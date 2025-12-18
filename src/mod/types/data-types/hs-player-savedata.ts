@@ -62,6 +62,20 @@ export interface Unlocks {
     rrow4: boolean;
     // Add others if they exist
 }
+/**
+ * Represents the exp for each rune
+ */
+export interface Runes {
+    antiquities: number;
+    duplication: number;
+    finiteDescent: number;
+    horseShoe: number;
+    infiniteAscent: number;
+    prism: number;
+    speed: number;
+    superiorIntellect: number;
+    thrift: number;
+}
 
 /**
  * Represents the levels/quantities of various shop upgrades purchased.
@@ -225,7 +239,7 @@ export interface HepteractCraft {
 /**
  * Contains the state for all Hepteract crafts.
  */
-export interface HepteractCrafts {
+export interface hepteracts {
     chronos: HepteractCraft;
     hyperrealism: HepteractCraft;
     quark: HepteractCraft;
@@ -433,7 +447,7 @@ export interface SingularityUpgradeData extends UpgradeData {
 /**
  * Contains the state of all singularity upgrades. Keys are internal upgrade names.
  */
-export interface SingularityUpgrades {
+export interface goldenQuarkUpgrades {
     goldenQuarks1: SingularityUpgradeData;
     goldenQuarks2: SingularityUpgradeData;
     goldenQuarks3: SingularityUpgradeData;
@@ -521,7 +535,7 @@ export interface OcteractUpgradeData extends UpgradeData {
 /**
  * Contains the state of all octeract upgrades. Keys are internal upgrade names.
  */
-export interface OcteractUpgrades {
+export interface octUpgrades {
     octeractStarter: OcteractUpgradeData;
     octeractGain: OcteractUpgradeData;
     octeractGain2: OcteractUpgradeData;
@@ -600,7 +614,7 @@ export interface AmbrosiaUpgradeData extends UpgradeData {
 /**
  * Contains the state of all Ambrosia/Blueberry upgrades. Keys are internal upgrade names.
  */
-export interface BlueberryUpgrades {
+export interface ambrosiaUpgrades {
     ambrosiaTutorial: AmbrosiaUpgradeData;
     ambrosiaQuarks1: AmbrosiaUpgradeData;
     ambrosiaCubes1: AmbrosiaUpgradeData;
@@ -735,7 +749,7 @@ export interface Campaigns {
     fortyEighth: number;
     fortyNinth: number;
     fiftieth: number;
-  }
+}
 
 
 /**
@@ -952,13 +966,13 @@ export interface PlayerData {
     constantUpgrades: (number | null)[]; // Array of constant upgrade levels (starts with null)
     antUpgrades: number[]; // Array of ant upgrade levels
     shopUpgrades: ShopUpgrades;
-    singularityUpgrades: SingularityUpgrades;
-    octeractUpgrades: OcteractUpgrades;
-    blueberryUpgrades: BlueberryUpgrades;
+    goldenQuarkUpgrades: goldenQuarkUpgrades;
+    octUpgrades: octUpgrades;
+    ambrosiaUpgrades: ambrosiaUpgrades;
     redAmbrosiaUpgrades: RedAmbrosiaUpgrades;
 
     // Runes & Talismans
-    runelevels: number[];
+    runes: Runes;
     runeexp: number[]; // Represented as number, potentially large (e+)
     runeBlessingLevels: number[]; // Represented as number, potentially large
     runeSpiritLevels: number[]; // Represented as number, potentially large
@@ -984,7 +998,7 @@ export interface PlayerData {
     tesseractBlessings: CubeTesseractHypercubeBlessings;
     hypercubeBlessings: CubeTesseractHypercubeBlessings;
     platonicBlessings: PlatonicBlessings;
-    hepteractCrafts: HepteractCrafts;
+    hepteracts: hepteracts;
 
     // Challenges & Corruptions
     challengecompletions: number[]; // Completions per challenge
