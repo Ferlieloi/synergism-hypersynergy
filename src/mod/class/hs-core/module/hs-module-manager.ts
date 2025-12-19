@@ -2,7 +2,7 @@ import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 
 // Explicit imports required because I don't know better...
-import { HSPotions } from "../../hs-modules/hs-potions"; 
+import { HSPotions } from "../../hs-modules/hs-potions";
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
@@ -21,6 +21,7 @@ import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSWebSocket } from "../hs-websocket";
 import { HSDebug } from "../hs-debug";
+import { HSAutosing } from "../../hs-modules/hs-autosing";
 
 /*
     Class: HSModuleManager
@@ -32,14 +33,14 @@ import { HSDebug } from "../hs-debug";
 */
 export class HSModuleManager {
     #context = "HSModuleManager";
-    #modules : HSModuleDefinition[] = [];
-    static #enabledModules : Map<string, HSModule | HSExternalModule> = new Map<string, HSModule | HSExternalModule>();
+    #modules: HSModuleDefinition[] = [];
+    static #enabledModules: Map<string, HSModule | HSExternalModule> = new Map<string, HSModule | HSExternalModule>();
 
     // This record is needed so that the modules can be instatiated properly and so that everything works nicely with TypeScript
-    #moduleClasses: Record<string, new (moduleOptions : HSModuleOptions) => HSModule> = {
+    #moduleClasses: Record<string, new (moduleOptions: HSModuleOptions) => HSModule> = {
         "HSUI": HSUI,
         "HSPotions": HSPotions,
-        "HSCodes": HSCodes, 
+        "HSCodes": HSCodes,
         "HSHepteracts": HSHepteracts,
         "HSTalismans": HSTalismans,
         "HSSettings": HSSettings,
@@ -54,10 +55,11 @@ export class HSModuleManager {
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
         "HSWebSocket": HSWebSocket,
-        "HSDebug": HSDebug
+        "HSDebug": HSDebug,
+        "HSAutosing": HSAutosing
     };
 
-    constructor(context: string, modulesToEnable : HSModuleDefinition[]) {
+    constructor(context: string, modulesToEnable: HSModuleDefinition[]) {
         this.#context = context;
         this.#modules = modulesToEnable;
 
@@ -74,21 +76,21 @@ export class HSModuleManager {
     async preprocessModules() {
         const seenModules: string[] = [];
 
-        for(const def of this.#modules) {
-            if(seenModules.includes(def.className)) {
+        for (const def of this.#modules) {
+            if (seenModules.includes(def.className)) {
                 HSLogger.warn(`Module "${def.className}" is already enabled - there is probably a duplicate module in enabledModules (index.ts)!`, this.#context);
                 return;
             }
 
-            const module =  this.addModule(def);
+            const module = this.addModule(def);
 
-            if(def.initImmediate !== undefined && def.initImmediate === true) {
-                if(module) {
+            if (def.initImmediate !== undefined && def.initImmediate === true) {
+                if (module) {
                     await module.init();
 
                     // We want / try to init HSUI module as early as possible so that we can integrate HSLogger to it
                     // This is so that HSLogger starts to write log inside the Log tab in the mod's panel instead of just the devtools console
-                    if(def.className === 'HSUI') {
+                    if (def.className === 'HSUI') {
                         const hsui = module as HSUI;
                         await HSLogger.integrateToUI(hsui);
                     }
@@ -101,7 +103,7 @@ export class HSModuleManager {
 
     // Adds module to the manager and instantiates the module's class (looks very unorthodox, but really isn't, I promise)
     addModule(moduleDefinition: HSModuleDefinition) {
-        if(moduleDefinition.moduleType === HSModuleType.EXTMODULE) {
+        if (moduleDefinition.moduleType === HSModuleType.EXTMODULE) {
             try {
                 const modName = moduleDefinition.moduleName || moduleDefinition.context;
 
@@ -126,7 +128,7 @@ export class HSModuleManager {
                 HSModuleManager.#enabledModules.set(moduleDefinition.className, module);
 
                 // Checking that the colorTag prototype method exists just to be safe (it's defined by the HSPrototypes module)
-                if(moduleDefinition.moduleColor && typeof String.prototype.colorTag === 'function')
+                if (moduleDefinition.moduleColor && typeof String.prototype.colorTag === 'function')
                     HSLogger.log(`Enabled EXTERNAL module '${modName.colorTag(moduleDefinition.moduleColor)}'`, this.#context);
                 else
                     HSLogger.log(`Enabled EXTERNAL module '${modName}'`, this.#context);
@@ -144,7 +146,7 @@ export class HSModuleManager {
                 if (!ModuleClass) {
                     throw new Error(`Class "${moduleDefinition.className}" not found in module`);
                 }
-                
+
                 const modName = moduleDefinition.moduleName || moduleDefinition.context;
 
                 const module = new ModuleClass({
@@ -156,7 +158,7 @@ export class HSModuleManager {
                 HSModuleManager.#enabledModules.set(moduleDefinition.className, module);
 
                 // Checking that the colorTag prototype method exists just to be safe (it's defined by the HSPrototypes module)
-                if(moduleDefinition.moduleColor && typeof String.prototype.colorTag === 'function')
+                if (moduleDefinition.moduleColor && typeof String.prototype.colorTag === 'function')
                     HSLogger.log(`Enabled module '${modName.colorTag(moduleDefinition.moduleColor)}'`, moduleDefinition.context);
                 else
                     HSLogger.log(`Enabled module '${modName}'`, moduleDefinition.context);
@@ -174,8 +176,8 @@ export class HSModuleManager {
         // Go through the modules added to module manager and initialize all of them
 
         HSModuleManager.#enabledModules.forEach
-        for(const [className, module] of HSModuleManager.#enabledModules.entries()) {
-            if(!module.isInitialized)
+        for (const [className, module] of HSModuleManager.#enabledModules.entries()) {
+            if (!module.isInitialized)
                 await module.init();
         }
     }

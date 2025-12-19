@@ -15,6 +15,7 @@ import { HSWebSocket } from "./hs-core/hs-websocket";
 import { GameEventResponse, GameEventType } from "../types/data-types/hs-event-data";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
+import { HSAutosing } from "./hs-modules/hs-autosing";
 
 /*
     Class: Hypersynergism
@@ -28,12 +29,12 @@ export class Hypersynergism {
     #context = 'HSMain';
 
     // HSModuleManager instance
-    #moduleManager : HSModuleManager;
+    #moduleManager: HSModuleManager;
 
-    #versionCheckIvl? : number;
+    #versionCheckIvl?: number;
     #latestRelease?: HSReleaseInfo;
 
-    constructor(modulesToEnable : HSModuleDefinition[]) {
+    constructor(modulesToEnable: HSModuleDefinition[]) {
         // Instantiate the module manager
         this.#moduleManager = new HSModuleManager('HSModuleManager', modulesToEnable);
     }
@@ -65,16 +66,16 @@ export class Hypersynergism {
         this.#versionCheckIvl = setInterval(async () => {
             const latestRelease = await HSGithub.getLatestRelease();
 
-            if(latestRelease) {
+            if (latestRelease) {
                 HSLogger.debug(`Latest release: ${latestRelease.name} (${latestRelease.version})`, this.#context);
 
-                if(latestRelease.version !== HSGlobal.General.currentModVersion) {
+                if (latestRelease.version !== HSGlobal.General.currentModVersion) {
                     HSGlobal.General.isLatestVersion = false;
 
                     const modIcon = document.querySelector('#hs-panel-control') as HTMLDivElement;
                     const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement;
 
-                    if(modIcon && modPanelHead) {
+                    if (modIcon && modPanelHead) {
                         modIcon.classList.add('hs-rainbowBorder');
                         modPanelHead.innerHTML += ` - <span id="hs-panel-new-ver">New version available!</span>`;
 
@@ -89,19 +90,19 @@ export class Hypersynergism {
     #buildUIPanelContents() {
         const hsui = HSModuleManager.getModule<HSUI>('HSUI');
 
-        if(hsui) {
+        if (hsui) {
             // Update panel title with current version
             hsui.updateTitle(`Hypersynergism v${HSGlobal.General.currentModVersion}`);
 
             // BUILD TOOLS TAB
             this.#buildToolsTab(hsui);
-            
+
             // BUILD SETTINGS TAB
             this.#buildSettingsTab(hsui);
-            
+
             // BUILD DEBUG TAB
             this.#buildDebugTab(hsui);
-            
+
             // Rename tabs
             hsui.renameTab(2, 'Tools');
             hsui.renameTab(3, 'Settings');
@@ -115,34 +116,42 @@ export class Hypersynergism {
 
     #buildToolsTab(hsui: HSUI) {
         const calculationOptions = HSGameDataAPI.getCalculationDefinitions({ toolingSupport: "true" })
-        .map((def) => {
-            return {
-                text: def.supportsReduce ? `${def.calculationName} (C)` : def.calculationName,
-                value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
-            };
-        });
+            .map((def) => {
+                return {
+                    text: def.supportsReduce ? `${def.calculationName} (C)` : def.calculationName,
+                    value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
+                };
+            });
 
         // BUILD TOOLS TAB
         // Add corruption reference modal button
-        hsui.replaceTabContents(2, 
-            HSUIC.Grid({ 
+        hsui.replaceTabContents(2,
+            HSUIC.Grid({
                 html: [
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Export tools',
                         styles: {
                             borderBottom: '1px solid limegreen',
                             gridColumn: 'span 2'
                         }
                     }),
-                    HSUIC.Div({ 
-                        id: 'hs-panel-amb-heater-p', 
+                    HSUIC.Div({
+                        id: 'hs-panel-amb-heater-p',
                         html: `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater.</a>`,
                         styles: {
                             gridColumn: 'span 2'
                         }
                     }),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia heater' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
+                        html: 'Auto Sing Tools',
+                        styles: {
+                            borderBottom: '1px solid limegreen',
+                            gridColumn: 'span 2'
+                        }
+                    }),
+                    HSUIC.Button({ id: 'hs-panel-auto-sing-btn', text: 'Auto Sing' }),
+                    HSUIC.Div({
                         html: 'References',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -151,7 +160,7 @@ export class Hypersynergism {
                     }),
                     HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: 'Corruption Ref.' }),
                     HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: 'Crpt. Onemind' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Mod links',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -162,7 +171,7 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki_features-btn', text: 'Mod Features' }),
                     HSUIC.Button({ id: 'hs-panel-mod-website-btn', text: 'Mod Website' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Other tools',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -173,7 +182,7 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: 'Dump Game vars' }),
                     HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: 'CLEAR SETTINGS', styles: { borderColor: 'red' } }),
                     HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Testing tools',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -182,15 +191,15 @@ export class Hypersynergism {
                     }),
                     HSUIC.Button({ id: 'hs-panel-test-notify-btn', text: 'Notify test' }),
                     HSUIC.Button({ id: 'hs-panel-test-notify-long-btn', text: 'Notify test 2' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Calculation tools',
                         styles: {
                             borderBottom: '1px solid limegreen',
                             gridColumn: 'span 2'
                         }
                     }),
-                    HSUIC.Div({ 
-                        id: 'hs-panel-calc-tools-p', 
+                    HSUIC.Div({
+                        id: 'hs-panel-calc-tools-p',
                         html: `Execute supported calculations and see their results. Calculations denoted with "(C)" support "calculating by components",
                         meaning that the calculation results can be output as an array of components that make up the calculations.<br><br>
                         Note that calculating by components always clears the calculation cache first.`,
@@ -199,9 +208,9 @@ export class Hypersynergism {
                             fontSize: '10pt'
                         }
                     }),
-                    HSUIC.Select({ 
-                        class: 'hs-panel-setting-block-select-input', 
-                        id: 'hs-panel-test-calc-sel', 
+                    HSUIC.Select({
+                        class: 'hs-panel-setting-block-select-input',
+                        id: 'hs-panel-test-calc-sel',
                         type: HSInputType.TEXT,
                         styles: {
                             gridColumn: 'span 2'
@@ -211,8 +220,8 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-test-calc-comps-btn', text: 'Calculate components', styles: { width: 'auto' } }),
                     HSUIC.Button({ id: 'hs-panel-test-calc-cache-clear-btn', text: 'Clear cache' }),
                     HSUIC.Button({ id: 'hs-panel-test-calc-cache-dump-btn', text: 'Dump cache' }),
-                    HSUIC.Div({ 
-                        id: 'hs-panel-test-calc-latest', 
+                    HSUIC.Div({
+                        id: 'hs-panel-test-calc-latest',
                         styles: {
                             gridColumn: 'span 2'
                         }
@@ -231,10 +240,10 @@ export class Hypersynergism {
         document.querySelector('#hs-panel-amb-heater-btn')?.addEventListener('click', async () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-            if(dataModule) {
+            if (dataModule) {
                 const heaterData = await dataModule.dumpDataForHeater();
 
-                if(heaterData) {
+                if (heaterData) {
                     await navigator.clipboard.writeText(btoa(JSON.stringify(heaterData)));
 
                     HSUI.Notify('Ambrosia heater data copied to clipboard', {
@@ -244,6 +253,48 @@ export class Hypersynergism {
                 }
             }
         });
+
+        document.querySelector('#hs-panel-auto-sing-btn')?.addEventListener('click', async () => {
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            let modalHtml = '';
+            if (autosingMod?.isAutosingEnabled()) {
+                modalHtml = `<div class="container">
+                    <p>Do you want to stop pseudosinging?</p>
+                    <button id="toggleSingularityBtn" type="button">stop</button>
+                    </div>`;
+            } else {
+                modalHtml = `<div class="container">
+                    <p>what singularity do you want to pseudosing?</p>
+                    <input id="singularityInput" type="number" placeholder="Enter number...">
+                    <button id="toggleSingularityBtn" type="button">start</button>
+                    </div>`;
+            }
+
+            hsui.Modal({ htmlContent: modalHtml, needsToLoad: true });
+
+            setTimeout(async () => {
+                const startBtn = document.querySelector('#toggleSingularityBtn');
+
+                startBtn?.addEventListener('click', async () => {
+                    const input = document.querySelector('#singularityInput') as HTMLInputElement | null;
+                    const value = input?.value;
+
+                    if (autosingMod) {
+                        // This will now trigger for both start and stop
+                        await autosingMod.toggleAutosing(Number(value));
+                        const targetModal = document.querySelector('.hs-modal') as any;
+
+                        if (targetModal) {
+                            if (targetModal.transition) {
+                                await targetModal.transition({ opacity: 0 });
+                            }
+                            targetModal.parentElement?.removeChild(targetModal);
+                        }
+                    }
+                });
+            }, 0);
+        });
+
 
         // Bind corruption reference button to open a modal
         document.querySelector('#hs-panel-cor-ref-btn')?.addEventListener('click', () => {
@@ -278,7 +329,7 @@ export class Hypersynergism {
         document.querySelector('#hs-panel-dump-gamedata-btn')?.addEventListener('click', () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-            if(dataModule) {
+            if (dataModule) {
                 console.log(`----- GAME DATA -----`);
                 console.log(dataModule.getGameData());
 
@@ -298,17 +349,17 @@ export class Hypersynergism {
 
         document.querySelector('#hs-panel-clear-settings-btn')?.addEventListener('click', () => {
             const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-            
-            if(storageMod) {
+
+            if (storageMod) {
                 storageMod.clearData(HSGlobal.HSSettings.storageKey);
                 HSLogger.info('Stored settings cleared', this.#context);
             }
         });
 
-        document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async() => {
+        document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async () => {
             const isLatest = await HSUtils.isLatestVersion();
-            
-            if(isLatest) {
+
+            if (isLatest) {
                 HSUI.Notify('You are using the latest version of Hypersynergism!', {
                     position: 'top',
                     notificationType: "success"
@@ -325,17 +376,17 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
             const sel = document.querySelector('#hs-panel-test-calc-sel') as HTMLSelectElement;
 
-            if(dataModule && sel) {
+            if (dataModule && sel) {
                 const calcFnName = sel.value.split('|')[0];
 
-                if(typeof (dataModule as any)[calcFnName] === 'function') {
+                if (typeof (dataModule as any)[calcFnName] === 'function') {
                     const result = (dataModule as any)[calcFnName]() as number;
                     console.log(`--- CALCULATED ${calcFnName} ---`);
                     console.log(result);
 
                     const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement;
 
-                    if(latestDiv) {
+                    if (latestDiv) {
                         latestDiv.innerText = `Last calc result: ${HSUtils.N(result)}`;
                     }
                 } else {
@@ -350,19 +401,19 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
             const sel = document.querySelector('#hs-panel-test-calc-sel') as HTMLSelectElement;
 
-            if(dataModule && sel) {
+            if (dataModule && sel) {
                 const selVal = sel.value.split('|');
                 const calcFnName = selVal[0];
                 const comp = selVal.includes('c');
 
-                if(typeof (dataModule as any)[calcFnName] === 'function') {
-                    if(comp) {
+                if (typeof (dataModule as any)[calcFnName] === 'function') {
+                    if (comp) {
                         dataModule.clearCache();
                         const result = (dataModule as any)[calcFnName](false) as number[];
 
                         const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement;
 
-                        if(latestDiv) {
+                        if (latestDiv) {
                             latestDiv.innerText = `Last calc result: [${result.toString().split(',').join(', ')}]`;
                         }
 
@@ -382,7 +433,7 @@ export class Hypersynergism {
         document.querySelector('#hs-panel-test-calc-cache-clear-btn')?.addEventListener('click', () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-            if(dataModule) {
+            if (dataModule) {
                 HSLogger.info('Cleared calculation cache', this.#context);
                 dataModule.clearCache();
             }
@@ -391,7 +442,7 @@ export class Hypersynergism {
         document.querySelector('#hs-panel-test-calc-cache-dump-btn')?.addEventListener('click', () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-            if(dataModule) {
+            if (dataModule) {
                 HSLogger.info('Calculation cache dump', this.#context);
                 dataModule.dumpCache();
             }
@@ -406,10 +457,10 @@ export class Hypersynergism {
             p_idx++;
             c_idx++;
 
-            if(p_idx > positions.length - 1)
+            if (p_idx > positions.length - 1)
                 p_idx = 0;
 
-            if(c_idx > colors.length - 1)
+            if (c_idx > colors.length - 1)
                 c_idx = 0;
 
             await HSUI.Notify('Test notification', {
@@ -422,13 +473,13 @@ export class Hypersynergism {
             p_idx++;
             c_idx++;
 
-            if(p_idx > positions.length - 1)
+            if (p_idx > positions.length - 1)
                 p_idx = 0;
 
-            if(c_idx > colors.length - 1)
+            if (c_idx > colors.length - 1)
                 c_idx = 0;
 
-            await HSUI.Notify('This is a really very extremely long test notification which tests if the notification works with a long notification test notification ',{
+            await HSUI.Notify('This is a really very extremely long test notification which tests if the notification works with a long notification test notification ', {
                 position: positions[p_idx],
                 notificationType: colors[c_idx]
             })
@@ -439,8 +490,8 @@ export class Hypersynergism {
         // BUILD SETTINGS TAB
         const settingsTabContents = HSSettings.autoBuildSettingsUI();
 
-        if(settingsTabContents.didBuild) {
-            hsui.replaceTabContents(3, 
+        if (settingsTabContents.didBuild) {
+            hsui.replaceTabContents(3,
                 [settingsTabContents.navHTML, settingsTabContents.pagesHTML].join('')
             );
 
@@ -451,7 +502,7 @@ export class Hypersynergism {
                 const allSubSettingContainers = document.querySelectorAll('.hs-panel-settings-grid') as NodeListOf<HTMLDivElement>;
                 const allSubTabs = document.querySelectorAll('.hs-panel-subtab') as NodeListOf<HTMLDivElement>;
 
-                if(subtab && subSettingsContainer &&allSubSettingContainers && allSubTabs) {
+                if (subtab && subSettingsContainer && allSubSettingContainers && allSubTabs) {
                     allSubSettingContainers.forEach(container => {
                         container.classList.remove('open');
                     });
@@ -462,7 +513,7 @@ export class Hypersynergism {
 
                     subSettingsContainer.classList.add('open');
 
-                    if(color && color.length > 0) {
+                    if (color && color.length > 0) {
                         subtab.style.backgroundColor = color;
                     }
                 }
@@ -479,14 +530,14 @@ export class Hypersynergism {
                 const target = e.target as HTMLDivElement;
                 const subtab = target.dataset.subtab;
                 const color = target.dataset.color;
-                
-                if(subtab) {
+
+                if (subtab) {
                     const subtabSelector = `#settings-grid-${subtab}`;
                     const subSettingsContainer = document.querySelector(subtabSelector) as HTMLDivElement;
                     const allSubSettingContainers = document.querySelectorAll('.hs-panel-settings-grid') as NodeListOf<HTMLDivElement>;
                     const allSubTabs = document.querySelectorAll('.hs-panel-subtab') as NodeListOf<HTMLDivElement>;
 
-                    if(subSettingsContainer && allSubSettingContainers && allSubTabs) {
+                    if (subSettingsContainer && allSubSettingContainers && allSubTabs) {
                         allSubSettingContainers.forEach(container => {
                             container.classList.remove('open');
                         });
@@ -497,7 +548,7 @@ export class Hypersynergism {
 
                         subSettingsContainer.classList.add('open');
 
-                        if(color && color.length > 0) {
+                        if (color && color.length > 0) {
                             target.style.backgroundColor = color;
                         }
                     }
@@ -508,10 +559,10 @@ export class Hypersynergism {
 
     #buildDebugTab(hsui: HSUI) {
         // BUILD DEBUG TAB
-        hsui.replaceTabContents(4, 
-            HSUIC.Grid({ 
+        hsui.replaceTabContents(4,
+            HSUIC.Grid({
                 html: [
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Mouse',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -519,7 +570,7 @@ export class Hypersynergism {
                         }
                     }),
                     HSUIC.Div({ id: 'hs-panel-debug-mousepos' }),
-                    HSUIC.Div({ 
+                    HSUIC.Div({
                         html: 'Game Data',
                         styles: {
                             borderBottom: '1px solid limegreen',

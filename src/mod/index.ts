@@ -119,6 +119,11 @@ declare global {
             moduleColor: '#fbc531',
         },
         {
+            className: 'HSAutosing',
+            context: 'HSAutosing',
+            moduleColor: '#e87b06ff',
+        },
+        {
             className: 'Chartist',
             context: 'Chartist',
             moduleColor: '#e8d7bf',
