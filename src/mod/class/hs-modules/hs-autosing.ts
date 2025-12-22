@@ -310,7 +310,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.waitForCompletion(14, 0, customSleepTime);
         this.exitReincBtn.click();
         this.exitAscBtn.click();
-        await this.c15Loop;
+        await this.c15Loop();
         console.log("Completed pre c14 challenges");
         return Promise.resolve();
     }
