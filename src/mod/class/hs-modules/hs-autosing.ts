@@ -156,12 +156,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             let loop = 0;
 
             while (this.isAutosingEnabled()) {
-                console.log(this.autosingEnabled);
-                loop++;
-                if (loop % 3 == 0) {
-                    await this.c15Loop();
-                    console.log("Completed c15 loop");
-                }
                 let stage = await this.getStage();
                 await this.runStage(stage);
                 console.log(`Completed stage: ${stage}`);
@@ -198,10 +192,42 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async runStage(stage: string | null): Promise<void> {
         switch (stage) {
+            case "start-prestige":
+                await this.preC14();
+                break;
+            case "prestige-transcend":
+                await this.preC14();
+                break;
+            case "transcend-reincarnate":
+                await this.preC14();
+                break;
+            case "reincarnate-ant":
+                await this.preC14();
+                break;
+            case "ant-sacrifice":
+                await this.preC14();
+                break;
             case "sacrifice-ascension":
                 await this.preC14();
                 break;
+            case "ascension-challenge10":
+                await this.preC14();
+                break;
+            case "challenge10-challenge11":
+                await this.preC14();
+                break;
+            case "challenge11-challenge12":
+                await this.preC14();
+                break;
+            case "challenge12-challenge13":
+                await this.preC14();
+                break;
+            case "challenge13-challenge14":
+                await this.preC14();
             case "challenge14-w5x10max":
+                await this.preC14();
+                break;
+            case "w5x10max-alpha":
                 await this.c14_w5x10();
                 break;
             case "alpha-p2x1x10":
@@ -223,7 +249,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.p3x5_antiquities();
                 break;
             default:
-                await this.preC14();
+                await this.p3x5_antiquities();
                 break;
         }
         return Promise.resolve();
@@ -265,11 +291,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private async c15Loop(): Promise<void> {
         this.challengeTab.click();
 
-        const customSleepTime = 100
+        const customSleepTime = 50
         const maxAttempts = 10;
 
         await this.DblClick(this.c15)
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
         await this.waitForCompletion(15, 1e999, maxAttempts, customSleepTime);
+        await this.click(this.ascendBtn);
         await this.click(this.exitAscBtn)
 
         return Promise.resolve();
@@ -279,10 +308,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const corruptions = [0, 0, 0, 0, 0, 0, 0, 0] as number[];
         await this.setCorruptions(corruptions);
 
-        const customSleepTime = 1000
+        const customSleepTime = 10000
         const maxAttempts = 1000
 
         this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
         await this.DblClick(this.c8)
         await this.waitForCompletion(8, 6, customSleepTime);
         await this.DblClick(this.c9)
@@ -333,11 +366,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.DblClick(this.c5)
         await this.waitForCompletion(5, 0);
         await this.click(this.ascendBtn);
+        await this.c15Loop();
         return Promise.resolve();
     }
 
     private async w5x10_p3x1(): Promise<void> {
-        const corruptions = [3, 7, 7, 15, 4, 12, 16, 15] as number[];
+        const corruptions = [3, 7, 7, 13, 4, 12, 16, 13] as number[];
         await this.setCorruptions(corruptions);
 
         this.challengeTab.click();
@@ -354,6 +388,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.DblClick(this.c5)
         await this.waitForCompletion(5, 0);
         await this.click(this.ascendBtn);
+        await this.c15Loop();
         return Promise.resolve();
     }
 
@@ -375,10 +410,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.DblClick(this.c5)
         await this.waitForCompletion(5, 0);
         await this.click(this.ascendBtn);
+        await this.c15Loop();
         return Promise.resolve();
     }
 
     private async p3x5_antiquities(): Promise<void> {
+        const ambLoadout2 = document.getElementById("hs-ambrosia-quickbar-blueberryLoadout2") as HTMLButtonElement
+        if (!ambLoadout2) {
+            this.showError(`Blueberry loadout not found`);
+        }
+        ambLoadout2.click();
+
         const corruptions = [10, 6, 7, 16, 16, 16, 16, 15] as number[];
         await this.setCorruptions(corruptions);
 
@@ -396,26 +438,36 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.DblClick(this.c5)
         await this.waitForCompletion(5, 0);
         await this.click(this.ascendBtn);
+        await this.c15Loop();
         return Promise.resolve();
     }
+
     private async antiquities_singularity(): Promise<void> {
-        const corruptions = [16, 16, 16, 16, 16, 16, 16, 16] as number[];
+        const corruptions = [0, 0, 0, 0, 0, 0, 0, 0] as number[];
         await this.setCorruptions(corruptions);
 
         this.challengeTab.click();
-        await this.DblClick(this.c6)
-        await this.waitForCompletion(6, 0);
-        await this.DblClick(this.c7)
-        await this.waitForCompletion(7, 0);
-        await this.DblClick(this.c8)
-        await this.waitForCompletion(8, 0);
-        await this.DblClick(this.c9)
-        await this.waitForCompletion(9, 0);
-        await this.DblClick(this.c10)
-        await this.waitForCompletion(10, 0);
-        await this.DblClick(this.c5)
-        await this.waitForCompletion(5, 0);
-        await this.click(this.ascendBtn);
+        await this.DblClick(this.c11);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(11, 72);
+        await this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c12);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(12, 72);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c13);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(13, 72);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c14);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(14, 72);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.c15Loop();
         return Promise.resolve();
     }
 
