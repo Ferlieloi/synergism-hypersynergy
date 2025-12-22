@@ -6,22 +6,67 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
+import { PlayerData } from "../../types/data-types/hs-player-savedata";
 
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 
     private autosingEnabled = false;
-    private autosingRunning = false;
     private targetSingularity = 0;
     private sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     private sleepTime = 20;
+    private buildingsTab!: HTMLButtonElement;
+    private challengeTab!: HTMLButtonElement;
+    private runesTab!: HTMLButtonElement;
+    private corruptionsTab!: HTMLButtonElement;
+    private settingsTab!: HTMLButtonElement;
+    private singularityTab!: HTMLButtonElement;
+    private c5!: HTMLButtonElement;
+    private c6!: HTMLButtonElement;
+    private c7!: HTMLButtonElement;
+    private c8!: HTMLButtonElement;
+    private c9!: HTMLButtonElement;
+    private c10!: HTMLButtonElement;
+    private c11!: HTMLButtonElement;
+    private c12!: HTMLButtonElement;
+    private c13!: HTMLButtonElement;
+    private c14!: HTMLButtonElement;
+    private c15!: HTMLButtonElement;
+    private exitReincBtn!: HTMLButtonElement;
+    private exitAscBtn!: HTMLButtonElement;
+    private ascendBtn!: HTMLButtonElement;
 
     init(): Promise<void> {
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
         this.autosingEnabled = false;
-        this.autosingRunning = false;
         this.targetSingularity = 0;
+
+        this.buildingsTab = document.getElementById('buildingstab') as HTMLButtonElement;
+        this.challengeTab = document.getElementById('challengetab') as HTMLButtonElement;
+        this.runesTab = document.getElementById('runestab') as HTMLButtonElement;
+        this.corruptionsTab = document.getElementById('traitstab') as HTMLButtonElement;
+        this.settingsTab = document.getElementById('settingstab') as HTMLButtonElement;
+        this.singularityTab = document.getElementById('singularitytab') as HTMLButtonElement;
+        this.c5 = document.getElementById('challenge5') as HTMLButtonElement;
+        this.c6 = document.getElementById('challenge6') as HTMLButtonElement;
+        this.c7 = document.getElementById('challenge7') as HTMLButtonElement;
+        this.c8 = document.getElementById('challenge8') as HTMLButtonElement;
+        this.c9 = document.getElementById('challenge9') as HTMLButtonElement;
+        this.c10 = document.getElementById('challenge10') as HTMLButtonElement;
+        this.c11 = document.getElementById('challenge11') as HTMLButtonElement;
+        this.c12 = document.getElementById('challenge12') as HTMLButtonElement;
+        this.c13 = document.getElementById('challenge13') as HTMLButtonElement;
+        this.c14 = document.getElementById('challenge14') as HTMLButtonElement;
+        this.c15 = document.getElementById('challenge15') as HTMLButtonElement;
+        this.exitReincBtn = document.getElementById('reincarnatechallengebtn') as HTMLButtonElement;
+        this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
+        this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
+
+        if (!this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.c5 || !this.c6 || !this.c7 || !this.c8 || !this.c9 || !this.c10 || !this.c11 || !this.c12 || !this.c13 || !this.c14 || !this.c15 || !this.exitAscBtn || !this.exitReincBtn) {
+            this.showError("Error during autosing initialization: could not find main tabs");
+            return Promise.resolve();
+        }
 
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
@@ -50,48 +95,31 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    async gameDataCallback() {
-        if (this.autosingEnabled && !this.autosingRunning) {
-            this.autosingRunning = true;
-            await this.performAutosingLogic();
-        }
+    gameDataCallback(): Promise<void> {
+        return Promise.resolve();
     }
 
-    async toggleAutosing(targetSingularity: number) {
+    async toggleAutosing(targetSingularity: number): Promise<void> {
         this.autosingEnabled = !this.autosingEnabled;
         this.targetSingularity = targetSingularity;
 
         if (this.autosingEnabled) {
             this.subscribeGameDataChanges();
+            this.performAutosingLogic();
         } else {
             this.stopAutosing();
         }
 
         HSLogger.log(`Autosing ${this.autosingEnabled ? "enabled" : "disabled"} for target singularity: ${targetSingularity}`, this.context);
+        return Promise.resolve();
     }
 
-    private async performAutosingLogic() {
-
+    private async performAutosingLogic(): Promise<void> {
         // START OF Autosinging Logic
         const ambrosia_late_cube = document.getElementById('hs-ambrosia-quickbar-blueberryLoadout2') as HTMLButtonElement;
         const ambrosia_quark = document.getElementById('hs-ambrosia-quickbar-blueberryLoadout1') as HTMLButtonElement;
-        const buildings_tab = document.getElementById('buildingstab') as HTMLButtonElement;
-        const challenge_tab = document.getElementById('challengetab') as HTMLButtonElement;
-        const coin = document.getElementById('buycoin1') as HTMLButtonElement;
-        const c5 = document.getElementById('challenge5') as HTMLButtonElement;
-        const c6 = document.getElementById('challenge6') as HTMLButtonElement;
-        const c7 = document.getElementById('challenge7') as HTMLButtonElement;
-        const c8 = document.getElementById('challenge8') as HTMLButtonElement;
-        const c9 = document.getElementById('challenge9') as HTMLButtonElement;
-        const c10 = document.getElementById('challenge10') as HTMLButtonElement;
-        const c11 = document.getElementById('challenge11') as HTMLButtonElement;
-        const c12 = document.getElementById('challenge12') as HTMLButtonElement;
-        const c13 = document.getElementById('challenge13') as HTMLButtonElement;
-        const c14 = document.getElementById('challenge14') as HTMLButtonElement;
-        const c15 = document.getElementById('challenge15') as HTMLButtonElement;
-        const exitBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
 
-        if (!c5 || !c6 || !c7 || !c8 || !c9 || !c10 || !c11 || !c12 || !c13 || !c14 || !c15 || !coin || !exitBtn || !ambrosia_late_cube || !ambrosia_quark || !buildings_tab || !challenge_tab) {
+        if (!ambrosia_late_cube || !ambrosia_quark) {
             console.error("Error during autosing logic: a button not found at the start of singularity");
             this.stopAutosing()
         }
@@ -102,7 +130,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             if (!gameDataAPI) {
                 this.showError("Could not find HSGameDataAPI module");
                 this.stopAutosing()
-                return;
+                return Promise.resolve();
             }
 
             const gameData = gameDataAPI.getGameData();
@@ -110,14 +138,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             if (!gameData) {
                 this.showError("Could not get game data");
                 this.stopAutosing()
-                return;
+                return Promise.resolve();;
             }
 
             // Check if target singularity is valid
             if (this.targetSingularity > gameData.highestSingularityCount) {
                 this.showError(`Target singularity ${this.targetSingularity} is greater than highest reached ${gameData.highestSingularityCount}`);
                 this.stopAutosing()
-                return;
+                return Promise.resolve();;
             }
 
             HSLogger.log(`Performing autosing logic: current=${gameData.singularityCount}, target=${this.targetSingularity}`, this.context);
@@ -125,139 +153,352 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await this.setElevator();
             await this.performSingularity();
 
-            while (this.isAutosingEnabled) {
-                let stage = this.getStage();
-                this.runStage(stage);
+            let loop = 0;
+
+            while (this.isAutosingEnabled()) {
+                console.log(this.autosingEnabled);
+                loop++;
+                if (loop % 3 == 0) {
+                    await this.c15Loop();
+                    console.log("Completed c15 loop");
+                }
+                let stage = await this.getStage();
+                await this.runStage(stage);
                 console.log(`Completed stage: ${stage}`);
-                this.sleep(this.sleepTime * 10);
+
+                if (stage === "antiquities-singularity") {
+                    console.log("STAGE BREAK")
+                    break;
+                }
+                await this.sleep(this.sleepTime);
             }
+            console.log("Antiquities reached, stopping autosing");
 
             this.stopAutosing()
-            this.autosingRunning = false;
 
         } catch (error) {
             this.showError("Error during autosing logic:");
             this.stopAutosing()
         }
+
+        //this.performAutosingLogic();
+        return Promise.resolve();;
     }
 
-    private async runStage(stage: string | null) {
+    private async haveAntiquities(): Promise<boolean> {
+        await this.click(this.runesTab);
+        const antiquitiesRuneLevel = document.getElementById('runeAntiquitiesLevel') as HTMLSpanElement;
+        if (!antiquitiesRuneLevel) {
+            this.showError("Error during autosing logic: could not access antiquities rune level");
+        }
+        const level = this.parseNumber(antiquitiesRuneLevel.innerText);
+        return level > 0;
+    }
+
+
+    private async runStage(stage: string | null): Promise<void> {
         switch (stage) {
             case "sacrifice-ascension":
                 await this.preC14();
+                break;
             case "challenge14-w5x10max":
                 await this.c14_w5x10();
+                break;
             case "alpha-p2x1x10":
                 await this.w5x10_p3x1();
+                break;
             case "p2x1x10-p3x1":
                 await this.w5x10_p3x1();
+                break;
             case "p3x1-beta":
                 await this.p3x1_p3x5();
+                break;
             case "beta-1e15-expo":
                 await this.p3x1_p3x5();
+                break;
             case "1e15-expo-omega":
                 await this.p3x1_p3x5();
+                break;
             case "omega-singularity":
                 await this.p3x5_antiquities();
+                break;
             default:
-                await this.antiquities_singularity();
+                await this.preC14();
+                break;
         }
+        return Promise.resolve();
     }
 
-    private async preC14() {
+    private async setCorruptions(corruptions: number[]): Promise<void> {
+        this.corruptionsTab.click();
+        const corrLoadoutsBtn = document.getElementById('corrLoadoutsBtn') as HTMLButtonElement;
+
+        if (!corrLoadoutsBtn) {
+            this.showError("Error during autosing logic: could not access corruptions to set loadout");
+        }
+        corrLoadoutsBtn.click();
+
+        const importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
+
+        if (!importBtn) {
+            this.showError("Error during autosing logic: could not access corruptions to set loadout");
+        }
+        importBtn.click();
+
+        const corruptionsInput = document.getElementById('prompt_text') as HTMLInputElement;
+
+        if (!corruptionsInput) {
+            this.showError("Error during autosing logic: could not access corruptions to set loadout");
+        }
+        corruptionsInput.value = corruptions.join('/');
+
+        const okayBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
+
+        if (!okayBtn) {
+            this.showError("Error during autosing logic: could not access corruptions to set loadout");
+        }
+        await this.click(okayBtn);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
+    }
+
+    private async c15Loop(): Promise<void> {
+        this.challengeTab.click();
+
+        const customSleepTime = 100
+        const maxAttempts = 10;
+
+        await this.DblClick(this.c15)
+        await this.waitForCompletion(15, 1e999, maxAttempts, customSleepTime);
+        await this.click(this.exitAscBtn)
+
+        return Promise.resolve();
+    }
+
+    private async preC14(): Promise<void> {
         const corruptions = [0, 0, 0, 0, 0, 0, 0, 0] as number[];
+        await this.setCorruptions(corruptions);
 
-        const c8 = document.getElementById('challenge8') as HTMLButtonElement;
-        const c9 = document.getElementById('challenge9') as HTMLButtonElement;
-        const c10 = document.getElementById('challenge10') as HTMLButtonElement;
-        const c11 = document.getElementById('challenge11') as HTMLButtonElement;
-        const c12 = document.getElementById('challenge12') as HTMLButtonElement;
-        const c13 = document.getElementById('challenge13') as HTMLButtonElement;
-        const c14 = document.getElementById('challenge14') as HTMLButtonElement;
-        const exitBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
-        const challenge_tab = document.getElementById('challengetab') as HTMLButtonElement;
+        const customSleepTime = 1000
+        const maxAttempts = 1000
 
-        if (!c8 || !c9 || !c10 || !c11 || !c12 || !c13 || !c14 || !exitBtn || !challenge_tab) {
-            console.error("Error during autosing logic: a button not found at pre c14");
-            this.stopAutosing()
-        }
-        challenge_tab.click();
-        this.DblClick(c10);
-        await this.waitForCompletion(10, 1);
-        exitBtn.click();
-        this.DblClick(c11);
-        this.DblClick(c10);
-        await this.waitForCompletion(11, 0);
-        exitBtn.click();
-        this.DblClick(c12);
-        this.DblClick(c10);
-        await this.waitForCompletion(12, 0);
-        exitBtn.click();
-        this.DblClick(c13);
-        this.DblClick(c10);
-        await this.waitForCompletion(13, 0);
-        exitBtn.click();
-        this.DblClick(c14);
-        this.DblClick(c10);
-        await this.waitForCompletion(14, 0);
-        exitBtn.click();
+        this.challengeTab.click();
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 6, customSleepTime);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 2, customSleepTime);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(10, 1, maxAttempts);
+        this.exitReincBtn.click();
+        await this.DblClick(this.c11);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(11, 0, customSleepTime);
+        await this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c12);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(12, 0, customSleepTime);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c13);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(13, 0, customSleepTime);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.DblClick(this.c14);
+        await this.DblClick(this.c10);
+        await this.waitForCompletion(14, 0, customSleepTime);
+        this.exitReincBtn.click();
+        this.exitAscBtn.click();
+        await this.c15Loop;
         console.log("Completed pre c14 challenges");
+        return Promise.resolve();
     }
 
-    private setCorruptions(corruptions: number[]) {
-    }
-
-    private async c14_w5x10() {
+    private async c14_w5x10(): Promise<void> {
         const corruptions = [0, 4, 1, 0, 4, 11, 6, 14] as number[];
+        await this.setCorruptions(corruptions);
+
+        this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 0);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 0);
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
+        await this.DblClick(this.c5)
+        await this.waitForCompletion(5, 0);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
     }
 
-    private async w5x10_p3x1() {
-        const corruptions = [3, 7, 7, 16, 4, 12, 16, 16] as number[];
+    private async w5x10_p3x1(): Promise<void> {
+        const corruptions = [3, 7, 7, 15, 4, 12, 16, 15] as number[];
+        await this.setCorruptions(corruptions);
+
+        this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 0);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 0);
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
+        await this.DblClick(this.c5)
+        await this.waitForCompletion(5, 0);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
     }
 
-    private async p3x1_p3x5() {
+    private async p3x1_p3x5(): Promise<void> {
         const corruptions = [6, 11, 10, 16, 16, 13, 16, 16] as number[];
+        await this.setCorruptions(corruptions);
+
+        this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 0);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 0);
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
+        await this.DblClick(this.c5)
+        await this.waitForCompletion(5, 0);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
     }
 
-    private async p3x5_antiquities() {
+    private async p3x5_antiquities(): Promise<void> {
         const corruptions = [10, 6, 7, 16, 16, 16, 16, 15] as number[];
-    }
+        await this.setCorruptions(corruptions);
 
-    private async antiquities_singularity() {
+        this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 0);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 0);
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
+        await this.DblClick(this.c5)
+        await this.waitForCompletion(5, 0);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
+    }
+    private async antiquities_singularity(): Promise<void> {
         const corruptions = [16, 16, 16, 16, 16, 16, 16, 16] as number[];
+        await this.setCorruptions(corruptions);
+
+        this.challengeTab.click();
+        await this.DblClick(this.c6)
+        await this.waitForCompletion(6, 0);
+        await this.DblClick(this.c7)
+        await this.waitForCompletion(7, 0);
+        await this.DblClick(this.c8)
+        await this.waitForCompletion(8, 0);
+        await this.DblClick(this.c9)
+        await this.waitForCompletion(9, 0);
+        await this.DblClick(this.c10)
+        await this.waitForCompletion(10, 0);
+        await this.DblClick(this.c5)
+        await this.waitForCompletion(5, 0);
+        await this.click(this.ascendBtn);
+        return Promise.resolve();
     }
 
     private stopAutosing() {
         this.autosingEnabled = false;
-        this.autosingRunning = false;
         this.unsubscribeGameDataChanges();
     }
 
-    private getStage() {
-        const stage = document.getElementById('gameStageStatistic') as HTMLParagraphElement;
+    private async getStage(): Promise<string> {
+        await this.click(this.settingsTab);
+        const settingsSubTab = document.getElementById('switchSettingSubTab4') as HTMLButtonElement;
+        if (!settingsSubTab) {
+            this.showError("Error during autosing logic: could not access settings to read stage");
+            this.stopAutosing()
+        }
+        settingsSubTab.click();
+        const misc = document.getElementById('kMisc') as HTMLButtonElement;
+        if (!misc) {
+            this.showError("Error during autosing logic: could not access settings to read stage");
+            this.stopAutosing()
+        }
+        misc.click();
+        const stage = await this.waitForElement('gameStageStatistic');
         if (!stage) {
             this.showError("Error during autosing logic: could not access settings to read stage");
             this.stopAutosing()
         }
-        const regex = new RegExp('Current Game Stage: (.*)');
+        await this.waitForInnerText(stage, t => /Current Game Section:/.test(t));
+        const regex = new RegExp('Current Game Section: (.*)');
         const match = stage.innerText.match(regex);
 
         if (!match) {
             console.error("Could not find game stage");
-            return null;
+            return "";
         }
-        return match[1].trim()
+        return match[1].trim();
     }
 
-    private async setElevator() {
-        // Navigate to singularity tab
-        const singularityTab = document.getElementById('singularitytab') as HTMLElement;
-        if (!singularityTab) {
-            this.showError("Error during autosing logic: singularity tab not found");
-            this.stopAutosing()
-        }
-        singularityTab.click();
+    private async waitForElement(id: string): Promise<HTMLElement> {
+        return new Promise(resolve => {
+            const existing = document.getElementById(id);
+            if (existing) return resolve(existing);
 
+            const observer = new MutationObserver(() => {
+                const el = document.getElementById(id);
+                if (el) {
+                    observer.disconnect();
+                    resolve(el);
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    }
+
+    private async waitForInnerText(
+        el: HTMLElement,
+        predicate: (text: string) => boolean = t => t.trim().length > 0
+    ): Promise<void> {
+        if (predicate(el.innerText)) return;
+
+        return new Promise(resolve => {
+            const observer = new MutationObserver(() => {
+                if (predicate(el.innerText)) {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+
+            observer.observe(el, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+        });
+    }
+
+    private async setElevator(): Promise<void> {
+        // Navigate to singularity tab
+        this.singularityTab.click();
         // Set elevator target input
         const elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
         if (!elevatorInput) {
@@ -274,35 +515,43 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.stopAutosing()
         }
         checkbox.checked = true;
-
-        const challengeTab = document.getElementById('challengetab') as HTMLButtonElement;
-        if (!challengeTab) {
-            this.showError("Error during autosing logic: challenge tab not found");
-            this.stopAutosing()
-        }
-        challengeTab.click();
+        return Promise.resolve();
     }
 
-    private async performSingularity() {
+    private async performSingularity(): Promise<void> {
         const singularityButton = document.getElementById('singularitybtn') as HTMLButtonElement
         if (!singularityButton) {
             this.showError("Error during autosing logic: singularity button not found");
             this.stopAutosing()
         }
-        this.click(singularityButton);
+        await this.click(singularityButton);
         const okay = document.getElementById('ok_confirm') as HTMLButtonElement;
         if (!okay) {
             this.showError("Error during autosing logic: okay button not found");
             this.stopAutosing()
         }
-        this.click(okay);
-        await this.sleep(this.sleepTime);
-        const okay2 = document.getElementById('ok_confirm') as HTMLButtonElement;
+        await this.click(okay);
+        const okay2 = document.getElementById('ok_alert') as HTMLButtonElement;
         if (!okay2) {
             this.showError("Error during autosing logic: okay button not found");
             this.stopAutosing()
         }
-        this.click(okay2);
+        await this.click(okay2);
+
+        const buildings_tab = document.getElementById('buildingstab') as HTMLButtonElement;
+        if (!buildings_tab) {
+            this.showError("Error during autosing logic: buildings tab button not found");
+            this.stopAutosing()
+        }
+        this.buildingsTab.click();
+
+        const coin = document.getElementById('buycoin1') as HTMLButtonElement;
+        if (!coin) {
+            this.showError("Error during autosing logic: coin button not found");
+            this.stopAutosing()
+        }
+        await this.click(coin);
+        await this.sleep(this.sleepTime);
 
         const ambrosia_early_cube = document.getElementById('hs-ambrosia-quickbar-blueberryLoadout4') as HTMLButtonElement;
         if (!ambrosia_early_cube) {
@@ -310,34 +559,33 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         } else {
             ambrosia_early_cube.click();
         }
-
+        return Promise.resolve();
     }
 
-    private async waitForCompletion(challengeIndex: number, minCompletions: number) {
+    private async waitForCompletion(challengeIndex: number, minCompletions: number, maxAttempts: number = 100, customSleepTime: number = this.sleepTime): Promise<void> {
         let attempts = 0;
         let previousCompletions = -1;
-        const maxAttempts = 10000; //100 seconds max
         const completions = document.getElementById(`challenge${challengeIndex}level`) as HTMLParagraphElement;
         while (attempts < maxAttempts) {
             const completionsNumber = completions ? this.parseNumber(completions.innerText) : 0;
             if (minCompletions == 0) {
                 if (previousCompletions == completionsNumber && completionsNumber > 0) {
-                    return;
+                    return Promise.resolve();
                 }
-                await this.sleep(this.sleepTime * 2);
+                await this.sleep(customSleepTime);
                 previousCompletions = completionsNumber;
             } else {
                 if (completionsNumber >= minCompletions) {
-                    await this.sleep(this.sleepTime);
-                    return;
+                    return Promise.resolve();
                 }
+                await this.sleep(customSleepTime);
             }
-            await this.sleep(50);
             attempts++;
 
         }
         console.error(`Timeout waiting for challenge ${challengeIndex} to reach ${minCompletions} completions`);
-        this.stopAutosing();
+        return Promise.resolve();
+
     }
 
     private parseNumber(text: string): number {
@@ -357,19 +605,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         });
     }
 
-    private async click(button: HTMLButtonElement) {
+    private async click(button: HTMLButtonElement): Promise<void> {
         button.click()
         await this.sleep(this.sleepTime)
+        return Promise.resolve();
     }
 
-    async DblClick(element: HTMLElement) {
+    async DblClick(element: HTMLElement): Promise<void> {
         element.click();
         // Wait 50ms to simulate human speed
         await new Promise(res => setTimeout(res, 5));
         element.click();
-        this.sleep(this.sleepTime);
+        await this.sleep(this.sleepTime);
 
         // Then fire the dblclick event just in case
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        return Promise.resolve();
     }
 }
