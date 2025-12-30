@@ -144,14 +144,6 @@ export class Hypersynergism {
                     }),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia heater' }),
                     HSUIC.Div({
-                        html: 'Auto Sing Tools',
-                        styles: {
-                            borderBottom: '1px solid limegreen',
-                            gridColumn: 'span 2'
-                        }
-                    }),
-                    HSUIC.Button({ id: 'hs-panel-auto-sing-btn', text: 'Auto Sing' }),
-                    HSUIC.Div({
                         html: 'References',
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -253,48 +245,6 @@ export class Hypersynergism {
                 }
             }
         });
-
-        document.querySelector('#hs-panel-auto-sing-btn')?.addEventListener('click', async () => {
-            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
-            let modalHtml = '';
-            if (autosingMod?.isAutosingEnabled()) {
-                modalHtml = `<div class="container">
-                    <p>Do you want to stop pseudosinging?</p>
-                    <button id="toggleSingularityBtn" type="button">stop</button>
-                    </div>`;
-            } else {
-                modalHtml = `<div class="container">
-                    <p>what singularity do you want to pseudosing?</p>
-                    <input id="singularityInput" type="number" placeholder="Enter number...">
-                    <button id="toggleSingularityBtn" type="button">start</button>
-                    </div>`;
-            }
-
-            hsui.Modal({ htmlContent: modalHtml, needsToLoad: true });
-
-            setTimeout(async () => {
-                const startBtn = document.querySelector('#toggleSingularityBtn');
-
-                startBtn?.addEventListener('click', async () => {
-                    const input = document.querySelector('#singularityInput') as HTMLInputElement | null;
-                    const value = input?.value;
-
-                    if (autosingMod) {
-                        // This will now trigger for both start and stop
-                        await autosingMod.toggleAutosing(Number(value));
-                        const targetModal = document.querySelector('.hs-modal') as any;
-
-                        if (targetModal) {
-                            if (targetModal.transition) {
-                                await targetModal.transition({ opacity: 0 });
-                            }
-                            targetModal.parentElement?.removeChild(targetModal);
-                        }
-                    }
-                });
-            }, 0);
-        });
-
 
         // Bind corruption reference button to open a modal
         document.querySelector('#hs-panel-cor-ref-btn')?.addEventListener('click', () => {

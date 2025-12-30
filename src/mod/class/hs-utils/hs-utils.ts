@@ -1,4 +1,5 @@
 import { EventBuffType } from "../../types/data-types/hs-event-data";
+import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
 import { HSGithub } from "../hs-core/github/hs-github";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
@@ -22,18 +23,18 @@ export class HSUtils {
 
     // Simple promise-based wait/delay utility method
     static wait(delay: number) {
-        return new Promise(function(resolve) {
+        return new Promise(function (resolve) {
             setTimeout(resolve, delay);
         });
     }
 
-    static uuidv4() : string {
+    static uuidv4(): string {
         return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
             (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
         );
     }
 
-    static domid() : string {
+    static domid(): string {
         return "hs-rnd-00000000000".replace(/[018]/g, c =>
             (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
         );
@@ -41,7 +42,7 @@ export class HSUtils {
 
     static hashCode(str: string): number {
         let hash = 0;
-        let i; 
+        let i;
         let chr;
 
         if (str.length === 0) return hash;
@@ -53,29 +54,29 @@ export class HSUtils {
         }
 
         return hash;
-    }  
+    }
 
     static async computeHash(data: string): Promise<string> {
         const encoder = new TextEncoder();
         const dataBuffer = encoder.encode(data);
         const hashBuffer = await crypto.subtle.digest('SHA-1', dataBuffer);
-        
+
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, '0'))
             .join('');
     }
 
-    static N(num: string | number, precision : number = 2, expDecimals : number = 2) {
+    static N(num: string | number, precision: number = 2, expDecimals: number = 2) {
         let tempNum = 0;
         let numString = '';
 
         try {
-            if(typeof num === "string")
+            if (typeof num === "string")
                 tempNum = parseFloat(num);
             else
                 tempNum = num;
 
-            if(tempNum > 1_000_000) {
+            if (tempNum > 1_000_000) {
                 numString = tempNum.toExponential(expDecimals).replace('+', '');
             } else {
                 numString = tempNum.toFixed(precision);
@@ -88,7 +89,7 @@ export class HSUtils {
         return numString;
     }
 
-    static getTime() : string {
+    static getTime(): string {
         const now = new Date();
         const hours = now.getHours();
         const minutes = now.getMinutes();
@@ -109,14 +110,14 @@ export class HSUtils {
         return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     }
 
-    static objectToCSS<T extends Record<string, CSSValue>>(obj: T) : string {
+    static objectToCSS<T extends Record<string, CSSValue>>(obj: T): string {
         let cssString = ``;
 
-        if(obj === undefined || obj === null) {
+        if (obj === undefined || obj === null) {
             return '';
         }
 
-        for(const [key, value] of Object.entries(obj)) {
+        for (const [key, value] of Object.entries(obj)) {
             if (value !== undefined && value !== null) {
                 cssString += `${this.camelToKebab(key)}: ${value};\n`;
             }
@@ -141,24 +142,24 @@ export class HSUtils {
 
     // JS native float parsing is fucky and won't work for when the number uses , like "123,456"...
     static parseFloat2(float: any) {
-        if(!float) return NaN;
+        if (!float) return NaN;
 
         const posC = float.indexOf(',');
-        if(posC === -1) {
+        if (posC === -1) {
             return parseFloat(float);
         } else {
             float = float.replace(/,/g, '');
         }
 
         const posFS = float.indexOf('.');
-        if(posFS === -1) return parseFloat(float.replace(/\,/g, '.'));
+        if (posFS === -1) return parseFloat(float.replace(/\,/g, '.'));
 
-        const parsed = ((posC < posFS) ? (float.replace(/\,/g,'')) : (float.replace(/\./g,'').replace(',', '.')));
+        const parsed = ((posC < posFS) ? (float.replace(/\,/g, '')) : (float.replace(/\./g, '').replace(',', '.')));
 
         return parseFloat(parsed);
     }
 
-    static nullProxy<T>(proxyName: string) : T {
+    static nullProxy<T>(proxyName: string): T {
         const nullProxy = new Proxy({}, {
             get: () => {
                 HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
@@ -174,9 +175,9 @@ export class HSUtils {
     }
 
     // Replace color tags for panel logging
-    static parseColorTags(msg: string) : string {
+    static parseColorTags(msg: string): string {
         const tagPattern = /<([a-zA-Z]+|#[0-9A-Fa-f]{3,6})>(.*?)<\/\1>/g;
-        
+
         // Replace all matched patterns with span elements
         return msg.replace(tagPattern, (match, colorName, content) => {
             return `<span style="color: ${colorName}">${content}</span>`;
@@ -184,24 +185,24 @@ export class HSUtils {
     }
 
     // Remove color tags for console logging
-    static removeColorTags(msg: string) : string {
+    static removeColorTags(msg: string): string {
         try {
             const tagPattern = /<([a-zA-Z]+|#[0-9A-Fa-f]{3,6})>(.*?)<\/\1>/g;
-        
+
             return msg.replace(tagPattern, (match, colorName, content) => {
                 return `${content}`;
             });
-        } catch(e) {
+        } catch (e) {
             console.warn("Error removing color tags from log message", e);
             return `${msg}`;
         }
     }
 
-    static unfuckNumericString(str: string) : string {
-        if(!str) return str;
+    static unfuckNumericString(str: string): string {
+        if (!str) return str;
 
         // if the number is in e-notation, we can just parse it normally
-        if(str.toLowerCase().includes('e')) {
+        if (str.toLowerCase().includes('e')) {
             return str.replace(/,/g, '');
         }
 
@@ -214,7 +215,7 @@ export class HSUtils {
 
         let finalStr = '';
 
-        if(parts.length > 1) {
+        if (parts.length > 1) {
             finalStr = parts[0].replace(/,/g, '') + '.' + parts[1].replace(/,/g, '');
         } else {
             finalStr = cleanedStr.replace(/,/g, '');
@@ -238,7 +239,7 @@ export class HSUtils {
         try {
             // First try the prototype (which might be CSSStyleDeclaration.prototype)
             originalDisplayDescriptor = Object.getOwnPropertyDescriptor(
-                Object.getPrototypeOf(element.style), 
+                Object.getPrototypeOf(element.style),
                 'display'
             );
 
@@ -256,11 +257,11 @@ export class HSUtils {
                     configurable: true,
                     enumerable: true,
 
-                    get: function() { 
-                        return this.getPropertyValue('display'); 
+                    get: function () {
+                        return this.getPropertyValue('display');
                     },
 
-                    set: function(value: any) { 
+                    set: function (value: any) {
                         this.setProperty('display', value, '');
                     }
                 };
@@ -271,20 +272,20 @@ export class HSUtils {
                 configurable: true,
                 enumerable: true,
 
-                get: function() { 
-                    return this.getPropertyValue('display'); 
+                get: function () {
+                    return this.getPropertyValue('display');
                 },
 
-                set: function(value: any) { 
+                set: function (value: any) {
                     this.setProperty('display', value, '');
                 }
             };
         }
-        
-        Object.defineProperty(element.style, 'display', { get: function() { return 'none'; }, set: function() { return; }, configurable: true });
-        
-        element.style.setProperty = function(propertyName, value, priority) {
-            if (propertyName === 'display') 
+
+        Object.defineProperty(element.style, 'display', { get: function () { return 'none'; }, set: function () { return; }, configurable: true });
+
+        element.style.setProperty = function (propertyName, value, priority) {
+            if (propertyName === 'display')
                 return originalSetProperty.call(this, propertyName, 'none');
 
             return originalSetProperty.call(this, propertyName, value, priority);
@@ -323,7 +324,7 @@ export class HSUtils {
         await action();
         await HSUtils.wait(waitMs);
 
-        if(isDoubleModal) {
+        if (isDoubleModal) {
             okConfirm.click();
             await HSUtils.wait(waitMs);
 
@@ -337,12 +338,12 @@ export class HSUtils {
             killedConfirm.restore();
             killedAlertWrapper.restore();
 
-            if(alertOrConfirm === "alert") {
+            if (alertOrConfirm === "alert") {
                 okAlert.click();
             } else {
                 okConfirm.click();
             }
-        }      
+        }
     }
 
     static async Noop() {
@@ -372,13 +373,18 @@ export class HSUtils {
 
     static async isLatestVersion() {
         const latestRelease = await HSGithub.getLatestRelease();
-        
-        if(latestRelease) {
-            if(latestRelease.version !== HSGlobal.General.currentModVersion) {
+
+        if (latestRelease) {
+            if (latestRelease.version !== HSGlobal.General.currentModVersion) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    static asString(settingValue: HSSettingType): string {
+        if (settingValue === null) return '';
+        return String(settingValue);
     }
 }

@@ -5,6 +5,7 @@ import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
+import { HSAutosing } from "../../hs-modules/hs-autosing";
 
 /*
     Class: HSSettingActions
@@ -17,7 +18,7 @@ import { HSMouse } from "../hs-mouse";
 export class HSSettingActions {
     // Record for SettingActions
     // If some setting in hs-settings.json has "settingAction" set, the action should be defined here
-    #settingActions : Record<string, (params: HSSettingActionParams) => any> = {
+    #settingActions: Record<string, (params: HSSettingActionParams) => any> = {
 
         // Let this server as an EXAMPLE SETTINGACTION DEFINITION
         // NOTE THE EXPLICIT HANDLING OF WHEN PARAMS.DISABLE = TRUE
@@ -26,19 +27,19 @@ export class HSSettingActions {
             const notifElement = document.querySelector('#notification') as HTMLDivElement;
             const context = params.contextName ?? "HSSettings";
 
-            if(params.disable && params.disable === true) {
+            if (params.disable && params.disable === true) {
                 notifElement.style.removeProperty('opacity');
             } else {
                 const value = params.value;
 
-                if(notifElement && value && value >= 0 && value <= 1) {
+                if (notifElement && value && value >= 0 && value <= 1) {
                     notifElement.style.opacity = value.toString();
                 }
             }
         },
 
         logTimestamp: async (params: HSSettingActionParams) => {
-            if(params.disable && params.disable === true) {
+            if (params.disable && params.disable === true) {
                 HSLogger.setTimestampDisplay(false);
             } else {
                 HSLogger.setTimestampDisplay(true);
@@ -48,7 +49,7 @@ export class HSSettingActions {
         reactiveMouseHover: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
-            if(params.disable && params.disable === true) {
+            if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('hover');
             }
         },
@@ -56,7 +57,7 @@ export class HSSettingActions {
         autoClick: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
-            if(params.disable && params.disable === true) {
+            if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('click');
             }
         },
@@ -66,8 +67,8 @@ export class HSSettingActions {
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
 
-            if(ambrosiaMod) {
-                if(params.disable && params.disable === true) {
+            if (ambrosiaMod) {
+                if (params.disable && params.disable === true) {
                     await ambrosiaMod.destroyQuickBar();
                 } else {
                     await ambrosiaMod.createQuickBar();
@@ -80,8 +81,8 @@ export class HSSettingActions {
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
 
-            if(ambrosiaMod) {
-                if(params.disable && params.disable === true) {
+            if (ambrosiaMod) {
+                if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableBerryMinibars();
                 } else {
                     await ambrosiaMod.enableBerryMinibars();
@@ -92,15 +93,15 @@ export class HSSettingActions {
         patch: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
-            if(!params.patchConfig || !params.patchConfig.patchName) {
+            if (!params.patchConfig || !params.patchConfig.patchName) {
                 HSLogger.error("No patch config provided for setting action", context);
                 return;
             }
 
             const patchMod = HSModuleManager.getModule<HSPatches>('HSPatches');
 
-            if(patchMod) {
-                if(params.disable && params.disable === true) {
+            if (patchMod) {
+                if (params.disable && params.disable === true) {
                     console.log("Disabling patch", params.patchConfig.patchName, context);
                     await patchMod.revertPatch(params.patchConfig.patchName);
                 } else {
@@ -115,8 +116,8 @@ export class HSSettingActions {
 
             const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
 
-            if(gameDataMod) {
-                if(params.disable && params.disable === true) {
+            if (gameDataMod) {
+                if (params.disable && params.disable === true) {
                     gameDataMod.disableGDS();
                 } else {
                     gameDataMod.enableGDS();
@@ -129,8 +130,8 @@ export class HSSettingActions {
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
 
-            if(ambrosiaMod) {
-                if(params.disable && params.disable === true) {
+            if (ambrosiaMod) {
+                if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableAutoLoadout();
                 } else {
                     await ambrosiaMod.enableAutoLoadout();
@@ -143,13 +144,32 @@ export class HSSettingActions {
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
 
-            if(ambrosiaMod) {
-                if(params.disable && params.disable === true) {
+            if (ambrosiaMod) {
+                if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableIdleSwap();
                 } else {
                     await ambrosiaMod.enableIdleSwap();
                 }
             }
+        },
+
+        startAutoSingAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            if (autosingMod) {
+                if (params.disable && params.disable === true) {
+                    await autosingMod.disableAutoSing();
+                } else {
+                    await autosingMod.enableAutoSing();
+                }
+            }
+        },
+
+        createAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+
+            console.log("button works!");
         }
     }
 
@@ -157,10 +177,10 @@ export class HSSettingActions {
 
     }
 
-    getAction(actionName: string) : ((params: HSSettingActionParams) => any) | null {
+    getAction(actionName: string): ((params: HSSettingActionParams) => any) | null {
         const self = this;
 
-        if(actionName in this.#settingActions) {
+        if (actionName in this.#settingActions) {
             return (params: HSSettingActionParams) => {
                 self.#settingActions[actionName](params);
             };

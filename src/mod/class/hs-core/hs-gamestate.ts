@@ -39,7 +39,7 @@ export class HSGameState extends HSModule {
         'pseudoCoins',
     ];
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
     }
 
@@ -48,16 +48,16 @@ export class HSGameState extends HSModule {
         HSLogger.log(`Initializing HSGameState module`, this.context);
 
         // Setup watchers and handling for when main UI view changes
-        for(const view of this.#mainUIViews) {
+        for (const view of this.#mainUIViews) {
             const viewElement = document.querySelector(`#${view}`) as HTMLDivElement;
 
-            HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string}) => {
+            HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string }) => {
                 const { view, state } = viewState;
 
-                if(state !== 'none') {
+                if (state !== 'none') {
                     const uiView = new MainView(view);
 
-                    if(uiView.getId() !== MAIN_VIEW.UNKNOWN) {
+                    if (uiView.getId() !== MAIN_VIEW.UNKNOWN) {
                         self.#viewStates.MAIN_VIEW.previousView = self.#viewStates.MAIN_VIEW.currentView;
                         self.#viewStates.MAIN_VIEW.currentView = uiView;
                         HSLogger.debug(`Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
@@ -70,7 +70,7 @@ export class HSGameState extends HSModule {
                     self.#viewStates.MAIN_VIEW.viewChangeSubscribers.forEach((callback) => {
                         try {
                             callback(
-                                self.#viewStates.MAIN_VIEW.previousView, 
+                                self.#viewStates.MAIN_VIEW.previousView,
                                 self.#viewStates.MAIN_VIEW.currentView
                             );
                         } catch (e) {
@@ -80,46 +80,46 @@ export class HSGameState extends HSModule {
 
                     this.#resolveSubViewChanges(uiView.getId());
                 }
-            }, 
-            {
-                characterData: false,
-                childList: false,
-                subtree: false,
-                attributes: true,
-                attributeOldValue: false,
-                attributeFilter: ['style'],
-                valueParser: (element, mutations) => {
-                    for(const mutation of mutations) {
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                            const target = mutation.target as HTMLElement;
-                            const display = target.style.getPropertyValue('display');
-                            return {
-                                view: target.id,
-                                state: display
+            },
+                {
+                    characterData: false,
+                    childList: false,
+                    subtree: false,
+                    attributes: true,
+                    attributeOldValue: false,
+                    attributeFilter: ['style'],
+                    valueParser: (element, mutations) => {
+                        for (const mutation of mutations) {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                                const target = mutation.target as HTMLElement;
+                                const display = target.style.getPropertyValue('display');
+                                return {
+                                    view: target.id,
+                                    state: display
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
         }
 
         HSGlobal.HSGameState.viewProperties.forEach(async (viewProperties, mainViewId) => {
-            for(const subViewId of viewProperties.subViewIds) {
+            for (const subViewId of viewProperties.subViewIds) {
                 const viewElement = document.querySelector(`#${subViewId}`) as HTMLElement;
-    
-                HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string}) => {
+
+                HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string }) => {
                     const { view, state } = viewState;
-    
-                    if(state !== 'none') {
+
+                    if (state !== 'none') {
                         let subViewInstance: GameView<VIEW_TYPE> | undefined = undefined;
-    
+
                         try {
                             const ViewClass = this.#viewClasses[viewProperties.viewClassName];
 
                             if (!ViewClass) {
                                 throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
                             }
-                            
+
                             subViewInstance = new ViewClass(subViewId);
 
                         } catch (error) {
@@ -130,8 +130,8 @@ export class HSGameState extends HSModule {
                         const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
 
                         //console.log(subViewId, viewElement, state, viewKey, subViewInstance, subViewInstance.getId())
-                        
-                        if(subViewInstance.getId() !== self.#UNKNOWN_VIEW) {
+
+                        if (subViewInstance.getId() !== self.#UNKNOWN_VIEW) {
 
                             self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
                             self.#viewStates[viewKey].currentView = subViewInstance;
@@ -147,38 +147,38 @@ export class HSGameState extends HSModule {
                                     HSLogger.error(`Error when trying to call CUBE VIEW change subscriber callback: ${e}`, self.context);
                                 }
                             });
-    
+
                             HSLogger.debug(`Subview changed ${previousView.getName()} -> ${currentView.getName()}`, self.context);
                         } else {
                             HSLogger.warn(`Subview ${view} not found`, self.context);
                             return;
                         }
                     }
-                }, 
-                {
-                    characterData: false,
-                    childList: false,
-                    subtree: false,
-                    attributes: true,
-                    attributeOldValue: false,
-                    attributeFilter: ['style'],
-                    valueParser: (element, mutations) => {
-                        for(const mutation of mutations) {
-                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                                const target = mutation.target as HTMLElement;
-                                const display = target.style.getPropertyValue('display');
-                                return {
-                                    view: target.id,
-                                    state: display
+                },
+                    {
+                        characterData: false,
+                        childList: false,
+                        subtree: false,
+                        attributes: true,
+                        attributeOldValue: false,
+                        attributeFilter: ['style'],
+                        valueParser: (element, mutations) => {
+                            for (const mutation of mutations) {
+                                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                                    const target = mutation.target as HTMLElement;
+                                    const display = target.style.getPropertyValue('display');
+                                    return {
+                                        view: target.id,
+                                        state: display
+                                    }
                                 }
                             }
                         }
-                    }
-                });
+                    });
             }
         });
         // Setup watchers and handling for when cube tab changes
-        
+
 
         this.isInitialized = true;
     }
@@ -187,17 +187,17 @@ export class HSGameState extends HSModule {
         const id = HSUtils.uuidv4();
 
         this.#viewStates[viewKey]
-        .viewChangeSubscribers
-        .set(
-            id, 
-            callback as (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => void
-        );
+            .viewChangeSubscribers
+            .set(
+                id,
+                callback as (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => void
+            );
 
         return id;
     }
 
     unsubscribeGameStateChange(viewKey: VIEW_KEY, subscriptionId: string) {
-        if(this.#viewStates[viewKey].viewChangeSubscribers.has(subscriptionId)) {
+        if (this.#viewStates[viewKey].viewChangeSubscribers.has(subscriptionId)) {
             this.#viewStates[viewKey].viewChangeSubscribers.delete(subscriptionId);
         } else {
             HSLogger.warn(`Subscription ID ${subscriptionId} not found for view key ${viewKey}`, this.context);
@@ -207,28 +207,28 @@ export class HSGameState extends HSModule {
     async #resolveSubViewChanges(mainViewId: MAIN_VIEW) {
         const self = this;
         const viewProperties = HSGlobal.HSGameState.viewProperties.get(mainViewId);
-    
+
         if (!viewProperties) {
             HSLogger.debug(`No view properties found for main view ID ${mainViewId}`, this.context);
             return;
         }
-    
+
         const tabs = await HSElementHooker.HookElements(viewProperties.subViewsSelector);
-    
+
         tabs.forEach(async (tab) => {
             const tabId = tab.id;
             const tabState = tab.style.getPropertyValue('display');
-    
+
             if (tabState !== 'none') {
                 let subViewInstance: GameView<VIEW_TYPE> | undefined = undefined;
-    
+
                 try {
                     const ViewClass = this.#viewClasses[viewProperties.viewClassName];
 
                     if (!ViewClass) {
                         throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
                     }
-    
+
                     subViewInstance = new ViewClass(tabId);
 
                 } catch (error) {
@@ -237,7 +237,7 @@ export class HSGameState extends HSModule {
                 }
 
                 const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
-    
+
                 if (subViewInstance && subViewInstance.getId() !== this.#UNKNOWN_VIEW) {
                     self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
                     self.#viewStates[viewKey].currentView = subViewInstance;
@@ -295,7 +295,7 @@ export class MainView extends GameView<MAIN_VIEW> {
     }
 
     getViewEnum(view: string): MAIN_VIEW {
-        switch(view) {
+        switch (view) {
             case 'buildings': return MAIN_VIEW.BUILDINGS;
             case 'upgrades': return MAIN_VIEW.UPGRADES;
             case 'statistics': return MAIN_VIEW.STATISTICS;
@@ -329,7 +329,7 @@ export class CubeView extends GameView<CUBE_VIEW> {
     }
 
     getViewEnum(tab: string): CUBE_VIEW {
-        switch(tab) {
+        switch (tab) {
             case 'cubeTab1': return CUBE_VIEW.CUBE_TRIBUTES;
             case 'cubeTab2': return CUBE_VIEW.TESSERACT_GIFTS;
             case 'cubeTab3': return CUBE_VIEW.HYPERCUBE_BENEDICTIONS;
@@ -355,11 +355,12 @@ export class SingularityView extends GameView<SINGULARITY_VIEW> {
     }
 
     getViewEnum(tab: string): SINGULARITY_VIEW {
-        switch(tab) {
-            case 'singularityContainer1': return SINGULARITY_VIEW.SHOP;
-            case 'singularityContainer2': return SINGULARITY_VIEW.PERKS;
-            case 'singularityContainer3': return SINGULARITY_VIEW.OCTERACTS;
-            case 'singularityContainer4': return SINGULARITY_VIEW.AMBROSIA;
+        switch (tab) {
+            case 'singularitycontainer1': return SINGULARITY_VIEW.ELEVATOR;
+            case 'singularityContainer2': return SINGULARITY_VIEW.SHOP;
+            case 'singularityContainer3': return SINGULARITY_VIEW.PERKS;
+            case 'singularityContainer4': return SINGULARITY_VIEW.OCTERACTS;
+            case 'singularityContainer5': return SINGULARITY_VIEW.AMBROSIA;
         }
         return SINGULARITY_VIEW.UNKNOWN;
     }

@@ -42,5 +42,13 @@
     "debug": {
         "groupName": "Debugging settings",
         "order": 11
+    },
+    "auto-sing": {
+        "groupName": "Auto-Sing settings",
+        "order": 12
+    },
+    "auto-sing-strategy": {
+        "groupName": "Auto-Sing strategy settings",
+        "order": 13
     }
 }

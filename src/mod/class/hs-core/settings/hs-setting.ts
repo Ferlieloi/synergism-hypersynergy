@@ -21,7 +21,7 @@ export abstract class HSSetting<T extends HSSettingType> {
     protected settingAction?: ((params: HSSettingActionParams) => any) | null;
 
     constructor(
-        settingDefinition: HSSettingBase<T>, 
+        settingDefinition: HSSettingBase<T>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
         disabledString: string) {
@@ -64,50 +64,50 @@ export abstract class HSSetting<T extends HSSettingType> {
         // 4. Check if the setting we are trying to enable uses game data
         // 5. Allow or disallow enabling the setting
         // We're trying to prevent enabling settings which use game data when game data is not enabled
-        if(!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(this.definition.settingName)) {
-            if(gameDataSetting) {
-                if(this.definition.usesGameData && 
+        if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(this.definition.settingName)) {
+            if (gameDataSetting) {
+                if (this.definition.usesGameData &&
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {
-                        HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`);
-                        return;
-                    }
+                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`);
+                    return;
+                }
             }
         }
 
         // If we are disabling GDS, we will auto-disable all features that use it
-        if(this.definition.settingName === 'useGameData') {
-            if(hasStateChanged && !newState) {
+        if (this.definition.settingName === 'useGameData') {
+            if (hasStateChanged && !newState) {
                 const settings = HSSettings.getSettings();
-                    
-                for(const [settingKey, setting] of Object.entries(settings)) {
+
+                for (const [settingKey, setting] of Object.entries(settings)) {
                     const def = setting.getDefinition();
 
-                    if(HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
+                    if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
                         continue;
 
-                    if("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
+                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
                         setting.disable();
                     }
                 }
             }
         }
-        
+
         HSLogger.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${!this.definition.enabled}`, this.context);
 
-        if(!hasStateChanged) return;
+        if (!hasStateChanged) return;
 
         this.definition.enabled = newState;
 
-        if(this.definition.settingType === 'boolean') {
-            (this.definition as HSSettingBase<boolean>).settingValue  = newState;
+        if (this.definition.settingType === 'boolean') {
+            (this.definition as HSSettingBase<boolean>).settingValue = newState;
             (this.definition as HSSettingBase<boolean>).calculatedSettingValue = newState;
         }
 
         const targetElement = (e.target as HTMLDivElement);
 
-        if(newState) {
+        if (newState) {
             targetElement.innerText = this.#settingEnabledString;
             targetElement.classList.remove('hs-disabled');
         } else {
@@ -120,19 +120,19 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     #handleManualToggle(newState: boolean) {
         const hasStateChanged = this.definition.enabled !== newState;
-        if(!hasStateChanged) return;
+        if (!hasStateChanged) return;
 
-        if(this.definition.settingName === 'useGameData') {
-            if(hasStateChanged && !newState) {
+        if (this.definition.settingName === 'useGameData') {
+            if (hasStateChanged && !newState) {
                 const settings = HSSettings.getSettings();
-                    
-                for(const [settingKey, setting] of Object.entries(settings)) {
+
+                for (const [settingKey, setting] of Object.entries(settings)) {
                     const def = setting.getDefinition();
 
-                    if(HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
+                    if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
                         continue;
 
-                    if("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
+                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
                         setting.disable();
                     }
                 }
@@ -145,7 +145,7 @@ export abstract class HSSetting<T extends HSSettingType> {
 
         const toggleElement = document.querySelector(`#${this.definition.settingControl?.controlEnabledId}`) as HTMLDivElement;
 
-        if(newState && toggleElement) {
+        if (newState && toggleElement) {
             toggleElement.innerText = this.#settingEnabledString;
             toggleElement.classList.remove('hs-disabled');
         } else {
@@ -164,21 +164,21 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     // Handles a setting's settingAction for all settings
     protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean): Promise<void> {
-        if(this.settingAction) {
+        if (this.settingAction) {
             const action = this.settingAction;
 
-            const actionConfig : HSSettingActionParams = {
+            const actionConfig: HSSettingActionParams = {
                 contextName: this.context,
                 value: this.definition.calculatedSettingValue ?? null
             }
 
-            if(this.definition.patchConfig && this.definition.patchConfig.patchName) {
+            if (this.definition.patchConfig && this.definition.patchConfig.patchName) {
                 actionConfig.patchConfig = this.definition.patchConfig;
             }
 
-            if(action && action instanceof Function) {
-                if(changeType === "state") {
-                    if(newState) {
+            if (action && action instanceof Function) {
+                if (changeType === "state") {
+                    if (newState) {
                         await action({
                             ...actionConfig,
                             disable: false
@@ -203,7 +203,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         return ('settingControl' in this.definition);
     }
 
-    isEnabled() : boolean {
+    isEnabled(): boolean {
         return this.definition.enabled;
     }
 
@@ -215,21 +215,51 @@ export abstract class HSSetting<T extends HSSettingType> {
         return JSON.stringify(this.definition);
     }
 
-    abstract getValue() : T;
-    abstract setValue(value: T) : void;
-    abstract handleChange(e: Event) : Promise<void>;
+    abstract getValue(): T;
+    abstract setValue(value: T): void;
+    abstract handleChange(e: Event): Promise<void>;
+}
+
+export class HSButtonSetting extends HSSetting<null> {
+    constructor(
+        settingDefinition: HSSettingBase<null>,
+        settingAction: ((params: HSSettingActionParams) => any) | null,
+        enabledString: string,
+        disabledString: string
+    ) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
+
+        this.definition.enabled = true;
+        this.definition.settingValue = null as any;
+        this.definition.calculatedSettingValue = null;
+    }
+    getValue(): null {
+        return null;
+    }
+
+    setValue(_: null): void {
+
+    }
+
+    async handleChange(e: Event): Promise<void> {
+        HSLogger.log(`Button pressed: ${this.definition.settingName}`, this.context);
+        await this.handleSettingAction("value");
+    }
+
+    enable(): void { }
+    disable(): void { }
 }
 
 export class HSNumericSetting extends HSSetting<number> {
     constructor(
-        settingDefinition: HSSettingBase<number>, 
+        settingDefinition: HSSettingBase<number>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
         disabledString: string) {
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        super(settingDefinition, settingAction, enabledString, disabledString);
 
-            if(this.definition.settingValueMultiplier)
-                this.definition.calculatedSettingValue = this.definition.settingValue * this.definition.settingValueMultiplier;
+        if (this.definition.settingValueMultiplier)
+            this.definition.calculatedSettingValue = this.definition.settingValue * this.definition.settingValueMultiplier;
     }
 
     getValue() {
@@ -246,7 +276,7 @@ export class HSNumericSetting extends HSSetting<number> {
         const newValue = parseFloat((e.target as HTMLInputElement).value);
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${newValue}`, this.context);
-        
+
         this.definition.settingValue = newValue;
         this.definition.calculatedSettingValue = newValue * this.definition.settingValueMultiplier;
 
@@ -256,11 +286,11 @@ export class HSNumericSetting extends HSSetting<number> {
 
 export class HSStringSetting extends HSSetting<string> {
     constructor(
-        settingDefinition: HSSettingBase<string>, 
+        settingDefinition: HSSettingBase<string>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
-        disabledString: string) { 
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        disabledString: string) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
     }
 
     getValue() {
@@ -284,11 +314,11 @@ export class HSStringSetting extends HSSetting<string> {
 
 export class HSBooleanSetting extends HSSetting<boolean> {
     constructor(
-        settingDefinition: HSSettingBase<boolean>, 
+        settingDefinition: HSSettingBase<boolean>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
         disabledString: string) {
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        super(settingDefinition, settingAction, enabledString, disabledString);
     }
 
     getValue() {
@@ -307,14 +337,14 @@ export class HSBooleanSetting extends HSSetting<boolean> {
 
 export class HSSelectNumericSetting extends HSSetting<number> {
     constructor(
-        settingDefinition: HSSettingBase<number>, 
+        settingDefinition: HSSettingBase<number>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
         disabledString: string) {
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        super(settingDefinition, settingAction, enabledString, disabledString);
 
-            if(this.definition.settingValueMultiplier)
-                this.definition.calculatedSettingValue = this.definition.settingValue * this.definition.settingValueMultiplier;
+        if (this.definition.settingValueMultiplier)
+            this.definition.calculatedSettingValue = this.definition.settingValue * this.definition.settingValueMultiplier;
     }
 
     getValue() {
@@ -331,7 +361,7 @@ export class HSSelectNumericSetting extends HSSetting<number> {
         const newValue = parseFloat((e.target as HTMLSelectElement).value);
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${newValue}`, this.context);
-        
+
         this.definition.settingValue = newValue;
         this.definition.calculatedSettingValue = newValue * this.definition.settingValueMultiplier;
 
@@ -341,11 +371,11 @@ export class HSSelectNumericSetting extends HSSetting<number> {
 
 export class HSSelectStringSetting extends HSSetting<string> {
     constructor(
-        settingDefinition: HSSettingBase<string>, 
+        settingDefinition: HSSettingBase<string>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
-        disabledString: string) { 
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        disabledString: string) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
     }
 
     getValue() {
@@ -369,11 +399,11 @@ export class HSSelectStringSetting extends HSSetting<string> {
 
 export class HSStateSetting extends HSSetting<string> {
     constructor(
-        settingDefinition: HSSettingBase<string>, 
+        settingDefinition: HSSettingBase<string>,
         settingAction: ((params: HSSettingActionParams) => any) | null,
         enabledString: string,
-        disabledString: string) { 
-            super(settingDefinition, settingAction, enabledString, disabledString);
+        disabledString: string) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
     }
 
     getValue() {
@@ -387,10 +417,10 @@ export class HSStateSetting extends HSSetting<string> {
     setValue(value: string) {
         this.definition.settingValue = value;
         this.definition.calculatedSettingValue = value;
-    
+
         const stateElement = document.querySelector(`#${this.definition.settingControl?.controlId}`) as HTMLParagraphElement;
 
-        if(stateElement) {
+        if (stateElement) {
             stateElement.innerHTML = this.getDisplayValue();
         }
 

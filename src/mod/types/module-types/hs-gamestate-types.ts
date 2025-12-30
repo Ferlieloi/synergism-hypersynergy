@@ -44,10 +44,11 @@ export enum CUBE_VIEW {
 export enum SINGULARITY_VIEW {
     UNKNOWN = -1,
 
-    SHOP = 1,
-    PERKS = 2,
-    OCTERACTS = 3,
-    AMBROSIA = 4
+    ELEVATOR = 1,
+    SHOP = 2,
+    PERKS = 3,
+    OCTERACTS = 4,
+    AMBROSIA = 5
 }
 
 export enum GAME_STATE_CHANGE {

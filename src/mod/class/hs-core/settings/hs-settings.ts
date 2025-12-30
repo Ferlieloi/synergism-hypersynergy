@@ -1,14 +1,15 @@
-import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType, HSAutosingStrategy, AutosingStrategyPhase, PhaseOption } from "../../../types/module-types/hs-settings-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
+import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
 import { HSSettingActions } from "./hs-setting-action";
-import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSetting, HSStateSetting, HSStringSetting } from "./hs-setting";
+import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
@@ -31,9 +32,9 @@ import { HSModuleOptions } from "../../../types/hs-types";
 export class HSSettings extends HSModule {
     static #staticContext = '';
 
-    static #settings : HSSettingRecord = {} as HSSettingRecord;
-    static #settingsControlGroups : Record<string, HSSettingControlGroup>;
-    static #settingsControlPages : Record<keyof HSSettingControlPage, HSSettingControlPage>;
+    static #settings: HSSettingRecord = {} as HSSettingRecord;
+    static #settingsControlGroups: Record<string, HSSettingControlGroup>;
+    static #settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
 
     static #settingsParsed = false;
     static #settingsSynced = false;
@@ -41,9 +42,9 @@ export class HSSettings extends HSModule {
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
 
-    #settingActions : HSSettingActions;
+    #settingActions: HSSettingActions;
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
 
         HSSettings.#staticContext = this.context;
@@ -55,7 +56,7 @@ export class HSSettings extends HSModule {
         try {
             HSLogger.log(`Parsing control groups`, this.context);
             HSSettings.#settingsControlGroups = JSON.parse(settings_control_groups) as Record<string, HSSettingControlGroup>;
-        } catch(e) {
+        } catch (e) {
             HSLogger.error(`Error parsing control groups ${e}`, this.context);
             HSSettings.#settingsParsed = false;
         }
@@ -64,7 +65,7 @@ export class HSSettings extends HSModule {
         try {
             HSLogger.log(`Parsing control pages`, this.context);
             HSSettings.#settingsControlPages = JSON.parse(settings_control_pages) as Record<keyof HSSettingControlPage, HSSettingControlPage>;
-        } catch(e) {
+        } catch (e) {
             HSLogger.error(`Error parsing control pages ${e}`, this.context);
             HSSettings.#settingsParsed = false;
         }
@@ -79,7 +80,7 @@ export class HSSettings extends HSModule {
 
             let gameDataSettingState;
 
-            if("useGameData" in resolvedSettings) {
+            if ("useGameData" in resolvedSettings) {
                 const gameDataSetting = resolvedSettings.useGameData;
                 gameDataSettingState = gameDataSetting.enabled;
             } else {
@@ -88,15 +89,15 @@ export class HSSettings extends HSModule {
 
             // Set default values for each setting
             for (const [key, setting] of Object.typedEntries<HSSettingsDefinition>(resolvedSettings)) {
-                
-                if(setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
+
+                if (setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
                     (setting as any).settingValue = false;
                 }
 
                 // If somehow we're loading a setting that uses game data, but game data is disabled in the loaded settings
                 // We disable this setting too
-                if(setting.usesGameData && setting.enabled && !gameDataSettingState) {
-                    if(!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(key)) {
+                if (setting.usesGameData && setting.enabled && !gameDataSettingState) {
+                    if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(key)) {
                         HSLogger.info(`Disabled ${setting.settingDescription} on load because GDS is not on`, this.context);
                         setting.enabled = false;
                     }
@@ -108,53 +109,60 @@ export class HSSettings extends HSModule {
                 const settingAction = settingActionName ? this.#settingActions.getAction(settingActionName) : null;
 
                 // Instantiate the setting as HSSetting objects based on their type
-                if(setting.settingType === 'numeric') {
+                if (setting.settingType === 'numeric') {
 
-                    if(!('settingValueMultiplier' in setting as any))
+                    if (!('settingValueMultiplier' in setting as any))
                         (setting as any).settingValueMultiplier = 1;
-                    
+
                     (HSSettings.#settings as any)[key] = new HSNumericSetting(
-                        setting as unknown as HSSettingBase<number>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<number>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
-                } else if(setting.settingType === 'string') {
+                } else if (setting.settingType === 'string') {
                     (HSSettings.#settings as any)[key] = new HSStringSetting(
-                        setting as unknown as HSSettingBase<string>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<string>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
-                } else if(setting.settingType === 'boolean') {
+                } else if (setting.settingType === 'boolean') {
                     (HSSettings.#settings as any)[key] = new HSBooleanSetting(
-                        setting as unknown as HSSettingBase<boolean>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<boolean>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
-                } else if(setting.settingType === 'selectnumeric') {
-                    if(!('settingValueMultiplier' in setting as any))
+                } else if (setting.settingType === 'selectnumeric') {
+                    if (!('settingValueMultiplier' in setting as any))
                         (setting as any).settingValueMultiplier = 1;
 
                     (HSSettings.#settings as any)[key] = new HSSelectNumericSetting(
-                        setting as unknown as HSSettingBase<number>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<number>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
-                } else if(setting.settingType === 'selectstring') {
+                } else if (setting.settingType === 'selectstring') {
                     (HSSettings.#settings as any)[key] = new HSSelectStringSetting(
-                        setting as unknown as HSSettingBase<string>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<string>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
-                } else if(setting.settingType === 'state') {
+                } else if (setting.settingType === 'state') {
                     (HSSettings.#settings as any)[key] = new HSStateSetting(
-                        setting as unknown as HSSettingBase<string>, 
-                        settingAction, 
-                        HSSettings.#settingEnabledString, 
+                        setting as unknown as HSSettingBase<string>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
+                        HSSettings.#settingDisabledString
+                    );
+                } else if (setting.settingType === 'button') {
+                    (HSSettings.#settings as any)[key] = new HSButtonSetting(
+                        setting as unknown as HSSettingBase<null>,
+                        settingAction,
+                        HSSettings.#settingEnabledString,
                         HSSettings.#settingDisabledString
                     );
                 } else {
@@ -177,7 +185,7 @@ export class HSSettings extends HSModule {
     static async syncSettings() {
         HSLogger.log(`Syncing mod settings`, HSSettings.#staticContext);
 
-        if(!HSSettings.#settingsParsed) {
+        if (!HSSettings.#settingsParsed) {
             HSLogger.error(`Could not sync settings - settings not parsed yet`, HSSettings.#staticContext);
             return;
         }
@@ -185,39 +193,39 @@ export class HSSettings extends HSModule {
         // Update the setting UI controls with the configured values in hs-settings.json
         for (const [key, settingObj] of Object.typedEntries(HSSettings.#settings)) {
             HSLogger.debug(`Syncing ${key} settings`, HSSettings.#staticContext);
-            
+
             const setting = settingObj.getDefinition();
             const controlSettings = settingObj.hasControls() ? setting.settingControl : undefined;
 
-            if(controlSettings) {
+            if (controlSettings) {
                 const controlType = controlSettings.controlType;
                 const controlOptions = controlSettings.controlOptions;
 
                 // Render input for all the text and number settings
                 // NOTE: switch settings do not need any input to be rendered
-                if(controlType === "text" || controlType === "number") {
+                if (controlType === "text" || controlType === "number") {
                     const valueElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLInputElement;
 
-                    if(valueElement) {
-                        if(controlType === "number" && controlOptions) {
-                            if('min' in controlOptions) valueElement.setAttribute('min', controlOptions.min!.toString());
-                            if('max' in controlOptions) valueElement.setAttribute('max', controlOptions.max!.toString());
-                            if('step' in controlOptions) valueElement.setAttribute('step', controlOptions.step!.toString());
-                        } else if(controlType === "text" && controlOptions) {
-                            if('placeholder' in controlOptions) valueElement.setAttribute('placeholder', controlOptions.placeholder!);
+                    if (valueElement) {
+                        if (controlType === "number" && controlOptions) {
+                            if ('min' in controlOptions) valueElement.setAttribute('min', controlOptions.min!.toString());
+                            if ('max' in controlOptions) valueElement.setAttribute('max', controlOptions.max!.toString());
+                            if ('step' in controlOptions) valueElement.setAttribute('step', controlOptions.step!.toString());
+                        } else if (controlType === "text" && controlOptions) {
+                            if ('placeholder' in controlOptions) valueElement.setAttribute('placeholder', controlOptions.placeholder!);
                         }
 
                         // Set the input value to the JSON setting value
-                        valueElement.value = setting.settingValue.toString();
+                        valueElement.value = HSUtils.asString(setting.settingValue);
 
                         // Listen for changes in the UI input to change the setting value
                         valueElement.addEventListener('change', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
                     }
-                } else if(controlType === "select") { // Render input for all the select settings
-                    const settingValue = setting.settingValue.toString();
+                } else if (controlType === "select") { // Render input for all the select settings
+                    const settingValue = HSUtils.asString(setting.settingValue);
                     const selectElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement;
 
-                    if(selectElement) {
+                    if (selectElement) {
                         const optionExists = Array.from(selectElement.options).some(option => option.value === settingValue);
 
                         if (optionExists) {
@@ -231,22 +239,28 @@ export class HSSettings extends HSModule {
                         // Listen for changes in the UI input to change the setting value
                         selectElement.addEventListener('change', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
                     }
-                } else if(controlType === "state") { // Render input for all the select settings
-                    const settingValue = HSUtils.parseColorTags(setting.settingValue.toString());
+                } else if (controlType === "state") { // Render input for all the select settings
+                    const settingValue = HSUtils.parseColorTags(HSUtils.asString(setting.settingValue));
                     const stateElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement;
 
-                    if(stateElement) {
+                    if (stateElement) {
                         stateElement.innerHTML = settingValue;
+                    }
+                } else if (controlType === "button") {
+                    // Buttons should invoke the setting's handleChange when clicked
+                    const buttonElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLButtonElement;
+
+                    if (buttonElement) {
+                        buttonElement.addEventListener('click', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
                     }
                 }
 
-
                 // This sets up the  "✓" / "✗" button next to the setting input (switch type settings just need this one)
-                if(controlSettings.controlEnabledId) {
+                if (controlSettings.controlEnabledId) {
                     const toggleElement = document.querySelector(`#${controlSettings.controlEnabledId}`) as HTMLDivElement;
 
-                    if(toggleElement) {
-                        if(setting.enabled) {
+                    if (toggleElement) {
+                        if (setting.enabled) {
                             toggleElement.innerText = HSSettings.#settingEnabledString;
                             toggleElement.classList.remove('hs-disabled');
                         } else {
@@ -268,15 +282,15 @@ export class HSSettings extends HSModule {
     }
 
     // Builds the settings UI in the mod's panel
-    static autoBuildSettingsUI() : { didBuild: boolean, navHTML: string, pagesHTML: string } {
+    static autoBuildSettingsUI(): { didBuild: boolean, navHTML: string, pagesHTML: string } {
         const self = this;
 
-        if(!HSSettings.#settingsParsed) {
+        if (!HSSettings.#settingsParsed) {
             HSLogger.error(`Could not sync settings - settings not parsed yet`, HSSettings.#staticContext);
             return { didBuild: false, navHTML: '', pagesHTML: '' };
         }
 
-        const settingsBlocks : string[] = [];
+        const settingsBlocks: string[] = [];
         let didBuild = true;
 
         // Sort the settings by their control group
@@ -284,11 +298,11 @@ export class HSSettings extends HSModule {
             const aControlGroup = a[1].getDefinition().settingControl?.controlGroup;
             const bControlGroup = b[1].getDefinition().settingControl?.controlGroup;
 
-            if(aControlGroup && bControlGroup) {
+            if (aControlGroup && bControlGroup) {
                 return (HSSettings.#settingsControlGroups[aControlGroup].order || 0) - (HSSettings.#settingsControlGroups[bControlGroup].order || 0);
-            } else if(aControlGroup) {
+            } else if (aControlGroup) {
                 return -1;
-            } else if(bControlGroup) {
+            } else if (bControlGroup) {
                 return 1;
             } else {
                 return 0;
@@ -300,11 +314,11 @@ export class HSSettings extends HSModule {
             const aPage = a[1].order;
             const bPage = b[1].order;
 
-            if(aPage && bPage) {
+            if (aPage && bPage) {
                 return (aPage || 0) - (bPage || 0);
-            } else if(aPage) {
+            } else if (aPage) {
                 return -1;
-            } else if(bPage) {
+            } else if (bPage) {
                 return 1;
             } else {
                 return 0;
@@ -316,7 +330,7 @@ export class HSSettings extends HSModule {
         for (const [key, page] of sortedPages) {
             const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
 
-            if(!haveAnySettingsForPage) continue;
+            if (!haveAnySettingsForPage) continue;
 
             subTabs.push(HSUIC.Div({
                 class: 'hs-panel-subtab',
@@ -336,7 +350,7 @@ export class HSSettings extends HSModule {
 
         let pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
 
-        let currentControlGroup : string | null = null;
+        let currentControlGroup: string | null = null;
 
         for (const [key, settingObj] of sortedSettings) {
             const setting = settingObj.getDefinition();
@@ -345,8 +359,8 @@ export class HSSettings extends HSModule {
 
             let gameDataIcon = "";
 
-            if(setting.usesGameData) {
-                gameDataIcon = HSUIC.Image({ 
+            if (setting.usesGameData) {
+                gameDataIcon = HSUIC.Image({
                     class: 'hs-panel-setting-block-gamedata-icon',
                     src: sIconB64,
                     width: 18,
@@ -355,18 +369,18 @@ export class HSSettings extends HSModule {
                 });
             }
 
-            if(controls) {
+            if (controls) {
                 const pageHTMLs = pagesHTML.get(controls.controlPage) || [];
-                let components : string[] = [];
+                let components: string[] = [];
 
                 // Check if the control group is different from the previous one
                 // If so, create a new setting group header
-                if(!currentControlGroup || currentControlGroup !== controls.controlGroup) {
+                if (!currentControlGroup || currentControlGroup !== controls.controlGroup) {
                     currentControlGroup = controls.controlGroup;
                     const controlGroup = HSSettings.#settingsControlGroups[currentControlGroup];
 
                     // Create control group header
-                    pageHTMLs.push(HSUIC.Div({ 
+                    pageHTMLs.push(HSUIC.Div({
                         html: controlGroup.groupName,
                         styles: {
                             borderBottom: '1px solid limegreen',
@@ -376,10 +390,10 @@ export class HSSettings extends HSModule {
                     }))
                 }
 
-                if(controls.controlType === "switch") {
+                if (controls.controlType === "switch") {
                     components = [
                         HSUIC.Div({
-                            class: 'hs-panel-setting-block-text-wrapper', 
+                            class: 'hs-panel-setting-block-text-wrapper',
                             styles: {
                                 display: 'flex',
                                 flexDirection: 'row',
@@ -387,23 +401,30 @@ export class HSSettings extends HSModule {
                             },
                             html: [
                                 HSUIC.P({
-                                    class: 'hs-panel-setting-block-text', 
+                                    class: 'hs-panel-setting-block-text',
                                     props: { title: setting.settingHelpText },
-                                    text: setting.settingDescription, 
-                                    styles: { margin: '0' } 
-                                }), 
+                                    text: setting.settingDescription,
+                                    styles: { margin: '0' }
+                                }),
                                 gameDataIcon
-                            ] 
+                            ]
                         }),
                     ]
 
-                    if(controls.controlEnabledId) {
+                    if (controls.controlEnabledId) {
                         components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn hs-panel-settings-block-btn-standalone', id: controls.controlEnabledId, text: "" }))
                     }
+                } else if (controls.controlType === "button") {
+                    components = [
+                        HSUIC.Button({
+                            id: controls.controlId!,
+                            text: setting.settingDescription || 'Error: No button text'
+                        })
+                    ];
                 } else {
-                    let convertedType : HSInputType | null = null;
+                    let convertedType: HSInputType | null = null;
 
-                    switch(controls.controlType) {
+                    switch (controls.controlType) {
                         case "text":
                             convertedType = HSInputType.TEXT;
                             break;
@@ -420,33 +441,33 @@ export class HSSettings extends HSModule {
                             convertedType = null;
                     }
 
-                    if(convertedType) {
+                    if (convertedType) {
                         // Setting header
-                        components = [ 
-                            HSUIC.Div({ 
-                                class: 'hs-panel-setting-block-text-wrapper', 
+                        components = [
+                            HSUIC.Div({
+                                class: 'hs-panel-setting-block-text-wrapper',
                                 styles: {
                                     display: 'flex',
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                 },
                                 html: [
-                                    HSUIC.P({ 
-                                        class: 'hs-panel-setting-block-text', 
+                                    HSUIC.P({
+                                        class: 'hs-panel-setting-block-text',
                                         props: { title: setting.settingHelpText },
-                                        text: setting.settingDescription, 
-                                        styles: { margin: '0' } 
-                                    }), 
+                                        text: setting.settingDescription,
+                                        styles: { margin: '0' }
+                                    }),
                                     gameDataIcon
-                                ] 
+                                ]
                             })
                         ];
 
                         // Setting value input
-                        if(convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
+                        if (convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
                             components.push(HSUIC.Input({ class: 'hs-panel-setting-block-num-input', id: controls.controlId, type: convertedType }));
-                        } else if(convertedType === HSInputType.SELECT) {
-                            if(controls.selectOptions) {
+                        } else if (convertedType === HSInputType.SELECT) {
+                            if (controls.selectOptions) {
                                 components.push(HSUIC.Select(
                                     { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType },
                                     controls.selectOptions
@@ -456,12 +477,12 @@ export class HSSettings extends HSModule {
                                 didBuild = false;
                                 break;
                             }
-                        } else if(convertedType === HSInputType.STATE) {
+                        } else if (convertedType === HSInputType.STATE) {
                             components.push(HSUIC.P({ class: 'hs-panel-setting-block-state', id: controls.controlId, text: "" }));
                         }
 
                         // Create setting on/off toggle
-                        if(controls.controlEnabledId) {
+                        if (controls.controlEnabledId) {
                             components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn', id: controls.controlEnabledId, text: "" }))
                         }
                     } else {
@@ -472,8 +493,8 @@ export class HSSettings extends HSModule {
                 }
 
                 // Create setting block which contains the setting header, value input and on/off toggle
-                
-                pageHTMLs.push(HSUIC.Div({ 
+
+                pageHTMLs.push(HSUIC.Div({
                     id: settingBlockId,
                     class: 'hs-panel-setting-block',
                     html: components
@@ -487,7 +508,7 @@ export class HSSettings extends HSModule {
             }
         }
 
-        for(const [pageName, pages] of pagesHTML.entries()) {
+        for (const [pageName, pages] of pagesHTML.entries()) {
             pagesHTML.set(pageName, [HSUIC.Div({
                 class: 'hs-panel-settings-grid',
                 id: `settings-grid-${pageName}`,
@@ -497,7 +518,7 @@ export class HSSettings extends HSModule {
 
         const flatPages = [];
 
-        for(const [pageName, pages] of pagesHTML.entries()) {
+        for (const [pageName, pages] of pagesHTML.entries()) {
             flatPages.push(pages.join(''));
         }
 
@@ -508,74 +529,149 @@ export class HSSettings extends HSModule {
         };
     }
 
-    #validateSetting(setting: HSSettingBase<HSSettingType>, controlGroups: Record<string, HSSettingControlGroup>) {
-        if(!setting) throw new Error(`Setting is undefined (wtf)`);
+    #validateStrategy(strategy: HSAutosingStrategy) {
+        if (!strategy) throw new Error('Strategy is undefined');
+        if (!('strategyName' in strategy)) throw new Error('Strategy is missing strategyName property');
+        if (!('strategy' in strategy)) throw new Error('Strategy is missing strategy property');
+        if (!Array.isArray(strategy.strategy)) throw new Error('Strategy.strategy must be an array');
+        const components = strategy.strategy as AutosingStrategyPhase[];
+        if (components.length === 0) {
+            throw new Error('Strategy has no components');
+        }
+        let remainingPhases = [
+            "start",
+            "prestige",
+            "transcend",
+            "reincarnate",
+            "ant",
+            "sacrifice",
+            "ascension",
+            "challenge10",
+            "challenge11",
+            "challenge12",
+            "challenge13",
+            "challenge14",
+            "w5x10max",
+            "alpha",
+            "p2x1x10",
+            "p3x1",
+            "beta",
+            "1e15-expo",
+            "omega",
+            "singularity",
+            ""
+        ];
 
-         // These should be the same as HSSettingsControlType in hs-settings-types.ts
-         const validControlTypes = ['text', 'number', 'switch', 'select', 'state'];
+        for (let i = 0; i < components.length; i++) {
+            const component = components[i];
+            const { startPhase, endPhase, corruptions, strat: challenges } = component;
+
+            if (!corruptions) {
+                throw new Error(
+                    `Component ${i} (${startPhase} → ${endPhase}) has no corruptions defined`,
+                );
+            }
+
+            if (!Array.isArray(challenges) || challenges.length === 0) {
+                throw new Error(
+                    `Component ${i} (${startPhase} → ${endPhase}) must have at least one challenge`,
+                );
+            }
+
+            // Rule: must start at leftmost remaining phase
+            if (remainingPhases[0] !== startPhase) {
+                throw new Error(
+                    `Component ${i} must start at "${remainingPhases[0]}", got "${startPhase}"`,
+                );
+            }
+
+            const endIndex = remainingPhases.indexOf(endPhase);
+
+            if (endIndex === -1) {
+                throw new Error(
+                    `Component ${i} ends at "${endPhase}", which is not valid or already consumed`,
+                );
+            }
+
+            // Consume phases from the left
+            remainingPhases = remainingPhases.slice(endIndex);
+        }
+        // all phases must be consumed
+        if (remainingPhases.length > 1) {
+            throw new Error(
+                `Uncovered phases: ${remainingPhases.join(', ')}`,
+            );
+        }
+    }
+
+    #validateSetting(setting: HSSettingBase<HSSettingType>, controlGroups: Record<string, HSSettingControlGroup>) {
+        if (!setting) throw new Error(`Setting is undefined (wtf)`);
+
+        // These should be the same as HSSettingsControlType in hs-settings-types.ts
+        const validControlTypes = ['text', 'number', 'switch', 'select', 'state', 'button'];
 
         // These should be the same as HSSettingJSONType in hs-settings-types.ts
-        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'state'];
+        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'state', 'button'];
 
         // Check the name first so we can use it in the error messages
-        if(!('settingName' in setting)) throw new Error(`Setting is missing settingName property`);
-        
+        if (!('settingName' in setting)) throw new Error(`Setting is missing settingName property`);
+
         const settingName = setting.settingName;
 
         // Check the basic properties
-        if(!('enabled' in setting)) throw new Error(`Setting '${settingName}' is missing enabled property`);
-        if(!('settingDescription' in setting)) throw new Error(`Setting '${settingName}' is missing settingDescription property`);
-        if(!('settingValue' in setting)) throw new Error(`Setting '${settingName}' is missing settingValue property`);
-        if(!('settingType' in setting)) throw new Error(`Setting '${settingName}' is missing settingType property`);
+        if (!('enabled' in setting)) throw new Error(`Setting '${settingName}' is missing enabled property`);
+        if (!('settingDescription' in setting)) throw new Error(`Setting '${settingName}' is missing settingDescription property`);
+        if (!('settingValue' in setting)) throw new Error(`Setting '${settingName}' is missing settingValue property`);
+        if (!('settingType' in setting)) throw new Error(`Setting '${settingName}' is missing settingType property`);
 
         // Check if the settingType is valid
-        if(!validSettingTypes.includes(setting.settingType)) 
+        if (!validSettingTypes.includes(setting.settingType))
             throw new Error(`Setting '${settingName}' has invalid settingType property`);
 
         const settingType = setting.settingType;
 
         // Check if the settingValue is valid for the settingType
-        if(settingType === 'numeric') {
-            if(!HSUtils.isNumeric(setting.settingValue)) 
-                throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
-        } 
-        else if(settingType === 'string') {
-            if(!HSUtils.isString(setting.settingValue))
-                throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
-        } 
-        else if(settingType === 'boolean') {
-            if(!HSUtils.isBoolean(setting.settingValue))
+        if (settingType === 'numeric') {
+            if (!HSUtils.isNumeric(setting.settingValue))
                 throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
         }
-        else if(settingType === 'selectnumeric') {
-            if(!HSUtils.isString(setting.settingValue) && !HSUtils.isNumeric(setting.settingValue))
+        else if (settingType === 'string') {
+            if (!HSUtils.isString(setting.settingValue))
                 throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
         }
-        else if(settingType === 'selectstring') {
-            if(!HSUtils.isString(setting.settingValue) && !HSUtils.isNumeric(setting.settingValue))
+        else if (settingType === 'boolean') {
+            if (!HSUtils.isBoolean(setting.settingValue))
+                throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
+        }
+        else if (settingType === 'selectnumeric') {
+            if (!HSUtils.isString(setting.settingValue) && !HSUtils.isNumeric(setting.settingValue))
+                throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
+        }
+        else if (settingType === 'selectstring') {
+            if (!HSUtils.isString(setting.settingValue) && !HSUtils.isNumeric(setting.settingValue))
                 throw new Error(`Setting '${settingName}' has invalid settingValue property for settingType ${settingType}`);
         }
 
         // If the setting defines a settingControl, check the properties
-        if('settingControl' in setting) {
-            if(setting.settingControl) {
+        if ('settingControl' in setting) {
+            if (setting.settingControl) {
                 const settingControl = setting.settingControl;
 
-                if(settingControl.controlType !== "switch" && !('controlId' in settingControl))
+                if (settingControl.controlType !== "switch" && !('controlId' in settingControl))
                     throw new Error(`Setting '${settingName}' has settingControl defined and it is not type'switch', but it is missing controlId property`);
-                if(!('controlType' in settingControl))
+                if (!('controlType' in settingControl))
                     throw new Error(`Setting '${settingName}' has settingControl defined, but it is missing controlType property`);
-                if(!('controlGroup' in settingControl))
+                if (!('controlGroup' in settingControl))
                     throw new Error(`Setting '${settingName}' has settingControl defined, but it is missing controlGroup property`);
 
-                if(!validControlTypes.includes(settingControl.controlType)) 
+                if (!validControlTypes.includes(settingControl.controlType))
                     throw new Error(`Setting '${settingName}' has invalid controlType property`);
 
                 const controlGroup = settingControl.controlGroup;
 
-                if(!(controlGroup in controlGroups))
+                if (!(controlGroup in controlGroups))
                     throw new Error(`Setting '${settingName}' has invalid controlGroup property`);
-            } 
+            }
         }
     }
 
@@ -589,16 +685,16 @@ export class HSSettings extends HSModule {
 
     // Serializes all current settings into a JSON string
     static #serializeSettings(): string {
-        const serializeableSettings: Partial<HSSettingBase<HSSettingType>> = { }
+        const serializeableSettings: Partial<HSSettingBase<HSSettingType>> = {}
 
-        for(const [key, setting] of Object.typedEntries(this.#settings)) {
+        for (const [key, setting] of Object.typedEntries(this.#settings)) {
             const definition = { ...setting.getDefinition() as Partial<HSSettingBase<HSSettingType>> };
 
             // Remove properties that should not be saved into localStorage
             const blackList = HSGlobal.HSSettings.serializationBlackList;
 
-            for(const blackListKey of blackList) {
-                if((definition as any)[blackListKey]) delete (definition as any)[blackListKey];
+            for (const blackListKey of blackList) {
+                if ((definition as any)[blackListKey]) delete (definition as any)[blackListKey];
             }
 
             (serializeableSettings as any)[key] = definition;
@@ -610,11 +706,11 @@ export class HSSettings extends HSModule {
     static saveSettingsToStorage() {
         const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
 
-        if(storageMod) {
+        if (storageMod) {
             const serializedSettings = this.#serializeSettings();
             const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
 
-            if(!saved) {
+            if (!saved) {
                 HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
             } else {
                 HSLogger.debug(`<green>Settings saved to localStorage</green>`, this.#staticContext);
@@ -622,33 +718,45 @@ export class HSSettings extends HSModule {
         }
     }
 
+    // Parses the default strategies read from strategies.json
+    #parseDefaultStrategies(): HSAutosingStrategy[] {
+        const defaultStrategies = JSON.parse(strategies) as HSAutosingStrategy[];
+
+        for (const strategy of defaultStrategies) {
+            if (!strategy) continue;
+            this.#validateStrategy(strategy);
+        }
+
+        return defaultStrategies as HSAutosingStrategy[];
+    }
+
     // Parses the default settings read from settings.json
     #parseDefaultSettings(): HSSettingsDefinition {
         const defaultSettings = JSON.parse(settings) as Partial<HSSettingsDefinition>;
-        
+
         for (const [key, setting] of Object.typedEntries<Partial<HSSettingsDefinition>>(defaultSettings)) {
-            if(!setting) continue;
-            
-            if(setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
+            if (!setting) continue;
+
+            if (setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
                 (setting as any).settingValue = false;
             }
 
             // Try fixing select type settings if they're missing some things
-            if(setting.settingType === 'selectnumeric' || setting.settingType === 'selectstring') {
+            if (setting.settingType === 'selectnumeric' || setting.settingType === 'selectstring') {
                 // If there is no (default) value defined, define it as empty string
-                if(!("settingValue" in setting))
+                if (!("settingValue" in setting))
                     (setting as any).settingValue = "";
 
                 // Make sure that the selectOptions contains a default option with value ""
-                if("settingControl" in setting && setting.settingControl) {
+                if ("settingControl" in setting && setting.settingControl) {
                     const settingControl = setting.settingControl;
 
-                    if("selectOptions" in settingControl && settingControl.selectOptions) {
+                    if ("selectOptions" in settingControl && settingControl.selectOptions) {
                         const hasDefaultOption = settingControl.selectOptions.find(option => {
                             return option.value === "";
                         });
 
-                        if(!hasDefaultOption) {
+                        if (!hasDefaultOption) {
                             settingControl.selectOptions.unshift({
                                 text: "None",
                                 value: ""
@@ -658,13 +766,13 @@ export class HSSettings extends HSModule {
                 }
             }
 
-            if(setting.settingType === 'numeric' || setting.settingType === 'selectnumeric' || HSUtils.isNumeric(setting.settingValue)) {
-                if(!('settingValueMultiplier' in setting as any))
+            if (setting.settingType === 'numeric' || setting.settingType === 'selectnumeric' || HSUtils.isNumeric(setting.settingValue)) {
+                if (!('settingValueMultiplier' in setting as any))
                     (setting as any).settingValueMultiplier = 1;
             }
 
-            if(setting.settingType === 'state') {
-                if(!("settingValue" in setting))
+            if (setting.settingType === 'state') {
+                if (!("settingValue" in setting))
                     (setting as any).settingValue = "<red>null</red>";
             }
 
@@ -674,14 +782,33 @@ export class HSSettings extends HSModule {
         return defaultSettings as HSSettingsDefinition;
     }
 
-    // Loads and parses settings from local storage as JSON
-    #parseStoredSettings(): Partial<HSSettingsDefinition> | null  {
+    // Loads and parses stored autosingStrategies
+    #parseStoredStrategies(): HSAutosingStrategy[] | null {
         const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
 
-        if(storageMod) {
+        if (storageMod) {
+            const loaded = storageMod.getData<string>(HSGlobal.HSSettings.strategiesKey);
+
+            if (loaded) {
+                return JSON.parse(loaded) as HSAutosingStrategy[];
+            } else {
+                HSLogger.warn(`Could not load strategies from localStorage`, this.context);
+                return null;
+            }
+        } else {
+            HSLogger.warn(`Could not find HSStorage module`, this.context);
+            return null;
+        }
+    }
+
+    // Loads and parses settings from local storage as JSON
+    #parseStoredSettings(): Partial<HSSettingsDefinition> | null {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+
+        if (storageMod) {
             const loaded = storageMod.getData<string>(HSGlobal.HSSettings.storageKey);
 
-            if(loaded) {
+            if (loaded) {
                 return JSON.parse(loaded) as Partial<HSSettingsDefinition>;
             } else {
                 HSLogger.warn(`Could not load settings from localStorage`, this.context);
@@ -693,14 +820,45 @@ export class HSSettings extends HSModule {
         }
     }
 
-    #resolveSettings() : HSSettingsDefinition {
+    #addStrategiesToOptions(strategies: HSAutosingStrategy[], defaultSettings: HSSettingsDefinition) {
+        const selectOptions = defaultSettings.autosingStrategy.settingControl?.selectOptions;
+
+        if (!selectOptions) {
+            throw new Error('selectOptions is not defined on autosingStrategy');
+        }
+
+        // Start values after existing options (or 1 if empty)
+        let nextValue =
+            selectOptions.length > 0
+                ? Math.max(...selectOptions.map(o => Number(o.value))) + 1
+                : 1;
+
+        for (const strategy of strategies) {
+            const name = strategy.strategyName;
+            selectOptions.push({
+                text: name,
+                value: nextValue,
+            });
+            nextValue++;
+        }
+    }
+
+    #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();
-        
+        const defaultStrategies = this.#parseDefaultStrategies();
+        this.#addStrategiesToOptions(defaultStrategies, defaultSettings)
+
         try {
             const loadedSettings = this.#parseStoredSettings();
+            const loadedStrategies = this.#parseStoredStrategies();
+
+            if (loadedStrategies) {
+                this.#addStrategiesToOptions(loadedStrategies, defaultSettings)
+            }
+
             const resolved = JSON.parse(JSON.stringify(defaultSettings));
 
-            if(loadedSettings) {
+            if (loadedSettings) {
                 HSLogger.log(`<green>Found settings from localStorage!</green>`, this.context);
 
                 // Process each top-level key that exists in defaultSettings (A)
@@ -714,28 +872,28 @@ export class HSSettings extends HSModule {
                     Object.keys((loadedSettings as any)[topLevelKey]).forEach(nestedKey => {
                         if (nestedKey in (defaultSettings as any)[topLevelKey]) {
                             const bValue = (loadedSettings as any)[topLevelKey][nestedKey];
-                            
+
                             // If this is a nested object (but not an array), recursively merge
                             if (
-                                bValue !== null && 
-                                typeof bValue === 'object' && 
+                                bValue !== null &&
+                                typeof bValue === 'object' &&
                                 !Array.isArray(bValue) &&
                                 typeof (defaultSettings as any)[topLevelKey][nestedKey] === 'object' &&
                                 !Array.isArray((defaultSettings as any)[topLevelKey][nestedKey])
                             ) {
                                 // For nested objects, preserve structure from A but override with values from B
                                 // where the keys exist in both
-                                const mergedNestedObj = { 
+                                const mergedNestedObj = {
                                     ...((defaultSettings as any)[topLevelKey][nestedKey]), // Start with all properties from A
                                 };
-                                
+
                                 // Override with B's values where they exist
                                 Object.keys(bValue).forEach(deepKey => {
                                     if (deepKey in mergedNestedObj) {
                                         mergedNestedObj[deepKey] = bValue[deepKey];
                                     }
                                 });
-                                
+
                                 // Update the resolved object
                                 (resolved as any)[topLevelKey][nestedKey] = mergedNestedObj;
                             } else {
@@ -751,7 +909,7 @@ export class HSSettings extends HSModule {
             } else {
                 return defaultSettings;
             }
-        } catch(err) {
+        } catch (err) {
             HSLogger.error(`Error while resolving settings`, this.context);
             console.log(err);
             return defaultSettings;
@@ -770,7 +928,7 @@ export class HSSettings extends HSModule {
 
     static dumpToConsole() {
         console.log('------------------ HYPERSYNERGISM CURRENT SETTINGS DUMP START ------------------');
-        if(this.#settings) 
+        if (this.#settings)
             console.log(this.#settings);
         else
             console.log('NO SETTINGS FOUND (wtf)');

@@ -7,9 +7,13 @@ import { HSModule } from "../hs-core/module/hs-module";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { PlayerData } from "../../types/data-types/hs-player-savedata";
+import { HSSettings } from "../hs-core/settings/hs-settings";
+import { HSNumericSetting } from "../hs-core/settings/hs-setting";
 
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
+
+    private gameDataResolver?: (value: void) => void;
 
     private autosingEnabled = false;
     private targetSingularity = 0;
@@ -96,21 +100,54 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     gameDataCallback(): Promise<void> {
+        if (this.gameDataResolver) {
+            this.gameDataResolver();
+            this.gameDataResolver = undefined;
+        }
         return Promise.resolve();
     }
 
-    async toggleAutosing(targetSingularity: number): Promise<void> {
-        this.autosingEnabled = !this.autosingEnabled;
-        this.targetSingularity = targetSingularity;
+    async enableAutoSing(): Promise<void> {
+        this.autosingEnabled = true;
+        const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting
+        this.targetSingularity = singularitySetting.getValue();
+        this.subscribeGameDataChanges();
 
-        if (this.autosingEnabled) {
-            this.subscribeGameDataChanges();
-            this.performAutosingLogic();
-        } else {
+        await new Promise<void>((resolve) => {
+            this.gameDataResolver = resolve;
+        });
+
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) {
+            this.showError("Could not find HSGameDataAPI module");
             this.stopAutosing();
+            return Promise.resolve();
         }
 
-        HSLogger.log(`Autosing ${this.autosingEnabled ? "enabled" : "disabled"} for target singularity: ${targetSingularity}`, this.context);
+        const gameData = gameDataAPI.getGameData();
+        if (!gameData) {
+            this.showError("Could not get game data");
+            this.stopAutosing();
+            return Promise.resolve();
+        }
+
+        if (this.targetSingularity > gameData.highestSingularityCount) {
+            HSLogger.log(`target singularity cannot be bigger than highest singularity`);
+            this.stopAutosing();
+            return Promise.resolve();
+        }
+        this.unsubscribeGameDataChanges();
+
+        this.performAutosingLogic();
+
+        HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
+        return Promise.resolve();
+    }
+
+    async disableAutoSing(): Promise<void> {
+        this.autosingEnabled = false;
+        this.stopAutosing();
+        HSLogger.log(`Autosing disabled`, this.context);
         return Promise.resolve();
     }
 
@@ -125,31 +162,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         try {
-            const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-
-            if (!gameDataAPI) {
-                this.showError("Could not find HSGameDataAPI module");
-                this.stopAutosing()
-                return Promise.resolve();
-            }
-
-            const gameData = gameDataAPI.getGameData();
-
-            if (!gameData) {
-                this.showError("Could not get game data");
-                this.stopAutosing()
-                return Promise.resolve();;
-            }
-
-            // Check if target singularity is valid
-            if (this.targetSingularity > gameData.highestSingularityCount) {
-                this.showError(`Target singularity ${this.targetSingularity} is greater than highest reached ${gameData.highestSingularityCount}`);
-                this.stopAutosing()
-                return Promise.resolve();;
-            }
-
-            HSLogger.log(`Performing autosing logic: current=${gameData.singularityCount}, target=${this.targetSingularity}`, this.context);
-
             await this.setElevator();
             await this.performSingularity();
 
@@ -158,7 +170,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             while (this.isAutosingEnabled()) {
                 let stage = await this.getStage();
                 await this.runStage(stage);
-                console.log(`Completed stage: ${stage}`);
 
                 if (stage === "antiquities-singularity") {
                     console.log("STAGE BREAK")
@@ -665,12 +676,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     async DblClick(element: HTMLElement): Promise<void> {
         element.click();
-        // Wait 50ms to simulate human speed
         await new Promise(res => setTimeout(res, 5));
         element.click();
         await this.sleep(this.sleepTime);
-
-        // Then fire the dblclick event just in case
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         return Promise.resolve();
     }

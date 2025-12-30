@@ -7,7 +7,7 @@
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
 import { HSUICSelectOption } from "./hs-ui-types";
 
-export type HSSettingType = number | string | boolean;
+export type HSSettingType = number | string | boolean | null;
 export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSettingType>>;
 
 export interface HSSettingsDefinition {
@@ -46,6 +46,20 @@ export interface HSSettingsDefinition {
     // Game Data Settings
     useGameData: UseGameDataSetting;
     stopSniffOnError: StopSniffOnErrorSetting;
+
+    // Auto Sing Settings
+    startAutosing: StartAutosing;
+    singularityNumber: SingularityNumber;
+    autosingEarlyCubeLoadout: AutosingEarlyCubeLoadout;
+    autosingLateCubeLoadout: AutosingLateCubeLoadout;
+    autosingQuarkLoadout: AutosingQuarkLoadout;
+    autosingStrategy: AutosingStrategy;
+    autosingSelectStrategy: AutosingSelectStrategy;
+}
+
+export interface HSAutosingStrategy {
+    strategyName: string;
+    strategy: AutosingStrategyPhase[];
 }
 
 export interface HSSettingControlOptions {
@@ -55,8 +69,20 @@ export interface HSSettingControlOptions {
     placeholder?: string;
 }
 
-export type HSSettingsControlType = "text" | "number" | "switch" | "select" | "state";
+export type HSSettingsControlType = "text" | "number" | "switch" | "select" | "state" | "button";
 export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "state";
+export type PhaseOption = "start" | "prestige" | "transcend" | "reincarnate" | "ant" | "sacrifice" | "ascension" | "challenge10" | "challenge11" | "challenge12" | "challenge13" | "challenge14" | "w5x10max" | "alpha" | "p2x1x10" | "p3x1" | "beta" | "1e15-expo" | "omega" | "singularity" | ""
+
+export interface CorruptionLoadout {
+    viscosity: number;
+    drought: number;
+    deflation: number;
+    extinction: number;
+    illiteracy: number;
+    recession: number;
+    dilation: number;
+    hyperchallenge: number;
+}
 
 export interface HSSettingActionParams {
     contextName?: string,
@@ -70,6 +96,12 @@ export interface HSSettingControlGroup {
     order: number;
 }
 
+export interface Challenge {
+    challengeNumber: number;
+    challengeCompletions: number;
+    challengeWaitTime: number;
+}
+
 export interface HSSettingControl {
     controlId: string;
     controlType: HSSettingsControlType;
@@ -77,7 +109,7 @@ export interface HSSettingControl {
     controlPage: keyof HSSettingControlPage;
     controlEnabledId?: string;
     controlOptions?: HSSettingControlOptions;
-    selectOptions?: HSUICSelectOption[];
+    selectOptions?: HSUICSelectOption[]
 }
 
 export interface HSSettingControlPage {
@@ -89,6 +121,13 @@ export interface HSSettingControlPage {
 
 export interface HSPatchConfig {
     patchName: string;
+}
+
+export interface AutosingStrategyPhase {
+    startPhase: PhaseOption;
+    endPhase: PhaseOption;
+    corruptions: CorruptionLoadout;
+    strat: Challenge[];
 }
 
 export interface HSSettingBase<T> {
@@ -109,39 +148,49 @@ export interface HSSettingBase<T> {
 }
 
 // Expand Cost Protection Settings
-export interface ExpandCostProtectionSetting extends HSSettingBase<number> {}
-export interface ExpandCostProtectionDoubleCap extends HSSettingBase<boolean> {}
-export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean> {}
+export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
+export interface ExpandCostProtectionDoubleCap extends HSSettingBase<boolean> { }
+export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean> { }
 
 // Notification Opacity Settings
-export interface SyncNotificationOpacitySetting extends HSSettingBase<number> {}
+export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
 
 // Log Settings
-export interface LogTimestampSetting extends HSSettingBase<boolean> {}
-export interface ShowDebugLogsSetting extends HSSettingBase<boolean> {}
+export interface LogTimestampSetting extends HSSettingBase<boolean> { }
+export interface ShowDebugLogsSetting extends HSSettingBase<boolean> { }
 
 // Mouse Settings
-export interface ReactiveMouseHoverSetting extends HSSettingBase<number> {}
-export interface AutoclickSetting extends HSSettingBase<number> {}
-export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> {}
+export interface ReactiveMouseHoverSetting extends HSSettingBase<number> { }
+export interface AutoclickSetting extends HSSettingBase<number> { }
+export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
 
 // Ambrosia Settings
-export interface AmbrosiaQuickBarSetting extends HSSettingBase<boolean> {}
-export interface AutoLoadoutSetting extends HSSettingBase<boolean> {}
-export interface AutoLoadoutStateSetting extends HSSettingBase<string> {}
-export interface AutoLoadoutAddSetting extends HSSettingBase<string> {}
-export interface AutoLoadoutTimeSetting extends HSSettingBase<string> {}
+export interface AmbrosiaQuickBarSetting extends HSSettingBase<boolean> { }
+export interface AutoLoadoutSetting extends HSSettingBase<boolean> { }
+export interface AutoLoadoutStateSetting extends HSSettingBase<string> { }
+export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
+export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
-export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> {}
-export interface AmbrosiaIdleSwapNormalLoadoutSetting extends HSSettingBase<string> {}
-export interface AmbrosiaIdleSwap100LoadoutSetting extends HSSettingBase<string> {}
+export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> { }
+export interface AmbrosiaIdleSwapNormalLoadoutSetting extends HSSettingBase<string> { }
+export interface AmbrosiaIdleSwap100LoadoutSetting extends HSSettingBase<string> { }
 
 
 // Patch Settings
-export interface PATCH_ambrosiaViewOverflow extends HSSettingBase<boolean> {}
-export interface PATCH_TestPatch extends HSSettingBase<boolean> {}
-export interface PATCH_shopItemNameMapping extends HSSettingBase<boolean> {}
+export interface PATCH_ambrosiaViewOverflow extends HSSettingBase<boolean> { }
+export interface PATCH_TestPatch extends HSSettingBase<boolean> { }
+export interface PATCH_shopItemNameMapping extends HSSettingBase<boolean> { }
 
 // Game Data Settings
-export interface UseGameDataSetting extends HSSettingBase<boolean> {}
-export interface StopSniffOnErrorSetting extends HSSettingBase<boolean> {}
+export interface UseGameDataSetting extends HSSettingBase<boolean> { }
+export interface StopSniffOnErrorSetting extends HSSettingBase<boolean> { }
+
+// Auto Sing Settings
+export interface StartAutosing extends HSSettingBase<boolean> { }
+export interface SingularityNumber extends HSSettingBase<number> { }
+export interface AutosingEarlyCubeLoadout extends HSSettingBase<string> { }
+export interface AutosingLateCubeLoadout extends HSSettingBase<string> { }
+export interface AutosingQuarkLoadout extends HSSettingBase<string> { }
+export interface AutosingStrategy extends HSSettingBase<string> { }
+export interface AutosingSelectStrategy extends HSSettingBase<null> { }
+

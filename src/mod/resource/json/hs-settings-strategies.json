@@ -1,0 +1,133 @@
+[
+    {
+        "strategyName": "default_strategy",
+        "strategy": [
+            {
+                "startPhase": "start",
+                "endPhase": "challenge14",
+                "corruptions": {
+                    "viscosity": 0,
+                    "drought": 0,
+                    "deflation": 0,
+                    "extinction": 0,
+                    "illiteracy": 0,
+                    "recession": 0,
+                    "dilation": 0,
+                    "hyperchallenge": 0
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            },
+            {
+                "startPhase": "challenge14",
+                "endPhase": "w5x10max",
+                "corruptions": {
+                    "viscosity": 0,
+                    "drought": 6,
+                    "deflation": 4,
+                    "extinction": 11,
+                    "illiteracy": 0,
+                    "recession": 14,
+                    "dilation": 4,
+                    "hyperchallenge": 1
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            },
+            {
+                "startPhase": "w5x10max",
+                "endPhase": "p3x1",
+                "corruptions": {
+                    "viscosity": 3,
+                    "drought": 16,
+                    "deflation": 4,
+                    "extinction": 12,
+                    "illiteracy": 13,
+                    "recession": 13,
+                    "dilation": 7,
+                    "hyperchallenge": 7
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            },
+            {
+                "startPhase": "p3x1",
+                "endPhase": "omega",
+                "corruptions": {
+                    "viscosity": 6,
+                    "drought": 16,
+                    "deflation": 16,
+                    "extinction": 13,
+                    "illiteracy": 16,
+                    "recession": 16,
+                    "dilation": 11,
+                    "hyperchallenge": 10
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            },
+            {
+                "startPhase": "omega",
+                "endPhase": "singularity",
+                "corruptions": {
+                    "viscosity": 10,
+                    "drought": 16,
+                    "deflation": 16,
+                    "extinction": 16,
+                    "illiteracy": 16,
+                    "recession": 14,
+                    "dilation": 14,
+                    "hyperchallenge": 14
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            },
+            {
+                "startPhase": "singularity",
+                "endPhase": "",
+                "corruptions": {
+                    "viscosity": 16,
+                    "drought": 16,
+                    "deflation": 16,
+                    "extinction": 16,
+                    "illiteracy": 16,
+                    "recession": 16,
+                    "dilation": 16,
+                    "hyperchallenge": 16
+                },
+                "strat": [
+                    {
+                        "challengeNumber": 1,
+                        "challengeCompletions": 0,
+                        "challengeWaitTime": 0
+                    }
+                ]
+            }
+        ]
+    }
+]
