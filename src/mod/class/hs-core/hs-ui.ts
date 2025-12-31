@@ -29,20 +29,21 @@ export class HSUI extends HSModule {
 
     uiReady = false;
 
-    #uiPanel? : HTMLDivElement;
+    #uiPanel?: HTMLDivElement;
     #uiPanelTitle?: HTMLDivElement;
-    #uiPanelCloseBtn? : HTMLDivElement;
+    #uiPanelCloseBtn?: HTMLDivElement;
     #uiPanelOpenBtn?: HTMLDivElement;
 
     #loggerElement?: HTMLTextAreaElement;
-    #logClearBtn? : HTMLButtonElement;
+    #logClearBtn?: HTMLButtonElement;
 
     static #modPanelOpen = false;
 
+    #activeModals: Set<HTMLDivElement> = new Set();
     static #injectedStyles = new Map<string, string>();
     static #injectedStylesHolder?: HTMLStyleElement;
 
-    #tabs : HSPanelTabDefinition[] = [
+    #tabs: HSPanelTabDefinition[] = [
         {
             tabId: 1,
             tabBodySel: '.hs-panel-body-1',
@@ -75,7 +76,7 @@ export class HSUI extends HSModule {
         }
     ];
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
         this.#staticPanelCss = panelCSS;
         this.#staticPanelHtml = panelHTML;
@@ -113,7 +114,7 @@ export class HSUI extends HSModule {
 
         // Make the HS UI panel closeable
         this.#uiPanelCloseBtn.addEventListener('click', async () => {
-            if(HSUI.#modPanelOpen && self.#uiPanel) {
+            if (HSUI.#modPanelOpen && self.#uiPanel) {
                 await self.#uiPanel.transition({
                     opacity: 0
                 });
@@ -135,13 +136,13 @@ export class HSUI extends HSModule {
                 const tab = e.target as HTMLDivElement;
                 const tabId = tab.dataset.tab ? parseInt(tab.dataset.tab, 10) : null;
 
-                if(tab.classList.contains('hs-tab-selected'))
+                if (tab.classList.contains('hs-tab-selected'))
                     return;
 
-                if(tabId) {
+                if (tabId) {
                     const tabConfig = self.#tabs.find((tab) => tab.tabId === tabId);
 
-                    if(!tabConfig) {
+                    if (!tabConfig) {
                         HSLogger.error(`Could not find tab config for tabId ${tabId}`, self.context);
                         return;
                     }
@@ -159,8 +160,8 @@ export class HSUI extends HSModule {
 
                     const targetPanel = document.querySelector(tabConfig.tabBodySel) as HTMLDivElement;
 
-                    if(targetPanel) {
-                        switch(tabConfig.panelDisplayType) {
+                    if (targetPanel) {
+                        switch (tabConfig.panelDisplayType) {
                             case "flex":
                                 targetPanel.classList.add('hs-panel-body-open-flex');
                                 break;
@@ -170,7 +171,7 @@ export class HSUI extends HSModule {
                         }
 
                         // Log panel (auto scroll to bottom when log tab selected)
-                        if(tabId === 1) 
+                        if (tabId === 1)
                             HSLogger.scrollToBottom();
                     }
                 } else {
@@ -185,7 +186,7 @@ export class HSUI extends HSModule {
 
         // Open button opens the panel
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
-            if(!HSUI.#modPanelOpen && self.#uiPanel) {
+            if (!HSUI.#modPanelOpen && self.#uiPanel) {
                 HSUI.#modPanelOpen = true;
                 self.#uiPanel.style.opacity = '0';
                 self.#uiPanel.classList.remove('hs-panel-closed');
@@ -213,7 +214,7 @@ export class HSUI extends HSModule {
     }
 
     // Makes element draggable with mouse
-    #makeDraggable(element : HTMLElement, dragHandle : HTMLElement) {
+    #makeDraggable(element: HTMLElement, dragHandle: HTMLElement) {
         let pos1 = 0;
         let pos2 = 0;
         let pos3 = 0;
@@ -221,7 +222,7 @@ export class HSUI extends HSModule {
 
         dragHandle.onmousedown = dragMouseDown;
 
-        function dragMouseDown(e : MouseEvent) {
+        function dragMouseDown(e: MouseEvent) {
             e.preventDefault();
 
             pos3 = e.clientX;
@@ -231,7 +232,7 @@ export class HSUI extends HSModule {
             document.onmousemove = elementDrag;
         }
 
-        function elementDrag(e : MouseEvent) {
+        function elementDrag(e: MouseEvent) {
             e.preventDefault();
 
             pos1 = pos3 - e.clientX;
@@ -249,7 +250,7 @@ export class HSUI extends HSModule {
         }
     }
 
-    #makeResizable(element: HTMLElement, resizeHandle : HTMLElement) {
+    #makeResizable(element: HTMLElement, resizeHandle: HTMLElement) {
         const resizable = element;
         const resizer = resizeHandle;
         let isResizing = false;
@@ -274,16 +275,16 @@ export class HSUI extends HSModule {
             let newWidth = startWidth + (e.clientX - startX);
             let newHeight = startHeight + (e.clientY - startY);
 
-            if(newWidth <= 500)
+            if (newWidth <= 500)
                 newWidth = 500;
 
-            if(newHeight <= 400)
+            if (newHeight <= 400)
                 newHeight = 400;
 
-            if(newWidth >= 1000)
+            if (newWidth >= 1000)
                 newWidth = 1000;
 
-            if(newHeight >= 700)
+            if (newHeight >= 700)
                 newHeight = 700;
 
             resizable.style.width = newWidth + 'px';
@@ -297,8 +298,8 @@ export class HSUI extends HSModule {
         }
     }
 
-    async getLogElement() : Promise<HTMLTextAreaElement> {
-        if(this.#loggerElement) {
+    async getLogElement(): Promise<HTMLTextAreaElement> {
+        if (this.#loggerElement) {
             return this.#loggerElement;
         } else {
             const logEl = await HSElementHooker.HookElement('#hs-ui-log') as HTMLTextAreaElement;
@@ -312,21 +313,21 @@ export class HSUI extends HSModule {
             return t.tabId === tabId;
         });
 
-        if(!tab) {
+        if (!tab) {
             HSLogger.warn('Could not find tab to replace contents', this.context);
             return;
         }
 
         const tabBody = document.querySelector(tab.tabBodySel) as HTMLDivElement;
 
-        if(tabBody) {
+        if (tabBody) {
             tabBody.innerHTML = htmlContent;
             HSLogger.log(`Replaced tab ${tab.tabId} content`, this.context);
         }
     }
 
     updateTitle(newTitle: string) {
-        if(this.#uiPanelTitle) {
+        if (this.#uiPanelTitle) {
             this.#uiPanelTitle.innerText = newTitle;
         } else {
             HSLogger.warn(`Could not update panel title`, this.context);
@@ -339,12 +340,12 @@ export class HSUI extends HSModule {
         let openBracketIdx = styleString.indexOf('{');
         const closeBracketIdx = styleString.indexOf('}');
 
-        if(openBracketIdx > -1 && closeBracketIdx > -1) {
+        if (openBracketIdx > -1 && closeBracketIdx > -1) {
             openBracketIdx++;
 
             const bracketInsides = styleString.substring(openBracketIdx, closeBracketIdx);
 
-            if(!HSUtils.isString(bracketInsides)) {
+            if (!HSUtils.isString(bracketInsides)) {
                 return true;
             } else {
                 const bracketsInsidesRemoveWhiteSpace = bracketInsides.replace(/\s+/g, '');
@@ -360,11 +361,11 @@ export class HSUI extends HSModule {
 
     // Can be used to inject arbitrary CSS into the page
     static injectStyle(styleString: string, styleId?: string) {
-        if(styleString && !this.#isStyleStringEmpty(styleString)) {
+        if (styleString && !this.#isStyleStringEmpty(styleString)) {
 
             let style_id = styleId ? styleId : 'hs-injected-style-' + HSUtils.domid();
 
-            if(!this.#injectedStyles.has(style_id)) {
+            if (!this.#injectedStyles.has(style_id)) {
                 this.#injectedStyles.set(style_id, styleString);
             }
 
@@ -376,7 +377,7 @@ export class HSUI extends HSModule {
 
     // Can be used to inject arbitrary CSS into the page
     static removeInjectedStyle(styleId: string) {
-        if(this.#injectedStyles.has(styleId)) {
+        if (this.#injectedStyles.has(styleId)) {
             this.#injectedStyles.delete(styleId);
             this.updateInjectedStyleBlock();
             HSLogger.debug(`Removed injected CSS`, this.#staticContext);
@@ -388,7 +389,7 @@ export class HSUI extends HSModule {
     static updateInjectedStyleBlock() {
         const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
 
-        if(!this.#injectedStylesHolder) {
+        if (!this.#injectedStylesHolder) {
             this.#injectedStylesHolder = document.createElement('style');
             this.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
             document.head.appendChild(this.#injectedStylesHolder);
@@ -408,7 +409,7 @@ export class HSUI extends HSModule {
         div.innerHTML = htmlString;
 
         while (div.firstChild) {
-            if(injectFunction) {
+            if (injectFunction) {
                 injectFunction(div.firstChild);
             } else {
                 document.body.appendChild(div.firstChild);
@@ -430,14 +431,14 @@ export class HSUI extends HSModule {
             return t.tabId === tabId;
         });
 
-        if(!tab) {
+        if (!tab) {
             HSLogger.warn('Could not find tab to rename', this.context);
             return;
         }
 
         const tabEl = document.querySelector(tab.tabSel) as HTMLDivElement;
 
-        if(tabEl) {
+        if (tabEl) {
             tabEl.innerHTML = newName;
         }
     }
@@ -448,39 +449,39 @@ export class HSUI extends HSModule {
 
         const windowCenterX = window.innerWidth / 2;
         const windowCenterY = window.innerHeight / 2;
-        
+
         let relativeX = 0;
         let relativeY = 0;
 
-        if(relativeTo) {
+        if (relativeTo) {
             const elementRect = relativeTo.getBoundingClientRect();
             relativeX = elementRect.width;
             relativeY = elementRect.height;
         }
 
-        if(Number.isInteger(coordinates)) {
-            switch(coordinates) {
+        if (Number.isInteger(coordinates)) {
+            switch (coordinates) {
                 case EPredefinedPosition.CENTER:
-                    position = { 
-                        x: windowCenterX - (relativeX / 2), 
+                    position = {
+                        x: windowCenterX - (relativeX / 2),
                         y: windowCenterY - (relativeY / 2)
                     };
                     break;
                 case EPredefinedPosition.RIGHT:
-                    position = { 
-                        x: window.innerWidth - 25 - relativeX, 
+                    position = {
+                        x: window.innerWidth - 25 - relativeX,
                         y: windowCenterY - (relativeY / 2)
                     };
                     break;
                 case EPredefinedPosition.LEFT:
-                    position = { 
-                        x: 25 + relativeX, 
+                    position = {
+                        x: 25 + relativeX,
                         y: windowCenterY - (relativeY / 2)
                     };
                     break;
                 default:
-                    position = { 
-                        x: windowCenterX - (relativeX / 2), 
+                    position = {
+                        x: windowCenterX - (relativeX / 2),
                         y: windowCenterY - (relativeY / 2)
                     };
                     break;
@@ -493,7 +494,7 @@ export class HSUI extends HSModule {
     }
 
     // Opens a new modal
-    async Modal(modalOptions: HSUIModalOptions) {
+    async Modal(modalOptions: HSUIModalOptions): Promise<string> {
         const uuid = `hs-dom-${HSUtils.uuidv4()}`;
         const html = HSUIC._modal({
             ...modalOptions,
@@ -501,7 +502,7 @@ export class HSUI extends HSModule {
             styles: {
                 opacity: 0
             }
-        });	
+        });
 
         // Create temp div, inject UI panel HTML and append the contents to body
         HSUI.injectHTMLString(html);
@@ -509,9 +510,11 @@ export class HSUI extends HSModule {
         const modal = document.querySelector(`#${uuid}`) as HTMLDivElement;
         const modalHead = document.querySelector(`#${uuid} > .hs-modal-head`) as HTMLDivElement;
 
+        this.#activeModals.add(modal);
+
         // If the modal contains something (images mainly) which take time to load, needsToLoad should be set to true
         // And this is where we handle / wait for the loading to happen before showing the modal
-        if(modalOptions.needsToLoad && modalOptions.needsToLoad === true) {
+        if (modalOptions.needsToLoad && modalOptions.needsToLoad === true) {
             const images = document.querySelectorAll(`#${uuid} > .hs-modal-body img`);
 
             const imagePromises = (Array.from(images) as HTMLImageElement[]).map(img => {
@@ -531,7 +534,7 @@ export class HSUI extends HSModule {
             await Promise.all(imagePromises);
         }
 
-        if(modal) {
+        if (modal) {
             const coords = this.#resolveCoordinates(modalOptions.position, modal);
             modal.style.left = `${coords.x}px`;
             modal.style.top = `${coords.y}px`;
@@ -542,15 +545,15 @@ export class HSUI extends HSModule {
 
             // Make the modal draggable
             this.#makeDraggable(modal, modalHead);
-        
+
             // Make the modal's close button (X in the top right corner) close the modal
-            modal.addEventListener('click', async function(e) {
+            modal.addEventListener('click', async function (e) {
                 const dClose = (e.target as HTMLDivElement).dataset.close;
 
-                if(dClose) {
+                if (dClose) {
                     const targetModal = document.querySelector(`#${dClose}`) as HTMLDivElement;
 
-                    if(targetModal) {
+                    if (targetModal) {
                         await targetModal.transition({
                             opacity: 0
                         });
@@ -560,7 +563,23 @@ export class HSUI extends HSModule {
                 }
             })
         }
+        return uuid;
     }
+
+    CloseModal(modalId?: string): void {
+        if (modalId) {
+            const modal = document.getElementById(modalId) as HTMLDivElement;
+            if (modal) {
+                modal.remove();
+                this.#activeModals.delete(modal);
+            }
+        } else {
+            // Close all modals
+            this.#activeModals.forEach(modal => modal.remove());
+            this.#activeModals.clear();
+        }
+    }
+
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
         const options: HSNotifyOptions = {
