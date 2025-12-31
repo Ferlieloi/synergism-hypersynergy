@@ -1,11 +1,13 @@
-import { HSSettingActionParams, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { HSSettingActionParams } from "../../../types/module-types/hs-settings-types";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
-import { HSAutosing } from "../../hs-modules/hs-autosing";
+import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
+import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
+import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 
 /*
     Class: HSSettingActions
@@ -168,14 +170,11 @@ export class HSSettingActions {
 
         createAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-
-            console.log("button works!");
+            await HSAutosingStrategyModal.open();
         }
     }
 
-    constructor() {
-
-    }
+    constructor() { }
 
     getAction(actionName: string): ((params: HSSettingActionParams) => any) | null {
         const self = this;

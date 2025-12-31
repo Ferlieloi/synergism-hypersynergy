@@ -4,6 +4,7 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSSettings } from "./hs-settings";
 
+
 /* 
     Class: HSSetting
     IsExplicitHSModule: No
@@ -244,6 +245,11 @@ export class HSButtonSetting extends HSSetting<null> {
     async handleChange(e: Event): Promise<void> {
         HSLogger.log(`Button pressed: ${this.definition.settingName}`, this.context);
         await this.handleSettingAction("value");
+    }
+
+    async initialAction(_: 'value' | 'state', __?: boolean) {
+        // 🚫 Buttons should not auto-fire on init
+        return;
     }
 
     enable(): void { }

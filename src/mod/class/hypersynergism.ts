@@ -11,11 +11,9 @@ import { HSStorage } from "./hs-core/hs-storage";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import { HSInputType, HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
-import { HSWebSocket } from "./hs-core/hs-websocket";
-import { GameEventResponse, GameEventType } from "../types/data-types/hs-event-data";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
-import { HSAutosing } from "./hs-modules/hs-autosing";
+
 
 /*
     Class: Hypersynergism

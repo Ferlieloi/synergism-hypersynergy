@@ -21,7 +21,7 @@ import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSWebSocket } from "../hs-websocket";
 import { HSDebug } from "../hs-debug";
-import { HSAutosing } from "../../hs-modules/hs-autosing";
+import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 
 /*
     Class: HSModuleManager

@@ -1,14 +1,12 @@
-import { HSGameDataSubscriber, HSModuleOptions } from "../../types/hs-types";
-import { HSGameData } from "../hs-core/gds/hs-gamedata";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { HSUtils } from "../hs-utils/hs-utils";
-import { HSModule } from "../hs-core/module/hs-module";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSUI } from "../hs-core/hs-ui";
-import { PlayerData } from "../../types/data-types/hs-player-savedata";
-import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSNumericSetting } from "../hs-core/settings/hs-setting";
+import { HSGameDataSubscriber } from "../../../types/hs-types";
+import { HSGameData } from "../../hs-core/gds/hs-gamedata";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
+import { HSModule } from "../../hs-core/module/hs-module";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSUI } from "../../hs-core/hs-ui";
+import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;

@@ -57,11 +57,6 @@ export interface HSSettingsDefinition {
     autosingSelectStrategy: AutosingSelectStrategy;
 }
 
-export interface HSAutosingStrategy {
-    strategyName: string;
-    strategy: AutosingStrategyPhase[];
-}
-
 export interface HSSettingControlOptions {
     min?: number;
     max?: number;
@@ -71,18 +66,6 @@ export interface HSSettingControlOptions {
 
 export type HSSettingsControlType = "text" | "number" | "switch" | "select" | "state" | "button";
 export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "state";
-export type PhaseOption = "start" | "prestige" | "transcend" | "reincarnate" | "ant" | "sacrifice" | "ascension" | "challenge10" | "challenge11" | "challenge12" | "challenge13" | "challenge14" | "w5x10max" | "alpha" | "p2x1x10" | "p3x1" | "beta" | "1e15-expo" | "omega" | "singularity" | ""
-
-export interface CorruptionLoadout {
-    viscosity: number;
-    drought: number;
-    deflation: number;
-    extinction: number;
-    illiteracy: number;
-    recession: number;
-    dilation: number;
-    hyperchallenge: number;
-}
 
 export interface HSSettingActionParams {
     contextName?: string,
@@ -94,12 +77,6 @@ export interface HSSettingActionParams {
 export interface HSSettingControlGroup {
     groupName: string;
     order: number;
-}
-
-export interface Challenge {
-    challengeNumber: number;
-    challengeCompletions: number;
-    challengeWaitTime: number;
 }
 
 export interface HSSettingControl {
@@ -121,13 +98,6 @@ export interface HSSettingControlPage {
 
 export interface HSPatchConfig {
     patchName: string;
-}
-
-export interface AutosingStrategyPhase {
-    startPhase: PhaseOption;
-    endPhase: PhaseOption;
-    corruptions: CorruptionLoadout;
-    strat: Challenge[];
 }
 
 export interface HSSettingBase<T> {

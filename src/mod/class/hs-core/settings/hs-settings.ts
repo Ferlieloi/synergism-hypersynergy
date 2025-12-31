@@ -1,4 +1,5 @@
-import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType, HSAutosingStrategy, AutosingStrategyPhase, PhaseOption } from "../../../types/module-types/hs-settings-types";
+import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
@@ -538,29 +539,7 @@ export class HSSettings extends HSModule {
         if (components.length === 0) {
             throw new Error('Strategy has no components');
         }
-        let remainingPhases = [
-            "start",
-            "prestige",
-            "transcend",
-            "reincarnate",
-            "ant",
-            "sacrifice",
-            "ascension",
-            "challenge10",
-            "challenge11",
-            "challenge12",
-            "challenge13",
-            "challenge14",
-            "w5x10max",
-            "alpha",
-            "p2x1x10",
-            "p3x1",
-            "beta",
-            "1e15-expo",
-            "omega",
-            "singularity",
-            ""
-        ];
+        let remainingPhases = [...phases];
 
         for (let i = 0; i < components.length; i++) {
             const component = components[i];
