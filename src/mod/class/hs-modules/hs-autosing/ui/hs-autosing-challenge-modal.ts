@@ -294,10 +294,3 @@ export async function openAutosingChallengesModal(
         });
     }, 0);
 }
-
-// "auto-sing": {
-//         "page": "auto-sing",
-//         "pageName": "auto-sing",
-//         "pageColor": "grey",
-//         "order": 10
-//     },

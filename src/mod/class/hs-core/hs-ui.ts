@@ -499,6 +499,7 @@ export class HSUI extends HSModule {
         const html = HSUIC._modal({
             ...modalOptions,
             id: uuid,
+            title: modalOptions.title || '',
             styles: {
                 opacity: 0
             }

@@ -528,7 +528,7 @@
     },
     "startAutoSing": {
         "settingName": "startAutoSing",
-        "settingDescription": "Start auto-sing",
+        "settingDescription": "Start auto-sing (WIP)",
         "settingHelpText": "when enabled, the mod will automatically perform singularities.",
         "settingType": "boolean",
         "enabled": false,

@@ -236,7 +236,6 @@ export class Hypersynergism {
                 if (heaterData) {
                     const json = JSON.stringify(heaterData);
                     const base64 = btoa(json);
-                    console.log("test");
                     const tsv = HSUtils.base64WithCRLF(base64);
                     await navigator.clipboard.writeText(tsv);
 

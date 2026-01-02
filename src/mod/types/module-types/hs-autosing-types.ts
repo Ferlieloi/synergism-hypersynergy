@@ -45,7 +45,7 @@ export interface CorruptionLoadout {
     illiteracy: number;
     recession: number;
     dilation: number;
-    hyperchallenge: number;
+    hyperchallenged: number;
 }
 
 export interface Challenge {
