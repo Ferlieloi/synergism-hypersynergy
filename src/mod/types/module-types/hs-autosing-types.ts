@@ -19,7 +19,7 @@ export const phases = [
     "1e15-expo",
     "omega",
     "singularity",
-    ""
+    "end",
 ] as const;
 
 

@@ -387,4 +387,17 @@ export class HSUtils {
         if (settingValue === null) return '';
         return String(settingValue);
     }
+
+    static base64WithCRLF(
+        base64: string,
+        chunkSize = 49000
+    ): string {
+        const parts: string[] = [];
+
+        for (let i = 0; i < base64.length; i += chunkSize) {
+            parts.push(base64.slice(i, i + chunkSize));
+        }
+
+        return parts.join("\r\n");
+    }
 }

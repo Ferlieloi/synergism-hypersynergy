@@ -15,39 +15,37 @@ export class HSAutosingStrategyModal {
             strategy: []
         };
 
-        const modalContent = HSUIC.Flex({
-            styles: {
-                flexDirection: "column",
-                gap: "12px",
-                padding: "14px",
-                width: "480px"
-            },
-            html: [
-                HSUIC.P({ text: "Create Autosing Strategy" }),
-                HSUIC.Input({
-                    id: "hs-autosing-strategy-name",
-                    type: HSInputType.TEXT,
-                    props: { placeholder: "Strategy name" }
-                }),
-                HSUIC.Div({
-                    id: "hs-autosing-phase-list",
-                    html: "No strategy phases added yet."
-                }),
-                HSUIC.Button({
-                    id: "hs-autosing-add-phase-btn",
-                    text: "Add strategy phase"
-                }),
-                HSUIC.Button({
-                    id: "hs-autosing-create-btn",
-                    text: "Create Strategy"
-                })
-            ]
-        });
+        const modalContent = {
+            htmlContent: HSUIC.Flex({
+                styles: {
+                    flexDirection: "column",
+                    gap: "12px",
+                    padding: "14px",
+                    width: "480px"
+                },
+                html: [
+                    HSUIC.Input({
+                        id: "hs-autosing-strategy-name",
+                        type: HSInputType.TEXT,
+                        props: { placeholder: "Strategy name" }
+                    }),
+                    HSUIC.Div({
+                        id: "hs-autosing-phase-list",
+                        html: "No strategy phases added yet."
+                    }),
+                    HSUIC.Button({
+                        id: "hs-autosing-add-phase-btn",
+                        text: "Add phase"
+                    }),
+                    HSUIC.Button({
+                        id: "hs-autosing-create-btn",
+                        text: "Create Strategy"
+                    })
+                ],
+            }), title: "Create Autosing Strategy"
+        }
 
-        const modalID = await uiMod.Modal({
-            position: EPredefinedPosition.CENTER,
-            htmlContent: modalContent
-        });
+        const modalID = await uiMod.Modal(modalContent);
 
         // 2. Helper function to refresh the phase list in the UI
         const updatePhaseListUI = () => {

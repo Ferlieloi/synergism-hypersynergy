@@ -518,7 +518,7 @@ export class HSUI extends HSModule {
             const images = document.querySelectorAll(`#${uuid} > .hs-modal-body img`);
 
             const imagePromises = (Array.from(images) as HTMLImageElement[]).map(img => {
-                return new Promise<void>((resolve, reject) => {
+                return new Promise<void>((resolve) => {
                     if (img.complete) {
                         resolve();
                     } else {

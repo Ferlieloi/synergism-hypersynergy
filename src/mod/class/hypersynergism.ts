@@ -234,7 +234,11 @@ export class Hypersynergism {
                 const heaterData = await dataModule.dumpDataForHeater();
 
                 if (heaterData) {
-                    await navigator.clipboard.writeText(btoa(JSON.stringify(heaterData)));
+                    const json = JSON.stringify(heaterData);
+                    const base64 = btoa(json);
+
+                    const tsv = HSUtils.base64WithCRLF(base64);
+                    await navigator.clipboard.writeText(tsv);
 
                     HSUI.Notify('Ambrosia heater data copied to clipboard', {
                         position: 'top',

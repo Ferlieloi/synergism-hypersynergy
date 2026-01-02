@@ -109,7 +109,7 @@
             },
             {
                 "startPhase": "singularity",
-                "endPhase": "",
+                "endPhase": "end",
                 "corruptions": {
                     "viscosity": 16,
                     "drought": 16,

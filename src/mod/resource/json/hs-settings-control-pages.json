@@ -53,12 +53,6 @@
         "pageColor": "maroon",
         "order": 9
     },
-    "auto-sing": {
-        "page": "auto-sing",
-        "pageName": "auto-sing",
-        "pageColor": "grey",
-        "order": 10
-    },
     "misc": {
         "page": "misc",
         "pageName": "Misc.",

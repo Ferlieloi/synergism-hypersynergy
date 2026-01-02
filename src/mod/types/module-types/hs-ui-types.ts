@@ -88,6 +88,7 @@ export interface HSUIModalOptions extends HSOptional<HSUICOptions, 'id'> {
     htmlContent?: string;
     position?: HSUIDOMCoordinates;
     needsToLoad?: boolean;
+    title?: string;
 }
 
 export type HSNotifyPosition = "topLeft" | "top" | "topRight" | "right" | "bottomRight" | "bottom" | "bottomLeft" | "left";
@@ -103,6 +104,7 @@ export interface HSNotifyOptions {
 
 export interface HSUICModalOptions extends HSUICOptions {
     htmlContent?: string;
+    title?: string;
 }
 
 export interface HSUICSelectOption {
