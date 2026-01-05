@@ -750,8 +750,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             for (const req of reqs) {
                 HSLogger.debug(`Running prerequisite c${req} for c${c}`, this.context);
-                await this.waitForCompletion(req, 1, 60000, 500);
-                await this.sleep(this.sleepTime);
+                if (req === 10) {
+                    await this.waitForCompletion(req, 1, 60000, 500);
+                    await this.sleep(this.sleepTime);
+                } else {
+                    await this.waitForCompletion(req, 0, 60000, 0);
+                    await this.sleep(this.sleepTime);
+                }
+
             }
         }
     }
