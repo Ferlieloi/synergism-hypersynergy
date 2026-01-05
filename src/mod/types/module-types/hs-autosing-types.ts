@@ -22,6 +22,16 @@ export const phases = [
     "end",
 ] as const;
 
+export const SPECIAL_ACTIONS = [
+    { label: "Exit Transcension challenge", value: 101 },
+    { label: "Exit Reincarnation challenge", value: 102 },
+    { label: "Exit Ascension challenge", value: 103 },
+    { label: "Ascend", value: 104 },
+    { label: "Ambrosia Early Cube loadout", value: 105 },
+    { label: "Ambrosia Late Cube loadout", value: 106 },
+    { label: "Ambrosia Quark loadout", value: 107 },
+] as const;
+
 
 export type PhaseOption = (typeof phases)[number];
 
@@ -50,6 +60,7 @@ export interface CorruptionLoadout {
 
 export interface Challenge {
     challengeNumber: number;
-    challengeCompletions: number;
+    challengeCompletions?: number;
+    challengeMaxTime?: number;
     challengeWaitTime: number;
 }

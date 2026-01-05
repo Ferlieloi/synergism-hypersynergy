@@ -1,295 +1,215 @@
-import { HSUI } from "../../../hs-core/hs-ui";
-import { HSInputType } from "../../../../types/module-types/hs-ui-types";
 import { AutosingStrategyPhase, Challenge } from "../../../../types/module-types/hs-autosing-types";
+import { HSUI } from "../../../hs-core/hs-ui";
+import { SPECIAL_ACTIONS } from "../../../../types/module-types/hs-autosing-types";
 
 export async function openAutosingChallengesModal(
     uiMod: HSUI,
     stratData: AutosingStrategyPhase["strat"]
 ): Promise<void> {
+
+
+    const getSpecialActionLabel = (num: number): string | null =>
+        SPECIAL_ACTIONS.find(a => a.value === num)?.label ?? null;
+
     const modalId = "hs-autosing-challenges-modal";
-
-    // Inject styles once for all challenge list items
-    HSUI.injectStyle(`
-        .hs-challenge-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            background-color: #2a2a2a;
-            border-radius: 4px;
-            margin-bottom: 6px;
-        }
-        .hs-challenge-item-text {
-            flex: 1;
-            font-weight: 500;
-        }
-        .hs-challenge-btn {
-            padding: 4px 8px;
-            min-width: 30px;
-            cursor: pointer;
-            background-color: #192a56;
-            border-radius: 4px;
-            text-align: center;
-            user-select: none;
-        }
-        .hs-challenge-btn:hover {
-            opacity: 0.8;
-        }
-        .hs-challenge-btn-edit {
-            padding: 4px 12px;
-        }
-        .hs-challenge-btn-delete {
-            background-color: #b33939;
-        }
-        .hs-challenges-input-section {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 12px;
-            background-color: #1a1a1a;
-            border-radius: 6px;
-        }
-        .hs-challenges-input-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .hs-challenges-input-label {
-            width: 120px;
-            font-weight: bold;
-        }
-        .hs-challenges-input {
-            flex: 1;
-        }
-        .hs-challenges-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 12px;
-        }
-    `, 'hs-challenges-modal-styles');
-
-    // Local working copy of challenges
     const workingChallenges: Challenge[] = [...stratData];
 
+    // Helper to render the list inside the modal
     const renderChallengeList = (): string => {
         if (workingChallenges.length === 0) {
-            return '<div style="color: #888; padding: 10px;">No challenges added yet.</div>';
+            return '<div class="hs-challenges-empty-state">No challenges added yet.</div>';
         }
 
         return workingChallenges
-            .map((entry, index) => `
+            .map((entry, index) => {
+                const actionLabel = getSpecialActionLabel(entry.challengeNumber);
+                const isSpecial = !!actionLabel;
+
+                const displayText = isSpecial
+                    ? `<strong>${actionLabel}</strong>`
+                    : `Challenge ${entry.challengeNumber} (${entry.challengeCompletions} completions)`;
+
+                return `
                 <div class="hs-challenge-item">
-                    <div class="hs-challenge-item-text">Challenge ${entry.challengeNumber} × ${entry.challengeCompletions} (wait: ${entry.challengeWaitTime}ms)</div>
-                    <div class="hs-challenge-btn" id="hs-challenge-up-${index}" data-index="${index}">↑</div>
-                    <div class="hs-challenge-btn" id="hs-challenge-down-${index}" data-index="${index}">↓</div>
-                    <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">Edit</div>
-                    <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
-                </div>
-            `)
+                    <div class="hs-challenge-item-text">
+                        ${displayText}
+                        <div>
+                            Wait after goal reached: ${entry.challengeWaitTime}ms ${!isSpecial ? `| Max: ${entry.challengeMaxTime}ms` : ''}
+                        </div>
+                    </div>
+                    <div class="hs-challenge-controls">
+                        <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">✎</div>
+                        <div class="hs-challenge-btn" id="hs-challenge-up-${index}" data-index="${index}">↑</div>
+                        <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
+                        <div class="hs-challenge-btn" id="hs-challenge-down-${index}" data-index="${index}">↓</div>
+                    </div>
+                </div>`;
+            })
             .join("");
     };
 
-    const updateChallengeList = () => {
+    const updateChallengeListUI = () => {
         const listContainer = document.getElementById("hs-challenge-list-container");
-        if (listContainer) {
-            listContainer.innerHTML = renderChallengeList();
-        }
+        if (listContainer) listContainer.innerHTML = renderChallengeList();
     };
 
     const modalContent = {
         htmlContent: `
-            <div id="${modalId}" style="display: flex; flex-direction: column; gap: 16px; padding: 14px; width: 480px; max-height: 600px;">
-                <!-- Input section -->
-                <div class="hs-challenges-input-section">
-                    <div class="hs-challenges-input-row">
-                        <div class="hs-challenges-input-label">Challenge:</div>
-                        <input 
-                            type="number" 
-                            id="hs-challenge-num-input" 
-                            class="hs-panel-input-number hs-challenges-input"
-                            min="1" 
-                            max="15" 
-                            value="1" 
-                            placeholder="1-15"
-                        />
-                    </div>
-                    <div class="hs-challenges-input-row">
-                        <div class="hs-challenges-input-label">Completions:</div>
-                        <input 
-                            type="number" 
-                            id="hs-challenge-completions-input" 
-                            class="hs-panel-input-number hs-challenges-input"
-                            min="1" 
-                            value="1" 
-                            placeholder="Number of completions"
-                        />
-                    </div>
-                    <div class="hs-challenges-input-row">
-                        <div class="hs-challenges-input-label">Wait Time (ms):</div>
-                        <input 
-                            type="number" 
-                            id="hs-challenge-wait-input" 
-                            class="hs-panel-input-number hs-challenges-input"
-                            min="0" 
-                            value="0" 
-                            placeholder="Wait time in miliseconds"
-                        />
-                    </div>
-                    <div 
-                        class="hs-panel-btn" 
-                        id="hs-challenge-add-btn" 
-                        style="margin-top: 8px; background-color: #009432;"
-                    >
-                        Add Challenge
-                    </div>
-                </div>
-
-                <!-- Challenge list -->
-                <div style="flex: 1; overflow-y: auto; max-height: 300px;">
-                    <div id="hs-challenge-list-container">
-                        ${renderChallengeList()}
-                    </div>
-                </div>
-
-                <!-- Footer buttons -->
-                <div class="hs-challenges-footer">
-                    <div class="hs-panel-btn" id="hs-challenges-cancel-btn">Cancel</div>
-                    <div class="hs-panel-btn" id="hs-challenges-save-btn" style="background-color: #192a56;">Done</div>
-                </div>
+    <div id="${modalId}" class="hs-challenges-modal-container">
+        <div class="hs-challenges-input-section">
+            <div class="hs-challenges-input-row" style="grid-column: 1 / -1;">
+                <div class="hs-challenges-input-label">Special Action:</div>
+                <select id="hs-challenge-action-select" class="hs-challenges-input">
+                    <option value="">None (Standard Challenge)</option>
+                    ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
+                </select>
             </div>
-        `,
-        id: modalId,
-        title: "Configure Challenges"
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Challenge #:</div>
+                <input type="number" id="hs-challenge-num-input" class="hs-challenges-input" min="1" max="15" value="1" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Min Completions:</div>
+                <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait (ms):</div>
+                <input type="number" id="hs-challenge-wait-input" class="hs-challenges-input" min="0" value="0" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Max Time (ms):</div>
+                <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="100" value="10000" />
+            </div>
+            <div class="hs-challenges-add-btn" id="hs-challenge-add-btn">Add Action/Challenge</div>
+        </div>
+
+        <div class="hs-challenges-list-container">
+            <div id="hs-challenge-list-container">
+                ${renderChallengeList()}
+            </div>
+        </div>
+
+        <div class="hs-challenges-footer">
+            <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" id="hs-challenges-cancel-btn">Cancel</div>
+            <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">Save Strategy</div>
+        </div>
+    </div>`,
+        title: "Configure Strategy Actions"
     };
 
     const modalInstance = await uiMod.Modal(modalContent);
-
-    // Track if we're editing an existing challenge
     let editingIndex: number | null = null;
 
-    // Helper to clear/reset inputs
-    const resetInputs = () => {
-        const challengeInput = document.getElementById("hs-challenge-num-input") as HTMLInputElement;
-        const completionsInput = document.getElementById("hs-challenge-completions-input") as HTMLInputElement;
-        const waitInput = document.getElementById("hs-challenge-wait-input") as HTMLInputElement;
-        const addBtn = document.getElementById("hs-challenge-add-btn") as HTMLButtonElement;
+    // Logic to disable inputs based on whether a Special Action is selected
+    const updateInputState = () => {
+        const actionSelect = document.getElementById("hs-challenge-action-select") as HTMLSelectElement;
+        const isSpecial = !!actionSelect?.value;
 
-        if (challengeInput) challengeInput.value = "1";
-        if (completionsInput) completionsInput.value = "1";
-        if (waitInput) waitInput.value = "0";
-        if (addBtn) addBtn.textContent = "Add Challenge";
+        const challengeNum = document.getElementById("hs-challenge-num-input") as HTMLInputElement;
+        const minCompletions = document.getElementById("hs-challenge-completions-input") as HTMLInputElement;
+        const maxTime = document.getElementById("hs-challenge-max-time-input") as HTMLInputElement;
 
-        editingIndex = null;
+        [challengeNum, minCompletions, maxTime].forEach(el => {
+            if (el) {
+                el.disabled = isSpecial;
+                el.parentElement!.style.opacity = isSpecial ? "0.4" : "1";
+            }
+        });
     };
 
-    // Event delegation
+    const resetInputs = () => {
+        (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
+        (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
+        (document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value = "0";
+        (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
+        (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
+        (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
+        editingIndex = null;
+        updateInputState();
+    };
+
     setTimeout(() => {
-        const modalRoot = document.getElementById(modalId);
-        if (!modalRoot) return;
+        const root = document.getElementById(modalId);
+        const actionSelect = document.getElementById("hs-challenge-action-select") as HTMLSelectElement;
 
-        modalRoot.addEventListener("click", (e) => {
+        actionSelect?.addEventListener("change", updateInputState);
+
+        root?.addEventListener("click", (e) => {
             const el = e.target as HTMLElement;
-            const elementId = el.id;
+            const id = el.id;
 
-            // Add/Update challenge
-            if (elementId === "hs-challenge-add-btn") {
-                const challengeInput = document.getElementById("hs-challenge-num-input") as HTMLInputElement;
-                const completionsInput = document.getElementById("hs-challenge-completions-input") as HTMLInputElement;
-                const waitInput = document.getElementById("hs-challenge-wait-input") as HTMLInputElement;
+            // ADD / UPDATE
+            if (id === "hs-challenge-add-btn") {
+                const isSpecial = !!actionSelect.value;
+                const newEntry: Challenge = {
+                    challengeNumber: isSpecial ? Number(actionSelect.value) : Number((document.getElementById("hs-challenge-num-input") as HTMLInputElement).value),
+                    challengeCompletions: isSpecial ? 0 : Number((document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value),
+                    challengeWaitTime: Number((document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value),
+                    challengeMaxTime: isSpecial ? 0 : Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
+                };
 
-                const challenge = Math.max(1, Math.min(15, Number(challengeInput?.value) || 1));
-                const completions = Math.max(1, Number(completionsInput?.value) || 1);
-                const waitTime = Math.max(0, Number(waitInput?.value) || 0);
+                if (editingIndex !== null) workingChallenges[editingIndex] = newEntry;
+                else workingChallenges.push(newEntry);
 
-                if (editingIndex !== null) {
-                    // Update existing
-                    workingChallenges[editingIndex] = {
-                        challengeNumber: challenge,
-                        challengeCompletions: completions,
-                        challengeWaitTime: waitTime
-                    };
+                updateChallengeListUI();
+                resetInputs();
+            }
+
+            // EDIT
+            if (id.startsWith("hs-challenge-edit-")) {
+                editingIndex = Number(el.dataset.index);
+                const item = workingChallenges[editingIndex];
+                const actionLabel = getSpecialActionLabel(item.challengeNumber);
+
+                if (actionLabel) {
+                    actionSelect.value = String(item.challengeNumber);
                 } else {
-                    // Add new
-                    workingChallenges.push({
-                        challengeNumber: challenge,
-                        challengeCompletions: completions,
-                        challengeWaitTime: waitTime
-                    });
+                    actionSelect.value = "";
+                    (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = String(item.challengeNumber);
+                    (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = String(item.challengeCompletions);
+                    (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = String(item.challengeMaxTime);
                 }
 
-                updateChallengeList();
+                (document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value = String(item.challengeWaitTime);
+                (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+                updateInputState();
+            }
+
+            // DELETE
+            if (id.startsWith("hs-challenge-delete-")) {
+                workingChallenges.splice(Number(el.dataset.index), 1);
+                updateChallengeListUI();
                 resetInputs();
-                return;
             }
 
-            // Move up
-            if (elementId.startsWith("hs-challenge-up-")) {
-                const index = Number(el.dataset.index);
-                if (index > 0) {
-                    [workingChallenges[index - 1], workingChallenges[index]] =
-                        [workingChallenges[index], workingChallenges[index - 1]];
-                    updateChallengeList();
-                    resetInputs(); // Cancel any ongoing edit
+            // REORDER UP
+            if (id.startsWith("hs-challenge-up-")) {
+                const idx = Number(el.dataset.index);
+                if (idx > 0) {
+                    [workingChallenges[idx], workingChallenges[idx - 1]] = [workingChallenges[idx - 1], workingChallenges[idx]];
+                    updateChallengeListUI();
                 }
-                return;
             }
 
-            // Move down
-            if (elementId.startsWith("hs-challenge-down-")) {
-                const index = Number(el.dataset.index);
-                if (index < workingChallenges.length - 1) {
-                    [workingChallenges[index], workingChallenges[index + 1]] =
-                        [workingChallenges[index + 1], workingChallenges[index]];
-                    updateChallengeList();
-                    resetInputs(); // Cancel any ongoing edit
+            // REORDER DOWN
+            if (id.startsWith("hs-challenge-down-")) {
+                const idx = Number(el.dataset.index);
+                if (idx < workingChallenges.length - 1) {
+                    [workingChallenges[idx], workingChallenges[idx + 1]] = [workingChallenges[idx + 1], workingChallenges[idx]];
+                    updateChallengeListUI();
                 }
-                return;
             }
 
-            // Edit
-            if (elementId.startsWith("hs-challenge-edit-")) {
-                const index = Number(el.dataset.index);
-                const entry = workingChallenges[index];
-
-                const challengeInput = document.getElementById("hs-challenge-num-input") as HTMLInputElement;
-                const completionsInput = document.getElementById("hs-challenge-completions-input") as HTMLInputElement;
-                const waitInput = document.getElementById("hs-challenge-wait-input") as HTMLInputElement;
-                const addBtn = document.getElementById("hs-challenge-add-btn") as HTMLButtonElement;
-
-                if (challengeInput) challengeInput.value = String(entry.challengeNumber);
-                if (completionsInput) completionsInput.value = String(entry.challengeCompletions);
-                if (waitInput) waitInput.value = String(entry.challengeWaitTime);
-                if (addBtn) addBtn.textContent = "Update Challenge";
-
-                editingIndex = index;
-                return;
-            }
-
-            // Delete
-            if (elementId.startsWith("hs-challenge-delete-")) {
-                const index = Number(el.dataset.index);
-                workingChallenges.splice(index, 1);
-                updateChallengeList();
-                resetInputs();
-                return;
-            }
-
-            // Save
-            if (elementId === "hs-challenges-save-btn") {
-                // Copy working challenges back to the original array
+            // SAVE
+            if (id === "hs-challenges-save-btn") {
                 stratData.length = 0;
                 stratData.push(...workingChallenges);
-                HSUI.removeInjectedStyle('hs-challenges-modal-styles');
                 uiMod.CloseModal(modalInstance);
-                return;
             }
 
-            // Cancel
-            if (elementId === "hs-challenges-cancel-btn") {
-                HSUI.removeInjectedStyle('hs-challenges-modal-styles');
+            // CANCEL
+            if (id === "hs-challenges-cancel-btn") {
                 uiMod.CloseModal(modalInstance);
-                return;
             }
         });
     }, 0);

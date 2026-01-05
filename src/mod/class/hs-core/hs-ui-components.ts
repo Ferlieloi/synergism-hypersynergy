@@ -280,6 +280,7 @@ export class HSUIC {
                     <div class="hs-modal-body">
                         ${comp_html}
                     </div>
+                    <div class="hs-modal-resizer"></div>
                 </div>`;
     }
 }

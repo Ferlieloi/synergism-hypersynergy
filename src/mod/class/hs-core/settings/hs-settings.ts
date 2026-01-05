@@ -1,4 +1,4 @@
-import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { AutosingStrategy, HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
 import { HSAutosingStrategy, AutosingStrategyPhase, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
@@ -7,6 +7,7 @@ import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
 import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
+import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
 import { HSSettingActions } from "./hs-setting-action";
@@ -16,6 +17,7 @@ import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
 import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 
 /*
     Class: HSSettings
@@ -42,6 +44,8 @@ export class HSSettings extends HSModule {
 
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
+
+    static #strategies: HSAutosingStrategy[] = []
 
     #settingActions: HSSettingActions;
 
@@ -180,6 +184,7 @@ export class HSSettings extends HSModule {
     }
 
     async init(): Promise<void> {
+        this.#addStrategiesToOptions(HSSettings.#strategies)
         this.isInitialized = true;
     }
 
@@ -530,7 +535,7 @@ export class HSSettings extends HSModule {
         };
     }
 
-    #validateStrategy(strategy: HSAutosingStrategy) {
+    static validateStrategy(strategy: HSAutosingStrategy) {
         if (!strategy) throw new Error('Strategy is undefined');
         if (!('strategyName' in strategy)) throw new Error('Strategy is missing strategyName property');
         if (!('strategy' in strategy)) throw new Error('Strategy is missing strategy property');
@@ -547,20 +552,20 @@ export class HSSettings extends HSModule {
 
             if (!corruptions) {
                 throw new Error(
-                    `Component ${i} (${startPhase} → ${endPhase}) has no corruptions defined`,
+                    `Component ${i + 1} (${startPhase} → ${endPhase}) has no corruptions defined`,
                 );
             }
 
             if (!Array.isArray(challenges) || challenges.length === 0) {
                 throw new Error(
-                    `Component ${i} (${startPhase} → ${endPhase}) must have at least one challenge`,
+                    `Component ${i + 1} (${startPhase} → ${endPhase}) must have at least one challenge`,
                 );
             }
 
             // Rule: must start at leftmost remaining phase
             if (remainingPhases[0] !== startPhase) {
                 throw new Error(
-                    `Component ${i} must start at "${remainingPhases[0]}", got "${startPhase}"`,
+                    `Component ${i + 1} must start at "${remainingPhases[0]}", got "${startPhase}"`,
                 );
             }
 
@@ -568,7 +573,7 @@ export class HSSettings extends HSModule {
 
             if (endIndex === -1) {
                 throw new Error(
-                    `Component ${i} ends at "${endPhase}", which is not valid or already consumed`,
+                    `Component ${i + 1} ends at "${endPhase}", which is not valid or already consumed`,
                 );
             }
 
@@ -662,6 +667,11 @@ export class HSSettings extends HSModule {
         return this.#settings;
     }
 
+    static getStrategies(): HSAutosingStrategy[] {
+        return this.#strategies;
+    }
+
+
     // Serializes all current settings into a JSON string
     static #serializeSettings(): string {
         const serializeableSettings: Partial<HSSettingBase<HSSettingType>> = {}
@@ -680,6 +690,153 @@ export class HSSettings extends HSModule {
         }
 
         return JSON.stringify(serializeableSettings);
+    }
+
+    static saveStrategiesToStorage(
+        strategy?: HSAutosingStrategy,
+        strategyName?: string
+    ) {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+        if (!storageMod) {
+            throw new Error("Could not find Storage Module");
+        }
+
+        let strategies: HSAutosingStrategy[] | null = storageMod.getData(HSGlobal.HSSettings.strategiesKey);
+        if (!Array.isArray(strategies)) {
+            strategies = [];
+        }
+
+        if (!strategy && strategyName) {
+            const updatedStrategies = strategies.filter(
+                s => s.strategyName !== strategyName
+            );
+
+            HSSettings.#strategies = updatedStrategies;
+            storageMod.setData(
+                HSGlobal.HSSettings.strategiesKey,
+                updatedStrategies
+            );
+            this.#removeStrategyFromOptions(strategyName);
+
+            HSLogger.debug(`<green>Strategy removed</green>`, this.#staticContext);
+            return;
+        }
+
+        if (strategy) {
+            this.validateStrategy(strategy);
+            const isUpdate = !!strategyName;
+            const nameExists = strategies.some(s => {
+                if (s.strategyName !== strategy.strategyName) return false;
+                if (!isUpdate) return true;
+                return s.strategyName !== strategyName;
+            });
+
+            if (nameExists) {
+                throw new Error(`Strategy with name "${strategy.strategyName}" already exists.`);
+            }
+
+            let updatedStrategies = strategies;
+
+            if (isUpdate) {
+                updatedStrategies = strategies.filter(
+                    s => s.strategyName !== strategyName
+                );
+                this.#removeStrategyFromOptions(strategyName);
+            }
+
+            updatedStrategies = updatedStrategies.concat(strategy);
+
+            HSSettings.#strategies = updatedStrategies;
+
+            const saved = storageMod.setData(
+                HSGlobal.HSSettings.strategiesKey,
+                updatedStrategies.filter(s => s.strategyName !== "default_strategy")
+            );
+
+            this.#addStrategyToOptions(strategy);
+
+
+            if (!saved) {
+                HSLogger.warn(
+                    `Could not save Strategy to localStorage`,
+                    this.#staticContext
+                );
+            } else {
+                HSLogger.debug(
+                    `<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`,
+                    this.#staticContext
+                );
+            }
+        }
+    }
+
+    static async deleteSelectedStrategy() {
+        const strategySetting = HSSettings.getSetting("autosingStrategy");
+        const selectedValue = strategySetting.getValue();
+
+        if (!selectedValue || selectedValue === '') {
+            HSUI.Notify("Please select a strategy to delete", {
+                notificationType: "warning"
+            });
+            return;
+        }
+
+        const control = strategySetting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
+        if (!selectedOption) return;
+
+        const strategyName = selectedOption.text;
+
+        if (strategyName == "default_strategy") {
+            HSUI.Notify("cannot delete default strategy")
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete strategy "${strategyName}"?`)) {
+            return;
+        }
+
+        HSSettings.saveStrategiesToStorage(undefined, strategyName);
+
+        HSUI.Notify(`Strategy "${strategyName}" deleted`, {
+            notificationType: "success"
+        });
+    }
+
+    static async editSelectedStrategy() {
+        const strategySetting = HSSettings.getSetting("autosingStrategy");
+        const selectedValue = strategySetting.getValue();
+
+        if (!selectedValue || selectedValue === '') {
+            HSUI.Notify("Please select a strategy to edit", {
+                notificationType: "warning"
+            });
+            return;
+        }
+
+        const control = strategySetting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
+        if (!selectedOption) return;
+
+        const strategies = HSSettings.getStrategies();
+        const strategy = strategies.find(s => s.strategyName === selectedOption.text);
+
+        if (!strategy) {
+            HSUI.Notify("Cannot edit selected strategy", {
+                notificationType: "error"
+            });
+            return;
+        }
+        if (strategy.strategyName == "default_strategy") {
+            HSUI.Notify("cannot edit default strategy")
+            return;
+        }
+
+        await HSAutosingStrategyModal.open(strategy, selectedValue as number);
     }
 
     static saveSettingsToStorage() {
@@ -703,7 +860,7 @@ export class HSSettings extends HSModule {
 
         for (const strategy of defaultStrategies) {
             if (!strategy) continue;
-            this.#validateStrategy(strategy);
+            HSSettings.validateStrategy(strategy);
         }
 
         return defaultStrategies as HSAutosingStrategy[];
@@ -765,20 +922,19 @@ export class HSSettings extends HSModule {
     #parseStoredStrategies(): HSAutosingStrategy[] | null {
         const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
 
-        if (storageMod) {
-            const loaded = storageMod.getData<string>(HSGlobal.HSSettings.strategiesKey);
-
-            if (loaded) {
-                return JSON.parse(loaded) as HSAutosingStrategy[];
-            } else {
-                HSLogger.warn(`Could not load strategies from localStorage`, this.context);
-                return null;
-            }
-        } else {
+        if (!storageMod) {
             HSLogger.warn(`Could not find HSStorage module`, this.context);
             return null;
         }
+        const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
+
+        if (loaded) {
+            return Array.isArray(loaded) ? loaded : [loaded];
+        }
+
+        return null;
     }
+
 
     // Loads and parses settings from local storage as JSON
     #parseStoredSettings(): Partial<HSSettingsDefinition> | null {
@@ -799,42 +955,82 @@ export class HSSettings extends HSModule {
         }
     }
 
-    #addStrategiesToOptions(strategies: HSAutosingStrategy[], defaultSettings: HSSettingsDefinition) {
-        const selectOptions = defaultSettings.autosingStrategy.settingControl?.selectOptions;
-
-        if (!selectOptions) {
-            throw new Error('selectOptions is not defined on autosingStrategy');
+    #addStrategiesToOptions(strategies: HSAutosingStrategy[]) {
+        for (const strategy of strategies) {
+            if (strategy.strategyName === undefined) {
+                throw new Error('Strategy name is missing. Cannot add strategy to options.');
+            }
         }
 
-        // Start values after existing options (or 1 if empty)
-        let nextValue =
-            selectOptions.length > 0
-                ? Math.max(...selectOptions.map(o => Number(o.value))) + 1
+        for (const strategy of strategies) {
+            HSSettings.#addStrategyToOptions(strategy);
+        }
+    }
+
+    static #removeStrategyFromOptions(strategyName: string) {
+        const setting = this.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+
+        if (!control?.selectOptions) return;
+        const optionIndex = control.selectOptions.findIndex(o => o.text === strategyName);
+
+        if (optionIndex !== -1) {
+            const optionValue = control.selectOptions[optionIndex].value;
+            control.selectOptions.splice(optionIndex, 1);
+            const selectEl = document.querySelector(
+                `#${control.controlId}`
+            ) as HTMLSelectElement | null;
+
+            if (selectEl) {
+                const optionToRem = selectEl.querySelector(`option[value="${optionValue}"]`);
+                if (optionToRem) {
+                    optionToRem.remove();
+                }
+            }
+        }
+    }
+
+    static #addStrategyToOptions(strategy: HSAutosingStrategy) {
+        const setting = this.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+
+        if (!control?.selectOptions) return;
+
+        const nextValue =
+            control.selectOptions.length > 0
+                ? Math.max(...control.selectOptions.map(o => Number(o.value))) + 1
                 : 1;
 
-        for (const strategy of strategies) {
-            const name = strategy.strategyName;
-            selectOptions.push({
-                text: name,
-                value: nextValue,
-            });
-            nextValue++;
+        control.selectOptions.push({
+            text: strategy.strategyName,
+            value: nextValue
+        });
+
+        // Update DOM if already rendered
+        const selectEl = document.querySelector(
+            `#${control.controlId}`
+        ) as HTMLSelectElement | null;
+
+        if (selectEl) {
+            const option = document.createElement("option");
+            option.value = String(nextValue);
+            option.textContent = strategy.strategyName;
+            selectEl.appendChild(option);
         }
     }
 
     #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();
         const defaultStrategies = this.#parseDefaultStrategies();
-        this.#addStrategiesToOptions(defaultStrategies, defaultSettings)
+        HSSettings.#strategies.push(...defaultStrategies)
 
         try {
             const loadedSettings = this.#parseStoredSettings();
             const loadedStrategies = this.#parseStoredStrategies();
 
             if (loadedStrategies) {
-                this.#addStrategiesToOptions(loadedStrategies, defaultSettings)
+                HSSettings.#strategies.push(...loadedStrategies);
             }
-
             const resolved = JSON.parse(JSON.stringify(defaultSettings));
 
             if (loadedSettings) {
@@ -883,7 +1079,6 @@ export class HSSettings extends HSModule {
                         // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
                     });
                 });
-
                 return resolved as HSSettingsDefinition;
             } else {
                 return defaultSettings;

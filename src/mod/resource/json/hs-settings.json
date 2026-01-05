@@ -526,14 +526,14 @@
             "controlEnabledId": "hs-setting-stop-sniff-on-error-btn"
         }
     },
-    "startAutoSing": {
-        "settingName": "startAutoSing",
-        "settingDescription": "Start auto-sing (WIP)",
+    "startAutosing": {
+        "settingName": "startAutosing",
+        "settingDescription": "Start auto-sing",
         "settingHelpText": "when enabled, the mod will automatically perform singularities.",
         "settingType": "boolean",
         "enabled": false,
         "usesGameData": true,
-        "settingAction": "startAutoSingAction",
+        "settingAction": "startAutosingAction",
         "settingControl": {
             "controlType": "switch",
             "controlGroup": "auto-sing",
@@ -667,7 +667,7 @@
     "autosingQuarkLoadout": {
         "settingName": "autosingEarlyQuarkLoadout",
         "settingDescription": "Quark loadout",
-        "settingHelpText": "This is the ambrosia loadout that gives you the most quarks",
+        "settingHelpText": "This is the ambrosia loadout that gives you the most quarks. Note: this loadout is automatically selected right before the autosing presses the singularity button, the ascension button is also clicked so you gain the extra quarks.",
         "settingType": "selectstring",
         "enabled": true,
         "settingValue": "",
@@ -729,6 +729,36 @@
             "controlGroup": "auto-sing-strategy",
             "controlPage": "auto-sing",
             "selectOptions": []
+        }
+    },
+    "editAutosingStrategy": {
+        "settingName": "editAutosingStrategy",
+        "settingDescription": "edit strategy",
+        "settingHelpText": "Opens a new window where you can edit the selected autosing strategy",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "editAutosingStrategy",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-editor-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy",
+            "controlPage": "auto-sing"
+        }
+    },
+    "deleteAutosingStrategy": {
+        "settingName": "deleteAutosingStrategy",
+        "settingDescription": "delete strategy",
+        "settingHelpText": "deletes the selected strategy",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "deleteAutosingStrategy",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-deleter-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy",
+            "controlPage": "auto-sing"
         }
     },
     "createAutosingStrategy": {

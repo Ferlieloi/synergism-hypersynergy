@@ -8,6 +8,7 @@ import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
+import { HSSettings } from "./hs-settings";
 
 /*
     Class: HSSettingActions
@@ -155,7 +156,7 @@ export class HSSettingActions {
             }
         },
 
-        startAutoSingAction: async (params: HSSettingActionParams) => {
+        startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
@@ -171,6 +172,15 @@ export class HSSettingActions {
         createAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             await HSAutosingStrategyModal.open();
+        },
+
+        editAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.editSelectedStrategy();
+        },
+        deleteAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.deleteSelectedStrategy();
         }
     }
 

@@ -88,7 +88,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
                         continue;
 
-                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
+                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled() && setting.definition.settingName !== "startAutosing") {
                         setting.disable();
                     }
                 }
@@ -133,7 +133,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
                         continue;
 
-                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled()) {
+                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled() && setting.definition.settingName !== "startAutosing") {
                         setting.disable();
                     }
                 }

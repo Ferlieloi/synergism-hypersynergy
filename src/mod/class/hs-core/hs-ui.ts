@@ -228,7 +228,6 @@ export class HSUI extends HSModule {
             pos3 = e.clientX;
             pos4 = e.clientY;
             document.onmouseup = closeDragElement;
-
             document.onmousemove = elementDrag;
         }
 
@@ -240,8 +239,28 @@ export class HSUI extends HSModule {
             pos3 = e.clientX;
             pos4 = e.clientY;
 
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
+            let newTop = element.offsetTop - pos2;
+            let newLeft = element.offsetLeft - pos1;
+
+            const modalRect = element.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            const minVisibleHeight = 45;
+            const padding = 10;
+
+            newLeft = Math.max(
+                -(modalRect.width - minVisibleHeight),
+                Math.min(newLeft, viewportWidth - minVisibleHeight)
+            );
+
+            newTop = Math.max(
+                padding,
+                Math.min(newTop, viewportHeight - minVisibleHeight)
+            );
+
+            element.style.top = newTop + "px";
+            element.style.left = newLeft + "px";
         }
 
         function closeDragElement() {
@@ -537,8 +556,31 @@ export class HSUI extends HSModule {
 
         if (modal) {
             const coords = this.#resolveCoordinates(modalOptions.position, modal);
-            modal.style.left = `${coords.x}px`;
-            modal.style.top = `${coords.y}px`;
+            const modalRect = modal.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let finalX = coords.x;
+            let finalY = coords.y;
+
+            if (finalX + modalRect.width > viewportWidth - 10) {
+                finalX = viewportWidth - modalRect.width - 10;
+            }
+
+            if (finalX < 10) {
+                finalX = 10;
+            }
+
+            if (finalY + modalRect.height > viewportHeight - 10) {
+                finalY = viewportHeight - modalRect.height - 10;
+            }
+
+            if (finalY < 10) {
+                finalY = 10;
+            }
+
+            modal.style.left = `${finalX}px`;
+            modal.style.top = `${finalY}px`;
 
             await modal.transition({
                 opacity: 1
@@ -546,6 +588,10 @@ export class HSUI extends HSModule {
 
             // Make the modal draggable
             this.#makeDraggable(modal, modalHead);
+            const modalResizer = modal.querySelector('.hs-modal-resizer') as HTMLElement;
+            if (modalResizer) {
+                this.#makeResizable(modal, modalResizer);
+            }
 
             // Make the modal's close button (X in the top right corner) close the modal
             modal.addEventListener('click', async function (e) {

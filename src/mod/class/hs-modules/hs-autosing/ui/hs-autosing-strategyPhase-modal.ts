@@ -3,156 +3,135 @@ import {
     AutosingStrategyPhase,
     PhaseOption
 } from "../../../../types/module-types/hs-autosing-types";
-import { HSUI } from "../../../hs-core/hs-ui";
-import { HSUICSelectOption } from "../../../../types/module-types/hs-ui-types";
 import { openAutosingCorruptionModal } from "./hs-autosing-corruption-modal";
 import { openAutosingChallengesModal } from "./hs-autosing-challenge-modal";
-
+import { HSUI } from "../../../hs-core/hs-ui"
+import { HSSettings } from "../../../hs-core/settings/hs-settings"
 
 export async function openStrategyPhaseModal(
     uiMod: HSUI,
     existingPhases: AutosingStrategyPhase[],
-    onCreate: (phase: AutosingStrategyPhase) => void
+    onCreate: (phase: AutosingStrategyPhase) => void,
+    onUpdate?: (phase: AutosingStrategyPhase) => void,
+    existingPhase?: AutosingStrategyPhase
 ) {
+    const isEditing = !!existingPhase;
+
     const lastPhaseEnd: PhaseOption = existingPhases.length
         ? existingPhases[existingPhases.length - 1].endPhase
         : "start";
 
-    const lastPhaseIndex = phases.indexOf(lastPhaseEnd);
+    const workingCorruptions: AutosingStrategyPhase["corruptions"] =
+        existingPhase?.corruptions || {
+            viscosity: 0,
+            drought: 0,
+            deflation: 0,
+            extinction: 0,
+            illiteracy: 0,
+            recession: 0,
+            dilation: 0,
+            hyperchallenged: 0
+        };
 
-    // Only allow phases AFTER the last end phase (including "end")
+    const workingStrat: AutosingStrategyPhase["strat"] =
+        existingPhase?.strat || [];
+
+    const lastPhaseIndex = phases.indexOf(lastPhaseEnd);
     const validEndPhases = phases.slice(lastPhaseIndex + 1);
 
-    const selectOptions: HSUICSelectOption[] = validEndPhases.map((phase, i) => ({
-        value: phase,
-        text: phase,
-        selected: i === 0
-    }));
-
-    const modalId = `hs-autosing-phase-modal-${existingPhases.length}`;
+    const selectOptions = validEndPhases
+        .map(
+            (phase, i) =>
+                `<option value="${phase}" ${existingPhase?.endPhase === phase
+                    ? "selected"
+                    : i === 0
+                        ? "selected"
+                        : ""
+                }>${phase}</option>`
+        )
+        .join("");
 
     const modalContent = {
         htmlContent: `
-            <div id="${modalId}">
-                <div class="hs-modal-body">
-                    <label for="hs-autosing-start-phase">Starting Phase:</label>
-                    <select id="hs-autosing-start-phase" disabled>
-                        <option value="${lastPhaseEnd}" selected>
-                            ${lastPhaseEnd || "(start)"}
-                        </option>
-                    </select>
+        <div class="hs-phase-modal-container">
+            <div class="hs-phase-select-group">
+                <label class="hs-phase-label">Starting Phase</label>
+                <select class="hs-phase-select" disabled>
+                    <option selected>
+                        ${existingPhase?.startPhase ?? lastPhaseEnd}
+                    </option>
+                </select>
+            </div>
 
-                    <label for="hs-autosing-end-phase" style="margin-top:1rem;">
-                        Ending Phase:
-                    </label>
-                    <select id="hs-autosing-end-phase">
-                        ${selectOptions
-                .map(
-                    opt =>
-                        `<option value="${opt.value}" ${opt.selected ? "selected" : ""
-                        }>${opt.text}</option>`
-                )
-                .join("")}
-                    </select>
+            <div class="hs-phase-select-group">
+                <label class="hs-phase-label">Ending Phase</label>
+                <select
+                    id="hs-autosing-end-phase"
+                    class="hs-phase-select"
+                >
+                    ${selectOptions}
+                </select>
+            </div>
 
-                    <div style="margin-top:1rem;">
-                        <button
-                            id="hs-autosing-phase-corruptions"
-                            class="hs-btn-secondary"
-                        >
-                            Configure Corruptions
-                        </button>
-                        <button
-                            id="hs-autosing-phase-challenges"
-                            class="hs-btn-secondary"
-                        >
-                            Configure Challenges
-                        </button>
-                    </div>
+            <div class="hs-phase-config-group">
+                <div class="hs-phase-config-btn" id="hs-autosing-phase-corruptions">
+                    Configure Corruptions
                 </div>
-
-                <div class="hs-modal-footer">
-                    <button
-                        id="hs-autosing-phase-done"
-                        class="hs-btn-primary"
-                    >
-                        Done
-                    </button>
-                    <button
-                        id="hs-autosing-phase-cancel"
-                        class="hs-btn-secondary"
-                    >
-                        Cancel
-                    </button>
+                <div class="hs-phase-config-btn" id="hs-autosing-phase-challenges">
+                    Configure Challenges
                 </div>
             </div>
+
+            <div class="hs-phase-footer">
+                <div class="hs-phase-done-btn" id="hs-autosing-phase-done">
+                    ${isEditing ? "Save" : "Create Phase"}
+                </div>
+                <div class="hs-phase-error" id="hs-phase-error" style="display:none;"></div>
+            </div>
+        </div>
         `,
-        id: modalId,
-        title: "Create Autosing Strategy Phase"
+        title: isEditing ? "Edit Strategy Phase" : "Create Strategy Phase"
     };
 
-    const workingCorruptions: AutosingStrategyPhase["corruptions"] = {
-        viscosity: 0,
-        drought: 0,
-        deflation: 0,
-        extinction: 0,
-        illiteracy: 0,
-        recession: 0,
-        dilation: 0,
-        hyperchallenged: 0
-    };
+    const modalId = await uiMod.Modal(modalContent);
 
-    const workingStrat: AutosingStrategyPhase["strat"] = [];
+    setTimeout(() => {
+        const root = document.querySelector(".hs-phase-modal-container");
+        if (!root) return;
 
-    // Create modal
-    const actualModalId = await uiMod.Modal(modalContent);
+        root.addEventListener("click", async (e) => {
+            const el = e.target as HTMLElement;
 
-    // Event delegation
-    const modalRoot = document.getElementById(modalId);
-
-    if (!modalRoot) {
-        console.error(`Could not find modal with ID: ${modalId}`);
-        return;
-    }
-
-    modalRoot.addEventListener("click", (e) => {
-        const el = e.target as HTMLElement;
-        if (!el?.id) return;
-
-        switch (el.id) {
-            case "hs-autosing-phase-done": {
-                const select = document.getElementById(
-                    "hs-autosing-end-phase"
-                ) as HTMLSelectElement;
-
+            if (el.id === "hs-autosing-phase-done") {
+                const select = document.getElementById("hs-autosing-end-phase") as HTMLSelectElement;
                 const endPhase = select?.value as PhaseOption;
                 if (!endPhase) return;
 
-                const newPhase: AutosingStrategyPhase = {
-                    startPhase: lastPhaseEnd,
+                const updatedPhase: AutosingStrategyPhase = {
+                    // Keep the original start phase if editing, otherwise use lastPhaseEnd
+                    startPhase: existingPhase ? existingPhase.startPhase : lastPhaseEnd,
                     endPhase,
                     corruptions: { ...workingCorruptions },
-                    strat: { ...workingStrat }
+                    strat: [...workingStrat]
                 };
 
-                onCreate(newPhase);
-                uiMod.CloseModal(actualModalId);
-                break;
+                if (isEditing && onUpdate) {
+                    onUpdate(updatedPhase);
+                } else {
+                    onCreate(updatedPhase);
+                }
+
+                HSUI.removeInjectedStyle("hs-phase-modal-styles");
+                uiMod.CloseModal(modalId);
             }
 
-            case "hs-autosing-phase-cancel":
-                uiMod.CloseModal(actualModalId);
-                break;
+            if (el.id === "hs-autosing-phase-corruptions") {
+                await openAutosingCorruptionModal(uiMod, workingCorruptions);
+            }
 
-            case "hs-autosing-phase-corruptions":
-                openAutosingCorruptionModal(uiMod, workingCorruptions);
-                break;
-
-
-            case "hs-autosing-phase-challenges":
-                openAutosingChallengesModal(uiMod, workingStrat)
-                break;
-        }
-    });
-
+            if (el.id === "hs-autosing-phase-challenges") {
+                await openAutosingChallengesModal(uiMod, workingStrat);
+            }
+        });
+    }, 0);
 }

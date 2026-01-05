@@ -162,5 +162,5 @@ export interface AutosingEarlyCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingLateCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingQuarkLoadout extends HSSettingBase<string> { }
 export interface AutosingStrategy extends HSSettingBase<string> { }
-export interface AutosingSelectStrategy extends HSSettingBase<null> { }
+export interface AutosingSelectStrategy extends HSSettingBase<string> { }
 

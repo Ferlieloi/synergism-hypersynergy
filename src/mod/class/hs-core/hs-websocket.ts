@@ -9,34 +9,41 @@ export class HSWebSocket extends HSModule {
     #webSockets: Map<string, HSWebSocketObject<any>> = new Map();
     #exponentialBackoff = [5000, 15000, 30000, 60000];
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
     }
-    
+
     async init() {
         HSLogger.log(`Initializing HSWebsocket module`, this.context);
         this.isInitialized = true;
     }
 
-    #reRegisterWebSocket<T>(name: string, socket: HSWebSocketRegistrationParams<T>) {
-        this.unregisterWebSocket(name);
-        this.registerWebSocket(name, socket);
+    #reconnectWebSocket<T>(name: string) {
+        const ws = this.#webSockets.get(name);
+
+        if (!ws) {
+            HSLogger.warn(`Tried to reconnect websocket ${name} but it doesn't exist`, this.context);
+            return;
+        }
+
+        this.#webSockets.delete(name);
+        this.registerWebSocket(name, ws.regParams);
     }
 
     registerWebSocket<T>(name: string, regParams: HSWebSocketRegistrationParams<T>) {
         const self = this;
 
-        if(this.#webSockets.has(name)) {
+        if (this.#webSockets.has(name)) {
             HSLogger.warn(`Tried to register websocket ${name} again`, this.context);
             return;
         }
 
-        if(!regParams.url) {
+        if (!regParams.url) {
             HSLogger.error(`Tried to register websocket ${name} without a URL`, this.context);
             return;
         }
 
-        const webSocketObject : HSWebSocketObject<T> = {
+        const webSocketObject: HSWebSocketObject<T> = {
             socket: new WebSocket(regParams.url),
             reconnectionTries: 0,
             onClose: regParams.onClose ?? HSUtils.Noop,
@@ -49,27 +56,32 @@ export class HSWebSocket extends HSModule {
         const onCloseHandler = async (event: CloseEvent) => {
             const ws = self.#webSockets.get(name);
 
-            if(!ws) {
-                HSLogger.warnOnce(`wsOnClose(): Socket ${name} not found`, self.context);
-                return;
-            }
+            console.log("WS CLOSED", name, {
+                code: event.code,
+                reason: event.reason,
+                wasClean: event.wasClean,
+                tries: ws?.reconnectionTries
+            });
 
-            const delay = self.#exponentialBackoff[++ws.reconnectionTries];
+            const delay = self.#exponentialBackoff[++webSocketObject.reconnectionTries];
 
             if (delay !== undefined) {
-                setTimeout(() => { self.#reRegisterWebSocket(name, ws.regParams)}, delay);
+                HSLogger.log(`Reconnecting ${name} in ${delay}ms (attempt ${webSocketObject.reconnectionTries})`, self.context);
+                setTimeout(() => {
+                    self.#reconnectWebSocket(name);
+                }, delay);
             } else {
                 HSLogger.warn(`WebSocket ${name} failed to reconnect after ${webSocketObject.reconnectionTries} tries`);
-                await (ws.onRetriesFailed ?? HSUtils.Noop)();
+                await (webSocketObject.onRetriesFailed ?? HSUtils.Noop)();
             }
 
-            await (ws.onClose ?? HSUtils.Noop)(event);
+            await (webSocketObject.onClose ?? HSUtils.Noop)(event);
         };
 
         const onMessageHandler = async (event: MessageEvent) => {
             const ws = self.#webSockets.get(name);
 
-            if(!ws) {
+            if (!ws) {
                 HSLogger.warnOnce(`wsOnOpen(): Socket ${name} not found`, self.context);
                 return;
             }
@@ -89,12 +101,14 @@ export class HSWebSocket extends HSModule {
         const onOpenHandler = async (event: Event) => {
             const ws = self.#webSockets.get(name);
 
-            if(!ws) {
+            if (!ws) {
                 HSLogger.warnOnce(`wsOnOpen(): Socket ${name} not found`, self.context);
                 return;
             }
 
             ws.reconnectionTries = 0;
+
+            HSLogger.log(`WebSocket ${name} connected successfully`, self.context);
 
             await (ws.onOpen ?? HSUtils.Noop)(event);
         };
@@ -111,13 +125,16 @@ export class HSWebSocket extends HSModule {
     unregisterWebSocket(name: string) {
         const socketObject = this.#webSockets.get(name);
 
-        if(socketObject) {
-            socketObject.socket.close();
+        if (socketObject) {
+            if (socketObject.socket.readyState === WebSocket.OPEN ||
+                socketObject.socket.readyState === WebSocket.CONNECTING) {
+                socketObject.socket.close();
+            }
             this.#webSockets.delete(name);
 
             HSLogger.log(`Unregistered websocket ${name}`, this.context);
         } else {
-            HSLogger.debug(`Could not unregister websocket ${name}`, this.context);
+            HSLogger.debug(`Could not unregister websocket (Maybe you're not logged in?) ${name}`, this.context);
         }
     }
 

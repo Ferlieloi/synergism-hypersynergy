@@ -22,6 +22,7 @@
 }
 
 @supports not selector(::-webkit-scrollbar) {
+
     .hs-panel-body::-webkit-scrollbar,
     #hs-ui-log::-webkit-scrollbar {
         scrollbar-color: #a22a2a #1c1b22;
@@ -50,15 +51,15 @@
     top: 100px;
     left: 100px;
     z-index: 7000;
-    
+
     background-color: #1c1b22;
     border: 1px solid white;
     border-radius: 3px;
 
-    -webkit-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    -moz-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    
+    -webkit-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+    -moz-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+    box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+
     font-family: -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
@@ -110,7 +111,7 @@
     height: 40px;
     padding: 0px 0px 0px 0px;
     color: white;
-    
+
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -221,7 +222,7 @@
     width: 100%;
     resize: none;
     box-sizing: border-box;
-    
+
     background-color: #18171c;
     color: white;
 
@@ -252,20 +253,16 @@
 }
 
 .hs-ui-log-line-debug {
-    font-style : italic;
+    font-style: italic;
 }
 
 .hs-log-ts-hidden {
     display: none;
 }
 
-.hs-log-ctx {
+.hs-log-ctx {}
 
-}
-
-.hs-log-ts {
-
-}
+.hs-log-ts {}
 
 #hs-ui-log-controls {
     width: 100%;
@@ -322,15 +319,15 @@
 
     top: -9001px;
     left: -9001px;
-    
+
     background-color: #1c1b22;
     border: 1px solid white;
     border-radius: 3px;
 
-    -webkit-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    -moz-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.75);
-    
+    -webkit-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+    -moz-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+    box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
+
     font-family: -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
@@ -380,8 +377,6 @@
 .hs-modal-body {
     width: 100%;
     height: calc(100% - 45px);
-    max-height: 60vh;
-    max-width: 60vw;
     background-color: #18171c;
     border-top: 1px solid white;
     padding: 10px;
@@ -415,7 +410,7 @@
     padding-left: 10px;
 }
 
-#hs-settings-panel > .hs-panel-setting-block:not(:last-child) {
+#hs-settings-panel>.hs-panel-setting-block:not(:last-child) {
     /*padding-bottom: 10px;
     margin-bottom: 10px;*/
 }
@@ -429,10 +424,24 @@
     cursor: help;
 }
 
+.hs-modal-resizer {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 0%, transparent 50%, #888 50%, #888 100%);
+}
+
+.hs-modal-resizer:hover {
+    background: linear-gradient(135deg, transparent 0%, transparent 50%, #aaa 50%, #aaa 100%);
+}
+
 .hs-panel-setting-block-num-input {
     display: block;
     height: 30px;
-    border: 1px solid green;	
+    border: 1px solid green;
     grid-column: 1 / 2;
     box-sizing: border-box;
 }
@@ -613,6 +622,604 @@ a.hs-link {
     -webkit-text-fill-color: transparent;
     background-size: 500% auto;
     animation: hs-animtext-1 3.5s ease-in-out infinite alternate;
+}
+
+/* Strategy Modal Styles */
+.hs-strategy-modal-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    min-width: 500px;
+    min-height: 400px;
+    background-color: #18171c;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.hs-strategy-input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.hs-strategy-input-label {
+    font-weight: 600;
+    color: white;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.hs-strategy-name-input {
+    padding: 10px 14px;
+    background-color: #101828;
+    border: 2px solid white;
+    border-radius: 3px;
+    color: white;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.hs-strategy-name-input:focus {
+    border-color: cyan;
+    background-color: #005;
+    outline: none;
+}
+
+.hs-strategy-phase-list {
+    flex: 1;
+    background-color: #1c1b22;
+    border-radius: 3px;
+    border: 1px solid #353439;
+    padding: 12px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.hs-strategy-phase-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    transition: all 0.15s;
+}
+
+.hs-strategy-phase-item:hover {
+    background-color: #005;
+    border-color: cyan;
+}
+
+.hs-strategy-phase-text {
+    flex: 1;
+    font-weight: 500;
+    color: white;
+    font-size: 12px;
+}
+
+.hs-strategy-phase-arrow {
+    color: cyan;
+    font-weight: bold;
+}
+
+.hs-strategy-btn-group {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.hs-strategy-btn {
+    padding: 10px 20px;
+    border-radius: 3px;
+    border: 2px solid white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    background-color: #101828;
+    color: white;
+    min-height: 30px;
+    line-height: 30px;
+}
+
+.hs-strategy-btn:hover {
+    background-color: #005;
+}
+
+.hs-strategy-btn-primary {
+    border-color: green;
+}
+
+.hs-strategy-btn-primary:hover {
+    background-color: #006;
+}
+
+.hs-strategy-btn-secondary {
+    border-color: white;
+}
+
+.hs-strategy-btn-icon {
+    padding: 4px 8px;
+    font-size: 13px;
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
+    line-height: 16px;
+    border: 1px solid white;
+}
+
+.hs-strategy-btn-edit {
+    border-color: orange;
+}
+
+.hs-strategy-btn-edit:hover {
+    background-color: #660;
+}
+
+.hs-strategy-btn-delete {
+    border-color: red;
+}
+
+.hs-strategy-btn-delete:hover {
+    background-color: maroon;
+}
+
+.hs-strategy-empty-state {
+    text-align: center;
+    color: #888;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+/* Phase Modal Styles */
+.hs-phase-modal-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    min-width: 500px;
+    min-height: 400px;
+    background-color: #18171c;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.hs-phase-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hs-phase-label {
+    font-weight: 600;
+    color: white;
+    font-size: 14px;
+}
+
+.hs-phase-select {
+    padding: 10px 14px;
+    background-color: #101828;
+    border: 2px solid white;
+    border-radius: 3px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-sizing: border-box;
+}
+
+.hs-phase-select:focus {
+    border-color: plum;
+    background-color: #005;
+    outline: none;
+}
+
+.hs-phase-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #666;
+}
+
+.hs-phase-config-group {
+    display: flex;
+    gap: 12px;
+}
+
+.hs-phase-config-btn {
+    flex: 1;
+    padding: 14px 20px;
+    background-color: #101828;
+    border: 2px solid plum;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+}
+
+.hs-phase-config-btn:hover {
+    background-color: #006;
+}
+
+.hs-phase-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.hs-phase-done-btn {
+    padding: 12px 32px;
+    background-color: #101828;
+    border: 2px solid green;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.hs-phase-done-btn:hover {
+    background-color: #060;
+}
+
+/* Corruption Modal Styles */
+.hs-corruption-modal-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    min-width: 550px;
+    min-height: 450px;
+    background-color: #18171c;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.hs-corruption-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.hs-corruption-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+    transition: all 0.15s;
+}
+
+.hs-corruption-item:hover {
+    background-color: #005;
+    border-color: maroon;
+}
+
+.hs-corruption-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.hs-corruption-label {
+    flex: 1;
+    font-weight: 600;
+    color: white;
+    font-size: 14px;
+}
+
+.hs-corruption-input {
+    width: 70px;
+    padding: 8px 12px;
+    background-color: #101828;
+    border: 2px solid white;
+    border-radius: 3px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.15s;
+    box-sizing: border-box;
+}
+
+.hs-corruption-input:focus {
+    border-color: maroon;
+    background-color: #005;
+    outline: none;
+}
+
+.hs-corruption-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid #353439;
+}
+
+.hs-corruption-done-btn {
+    padding: 12px 32px;
+    background-color: #101828;
+    border: 2px solid green;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.hs-corruption-done-btn:hover {
+    background-color: #060;
+}
+
+/* Challenges Modal Styles */
+.hs-challenges-modal-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    width: 100%;
+    height: 100%;
+    min-width: 550px;
+    min-height: 500px;
+    background-color: #18171c;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.hs-challenges-input-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+}
+
+.hs-challenges-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hs-challenges-input-label {
+    width: 90px;
+    font-weight: 600;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.hs-challenges-input {
+    flex: 1;
+    padding: 5px 8px;
+    background-color: #101828;
+    border: 2px solid white;
+    border-radius: 3px;
+    color: white;
+    font-size: 12px;
+    transition: all 0.15s;
+    box-sizing: border-box;
+}
+
+.hs-challenges-input:focus {
+    border-color: royalblue;
+    background-color: #005;
+    outline: none;
+}
+
+.hs-challenges-add-btn {
+    grid-column: 1 / -1;
+    padding: 6px 16px;
+    background-color: #101828;
+    border: 2px solid green;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.hs-challenges-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.hs-challenges-action-label {
+    width: 80px;
+    font-weight: 600;
+    color: white;
+    font-size: 13px;
+}
+
+.hs-challenges-action-select {
+    flex: 1;
+    padding: 6px 10px;
+    background-color: #101828;
+    border: 2px solid white;
+    border-radius: 3px;
+    color: white;
+    font-size: 13px;
+    transition: all 0.15s;
+    box-sizing: border-box;
+}
+
+.hs-challenges-add-btn:hover {
+    background-color: #060;
+}
+
+.hs-challenges-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #1c1b22;
+    border: 1px solid #353439;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.hs-challenge-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+    margin-bottom: 4px;
+    transition: all 0.15s;
+}
+
+.hs-challenge-item:hover {
+    background-color: #005;
+    border-color: royalblue;
+}
+
+.hs-challenge-item-text {
+    flex: 1;
+    font-weight: 500;
+    color: white;
+    font-size: 12px;
+}
+
+.hs-challenge-item-text>div {
+    font-size: 11px;
+    color: #4db8ca;
+    margin-top: 2px;
+}
+
+.hs-challenge-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 3px;
+}
+
+.hs-challenge-btn {
+    padding: 3px 6px;
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    background-color: #101828;
+    border: 1px solid white;
+    border-radius: 3px;
+    text-align: center;
+    font-weight: 600;
+    line-height: 16px;
+    font-size: 11px;
+    transition: all 0.15s;
+}
+
+.hs-challenge-btn:hover {
+    background-color: #005;
+}
+
+.hs-challenge-btn-edit {
+    border-color: orange;
+}
+
+.hs-challenge-btn-edit:hover {
+    background-color: #660;
+}
+
+.hs-challenge-btn-delete {
+    border-color: red;
+}
+
+.hs-challenge-btn-delete:hover {
+    background-color: maroon;
+}
+
+.hs-challenges-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #353439;
+}
+
+.hs-challenges-footer-btn {
+    padding: 10px 24px;
+    border-radius: 3px;
+    border: 2px solid white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    background-color: #101828;
+    color: white;
+    font-size: 13px;
+}
+
+.hs-challenges-cancel-btn {
+    border-color: white;
+}
+
+.hs-challenges-cancel-btn:hover {
+    background-color: #005;
+}
+
+.hs-challenges-save-btn {
+    border-color: green;
+}
+
+.hs-challenges-save-btn:hover {
+    background-color: #060;
+}
+
+.hs-challenges-empty-state {
+    text-align: center;
+    color: #888;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+.hs-strategy-phase-list::-webkit-scrollbar,
+.hs-corruption-grid::-webkit-scrollbar,
+.hs-challenges-list-container::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.hs-strategy-phase-list::-webkit-scrollbar-track,
+.hs-corruption-grid::-webkit-scrollbar-track,
+.hs-challenges-list-container::-webkit-scrollbar-track {
+    background: #1c1b22;
+    border-radius: 3px;
+}
+
+.hs-strategy-phase-list::-webkit-scrollbar-thumb,
+.hs-corruption-grid::-webkit-scrollbar-thumb,
+.hs-challenges-list-container::-webkit-scrollbar-thumb {
+    background: #a22a2a;
+    border-radius: 3px;
+}
+
+.hs-strategy-error {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 0, 0, 0.12);
+    border-left: 3px solid #c33;
+    color: #900;
+    font-size: 0.9em;
 }
 
 @keyframes hs-animtext-1 {
