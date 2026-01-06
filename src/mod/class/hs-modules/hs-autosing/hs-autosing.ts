@@ -487,8 +487,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return match[1].trim();
     }
 
-    private async waitForElement(id: string): Promise<HTMLElement> {
-        return new Promise(resolve => {
+    private async waitForElement(id: string, timeoutMs: number = 5000): Promise<HTMLElement> {
+        return new Promise((resolve, reject) => {
             const existing = document.getElementById(id);
             if (existing) return resolve(existing);
 
@@ -496,9 +496,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const el = document.getElementById(id);
                 if (el) {
                     observer.disconnect();
+                    clearTimeout(timeoutId);
                     resolve(el);
                 }
             });
+
+            const timeoutId = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`Element ${id} not found within ${timeoutMs}ms`));
+            }, timeoutMs);
 
             observer.observe(document.body, {
                 childList: true,
@@ -552,17 +558,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async clickOkayAlert(): Promise<void> {
-        const okay = document.getElementById('ok_alert') as HTMLButtonElement;
-        if (okay) {
-            await this.click(okay);
+        try {
+            const okay = await this.waitForElement('ok_alert');
+            await this.click(okay as HTMLButtonElement);
+        } catch (error) {
+            HSLogger.debug('ok_alert button not found or timed out', this.context);
         }
         return Promise.resolve();
     }
 
     private async clickOkayConfirm(): Promise<void> {
-        const okay = document.getElementById('ok_confirm') as HTMLButtonElement;
-        if (okay) {
-            await this.click(okay);
+        try {
+            const okay = await this.waitForElement('ok_confirm');
+            await this.click(okay as HTMLButtonElement);
+        } catch (error) {
+            HSLogger.debug('ok_confirm button not found or timed out', this.context);
         }
         return Promise.resolve();
     }

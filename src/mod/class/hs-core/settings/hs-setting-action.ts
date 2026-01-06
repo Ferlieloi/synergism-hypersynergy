@@ -181,6 +181,16 @@ export class HSSettingActions {
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             await HSSettings.deleteSelectedStrategy();
+        },
+
+        exportAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.exportSelectedStrategy();
+        },
+
+        importAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.importStrategy();
         }
     }
 

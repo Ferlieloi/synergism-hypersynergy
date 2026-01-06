@@ -805,6 +805,155 @@ export class HSSettings extends HSModule {
         });
     }
 
+    static async exportSelectedStrategy() {
+        const strategySetting = HSSettings.getSetting("autosingStrategy");
+        const selectedValue = strategySetting.getValue();
+
+        if (!selectedValue || selectedValue === '') {
+            HSUI.Notify("Please select a strategy to export", {
+                notificationType: "warning"
+            });
+            return;
+        }
+
+        const control = strategySetting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
+        if (!selectedOption) return;
+
+        const strategyName = selectedOption.text;
+
+        const strategies = HSSettings.getStrategies();
+        const strategy = strategies.find(s => s.strategyName === strategyName);
+
+        if (!strategy) {
+            HSUI.Notify("Strategy not found", {
+                notificationType: "error"
+            });
+            return;
+        }
+
+        try {
+            const strategyJson = JSON.stringify(strategy, null, 2);
+            await navigator.clipboard.writeText(strategyJson);
+
+            HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, {
+                notificationType: "success"
+            });
+        } catch (error) {
+            HSUI.Notify("Failed to copy strategy to clipboard", {
+                notificationType: "error"
+            });
+            HSLogger.log(`Export failed: ${error}`, 'HSAutosing');
+        }
+    }
+
+    static async importStrategy() {
+        const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
+        if (uiMod) {
+            const modalId = await uiMod.Modal({
+                title: 'Import Strategy',
+                htmlContent: `
+            <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
+                <div>
+                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy Name:</label>
+                    <input type="text" id="import-strategy-name" placeholder="Enter strategy name" style="width: 100%; padding: 8px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy JSON:</label>
+                    <textarea id="import-strategy-json" placeholder="Paste strategy JSON here" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="import-strategy-cancel" data-close="${'modal-will-be-replaced'}" style="padding: 8px 16px; cursor: pointer;">Cancel</button>
+                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">Import</button>
+                </div>
+            </div>
+        `
+            });
+
+            // Update the cancel button's data-close attribute with the actual modal ID
+            const cancelBtn = document.querySelector(`#${modalId} #import-strategy-cancel`) as HTMLButtonElement;
+            if (cancelBtn) {
+                cancelBtn.dataset.close = modalId;
+            }
+
+            const submitBtn = document.querySelector(`#${modalId} #import-strategy-submit`) as HTMLButtonElement;
+            const nameInput = document.querySelector(`#${modalId} #import-strategy-name`) as HTMLInputElement;
+            const jsonInput = document.querySelector(`#${modalId} #import-strategy-json`) as HTMLTextAreaElement;
+
+            if (!submitBtn || !nameInput || !jsonInput) {
+                HSUI.Notify("Failed to create import modal", {
+                    notificationType: "error"
+                });
+                return;
+            }
+
+            submitBtn.addEventListener('click', async () => {
+                const strategyName = nameInput.value.trim();
+                const strategyJson = jsonInput.value.trim();
+
+                // Validate name
+                if (!strategyName) {
+                    HSUI.Notify("Please enter a strategy name", {
+                        notificationType: "warning"
+                    });
+                    return;
+                }
+
+                // Check if name already exists
+                const existingStrategies = HSSettings.getStrategies();
+                if (existingStrategies.some(s => s.strategyName === strategyName)) {
+                    HSUI.Notify(`Strategy "${strategyName}" already exists`, {
+                        notificationType: "warning"
+                    });
+                    return;
+                }
+
+                // Validate JSON
+                let parsedStrategy: HSAutosingStrategy;
+                try {
+                    parsedStrategy = JSON.parse(strategyJson);
+                } catch (error) {
+                    HSUI.Notify("Invalid JSON format", {
+                        notificationType: "error"
+                    });
+                    return;
+                }
+
+                this.validateStrategy(parsedStrategy);
+
+                // Update the strategy name to the user's input
+                parsedStrategy.strategyName = strategyName;
+
+                // Save the strategy
+                try {
+                    HSSettings.saveStrategiesToStorage(parsedStrategy);
+
+                    HSUI.Notify(`Strategy "${strategyName}" imported successfully`, {
+                        notificationType: "success"
+                    });
+
+                    // Close the modal
+                    const modal = document.querySelector(`#${modalId}`) as HTMLDivElement;
+                    if (modal) {
+                        await modal.transition({ opacity: 0 });
+                        modal.parentElement?.removeChild(modal);
+                    }
+                } catch (error) {
+                    HSUI.Notify("Failed to save strategy", {
+                        notificationType: "error"
+                    });
+                    HSLogger.log(`Import failed: ${error}`, 'HSAutosing');
+                }
+            });
+        } else {
+            HSUI.Notify("Failed to find HSUI", {
+                notificationType: "error"
+            });
+        }
+    }
+
     static async editSelectedStrategy() {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();

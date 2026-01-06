@@ -66,7 +66,7 @@ export class Hypersynergism {
 
             if (latestRelease) {
                 HSLogger.debug(`Latest release: ${latestRelease.name} (${latestRelease.version})`, this.#context);
-
+                /*
                 if (latestRelease.version !== HSGlobal.General.currentModVersion) {
                     HSGlobal.General.isLatestVersion = false;
 
@@ -80,7 +80,7 @@ export class Hypersynergism {
                         clearInterval(this.#versionCheckIvl);
                         this.#versionCheckIvl = undefined;
                     }
-                }
+                }*/
             }
         }, HSGlobal.PrivateAPI.checkIntervalMs);
     }

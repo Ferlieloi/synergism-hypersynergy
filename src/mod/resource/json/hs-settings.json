@@ -562,7 +562,7 @@
     },
     "autosingEarlyCubeLoadout": {
         "settingName": "autosingEarlyCubeLoadout",
-        "settingDescription": "early cube loadout",
+        "settingDescription": "Pre-AOAG ambrosia cube loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the early game",
         "settingType": "selectstring",
         "enabled": true,
@@ -614,7 +614,7 @@
     },
     "autosingLateCubeLoadout": {
         "settingName": "autosingLateCubeLoadout",
-        "settingDescription": "late cube loadout",
+        "settingDescription": "Post-AOAG ambrosia cube loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the late game",
         "settingType": "selectstring",
         "enabled": true,
@@ -771,6 +771,36 @@
         "settingAction": "createAutosingStrategy",
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy-maker-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy",
+            "controlPage": "auto-sing"
+        }
+    },
+    "exportAutosingStrategy": {
+        "settingName": "exportAutosingStrategy",
+        "settingDescription": "export strategy",
+        "settingHelpText": "exports the selected strategy to your clipboard",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "exportAutosingStrategy",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy",
+            "controlPage": "auto-sing"
+        }
+    },
+    "importAutosingStrategy": {
+        "settingName": "importAutosingStrategy",
+        "settingDescription": "import strategy",
+        "settingHelpText": "Opens a Modal where you can paste a strategy that you want to import",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "importAutosingStrategy",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-importer-button",
             "controlType": "button",
             "controlGroup": "auto-sing-strategy",
             "controlPage": "auto-sing"
