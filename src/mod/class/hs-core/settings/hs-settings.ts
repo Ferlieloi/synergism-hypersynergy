@@ -707,11 +707,16 @@ export class HSSettings extends HSModule {
         }
 
         if (!strategy && strategyName) {
+            // Deletion: remove from both storage and memory
             const updatedStrategies = strategies.filter(
                 s => s.strategyName !== strategyName
             );
 
-            HSSettings.#strategies = updatedStrategies;
+            // Remove from memory (but preserve default strategies)
+            HSSettings.#strategies = HSSettings.#strategies.filter(
+                s => s.strategyName !== strategyName
+            );
+
             storageMod.setData(
                 HSGlobal.HSSettings.strategiesKey,
                 updatedStrategies
@@ -742,11 +747,17 @@ export class HSSettings extends HSModule {
                     s => s.strategyName !== strategyName
                 );
                 this.#removeStrategyFromOptions(strategyName);
+
+                // Also remove from memory
+                HSSettings.#strategies = HSSettings.#strategies.filter(
+                    s => s.strategyName !== strategyName
+                );
             }
 
             updatedStrategies = updatedStrategies.concat(strategy);
 
-            HSSettings.#strategies = updatedStrategies;
+            // Add to memory instead of replacing
+            HSSettings.#strategies.push(strategy);
 
             const saved = storageMod.setData(
                 HSGlobal.HSSettings.strategiesKey,
@@ -754,7 +765,6 @@ export class HSSettings extends HSModule {
             );
 
             this.#addStrategyToOptions(strategy);
-
 
             if (!saved) {
                 HSLogger.warn(
