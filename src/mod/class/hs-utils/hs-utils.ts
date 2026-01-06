@@ -20,6 +20,9 @@ import { HSLogger } from "../hs-core/hs-logger";
     Author: Swiffy
 */
 export class HSUtils {
+    static #dialogWatcherInterval: number | null = null;
+    static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    static sleepTime = 10;
 
     // Simple promise-based wait/delay utility method
     static wait(delay: number) {
@@ -386,6 +389,150 @@ export class HSUtils {
     static asString(settingValue: HSSettingType): string {
         if (settingValue === null) return '';
         return String(settingValue);
+    }
+
+    static async waitForElement(id: string, timeoutMs: number = 5000): Promise<HTMLElement> {
+        return new Promise((resolve, reject) => {
+            const existing = document.getElementById(id);
+            if (existing) return resolve(existing);
+
+            const observer = new MutationObserver(() => {
+                const el = document.getElementById(id);
+                if (el) {
+                    observer.disconnect();
+                    clearTimeout(timeoutId);
+                    resolve(el);
+                }
+            });
+
+            const timeoutId = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`Element ${id} not found within ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    }
+
+    static async waitForInnerText(
+        el: HTMLElement,
+        predicate: (text: string) => boolean = t => t.trim().length > 0
+    ): Promise<void> {
+        if (predicate(el.innerText)) return;
+
+        return new Promise(resolve => {
+            const observer = new MutationObserver(() => {
+                if (predicate(el.innerText)) {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+
+            observer.observe(el, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+        });
+    }
+
+    static async click(button: HTMLButtonElement): Promise<void> {
+        button.click();
+        await HSUtils.sleep(HSUtils.sleepTime);
+        return Promise.resolve();
+    }
+
+    static async DblClick(element: HTMLElement): Promise<void> {
+        element.click();
+        await new Promise(res => setTimeout(res, 5));
+        element.click();
+        await HSUtils.sleep(HSUtils.sleepTime);
+        element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        return Promise.resolve();
+    }
+
+    static startDialogWatcher(): void {
+        // Prevent multiple watchers
+        if (this.#dialogWatcherInterval !== null) {
+            return;
+        }
+
+        this.#dialogWatcherInterval = window.setInterval(() => {
+            // Check for confirm dialog
+            const confirmWrapper = document.getElementById('confirmWrapper');
+            if (confirmWrapper && confirmWrapper.style.display === 'block') {
+                const okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                if (okConfirm) {
+                    okConfirm.click();
+                    HSLogger.debug('Auto-clicked ok_confirm');
+                }
+            }
+
+            // Check for alert dialog
+            const alertWrapper = document.getElementById('alertWrapper');
+            if (alertWrapper && alertWrapper.style.display === 'block') {
+                const okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                if (okAlert) {
+                    okAlert.click();
+                    HSLogger.debug('Auto-clicked ok_alert');
+                }
+            }
+        }, this.sleepTime); // Check every 50ms for fast response
+    }
+
+    static async stopDialogWatcher(): Promise<void> {
+        return new Promise((resolve) => {
+            let emptyLoopCount = 0;
+            const maxEmptyLoops = 3; // Wait for 3 consecutive empty loops before stopping
+
+            const shutdownInterval = window.setInterval(() => {
+                let foundDialog = false;
+
+                // Check for confirm dialog
+                const confirmWrapper = document.getElementById('confirmWrapper');
+                if (confirmWrapper && confirmWrapper.style.display === 'block') {
+                    const okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                    if (okConfirm) {
+                        okConfirm.click();
+                        HSLogger.debug('Auto-clicked ok_confirm during shutdown');
+                        foundDialog = true;
+                    }
+                }
+
+                // Check for alert dialog
+                const alertWrapper = document.getElementById('alertWrapper');
+                if (alertWrapper && alertWrapper.style.display === 'block') {
+                    const okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                    if (okAlert) {
+                        okAlert.click();
+                        HSLogger.debug('Auto-clicked ok_alert during shutdown');
+                        foundDialog = true;
+                    }
+                }
+
+                if (foundDialog) {
+                    emptyLoopCount = 0; // Reset counter if we found a dialog
+                } else {
+                    emptyLoopCount++;
+                }
+
+                // If we've had enough empty loops, shut down
+                if (emptyLoopCount >= maxEmptyLoops) {
+                    window.clearInterval(shutdownInterval);
+
+                    if (this.#dialogWatcherInterval !== null) {
+                        window.clearInterval(this.#dialogWatcherInterval);
+                        this.#dialogWatcherInterval = null;
+                    }
+
+                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs');
+                    resolve();
+                }
+            }, HSUtils.sleepTime);
+        });
     }
 
     static base64WithCRLF(

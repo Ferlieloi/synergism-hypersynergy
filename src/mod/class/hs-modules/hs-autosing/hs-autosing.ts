@@ -20,7 +20,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private autosingEnabled = false;
     private targetSingularity = 0;
-    private sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     private sleepTime = 50;
     private buildingsTab!: HTMLButtonElement;
     private challengeTab!: HTMLButtonElement;
@@ -107,6 +106,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async enableAutoSing(): Promise<void> {
+        HSUtils.startDialogWatcher();
         this.autosingEnabled = true;
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.targetSingularity = singularitySetting.getValue();
@@ -204,14 +204,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         try {
-            await this.setElevator();
             let sing = 0;
 
             while (this.isAutosingEnabled()) {
-                HSLogger.debug("clicking singularity button", this.context);
-
-                await this.click(this.ambrosia_quark);
-                await this.click(this.ascendBtn);
+                await HSUtils.click(this.ambrosia_quark);
+                await HSUtils.click(this.ascendBtn);
                 await this.performSingularity();
 
                 let singularityActivated = false;
@@ -233,7 +230,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     }
                     let stage = await this.getStage();
                     await this.matchStageToStrategy(stage);
-                    await this.sleep(this.sleepTime);
+                    await HSUtils.sleep(this.sleepTime);
                 }
                 if (this.isAutosingEnabled()) {
                     const finalPhase = this.getFinalStrategyPhase();
@@ -363,40 +360,37 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 challenge.challengeMaxTime,
                 challenge.challengeWaitTime
             );
-            await this.sleep(this.sleepTime);
+            await HSUtils.sleep(this.sleepTime);
         }
     }
 
     private async performSpecialAction(actionId: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
-                await this.click(this.exitTranscBtn);
+                await HSUtils.click(this.exitTranscBtn);
                 break;
             case 102: // Exit Reincarnation challenge
-                await this.click(this.exitReincBtn);
+                await HSUtils.click(this.exitReincBtn);
                 break;
             case 103: // Exit Ascension challenge
-                await this.click(this.exitAscBtn);
+                await HSUtils.click(this.exitAscBtn);
                 break;
             case 104: // Ascend
-                await this.click(this.ascendBtn);
+                await HSUtils.click(this.ascendBtn);
                 break;
             case 105: // Early Cube
                 if (this.ambrosia_early_cube) {
-                    await this.click(this.ambrosia_early_cube);
-                    await this.clickOkayAlert();
+                    await HSUtils.click(this.ambrosia_early_cube);
                 }
                 break;
             case 106: // Late Cube
                 if (this.ambrosia_late_cube) {
-                    await this.click(this.ambrosia_late_cube);
-                    await this.clickOkayAlert();
+                    await HSUtils.click(this.ambrosia_late_cube);
                 }
                 break;
             case 107: // Quark
                 if (this.ambrosia_quark) {
-                    await this.click(this.ambrosia_quark);
-                    await this.clickOkayAlert();
+                    await HSUtils.click(this.ambrosia_quark);
                 }
                 break;
             default:
@@ -446,8 +440,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
-        await this.click(okayBtn);
-        await this.click(this.ascendBtn);
+        await HSUtils.click(okayBtn);
+        await HSUtils.click(this.ascendBtn);
     }
 
     private stopAutosing() {
@@ -455,10 +449,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.unsubscribeGameDataChanges();
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
+        HSUtils.stopDialogWatcher();
     }
 
     private async getStage(): Promise<string> {
-        await this.click(this.settingsTab);
+        await HSUtils.click(this.settingsTab);
         const settingsSubTab = document.getElementById('switchSettingSubTab4') as HTMLButtonElement;
         if (!settingsSubTab) {
             this.showError("Error during autosing logic: could not access settings to read stage");
@@ -471,12 +466,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.stopAutosing();
         }
         misc.click();
-        const stage = await this.waitForElement('gameStageStatistic');
+        const stage = await HSUtils.waitForElement('gameStageStatistic');
         if (!stage) {
             this.showError("Error during autosing logic: could not access settings to read stage");
             this.stopAutosing();
         }
-        await this.waitForInnerText(stage, t => /Current Game Section:/.test(t));
+        await HSUtils.waitForInnerText(stage, t => /Current Game Section:/.test(t));
         const regex = new RegExp('Current Game Section: (.*)');
         const match = stage.innerText.match(regex);
 
@@ -487,58 +482,23 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return match[1].trim();
     }
 
-    private async waitForElement(id: string, timeoutMs: number = 5000): Promise<HTMLElement> {
-        return new Promise((resolve, reject) => {
-            const existing = document.getElementById(id);
-            if (existing) return resolve(existing);
+    private async performSingularity(): Promise<void> {
+        const exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
+        if (!exalt2Btn) {
+            this.showError("Error during autosing logic: exalt 2 button not found");
+            this.stopAutosing();
+        }
+        await HSUtils.click(exalt2Btn);
+        await HSUtils.click(exalt2Btn);
 
-            const observer = new MutationObserver(() => {
-                const el = document.getElementById(id);
-                if (el) {
-                    observer.disconnect();
-                    clearTimeout(timeoutId);
-                    resolve(el);
-                }
-            });
+        HSUtils.click(this.singularityTab);
+        const toggleSingularitySubTab1 = document.getElementById('toggleSingularitySubTab1') as HTMLButtonElement;
+        if (!toggleSingularitySubTab1) {
+            this.showError("Error during autosing logic: elevator teleport button button not found");
+            this.stopAutosing();
+        }
+        await HSUtils.click(toggleSingularitySubTab1);
 
-            const timeoutId = setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`Element ${id} not found within ${timeoutMs}ms`));
-            }, timeoutMs);
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        });
-    }
-
-    private async waitForInnerText(
-        el: HTMLElement,
-        predicate: (text: string) => boolean = t => t.trim().length > 0
-    ): Promise<void> {
-        if (predicate(el.innerText)) return;
-
-        return new Promise(resolve => {
-            const observer = new MutationObserver(() => {
-                if (predicate(el.innerText)) {
-                    observer.disconnect();
-                    resolve();
-                }
-            });
-
-            observer.observe(el, {
-                childList: true,
-                characterData: true,
-                subtree: true
-            });
-        });
-    }
-
-    private async setElevator(): Promise<void> {
-        // Navigate to singularity tab
-        this.singularityTab.click();
-        // Set elevator target input
         const elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
         if (!elevatorInput) {
             this.showError("Error during autosing logic: elevator input not found");
@@ -547,53 +507,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         elevatorInput.value = this.targetSingularity.toString();
         // Trigger input event to update the game state
         elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
-        // Lock elevator and confirm teleport
-        const checkbox = document.getElementById('elevatorLockToggle') as HTMLInputElement;
-        if (!checkbox) {
-            this.showError("Error during autosing logic: elevator checkbox not found");
+
+        const elevatorTeleportButton = document.getElementById('elevatorTeleportButton') as HTMLButtonElement;
+        if (!elevatorTeleportButton) {
+            this.showError("Error during autosing logic: elevator teleport button button not found");
             this.stopAutosing();
         }
-        checkbox.checked = true;
-        return Promise.resolve();
-    }
-
-    private async clickOkayAlert(): Promise<void> {
-        try {
-            const okay = await this.waitForElement('ok_alert');
-            await this.click(okay as HTMLButtonElement);
-        } catch (error) {
-            HSLogger.debug('ok_alert button not found or timed out', this.context);
-        }
-        return Promise.resolve();
-    }
-
-    private async clickOkayConfirm(): Promise<void> {
-        try {
-            const okay = await this.waitForElement('ok_confirm');
-            await this.click(okay as HTMLButtonElement);
-        } catch (error) {
-            HSLogger.debug('ok_confirm button not found or timed out', this.context);
-        }
-        return Promise.resolve();
-    }
-
-    private async performSingularity(): Promise<void> {
-        const singularityButton = document.getElementById('singularitybtn') as HTMLButtonElement;
-        if (!singularityButton) {
-            this.showError("Error during autosing logic: singularity button not found");
-            this.stopAutosing();
-        }
-        await this.click(singularityButton);
-
-        await this.clickOkayConfirm();
-        await this.clickOkayAlert();
-
-        const buildings_tab = document.getElementById('buildingstab') as HTMLButtonElement;
-        if (!buildings_tab) {
-            this.showError("Error during autosing logic: buildings tab button not found");
-            this.stopAutosing();
-        }
-        this.buildingsTab.click();
+        await HSUtils.click(elevatorTeleportButton);
 
         const coin = document.getElementById('buycoin1') as HTMLButtonElement;
         if (!coin) {
@@ -601,8 +521,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.stopAutosing();
         }
         HSLogger.debug("Buying first coin building: ", this.context);
-        await this.click(coin);
-        await this.sleep(this.sleepTime);
+        await HSUtils.click(coin);
+        await HSUtils.sleep(this.sleepTime);
 
         this.C11Unlocked = false;
         this.C12Unlocked = false;
@@ -639,8 +559,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return Promise.resolve();
             }
 
-            await this.DblClick(challengeBtn);
-            await this.sleep(100); // debounce double-clicks
+            await HSUtils.DblClick(challengeBtn);
+            await HSUtils.sleep(100); // debounce double-clicks
             totalTimeElapsed += 100;
         }
 
@@ -663,12 +583,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             if (currentCompletions >= minCompletions) {
                 this.markChallengeUnlocked(challengeIndex);
                 if (waitTime > 0) {
-                    await this.sleep(waitTime);
+                    await HSUtils.sleep(waitTime);
                 }
                 return Promise.resolve();
             }
 
-            await this.sleep(sleepInterval);
+            await HSUtils.sleep(sleepInterval);
             totalTimeElapsed += sleepInterval;
         }
 
@@ -690,21 +610,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             position: 'top',
             notificationType: "error"
         });
-    }
-
-    private async click(button: HTMLButtonElement): Promise<void> {
-        button.click();
-        await this.sleep(this.sleepTime);
-        return Promise.resolve();
-    }
-
-    async DblClick(element: HTMLElement): Promise<void> {
-        element.click();
-        await new Promise(res => setTimeout(res, 5));
-        element.click();
-        await this.sleep(this.sleepTime);
-        element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-        return Promise.resolve();
     }
 
     private isChallengeUnlocked(challenge: number): boolean {
@@ -762,10 +667,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 HSLogger.debug(`Running prerequisite c${req} for c${c}`, this.context);
                 if (req === 10) {
                     await this.waitForCompletion(req, 1, 60000, 500);
-                    await this.sleep(this.sleepTime);
+                    await HSUtils.sleep(this.sleepTime);
                 } else {
                     await this.waitForCompletion(req, 0, 60000, 0);
-                    await this.sleep(this.sleepTime);
+                    await HSUtils.sleep(this.sleepTime);
                 }
 
             }

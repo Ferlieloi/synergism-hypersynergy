@@ -1,4 +1,4 @@
- #hs-ambrosia-quick-loadout-container{
+ #hs-ambrosia-quick-loadout-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -9,5 +9,8 @@
     align-self: flex-end;
     margin: 0px 4% 10px 0px;
     border: 0px solid #4f86f7;
- }   
-    
+ }
+
+ #hs-ambrosia-extra-btn {
+    border: 2px solid orange;
+ }

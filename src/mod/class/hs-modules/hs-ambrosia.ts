@@ -145,6 +145,8 @@ export class HSAmbrosia extends HSModule
 
         this.loadState();
 
+        await this.#injectImportFromClipboardButton();
+
         HSLogger.log('Hooking stuff', this.context);
 
         for (const [id, icon] of HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.entries()) {
@@ -499,6 +501,28 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    async #injectImportFromClipboardButton() {
+        const importBtn = await HSElementHooker.HookElement(
+            '#importBlueberriesButton'
+        ) as HTMLButtonElement;
+
+        if (!importBtn) return;
+
+        if (document.getElementById('hs-ambrosia-extra-btn')) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'hs-ambrosia-extra-btn';
+        btn.className = 'ambrosiaLoadoutBtn';
+        btn.textContent = 'Quick Import';
+
+        importBtn.parentElement?.insertBefore(
+            btn,
+            importBtn.nextSibling
+        );
+
+        btn.addEventListener('click', () => this.#handleQuickImport());
+    }
+
     // Helper method to destroy the quick bar and recreate it (which updates the icons)
     async updateQuickBar() {
         const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar') as HSSetting<boolean>;
@@ -739,7 +763,7 @@ export class HSAmbrosia extends HSModule
             let accelerationAmount = 0;
             let accelerationPercent = 0;
             const bluePercentageSpeed = (ambrosiaSpeed / blueAmbrosiaBarMax) * 100;
-            const bluePercentageSafeThreshold = bluePercentageSpeed + 3;
+            const bluePercentageSafeThreshold = bluePercentageSpeed + 0.1;
 
             const maxAccelMultiplier = (1 / 2)
                 + (3 / 5 - 1 / 2) * +(gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 15)
@@ -1039,5 +1063,123 @@ export class HSAmbrosia extends HSModule
 
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
+    }
+
+    async #handleQuickImport() {
+        let previouslyActiveSlot: HTMLButtonElement | null = null;
+        try {
+            previouslyActiveSlot = document.querySelector(
+                '.blueberryLoadoutSlot.hs-ambrosia-active-slot'
+            ) as HTMLButtonElement | null;
+
+            const text = await navigator.clipboard.readText();
+
+            if (!text || typeof text !== 'string') {
+                HSUI.Notify('Clipboard does not contain valid loadout data', {
+                    notificationType: 'warning'
+                });
+                return;
+            }
+
+            // Split clipboard by lines
+            const lines = text.split('\n').map(line => line.trim());
+
+            // Validate we have between 1 and 16 loadouts
+            if (lines.length === 0 || lines.length > 16) {
+                HSUI.Notify(`Invalid number of loadouts: ${lines.length}. Expected 1-16.`, {
+                    notificationType: 'warning'
+                });
+                return;
+            }
+
+            const fileInput = document.getElementById('importBlueberries') as HTMLInputElement;
+            const modeToggle = await HSElementHooker.HookElement('#blueberryToggleMode') as HTMLButtonElement;
+
+            if (!fileInput) {
+                throw new Error('Import input element not found');
+            }
+
+            if (!modeToggle) {
+                throw new Error('Mode toggle button not found');
+            }
+
+            // Check if we're in SAVE mode and switch to LOAD mode
+
+            const currentMode = modeToggle.innerText;
+
+            // If the current mode is SAVE, we need to switch to LOAD mode
+            // This is so that the user never accidentally saves a loadout when using the quickbar
+            if (currentMode.includes('LOAD ')) {
+                modeToggle.click();
+            }
+
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            HSUtils.startDialogWatcher();
+
+            // Import each loadout
+            for (let i = 0; i < lines.length; i++) {
+
+                const loadoutData = lines[i];
+                const loadoutNumber = i + 1;
+
+                // Skip empty lines
+                if (!loadoutData) {
+                    skippedCount++;
+                    continue;
+                }
+
+                // Click the loadout slot button
+                const loadoutBtn = document.getElementById(`blueberryLoadout${loadoutNumber}`) as HTMLButtonElement;
+
+                if (!loadoutBtn) {
+                    console.warn(`Loadout button ${loadoutNumber} not found`);
+                    continue;
+                }
+
+                const blob = new Blob([loadoutData], { type: 'application/json' });
+                const file = new File([blob], 'quick-import.json', { type: 'application/json' });
+
+
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+                await HSUtils.sleep(50);
+                loadoutBtn.click();
+                await HSUtils.sleep(50);
+                importedCount++;
+            }
+            modeToggle.click();
+
+            HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
+                notificationType: 'success'
+            });
+
+
+        } catch (err: unknown) {
+            const msg =
+                err instanceof Error
+                    ? err.message
+                    : typeof err === 'string'
+                        ? err
+                        : 'Unknown error';
+
+            console.error('Quick Import error:', err);
+            HSLogger.error(`Quick Import failed: ${msg}`, this.context, true);
+
+            HSUI.Notify('Quick Import failed', {
+                notificationType: 'error'
+            });
+        } finally {
+            await HSUtils.stopDialogWatcher();
+            // 🔹 Restore previously active loadout slot
+            if (previouslyActiveSlot) {
+                previouslyActiveSlot.click();
+            }
+        }
     }
 }
