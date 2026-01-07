@@ -12,6 +12,49 @@ export interface CalculationCache {
     R_AmbrosiaLuckOcteractUpgrade: CachedValue;
     R_TotalCubes: CachedValue;
 
+    AMB_ambrosiaTutorial: CachedValue;
+
+    AMB_ambrosiaQuarks1: CachedValue;
+    AMB_ambrosiaCubes1: CachedValue;
+    AMB_ambrosiaLuck1: CachedValue;
+
+    AMB_ambrosiaQuarkCube1: CachedValue;
+    AMB_ambrosiaLuckCube1: CachedValue;
+    AMB_ambrosiaCubeQuark1: CachedValue;
+    AMB_ambrosiaLuckQuark1: CachedValue;
+    AMB_ambrosiaCubeLuck1: CachedValue;
+    AMB_ambrosiaQuarkLuck1: CachedValue;
+
+    AMB_ambrosiaQuarks2: CachedValue;
+    AMB_ambrosiaCubes2: CachedValue;
+    AMB_ambrosiaLuck2: CachedValue;
+
+    AMB_ambrosiaQuarks3: CachedValue;
+    AMB_ambrosiaCubes3: CachedValue;
+    AMB_ambrosiaLuck3: CachedValue;
+    AMB_ambrosiaLuck4: CachedValue;
+
+    AMB_ambrosiaPatreon: CachedValue;
+
+    AMB_ambrosiaObtainium1: CachedValue;
+    AMB_ambrosiaOffering1: CachedValue;
+
+    AMB_ambrosiaHyperflux: CachedValue;
+
+    AMB_ambrosiaBaseOffering1: CachedValue;
+    AMB_ambrosiaBaseObtainium1: CachedValue;
+    AMB_ambrosiaBaseOffering2: CachedValue;
+    AMB_ambrosiaBaseObtainium2: CachedValue;
+
+    AMB_ambrosiaSingReduction1: CachedValue;
+    AMB_ambrosiaSingReduction2: CachedValue;
+
+    AMB_ambrosiaInfiniteShopUpgrades1: CachedValue;
+    AMB_ambrosiaInfiniteShopUpgrades2: CachedValue;
+
+    AMB_ambrosiaTalismanBonusRuneLevel: CachedValue;
+    AMB_ambrosiaRuneOOMBonus: CachedValue;
+
     REDAMB_blueberryGenerationSpeed: CachedValue;
     REDAMB_blueberryGenerationSpeed2: CachedValue;
     REDAMB_freeLevelsRow2: CachedValue;
@@ -37,7 +80,7 @@ export interface CalculationCache {
     EVENTBUFF_Cubes: CachedValue;
     EVENTBUFF_PowderConversion: CachedValue;
     EVENTBUFF_AscensionSpeed: CachedValue;
-    EVENTBUFF_GlobalSpeed:      CachedValue;
+    EVENTBUFF_GlobalSpeed: CachedValue;
     EVENTBUFF_AscensionScore: CachedValue;
     EVENTBUFF_AntSacrifice: CachedValue;
     EVENTBUFF_Offering: CachedValue;
@@ -66,11 +109,65 @@ export interface CachedValue {
 }
 
 export interface RedAmbrosiaUpgradeCalculationConfig {
-    costPerLevel: number, 
-    maxLevel: number, 
+    costPerLevel: number,
+    maxLevel: number,
     costFunction: (n: number, cpl: number) => number,
     levelFunction: (n: number) => number
 }
+
+export interface AmbrosiaUpgradeCalculationConfig {
+    costPerLevel: number
+    maxLevel: number
+    costFunction: (n: number, cpl: number) => number
+    levelFunction: (n: number) => number
+}
+
+
+export interface AmbrosiaUpgradeCalculationCollection {
+    ambrosiaTutorial: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaQuarks1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaCubes1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuck1: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaQuarkCube1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuckCube1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaCubeQuark1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuckQuark1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaCubeLuck1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaQuarkLuck1: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaQuarks2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaCubes2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuck2: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaQuarks3: AmbrosiaUpgradeCalculationConfig
+    ambrosiaCubes3: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuck3: AmbrosiaUpgradeCalculationConfig
+    ambrosiaLuck4: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaPatreon: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaObtainium1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaOffering1: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaHyperflux: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaBaseOffering1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaBaseObtainium1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaBaseOffering2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaBaseObtainium2: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaSingReduction1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaSingReduction2: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeCalculationConfig
+
+    ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig
+    ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig
+}
+
 
 export interface RedAmbrosiaUpgradeCalculationCollection {
     blueberryGenerationSpeed: RedAmbrosiaUpgradeCalculationConfig;
@@ -103,31 +200,31 @@ export interface HepteractEffectiveValue {
 }
 
 export type HepteractEffectiveValues = { [key in HepteractType]: HepteractEffectiveValue };
-    
+
 export const hepteractTypeList = [
-  'chronos',
-  'hyperrealism',
-  'quark',
-  'challenge',
-  'abyss',
-  'accelerator',
-  'acceleratorBoost',
-  'multiplier'
+    'chronos',
+    'hyperrealism',
+    'quark',
+    'challenge',
+    'abyss',
+    'accelerator',
+    'acceleratorBoost',
+    'multiplier'
 ] as const
 
 export type HepteractType = typeof hepteractTypeList[number];
 
 //https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/singularity.ts#L2680
 export type SingularityDebuffs =
-  | 'Offering'
-  | 'Obtainium'
-  | 'Global Speed'
-  | 'Researches'
-  | 'Ascension Speed'
-  | 'Cubes'
-  | 'Cube Upgrades'
-  | 'Platonic Costs'
-  | 'Hepteract Costs';
+    | 'Offering'
+    | 'Obtainium'
+    | 'Global Speed'
+    | 'Researches'
+    | 'Ascension Speed'
+    | 'Cubes'
+    | 'Cube Upgrades'
+    | 'Platonic Costs'
+    | 'Hepteract Costs';
 
 export interface HSCalculationParams {
     paramName: string;

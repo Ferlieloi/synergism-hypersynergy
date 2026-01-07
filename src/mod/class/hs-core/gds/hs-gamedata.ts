@@ -412,6 +412,7 @@ export class HSGameData extends HSModule {
             'noAmbrosiaUpgrades',
             'limitedTime',
             'sadisticPrequel',
+            'taxmanLastStand',
         ];
 
         if (target) {

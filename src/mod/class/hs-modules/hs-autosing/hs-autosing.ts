@@ -35,6 +35,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_early_cube: HTMLButtonElement | null = null;
     private ambrosia_late_cube: HTMLButtonElement | null = null;
     private ambrosia_quark: HTMLButtonElement | null = null;
+    private antSacrifice: HTMLButtonElement | null = null
     private C11Unlocked = false;
     private C12Unlocked = false;
     private C13Unlocked = false;
@@ -64,6 +65,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exitReincBtn = document.getElementById('reincarnatechallengebtn') as HTMLButtonElement;
         this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
+        this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
 
         if (!this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             this.showError("Error during autosing initialization: could not find main tabs");
@@ -345,6 +347,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             // Special actions (100+)
             if (challenge.challengeNumber >= 100) {
                 HSLogger.debug(`Autosing: Perorming special action: ${challenge.challengeNumber}`, this.context);
+                await HSUtils.sleep(challenge.challengeWaitTime);
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             }
@@ -391,6 +394,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 107: // Quark
                 if (this.ambrosia_quark) {
                     await HSUtils.click(this.ambrosia_quark);
+                }
+            case 108: // Ant sac
+                if (this.antSacrifice) {
+                    await HSUtils.click(this.antSacrifice);
                 }
                 break;
             default:

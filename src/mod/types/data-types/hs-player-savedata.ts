@@ -77,6 +77,46 @@ export interface Runes {
     thrift: number;
 }
 
+interface Ants {
+    producers: Record<string, {
+        purchased: number;
+        generated: string; // scientific notation string
+    }>;
+    masteries: Record<string, {
+        mastery: number;
+        highestMastery: number;
+    }>;
+    upgrades: Record<string, number>;
+    crumbs: string;
+    crumbsThisSacrifice: string;
+    crumbsEverMade: string;
+    immortalELO: number;
+    rebornELO: number;
+    highestRebornELODaily: Array<{
+        elo: number;
+        sacrificeId: number;
+    }>;
+    highestRebornELOEver: Array<{
+        elo: number;
+        sacrificeId: number;
+    }>;
+    quarksGainedFromAnts: number;
+    antSacrificeCount: number;
+    currentSacrificeId: number;
+    toggles: {
+        autobuyProducers: boolean;
+        autobuyMasteries: boolean;
+        autobuyUpgrades: boolean;
+        maxBuyProducers: boolean;
+        maxBuyUpgrades: boolean;
+        autoSacrificeEnabled: boolean;
+        autoSacrificeThreshold: number;
+        autoSacrificeMode: number;
+        alwaysSacrificeMaxRebornELO: boolean;
+        onlySacrificeMaxRebornELO: boolean;
+    };
+}
+
 /**
  * Represents the levels/quantities of various shop upgrades purchased.
  * Many keys correspond to internal upgrade IDs.
@@ -163,6 +203,7 @@ export interface ShopUpgrades {
     shopRedLuck2: number;
     shopRedLuck3: number;
     shopInfiniteShopUpgrades: number;
+    shopHorseShoe: number;
 }
 
 /**
@@ -376,6 +417,30 @@ export interface AntSacrificeHistoryEntry {
     effectiveELO: number;
     crumbs: string;      // Very large number stored as string
     crumbsPerSecond: string; // Very large number stored as string
+}
+
+export interface TalismanShards {
+    commonFragment: number;
+    epicFragment: number;
+    legendaryFragment: number;
+    mythicalFragment: number;
+    rareFragment: number;
+    shard: number;
+    uncommonFragment: number;
+}
+
+export interface Talismans {
+    achievement: TalismanShards;
+    chronos: TalismanShards;
+    cookieGrandma: TalismanShards;
+    exemption: TalismanShards;
+    horseShoe: TalismanShards;
+    metaphysics: TalismanShards;
+    midas: TalismanShards;
+    mortuus: TalismanShards;
+    plastic: TalismanShards;
+    polymath: TalismanShards;
+    wowSquare: TalismanShards;
 }
 
 /**
@@ -601,6 +666,7 @@ export interface SingularityChallenges {
     noAmbrosiaUpgrades: SingularityChallengeStatus;
     limitedTime: SingularityChallengeStatus;
     sadisticPrequel: SingularityChallengeStatus;
+    taxmanLastStand: SingularityChallengeStatus;
 }
 
 /**
@@ -614,7 +680,7 @@ export interface AmbrosiaUpgradeData extends UpgradeData {
 /**
  * Contains the state of all Ambrosia/Blueberry upgrades. Keys are internal upgrade names.
  */
-export interface ambrosiaUpgrades {
+export interface AmbrosiaUpgrades {
     ambrosiaTutorial: AmbrosiaUpgradeData;
     ambrosiaQuarks1: AmbrosiaUpgradeData;
     ambrosiaCubes1: AmbrosiaUpgradeData;
@@ -790,9 +856,6 @@ export interface PlayerData {
     reincarnationShards: string;
     ascendShards: string;
 
-    antPoints: string; // Very large number stored as string
-    antSacrificePoints: number;
-
     campaigns: Campaigns;
 
     researchPoints: number; // Represented as number, potentially large (e+)
@@ -825,6 +888,7 @@ export interface PlayerData {
     ultimateProgress: number;
 
     // Generators (Coins, Diamonds, Mythos, Particles, Ants)
+    ants: Ants;
     firstOwnedCoin: number;
     firstGeneratedCoin: string;
     firstCostCoin: string;
@@ -909,39 +973,6 @@ export interface PlayerData {
     fifthCostParticles: string;
     fifthProduceParticles: number;
 
-    firstOwnedAnts: number;
-    firstGeneratedAnts: string;
-    firstCostAnts: string;
-    firstProduceAnts: number;
-    secondOwnedAnts: number;
-    secondGeneratedAnts: string;
-    secondCostAnts: string;
-    secondProduceAnts: number;
-    thirdOwnedAnts: number;
-    thirdGeneratedAnts: string;
-    thirdCostAnts: string;
-    thirdProduceAnts: number;
-    fourthOwnedAnts: number;
-    fourthGeneratedAnts: string;
-    fourthCostAnts: string;
-    fourthProduceAnts: number;
-    fifthOwnedAnts: number;
-    fifthGeneratedAnts: string;
-    fifthCostAnts: string;
-    fifthProduceAnts: number;
-    sixthOwnedAnts: number;
-    sixthGeneratedAnts: string;
-    sixthCostAnts: string;
-    sixthProduceAnts: number;
-    seventhOwnedAnts: number;
-    seventhGeneratedAnts: string;
-    seventhCostAnts: string;
-    seventhProduceAnts: number;
-    eighthOwnedAnts: number;
-    eighthGeneratedAnts: string;
-    eighthCostAnts: string;
-    eighthProduceAnts: number;
-
     // Buildings & Accelerators
     ascendBuilding1: AscendBuilding;
     ascendBuilding2: AscendBuilding;
@@ -964,11 +995,11 @@ export interface PlayerData {
     cubeUpgrades: (number | null)[]; // Array of cube upgrade levels (starts with null)
     platonicUpgrades: number[];
     constantUpgrades: (number | null)[]; // Array of constant upgrade levels (starts with null)
-    antUpgrades: number[]; // Array of ant upgrade levels
     shopUpgrades: ShopUpgrades;
+    shopHorseShoe: ShopUpgrades;
     goldenQuarkUpgrades: goldenQuarkUpgrades;
     octUpgrades: octUpgrades;
-    ambrosiaUpgrades: ambrosiaUpgrades;
+    ambrosiaUpgrades: AmbrosiaUpgrades;
     redAmbrosiaUpgrades: RedAmbrosiaUpgrades;
 
     // Runes & Talismans
@@ -976,15 +1007,7 @@ export interface PlayerData {
     runeexp: number[]; // Represented as number, potentially large (e+)
     runeBlessingLevels: number[]; // Represented as number, potentially large
     runeSpiritLevels: number[]; // Represented as number, potentially large
-    talismanLevels: number[];
-    talismanRarity: number[];
-    talismanOne: TalismanEnhancementArray;
-    talismanTwo: TalismanEnhancementArray;
-    talismanThree: TalismanEnhancementArray;
-    talismanFour: TalismanEnhancementArray;
-    talismanFive: TalismanEnhancementArray;
-    talismanSix: TalismanEnhancementArray;
-    talismanSeven: TalismanEnhancementArray;
+    talismans: Talismans;
     talismanShards: number;
     commonFragments: number;
     uncommonFragments: number;
@@ -1037,10 +1060,6 @@ export interface PlayerData {
     autoResearchMode: string; // e.g., "cheapest"
     autoResearch: number;
     autoSacrifice: number;
-    autoAntSacrifice: boolean;
-    autoAntSacTimer: number;
-    autoAntSacrificeMode: number;
-    antMax: boolean;
     buyTalismanShardPercent: number;
     cubeUpgradesBuyMaxToggle: boolean;
     autoCubeUpgradesToggle: boolean;
@@ -1081,8 +1100,6 @@ export interface PlayerData {
     sacrificeTimer: number;
     quarkstimer: number;
     goldenQuarksTimer: number;
-    antSacrificeTimer: number;
-    antSacrificeTimerReal: number;
     octeractTimer: number;
     blueberryTime: number;
     redAmbrosiaTime: number;

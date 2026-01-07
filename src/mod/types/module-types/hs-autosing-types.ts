@@ -30,6 +30,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Early Cube loadout", value: 105 },
     { label: "Ambrosia Late Cube loadout", value: 106 },
     { label: "Ambrosia Quark loadout", value: 107 },
+    { label: "Ant Sacrifice", value: 108 },
 ] as const;
 
 

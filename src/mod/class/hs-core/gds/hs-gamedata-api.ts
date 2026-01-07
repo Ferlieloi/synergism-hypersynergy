@@ -1,6 +1,6 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { CachedValue, CalculationCache, HepteractType, RedAmbrosiaUpgradeCalculationConfig, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
-import { RedAmbrosiaUpgrades, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
+import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, AmbrosiaUpgradeData, Runes } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
@@ -9,7 +9,8 @@ import { HSUI } from "../hs-ui";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSGameData } from "./hs-gamedata";
 import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
-import { c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection } from "./stored-vars-and-calculations";
+import { c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection, ambrosiaUpgradeCalculationCollection } from "./stored-vars-and-calculations";
+import { achievements } from "../../../resource/data/achievements";
 
 /*
     If this looks silly, check details in hs-gamedata-api-partial.ts
@@ -49,6 +50,50 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         R_AmbrosiaLuckSingularityUpgrade: { value: undefined, cachedBy: [] },
         R_AmbrosiaLuckOcteractUpgrade: { value: undefined, cachedBy: [] },
         R_TotalCubes: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaTutorial: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaQuarks1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaCubes1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuck1: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaQuarkCube1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuckCube1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaCubeQuark1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuckQuark1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaCubeLuck1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaQuarkLuck1: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaQuarks2: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaCubes2: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuck2: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaQuarks3: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaCubes3: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuck3: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaLuck4: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaPatreon: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaObtainium1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaOffering1: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaHyperflux: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaBaseOffering1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaBaseObtainium1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaBaseOffering2: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaBaseObtainium2: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaSingReduction1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaSingReduction2: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaInfiniteShopUpgrades1: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaInfiniteShopUpgrades2: { value: undefined, cachedBy: [] },
+
+        AMB_ambrosiaTalismanBonusRuneLevel: { value: undefined, cachedBy: [] },
+        AMB_ambrosiaRuneOOMBonus: { value: undefined, cachedBy: [] },
+
 
         REDAMB_blueberryGenerationSpeed: { value: undefined, cachedBy: [] },
         REDAMB_blueberryGenerationSpeed2: { value: undefined, cachedBy: [] },
@@ -102,6 +147,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     // These are imported from stored-vars-and-calculationss.ts
     #redAmbrosiaCalculationCollection = redAmbrosiaUpgradeCalculationCollection;
+    #ambrosiaCalculationCollection = ambrosiaUpgradeCalculationCollection;
     #hepteractEffectiveValues = hepteractEffectiveValues;
 
     constructor(moduleOptions: HSModuleOptions) {
@@ -164,6 +210,30 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     dumpCache() {
         console.table(this.#calculationCache);
+    }
+
+    #investToAmbrosiaUpgrade(
+        budget: number,
+        costPerLevel: number,
+        maxLevel: number,
+        constFunction: (n: number, cpl: number) => number,
+        levelFunction: (n: number) => number) {
+
+        let level = 0
+
+        let nextCost = constFunction(level, costPerLevel)
+
+        while (budget >= nextCost) {
+            budget -= nextCost
+            level += 1
+            nextCost = constFunction(level, costPerLevel)
+
+            if (level >= maxLevel) {
+                break;
+            }
+        }
+
+        return levelFunction(level);
     }
 
     #investToRedAmbrosiaUpgrade(
@@ -580,6 +650,43 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
+    R_calculateAmbrosiaUpgradeValue(
+        upgradeName: keyof AmbrosiaUpgrades,
+    ) {
+        if (!this.gameData) return 0;
+        const data = this.gameData;
+        const cacheName = `REDAMB_${upgradeName}` as keyof CalculationCache;
+
+        if (!(upgradeName in data.ambrosiaUpgrades)) return 0;
+        if (!(upgradeName in this.#ambrosiaCalculationCollection)) return 0;
+
+        const calculationVars: number[] = [
+            data.ambrosiaUpgrades[upgradeName].ambrosiaInvested
+        ]
+
+        const cached = this.#checkCache(cacheName, calculationVars);
+
+        if (cached) return cached;
+
+        const investmentParameters = ((this.#ambrosiaCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig;
+
+        const upgradeValue = this.#investToAmbrosiaUpgrade(
+            data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
+            investmentParameters.costPerLevel,
+            investmentParameters.maxLevel,
+            investmentParameters.costFunction,
+            investmentParameters.levelFunction
+        );
+
+        const reduced = upgradeValue;
+
+        this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
+
+        return reduced;
+    }
+
+
+
     R_calculateRedAmbrosiaUpgradeValue(
         upgradeName: keyof RedAmbrosiaUpgrades,
     ) {
@@ -955,8 +1062,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
             data.octUpgrades.octeractInfiniteShopUpgrades.level,
             data.shopUpgrades.shopInfiniteShopUpgrades,
-            data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.freeLevels,
-            data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.freeLevels,
+            ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
+                ? []
+                : [
+                    this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
+                    this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                ]),
         ];
 
         const cached = this.#checkCache(cacheName, calculationVars);
@@ -979,8 +1090,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             +data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
             +data.octUpgrades.octeractInfiniteShopUpgrades.level,
             Math.floor(0.005 * data.shopUpgrades.shopInfiniteShopUpgrades * this.R_calculateSumOfExaltCompletions()),
-            +data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.freeLevels,
-            +data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.freeLevels,
+            ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
+                ? []
+                : [
+                    +this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
+                    +this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                ]),
         ]
 
         const reduced = vals.reduce((a, b) => a + b, 0);
@@ -1028,8 +1143,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const calculationVars: number[] = [
             data.insideSingularityChallenge ? 1 : 0,
-            data.ambrosiaUpgrades.ambrosiaSingReduction2.level,
-            data.ambrosiaUpgrades.ambrosiaSingReduction1.level,
+            this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction2"),
+            this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction1"),
             data.shopUpgrades.shopSingularityPenaltyDebuff
         ];
 
@@ -1040,9 +1155,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         let redu;
 
         if (data.insideSingularityChallenge) {
-            redu = data.ambrosiaUpgrades.ambrosiaSingReduction2.level
+            redu = this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction2")
         } else {
-            redu = data.ambrosiaUpgrades.ambrosiaSingReduction1.level
+            redu = this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction1")
         }
 
         const vals = [
@@ -1166,6 +1281,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             constitutiveSingularityCount
         )
 
+        let baseDebuffMultiplier = 1
+        baseDebuffMultiplier *= 1 - Math.min(300, data.shopUpgrades.shopHorseShoe * this.R_calculateHorseShoeLevel(data.runes.horseShoe.toString())) / 1000
+
         let val;
 
         if (debuff === 'Offering') {
@@ -1181,9 +1299,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         } else if (debuff === 'Researches') {
             val = 1 + Math.sqrt(effectiveSingularities) / 2
         } else if (debuff === 'Ascension Speed') {
-            val = constitutiveSingularityCount < 150
+            val = baseDebuffMultiplier * (constitutiveSingularityCount < 150
                 ? 1 + Math.sqrt(effectiveSingularities) / 5
-                : 1 + Math.pow(effectiveSingularities, 0.75) / 10000
+                : 1 + Math.pow(effectiveSingularities, 0.75) / 10000)
         } else if (debuff === 'Cubes') {
             const extraMult = constitutiveSingularityCount > 100
                 ? Math.pow(1.02, constitutiveSingularityCount - 100)
@@ -1248,7 +1366,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             : data.highestChallenge15Exponent
                 ? data.highestChallenge15Exponent
                 : 0;
-
+        if (exponent === 0) {
+            return 0;
+        }
         return c15Functions[rewardName](exponent);
     }
 
@@ -1279,9 +1399,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        //if (cached) return cached;
 
         const vals: number[] = [
+            // Mortuus Iterum Formicidae
+            this.R_calculateMortuus2AscensionSpeed(),
+            // Polymath bonus
+            this.R_calculatePolymathAscSpeed(),
             // Chronometer
             1 + (1.2 / 100) * data.shopUpgrades.chronometer,
             // Chronometer2
@@ -1290,10 +1414,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             1 + (1.5 / 100) * data.shopUpgrades.chronometer3,
             // ChronosHepteract
             1 + (0.6 / 1000) * this.R_calculateHepteractEffective('chronos'),
-            // Achievement262
-            1 + Math.min(0.1, (1 / 100) * Math.log10(data.ascensionCount + 1)) * data.achievements[262],
-            // Achievement263
-            1 + Math.min(0.1, (1 / 100) * Math.log10(data.ascensionCount + 1)) * data.achievements[263],
             // PlatonicOMEGA
             1 + 0.002 * this.getCorruptionTotalLevel() * data.platonicUpgrades[15],
             // Challenge15
@@ -1348,6 +1468,319 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return base;
     }
 
+    R_calculateFreeAntUpgradeLevels(): number {
+        if (!this.gameData) return 1;
+        const data = this.gameData;
+
+        const CalcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number) => { // ECC stands for "Effective Challenge Completions"
+            let effective = 0
+            switch (type) {
+                case 'transcend':
+                    effective += Math.min(100, completions)
+                    effective += 1 / 20 * (Math.min(1000, Math.max(100, completions)) - 100)
+                    effective += 1 / 100 * (Math.max(1000, completions) - 1000)
+                    return effective
+                case 'reincarnation':
+                    effective += Math.min(25, completions)
+                    effective += 1 / 2 * (Math.min(75, Math.max(25, completions)) - 25)
+                    effective += 1 / 10 * (Math.max(75, completions) - 75)
+                    return effective
+                case 'ascension':
+                    effective += Math.min(10, completions)
+                    effective += 1 / 2 * (Math.max(10, completions) - 10)
+                    return effective
+            }
+        }
+
+        let bonusLevels = 0;
+        bonusLevels += CalcECC('reincarnation', data.challengecompletions[9]);
+        bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)));
+        bonusLevels += 12 * CalcECC('ascension', data.challengecompletions[11]);
+        bonusLevels += 2 * data.researches[97];
+        bonusLevels += 2 * data.researches[98];
+        bonusLevels += data.researches[102];
+        bonusLevels += 2 * data.researches[132];
+        bonusLevels += Math.floor((1 / 200) * data.researches[200]);
+        bonusLevels += this.R_calculateAchievementReward();
+        bonusLevels *= this.calculateChallenge15Reward("bonusAntLevel");
+
+        if (data.currentChallenge.ascension === 11) {
+            bonusLevels += Math.floor(
+                3 * data.challengecompletions[8]
+                + 5 * data.challengecompletions[9]
+            )
+            return bonusLevels
+        }
+
+        return bonusLevels
+    }
+
+    R_calculateAchievementReward() {
+        if (!this.gameData) return 1;
+        const data = this.gameData;
+        const freeAntAchievements = achievements
+            .map((ach, index) => {
+                if (ach.reward && ach.reward.includes("freeAntUpgrades")) {
+                    const match = ach.reward.match(/freeAntUpgrades:\s*\(\)\s*=>\s*(\d+)/);
+                    if (match) {
+                        return {
+                            index,
+                            freeAntUpgrades: Number(match[1])
+                        };
+                    }
+                }
+                return null;
+            })
+            .filter(item => item !== null) as { index: number; freeAntUpgrades: number }[];
+
+        // Step 2: Sum freeAntUpgrades for unlocked achievements
+        let totalFreeAntUpgrades = 0;
+
+        freeAntAchievements.forEach(ach => {
+            if (data.achievements[ach.index] === 1) {
+                totalFreeAntUpgrades += ach.freeAntUpgrades;
+            }
+        });
+        return totalFreeAntUpgrades;
+    }
+
+    R_calculatePolymathAscSpeed(): number {
+        if (!this.gameData) return 1;
+
+        const regularCostProgressionString = (baseMult: string, level: number): Record<string, string> => {
+            // Helper to multiply two strings
+            const multiply = (a: string, b: number): string => {
+                const { mantissa: m1, exponent: e1 } = parseSci(a);
+                const result = m1 * b;
+                return result.toExponential() + "e" + e1;
+            };
+
+            // Helper to parse scientific notation string
+            const parseSci = (s: string) => {
+                const m = s.match(/^([\d.]+)e\+?(-?\d+)$/i);
+                if (m) return { mantissa: parseFloat(m[1]), exponent: parseInt(m[2], 10) };
+                return { mantissa: parseFloat(s), exponent: 0 };
+            };
+
+            // --- Compute price multiplier ---
+            let priceMult = baseMult;
+            const base = parseSci(baseMult).mantissa;
+
+            let multiplier = 1;
+            if (level >= 120) multiplier *= (level - 90) / 30;
+            if (level >= 150) multiplier *= (level - 120) / 30;
+            if (level >= 180) multiplier *= (level - 170) / 10;
+            priceMult = multiply(baseMult, multiplier);
+
+            // --- Helper: compute cost as string ---
+            const cost = (val: number) => (Math.floor(val) || 0).toExponential();
+
+            const shardCost = multiply(cost(Math.pow(level, 3) / 8 + 1), parseFloat(priceMult));
+
+            const commonCost = level >= 30
+                ? multiply(cost(Math.pow(level - 30, 3) / 32 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            const uncommonCost = level >= 60
+                ? multiply(cost(Math.pow(level - 60, 3) / 384 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            const rareCost = level >= 90
+                ? multiply(cost(Math.pow(level - 90, 3) / 500 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            const epicCost = level >= 120
+                ? multiply(cost(Math.pow(level - 120, 3) / 375 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            const legendaryCost = level >= 150
+                ? multiply(cost(Math.pow(level - 150, 3) / 192 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            const mythicalCost = level >= 150
+                ? multiply(cost(Math.pow(level - 150, 3) / 1280 + 1), parseFloat(priceMult))
+                : "0e0";
+
+            return {
+                shard: shardCost,
+                commonFragment: commonCost,
+                uncommonFragment: uncommonCost,
+                rareFragment: rareCost,
+                epicFragment: epicCost,
+                legendaryFragment: legendaryCost,
+                mythicalFragment: mythicalCost
+            };
+        };
+
+        const data = this.gameData;
+
+        const inscriptValues = [
+            1, 1.04, 1.08, 1.12, 1.16, 1.20, 1.25, 1.30, 1.325, 1.35, 1.40
+        ];
+
+        // --- Helper: parse scientific notation string ---
+        const parseSci = (s: string) => {
+            const m = s.match(/^([\d.]+)e\+?(-?\d+)$/i);
+            if (m) return { mantissa: parseFloat(m[1]), exponent: parseInt(m[2], 10) };
+            return { mantissa: parseFloat(s), exponent: 0 };
+        };
+
+        // --- Helper: check if fragment >= cost ---
+        const geq = (frag: string, cost: string): boolean => {
+            const f = parseSci(frag);
+            const c = parseSci(cost);
+            if (f.exponent > c.exponent) return true;
+            if (f.exponent < c.exponent) return false;
+            return f.mantissa >= c.mantissa;
+        };
+
+        // --- Helper: subtract cost from fragment ---
+        const subtract = (frag: string, cost: string): string => {
+            const f = parseSci(frag);
+            const c = parseSci(cost);
+            if (f.exponent === c.exponent) return (f.mantissa - c.mantissa).toExponential();
+            const diffExp = f.exponent - c.exponent;
+            const resultMantissa = f.mantissa - c.mantissa * Math.pow(10, -diffExp);
+            return resultMantissa.toExponential() + "e" + f.exponent;
+        };
+
+        // --- Copy fragment budget ---
+        const budget: Record<string, string> = {
+            shard: data.talismans.polymath.shard.toString(),
+            commonFragment: data.talismans.polymath.commonFragment.toString(),
+            uncommonFragment: data.talismans.polymath.uncommonFragment.toString(),
+            rareFragment: data.talismans.polymath.rareFragment.toString(),
+            epicFragment: data.talismans.polymath.epicFragment.toString(),
+            legendaryFragment: data.talismans.polymath.legendaryFragment.toString(),
+            mythicalFragment: data.talismans.polymath.mythicalFragment.toString()
+        };
+        let level = 0;
+        const maxLevel = 180;
+
+        // --- Level-up simulation ---
+        const nextCost = (lvl: number) => regularCostProgressionString(1e16.toString(), lvl);
+
+
+        const log10FromSci = (s: string): number => {
+            const m = s.match(/^([\d.]+)e\+?(-?\d+)$/i);
+            if (!m) return Math.log10(parseFloat(s));
+            return Math.log10(parseFloat(m[1])) + parseInt(m[2], 10);
+        };
+
+        // Calculate max affordable level (simplified)
+        const budgetLogs: Record<string, number> = {};
+        for (const item in budget) {
+            budgetLogs[item] = log10FromSci(budget[item]);
+        }
+
+
+        let canBuy = true;
+        while (canBuy) {
+            const cost = nextCost(level); // returns string costs
+            let canBuy = true;
+
+            for (const item in cost) {
+                const costLog = log10FromSci(cost[item]);
+                if (budgetLogs[item] < costLog) {
+                    canBuy = false;
+                    break;
+                }
+            }
+
+            if (!canBuy) break;
+
+            // Subtract in log space
+            for (const item in cost) {
+                const costLog = log10FromSci(cost[item]);
+                budgetLogs[item] = Math.log10(Math.pow(10, budgetLogs[item]) - Math.pow(10, costLog));
+            }
+
+            level += 1;
+        }
+
+        // --- Compute rarity ---
+        const levelRatio = level / maxLevel;
+        let extraRarity = 0;
+        if (levelRatio >= 1) {
+            if (levelRatio >= 2) extraRarity += 1;
+            if (levelRatio >= 4) extraRarity += 1;
+            if (levelRatio >= 8) extraRarity += 1;
+        }
+        let rarity = 1 + Math.min(6, Math.floor(6 * levelRatio)) + extraRarity;
+        rarity = Math.min(rarity, inscriptValues.length - 1);
+
+        // --- Ascension speed ---
+        return inscriptValues[rarity] ?? 1;
+    }
+
+
+
+    R_calculateMortuus2AscensionSpeed() {
+        if (!this.gameData) return 0;
+
+        const data = this.gameData;
+        const mortuus2Level = data.ants.upgrades[15];
+        const freeLevels = this.R_calculateFreeAntUpgradeLevels();
+        let totalLevels;
+        if (data.currentChallenge.ascension === 11) {
+            totalLevels = Math.min(data.ants.upgrades[15], freeLevels);
+        } else {
+            totalLevels = (data.ants.upgrades[15]
+                + Math.min(data.ants.upgrades[15], freeLevels))
+        }
+
+        const ascensionSpeed = 2 - Math.pow(0.996, totalLevels);
+        return ascensionSpeed;
+    }
+
+    R_calculateHorseShoeLevel(exp: string): number {
+        if (!this.gameData) return 0;
+
+        const data = this.gameData;
+
+        let levelsPerOOM = 1 / 20;
+        levelsPerOOM += 0.005 * data.singularityChallenges.taxmanLastStand.completions;
+
+        const bonusLevels = data.shopUpgrades.shopHorseShoe > 0 ? 3 : 0;
+        const effectiveMult = 1;
+
+        const cost = '1e500'
+
+        // log10(exp / cost + 1) using strings
+        const log10ExpOverCostPlus1 = ((expStr: string, costStr: string): number => {
+            const parse = (s: string) => {
+                const m = s.match(/^([\d.]+)e\+?(-?\d+)$/i);
+                return m
+                    ? { m: parseFloat(m[1]), e: parseInt(m[2], 10) }
+                    : { m: parseFloat(s), e: 0 };
+            };
+
+            const A = parse(expStr);
+            const B = parse(costStr);
+
+            // exp / cost exponent
+            const expDiff = A.e - B.e;
+            const mantissaRatio = A.m / B.m;
+
+            // exp < cost → exp / cost < 1 → log10(1 + x)
+            if (expDiff < 0 || (expDiff === 0 && mantissaRatio < 1)) {
+                const x = mantissaRatio * Math.pow(10, expDiff);
+                return Math.log10(1 + x);
+            }
+
+            // exp >> cost → +1 negligible
+            return Math.log10(mantissaRatio) + expDiff;
+        })(exp, cost);
+
+        const level = Math.floor(
+            levelsPerOOM * log10ExpOverCostPlus1 * effectiveMult
+        ) + bonusLevels;
+
+        return Math.max(0, level);
+    }
+
+
+
     R_calculateCashGrabBonus(extra: number) {
         if (!this.gameData) return 0;
         const data = this.gameData;
@@ -1374,16 +1807,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         // Maybe caching for these later?
         /*const cacheName = 'R_RequiredRedAmbrosiaTime' as keyof CalculationCache;
-
+     
         const P_GEN_BUFF_LVL = pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_GENERATION_BUFF")?.level ?? 0;
-
+     
         const calculationVars : number[] = [
             P_GEN_BUFF_LVL,
             this.R_calculateCampaignAmbrosiaSpeedBonus(),
         ]
-
+     
         const cached = this.#checkCache(cacheName, calculationVars);
-
+     
         if(cached) return cached;*/
 
         const P_GEN_BUFF_LVL = pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_GENERATION_BUFF")?.level;
@@ -1405,7 +1838,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             (this.R_calculateAmbrosiaGenerationShopUpgrade() as number),
             (this.R_calculateAmbrosiaGenerationSingularityUpgrade() as number),
             (this.R_calculateAmbrosiaGenerationOcteractUpgrade() as number),
-            1 + (gameData.ambrosiaUpgrades.ambrosiaPatreon.level * QUARK_BONUS) / 100,
+            1 + (this.R_calculateAmbrosiaUpgradeValue('ambrosiaPatreon') * QUARK_BONUS) / 100,
             (1 + gameData.singularityChallenges.oneChallengeCap.completions / 100),
             (1 + gameData.singularityChallenges.noAmbrosiaUpgrades.completions / 50),
             RED_AMB_GEN_1,
@@ -1488,15 +1921,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 return level + RED_AMB_FREE_ROWS[rowNum];
         }
 
-        const blueLuck1 = gameData.ambrosiaUpgrades.ambrosiaLuck1.level;
-        const blueLuck2 = gameData.ambrosiaUpgrades.ambrosiaLuck2.level;
-        const blueLuck3 = gameData.ambrosiaUpgrades.ambrosiaLuck3.level;
+        const blueLuck1 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck1');
+        const blueLuck2 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck2');
+        const blueLuck3 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck3');
 
         // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/BlueberryUpgrades.ts#L564
         const totalCubes = this.R_calculateTotalCubes();
 
-        const blueCubeLuck = gameData.ambrosiaUpgrades.ambrosiaCubeLuck1.level;
-        const blueQuarkLuck = gameData.ambrosiaUpgrades.ambrosiaQuarkLuck1.level;
+        const blueCubeLuck = this.R_calculateAmbrosiaUpgradeValue('ambrosiaCubeLuck1');
+        const blueQuarkLuck = this.R_calculateAmbrosiaUpgradeValue('ambrosiaQuarkLuck1');
 
         const RED_AMB_LUCK1 = this.R_calculateRedAmbrosiaUpgradeValue('regularLuck');
         const RED_AMB_LUCK2 = this.R_calculateRedAmbrosiaUpgradeValue('regularLuck2');
