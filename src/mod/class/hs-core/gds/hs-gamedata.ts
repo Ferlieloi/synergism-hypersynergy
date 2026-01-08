@@ -378,8 +378,9 @@ export class HSGameData extends HSModule {
         // Overwrite btoa
         window.btoa = function (s) {
             // Small check so we hopefully mitm just when we have the save
-            if (s && s.length > 0 && s[0] === '{')
-                self.#mitm_gamedata = s; // Snatch the save json before it is encoded
+            if (s && s.length > 0 && s[0] === '{') {
+                self.#mitm_gamedata = s;
+            } // Snatch the save json before it is encoded
 
             // Call the original btoa so everything still works normally
             return _btoa(s);

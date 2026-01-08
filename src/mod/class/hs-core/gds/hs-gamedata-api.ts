@@ -685,6 +685,33 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
+    R_calculateSynergismLevel() {
+        if (!this.gameData) return 0;
+        const data = this.gameData;
+
+        let points = 0
+
+        points += achievements.reduce((sum, ach, index) => {
+            return sum + (data.achievements[index] ? ach.pointValue : 0)
+        }, 0)
+        /* later?
+        for (const k of Object.keys(progressiveAchievements) as ProgressiveAchievements[]) {
+            const pointsAwarded = progressiveAchievements[k].pointsAwarded(player.progressiveAchievements[k])
+            achievementPoints += pointsAwarded
+            progressiveAchievements[k].rewardedAP = pointsAwarded
+            updateProgressiveCache(k, sourcedFromUpdate)
+        }
+
+        let level: number;
+        if (points < 2500) {
+            level = Math.floor(points / 50)
+        } else {
+            level = 50 + Math.floor((points - 2500) / 100)
+        }
+        return level
+    }*/}
+
+
 
 
     R_calculateRedAmbrosiaUpgradeValue(
@@ -1282,7 +1309,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         )
 
         let baseDebuffMultiplier = 1
-        baseDebuffMultiplier *= 1 - Math.min(300, data.shopUpgrades.shopHorseShoe * this.R_calculateHorseShoeLevel(data.runes.horseShoe.toString())) / 1000
+        baseDebuffMultiplier *= 1 - Math.min(300, data.shopUpgrades.shopHorseShoe * this.R_calculateHorseShoeLevel()) / 1000
 
         let val;
 
@@ -1546,6 +1573,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     R_calculatePolymathAscSpeed(): number {
         if (!this.gameData) return 1;
+        const data = this.gameData;
 
         const regularCostProgressionString = (baseMult: string, level: number): Record<string, string> => {
             // Helper to multiply two strings
@@ -1564,7 +1592,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
             // --- Compute price multiplier ---
             let priceMult = baseMult;
-            const base = parseSci(baseMult).mantissa;
 
             let multiplier = 1;
             if (level >= 120) multiplier *= (level - 90) / 30;
@@ -1612,37 +1639,25 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             };
         };
 
-        const data = this.gameData;
+        let octUpgradeExtraCap = 0
+
+        if (!(data.singularityChallenges.noOcteracts.enabled || data.singularityChallenges.sadisticPrequel.enabled)) {
+            octUpgradeExtraCap += data.octUpgrades.octeractTalismanLevelCap1.level
+            octUpgradeExtraCap += data.octUpgrades.octeractTalismanLevelCap2.level
+            octUpgradeExtraCap += data.octUpgrades.octeractTalismanLevelCap3.level
+            octUpgradeExtraCap += data.octUpgrades.octeractTalismanLevelCap4.level
+        }
+        const maxLevel = 180;
+        let polymathTrueMaxLevel = maxLevel;
+        polymathTrueMaxLevel += 6 * (Math.min(10, data.challengecompletions[13]));
+        polymathTrueMaxLevel += (3 * (Math.max(10, data.challengecompletions[13]) - 10))
+        polymathTrueMaxLevel += Math.floor(data.researches[200] / 400);
+        polymathTrueMaxLevel += data.singularityChallenges.taxmanLastStand.completions * 25
+        polymathTrueMaxLevel += octUpgradeExtraCap;
 
         const inscriptValues = [
             1, 1.04, 1.08, 1.12, 1.16, 1.20, 1.25, 1.30, 1.325, 1.35, 1.40
         ];
-
-        // --- Helper: parse scientific notation string ---
-        const parseSci = (s: string) => {
-            const m = s.match(/^([\d.]+)e\+?(-?\d+)$/i);
-            if (m) return { mantissa: parseFloat(m[1]), exponent: parseInt(m[2], 10) };
-            return { mantissa: parseFloat(s), exponent: 0 };
-        };
-
-        // --- Helper: check if fragment >= cost ---
-        const geq = (frag: string, cost: string): boolean => {
-            const f = parseSci(frag);
-            const c = parseSci(cost);
-            if (f.exponent > c.exponent) return true;
-            if (f.exponent < c.exponent) return false;
-            return f.mantissa >= c.mantissa;
-        };
-
-        // --- Helper: subtract cost from fragment ---
-        const subtract = (frag: string, cost: string): string => {
-            const f = parseSci(frag);
-            const c = parseSci(cost);
-            if (f.exponent === c.exponent) return (f.mantissa - c.mantissa).toExponential();
-            const diffExp = f.exponent - c.exponent;
-            const resultMantissa = f.mantissa - c.mantissa * Math.pow(10, -diffExp);
-            return resultMantissa.toExponential() + "e" + f.exponent;
-        };
 
         // --- Copy fragment budget ---
         const budget: Record<string, string> = {
@@ -1655,7 +1670,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             mythicalFragment: data.talismans.polymath.mythicalFragment.toString()
         };
         let level = 0;
-        const maxLevel = 180;
 
         // --- Level-up simulation ---
         const nextCost = (lvl: number) => regularCostProgressionString(1e16.toString(), lvl);
@@ -1675,7 +1689,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
 
         let canBuy = true;
-        while (canBuy) {
+        while (canBuy && level < polymathTrueMaxLevel) {
             const cost = nextCost(level); // returns string costs
             let canBuy = true;
 
@@ -1733,11 +1747,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return ascensionSpeed;
     }
 
-    R_calculateHorseShoeLevel(exp: string): number {
+    R_calculateHorseShoeLevel(): number {
         if (!this.gameData) return 0;
 
         const data = this.gameData;
 
+        const exp = data.runes.horseShoe.toString()
         let levelsPerOOM = 1 / 20;
         levelsPerOOM += 0.005 * data.singularityChallenges.taxmanLastStand.completions;
 
@@ -1845,7 +1860,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             RED_AMB_GEN_2,
             1 + 0.01 * cube76 * this.R_calculateNumberOfThresholds(),
             this.R_calculateCashGrabBonus(CASH_GRAB_ULTRA_BLUEBERRY),
-            this.isEvent ? 1 + this.R_calculateConsumableEventBuff(EventBuffType.BlueberryTime) : 1
+            this.isEvent ? 1 + this.R_calculateConsumableEventBuff(EventBuffType.BlueberryTime) : 1,
+            this.R_calculateHorseShoeLevel(),
         ];
 
         const reduced = vals.reduce((a, b) => a * b, 1);
@@ -1969,6 +1985,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             2 * cube77,
             this.R_calculateCookieUpgrade29Luck(),
             gameData.shopUpgrades.shopAmbrosiaUltra * this.R_calculateSumOfExaltCompletions(),
+            Math.max(0, (this.R_calculateSynergismLevel() - 229) * 4),
         ]
 
         const rawLuckComponents2 = [
@@ -2010,6 +2027,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const c1 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement1')
         const c2 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement2')
         const c3 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement3')
+        const horseShoeLevel = this.R_calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
             data.shopUpgrades.shopRedLuck1,
@@ -2018,6 +2036,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             c1,
             c2,
             c3,
+            horseShoeLevel,
         ];
 
         const cached = this.#checkCache(cacheName, calculationVars);
@@ -2032,6 +2051,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             -0.01 * Math.floor(data.shopUpgrades.shopRedLuck1 / 20),
             -0.01 * Math.floor(data.shopUpgrades.shopRedLuck2 / 20),
             -0.01 * Math.floor(data.shopUpgrades.shopRedLuck3 / 20),
+            -0.5 * horseShoeLevel / (horseShoeLevel + 50),
         ]
 
         const reduced = vals.reduce((a, b) => a + b, 0)
@@ -2054,6 +2074,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
         const red1 = this.R_calculateRedAmbrosiaUpgradeValue('redLuck');
         const red2 = this.R_calculateRedAmbrosiaUpgradeValue('viscount');
+        const horseShoeLevel = this.R_calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
             pseudoLuck,
@@ -2064,6 +2085,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopRedLuck1,
             data.shopUpgrades.shopRedLuck2,
             data.shopUpgrades.shopRedLuck3,
+            horseShoeLevel,
         ];
 
         const cached = this.#checkCache(cacheName, calculationVars);
@@ -2080,6 +2102,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopRedLuck2 * 0.075,
             data.shopUpgrades.shopRedLuck3 * 0.1,
             red2,
+            horseShoeLevel * 0.2,
+            Math.max(0, this.R_calculateSynergismLevel() - 259),
         ]
 
         const reduced = vals.reduce((a, b) => a + b, 0)
@@ -2137,11 +2161,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     baseLuck: raw,
                     luckMult: additive,
                     totalLuck: total,
-                    trueBaseLuck: true_luck.raw,
-                    redAmbrosiaLuck: (this.R_calculateRedAmbrosiaLuck() as number),
+                    //trueBaseLuck: true_luck.raw,
+                    //redAmbrosiaLuck: (this.R_calculateRedAmbrosiaLuck() as number),
                     luckConversion: (this.R_calculateLuckConversion() as number),
                     totalCubes: this.R_calculateTotalCubes(),
-                    effectiveSingularity: data.highestSingularityCount,
+                    //effectiveSingularity: data.highestSingularityCount,
                     transcription: 0.55 + data.octUpgrades.octeractOneMindImprover.level / 150,
                     ascSpeed: this.R_calculateAscensionSpeedMult(),
                     blueberries: blueberries,
@@ -2159,7 +2183,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     personalQuarkBonus: this.meData?.bonus.quarkBonus,
                     blueAmbrosiaBarValue: data.blueberryTime,
                     redAmbrosiaBarValue: data.redAmbrosiaTime,
-                    blueAmbrosiaBarMax: this.R_calculateRequiredBlueberryTime(),
+                    //blueAmbrosiaBarMax: this.R_calculateRequiredBlueberryTime(),
                     redAmbrosiaBarMax: this.R_calculateRequiredRedAmbrosiaTime(),
                     ambrosiaSpeedMult: ambSpeedMult,
                     ambrosiaSpeed: ambSpeed,

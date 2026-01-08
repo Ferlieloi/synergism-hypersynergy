@@ -644,6 +644,10 @@ export interface octUpgrades {
     octeractBonusTokens4: OcteractUpgradeData;
     octeractBlueberries: OcteractUpgradeData;
     octeractInfiniteShopUpgrades: OcteractUpgradeData;
+    octeractTalismanLevelCap1: OcteractUpgradeData;
+    octeractTalismanLevelCap2: OcteractUpgradeData;
+    octeractTalismanLevelCap3: OcteractUpgradeData;
+    octeractTalismanLevelCap4: OcteractUpgradeData;
 }
 
 /**
@@ -653,6 +657,11 @@ export interface SingularityChallengeStatus {
     completions: number;
     highestSingularityCompleted: number;
     enabled: boolean;
+    rewards?: SingularityChallengeRewards;
+}
+
+export interface SingularityChallengeRewards {
+    talismanFreeLevel: number;
 }
 
 /**
@@ -816,6 +825,8 @@ export interface Campaigns {
     fortyNinth: number;
     fiftieth: number;
 }
+
+
 
 
 /**

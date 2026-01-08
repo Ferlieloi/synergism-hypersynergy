@@ -346,7 +346,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         for (const challenge of phaseConfig.strat) {
             // Special actions (100+)
             if (challenge.challengeNumber >= 100) {
-                HSLogger.debug(`Autosing: Perorming special action: ${challenge.challengeNumber}`, this.context);
+                HSLogger.debug(`Autosing: Performing special action: ${challenge.challengeNumber}`, this.context);
                 await HSUtils.sleep(challenge.challengeWaitTime);
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
