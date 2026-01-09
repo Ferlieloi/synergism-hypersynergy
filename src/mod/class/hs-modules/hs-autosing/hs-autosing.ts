@@ -587,6 +587,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await HSUtils.click(elevatorTeleportButton);
         await HSUtils.sleep(this.sleepTime);
         await this.buyCoin();
+        HSLogger.debug("Singularity performed", this.context);
         return Promise.resolve();
     }
 
