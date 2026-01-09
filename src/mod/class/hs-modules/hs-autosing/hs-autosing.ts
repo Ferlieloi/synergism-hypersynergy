@@ -517,19 +517,50 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.debug("Error during autosing logic: could not access settings to read stage", this.context);
             this.stopAutosing();
         }
-        settingsSubTab.click();
+
         const misc = document.getElementById('kMisc') as HTMLButtonElement;
         if (!misc) {
             HSLogger.debug("Error during autosing logic: could not access settings to read stage", this.context);
             this.stopAutosing();
         }
-        misc.click();
+
         const stage = await HSUtils.waitForElement('gameStageStatistic');
         if (!stage) {
             HSLogger.debug("Error during autosing logic: could not access settings to read stage", this.context);
             this.stopAutosing();
         }
+
+        // Wait for ANY mutation to the element (even if text is the same)
+        await new Promise<void>((resolve) => {
+            let mutationDetected = false;
+
+            const observer = new MutationObserver(() => {
+                if (!mutationDetected) {
+                    mutationDetected = true;
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+
+            // Observe before clicking to catch the update
+            observer.observe(stage, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+
+            settingsSubTab.click();
+            misc.click();
+
+            // Safety timeout in case no mutation happens
+            setTimeout(() => {
+                observer.disconnect();
+                resolve();
+            }, 2000);
+        });
+
         await HSUtils.waitForInnerText(stage, t => /Current Game Section:/.test(t));
+
         const regex = new RegExp('Current Game Section: (.*)');
         const match = stage.innerText.match(regex);
 
@@ -537,6 +568,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             console.error("Could not find game stage");
             return "";
         }
+
         HSLogger.debug(`Found stage: ${match[1].trim()} in settings`)
         return match[1].trim();
     }
