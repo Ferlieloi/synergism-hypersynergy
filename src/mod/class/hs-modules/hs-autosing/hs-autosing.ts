@@ -556,14 +556,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.C14Unlocked = false;
         this.C15Unlocked = false;
 
-        await HSUtils.click(this.singularityTab);
-        const toggleSingularitySubTab1 = document.getElementById('toggleSingularitySubTab1') as HTMLButtonElement;
-        if (!toggleSingularitySubTab1) {
-            HSLogger.debug("Error during autosing logic: elevator teleport button button not found", this.context);
-            this.stopAutosing();
-        }
-        await HSUtils.click(toggleSingularitySubTab1);
-
         const elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
         if (!elevatorInput) {
             HSLogger.debug("Error during autosing logic: elevator input not found", this.context);
