@@ -377,7 +377,7 @@ export interface CorruptionLevels {
     illiteracy: number;
     recession: number;
     dilation: number;
-    hyperchallenged: number;
+    hyperchallenge: number;
 }
 
 /**

@@ -7,7 +7,7 @@ import extinction from "../../../../resource/txt/extinction_icon.txt";
 import illiteracy from "../../../../resource/txt/illiteracy_icon.txt";
 import recession from "../../../../resource/txt/recession_icon.txt";
 import dilation from "../../../../resource/txt/dilation_icon.txt";
-import hyperchallenged from "../../../../resource/txt/hyperchallenged_icon.txt";
+import hyperchallenge from "../../../../resource/txt/hyperchallenge_icon.txt";
 
 type CorruptionKey = keyof CorruptionLoadout;
 
@@ -19,7 +19,7 @@ export const CorruptionIcons: Record<CorruptionKey, string> = {
     illiteracy,
     recession,
     dilation,
-    hyperchallenged
+    hyperchallenge
 };
 
 const corruptionMeta: Record<CorruptionKey, { label: string }> = {
@@ -30,7 +30,7 @@ const corruptionMeta: Record<CorruptionKey, { label: string }> = {
     illiteracy: { label: "Illiteracy" },
     recession: { label: "Recession" },
     dilation: { label: "Dilation" },
-    hyperchallenged: { label: "Hyperchallenged" }
+    hyperchallenge: { label: "Hyperchallenged" }
 };
 
 export async function openAutosingCorruptionModal(

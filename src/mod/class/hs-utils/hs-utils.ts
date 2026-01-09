@@ -96,11 +96,13 @@ export class HSUtils {
         const now = new Date();
         const hours = now.getHours();
         const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
 
         const formattedHours = hours.toString().padStart(2, '0');
         const formattedMinutes = minutes.toString().padStart(2, '0');
+        const formattedSeconds = seconds.toString().padStart(2, '0');
 
-        return `${formattedHours}:${formattedMinutes}`;
+        return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
     }
 
     static camelToKebab(str: string) {
@@ -480,6 +482,15 @@ export class HSUtils {
                     HSLogger.debug('Auto-clicked ok_alert');
                 }
             }
+            const promptWrapper = document.getElementById("promptWrapper");
+            if (promptWrapper && promptWrapper.style.display === "block") {
+                const okPrompt = document.getElementById('ok_prompt') as HTMLButtonElement;
+                if (okPrompt) {
+                    okPrompt.click();
+                    HSLogger.debug('Auto-clicked ok_prompt');
+                }
+            }
+
         }, this.sleepTime); // Check every 50ms for fast response
     }
 
@@ -546,5 +557,55 @@ export class HSUtils {
         }
 
         return parts.join("\r\n");
+    }
+
+    static getCorruptions(mode: "current" | "next") {
+        const getLevel = (id: string): number => {
+            const element = document.getElementById(id);
+            // Use parseInt and default to 0 if the element is missing or text is invalid
+            return element ? parseInt(element.textContent || '0', 10) : 0;
+        };
+        if (mode === "current") {
+            const a = {
+                viscosity: getLevel('corrCurrentviscosity'),
+                drought: getLevel('corrCurrentdrought'),
+                deflation: getLevel('corrCurrentdeflation'),
+                extinction: getLevel('corrCurrentextinction'),
+                illiteracy: getLevel('corrCurrentilliteracy'),
+                recession: getLevel('corrCurrentrecession'),
+                dilation: getLevel('corrCurrentdilation'),
+                hyperchallenge: getLevel('corrCurrenthyperchallenge')
+            };
+            return a;
+        } else {
+            return {
+                viscosity: getLevel('corrNextviscosity'),
+                drought: getLevel('corrNextdrought'),
+                deflation: getLevel('corrNextdeflation'),
+                extinction: getLevel('corrNextextinction'),
+                illiteracy: getLevel('corrNextilliteracy'),
+                recession: getLevel('corrNextrecession'),
+                dilation: getLevel('corrNextdilation'),
+                hyperchallenge: getLevel('corrNexthyperchallenge')
+            };
+        }
+    }
+
+    static isBiggerThan1000(input: string): boolean {
+        const str = input.trim().toLowerCase();
+
+        if (/[a-df-z]/.test(str)) {
+            return true;
+        }
+
+        if (str.includes('e')) {
+            const parts = str.split('e');
+            if (/[a-df-z]/.test(parts[1])) {
+                return true
+            }
+            const exponent = parseInt(parts[1], 10);
+            return exponent >= 3;
+        }
+        return parseFloat(str) > 1000;
     }
 }

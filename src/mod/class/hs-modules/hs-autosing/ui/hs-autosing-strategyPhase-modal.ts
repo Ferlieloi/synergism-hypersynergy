@@ -30,7 +30,7 @@ export async function openStrategyPhaseModal(
             illiteracy: 0,
             recession: 0,
             dilation: 0,
-            hyperchallenged: 0
+            hyperchallenge: 0
         };
 
     const workingStrat: AutosingStrategyPhase["strat"] =

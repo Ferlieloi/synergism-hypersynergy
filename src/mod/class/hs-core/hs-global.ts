@@ -87,7 +87,7 @@ export const HSGlobal: IHSGlobal = class {
 
     static HSLogger = {
         logLevel: ELogLevel.ALL,
-        logSize: 100
+        logSize: 5000
     }
 
     // --- HSStorage ---

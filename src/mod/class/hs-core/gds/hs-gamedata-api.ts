@@ -1985,7 +1985,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             2 * cube77,
             this.R_calculateCookieUpgrade29Luck(),
             gameData.shopUpgrades.shopAmbrosiaUltra * this.R_calculateSumOfExaltCompletions(),
-            Math.max(0, (this.R_calculateSynergismLevel() - 229) * 4),
+            Math.max(0, (this.R_calculateSynergismLevel() ?? 0 - 229) * 4),
         ]
 
         const rawLuckComponents2 = [
@@ -2103,7 +2103,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopRedLuck3 * 0.1,
             red2,
             horseShoeLevel * 0.2,
-            Math.max(0, this.R_calculateSynergismLevel() - 259),
+            Math.max(0, this.R_calculateSynergismLevel() ?? 0 - 259),
         ]
 
         const reduced = vals.reduce((a, b) => a + b, 0)

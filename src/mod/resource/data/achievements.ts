@@ -4,29 +4,9 @@ export interface Achievement {
     reward?: string;
 }
 
-export type ProgressiveAchievements =
-    | 'runeLevel'
-    | 'freeRuneLevel'
-    | 'antMasteries'
-    | 'rebornELO'
-    | 'talismanRarities'
-    | 'singularityCount'
-    | 'ambrosiaCount'
-    | 'redAmbrosiaCount'
-    | 'singularityUpgrades'
-    | 'octeractUpgrades'
-    | 'redAmbrosiaUpgrades'
-    | 'exalts'
 
 export interface ProgressiveAchievement {
-    maxPointValue: number
-    pointsAwarded: (cached: number) => number
-    updateValue: () => number // Number to compare to existing caches
-    useCachedValue: boolean
-    rewardedAP: number // Updating achievementPoints: pointsAwarded() - rewardedAP
-    extraI18n?: () => Record<string, number>
-    displayOrder: number
-    displayCondition: () => boolean
+    pointsAwarded: string
 }
 
 
@@ -2138,7 +2118,7 @@ export const achievements: Achievement[] = [
     }
 ]
 
-export const progressiveAchievements: Record<ProgressiveAchievements, ProgressiveAchievement> = [
+export const progressiveAchievements: ProgressiveAchievement[] = [
     {
         "pointsAwarded": "pointsAwarded: (cached: number) => {\n            console.log(cached)\n            return Math.min(200, Math.floor(cached / 1000)) + Math.min(400, Math.floor(cached / 2500))\n                + Math.min(400, Math.floor(cached / 12500))\n        }"
     },

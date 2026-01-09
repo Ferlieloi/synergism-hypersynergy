@@ -1,3 +1,5 @@
+export const IF_JUMP_VALUE = 200;
+
 export const phases = [
     "start",
     "prestige",
@@ -31,6 +33,8 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Late Cube loadout", value: 106 },
     { label: "Ambrosia Quark loadout", value: 107 },
     { label: "Ant Sacrifice", value: 108 },
+    { label: "Load Ant Speed Corruptions", value: 109 },
+    { label: "if-jump", value: IF_JUMP_VALUE },
 ] as const;
 
 
@@ -56,12 +60,33 @@ export interface CorruptionLoadout {
     illiteracy: number;
     recession: number;
     dilation: number;
-    hyperchallenged: number;
+    hyperchallenge: number;
 }
+
+export interface IfJumpParams {
+    id: string;
+    ifJumpChallenge: number;   // 1–15
+    ifJumpOperator: ">" | "<";
+    ifJumpValue: number;
+    ifJumpIndex: number;
+};
 
 export interface Challenge {
     challengeNumber: number;
-    challengeCompletions?: number;
-    challengeMaxTime?: number;
+    challengeCompletions: number;
     challengeWaitTime: number;
-}
+    challengeMaxTime: number;
+
+    // Optional special-action params
+    ifJump?: IfJumpParams;
+};
+
+export type IsJumpChallenge = Challenge & {
+    ifJump: {
+        id: string;
+        ifJumpChallenge: number;   // 1–15
+        ifJumpOperator: ">" | "<";
+        ifJumpValue: number;
+        ifJumpIndex: number;
+    };
+};

@@ -13,7 +13,7 @@
                     "illiteracy": 0,
                     "recession": 0,
                     "dilation": 0,
-                    "hyperchallenged": 0
+                    "hyperchallenge": 0
                 },
                 "strat": [
                     {
@@ -179,7 +179,7 @@
                     "illiteracy": 0,
                     "recession": 14,
                     "dilation": 4,
-                    "hyperchallenged": 1
+                    "hyperchallenge": 1
                 },
                 "strat": [
                     {
@@ -249,7 +249,7 @@
                     "illiteracy": 16,
                     "recession": 16,
                     "dilation": 7,
-                    "hyperchallenged": 7
+                    "hyperchallenge": 7
                 },
                 "strat": [
                     {
@@ -319,7 +319,7 @@
                     "illiteracy": 16,
                     "recession": 16,
                     "dilation": 11,
-                    "hyperchallenged": 10
+                    "hyperchallenge": 10
                 },
                 "strat": [
                     {
@@ -389,7 +389,7 @@
                     "illiteracy": 16,
                     "recession": 14,
                     "dilation": 14,
-                    "hyperchallenged": 13
+                    "hyperchallenge": 13
                 },
                 "strat": [
                     {
@@ -465,7 +465,7 @@
                     "illiteracy": 16,
                     "recession": 16,
                     "dilation": 16,
-                    "hyperchallenged": 16
+                    "hyperchallenge": 16
                 },
                 "strat": [
                     {

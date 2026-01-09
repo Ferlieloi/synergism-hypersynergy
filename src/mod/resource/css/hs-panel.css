@@ -754,6 +754,11 @@ a.hs-link {
     border: 1px solid white;
 }
 
+.hs-jump-highlight {
+    background: rgba(255, 200, 0, 0.25);
+    outline: 4px solid rgba(255, 170, 0, 0.8);
+}
+
 .hs-strategy-btn-edit {
     border-color: orange;
 }
@@ -1078,7 +1083,6 @@ a.hs-link {
 
 .hs-challenge-item {
     display: flex;
-    align-items: center;
     gap: 6px;
     padding: 6px 8px;
     background-color: #353439;
