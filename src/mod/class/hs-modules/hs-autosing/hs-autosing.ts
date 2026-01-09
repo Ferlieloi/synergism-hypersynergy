@@ -339,7 +339,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return;
             }
         }
-        HSLogger.debug(`executing phase: ${phaseConfig}`, this.context);
+        HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         await this.executePhase(phaseConfig);
     }
 
@@ -447,6 +447,20 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
+    private stringifyCorruptions(loadout: CorruptionLoadout): string {
+        const values = [
+            loadout.viscosity,
+            loadout.drought,
+            loadout.deflation,
+            loadout.extinction,
+            loadout.illiteracy,
+            loadout.recession,
+            loadout.dilation,
+            loadout.hyperchallenge
+        ];
+        return values.join(',');
+    }
+
     private async setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
         let tries = 0
         const importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
@@ -485,7 +499,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.click(okayBtn);
             await HSUtils.click(this.ascendBtn);
         }
-        HSLogger.debug(`Corruptions: ${corruptions} set`, this.context)
+        HSLogger.debug(`Corruptions: ${this.stringifyCorruptions(corruptions)} set`, this.context)
     }
 
     private stopAutosing() {
