@@ -2235,6 +2235,11 @@ a.hs-link {
     animation: hue-rotate 6s linear infinite;
 }
 
+.hs-rainbow-text {
+    color: #ff5e00;
+    animation: hs-color_rotate 6s linear infinite;
+}
+
 #hs-panel-new-ver {
     background: linear-gradient(to right, #e74949 20%, #f9bb44 30%, #ff982e 70%, #b73636 80%);
     -webkit-background-clip: text;
