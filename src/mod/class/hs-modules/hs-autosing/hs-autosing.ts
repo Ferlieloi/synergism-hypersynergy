@@ -8,9 +8,21 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSAutosingTimer } from "./hs-autosingTimer"
 import { HSAutosingStrategy, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS } from "../../../types/module-types/hs-autosing-types";
-import { HSElementHooker } from "../../hs-core/hs-elementhooker";
-import { HSDebug } from "../../hs-core/hs-debug";
+import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
+
+
+const ZERO_CORRUPTIONS: CorruptionLoadout = {
+    viscosity: 0,
+    drought: 0,
+    deflation: 0,
+    extinction: 0,
+    illiteracy: 0,
+    recession: 0,
+    dilation: 0,
+    hyperchallenge: 0,
+};
 
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
@@ -18,7 +30,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private gameDataResolver?: (value: void) => void;
 
     private strategy?: HSAutosingStrategy;
-
+    private timerDisplay: HTMLDivElement | null = null;
     private autosingEnabled = false;
     private targetSingularity = 0;
     private sleepTime = 50;
@@ -38,12 +50,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_quark: HTMLButtonElement | null = null;
     private antSacrifice: HTMLButtonElement | null = null;
     private coin!: HTMLButtonElement;
+    private timer: HSAutosingTimer | null = null;
     private C11Unlocked = false;
     private C12Unlocked = false;
     private C13Unlocked = false;
     private C14Unlocked = false;
     private C15Unlocked = false;
-    private sing = 0;
+    private timerModal: HSAutosingTimerModal | null = null;
+    private singTab2: HTMLButtonElement | null = null;
+
 
 
 
@@ -71,8 +86,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
+        this.timerModal = new HSAutosingTimerModal();
+        this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
 
-        if (!this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
+        if (!this.timer || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
             return Promise.resolve();
         }
@@ -115,6 +132,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async enableAutoSing(): Promise<void> {
         HSUtils.startDialogWatcher();
         this.autosingEnabled = true;
+        if (this.timerModal) {
+            this.timerModal.show();
+        }
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.targetSingularity = singularitySetting.getValue();
         this.subscribeGameDataChanges();
@@ -155,13 +175,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async disableAutoSing(): Promise<void> {
         this.autosingEnabled = false;
         this.stopAutosing();
+        if (this.timerModal) {
+            this.timerModal.hide();
+        }
         HSLogger.log(`Autosing disabled`, this.context);
         return Promise.resolve();
     }
 
     private async performAutosingLogic(): Promise<void> {
         // START OF Autosinging Logic
-        this.sing = 0;
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
 
@@ -205,14 +227,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ambrosia_late_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
         this.ambrosia_quark = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
 
-        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark) {
-            HSUI.Notify("An ambrosia button not found at the start of singularity", { notificationType: "warning" });
-            this.stopAutosing();
-            return Promise.resolve();
-        }
-
         try {
-
+            if (this.timerModal) {
+                this.timerModal.start();
+            }
             while (this.isAutosingEnabled()) {
                 await HSUtils.click(this.ambrosia_quark);
                 await HSUtils.click(this.ascendBtn);
@@ -249,8 +267,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                         await this.matchStageToStrategy("final");
                     }
                 }
-
-                this.sing += 1;
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -432,8 +448,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
                 break;
             case 109: // Ant Corruptions
-                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout
-                this.setCorruptions(antCorruptions)
+                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(antCorruptions);
+                break;
+            case 110: // Cleanse
+                await this.setCorruptions(ZERO_CORRUPTIONS);
+                break;
+            case 111: // Wait
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
@@ -507,6 +528,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.unsubscribeGameDataChanges();
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
+        if (this.timerModal) {
+            this.timerModal.hide();
+        }
         HSUtils.stopDialogWatcher();
     }
 
@@ -575,27 +599,98 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async enterAndLeaveExalt(): Promise<void> {
         const exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
+        const exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
 
         if (!exalt2Btn) {
             HSLogger.debug("Error: Exalt 2 button not found", this.context);
             this.stopAutosing();
             return;
         }
-        const isInChallenge = () => exalt2Btn.style.backgroundColor === "orchid";
 
+        // Returns true if we're currently IN the challenge (timer is visible)
+        const isInChallenge = () => {
+            const style = window.getComputedStyle(exaltTimer);
+            return style.display !== "none";
+        };
+
+        // Enter the challenge
         while (!isInChallenge()) {
             await HSUtils.click(exalt2Btn);
             await HSUtils.sleep(200);
         }
 
+        // Leave the challenge
         while (isInChallenge()) {
             await HSUtils.click(exalt2Btn);
             await HSUtils.sleep(200);
         }
     }
 
+    private async getCurrentGoldenQuarks(): Promise<number> {
+        // Navigate to singularity tab
+        await HSUtils.click(this.singularityTab);
+        if (this.singTab2) await HSUtils.click(this.singTab2);
+        const quarksElement = document.getElementById('goldenQuarkamount');
+
+        if (!quarksElement) {
+            HSLogger.debug("Error: could not find golden quarks display element", this.context);
+            return 0;
+        }
+
+        // Wait until the element is not empty
+        await new Promise<void>((resolve) => {
+            // 1. Check if it already has content before starting the observer
+            if (quarksElement.textContent?.trim()) {
+                return resolve();
+            }
+
+            const observer = new MutationObserver(() => {
+                const currentText = quarksElement.textContent?.trim();
+                // 2. Only resolve if text has actually appeared
+                if (currentText && currentText.length > 0) {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+
+            observer.observe(quarksElement, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+
+            // Safety timeout extended slightly to 3s to account for game lag
+            setTimeout(() => {
+                observer.disconnect();
+                resolve();
+            }, 3000);
+        });
+
+        const quarksText = quarksElement.textContent || '';
+
+        // Regex optimized for the scientific notation in your image
+        const scientificRegex = /\d+(\.\d+)?[eE][+-]?\d+/;
+        const simpleRegex = /\d+(\.\d+)?/;
+
+        const match = quarksText.match(scientificRegex) || quarksText.match(simpleRegex);
+
+        if (!match) {
+            HSLogger.debug(`Still no number found in text: "${quarksText}"`, this.context);
+            return 0;
+        }
+
+        const parsed = parseFloat(match[0]);
+        HSLogger.debug(`Current Golden Quarks: ${parsed}`, this.context);
+
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
     private async performSingularity(): Promise<void> {
         await this.enterAndLeaveExalt();
+        const gq = await this.getCurrentGoldenQuarks();
+        if (this.timerModal) {
+            this.timerModal.recordSingularity(gq);
+        }
         this.C11Unlocked = false;
         this.C12Unlocked = false;
         this.C13Unlocked = false;
@@ -752,17 +847,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             13: [12, 10],
             14: [13, 10],
             15: [14, 10],
-        };
-
-        const ZERO_CORRUPTIONS: CorruptionLoadout = {
-            viscosity: 0,
-            drought: 0,
-            deflation: 0,
-            extinction: 0,
-            illiteracy: 0,
-            recession: 0,
-            dilation: 0,
-            hyperchallenge: 0,
         };
 
         await this.setCorruptions(ZERO_CORRUPTIONS);

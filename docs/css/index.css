@@ -89,7 +89,7 @@ header {
 
 #version_num {
     display: inline-block;
-    animation: shake 400ms ease 0s infinite normal forwards, color_rotate 1500ms ease 0s infinite normal forwards;
+    animation: shake 400ms ease 0s infinite normal forwards;
     font-size: 11pt;
 }
 
@@ -211,7 +211,8 @@ button#about-btn {
     padding-left: 15px;
 }
 
-.page-wrapper ul, dl {
+.page-wrapper ul,
+dl {
     margin-left: 40px;
 }
 
@@ -227,7 +228,9 @@ button#about-btn {
     margin-left: 35px;
 }
 
-.page-wrapper h1, h2, h3 {
+.page-wrapper h1,
+h2,
+h3 {
     margin-bottom: 10px;
     margin-top: 10px;
 }
@@ -255,41 +258,41 @@ a {
     color: #0066cc;
     text-decoration: none;
     font-weight: normal;
-    
+
     /* Optional spacing and layout */
     padding: 2px 4px;
     display: inline-block;
-    
+
     /* Optional transitions for smooth state changes */
     transition: all 0.1s ease;
-  }
-  
-  /* Hover state - when user hovers over the link */
-  a:hover {
+}
+
+/* Hover state - when user hovers over the link */
+a:hover {
     color: #004499;
     text-decoration: underline;
-  }
-  
-  /* Active state - when link is being clicked */
-  a:active {
+}
+
+/* Active state - when link is being clicked */
+a:active {
     color: #cc0000;
     text-decoration: underline;
-  }
-  
-  /* Visited state - after the link has been clicked */
-  a:visited {
+}
+
+/* Visited state - after the link has been clicked */
+a:visited {
     color: #8d39db;
-  }
-  
-  /* Focus state - when link is focused via keyboard navigation */
-  a:focus {
+}
+
+/* Focus state - when link is focused via keyboard navigation */
+a:focus {
     outline: none;
-  }
-  
-  /* Example of combination states */
-  a:hover:visited {
+}
+
+/* Example of combination states */
+a:hover:visited {
     color: #b503b5;
-  }
+}
 
 @keyframes shake {
     0% {
@@ -319,28 +322,57 @@ a {
 
 @keyframes color_rotate {
     0% {
-        color: yellow;
+        color: #ff5e00;
     }
 
-    20% {
-        color: red;
+    9% {
+        color: #ff9a00;
     }
 
-    40% {
-        color: cyan;
+    18% {
+        color: #ffcd00;
     }
 
-    60% {
-        color: chartreuse;
+    27% {
+        color: #e5ff00;
     }
 
-    80% {
-        color: red;
+    36% {
+        color: #a5ff00;
+    }
+
+    45% {
+        color: #00ffc8;
+    }
+
+    54% {
+        color: #00c8ff;
+    }
+
+    63% {
+        color: #00a5ff;
+    }
+
+    72% {
+        color: #9500ff;
+    }
+
+    81% {
+        color: #ff00e1;
+    }
+
+    90% {
+        color: #ff0095;
     }
 
     100% {
-        color: yellow;
+        color: #ff5e00;
     }
+}
+
+.rainbow-text {
+    color: #ff5e00;
+    animation: color_rotate 6s linear infinite;
 }
 
 .fluid-img {

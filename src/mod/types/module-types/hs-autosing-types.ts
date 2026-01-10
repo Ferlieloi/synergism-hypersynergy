@@ -34,6 +34,8 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Quark loadout", value: 107 },
     { label: "Ant Sacrifice", value: 108 },
     { label: "Load Ant Speed Corruptions", value: 109 },
+    { label: "Cleanse corruptions", value: 110 },
+    { label: "Wait", value: 111 },
     { label: "if-jump", value: IF_JUMP_VALUE },
 ] as const;
 

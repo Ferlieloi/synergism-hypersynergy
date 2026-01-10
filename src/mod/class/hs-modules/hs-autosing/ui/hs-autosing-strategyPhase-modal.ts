@@ -90,7 +90,7 @@ export async function openStrategyPhaseModal(
             </div>
         </div>
         `,
-        title: isEditing ? "Edit Strategy Phase" : "Create Strategy Phase"
+        title: isEditing ? `Edit Strategy Phase ${existingPhase.startPhase}-${existingPhase.endPhase}` : `Create Strategy Phase`
     };
 
     const modalId = await uiMod.Modal(modalContent);
@@ -130,7 +130,7 @@ export async function openStrategyPhaseModal(
             }
 
             if (el.id === "hs-autosing-phase-challenges") {
-                await openAutosingChallengesModal(uiMod, workingStrat);
+                await openAutosingChallengesModal(uiMod, workingStrat, existingPhase?.startPhase ?? "error", existingPhase?.endPhase ?? "error");
             }
         });
     }, 0);

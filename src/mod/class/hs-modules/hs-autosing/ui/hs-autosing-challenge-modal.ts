@@ -10,7 +10,9 @@ type JumpTargetInfo = {
 
 export async function openAutosingChallengesModal(
     uiMod: HSUI,
-    stratData: AutosingStrategyPhase["strat"]
+    stratData: AutosingStrategyPhase["strat"],
+    startPhase: string,
+    endPhase: string,
 ): Promise<void> {
     const modalId = "hs-autosing-challenges-modal";
     const workingChallenges: Challenge[] = [...stratData];
@@ -206,7 +208,7 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">Save Strategy</div>
         </div>
     </div>`,
-        title: "Configure Strategy Actions"
+        title: `Configure Strategy Actions (${startPhase}-${endPhase})`
     };
 
     const modalInstance = await uiMod.Modal(modalContent);
@@ -506,7 +508,6 @@ export async function openAutosingChallengesModal(
         const standardInputs = [
             "hs-challenge-num-input",
             "hs-challenge-completions-input",
-            "hs-challenge-wait-input",
             "hs-challenge-max-time-input"
         ];
 
