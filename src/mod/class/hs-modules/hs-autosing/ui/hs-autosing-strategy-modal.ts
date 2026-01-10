@@ -21,7 +21,6 @@ export class HSAutosingStrategyModal {
                 strategy: []
             };
 
-        // Fix phase chain: each phase starts where previous ended
         const fixPhaseChain = () => {
             for (let i = 1; i < strategyDraft.strategy.length; i++) {
                 const prevPhase = strategyDraft.strategy[i - 1];

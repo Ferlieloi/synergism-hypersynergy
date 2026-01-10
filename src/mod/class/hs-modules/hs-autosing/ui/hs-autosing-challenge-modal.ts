@@ -59,25 +59,25 @@ export async function openAutosingChallengesModal(
         const displayText = isSpecial
             ? `<strong>${actionLabel}</strong>`
             : `Challenge ${entry.challengeNumber}
-         (${entry.challengeCompletions} completions)`;
+     (${entry.challengeCompletions} completions)`;
 
         return `
-            <div class="hs-challenge-item" data-index="${index}">
-                <div class="hs-challenge-drag-handle">⋮⋮</div>
-                <div class="hs-challenge-item-text">
-                    ${displayText}
-                    <div class="hs-challenge-meta">
-                        Wait after goal reached:
-                        ${formatMs(entry.challengeWaitTime)}
-                        ${!isSpecial
+        <div class="hs-challenge-item" data-index="${index}">
+            <div class="hs-challenge-drag-handle">⋮⋮</div>
+            <div class="hs-challenge-item-text">
+                ${displayText}
+                <div class="hs-challenge-meta">
+                    Wait outside: ${formatMs(entry.challengeWaitAfter ?? 0)} |
+                    Wait inside: ${formatMs(entry.challengeWaitTime)}
+                    ${!isSpecial
                 ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
                 : ""}
-                    </div>
                 </div>
-                <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">✎</div>
-                <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
             </div>
-            `;
+            <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">✎</div>
+            <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
+        </div>
+        `;
     };
 
     // Helper to render the list inside the modal
@@ -162,8 +162,12 @@ export async function openAutosingChallengesModal(
                 <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Wait (ms):</div>
-                <input type="number" id="hs-challenge-wait-input" class="hs-challenges-input" min="0" value="0" />
+                <div class="hs-challenges-input-label">Wait outside (ms):</div>
+                <input type="number" id="hs-challenge-wait-outside-input" class="hs-challenges-input" min="0" value="0" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait inside (ms):</div>
+                <input type="number" id="hs-challenge-wait-inside-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Max Time (ms):</div>
@@ -532,7 +536,8 @@ export async function openAutosingChallengesModal(
     const resetInputs = () => {
         (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
         (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
-        (document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value = "0";
+        (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = "0";
+        (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
         (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
@@ -586,7 +591,8 @@ export async function openAutosingChallengesModal(
                             ? Number(actionSelect.value)
                             : Number((document.getElementById("hs-challenge-num-input") as HTMLInputElement).value),
                         challengeCompletions: isSpecial ? 0 : Number((document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value),
-                        challengeWaitTime: Number((document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value),
+                        challengeWaitTime: Number((document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value),
+                        challengeWaitAfter: Number((document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value),
                         challengeMaxTime: isSpecial ? 0 : Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
                     };
                 }
@@ -616,7 +622,10 @@ export async function openAutosingChallengesModal(
                     (document.getElementById("hs-if-jump-value") as HTMLInputElement).value =
                         String(item.ifJump?.ifJumpValue);
 
-                    document.getElementById("hs-challenge-add-btn")!.textContent = "Update Action";
+                    (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
+                    (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = String(item.challengeWaitAfter ?? 0);
+
+                    (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
                     updateInputState();
                     return;
                 }
@@ -630,7 +639,8 @@ export async function openAutosingChallengesModal(
                     (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = String(item.challengeMaxTime);
                 }
 
-                (document.getElementById("hs-challenge-wait-input") as HTMLInputElement).value = String(item.challengeWaitTime);
+                (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
+                (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = String(item.challengeWaitAfter ?? 0);
                 (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
                 updateInputState();
             }

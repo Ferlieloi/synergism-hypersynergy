@@ -11,7 +11,7 @@ import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingTimer } from "./hs-autosingTimer"
 import { HSAutosingStrategy, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
-
+import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 
 const ZERO_CORRUPTIONS: CorruptionLoadout = {
     viscosity: 0,
@@ -33,7 +33,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private timerDisplay: HTMLDivElement | null = null;
     private autosingEnabled = false;
     private targetSingularity = 0;
-    private sleepTime = 50;
+    private sleepTime = 20;
     private buildingsTab!: HTMLButtonElement;
     private challengeTab!: HTMLButtonElement;
     private runesTab!: HTMLButtonElement;
@@ -139,7 +139,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.targetSingularity = singularitySetting.getValue();
         this.subscribeGameDataChanges();
 
-
         new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
         })
@@ -219,43 +218,39 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
 
-        if (earlyCubeVal === lateCubeVal || earlyCubeVal === quarkVal || lateCubeVal === quarkVal) {
-            HSUI.Notify("Autosing Ambrosia loadout selection contains the same loadout twice", { notificationType: "warning" });
-        }
-
         this.ambrosia_early_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement;
         this.ambrosia_late_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
         this.ambrosia_quark = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
+
+        if (earlyCubeVal === lateCubeVal || earlyCubeVal === quarkVal || lateCubeVal === quarkVal) {
+            HSUI.Notify("Autosing Ambrosia loadout selection contains the same loadout twice", { notificationType: "warning" });
+        }
 
         try {
             if (this.timerModal) {
                 this.timerModal.start();
             }
             while (this.isAutosingEnabled()) {
-                await HSUtils.click(this.ambrosia_quark);
+                await this.setAmbrosiaLoadout(this.ambrosia_quark);
                 await HSUtils.click(this.ascendBtn);
                 await this.performSingularity();
+                let sawDisabled = false;
 
-                let singularityActivated = false;
-                const checkSingularity = () => {
+                while (this.isAutosingEnabled()) {
                     const btn = document.querySelector('#singularitybtn');
-                    if (!btn) return false;
-
-                    // Use computed style instead of inline style
-                    const filter = window.getComputedStyle(btn).getPropertyValue('filter');
-                    return !filter || filter === 'none';
-                };
-
-
-                while (this.isAutosingEnabled() && !singularityActivated) {
-                    if (checkSingularity()) {
-                        singularityActivated = true;
-                        HSLogger.debug('Singularity button is now ACTIVATED!');
-                        break;
+                    if (btn) {
+                        const filter = getComputedStyle(btn).getPropertyValue('filter');
+                        const isEnabled = !filter || filter === 'none';
+                        if (!isEnabled) {
+                            sawDisabled = true;
+                        }
+                        if (sawDisabled && isEnabled) {
+                            HSLogger.debug('Singularity button ACTIVATED!');
+                            break;
+                        }
                     }
-                    let stage = await this.getStage();
+                    const stage = await this.getStage();
                     await this.matchStageToStrategy(stage);
-                    await HSUtils.sleep(this.sleepTime);
                 }
                 if (this.isAutosingEnabled()) {
                     const finalPhase = this.getFinalStrategyPhase();
@@ -371,8 +366,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled) return;
             const challenge = phaseConfig.strat[i];
-
-            if (challenge.challengeNumber == 200) { // Jump action (200)
+            if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
+            else if (challenge.challengeNumber == 200) { // Jump action (200)
                 const operator = challenge.ifJump?.ifJumpOperator;
                 const challengeCompletions = this.getChallengeCompletions(challenge.ifJump?.ifJumpChallenge ?? -1)
                 switch (operator) {
@@ -406,12 +401,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
                     challenge.challengeMaxTime,
-                    challenge.challengeWaitTime
+                    challenge.challengeWaitTime,
                 );
-                await HSUtils.sleep(this.sleepTime);
+                if (challenge.challengeWaitAfter && challenge.challengeWaitAfter > 0) {
+                    if (challenge.challengeNumber <= 5) {
+                        await HSUtils.click(this.exitTranscBtn);
+                        await HSUtils.sleep(challenge.challengeWaitAfter);
+                    } else if (challenge.challengeNumber <= 10) {
+                        await HSUtils.click(this.exitReincBtn);
+                        await HSUtils.sleep(challenge.challengeWaitAfter);
+                    } else {
+                        await HSUtils.click(this.exitAscBtn);
+                        await HSUtils.sleep(challenge.challengeWaitAfter);
+                    }
+                }
             }
         }
     }
+
 
     private async performSpecialAction(actionId: number): Promise<void> {
         switch (actionId) {
@@ -520,7 +527,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.click(okayBtn);
             await HSUtils.click(this.ascendBtn);
         }
-        HSLogger.debug(`Corruptions: ${this.stringifyCorruptions(corruptions)} set`, this.context)
+        if (tries < 10) HSLogger.debug(`Corruptions: ${this.stringifyCorruptions(corruptions)} set`, this.context)
     }
 
     private stopAutosing() {
@@ -616,13 +623,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Enter the challenge
         while (!isInChallenge()) {
             await HSUtils.click(exalt2Btn);
-            await HSUtils.sleep(200);
+            await HSUtils.sleep(this.sleepTime);
         }
 
         // Leave the challenge
         while (isInChallenge()) {
             await HSUtils.click(exalt2Btn);
-            await HSUtils.sleep(200);
+            await HSUtils.sleep(this.sleepTime);
         }
     }
 
@@ -685,11 +692,22 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return isNaN(parsed) ? 0 : parsed;
     }
 
+    private async getCurrentQuarks(): Promise<number> {
+        // Navigate to singularity tab
+        const quarksElement = document.getElementById('quarkDisplay');
+        if (!quarksElement) return 0;
+        const quarksText = quarksElement.textContent;
+        const parsed = parseFloat(quarksText);
+        HSLogger.debug(`Current Quarks: ${parsed}`, this.context);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
     private async performSingularity(): Promise<void> {
         await this.enterAndLeaveExalt();
         const gq = await this.getCurrentGoldenQuarks();
+        const q = await this.getCurrentQuarks();
         if (this.timerModal) {
-            this.timerModal.recordSingularity(gq);
+            this.timerModal.recordSingularity(q, gq);
         }
         this.C11Unlocked = false;
         this.C12Unlocked = false;
@@ -712,10 +730,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.stopAutosing();
         }
         await HSUtils.click(elevatorTeleportButton);
-        await HSUtils.sleep(this.sleepTime);
         await this.buyCoin();
         HSLogger.debug("Singularity performed", this.context);
-        return Promise.resolve();
+        let stage = await this.getStage();
+        while (!Object.values(ALLOWED).some(phase => stage.includes(phase))) {
+            await HSUtils.sleep(5);
+            stage = await this.getStage();
+        }
+        return Promise.resolve()
     }
 
     private async buyCoin() {
@@ -751,7 +773,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         maxTime: number = 99999999,
         waitTime: number = 0
     ): Promise<void> {
-        const sleepInterval = 10; // Fixed sleep interval inside function
+        const sleepInterval = 10;
         let totalTimeElapsed = 0;
         const challengeBtn = this.challengeButtons[challengeIndex];
 
@@ -770,10 +792,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             await HSUtils.DblClick(challengeBtn);
-            await HSUtils.sleep(100); // debounce double-clicks
-            totalTimeElapsed += 100;
+            await HSUtils.sleep(20); // debounce double-clicks
+            totalTimeElapsed += 25;
         }
-
+        totalTimeElapsed = 0;
         if (!this.isInChallenge(challengeIndex)) {
             HSLogger.debug(
                 `Timeout: Failed to enter challenge ${challengeIndex}`,
@@ -859,13 +881,55 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 HSLogger.debug(`Running prerequisite c${req} for c${c}`, this.context);
                 if (req === 10) {
                     await this.waitForCompletion(req, 1, 60000, 500);
-                    await HSUtils.sleep(this.sleepTime);
                 } else {
                     await this.waitForCompletion(req, 0, 60000, 0);
-                    await HSUtils.sleep(this.sleepTime);
                 }
 
             }
         }
     }
+
+    async waitForSingularityActivation() {
+        return new Promise(resolve => {
+            const btn = document.querySelector('#singularitybtn');
+            if (!btn) {
+                resolve(false);
+                return;
+            }
+
+            const isEnabled = () => {
+                const filter = getComputedStyle(btn).getPropertyValue('filter');
+                return !filter || filter === 'none';
+            };
+
+            let sawDisabled = !isEnabled(); // require a real transition
+
+            const observer = new MutationObserver(() => {
+                if (!this.isAutosingEnabled()) {
+                    observer.disconnect();
+                    resolve(false);
+                    return;
+                }
+
+                const enabled = isEnabled();
+
+                if (!enabled) {
+                    sawDisabled = true;
+                    return;
+                }
+
+                if (sawDisabled && enabled) {
+                    observer.disconnect();
+                    HSLogger.debug('Singularity button ACTIVATED!', this.context);
+                    resolve(true);
+                }
+            });
+
+            observer.observe(btn, {
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+        });
+    }
+
 }

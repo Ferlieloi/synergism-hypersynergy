@@ -10,6 +10,7 @@ export class HSAutosingTimerModal {
 
     private timestamps: number[] = [];
     private quarksHistory: number[] = [];
+    private goldenQuarksHistory: number[] = [];
     private startTime: number = 0;
 
     constructor() {
@@ -202,13 +203,15 @@ export class HSAutosingTimerModal {
     public start(): void {
         this.timestamps = [];
         this.quarksHistory = [];
+        this.goldenQuarksHistory = [];
         this.startTime = performance.now();
     }
 
-    public recordSingularity(currentQuarks: number): void {
+    public recordSingularity(currentQuarks: number, currentGoldenQuarks: number): void {
         const now = performance.now();
         this.timestamps.push(now);
         this.quarksHistory.push(currentQuarks);
+        this.goldenQuarksHistory.push(currentGoldenQuarks);
         this.updateDisplay();
     }
 
@@ -236,13 +239,13 @@ export class HSAutosingTimerModal {
         return sum / n / 1000;
     }
 
-    private getQuarksPerSecond(): number | null {
-        if (this.quarksHistory.length < 2) {
+    private getQuarksPerSecond(quarks: number[]): number | null {
+        if (quarks.length < 2) {
             return null;
         }
 
-        const firstQuarks = this.quarksHistory[0];
-        const lastQuarks = this.quarksHistory[this.quarksHistory.length - 1];
+        const firstQuarks = quarks[0];
+        const lastQuarks = quarks[quarks.length - 1];
         const quarksDiff = lastQuarks - firstQuarks;
 
         const totalTimeSeconds = (this.timestamps[this.timestamps.length - 1] - this.startTime) / 1000;
@@ -254,11 +257,11 @@ export class HSAutosingTimerModal {
         return quarksDiff / totalTimeSeconds;
     }
 
-    private getLastQuarksGained(): number | null {
-        if (this.quarksHistory.length < 2) {
+    private getLastQuarksGained(quarks: number[]): number | null {
+        if (quarks.length < 2) {
             return null;
         }
-        return this.quarksHistory[this.quarksHistory.length - 1] - this.quarksHistory[this.quarksHistory.length - 2];
+        return quarks[quarks.length - 1] - quarks[quarks.length - 2];
     }
 
     private formatNumber(num: number): string {
@@ -274,8 +277,13 @@ export class HSAutosingTimerModal {
         const avg10 = this.getAverageLast(10);
         const avg50 = this.getAverageLast(50);
         const avgAll = this.getAverageLast(count - 1);
-        const quarksPerSec = this.getQuarksPerSecond();
-        const lastQuarks = this.getLastQuarksGained();
+        const goldenQuarksPerSec = this.getQuarksPerSecond(this.goldenQuarksHistory);
+        const lastGoldenQuarks = this.getLastQuarksGained(this.goldenQuarksHistory);
+        const currentGoldenQuarks = this.goldenQuarksHistory.length > 0
+            ? this.goldenQuarksHistory[this.goldenQuarksHistory.length - 1]
+            : 0;
+        const quarksPerSec = this.getQuarksPerSecond(this.quarksHistory);
+        const lastQuarks = this.getLastQuarksGained(this.quarksHistory);
         const currentQuarks = this.quarksHistory.length > 0
             ? this.quarksHistory[this.quarksHistory.length - 1]
             : 0;
@@ -310,15 +318,32 @@ export class HSAutosingTimerModal {
 
         if (currentQuarks > 0) {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
-                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
-                <div style="margin-bottom: 4px;">Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentQuarks)}</span></div>`;
-
-            if (lastQuarks !== null && lastQuarks > 0) {
-                html += `<div style="margin-bottom: 4px;">Last Gain: <span style="color: #ffbf00; font-weight: bold;">+${this.formatNumber(lastQuarks)}</span></div>`;
-            }
+                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">QUARKS</div>
+                <div style="margin-bottom: 4px;">Total: 
+                    <span style="color: #00BCD4; font-weight: bold;">
+                        ${this.formatNumber(currentQuarks)}
+                    </span>
+                </div>`;
 
             if (quarksPerSec !== null && quarksPerSec > 0) {
-                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(quarksPerSec)}/s</span></div>`;
+                html += `<div>Rate: 
+                    <span style="color: #4DD0E1; font-weight: bold;">
+                        ${this.formatNumber(quarksPerSec)}/s
+                    </span>
+                </div>`;
+            }
+
+            html += `</div>`;
+        }
+
+        if (currentGoldenQuarks > 0) {
+            html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
+                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
+                <div style="margin-bottom: 4px;">Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentGoldenQuarks)}</span></div>`;
+
+
+            if (goldenQuarksPerSec !== null && goldenQuarksPerSec > 0) {
+                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s</span></div>`;
             }
 
             html += `</div>`;
