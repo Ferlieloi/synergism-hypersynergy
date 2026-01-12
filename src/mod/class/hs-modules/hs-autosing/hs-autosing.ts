@@ -722,17 +722,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const quarksText = quarksElement.textContent || '';
 
         // Regex optimized for the scientific notation in your image
-        const scientificRegex = /\d+(\.\d+)?[eE][+-]?\d+/;
-        const simpleRegex = /\d+(\.\d+)?/;
+        const scientificRegex = /\d+([.,]\d+)?[eE][+-]?\d+/;
 
-        const match = quarksText.match(scientificRegex) || quarksText.match(simpleRegex);
+        const match = quarksText.match(scientificRegex);
 
         if (!match) {
             HSLogger.debug(`Still no number found in text: "${quarksText}"`, this.context);
             return 0;
         }
 
-        const parsed = parseFloat(match[0]);
+        const parsed = parseFloat(match[0].replace(',', '.'));
         HSLogger.debug(`Current Golden Quarks: ${parsed}`, this.context);
 
         return isNaN(parsed) ? 0 : parsed;
@@ -743,7 +742,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const quarksElement = document.getElementById('quarkDisplay');
         if (!quarksElement) return 0;
         const quarksText = quarksElement.textContent;
-        const parsed = parseFloat(quarksText);
+        const parsed = parseFloat(quarksText.replace(",", "."));
         HSLogger.debug(`Current Quarks: ${parsed}`, this.context);
         return isNaN(parsed) ? 0 : parsed;
     }

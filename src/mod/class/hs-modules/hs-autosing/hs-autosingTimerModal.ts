@@ -341,16 +341,6 @@ export class HSAutosingTimerModal {
         this.startLiveTimer();
     }
 
-    private parseQuarkValue(value: number | string): number {
-        if (typeof value === 'number') {
-            return value;
-        }
-        const normalized = value.replace(',', '.');
-
-        const parsed = Number(normalized);
-        return isNaN(parsed) ? 0 : parsed;
-    }
-
     public recordPhase(phase: string): void {
         const now = performance.now();
         const timeSinceStart = (now - this.currentSingularityStart) / 1000;
@@ -403,11 +393,8 @@ export class HSAutosingTimerModal {
         this.updateDisplay();
     }
 
-    public recordSingularity(currentQuarks: number, currentGoldenQuarks: number): void {
+    public recordSingularity(quarks: number, goldenQuarks: number): void {
         const now = performance.now();
-
-        const quarks = this.parseQuarkValue(currentQuarks);
-        const goldenQuarks = this.parseQuarkValue(currentGoldenQuarks);
 
         this.timestamps.push(now);
         this.quarksHistory.push(quarks);
@@ -638,12 +625,12 @@ export class HSAutosingTimerModal {
         // Live Timer Section
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">CURRENT SINGULARITY</div>
-            <div style="margin-bottom: 4px;">Time: <span style="color: #00E676; font-weight: bold; font-size: 16px;">${this.currentLiveTime.toFixed(1)}s</span></div>`;
+            <div style="margin-bottom: 4px;">Time: <span style="color: #00E676; font-weight: bold; font-size: 16px;">${this.currentLiveTime.toFixed(2)}s</span></div>`;
 
         // Use the backing field _currentPhaseName which is set via the setter
         if (this._currentPhaseName) {
             const phaseTime = (performance.now() - this.currentPhaseStart) / 1000;
-            html += `<div>Phase: <span style="color: #FF6B6B; font-weight: bold;">${this._currentPhaseName}</span> (<span style="color: #FFD93D;">${phaseTime.toFixed(1)}s</span>)</div>`;
+            html += `<div>Phase: <span style="color: #FF6B6B; font-weight: bold;">${this._currentPhaseName}</span> (<span style="color: #FFD93D;">${phaseTime.toFixed(2)}s</span>)</div>`;
         }
 
         html += `</div>`;
@@ -690,23 +677,23 @@ export class HSAutosingTimerModal {
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">TIMING</div>`;
 
         if (lastDuration !== null) {
-            html += `<div style="margin-bottom: 4px;">Last: <span style="color: #2196F3; font-weight: bold;">${lastDuration.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Last: <span style="color: #2196F3; font-weight: bold;">${lastDuration.toFixed(2)}s</span></div>`;
         }
 
         if (avg5 !== null) {
-            html += `<div style="margin-bottom: 4px;">Avg (5): <span style="color: #9C27B0; font-weight: bold;">${avg5.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Avg (5): <span style="color: #9C27B0; font-weight: bold;">${avg5.toFixed(2)}s</span></div>`;
         }
 
         if (avg10 !== null) {
-            html += `<div style="margin-bottom: 4px;">Avg (10): <span style="color: #19ae11; font-weight: bold;">${avg10.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Avg (10): <span style="color: #19ae11; font-weight: bold;">${avg10.toFixed(2)}s</span></div>`;
         }
 
         if (avg50 !== null) {
-            html += `<div style="margin-bottom: 4px;">Avg (50): <span style="color: #FF9800; font-weight: bold;">${avg50.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Avg (50): <span style="color: #FF9800; font-weight: bold;">${avg50.toFixed(2)}s</span></div>`;
         }
 
         if (avgAll !== null) {
-            html += `<div>Avg (All): <span class="hs-rainbow-text">${avgAll.toFixed(1)}s</span></div>`;
+            html += `<div>Avg (All): <span class="hs-rainbow-text">${avgAll.toFixed(2)}s</span></div>`;
         }
 
         html += `</div>`;
@@ -724,9 +711,9 @@ export class HSAutosingTimerModal {
                 if (avg !== null) {
                     html += `<div style="margin-bottom: 2px; font-size: 12px;">
                         <span style="color: #B39DDB;">${phase}</span>: 
-                        <span style="color: #FFB74D; font-weight: bold;">${avg.toFixed(1)}s</span>
+                        <span style="color: #FFB74D; font-weight: bold;">${avg.toFixed(2)}s</span>
                         <span style="color: #666;"> (${data.times.length}x)</span>
-                        <span style="color: #4FC3F7;"> | Last: ${data.lastTime.toFixed(1)}s</span>
+                        <span style="color: #4FC3F7;"> | Last: ${data.lastTime.toFixed(2)}s</span>
                     </div>`;
                 }
             }
