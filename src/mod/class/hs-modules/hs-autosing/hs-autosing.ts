@@ -55,7 +55,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_early_cube: HTMLButtonElement | null = null;
     private ambrosia_late_cube: HTMLButtonElement | null = null;
     private ambrosia_quark: HTMLButtonElement | null = null;
-    private ambrosia_obtoff: HTMLButtonElement | null = null;
+    private ambrosia_obt: HTMLButtonElement | null = null;
+    private ambrosia_off: HTMLButtonElement | null = null;
     private ambrosia_ambrosia: HTMLButtonElement | null = null;
     private antSacrifice: HTMLButtonElement | null = null;
     private coin!: HTMLButtonElement;
@@ -66,6 +67,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private C15Unlocked = false;
     private timerModal: HSAutosingTimerModal | null = null;
     private singTab2: HTMLButtonElement | null = null;
+    private paused = false;
+    private pauseResolver: (() => void) | null = null;
 
 
 
@@ -233,13 +236,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
-        const obtoffVal = HSSettings.getSetting("autosingObtOffLoadout").getValue();
+        const obtVal = HSSettings.getSetting("autosingObtLoadout").getValue();
+        const offVal = HSSettings.getSetting("autosingOffLoadout").getValue();
         const ambrosiaVal = HSSettings.getSetting("autosingAmbrosiaLoadout").getValue();
 
         this.ambrosia_early_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement;
         this.ambrosia_late_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
         this.ambrosia_quark = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
-        this.ambrosia_obtoff = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${obtoffVal}`) as HTMLButtonElement;
+        this.ambrosia_obt = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${obtVal}`) as HTMLButtonElement;
+        this.ambrosia_off = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${offVal}`) as HTMLButtonElement;
         this.ambrosia_ambrosia = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
         if (earlyCubeVal === lateCubeVal || earlyCubeVal === quarkVal || lateCubeVal === quarkVal) {
@@ -489,12 +494,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 break;
             case 111: // Wait
                 break;
-            case 112: // Obt/Off loadout
-                if (this.ambrosia_obtoff) {
-                    await this.setAmbrosiaLoadout(this.ambrosia_obtoff);
+            case 112: // Obt loadout
+                if (this.ambrosia_obt) {
+                    await this.setAmbrosiaLoadout(this.ambrosia_obt);
                 }
                 break;
-            case 113: // Ambrosia loadout
+            case 113: // Off loadout
+                if (this.ambrosia_off) {
+                    await this.setAmbrosiaLoadout(this.ambrosia_off);
+                }
+                break;
+            case 114: // Ambrosia loadout
                 if (this.ambrosia_ambrosia) {
                     await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
                 }
