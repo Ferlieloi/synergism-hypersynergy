@@ -1,5 +1,13 @@
 import { HSLogger } from "../../hs-core/hs-logger"
 
+/*
+    Class: HSAutosingTimer
+    IsExplicitHSModule: No
+    Description: 
+        Class that implements a timer for the autosing module.
+    Author: XxmolkxX
+*/
+
 export class HSAutosingTimer {
     private timestamps: number[] = [];
     private context: string = "HSAutosing-Timer"

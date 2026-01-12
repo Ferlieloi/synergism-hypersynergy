@@ -1,3 +1,23 @@
+/*
+    Class: HSAutosingTimerModule
+    IsExplicitHSModule: No
+    Description: 
+        Class that implements a modal for the autosing timer and for tracking (golden)quark gain.
+    Author: XxmolkxX
+*/
+import { HSSettings } from "../../hs-core/settings/hs-settings";
+
+interface SingularityBundle {
+    singularityNumber: number;
+    totalTime: number;
+    quarksGained: number;
+    goldenQuarksGained: number;
+    totalQuarks: number;
+    totalGoldenQuarks: number;
+    phases: { [phaseName: string]: number };
+    timestamp: number;
+}
+
 export class HSAutosingTimerModal {
     private timerDisplay: HTMLDivElement | null = null;
     private timerHeader: HTMLDivElement | null = null;
@@ -12,6 +32,22 @@ export class HSAutosingTimerModal {
     private quarksHistory: number[] = [];
     private goldenQuarksHistory: number[] = [];
     private startTime: number = 0;
+
+    // Phase tracking
+    private currentSingularityStart: number = 0;
+    private currentPhaseStart: number = 0;
+    private currentPhaseName: string = '';
+    private phaseHistory: Map<string, { times: number[], totalTime: number, lastTime: number }> = new Map();
+    private currentSingularityPhases: Map<string, number> = new Map();
+
+    // Live timer
+    private liveTimerInterval: number | null = null;
+    private currentLiveTime: number = 0;
+
+    // Advanced data collection
+    private singularityBundles: SingularityBundle[] = [];
+    private previousQuarks: number = 0;
+    private previousGoldenQuarks: number = 0;
 
     constructor() {
         this.createTimerDisplay();
@@ -200,18 +236,110 @@ export class HSAutosingTimerModal {
         }
     }
 
+    private startLiveTimer(): void {
+        this.stopLiveTimer();
+        this.currentSingularityStart = performance.now();
+        this.currentPhaseStart = this.currentSingularityStart;
+        this.currentPhaseName = '';
+        this.currentSingularityPhases.clear();
+
+        this.liveTimerInterval = window.setInterval(() => {
+            this.currentLiveTime = (performance.now() - this.currentSingularityStart) / 1000;
+            this.updateDisplay();
+        }, 100);
+    }
+
+    private stopLiveTimer(): void {
+        if (this.liveTimerInterval !== null) {
+            clearInterval(this.liveTimerInterval);
+            this.liveTimerInterval = null;
+        }
+    }
+
     public start(): void {
         this.timestamps = [];
         this.quarksHistory = [];
         this.goldenQuarksHistory = [];
         this.startTime = performance.now();
+        this.phaseHistory.clear();
+        this.singularityBundles = [];
+        this.previousQuarks = 0;
+        this.previousGoldenQuarks = 0;
+        this.startLiveTimer();
+    }
+
+    private parseQuarkValue(value: number | string): number {
+        if (typeof value === 'number') {
+            return value;
+        }
+        const normalized = value.replace(',', '.');
+
+        const parsed = Number(normalized);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    public recordPhase(phase: string): void {
+        const now = performance.now();
+        const timeSinceStart = (now - this.currentSingularityStart) / 1000;
+        const phaseDuration = (now - this.currentPhaseStart) / 1000;
+
+        if (!this.phaseHistory.has(phase)) {
+            this.phaseHistory.set(phase, { times: [], totalTime: 0, lastTime: 0 });
+        }
+
+        const phaseData = this.phaseHistory.get(phase)!;
+        phaseData.times.push(phaseDuration);
+        phaseData.totalTime = timeSinceStart;
+        phaseData.lastTime = phaseDuration;
+
+        // Store phase time for current singularity
+        this.currentSingularityPhases.set(phase, phaseDuration);
+
+        this.currentPhaseStart = now;
+        this.currentPhaseName = phase;
+        this.updateDisplay();
     }
 
     public recordSingularity(currentQuarks: number, currentGoldenQuarks: number): void {
         const now = performance.now();
+
+        const quarks = this.parseQuarkValue(currentQuarks);
+        const goldenQuarks = this.parseQuarkValue(currentGoldenQuarks);
+
         this.timestamps.push(now);
-        this.quarksHistory.push(currentQuarks);
-        this.goldenQuarksHistory.push(currentGoldenQuarks);
+        this.quarksHistory.push(quarks);
+        this.goldenQuarksHistory.push(goldenQuarks);
+
+        // Advanced data collection
+        const advancedDataCollectionSetting = HSSettings.getSetting('advancedDataCollection');
+        if (advancedDataCollectionSetting && advancedDataCollectionSetting.isEnabled()) {
+            const singularityTime = this.timestamps.length < 2
+                ? (now - this.startTime) / 1000
+                : (now - this.timestamps[this.timestamps.length - 2]) / 1000;
+
+            const quarksGained = this.previousQuarks > 0 ? quarks - this.previousQuarks : 0;
+            const goldenQuarksGained = this.previousGoldenQuarks > 0 ? goldenQuarks - this.previousGoldenQuarks : 0;
+
+            const bundle: SingularityBundle = {
+                singularityNumber: this.timestamps.length,
+                totalTime: singularityTime,
+                quarksGained: quarksGained,
+                goldenQuarksGained: goldenQuarksGained,
+                totalQuarks: quarks,
+                totalGoldenQuarks: goldenQuarks,
+                phases: Object.fromEntries(this.currentSingularityPhases),
+                timestamp: Date.now()
+            };
+
+            this.singularityBundles.push(bundle);
+        }
+
+        this.previousQuarks = quarks;
+        this.previousGoldenQuarks = goldenQuarks;
+
+        // Reset phase tracking for new singularity
+        this.startLiveTimer();
+
         this.updateDisplay();
     }
 
@@ -268,6 +396,74 @@ export class HSAutosingTimerModal {
         return num.toExponential(2).replace('+', '');
     }
 
+    private getPhaseAverage(phase: string): number | null {
+        const phaseData = this.phaseHistory.get(phase);
+        if (!phaseData || phaseData.times.length === 0) {
+            return null;
+        }
+
+        const sum = phaseData.times.reduce((acc, time) => acc + time, 0);
+        return sum / phaseData.times.length;
+    }
+
+    private exportDataAsCSV(): void {
+        if (this.singularityBundles.length === 0) {
+            alert('No data to export');
+            return;
+        }
+
+        // Collect all unique phase names
+        const allPhaseNames = new Set<string>();
+        this.singularityBundles.forEach(bundle => {
+            Object.keys(bundle.phases).forEach(phase => allPhaseNames.add(phase));
+        });
+        const sortedPhaseNames = Array.from(allPhaseNames).sort();
+
+        // Build CSV header
+        const headers = [
+            'Singularity Number',
+            'Total Time (s)',
+            'Quarks Gained',
+            'Golden Quarks Gained',
+            'Total Quarks',
+            'Total Golden Quarks',
+            'Timestamp',
+            ...sortedPhaseNames.map(phase => `Phase: ${phase} (s)`)
+        ];
+
+        // Build CSV rows
+        const rows = this.singularityBundles.map(bundle => {
+            const row = [
+                bundle.singularityNumber.toString(),
+                bundle.totalTime.toFixed(3),
+                bundle.quarksGained.toExponential(6),
+                bundle.goldenQuarksGained.toExponential(6),
+                bundle.totalQuarks.toExponential(6),
+                bundle.totalGoldenQuarks.toExponential(6),
+                new Date(bundle.timestamp).toISOString(),
+                ...sortedPhaseNames.map(phase => (bundle.phases[phase] || '').toString())
+            ];
+            return row.join(',');
+        });
+
+        // Combine into CSV
+        const csv = [headers.join(','), ...rows].join('\n');
+
+        // Create download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `autosing_data_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     private updateDisplay(): void {
         if (!this.timerContent) return;
 
@@ -309,7 +505,42 @@ export class HSAutosingTimerModal {
     font-weight: bold;
     animation: hs-color_rotate 6s linear infinite;
 }
+
+.hs-export-btn {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 8px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.hs-export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+}
+
+.hs-export-btn:active {
+    transform: translateY(0);
+}
 </style>`;
+
+        // Live Timer Section
+        html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px;">CURRENT SINGULARITY</div>
+            <div style="margin-bottom: 4px;">Time: <span style="color: #00E676; font-weight: bold; font-size: 16px;">${this.currentLiveTime.toFixed(1)}s</span></div>`;
+
+        if (this.currentPhaseName) {
+            const phaseTime = (performance.now() - this.currentPhaseStart) / 1000;
+            html += `<div>Phase: <span style="color: #FF6B6B; font-weight: bold;">${this.currentPhaseName}</span> (<span style="color: #FFD93D;">${phaseTime.toFixed(1)}s</span>)</div>`;
+        }
+
+        html += `</div>`;
 
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PROGRESS</div>
@@ -349,7 +580,7 @@ export class HSAutosingTimerModal {
             html += `</div>`;
         }
 
-        html += `<div style="margin-bottom: 4px;">
+        html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">TIMING</div>`;
 
         if (lastDuration !== null) {
@@ -361,11 +592,11 @@ export class HSAutosingTimerModal {
         }
 
         if (avg10 !== null) {
-            html += `<div>Avg (10): <span style="color: #19ae11; font-weight: bold;">${avg10.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Avg (10): <span style="color: #19ae11; font-weight: bold;">${avg10.toFixed(1)}s</span></div>`;
         }
 
         if (avg50 !== null) {
-            html += `<div>Avg (50): <span style="color: #FF9800; font-weight: bold;">${avg50.toFixed(1)}s</span></div>`;
+            html += `<div style="margin-bottom: 4px;">Avg (50): <span style="color: #FF9800; font-weight: bold;">${avg50.toFixed(1)}s</span></div>`;
         }
 
         if (avgAll !== null) {
@@ -374,7 +605,53 @@ export class HSAutosingTimerModal {
 
         html += `</div>`;
 
+        // Phase Statistics
+        if (this.phaseHistory.size > 0) {
+            html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
+                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PHASE STATISTICS</div>`;
+
+            const sortedPhases = Array.from(this.phaseHistory.entries()).sort((a, b) => a[1].totalTime - b[1].totalTime);
+
+            for (const [phase, data] of sortedPhases) {
+                const avg = this.getPhaseAverage(phase);
+                if (avg !== null) {
+                    html += `<div style="margin-bottom: 2px; font-size: 12px;">
+                        <span style="color: #B39DDB;">${phase}</span>: 
+                        <span style="color: #FFB74D; font-weight: bold;">${avg.toFixed(1)}s</span>
+                        <span style="color: #666;"> (${data.times.length}x)</span>
+                        <span style="color: #4FC3F7;"> | Last: ${data.lastTime.toFixed(1)}s</span>
+                    </div>`;
+                }
+            }
+
+            html += `</div>`;
+        }
+
+        // Export button for advanced data collection mode
+        const advancedDataCollectionSetting = HSSettings.getSetting('advancedDataCollection');
+        const showExportButton = advancedDataCollectionSetting && advancedDataCollectionSetting.isEnabled() && this.singularityBundles.length > 0;
+
+        if (showExportButton) {
+            html += `<div style="padding-top: 4px;">
+                <button class="hs-export-btn" id="hs-export-data-btn">
+                    📊 Export Data (${this.singularityBundles.length} singularities)
+                </button>
+            </div>`;
+        }
+
         this.timerContent.innerHTML = html;
+
+        // Attach export button event listener
+        if (showExportButton) {
+            const exportBtn = document.getElementById('hs-export-data-btn');
+            if (exportBtn) {
+                exportBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.exportDataAsCSV();
+                };
+            }
+        }
     }
 
     public show(): void {
@@ -387,16 +664,25 @@ export class HSAutosingTimerModal {
         if (this.timerDisplay) {
             this.timerDisplay.style.display = 'none';
         }
+        this.stopLiveTimer();
     }
 
     public reset(): void {
         this.timestamps = [];
         this.quarksHistory = [];
+        this.goldenQuarksHistory = [];
         this.startTime = 0;
+        this.phaseHistory.clear();
+        this.singularityBundles = [];
+        this.previousQuarks = 0;
+        this.previousGoldenQuarks = 0;
+        this.stopLiveTimer();
+        this.currentLiveTime = 0;
         this.updateDisplay();
     }
 
     public destroy(): void {
+        this.stopLiveTimer();
         if (this.timerDisplay && this.timerDisplay.parentNode) {
             this.timerDisplay.parentNode.removeChild(this.timerDisplay);
         }

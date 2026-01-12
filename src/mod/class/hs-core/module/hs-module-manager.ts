@@ -2,7 +2,6 @@ import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 
 // Explicit imports required because I don't know better...
-import { HSPotions } from "../../hs-modules/hs-potions";
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
@@ -22,6 +21,7 @@ import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSWebSocket } from "../hs-websocket";
 import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
+import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 
 /*
     Class: HSModuleManager
@@ -39,7 +39,6 @@ export class HSModuleManager {
     // This record is needed so that the modules can be instatiated properly and so that everything works nicely with TypeScript
     #moduleClasses: Record<string, new (moduleOptions: HSModuleOptions) => HSModule> = {
         "HSUI": HSUI,
-        "HSPotions": HSPotions,
         "HSCodes": HSCodes,
         "HSHepteracts": HSHepteracts,
         "HSTalismans": HSTalismans,
@@ -56,7 +55,8 @@ export class HSModuleManager {
         "HSGameDataAPI": HSGameDataAPI,
         "HSWebSocket": HSWebSocket,
         "HSDebug": HSDebug,
-        "HSAutosing": HSAutosing
+        "HSAutosing": HSAutosing,
+        "HSQOLButtons": HSQOLButtons
     };
 
     constructor(context: string, modulesToEnable: HSModuleDefinition[]) {

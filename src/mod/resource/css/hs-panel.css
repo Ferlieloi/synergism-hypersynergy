@@ -644,10 +644,22 @@ a.hs-link {
     box-sizing: border-box;
 }
 
-.hs-strategy-input-section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.hs-challenges-input-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 20px;
+}
+
+.hs-challenges-input-label {
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 500;
+}
+
+/* Make inputs fill the remaining space */
+.hs-challenges-input {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .hs-strategy-input-label {
@@ -1003,14 +1015,6 @@ a.hs-link {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.hs-challenges-input-label {
-    width: 90px;
-    font-weight: 600;
-    color: white;
-    font-size: 12px;
-    white-space: nowrap;
 }
 
 .hs-challenges-input {

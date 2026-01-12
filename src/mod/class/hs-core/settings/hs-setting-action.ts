@@ -9,6 +9,7 @@ import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
+import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 
 /*
     Class: HSSettingActions

@@ -56,7 +56,13 @@
     "auto-sing": {
         "page": "auto-sing",
         "pageName": "auto-sing",
-        "pageColor": "grey",
+        "pageColor": "#00ff7f",
+        "order": 10
+    },
+    "qol-buttons": {
+        "page": "qol-buttons",
+        "pageName": "QOL-Buttons",
+        "pageColor": "#c0c0c0",
         "order": 10
     },
     "misc": {

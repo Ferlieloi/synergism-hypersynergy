@@ -53,8 +53,13 @@ export interface HSSettingsDefinition {
     autosingEarlyCubeLoadout: AutosingEarlyCubeLoadout;
     autosingLateCubeLoadout: AutosingLateCubeLoadout;
     autosingQuarkLoadout: AutosingQuarkLoadout;
+    autosingObtOffLoadout: AutosingObtOffLoadout;
+    autosingAmbrosiaLoadout: AutosingAmbrosiaLoadout;
+
     autosingStrategy: AutosingStrategy;
     autosingSelectStrategy: AutosingSelectStrategy;
+
+    advancedDataCollection: AutosingAdvancedDataCollection;
 }
 
 export interface HSSettingControlOptions {
@@ -161,6 +166,11 @@ export interface SingularityNumber extends HSSettingBase<number> { }
 export interface AutosingEarlyCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingLateCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingQuarkLoadout extends HSSettingBase<string> { }
+export interface AutosingAmbrosiaLoadout extends HSSettingBase<string> { }
+export interface AutosingObtOffLoadout extends HSSettingBase<string> { }
+
 export interface AutosingStrategy extends HSSettingBase<string> { }
 export interface AutosingSelectStrategy extends HSSettingBase<string> { }
+
+export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> { }
 

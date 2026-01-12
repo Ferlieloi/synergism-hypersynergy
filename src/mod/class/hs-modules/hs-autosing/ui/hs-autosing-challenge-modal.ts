@@ -146,8 +146,8 @@ export async function openAutosingChallengesModal(
         htmlContent: `
     <div id="${modalId}" class="hs-challenges-modal-container">
         <div class="hs-challenges-input-section">
-            <div class="hs-challenges-input-row" style="grid-column: 1 / -1;">
-                <div class="hs-challenges-input-label">Special Action:</div>
+            <div class="hs-challenges-input-row" style="grid-column: 1 / -1; grid-template-columns: 120px 1fr;">
+            <div class="hs-challenges-input-label">Special Action:</div>
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
                     <option value="">None (Standard Challenge)</option>
                     ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
@@ -162,16 +162,16 @@ export async function openAutosingChallengesModal(
                 <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
             </div>
             <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Wait outside (ms):</div>
-                <input type="number" id="hs-challenge-wait-outside-input" class="hs-challenges-input" min="0" value="0" />
-            </div>
-            <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Wait inside (ms):</div>
                 <input type="number" id="hs-challenge-wait-inside-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Max Time (ms):</div>
                 <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="100" value="10000" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait outside (ms):</div>
+                <input type="number" id="hs-challenge-wait-outside-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
                 <div class="hs-challenges-input-label">If Challenge</div>

@@ -13,6 +13,14 @@ import { HSAutosingStrategy, PhaseOption, phases, CorruptionLoadout, AutosingStr
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 
+/*
+    Class: HSAutosing
+    IsExplicitHSModule: Yes
+    Description: 
+        Hypersynergism module that performs autosings.
+    Author: XxmolkxX
+*/
+
 const ZERO_CORRUPTIONS: CorruptionLoadout = {
     viscosity: 0,
     drought: 0,
@@ -48,6 +56,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_early_cube: HTMLButtonElement | null = null;
     private ambrosia_late_cube: HTMLButtonElement | null = null;
     private ambrosia_quark: HTMLButtonElement | null = null;
+    private ambrosia_obtoff: HTMLButtonElement | null = null;
+    private ambrosia_ambrosia: HTMLButtonElement | null = null;
     private antSacrifice: HTMLButtonElement | null = null;
     private coin!: HTMLButtonElement;
     private timer: HSAutosingTimer | null = null;
@@ -135,6 +145,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.timerModal) {
             this.timerModal.show();
         }
+        const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
+
+        if (quickbarSettng && !quickbarSettng.isEnabled()) {
+            HSUI.Notify("You need to enable the ambrosia quickbar setting before you can use autosing.")
+            this.stopAutosing;
+            return Promise.resolve();
+        }
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.targetSingularity = singularitySetting.getValue();
         this.subscribeGameDataChanges();
@@ -217,10 +234,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
+        const obtoffVal = HSSettings.getSetting("autosingObtOffLoadout").getValue();
+        const ambrosiaVal = HSSettings.getSetting("autosingAmbrosiaLoadout").getValue();
 
         this.ambrosia_early_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement;
         this.ambrosia_late_cube = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
         this.ambrosia_quark = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
+        this.ambrosia_obtoff = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${obtoffVal}`) as HTMLButtonElement;
+        this.ambrosia_ambrosia = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
         if (earlyCubeVal === lateCubeVal || earlyCubeVal === quarkVal || lateCubeVal === quarkVal) {
             HSUI.Notify("Autosing Ambrosia loadout selection contains the same loadout twice", { notificationType: "warning" });
@@ -417,6 +438,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             }
         }
+        if (this.timerModal) {
+            this.timerModal.recordPhase(`${phaseConfig.startPhase}-${phaseConfig.endPhase}`);
+        }
     }
 
 
@@ -462,6 +486,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.setCorruptions(ZERO_CORRUPTIONS);
                 break;
             case 111: // Wait
+                break;
+            case 112: // Obt/Off loadout
+                if (this.ambrosia_obtoff) {
+                    await this.setAmbrosiaLoadout(this.ambrosia_obtoff);
+                }
+                break;
+            case 113: // Ambrosia loadout
+                if (this.ambrosia_ambrosia) {
+                    await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
+                }
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
@@ -767,6 +801,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return 9999;
     }
 
+    private getActiveC11to14Challenge(): number | null {
+        for (let i = 11; i <= 14; i++) {
+            if (this.isInChallenge(i)) {
+                return i;
+            }
+        }
+        return null;
+    }
+
     private async waitForCompletion(
         challengeIndex: number,
         minCompletions: number,
@@ -795,7 +838,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(20); // debounce double-clicks
             totalTimeElapsed += 25;
         }
-        totalTimeElapsed = 0;
+        const startTime = performance.now();
         if (!this.isInChallenge(challengeIndex)) {
             HSLogger.debug(
                 `Timeout: Failed to enter challenge ${challengeIndex}`,
@@ -804,7 +847,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
-        while (totalTimeElapsed < maxTime && this.isAutosingEnabled()) {
+        while (performance.now() - startTime < maxTime) {
             if (!this.isAutosingEnabled()) {
                 this.stopAutosing();
                 return Promise.resolve();
@@ -815,12 +858,30 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             if (currentCompletions >= minCompletions || currentCompletions >= maxPossible) {
                 this.markChallengeUnlocked(challengeIndex);
+
+                // Special handling for C10 when C11-14 are active
+                if (challengeIndex === 10 && currentCompletions >= maxPossible) {
+                    const activeC11to14 = this.getActiveC11to14Challenge();
+
+                    if (activeC11to14 !== null) {
+                        // We're in C10 with max completions AND in a C11-14 challenge
+                        // Wait for the C11-14 challenge to also complete
+                        const c11to14MaxPossible = this.getChallengeGoal(activeC11to14);
+                        const c11to14CurrentCompletions = this.getChallengeCompletions(activeC11to14);
+
+                        // Only leave if C11-14 is also maxed OR we've hit max time
+                        if (c11to14CurrentCompletions < c11to14MaxPossible && totalTimeElapsed < maxTime) {
+                            await HSUtils.sleep(sleepInterval);
+                            totalTimeElapsed += sleepInterval;
+                            continue; // Keep waiting for C11-14 to catch up
+                        }
+                    }
+                }
                 if (waitTime > 0 && !(currentCompletions >= maxPossible)) {
                     await HSUtils.sleep(waitTime);
                 }
                 return Promise.resolve();
             }
-
             await HSUtils.sleep(sleepInterval);
             totalTimeElapsed += sleepInterval;
         }

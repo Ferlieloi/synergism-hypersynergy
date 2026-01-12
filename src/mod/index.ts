@@ -64,11 +64,6 @@ declare global {
             moduleColor: 'hotpink',
         },
         {
-            className: 'HSPotions',
-            context: 'HSPotions',
-            moduleColor: 'darkorange',
-        },
-        {
             className: 'HSCodes',
             context: 'HSCodes',
             moduleColor: 'darkgoldenrod',
@@ -121,7 +116,12 @@ declare global {
         {
             className: 'HSAutosing',
             context: 'HSAutosing',
-            moduleColor: '#e87b06ff',
+            moduleColor: '#00ff7f',
+        },
+        {
+            className: 'HSQOLButtons',
+            context: 'HSQOLButtons',
+            moduleColor: '#c0c0c0',
         },
         {
             className: 'Chartist',

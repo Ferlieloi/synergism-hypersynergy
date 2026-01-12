@@ -181,7 +181,7 @@ export class HSUtils {
 
     // Replace color tags for panel logging
     static parseColorTags(msg: string): string {
-        const tagPattern = /<([a-zA-Z]+|#[0-9A-Fa-f]{3,6})>(.*?)<\/\1>/g;
+        const tagPattern = /<([a-zA-Z]+|#[0-9A-Fa-f]{3,8})>(.*?)<\/\1>/g;
 
         // Replace all matched patterns with span elements
         return msg.replace(tagPattern, (match, colorName, content) => {
