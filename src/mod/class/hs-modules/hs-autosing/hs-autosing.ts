@@ -8,7 +8,6 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingTimer } from "./hs-autosingTimer"
 import { HSAutosingStrategy, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
@@ -60,7 +59,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_ambrosia: HTMLButtonElement | null = null;
     private antSacrifice: HTMLButtonElement | null = null;
     private coin!: HTMLButtonElement;
-    private timer: HSAutosingTimer | null = null;
     private C11Unlocked = false;
     private C12Unlocked = false;
     private C13Unlocked = false;
@@ -96,10 +94,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
-        this.timerModal = new HSAutosingTimerModal();
         this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
 
-        if (!this.timer || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
+        if (!this.timerModal || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
             return Promise.resolve();
         }
@@ -140,11 +137,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async enableAutoSing(): Promise<void> {
-        HSUtils.startDialogWatcher();
         this.autosingEnabled = true;
-        if (this.timerModal) {
-            this.timerModal.show();
-        }
+        HSUtils.startDialogWatcher();
         const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
 
         if (quickbarSettng && !quickbarSettng.isEnabled()) {
@@ -154,8 +148,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.targetSingularity = singularitySetting.getValue();
-        this.subscribeGameDataChanges();
 
+        this.timerModal = new HSAutosingTimerModal();
+        if (this.timerModal) {
+            this.timerModal.show();
+        }
+
+        this.subscribeGameDataChanges();
         new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
         })
@@ -372,6 +371,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
         }
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
+        if (this.timerModal) {
+            this.timerModal.setCurrentPhase(phaseConfig.startPhase + '-' + phaseConfig.endPhase);
+        }
         await this.executePhase(phaseConfig);
     }
 
@@ -417,7 +419,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     await this.ensureChallengeUnlocked(challenge.challengeNumber);
                 }
 
-                HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms \nMAX TIME: ${challenge.challengeWaitTime}ms`, this.context);
+                HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside \nMAX TIME: ${challenge.challengeMaxTime}ms and waiting outside: ${challenge.challengeWaitAfter}ms`, this.context);
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
@@ -817,10 +819,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         waitTime: number = 0
     ): Promise<void> {
         const sleepInterval = 10;
-        let totalTimeElapsed = 0;
         const challengeBtn = this.challengeButtons[challengeIndex];
-
-        while (!this.isInChallenge(challengeIndex) && totalTimeElapsed < maxTime) {
+        let startTime = performance.now();
+        while (!this.isInChallenge(challengeIndex) && performance.now() - startTime < maxTime) {
             if (!this.isAutosingEnabled()) {
                 this.stopAutosing();
                 return Promise.resolve();
@@ -835,10 +836,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             await HSUtils.DblClick(challengeBtn);
-            await HSUtils.sleep(20); // debounce double-clicks
-            totalTimeElapsed += 25;
+            await HSUtils.sleep(20);
         }
-        const startTime = performance.now();
+        startTime = performance.now();
+
         if (!this.isInChallenge(challengeIndex)) {
             HSLogger.debug(
                 `Timeout: Failed to enter challenge ${challengeIndex}`,
@@ -846,6 +847,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             );
             return Promise.resolve();
         }
+
+        this.markChallengeUnlocked(challengeIndex);
 
         while (performance.now() - startTime < maxTime) {
             if (!this.isAutosingEnabled()) {
@@ -856,34 +859,38 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             const currentCompletions = this.getChallengeCompletions(challengeIndex);
             const maxPossible = this.getChallengeGoal(challengeIndex);
 
-            if (currentCompletions >= minCompletions || currentCompletions >= maxPossible) {
-                this.markChallengeUnlocked(challengeIndex);
-
+            if (currentCompletions >= maxPossible || currentCompletions >= minCompletions) {
                 // Special handling for C10 when C11-14 are active
-                if (challengeIndex === 10 && currentCompletions >= maxPossible) {
+                if (challengeIndex === 10) {
                     const activeC11to14 = this.getActiveC11to14Challenge();
-
                     if (activeC11to14 !== null) {
-                        // We're in C10 with max completions AND in a C11-14 challenge
+                        // We're in C10 with enough completions to leave and in a C11-14 challenge
                         // Wait for the C11-14 challenge to also complete
                         const c11to14MaxPossible = this.getChallengeGoal(activeC11to14);
-                        const c11to14CurrentCompletions = this.getChallengeCompletions(activeC11to14);
+                        let c11to14CurrentCompletions = this.getChallengeCompletions(activeC11to14);
 
-                        // Only leave if C11-14 is also maxed OR we've hit max time
-                        if (c11to14CurrentCompletions < c11to14MaxPossible && totalTimeElapsed < maxTime) {
-                            await HSUtils.sleep(sleepInterval);
-                            totalTimeElapsed += sleepInterval;
-                            continue; // Keep waiting for C11-14 to catch up
+                        while (true) {
+                            await HSUtils.sleep(10);
+                            const c11to14CurrentCompletions2 = this.getChallengeCompletions(activeC11to14);
+                            if (c11to14CurrentCompletions2 == c11to14CurrentCompletions) {
+                                return Promise.resolve();
+                            }
+                            c11to14CurrentCompletions = c11to14CurrentCompletions2;
                         }
+                    } else {
+                        return Promise.resolve();
                     }
+                } else if (currentCompletions >= minCompletions) {
+                    if (waitTime > 0) {
+                        await HSUtils.sleep(waitTime);
+                    }
+                    return Promise.resolve();
                 }
-                if (waitTime > 0 && !(currentCompletions >= maxPossible)) {
-                    await HSUtils.sleep(waitTime);
+                else {
+                    return Promise.resolve();
                 }
-                return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
-            totalTimeElapsed += sleepInterval;
         }
 
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime}ms`);
