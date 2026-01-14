@@ -67,8 +67,10 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenge-item-text">
                 ${displayText}
                 <div class="hs-challenge-meta">
-                    Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)} |
-                    Wait inside: ${formatMs(entry.challengeWaitTime)}
+                    Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)} 
+                    ${!isSpecial
+                ? ` | Wait inside: ${formatMs(entry.challengeWaitTime)}`
+                : ""}
                     ${!isSpecial
                 ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
                 : ""}
@@ -513,7 +515,7 @@ export async function openAutosingChallengesModal(
             "hs-challenge-num-input",
             "hs-challenge-completions-input",
             "hs-challenge-max-time-input",
-            "hs-challenges-wait-inside-input"
+            "hs-challenge-wait-inside-input"
         ];
 
         // Toggle standard inputs
