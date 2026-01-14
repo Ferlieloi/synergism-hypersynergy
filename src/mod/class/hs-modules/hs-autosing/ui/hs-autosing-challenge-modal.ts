@@ -67,7 +67,7 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenge-item-text">
                 ${displayText}
                 <div class="hs-challenge-meta">
-                    Wait outside: ${formatMs(entry.challengeWaitAfter ?? 0)} |
+                    Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)} |
                     Wait inside: ${formatMs(entry.challengeWaitTime)}
                     ${!isSpecial
                 ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
@@ -162,16 +162,16 @@ export async function openAutosingChallengesModal(
                 <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
             </div>
             <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait before (ms):</div>
+                <input type="number" id="hs-challenge-wait-before-input" class="hs-challenges-input" min="0" value="0" />
+            </div>
+            <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Wait inside (ms):</div>
                 <input type="number" id="hs-challenge-wait-inside-input" class="hs-challenges-input" min="0" value="0" />
             </div>
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Max Time (ms):</div>
-                <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="100" value="10000" />
-            </div>
-            <div class="hs-challenges-input-row">
-                <div class="hs-challenges-input-label">Wait outside (ms):</div>
-                <input type="number" id="hs-challenge-wait-outside-input" class="hs-challenges-input" min="0" value="0" />
+                <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="0" value="10000" />
             </div>
             <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
                 <div class="hs-challenges-input-label">If Challenge</div>
@@ -512,7 +512,8 @@ export async function openAutosingChallengesModal(
         const standardInputs = [
             "hs-challenge-num-input",
             "hs-challenge-completions-input",
-            "hs-challenge-max-time-input"
+            "hs-challenge-max-time-input",
+            "hs-challenges-wait-inside-input"
         ];
 
         // Toggle standard inputs
@@ -537,7 +538,7 @@ export async function openAutosingChallengesModal(
         (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
         (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = "0";
-        (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = "0";
+        (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
         (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
@@ -592,7 +593,7 @@ export async function openAutosingChallengesModal(
                             : Number((document.getElementById("hs-challenge-num-input") as HTMLInputElement).value),
                         challengeCompletions: isSpecial ? 0 : Number((document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value),
                         challengeWaitTime: Number((document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value),
-                        challengeWaitAfter: Number((document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value),
+                        challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
                         challengeMaxTime: isSpecial ? 0 : Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
                     };
                 }
@@ -623,7 +624,7 @@ export async function openAutosingChallengesModal(
                         String(item.ifJump?.ifJumpValue);
 
                     (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
-                    (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = String(item.challengeWaitAfter ?? 0);
+                    (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
 
                     (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
                     updateInputState();
@@ -640,7 +641,7 @@ export async function openAutosingChallengesModal(
                 }
 
                 (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
-                (document.getElementById("hs-challenge-wait-outside-input") as HTMLInputElement).value = String(item.challengeWaitAfter ?? 0);
+                (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
                 (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
                 updateInputState();
             }

@@ -29,7 +29,6 @@ export interface HSSettingsDefinition {
     autoClickIgnoreElements: AutoClickIgnoreElementsSetting;
 
     // Ambrosia Settings
-    ambrosiaQuickBar: AmbrosiaQuickBarSetting;
     autoLoadout: AutoLoadoutSetting;
     autoLoadoutState: AutoLoadoutStateSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
@@ -61,6 +60,10 @@ export interface HSSettingsDefinition {
     autosingSelectStrategy: AutosingSelectStrategy;
 
     advancedDataCollection: AutosingAdvancedDataCollection;
+
+    // QOL Buttons Settings
+    ambrosiaQuickBar: QOLButtonsQuickBarSetting;
+    hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
 }
 
 export interface HSSettingControlOptions {
@@ -141,7 +144,6 @@ export interface AutoclickSetting extends HSSettingBase<number> { }
 export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
 
 // Ambrosia Settings
-export interface AmbrosiaQuickBarSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutStateSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
@@ -175,4 +177,8 @@ export interface AutosingStrategy extends HSSettingBase<string> { }
 export interface AutosingSelectStrategy extends HSSettingBase<string> { }
 
 export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> { }
+
+// QOL Buttons Settings
+export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 

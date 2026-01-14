@@ -972,7 +972,20 @@
             "controlType": "switch",
             "controlGroup": "quickbar-qol",
             "controlPage": "qol-buttons",
-            "controlEnabledId": "hs-setting-ambrosia-quickbar-btn"
+            "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
+        }
+    },
+    "hideMaxedGQUpgrades": {
+        "settingName": "hideMaxedGQUpgrades",
+        "settingDescription": "Hide unbuyable GQ upgrades",
+        "settingHelpText": "When enabled, hides maxed Golden Quark upgrades in the quick bar.",
+        "settingType": "boolean",
+        "enabled": true,
+        "settingControl": {
+            "controlType": "switch",
+            "controlGroup": "Golden-quarks-qol-settings",
+            "controlPage": "qol-buttons",
+            "controlEnabledId": "hs-setting-qol-hide-maxed-gq-upgrades-btn"
         }
     }
 }

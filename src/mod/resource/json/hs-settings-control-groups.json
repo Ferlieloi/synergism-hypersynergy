@@ -58,5 +58,9 @@
     "quickbar-qol": {
         "groupName": "Quickbar QOL settings",
         "order": 15
+    },
+    "Golden-quarks-qol-settings": {
+        "groupName": "Golden Quarks QOL settings",
+        "order": 16
     }
 }

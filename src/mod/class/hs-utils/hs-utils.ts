@@ -97,12 +97,14 @@ export class HSUtils {
         const hours = now.getHours();
         const minutes = now.getMinutes();
         const seconds = now.getSeconds();
+        const milliseconds = now.getMilliseconds();
 
         const formattedHours = hours.toString().padStart(2, '0');
         const formattedMinutes = minutes.toString().padStart(2, '0');
         const formattedSeconds = seconds.toString().padStart(2, '0');
+        const formattedMilliseconds = milliseconds.toString().padStart(3, '0');
 
-        return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+        return `${formattedHours}:${formattedMinutes}:${formattedSeconds}.${formattedMilliseconds}`;
     }
 
     static camelToKebab(str: string) {

@@ -41,14 +41,15 @@ export const SPECIAL_ACTIONS = [
     { label: "Ascend", value: 104 },
     { label: "Ambrosia pre-AOAG loadout", value: 105 },
     { label: "Ambrosia post-AOAG Cube loadout", value: 106 },
-    { label: "Ambrosia Quark loadout", value: 112 },
-    { label: "Ambrosia Obt loadout", value: 113 },
-    { label: "Ambrosia Off loadout", value: 114 },
-    { label: "Ambrosia Ambrosia loadout", value: 107 },
+    { label: "Ambrosia Quark loadout", value: 107 },
+    { label: "Ambrosia Obt loadout", value: 112 },
+    { label: "Ambrosia Off loadout", value: 113 },
+    { label: "Ambrosia Ambrosia loadout", value: 114 },
     { label: "Ant Sacrifice", value: 108 },
     { label: "Load Ant Speed Corruptions", value: 109 },
     { label: "Cleanse corruptions", value: 110 },
     { label: "Wait", value: 111 },
+    { label: "auto Challenge Toggle", value: 115 },
     { label: "if-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
 ] as const;
@@ -92,7 +93,7 @@ export interface Challenge {
     challengeCompletions: number;
     challengeWaitTime: number;
     challengeMaxTime: number;
-    challengeWaitAfter?: number;
+    challengeWaitBefore?: number;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

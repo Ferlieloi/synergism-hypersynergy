@@ -1090,6 +1090,11 @@ a.hs-link {
     box-sizing: border-box;
 }
 
+.hs-challenges-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
 .hs-challenge-item {
     display: flex;
     gap: 6px;

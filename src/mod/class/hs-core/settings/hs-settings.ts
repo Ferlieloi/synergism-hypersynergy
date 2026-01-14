@@ -892,6 +892,27 @@ export class HSSettings extends HSModule {
             const nameInput = document.querySelector(`#${modalId} #import-strategy-name`) as HTMLInputElement;
             const jsonInput = document.querySelector(`#${modalId} #import-strategy-json`) as HTMLTextAreaElement;
 
+            jsonInput.addEventListener('input', () => {
+                // Do not overwrite a name the user already typed
+                if (nameInput.value.trim()) {
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(jsonInput.value) as Partial<HSAutosingStrategy>;
+
+                    if (
+                        parsed &&
+                        typeof parsed.strategyName === 'string' &&
+                        parsed.strategyName.trim()
+                    ) {
+                        nameInput.value = parsed.strategyName.trim();
+                    }
+                } catch {
+                    // Ignore invalid JSON while typing
+                }
+            });
+
             if (!submitBtn || !nameInput || !jsonInput) {
                 HSUI.Notify("Failed to create import modal", {
                     notificationType: "error"
