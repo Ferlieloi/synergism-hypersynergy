@@ -385,6 +385,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private getChallengeCompletions(challengeNumber: number): number {
         const chal = document.getElementById(`challenge${challengeNumber}level`) as HTMLParagraphElement | null;
         if (!chal) return 0;
+        if (challengeNumber === 15) {
+            const currentCompletions = this.parseNumber(chal.innerText);
+            return currentCompletions;
+        }
         const currentCompletions = this.parseNumber(chal.innerText.split('/')[0]);
         return currentCompletions;
     }
