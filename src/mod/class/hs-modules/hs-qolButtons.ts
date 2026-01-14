@@ -8,6 +8,7 @@ import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSetting } from "../hs-core/settings/hs-setting";
+import { HSUtils } from "../hs-utils/hs-utils";
 
 
 /*
@@ -26,6 +27,9 @@ export class HSQOLButtons extends HSModule {
 
     #offeringPotionObserver: MutationObserver;
     #obtainiumPotionObserver: MutationObserver;
+
+    octUpgradesInitialized: boolean = false;
+    gqUpgradesInitialized: boolean = false;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
@@ -51,20 +55,19 @@ export class HSQOLButtons extends HSModule {
 
         gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
             if (currentView.getId() === SINGULARITY_VIEW.SHOP) {
-                // Small delay to ensure DOM is fully rendered
                 setTimeout(() => {
                     this.setGQButtonsVisibility();
-                }, 50);
+                }, 20);
             }
         });
 
-        // Also run immediately if we're already on the shop tab
-        const currentView = gameState.getCurrentUIView<SingularityView>('SINGULARITY_VIEW');
-        if (currentView.getId() === SINGULARITY_VIEW.SHOP) {
-            setTimeout(() => {
-                this.disableGQButtons();
-            }, 100);
-        }
+        gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
+            if (currentView.getId() === SINGULARITY_VIEW.OCTERACTS) {
+                setTimeout(() => {
+                    this.setOctButtonsVisibility();
+                }, 20);
+            }
+        });
     }
 
     observe() {
@@ -169,67 +172,158 @@ export class HSQOLButtons extends HSModule {
     };
 
     setGQButtonsVisibility(): void {
-        const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
-        if (hideMaxedGQUpgradesSetting.getValue()) {
-            this.disableGQButtons();
-        } else {
-            this.enableGQButtons();
-        }
-    }
-
-    enableGQButtons(): void {
-        const container = document.getElementById('actualSingularityUpgradeContainer');
-        if (!container) {
+        if (this.gqUpgradesInitialized) {
             return;
         }
 
-        const buttons = container.querySelectorAll<HTMLButtonElement>(
-            '.singularityUpgrade'
-        );
+        this.gqUpgradesInitialized = true;
+        const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
 
-        for (const button of buttons) {
-            button.style.display = '';
+        if (hideMaxedGQUpgradesSetting.getValue()) {
+            this.#disableGQButtons();
+        } else {
+            this.#enableGQButtons();
         }
     }
 
-    disableGQButtons(): void {
-        const container = document.getElementById('actualSingularityUpgradeContainer');
+    setOctButtonsVisibility(): void {
+        if (this.octUpgradesInitialized) {
+            return;
+        }
+
+        this.octUpgradesInitialized = true;
+        const hideMaxedOctUpgradesSetting = HSSettings.getSetting('hideMaxedOctUpgrades') as HSSetting<boolean>;
+
+        if (hideMaxedOctUpgradesSetting.getValue()) {
+            this.#disableOctButtons();
+        } else {
+            this.#enableOctButtons();
+        }
+    }
+
+    #enableButtons(containerId: string, selector: string): void {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
-        const buttons = container.querySelectorAll<HTMLButtonElement>('.singularityUpgrade');
+        const buttons = container.querySelectorAll<HTMLButtonElement>(selector);
+        buttons.forEach(button => button.style.display = '');
+    }
 
-        if (buttons.length === 0) return;
+    async #disableButtons(containerId: string, selector: string): Promise<void> {
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
-        // Trigger hover to apply filters
-        const mouseOverEvent = new MouseEvent('mouseover', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-        });
+        const buttons = Array.from(
+            container.querySelectorAll<HTMLElement>(selector)
+        );
 
-        buttons[0].dispatchEvent(mouseOverEvent);
+        for (const button of buttons) {
+            this.hoverElement(button);
 
-        // Give it time for the CSS to actually apply
-        setTimeout(() => {
-            for (const button of buttons) {
-                const filter = button.style.filter || '';
-                console.log('Button filter:', filter, 'ID:', button.id);
+            // Give modal time to appear & populate
+            await HSUtils.sleep(1);
 
-                // Only hide if we actually got a filter applied AND it doesn't have invert
-                // Maxed buttons will have brightness() without invert()
-                if (filter && filter !== 'none' && filter !== '' && !filter.includes('invert')) {
-                    console.log('Hiding button:', button.id);
-                    button.style.display = 'none';
-                }
+            const modal = document.getElementById('modal') as HTMLDivElement | null;
+            if (!modal) {
+                this.unhoverElement(button);
+                continue;
             }
 
-            // Clean up hover state
-            const mouseOutEvent = new MouseEvent('mouseout', {
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
-            buttons[0].dispatchEvent(mouseOutEvent);
-        }, 100); // Give it 50ms for the CSS to apply
+            const levelSpan = this.findLevelSpan(modal);
+
+            if (!levelSpan) {
+                this.unhoverElement(button);
+                continue;
+            }
+
+            const text = levelSpan.textContent ?? '';
+
+            const match = text.match(/level\s+([\d,]+)(?:\s*\/\s*([\d,]+))?/i);
+            if (!match) {
+                this.unhoverElement(button);
+                continue;
+            }
+
+            const current = this.parseNumber(match[1]);
+            const max = match[2] ? this.parseNumber(match[2]) : null;
+
+            // Infinite upgrade → don't hide
+            if (max === null) {
+                this.unhoverElement(button);
+                continue;
+            }
+
+            // Maxed upgrade → hide
+            if (current === max) {
+                console.log('Hiding maxed upgrade:', button.id);
+                button.style.display = 'none';
+            }
+
+            this.unhoverElement(button);
+            await HSUtils.sleep(1);
+        }
+    }
+
+    parseNumber(value: string): number {
+        return Number(value.replace(/,/g, ''));
+    }
+
+    hoverElement(el: HTMLElement) {
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+
+        const events = [
+            new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y }),
+            new PointerEvent('pointerenter', { bubbles: true, clientX: x, clientY: y }),
+            new MouseEvent('mouseenter', { bubbles: true, clientX: x, clientY: y }),
+            new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }),
+            new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y })
+        ];
+
+        events.forEach(e => el.dispatchEvent(e));
+    }
+
+    findLevelSpan(modal: HTMLElement): HTMLSpanElement | null {
+        const spans = Array.from(modal.querySelectorAll<HTMLSpanElement>('span'));
+        for (const span of spans) {
+            const text = span.textContent?.trim();
+            if (!text) continue;
+            const hasLevelNumbers = /(\d{1,3}(?:,\d{3})*)(?:\s*\/\s*(\d{1,3}(?:,\d{3})*))/.test(text)
+                || /\blevel\s+\d{1,3}(?:,\d{3})*/i.test(text);
+
+            if (!hasLevelNumbers) continue;
+            if (text.length > 100) continue;
+            return span;
+        }
+        return null;
+    }
+
+    unhoverElement(el: HTMLElement) {
+        const rect = el.getBoundingClientRect();
+        const x = rect.left - 10;
+        const y = rect.top - 10;
+
+        el.dispatchEvent(new MouseEvent('mouseout', {
+            bubbles: true,
+            clientX: x,
+            clientY: y
+        }));
+    }
+
+    #enableOctButtons(): void {
+        this.#enableButtons('singularityOcteracts', '.octeractUpgrade');
+    }
+
+    #enableGQButtons(): void {
+        this.#enableButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
+    }
+
+    #disableOctButtons(): void {
+        this.#disableButtons('singularityOcteracts', '.octeractUpgrade');
+    }
+
+    #disableGQButtons(): void {
+        this.#disableButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
     }
 }

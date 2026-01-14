@@ -192,6 +192,18 @@ export class HSSettingActions {
         importAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             await HSSettings.importStrategy();
+        },
+
+        hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (qolButtonsMod) qolButtonsMod.gqUpgradesInitialized = false;
+        },
+
+        hideMaxedOctUpgradesAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (qolButtonsMod) qolButtonsMod.octUpgradesInitialized = false;
         }
     }
 

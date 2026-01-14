@@ -977,15 +977,30 @@
     },
     "hideMaxedGQUpgrades": {
         "settingName": "hideMaxedGQUpgrades",
-        "settingDescription": "Hide unbuyable GQ upgrades",
+        "settingDescription": "Hide maxed GQ upgrades",
         "settingHelpText": "When enabled, hides maxed Golden Quark upgrades in the quick bar.",
         "settingType": "boolean",
         "enabled": true,
+        "settingAction": "hideMaxedGQUpgradesAction",
         "settingControl": {
             "controlType": "switch",
             "controlGroup": "Golden-quarks-qol-settings",
             "controlPage": "qol-buttons",
             "controlEnabledId": "hs-setting-qol-hide-maxed-gq-upgrades-btn"
+        }
+    },
+    "hideMaxedOctUpgrades": {
+        "settingName": "hideMaxedOctUpgrades",
+        "settingDescription": "Hide maxed Octeract upgrades",
+        "settingHelpText": "When enabled, hides maxed Octeract upgrades in the quick bar.",
+        "settingType": "boolean",
+        "enabled": true,
+        "settingAction": "hideMaxedOctUpgradesAction",
+        "settingControl": {
+            "controlType": "switch",
+            "controlGroup": "Octeracts-qol-settings",
+            "controlPage": "qol-buttons",
+            "controlEnabledId": "hs-setting-qol-hide-maxed-oct-upgrades-btn"
         }
     }
 }

@@ -62,5 +62,9 @@
     "Golden-quarks-qol-settings": {
         "groupName": "Golden Quarks QOL settings",
         "order": 16
+    },
+    "Octeracts-qol-settings": {
+        "groupName": "Octeracts QOL settings",
+        "order": 17
     }
 }
