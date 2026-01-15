@@ -276,7 +276,7 @@ export class HSQOLButtons extends HSModule {
             this.hoverElement(button);
 
             // Give modal time to appear & populate
-            await HSUtils.sleep(1);
+            await HSUtils.sleep(5);
 
             const modal = document.getElementById('modal') as HTMLDivElement | null;
             if (!modal) {

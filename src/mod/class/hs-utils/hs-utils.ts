@@ -31,6 +31,20 @@ export class HSUtils {
         });
     }
 
+    static async sleepUntilElapsed(
+        prevTime: number,
+        delayMs: number
+    ): Promise<void> {
+        if (delayMs <= 0) return;
+
+        const elapsed = performance.now() - prevTime;
+        const remaining = delayMs - elapsed;
+
+        if (remaining > 0) {
+            await HSUtils.sleep(remaining);
+        }
+    }
+
     static uuidv4(): string {
         return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
             (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)

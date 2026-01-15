@@ -58,13 +58,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_ambrosia!: HTMLButtonElement;
     private antSacrifice!: HTMLButtonElement;
     private coin!: HTMLButtonElement;
-    private C11Unlocked = false;
-    private C12Unlocked = false;
-    private C13Unlocked = false;
-    private C14Unlocked = false;
-    private C15Unlocked = false;
     private timerModal!: HSAutosingTimerModal;
     private singTab2!: HTMLButtonElement;
+    private prevActionTime: number = 0;
 
 
 
@@ -243,8 +239,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ambrosia_off = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${offVal}`) as HTMLButtonElement;
         this.ambrosia_ambrosia = document.getElementById(`hs-ambrosia-quickbar-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
-        if (earlyCubeVal === lateCubeVal || earlyCubeVal === quarkVal || lateCubeVal === quarkVal) {
-            HSUI.Notify("Autosing Ambrosia loadout selection contains the same loadout twice", { notificationType: "warning" });
+        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_ambrosia) {
+            HSUI.Notify("Could not find all required Ambrosia loadout buttons", { notificationType: "warning" });
+            this.stopAutosing();
+            return Promise.resolve();
         }
 
         try {
@@ -423,18 +421,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTIONS.find(a => a.value === challenge.challengeNumber)?.label ?? challenge.challengeNumber}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleep(challenge.challengeWaitBefore ?? 0);
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
                 }
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
-
-                if (challenge.challengeNumber >= 11 && challenge.challengeNumber <= 15) {
-                    await this.ensureChallengeUnlocked(challenge.challengeNumber);
-                }
-
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber},waiting before: ${challenge.challengeWaitBefore}ms, after reaching goal waiting ${challenge.challengeWaitTime}ms inside \nMAX TIME: ${challenge.challengeMaxTime}`, this.context);
-                await HSUtils.sleep(challenge.challengeWaitBefore ?? 0);
+                await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
@@ -500,6 +493,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
         }
+        this.prevActionTime = performance.now();
     }
 
     private async setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
@@ -576,6 +570,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return;
             }
         }
+        this.prevActionTime = performance.now();
     }
 
     private stopAutosing() {
@@ -756,11 +751,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.timerModal) {
             this.timerModal.recordSingularity(q, gq);
         }
-        this.C11Unlocked = false;
-        this.C12Unlocked = false;
-        this.C13Unlocked = false;
-        this.C14Unlocked = false;
-        this.C15Unlocked = false;
 
         const elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
         if (!elevatorInput) {
@@ -842,7 +832,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         startTime = performance.now();
-        this.markChallengeUnlocked(challengeIndex);
 
         let maxPossible = 9999;
 
@@ -910,63 +899,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime}ms`);
+        this.prevActionTime = performance.now();
     }
 
     private parseNumber(text: string): number {
         let cleanText = text.replace(/,/g, '.').trim();
         const result = Number(cleanText);
         return isNaN(result) ? 0 : result;
-    }
-
-    private isChallengeUnlocked(challenge: number): boolean {
-        switch (challenge) {
-            case 11: return this.C11Unlocked;
-            case 12: return this.C12Unlocked;
-            case 13: return this.C13Unlocked;
-            case 14: return this.C14Unlocked;
-            case 15: return this.C15Unlocked;
-            default: return true;
-        }
-    }
-
-    private markChallengeUnlocked(challenge: number): void {
-        switch (challenge) {
-            case 10: this.C11Unlocked = true; break;
-            case 11: this.C12Unlocked = true; break;
-            case 12: this.C13Unlocked = true; break;
-            case 13: this.C14Unlocked = true; break;
-            case 14: this.C15Unlocked = true; break;
-        }
-    }
-
-    private async ensureChallengeUnlocked(target: number): Promise<void> {
-        if (this.isChallengeUnlocked(target)) return;
-
-        HSLogger.debug(`Ensuring unlock path for c${target}`);
-
-        const prerequisites: Record<number, number[]> = {
-            11: [10],
-            12: [11, 10],
-            13: [12, 10],
-            14: [13, 10],
-            15: [14, 10],
-        };
-
-        await this.setCorruptions(ZERO_CORRUPTIONS);
-
-        for (let c = 11; c <= target; c++) {
-            const reqs = prerequisites[c];
-            if (!reqs) continue;
-
-            for (const req of reqs) {
-                HSLogger.debug(`Running prerequisite c${req} for c${c}`, this.context);
-                if (req === 10) {
-                    await this.waitForCompletion(req, 1, 60000, 500);
-                } else {
-                    await this.waitForCompletion(req, 0, 60000, 0);
-                }
-
-            }
-        }
     }
 }
