@@ -68,6 +68,7 @@ export class HSQOLButtons extends HSModule {
                 }, 20);
             }
         });
+        this.#injectAdd10Button();
     }
 
     observe() {
@@ -170,6 +171,60 @@ export class HSQOLButtons extends HSModule {
             HSLogger.log("Obtainium potion multi buy / consume buttons injected", this.context);
         }
     };
+
+    async #injectAdd10Button() {
+        if (document.getElementById('hs-add-10-btn')) return;
+
+        const container = document.getElementById('addCodeBox');
+        if (!container) return;
+
+        const addBtn = container.querySelector('#addCode') as HTMLButtonElement;
+        const addAllBtn = container.querySelector('#addCodeAll') as HTMLButtonElement;
+        const addOneBtn = container.querySelector('#addCodeOne') as HTMLButtonElement;
+
+        if (!addBtn || !addAllBtn || !addOneBtn) return;
+
+        const add10Btn = document.createElement('button');
+        add10Btn.id = 'hs-add-10-btn';
+        add10Btn.className = 'hs-add-10-btn';
+        add10Btn.textContent = 'Add x10';
+
+        add10Btn.addEventListener('click', async () => {
+            addBtn.click();
+            const input = document.getElementById('prompt_text') as HTMLInputElement | null;
+            if (!input) return;
+            input.value = '10';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            HSUtils.startDialogWatcher();
+            HSUtils.sleep(3);
+            HSUtils.stopDialogWatcher();
+        });
+
+        // Create new container for all buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'hs-button-container';
+
+        Object.assign(buttonContainer.style, {
+            display: 'flex',
+            width: '100%',
+            gap: '0',
+        });
+
+        // Style each button to take 25% width
+        [addBtn, addAllBtn, add10Btn, addOneBtn].forEach(btn => {
+            Object.assign(btn.style, {
+                flex: '1',
+                minWidth: '0',
+            });
+        });
+
+        buttonContainer.append(addBtn, addAllBtn, add10Btn, addOneBtn);
+
+        container.innerHTML = '';
+        container.appendChild(buttonContainer);
+    }
+
 
     setGQButtonsVisibility(): void {
         if (this.gqUpgradesInitialized) {

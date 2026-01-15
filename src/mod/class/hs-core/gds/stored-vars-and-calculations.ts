@@ -414,6 +414,23 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
     maxLevel: 100,
     costPerLevel: 1000
   },
+  salvageYinYang: {
+    costFunction: (level: number, baseCost: number) => {
+      return baseCost * (level + 1)
+    },
+    levelFunction: (n: number) => 10 * n,
+    maxLevel: 100,
+    costPerLevel: 200,
+  },
+  blueberries: {
+    costFunction: (level: number, _baseCost: number) => {
+      const costValue = [100_000, 1_400_000, 3_000_000]
+      return costValue[level] ?? 0
+    },
+    levelFunction: (n: number) => n,
+    maxLevel: 3,
+    costPerLevel: 1e5,
+  }
 };
 
 export const hepteractEffectiveValues: HepteractEffectiveValues = {

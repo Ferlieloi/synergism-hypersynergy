@@ -14,3 +14,8 @@
  #hs-ambrosia-extra-btn {
     border: 2px solid orange;
  }
+
+ #hs-add-10-btn {
+    border: 2px solid green;
+    border-right: none;
+ }

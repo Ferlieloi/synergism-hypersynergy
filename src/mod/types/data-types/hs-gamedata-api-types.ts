@@ -192,6 +192,8 @@ export interface RedAmbrosiaUpgradeCalculationCollection {
     redAmbrosiaCubeImprover: RedAmbrosiaUpgradeCalculationConfig;
     infiniteShopUpgrades: RedAmbrosiaUpgradeCalculationConfig;
     redAmbrosiaAccelerator: RedAmbrosiaUpgradeCalculationConfig;
+    salvageYinYang: RedAmbrosiaUpgradeCalculationConfig;
+    blueberries: RedAmbrosiaUpgradeCalculationConfig;
 }
 
 export interface HepteractEffectiveValue {

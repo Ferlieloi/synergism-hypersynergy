@@ -730,6 +730,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
+        if (upgradeName == 'salvageYinYang') {
+            debugger;
+        }
+
         if (cached) return cached;
 
         const investmentParameters = ((this.#redAmbrosiaCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig;
@@ -948,6 +952,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         let val = timePerAmbrosia;
         val += Math.floor(data.lifetimeAmbrosia / 500)
+
+        const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions
+        const acceleratorMult = 1 - 0.004 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
+
+        val *= acceleratorMult;
+        val = Math.ceil(val);
 
         const thresholds = this.R_calculateNumberOfThresholds();
         const thresholdBase = 2;
@@ -1885,6 +1895,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             +(gameData.singularityChallenges.noSingularityUpgrades.completions > 0),
             +(gameData.goldenQuarkUpgrades.blueberries.level),
             +(gameData.octUpgrades.octeractBlueberries.level),
+            +(this.R_calculateRedAmbrosiaUpgradeValue('blueberries')),
             this.R_calculateSingularityMilestoneBlueberries(),
             noAmbrosiaFactor
         ]
@@ -2183,7 +2194,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     personalQuarkBonus: this.meData?.bonus.quarkBonus,
                     blueAmbrosiaBarValue: data.blueberryTime,
                     redAmbrosiaBarValue: data.redAmbrosiaTime,
-                    //blueAmbrosiaBarMax: this.R_calculateRequiredBlueberryTime(),
+                    blueAmbrosiaBarMax: this.R_calculateRequiredBlueberryTime(),
                     redAmbrosiaBarMax: this.R_calculateRequiredRedAmbrosiaTime(),
                     ambrosiaSpeedMult: ambSpeedMult,
                     ambrosiaSpeed: ambSpeed,
@@ -2222,6 +2233,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         viscount: this.R_calculateRedAmbrosiaUpgradeValue('viscount'),
                         infiniteShopUpgrades: this.R_calculateRedAmbrosiaUpgradeValue('infiniteShopUpgrades'),
                         redAmbrosiaAccelerator: this.R_calculateRedAmbrosiaUpgradeValue('redAmbrosiaAccelerator'),
+                        salvageYinYang: this.R_calculateRedAmbrosiaUpgradeValue('salvageYinYang'),
+                        blueberries: this.R_calculateRedAmbrosiaUpgradeValue('blueberries'),
                     },
                     isInsideSingularityChallenge: data.insideSingularityChallenge,
                 }

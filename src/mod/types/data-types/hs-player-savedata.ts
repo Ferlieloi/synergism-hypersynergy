@@ -771,6 +771,8 @@ export interface RedAmbrosiaUpgrades {
     viscount: number;
     infiniteShopUpgrades: number;
     redAmbrosiaAccelerator: number;
+    salvageYinYang: number;
+    blueberries: number;
 }
 
 export interface Campaigns {

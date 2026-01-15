@@ -763,7 +763,7 @@ export class HSAmbrosia extends HSModule
             let accelerationAmount = 0;
             let accelerationPercent = 0;
             const bluePercentageSpeed = (ambrosiaSpeed / blueAmbrosiaBarMax) * 100;
-            const bluePercentageSafeThreshold = bluePercentageSpeed + 0.1;
+            const bluePercentageSafeThreshold = bluePercentageSpeed;
 
             const maxAccelMultiplier = (1 / 2)
                 + (3 / 5 - 1 / 2) * +(gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 15)
