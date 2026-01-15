@@ -146,7 +146,7 @@ export const ambrosiaUpgradeCalculationCollection: AmbrosiaUpgradeCalculationCol
   },
 
   ambrosiaPatreon: {
-    costPerLevel: 1,
+    costPerLevel: 0,
     maxLevel: 1,
     costFunction: (n: number, cpl: number): number =>
       cpl * ((n + 1) ** 2 - n ** 2),
@@ -269,8 +269,8 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
   },
 
   blueberryGenerationSpeed2: {
-    costPerLevel: 2000,
-    maxLevel: 500,
+    costPerLevel: 8000,
+    maxLevel: 250,
     costFunction: (n: number, cpl: number) => cpl + 0 * n,
     levelFunction: (n: number) => 1 + n / 1000
   },

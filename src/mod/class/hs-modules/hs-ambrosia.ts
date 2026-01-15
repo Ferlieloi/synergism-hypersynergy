@@ -296,7 +296,98 @@ export class HSAmbrosia extends HSModule
             await self.#updateCurrentLoadout(slotEnum);
         });
 
+        this.#pageHeader = await HSElementHooker.HookElement('header');
+        if (this.#pageHeader) {
+            await this.#createPersistentMinibars();
+            await this.#createPersistentQuickbarContainer();
+        }
+
         this.isInitialized = true;
+    }
+
+    async disableBerryMinibars() {
+        if (!this.#pageHeader) {
+            this.#pageHeader = await HSElementHooker.HookElement('header');
+        }
+
+        const barWrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
+
+        if (barWrapper) {
+            barWrapper.style.display = 'none';
+            HSUI.removeInjectedStyle(this.#minibarCSSId);
+        } else {
+            HSLogger.warn('Could not find bar wrapper element', this.context);
+        }
+
+        this.#berryMinibarsEnabled = false;
+        this.unsubscribeGameDataChanges();
+    }
+
+    async enableBerryMinibars() {
+        if (!this.#pageHeader) {
+            this.#pageHeader = await HSElementHooker.HookElement('header');
+        }
+
+        if (!this.#pageHeader) return;
+
+        const barWrapper = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
+
+        if (barWrapper) {
+            barWrapper.style.display = 'block';
+            HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
+
+            this.subscribeGameDataChanges();
+            this.#berryMinibarsEnabled = true;
+        } else {
+            HSLogger.warn('Could not find minibar wrapper', this.context);
+        }
+    }
+
+    async #createPersistentMinibars() {
+        if (!this.#pageHeader) return;
+
+        // Check if already exists
+        if (this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
+            HSLogger.warn('Minibar wrapper already exists', this.context);
+            return;
+        }
+
+        // Blue bar
+        const blueBarOriginal = await HSElementHooker.HookElement('#ambrosiaProgressBar');
+        const blueBarClone = blueBarOriginal.cloneNode(true) as HTMLDivElement;
+        const blueBarProgress = blueBarClone.querySelector('#ambrosiaProgress') as HTMLDivElement;
+        const blueBarProgressText = blueBarClone.querySelector('#ambrosiaProgressText') as HTMLDivElement;
+
+        blueBarClone.id = HSGlobal.HSAmbrosia.blueBarId;
+        blueBarProgress.id = HSGlobal.HSAmbrosia.blueBarProgressId;
+        blueBarProgressText.id = HSGlobal.HSAmbrosia.blueBarProgressTextId;
+
+        // Red bar
+        const redBarOriginal = await HSElementHooker.HookElement('#pixelProgressBar');
+        const redBarClone = redBarOriginal.cloneNode(true) as HTMLDivElement;
+        const redBarProgress = redBarClone.querySelector('#pixelProgress') as HTMLDivElement;
+        const redBarProgressText = redBarClone.querySelector('#pixelProgressText') as HTMLDivElement;
+
+        redBarClone.id = HSGlobal.HSAmbrosia.redBarId;
+        redBarProgress.id = HSGlobal.HSAmbrosia.redBarProgressId;
+        redBarProgressText.id = HSGlobal.HSAmbrosia.redBarProgressTextId;
+
+        // Wrapper for both
+        const barWrapper = document.createElement('div') as HTMLDivElement;
+        barWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
+        barWrapper.style.display = 'none';
+        barWrapper.appendChild(blueBarClone);
+        barWrapper.appendChild(redBarClone);
+
+        // Find reference element (quickbar wrapper or navbar)
+        const quickbarWrapper = this.#pageHeader.querySelector('#hs-ambrosia-quickbar-wrapper');
+        const referenceElement = quickbarWrapper || this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
+
+        // Insert bars
+        this.#pageHeader.insertBefore(barWrapper, referenceElement);
+
+        this.#blueProgressMinibarElement = blueBarProgress;
+        this.#redProgressMinibarElement = redBarProgress;
     }
 
     async #updateCurrentLoadout(slotEnum: AMBROSIA_LOADOUT_SLOT) {
@@ -319,7 +410,7 @@ export class HSAmbrosia extends HSModule
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
 
-            const activeSlot = quickBar.querySelector(`#${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${slotEnum}`) as HTMLElement;
+            const activeSlot = quickBar.querySelector(`[data-original-id="${slotEnum}"]`) as HTMLElement;
 
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
@@ -343,6 +434,140 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    async #createPersistentQuickbarContainer() {
+        if (!this.#pageHeader) return;
+        const self = this;
+
+        // Check if already exists
+        const quickbar = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`);
+        if (quickbar) {
+            HSLogger.debug('Quickbar wrapper already exists', this.context);
+            return;
+        }
+        if (this.#loadOutContainer) {
+            const referenceElement = this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
+
+            const clone = this.#loadOutContainer.cloneNode(true) as HTMLElement;
+            clone.id = HSGlobal.HSAmbrosia.quickBarId;
+            clone.style.display = 'none';
+
+            const cloneSettingButton = clone.querySelector('.blueberryLoadoutSetting') as HTMLButtonElement;
+            const cloneLoadoutButtons = clone.querySelectorAll('.blueberryLoadoutSlot') as NodeListOf<HTMLButtonElement>;
+
+            cloneLoadoutButtons.forEach((button) => {
+                const buttonId = button.id;
+                button.dataset.originalId = buttonId;
+                button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
+
+                const buttonHandler = async function (e: Event) {
+                    await self.#quickBarClickHandler(e, buttonId);
+                };
+
+                this.#quickBarClickHandlers.set(button, buttonHandler);
+                button.addEventListener('click', buttonHandler);
+            });
+
+            if (cloneSettingButton) {
+                cloneSettingButton.remove();
+            }
+            this.#pageHeader.insertBefore(clone, referenceElement);
+            HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
+
+            await this.#refreshQuickbarIcons();
+
+            if (this.#currentLoadout) {
+                await this.#updateCurrentLoadout(this.#currentLoadout);
+            }
+        }
+    }
+
+    async showQuickBar() {
+        if (!this.#pageHeader) {
+            this.#pageHeader = await HSElementHooker.HookElement('header');
+        }
+
+        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+
+        if (wrapper) {
+            wrapper.style.display = '';
+            HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
+
+            await this.#refreshQuickbarIcons();
+
+            if (this.#currentLoadout) {
+                await this.#updateCurrentLoadout(this.#currentLoadout);
+            }
+        } else {
+            HSLogger.warn('Could not find quickbar wrapper', this.context);
+        }
+    }
+
+    async hideQuickBar() {
+        if (!this.#pageHeader) {
+            this.#pageHeader = await HSElementHooker.HookElement('header');
+        }
+
+        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+
+        if (wrapper) {
+            wrapper.style.display = 'none';
+            HSUI.removeInjectedStyle(this.#quickbarCSSId);
+        }
+    }
+
+    async #refreshQuickbarIcons() {
+        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+        if (!wrapper) return;
+
+        const quickbarSlots = wrapper.querySelectorAll('.blueberryLoadoutSlot') as NodeListOf<HTMLElement>;
+
+        quickbarSlots.forEach((slot) => {
+            const originalSlotId = slot.dataset.originalId;
+            if (!originalSlotId) return;
+            const slotEnum = this.#getSlotEnumBySlotId(originalSlotId);
+
+            if (!slotEnum) return;
+
+            const iconEnum = this.#loadoutState.get(slotEnum);
+
+            if (iconEnum) {
+                const icon = HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.get(iconEnum);
+                if (icon) {
+                    slot.classList.add('hs-ambrosia-slot');
+                    slot.style.backgroundImage = `url(${icon.url})`;
+                }
+            } else {
+                slot.classList.remove('hs-ambrosia-slot');
+                slot.style.backgroundImage = '';
+            }
+        });
+
+        // Update active slot highlighting
+        if (this.#currentLoadout) {
+            await this.#updateCurrentLoadout(this.#currentLoadout);
+        }
+    }
+
+    #applyIconToQuickbarSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
+        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix} -${slot} `;
+        const slotElement = document.querySelector(`#${quickbarSlotId} `) as HTMLElement;
+
+        if (!slotElement) {
+            HSLogger.warn(`Could not find quickbar slot element for ${slot}`, this.context);
+            return;
+        }
+
+        const icon = HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.get(iconEnum);
+
+        if (!icon) {
+            HSLogger.warn(`Could not find icon for ${iconEnum}`, this.context);
+            return;
+        }
+
+        slotElement.classList.add('hs-ambrosia-slot');
+        slotElement.style.backgroundImage = `url(${icon.url})`;
+    }
+
     #getIconEnumById(iconId: string): AMBROSIA_ICON | undefined {
         return Object.values(AMBROSIA_ICON).find(
             icon => icon === iconId
@@ -356,7 +581,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #applyIconToSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const slotElement = document.querySelector(`#${slot}`) as HTMLElement;
+        const slotElement = document.querySelector(`#${slot} `) as HTMLElement;
 
         if (!slotElement) {
             HSLogger.warn(`Could not find slot element for ${slot}`, this.context);
@@ -416,91 +641,6 @@ export class HSAmbrosia extends HSModule
         }
     }
 
-    async createQuickBar() {
-        const self = this;
-
-        this.#quickBarClickHandlers.forEach((handler, button) => {
-            button.removeEventListener('click', handler);
-        });
-
-        this.#quickBarClickHandlers.clear();
-
-        // Get the ambrosia louadout container element
-        this.#loadOutContainer = await HSElementHooker.HookElement('#bbLoadoutContainer');
-
-        // Get the page header element
-        this.#pageHeader = await HSElementHooker.HookElement('header');
-
-        if (this.#loadOutContainer && this.#pageHeader) {
-            const referenceElement = this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
-
-            // Clone the loadout container and set a new ID for it
-            const clone = this.#loadOutContainer.cloneNode(true) as HTMLElement;
-            clone.id = HSGlobal.HSAmbrosia.quickBarId;
-
-            const cloneSettingButton = clone.querySelector('.blueberryLoadoutSetting') as HTMLButtonElement;
-            const cloneLoadoutButtons = clone.querySelectorAll('.blueberryLoadoutSlot') as NodeListOf<HTMLButtonElement>;
-
-            // Set a new ID for each quickbar button and add event listeners to them
-            // The ID's must be overwritten to be unique, otherwise all hell breaks loose
-            cloneLoadoutButtons.forEach((button) => {
-                const buttonId = button.id;
-                button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
-
-                const buttonHandler = async function (e: Event) {
-                    await self.#quickBarClickHandler(e, buttonId);
-                };
-
-                this.#quickBarClickHandlers.set(button, buttonHandler);
-
-                // Make the quickbar buttons simulate a click on the real buttons
-                button.addEventListener('click', buttonHandler);
-            });
-
-            if (cloneSettingButton) {
-                cloneSettingButton.remove();
-            }
-
-            this.#pageHeader.insertBefore(clone, referenceElement);
-
-            HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
-
-            if (this.#currentLoadout) {
-                await this.#updateCurrentLoadout(this.#currentLoadout);
-            }
-        }
-    }
-
-    async destroyQuickBar() {
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
-        }
-
-        const quickBar = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-
-        if (quickBar) {
-            this.#quickBarClickHandlers.forEach((handler, button) => {
-                button.removeEventListener('click', handler);
-            });
-
-            this.#quickBarClickHandlers.clear();
-
-            quickBar.remove();
-
-            HSUI.removeInjectedStyle(this.#quickbarCSSId);
-        } else {
-            HSLogger.warn(`Could not find quick bar element`, this.context);
-        }
-
-        const originalQuickBar = document.querySelector('#bbLoadoutContainer');
-
-        if (originalQuickBar) {
-            originalQuickBar.querySelectorAll('.blueberryLoadoutSlot').forEach((slot) => {
-                slot.classList.remove('hs-ambrosia-active-slot');
-            });
-        }
-    }
-
     async #injectImportFromClipboardButton() {
         const importBtn = await HSElementHooker.HookElement(
             '#importBlueberriesButton'
@@ -523,17 +663,12 @@ export class HSAmbrosia extends HSModule
         btn.addEventListener('click', () => this.#handleQuickImport());
     }
 
-    // Helper method to destroy the quick bar and recreate it (which updates the icons)
+    // Helper method to hide the quick bar and recreate it (which updates the icons)
     async updateQuickBar() {
         const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar') as HSSetting<boolean>;
 
         if (quickbarSetting.isEnabled()) {
-            await this.destroyQuickBar();
-            await this.createQuickBar();
-
-            if (this.#currentLoadout) {
-                await this.#updateCurrentLoadout(this.#currentLoadout);
-            }
+            await this.#refreshQuickbarIcons();
         }
     }
 
@@ -645,7 +780,7 @@ export class HSAmbrosia extends HSModule
 
         if (currentLoadout && addLoadoutSetting) {
             const addLoadout = this.#convertSettingLoadoutToSlot(addLoadoutSetting.getValue());
-            const loadoutSlot = await HSElementHooker.HookElement(`#${addLoadout}`) as HTMLButtonElement;
+            const loadoutSlot = await HSElementHooker.HookElement(`#${addLoadout} `) as HTMLButtonElement;
 
             await this.#maybeTurnLoadoutModeToLoad();
 
@@ -661,7 +796,7 @@ export class HSAmbrosia extends HSModule
 
         if (currentLoadout && timeLoadoutSetting) {
             const timeLoadout = this.#convertSettingLoadoutToSlot(timeLoadoutSetting.getValue());
-            const loadoutSlot = await HSElementHooker.HookElement(`#${timeLoadout}`) as HTMLButtonElement;
+            const loadoutSlot = await HSElementHooker.HookElement(`#${timeLoadout} `) as HTMLButtonElement;
 
             await this.#maybeTurnLoadoutModeToLoad();
 
@@ -672,7 +807,7 @@ export class HSAmbrosia extends HSModule
     }
 
     async #quickBarClickHandler(e: Event, buttonId: string) {
-        const realButton = document.querySelector(`#${buttonId}`) as HTMLButtonElement;
+        const realButton = document.querySelector(`#${buttonId} `) as HTMLButtonElement;
 
         if (realButton) {
             await this.#maybeTurnLoadoutModeToLoad();
@@ -776,7 +911,7 @@ export class HSAmbrosia extends HSModule
                     secondsToNextAmbrosia * maxAccelMultiplier,
                     ambrosiaGainPerGen * 0.2 * ambrosiaAcceleratorCount
                 );
-                accelerationAmount = accelerationSeconds * ambrosiaSpeed;
+                accelerationAmount = 1//accelerationSeconds * ambrosiaSpeed;
                 accelerationPercent = (accelerationAmount / blueAmbrosiaBarMax) * 100;
             }
 
@@ -818,7 +953,7 @@ export class HSAmbrosia extends HSModule
                         if ((blueAmbrosiaPercent >= blueSwapTreshold100Min && blueAmbrosiaPercent <= blueSwapTreshold100Max) ||
                             (redAmbrosiaPercent >= redSwapTreshold100Min && redAmbrosiaPercent <= redSwapTreshold100Max)) {
                             if (this.#currentLoadout !== loadout100) {
-                                const loadoutSlot = await HSElementHooker.HookElement(`#${loadout100}`) as HTMLButtonElement;
+                                const loadoutSlot = await HSElementHooker.HookElement(`#${loadout100} `) as HTMLButtonElement;
 
                                 await this.#maybeTurnLoadoutModeToLoad();
 
@@ -829,7 +964,7 @@ export class HSAmbrosia extends HSModule
                         } else if ((blueAmbrosiaPercent >= blueSwapTresholdNormalMin && blueAmbrosiaPercent <= blueSwapTresholdNormalMax) ||
                             (redAmbrosiaPercent >= redSwapTresholdNormalMin && redAmbrosiaPercent <= redSwapTresholdNormalMax)) {
                             if (this.#currentLoadout !== normalLoadout) {
-                                const loadoutSlot = await HSElementHooker.HookElement(`#${normalLoadout}`) as HTMLButtonElement;
+                                const loadoutSlot = await HSElementHooker.HookElement(`#${normalLoadout} `) as HTMLButtonElement;
 
                                 await this.#maybeTurnLoadoutModeToLoad();
 
@@ -844,41 +979,41 @@ export class HSAmbrosia extends HSModule
                         const newDebugElement = document.createElement('div');
 
                         newDebugElement.innerHTML = `
-                        BLUE - Value: ${blueAmbrosiaBarValue.toFixed(2)}, Max: ${blueAmbrosiaBarMax}, Percent: ${blueAmbrosiaPercent.toFixed(2)}<br>
-                        RED - Value: ${redAmbrosiaBarValue.toFixed(2)}, Max: ${redAmbrosiaBarMax}, Percent: ${redAmbrosiaPercent.toFixed(2)}<br>
-                        BLUE SPD MLT: ${blueberrySpeedMults.toFixed(2)}<br>
-                        BLUE SPD %: ${bluePercentageSpeed.toFixed(2)}<br>
-                        BERRY: ${blueberries}</br>
-                        TOT BLU: ${(blueberrySpeedMults * blueberries).toFixed(2)}</br>
-                        ------------------------</br>
-                        ADD LUK: ${ambrosiaLuck.additive.toFixed(2)}</br>
-                        RAW LUK: ${ambrosiaLuck.raw.toFixed(2)}</br>
-                        TOT LUK: ${ambrosiaLuck.total.toFixed(2)}</br>
-                        ------------------------</br>
-                        ACC CNT: ${ambrosiaAcceleratorCount}</br>
-                        ACCEL AMOUNT: ${accelerationAmount.toFixed(2)}</br>
-                        ACCEL %: ${accelerationPercent.toFixed(2)}</br>
-                        `;
+        BLUE - Value: ${blueAmbrosiaBarValue.toFixed(2)}, Max: ${blueAmbrosiaBarMax}, Percent: ${blueAmbrosiaPercent.toFixed(2)} <br>
+            RED - Value: ${redAmbrosiaBarValue.toFixed(2)}, Max: ${redAmbrosiaBarMax}, Percent: ${redAmbrosiaPercent.toFixed(2)} <br>
+                BLUE SPD MLT: ${blueberrySpeedMults.toFixed(2)} <br>
+                    BLUE SPD %: ${bluePercentageSpeed.toFixed(2)} <br>
+                        BERRY: ${blueberries} </br>
+                        TOT BLU: ${(blueberrySpeedMults * blueberries).toFixed(2)} </br>
+        ------------------------</br>
+                        ADD LUK: ${ambrosiaLuck.additive.toFixed(2)} </br>
+                        RAW LUK: ${ambrosiaLuck.raw.toFixed(2)} </br>
+                        TOT LUK: ${ambrosiaLuck.total.toFixed(2)} </br>
+        ------------------------</br>
+                        ACC CNT: ${ambrosiaAcceleratorCount} </br>
+                        ACCEL AMOUNT: ${accelerationAmount.toFixed(2)} </br>
+        ACCEL %: ${accelerationPercent.toFixed(2)} </br>
+            `;
 
                         this.#debugElement.innerHTML = '';
                         while (newDebugElement.firstChild) {
                             this.#debugElement.appendChild(newDebugElement.firstChild);
                         }
                     }
-                    //console.log(`BLUE - Value: ${blueAmbrosiaBarValue}, Max: ${blueAmbrosiaBarMax}, Percent: ${blueAmbrosiaPercent}`);
-                    //console.log(`RED - Value: ${redAmbrosiaBarValue}, Max: ${redAmbrosiaBarMax}, Percent: ${redAmbrosiaPercent}`);
+                    //console.log(`BLUE - Value: ${ blueAmbrosiaBarValue }, Max: ${ blueAmbrosiaBarMax }, Percent: ${ blueAmbrosiaPercent } `);
+                    //console.log(`RED - Value: ${ redAmbrosiaBarValue }, Max: ${ redAmbrosiaBarMax }, Percent: ${ redAmbrosiaPercent } `);
                 }
             }
 
             if (this.#berryMinibarsEnabled) {
                 if (this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
-                    this.#blueProgressMinibarElement.style.width = `${blueAmbrosiaPercent}%`;
-                    this.#redProgressMinibarElement.style.width = `${redAmbrosiaPercent}%`;
+                    this.#blueProgressMinibarElement.style.width = `${blueAmbrosiaPercent}% `;
+                    this.#redProgressMinibarElement.style.width = `${redAmbrosiaPercent}% `;
                 } else {
                     HSLogger.warnOnce(`
-                        HSAmbrosia.gameDataCallback() - minibar element(s) undefined. 
-                        blue: ${this.#blueProgressMinibarElement}, 
-                        red: ${this.#redProgressMinibarElement}`, 'hs-minibars-undefined');
+        HSAmbrosia.gameDataCallback() - minibar element(s) undefined.
+            blue: ${this.#blueProgressMinibarElement},
+        red: ${this.#redProgressMinibarElement} `, 'hs-minibars-undefined');
                 }
             } else {
                 HSLogger.logOnce('HSAmbrosia.gameDataCallback() - berryMinibarsEnabled was false', 'hs-minibars-false');
@@ -964,7 +1099,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #maybeInsertIdleLoadoutIndicator() {
-        const indicatorExists = document.querySelector(`#${HSGlobal.HSAmbrosia.idleSwapIndicatorId}`) as HTMLElement;
+        const indicatorExists = document.querySelector(`#${HSGlobal.HSAmbrosia.idleSwapIndicatorId} `) as HTMLElement;
 
         if (indicatorExists)
             return;
@@ -984,85 +1119,13 @@ export class HSAmbrosia extends HSModule
     }
 
     #removeIdleLoadoutIndicator() {
-        const loadoutIndicator = document.querySelector(`#${HSGlobal.HSAmbrosia.idleSwapIndicatorId}`) as HTMLElement;
+        const loadoutIndicator = document.querySelector(`#${HSGlobal.HSAmbrosia.idleSwapIndicatorId} `) as HTMLElement;
 
         if (loadoutIndicator) {
             loadoutIndicator.remove();
         }
 
         HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
-    }
-
-    async enableBerryMinibars() {
-        if (!this.#pageHeader)
-            this.#pageHeader = await HSElementHooker.HookElement('header');
-
-        if (!this.#pageHeader) return;
-
-        // Blue bar
-        const blueBarOriginal = await HSElementHooker.HookElement('#ambrosiaProgressBar');
-        const blueBarClone = blueBarOriginal.cloneNode(true) as HTMLDivElement;
-        const blueBarProgress = blueBarClone.querySelector('#ambrosiaProgress') as HTMLDivElement;
-        const blueBarProgressText = blueBarClone.querySelector('#ambrosiaProgressText') as HTMLDivElement;
-
-        blueBarClone.id = HSGlobal.HSAmbrosia.blueBarId;
-        blueBarProgress.id = HSGlobal.HSAmbrosia.blueBarProgressId;
-        blueBarProgressText.id = HSGlobal.HSAmbrosia.blueBarProgressTextId;
-
-        // Red bar
-        const redBarOriginal = await HSElementHooker.HookElement('#pixelProgressBar');
-        const redBarClone = redBarOriginal.cloneNode(true) as HTMLDivElement;
-        const redBarProgress = redBarClone.querySelector('#pixelProgress') as HTMLDivElement;
-        const redBarProgressText = redBarClone.querySelector('#pixelProgressText') as HTMLDivElement;
-
-        redBarClone.id = HSGlobal.HSAmbrosia.redBarId;
-        redBarProgress.id = HSGlobal.HSAmbrosia.redBarProgressId;
-        redBarProgressText.id = HSGlobal.HSAmbrosia.redBarProgressTextId;
-
-        // Wrapper for both
-        const barWrapper = document.createElement('div') as HTMLDivElement;
-        barWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
-        barWrapper.appendChild(blueBarClone);
-        barWrapper.appendChild(redBarClone);
-
-        // Check if quick bar is enabled
-        const quickBarSetting = HSSettings.getSetting('ambrosiaQuickBar') as HSSetting<boolean>;
-
-        let referenceElement: HTMLElement;
-
-        if (quickBarSetting && quickBarSetting.isEnabled()) {
-            referenceElement = this.#pageHeader.querySelector('#hs-ambrosia-quick-loadout-container') as HTMLDivElement;
-        } else {
-            referenceElement = this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
-        }
-
-        // Insert bars
-        this.#pageHeader.insertBefore(barWrapper, referenceElement);
-        HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
-
-        this.#blueProgressMinibarElement = blueBarProgress;
-        this.#redProgressMinibarElement = redBarProgress;
-
-        this.subscribeGameDataChanges();
-        this.#berryMinibarsEnabled = true;
-    }
-
-    async disableBerryMinibars() {
-        if (!this.#pageHeader)
-            this.#pageHeader = await HSElementHooker.HookElement('header');
-
-        const barWrapper = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-
-        if (barWrapper) {
-            barWrapper.remove();
-        } else {
-            HSLogger.warn(`Could not find bar wrapper element`, this.context);
-        }
-
-        HSUI.removeInjectedStyle(this.#minibarCSSId);
-
-        this.#berryMinibarsEnabled = false;
-        this.unsubscribeGameDataChanges();
     }
 
     async #handleQuickImport() {
@@ -1086,7 +1149,7 @@ export class HSAmbrosia extends HSModule
 
             // Validate we have between 1 and 16 loadouts
             if (lines.length === 0 || lines.length > 16) {
-                HSUI.Notify(`Invalid number of loadouts: ${lines.length}. Expected 1-16.`, {
+                HSUI.Notify(`Invalid number of loadouts: ${lines.length}. Expected 1 - 16.`, {
                     notificationType: 'warning'
                 });
                 return;
@@ -1131,7 +1194,7 @@ export class HSAmbrosia extends HSModule
                 }
 
                 // Click the loadout slot button
-                const loadoutBtn = document.getElementById(`blueberryLoadout${loadoutNumber}`) as HTMLButtonElement;
+                const loadoutBtn = document.getElementById(`blueberryLoadout${loadoutNumber} `) as HTMLButtonElement;
 
                 if (!loadoutBtn) {
                     console.warn(`Loadout button ${loadoutNumber} not found`);
@@ -1169,7 +1232,7 @@ export class HSAmbrosia extends HSModule
                         : 'Unknown error';
 
             console.error('Quick Import error:', err);
-            HSLogger.error(`Quick Import failed: ${msg}`, this.context, true);
+            HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
 
             HSUI.Notify('Quick Import failed', {
                 notificationType: 'error'

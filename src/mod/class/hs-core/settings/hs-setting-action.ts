@@ -73,9 +73,9 @@ export class HSSettingActions {
 
             if (ambrosiaMod) {
                 if (params.disable && params.disable === true) {
-                    await ambrosiaMod.destroyQuickBar();
+                    await ambrosiaMod.hideQuickBar();
                 } else {
-                    await ambrosiaMod.createQuickBar();
+                    await ambrosiaMod.showQuickBar();
                 }
             }
         },

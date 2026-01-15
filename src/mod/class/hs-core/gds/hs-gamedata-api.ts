@@ -729,11 +729,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         ]
 
         const cached = this.#checkCache(cacheName, calculationVars);
-
-        if (upgradeName == 'salvageYinYang') {
-            debugger;
-        }
-
         if (cached) return cached;
 
         const investmentParameters = ((this.#redAmbrosiaCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig;
@@ -771,7 +766,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (tokens < 2000) {
             campaignBlueberrySpeedBonus = 1;
         } else {
-            campaignBlueberrySpeedBonus = 1 + 0.05 * 1 / 2000 * Math.min(tokens - 2000, 2000) + 0.05 * (1 - Math.exp(-Math.max(tokens - 4000, 0) / 2000));
+            campaignBlueberrySpeedBonus = 1 + 0.02 * 1 / 2000 * Math.min(tokens - 2000, 2000) + 0.03 * (1 - Math.exp(-Math.max(tokens - 4000, 0) / 2000))
         }
 
         const reduced = campaignBlueberrySpeedBonus;
@@ -1871,7 +1866,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             1 + 0.01 * cube76 * this.R_calculateNumberOfThresholds(),
             this.R_calculateCashGrabBonus(CASH_GRAB_ULTRA_BLUEBERRY),
             this.isEvent ? 1 + this.R_calculateConsumableEventBuff(EventBuffType.BlueberryTime) : 1,
-            this.R_calculateHorseShoeLevel(),
         ];
 
         const reduced = vals.reduce((a, b) => a * b, 1);
@@ -1886,7 +1880,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         let noAmbrosiaFactor = 0;
 
-        if (gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 10)
+        if (gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 20)
+            noAmbrosiaFactor = 3;
+        else if (gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 10)
             noAmbrosiaFactor = 2;
         else if (gameData.singularityChallenges.noAmbrosiaUpgrades.completions > 0)
             noAmbrosiaFactor = 1;
@@ -1997,6 +1993,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             this.R_calculateCookieUpgrade29Luck(),
             gameData.shopUpgrades.shopAmbrosiaUltra * this.R_calculateSumOfExaltCompletions(),
             Math.max(0, (this.R_calculateSynergismLevel() ?? 0 - 229) * 4),
+            this.R_calculateHorseShoeLevel(),
         ]
 
         const rawLuckComponents2 = [
