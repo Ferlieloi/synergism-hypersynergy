@@ -579,10 +579,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.0001 * n
-                const luck = calculateAmbrosiaLuck()
+                const luck = this.calculateLuck() as { additive: number, raw: number, total: number }
                 const effectiveLuck = Math.min(
-                    luck,
-                    Math.pow(1000, 0.5) * Math.pow(luck, 0.5)
+                    luck.total,
+                    Math.pow(1000, 0.5) * Math.pow(luck.total, 0.5)
                 )
                 const val = 1 + baseVal * effectiveLuck
                 return {
@@ -596,7 +596,21 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.02 * n
+                const val = baseVal
+                    * (Math.floor(Math.log10(Number(this.gameData?.wowCubes) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowTesseracts) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowHypercubes) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes) + 1))
+                        + Math.floor(Math.log10(this.gameData?.wowAbyssals ?? 0 + 1))
+                        + Math.floor(Math.log10(this.gameData?.wowOcteracts ?? 0 + 1))
+                        + 6)
+                return {
+                    ambrosiaLuck: val
+                }
+            },
         },
 
         ambrosiaQuarkLuck1: {
