@@ -62,7 +62,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private singTab2!: HTMLButtonElement;
     private prevActionTime: number = 0;
     private AOAG!: HTMLButtonElement;
-    private AOAGBought: boolean = false;
+    private singBtn!: HTMLButtonElement;
+    private singularityWasDisabled: boolean = false;
 
 
 
@@ -93,7 +94,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
         this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
-
+        this.singularityWasDisabled = false;
+        this.singBtn = document.querySelector('#singularitybtn') as HTMLButtonElement;
         if (!this.timerModal || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
             return Promise.resolve();
@@ -258,19 +260,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.performSingularity();
                 let sawDisabled = false;
 
-                while (this.isAutosingEnabled() && !this.AOAGBought) {
-                    const btn = document.querySelector('#singularitybtn');
-                    if (btn) {
-                        const filter = getComputedStyle(btn).getPropertyValue('filter');
-                        const isEnabled = !filter || filter !== 'contrast(1.25) sepia(1) grayscale(0.25)';
-                        if (!isEnabled) {
-                            sawDisabled = true;
-                        }
-                        if (sawDisabled && isEnabled) {
-                            HSLogger.debug('Singularity button ACTIVATED!');
-                            break;
-                        }
+                while (this.isAutosingEnabled()) {
+                    const singularityEnabled = this.checkSingularityActivated();
+                    if (this.singularityWasDisabled && singularityEnabled) {
+                        HSLogger.debug('Singularity button ACTIVATED!');
+                        break;
                     }
+                    if (!singularityEnabled) {
+                        this.singularityWasDisabled = true;
+                    }
+
                     const stage = await this.getStage();
                     await this.matchStageToStrategy(stage);
                 }
@@ -401,6 +400,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled) return;
+
+            const singularityEnabled = this.checkSingularityActivated();
+            if (this.singularityWasDisabled && singularityEnabled && phaseConfig.endPhase != "end") {
+                HSLogger.debug('Singularity button ACTIVATED during phase execution - breaking early', this.context);
+                this.ascendBtn.click();
+                break;
+            }
+            if (!singularityEnabled) {
+                this.singularityWasDisabled = true;
+            }
+
             const challenge = phaseConfig.strat[i];
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
             else if (challenge.challengeNumber == 200) { // Jump action (200)
@@ -498,8 +508,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 116: // Buy AOAG
                 if (this.AOAG.classList.contains('runeButtonAvailable')) {
                     this.AOAG.click();
-                    this.AOAGBought = true;
-                    HSLogger.log(`AOAG bought!`, this.context);
+                    HSLogger.log(`Tried to buy AOAG!`, this.context);
+                } else {
+                    HSLogger.log(`Tried to buy AOAG,  but it was not yet unlocked`, this.context);
                 }
                 break;
             default:
@@ -759,7 +770,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async performSingularity(): Promise<void> {
         await this.enterAndLeaveExalt();
-        this.AOAGBought = false;
+        this.singularityWasDisabled = false;
         const gq = await this.getCurrentGoldenQuarks();
         const q = await this.getCurrentQuarks();
         if (this.timerModal) {
@@ -920,5 +931,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         let cleanText = text.replace(/,/g, '.').trim();
         const result = Number(cleanText);
         return isNaN(result) ? 0 : result;
+    }
+
+    private checkSingularityActivated(): boolean {
+        const btn = document.querySelector('#singularitybtn');
+        if (!btn) return false;
+
+        const filter = getComputedStyle(btn).getPropertyValue('filter');
+        const isEnabled = !filter || filter !== 'contrast(1.25) sepia(1) grayscale(0.25)';
+
+        return isEnabled;
     }
 }
