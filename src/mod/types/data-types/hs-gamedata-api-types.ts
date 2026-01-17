@@ -168,6 +168,135 @@ export interface AmbrosiaUpgradeCalculationCollection {
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig
 }
 
+export enum AntUpgrades {
+    AntSpeed = 0,
+    Coins = 1,
+    Taxes = 2,
+    AcceleratorBoosts = 3,
+    Multipliers = 4,
+    Offerings = 5,
+    BuildingCostScale = 6,
+    Salvage = 7,
+    FreeRunes = 8,
+    Obtainium = 9,
+    AntSacrifice = 10,
+    Mortuus = 11,
+    AntELO = 12,
+    WowCubes = 13,
+    AscensionScore = 14,
+    Mortuus2 = 15
+}
+
+export type AchievementGroups =
+    | 'firstOwnedCoin'
+    | 'secondOwnedCoin'
+    | 'thirdOwnedCoin'
+    | 'fourthOwnedCoin'
+    | 'fifthOwnedCoin'
+    | 'prestigePointGain'
+    | 'transcendPointGain'
+    | 'reincarnationPointGain'
+    | 'challenge1'
+    | 'challenge2'
+    | 'challenge3'
+    | 'challenge4'
+    | 'challenge5'
+    | 'challenge6'
+    | 'challenge7'
+    | 'challenge8'
+    | 'challenge9'
+    | 'challenge10'
+    | 'accelerators'
+    | 'acceleratorBoosts'
+    | 'multipliers'
+    | 'antCrumbs'
+    | 'sacMult'
+    | 'ascensionCount'
+    | 'constant'
+    | 'challenge11'
+    | 'challenge12'
+    | 'challenge13'
+    | 'challenge14'
+    | 'ascensionScore'
+    | 'speedBlessing'
+    | 'speedSpirit'
+    | 'singularityCount'
+    | 'runeLevel'
+    | 'runeFreeLevel'
+    | 'campaignTokens'
+    | 'prestigeCount'
+    | 'transcensionCount'
+    | 'reincarnationCount'
+    | 'sacCount'
+    | 'ungrouped'
+
+export type AchievementRewards =
+    | 'acceleratorPower'
+    | 'accelerators'
+    | 'multipliers'
+    | 'accelBoosts'
+    | 'crystalMultiplier'
+    | 'taxReduction'
+    | 'particleGain'
+    | 'conversionExponent'
+    | 'chronosTalisman'
+    | 'midasTalisman'
+    | 'metaphysicsTalisman'
+    | 'polymathTalisman'
+    | 'talismanPower'
+    | 'sacrificeMult'
+    | 'antSpeed'
+    | 'antSacrificeUnlock'
+    | 'preserveAnthillCount'
+    | 'preserveAnthillCountSingularity'
+    | 'antAutobuyers'
+    | 'inceptusAutobuy'
+    | 'fortunaeAutobuy'
+    | 'tributumAutobuy'
+    | 'celeritasAutobuy'
+    | 'exploratoremAutobuy'
+    | 'sacrificiumAutobuy'
+    | 'experientiaAutobuy'
+    | 'hicAutobuy'
+    | 'scientiaAutobuy'
+    | 'praemoenioAutobuy'
+    | 'phylacteriumAutobuy'
+    | 'antELOAdditive'
+    | 'antELOAdditiveMultiplier'
+    | 'wowSquareTalisman'
+    | 'ascensionCountMultiplier'
+    | 'ascensionCountAdditive'
+    | 'wowCubeGain'
+    | 'wowTesseractGain'
+    | 'wowHypercubeGain'
+    | 'wowPlatonicGain'
+    | 'quarkGain'
+    | 'wowHepteractGain'
+    | 'ascensionScore'
+    | 'constUpgrade1Buff'
+    | 'constUpgrade2Buff'
+    | 'platonicToHypercubes'
+    | 'statTracker'
+    | 'ascensionRewardScaling'
+    | 'overfluxConversionRate'
+    | 'diamondUpgrade18'
+    | 'diamondUpgrade19'
+    | 'diamondUpgrade20'
+    | 'prestigeCountMultiplier'
+    | 'transcensionCountMultiplier'
+    | 'reincarnationCountMultiplier'
+    | 'duplicationRuneUnlock'
+    | 'prismRuneUnlock'
+    | 'thriftRuneUnlock'
+    | 'salvage'
+    | 'offeringBonus'
+    | 'obtainiumBonus'
+    | 'transcendToPrestige'
+    | 'reincarnationToTranscend'
+    | 'antSacrificeCountMultiplier'
+    | 'freeAntUpgrades'
+    | 'autoAntSacrifice'
+    | 'antSpeed2UpgradeImprover'
 
 export interface RedAmbrosiaUpgradeCalculationCollection {
     blueberryGenerationSpeed: RedAmbrosiaUpgradeCalculationConfig;

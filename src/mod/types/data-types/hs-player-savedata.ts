@@ -87,7 +87,7 @@ interface Ants {
         highestMastery: number;
     }>;
     upgrades: Record<string, number>;
-    crumbs: string;
+    crumbs: Decimal;
     crumbsThisSacrifice: string;
     crumbsEverMade: string;
     immortalELO: number;
@@ -380,6 +380,21 @@ export interface CorruptionLevels {
     hyperchallenge: number;
 }
 
+export class CorruptionLoadout {
+    totalScoreMult = 1
+    corruptionScoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35]
+    levels: CorruptionLevels = {
+        viscosity: 0,
+        drought: 0,
+        deflation: 0,
+        extinction: 0,
+        illiteracy: 0,
+        recession: 0,
+        dilation: 0,
+        hyperchallenge: 0
+    }
+}
+
 /**
  * Represents saved loadouts for corruptions.
  * Keys are the names of the saved loadouts.
@@ -396,8 +411,8 @@ export interface CorruptionSaves {
  * Contains the current, next, and saved corruption states.
  */
 export interface Corruptions {
-    used: CorruptionLevels;
-    next: CorruptionLevels;
+    used: CorruptionLoadout;
+    next: CorruptionLoadout;
     saves: CorruptionSaves;
     showStats: boolean;
 }
@@ -828,7 +843,20 @@ export interface Campaigns {
     fiftieth: number;
 }
 
-
+export interface progressiveAchievements {
+    "runeLevel": 3810952,
+    "freeRuneLevel": 573062.1333037298,
+    "antMasteries": 108,
+    "rebornELO": 60815898.0197857,
+    "singularityCount": 0,
+    "ambrosiaCount": 51193216,
+    "redAmbrosiaCount": 4863592,
+    "exalts": 0,
+    "talismanRarities": 92,
+    "singularityUpgrades": 0,
+    "octeractUpgrades": 0,
+    "redAmbrosiaUpgrades": 0
+}
 
 
 /**
@@ -867,7 +895,7 @@ export interface PlayerData {
     prestigeShards: string;
     transcendShards: string;
     reincarnationShards: string;
-    ascendShards: string;
+    ascendShards: Decimal;
 
     campaigns: Campaigns;
 
@@ -1053,6 +1081,7 @@ export interface PlayerData {
     toggles: Toggles;
     unlocks: Unlocks;
     achievements: number[]; // Status per achievement (0 or 1)
+    progressiveAchievements: progressiveAchievements;
     achievementPoints: number;
     shoptoggles: ShopToggles;
     shopBuyMaxToggle: boolean;

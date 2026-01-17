@@ -1,6 +1,6 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
-import { CachedValue, CalculationCache, HepteractType, RedAmbrosiaUpgradeCalculationConfig, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
-import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, AmbrosiaUpgradeData, Runes } from "../../../types/data-types/hs-player-savedata";
+import { AntUpgrades, CachedValue, CalculationCache, HepteractType, RedAmbrosiaUpgradeCalculationConfig, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
+import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, AmbrosiaUpgradeData, Runes, CorruptionLoadout } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
@@ -9,7 +9,7 @@ import { HSUI } from "../hs-ui";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSGameData } from "./hs-gamedata";
 import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
-import { c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection, ambrosiaUpgradeCalculationCollection } from "./stored-vars-and-calculations";
+import { c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection, ambrosiaUpgradeCalculationCollection, antUpgradeData } from "./stored-vars-and-calculations";
 import { achievements } from "../../../resource/data/achievements";
 
 /*
@@ -1750,6 +1750,158 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const ascensionSpeed = 2 - Math.pow(0.996, totalLevels);
         return ascensionSpeed;
+    }
+
+    R_calculateRuneEffectiveLevel(runeType: keyof Runes): number {
+        return 0;
+    }
+
+    #corruptionData = {
+        viscosityPower: [1, 0.87, 0.80, 0.75, 0.70, 0.6, 0.54, 0.45, 0.39, 0.33, 0.3, 0.2, 0.1, 0.05, 0, 0, 0],
+        dilationMultiplier: [1, 1 / 3, 1 / 10, 1 / 40, 1 / 200, 1 / 3e4, 1 / 3e6, 1 / 3e9, 1 / 3e12, 1 / 1e15, 1 / 1e19, 1 / 1e24, 1 / 1e34, 1 / 1e48, 1 / 1e65, 1 / 1e80, 1 / 1e100],
+        hyperchallengeMultiplier: [1, 1.2, 1.5, 1.7, 3, 5, 8, 13, 21, 34, 55, 100, 400, 1600, 7777, 18888, 88888],
+        illiteracyPower: [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.20, 0.15, 0.10, 0.08, 0.06, 0.04],
+        deflationMultiplier: [1, 0.3, 0.1, 0.03, 0.01, 1 / 1e6, 1 / 1e8, 1 / 1e10, 1 / 1e12, 1 / 1e15, 1 / 1e18, 1 / 1e25, 1 / 1e35, 1 / 1e50, 1 / 1e77, 0, 0],
+        extinctionDivisor: [1, 1.25, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        droughtSalvage: [0, -25, -50, -75, -100, -200, -300, -400, -600, -800, -1_000, -1_250, -2_000, -4_000, -8_000, -12_000, -16_000],
+        recessionPower: [1, 0.9, 0.7, 0.6, 0.5, 0.37, 0.30, 0.23, 0.18, 0.15, 0.12, 0.09, 0.03, 0.01, 0.007, 0.0007, 0.00007]
+    };
+
+    R_calculateCorruptionEffect(loadout: CorruptionLoadout, corruption: string): number {
+        if (!this.gameData) return 0;
+
+        const data = this.gameData;
+
+        switch (corruption) {
+            case 'deflation':
+                return this.#deflationEffect(loadout);
+            case 'dilation':
+                return this.#dilationEffect(loadout);
+            case 'drought':
+                return this.#droughtEffect(loadout, data);
+            case 'extinction':
+                return this.#extinctionEffect(loadout);
+            case 'hyperchallenge':
+                return this.#hyperchallengeEffect(loadout, data);
+            case 'illiteracy':
+                return this.#illiteracyEffect(loadout, data);
+            case 'recession':
+                return this.#recessionEffect(loadout);
+            case 'viscosity':
+                return this.#viscosityEffect(loadout, data);
+            default:
+                return 1;
+        }
+    }
+
+    #viscosityEffect(loadout: CorruptionLoadout, data: any): number {
+        const base = this.#corruptionData.viscosityPower[loadout.levels.viscosity];
+        const multiplier = 1 + data.platonicUpgrades[6] / 30;
+        return Math.min(base * multiplier, 1);
+    }
+
+    #droughtEffect(loadout: CorruptionLoadout, data: any): number {
+        let baseSalvageReduction = this.#corruptionData.droughtSalvage[loadout.levels.drought];
+        if (data.platonicUpgrades[13] > 0) {
+            baseSalvageReduction *= 0.5;
+        }
+        return baseSalvageReduction;
+    }
+
+    #deflationEffect(loadout: CorruptionLoadout): number {
+        return this.#corruptionData.deflationMultiplier[loadout.levels.deflation];
+    }
+
+    #extinctionEffect(loadout: CorruptionLoadout): number {
+        return this.#corruptionData.extinctionDivisor[loadout.levels.extinction];
+    }
+
+    #illiteracyEffect(loadout: CorruptionLoadout, data: any): number {
+        const base = this.#corruptionData.illiteracyPower[loadout.levels.illiteracy];
+        const multiplier = (data.obtainium && data.obtainium > 0)
+            ? 1 + (1 / 100) * data.platonicUpgrades[9] * Math.min(100, Math.log10(data.obtainium))
+            : 1;
+        return Math.min(base * multiplier, 1);
+    }
+
+    #recessionEffect(loadout: CorruptionLoadout): number {
+        return this.#corruptionData.recessionPower[loadout.levels.recession];
+    }
+
+    #dilationEffect(loadout: CorruptionLoadout): number {
+        return this.#corruptionData.dilationMultiplier[loadout.levels.dilation];
+    }
+
+    #hyperchallengeEffect(loadout: CorruptionLoadout, data: any): number {
+        const baseEffect = this.#corruptionData.hyperchallengeMultiplier[loadout.levels.hyperchallenge];
+        let divisor = 1;
+        divisor *= 1 + 2 / 5 * data.platonicUpgrades[8];
+        return Math.max(1, baseEffect / divisor);
+    }
+
+    CalcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number) => { // ECC stands for "Effective Challenge Completions"
+        let effective = 0
+        switch (type) {
+            case 'transcend':
+                effective += Math.min(100, completions)
+                effective += 1 / 20 * (Math.min(1000, Math.max(100, completions)) - 100)
+                effective += 1 / 100 * (Math.max(1000, completions) - 1000)
+                return effective
+            case 'reincarnation':
+                effective += Math.min(25, completions)
+                effective += 1 / 2 * (Math.min(75, Math.max(25, completions)) - 25)
+                effective += 1 / 10 * (Math.max(75, completions) - 75)
+                return effective
+            case 'ascension':
+                effective += Math.min(10, completions)
+                effective += 1 / 2 * (Math.max(10, completions) - 10)
+                return effective
+        }
+    }
+
+    R_computeFreeAntUpgradeLevels = () => {
+        if (!this.gameData) return 0;
+
+        const data = this.gameData;
+
+        let bonusLevels = 0
+        bonusLevels += this.CalcECC('reincarnation', data.challengecompletions[9])
+        bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)))
+        bonusLevels += 12 * this.CalcECC('ascension', data.challengecompletions[11])
+        bonusLevels += 2 * data.researches[97]
+        bonusLevels += 2 * data.researches[98]
+        bonusLevels += data.researches[102]
+        bonusLevels += 2 * data.researches[132]
+        bonusLevels += Math.floor((1 / 200) * data.researches[200])
+        bonusLevels += +getAchievementReward('freeAntUpgrades')
+        bonusLevels *= Globals.challenge15Rewards.bonusAntLevel.value
+
+        if (data.currentChallenge.ascension === 11) {
+            bonusLevels += Math.floor(
+                3 * data.challengecompletions[8]
+                + 5 * data.challengecompletions[9]
+            )
+            return bonusLevels
+        }
+
+        return bonusLevels
+    }
+
+    R_calculateTrueAntLevel(antUpgrade: AntUpgrades): number {
+        if (!this.gameData) return 0;
+
+        const data = this.gameData;
+
+        const freeLevels = this.R_computeFreeAntUpgradeLevels()
+        const corruptionDivisor = (antUpgradeData[antUpgrade].exemptFromCorruption)
+            ? 1
+            : this.R_calculateCorruptionEffect(data.corruptions.used, "extinction");
+        if (data.currentChallenge.ascension === 11) {
+            return Math.min(data.ants.upgrades[antUpgrade], freeLevels) / corruptionDivisor
+        } else {
+            return (data.ants.upgrades[antUpgrade]
+                + Math.min(data.ants.upgrades[antUpgrade], freeLevels)) / corruptionDivisor
+        }
     }
 
     R_calculateHorseShoeLevel(): number {
