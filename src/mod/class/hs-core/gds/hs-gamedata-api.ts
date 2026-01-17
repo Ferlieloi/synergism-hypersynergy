@@ -290,11 +290,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_getAmbrosiaUpgradeEffectiveLevels = (upgradeKey: AmbrosiaUpgradeNames): number => {
-        const upgrade = ambrosiaUpgrades[upgradeKey]
-        return ((player.singularityChallenges.noAmbrosiaUpgrades.enabled
-            || player.singularityChallenges.sadisticPrequel.enabled) && !upgrade.ignoreEXALT)
-            ? 0
-            : upgrade.level + upgrade.extraLevelCalc()
+        const upgrade = ambrosiaUpgradeCalculationCollection[upgradeKey]
+        return this.gameData?.redAmbrosiaUpgrades[upgradeKey].level + upgrade.extraLevelCalc()
     }
 
     R_getAmbrosiaUpgradeEffects = <T extends AmbrosiaUpgradeNames>(

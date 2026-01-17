@@ -16,7 +16,7 @@ export const ambrosiaUpgradeCalculationCollection: AmbrosiaUpgradeCalculationCol
     costFunction: (n: number, cpl: number): number =>
       cpl * ((n + 1) ** 2 - n ** 2),
     levelFunction: (n: number): number => n
-        effects: (n: number) => {
+    effects: (n: number) => {
       const cubeAmount = 1 + 0.05 * n
       const quarkAmount = 1 + 0.01 * n
       return {
