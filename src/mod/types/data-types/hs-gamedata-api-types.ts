@@ -1,4 +1,5 @@
 import { HSGameDataAPI } from "../../class/hs-core/gds/hs-gamedata-api";
+import { goldenQuarkUpgrades, OcteractUpgradeData, octUpgrades, PlayerData, RedAmbrosiaUpgrades, Runes } from "./hs-player-savedata";
 
 export interface CalculationCache {
     R_AmbrosiaGenerationShopUpgrade: CachedValue;
@@ -103,6 +104,11 @@ export interface CalculationCache {
     R_LuckConversion: CachedValue;
 }
 
+export type GoldenQuarkUpgradeKey = keyof goldenQuarkUpgrades;
+export type OcteractUpgradeKey = keyof octUpgrades;
+export type RedAmbrosiaUpgradeKey = keyof RedAmbrosiaUpgrades;
+export type RuneType = keyof Runes;
+
 export interface CachedValue {
     value: number | undefined;
     cachedBy: number[]
@@ -120,6 +126,7 @@ export interface AmbrosiaUpgradeCalculationConfig {
     maxLevel: number
     costFunction: (n: number, cpl: number) => number
     levelFunction: (n: number) => number
+    effects: (n: number) => Partial<AmbrosiaUpgradeRewards>
 }
 
 
@@ -167,6 +174,41 @@ export interface AmbrosiaUpgradeCalculationCollection {
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig
 }
+
+export type AmbrosiaUpgradeRewards = {
+    ambrosiaTutorial: { quarks: number; cubes: number }
+    ambrosiaQuarks1: { quarks: number }
+    ambrosiaCubes1: { cubes: number }
+    ambrosiaLuck1: { ambrosiaLuck: number }
+    ambrosiaQuarkCube1: { cubes: number }
+    ambrosiaLuckCube1: { cubes: number }
+    ambrosiaCubeQuark1: { quarks: number }
+    ambrosiaLuckQuark1: { quarks: number }
+    ambrosiaCubeLuck1: { ambrosiaLuck: number }
+    ambrosiaQuarkLuck1: { ambrosiaLuck: number }
+    ambrosiaQuarks2: { quarks: number }
+    ambrosiaCubes2: { cubes: number }
+    ambrosiaLuck2: { ambrosiaLuck: number }
+    ambrosiaQuarks3: { quarks: number }
+    ambrosiaCubes3: { cubes: number }
+    ambrosiaLuck3: { ambrosiaLuck: number }
+    ambrosiaPatreon: { blueberryGeneration: number }
+    ambrosiaObtainium1: { luckMult: number; obtainiumMult: number }
+    ambrosiaOffering1: { luckMult: number; offeringMult: number }
+    ambrosiaHyperflux: { hyperFlux: number }
+    ambrosiaBaseOffering1: { offering: number }
+    ambrosiaBaseObtainium1: { obtainium: number }
+    ambrosiaBaseOffering2: { offering: number }
+    ambrosiaBaseObtainium2: { obtainium: number }
+    ambrosiaSingReduction1: { singularityReduction: number }
+    ambrosiaInfiniteShopUpgrades1: { freeLevels: number }
+    ambrosiaInfiniteShopUpgrades2: { freeLevels: number }
+    ambrosiaSingReduction2: { singularityReduction: number }
+    ambrosiaTalismanBonusRuneLevel: { talismanBonusRuneLevel: number }
+    ambrosiaRuneOOMBonus: { runeOOMBonus: number; infiniteAscentOOMBonus: number }
+}
+
+export type AmbrosiaUpgradeNames = keyof AmbrosiaUpgradeRewards
 
 export enum AntUpgrades {
     AntSpeed = 0,
@@ -297,6 +339,102 @@ export type AchievementRewards =
     | 'freeAntUpgrades'
     | 'autoAntSacrifice'
     | 'antSpeed2UpgradeImprover'
+
+export type AchievementReward = Partial<Record<AchievementRewards, (player?: PlayerData) => number>>
+
+export interface Achievement {
+    pointValue: number;
+    group: AchievementGroups;
+    reward?: AchievementReward;
+}
+
+export enum AntProducers {
+    'Workers' = 0,
+    'Breeders' = 1,
+    'MetaBreeders' = 2,
+    'MegaBreeders' = 3,
+    'Queens' = 4,
+    'LordRoyals' = 5,
+    'Almighties' = 6,
+    'Disciples' = 7,
+    'HolySpirit' = 8
+}
+
+export const LAST_ANT_PRODUCER = AntProducers.HolySpirit
+
+export type SingularityChallengeDataKeys =
+    | 'noSingularityUpgrades'
+    | 'oneChallengeCap'
+    | 'noOcteracts'
+    | 'limitedAscensions'
+    | 'noAmbrosiaUpgrades'
+    | 'limitedTime'
+    | 'sadisticPrequel'
+    | 'taxmanLastStand'
+
+export interface ISingularityChallengeData {
+    effect: (n: number) => Record<string, number | boolean>
+    achievementPointValue: (n: number) => number
+}
+
+export type ProgressiveAchievements =
+    | 'runeLevel'
+    | 'freeRuneLevel'
+    | 'antMasteries'
+    | 'rebornELO'
+    | 'talismanRarities'
+    | 'singularityCount'
+    | 'ambrosiaCount'
+    | 'redAmbrosiaCount'
+    | 'singularityUpgrades'
+    | 'octeractUpgrades'
+    | 'redAmbrosiaUpgrades'
+    | 'exalts'
+
+export interface ProgressiveAchievement {
+    maxPointValue: number
+    pointsAwarded: (cached: number) => number
+}
+
+export type AntUpgradeTypeMap = {
+    [AntUpgrades.AntSpeed]: { antSpeed: Decimal }
+    [AntUpgrades.Coins]: {
+        crumbToCoinExp: number
+        coinMultiplier: Decimal
+    }
+    [AntUpgrades.Taxes]: { taxReduction: number }
+    [AntUpgrades.AcceleratorBoosts]: { acceleratorBoostMult: number }
+    [AntUpgrades.Multipliers]: { multiplierMult: number }
+    [AntUpgrades.Offerings]: { offeringMult: number }
+    [AntUpgrades.BuildingCostScale]: { buildingCostScale: number; buildingPowerMult: number }
+    [AntUpgrades.Salvage]: { salvage: number }
+    [AntUpgrades.FreeRunes]: { freeRuneLevel: number }
+    [AntUpgrades.Obtainium]: { obtainiumMult: number }
+    [AntUpgrades.AntSacrifice]: {
+        antSacrificeMultiplier: number
+        elo: number
+    }
+    [AntUpgrades.Mortuus]: {
+        talismanUnlock: boolean
+        globalSpeed: number
+    }
+    [AntUpgrades.AntELO]: {
+        antELO: number
+        antSacrificeLimitCount: number
+    }
+    [AntUpgrades.Mortuus2]: {
+        talismanLevelIncreaser: number
+        talismanEffectBuff: number
+        ascensionSpeed: number
+    }
+    [AntUpgrades.AscensionScore]: {
+        cubesBanked: number
+        ascensionScoreBase: number
+    }
+    [AntUpgrades.WowCubes]: {
+        wowCubes: number
+    }
+}
 
 export interface RedAmbrosiaUpgradeCalculationCollection {
     blueberryGenerationSpeed: RedAmbrosiaUpgradeCalculationConfig;

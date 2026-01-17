@@ -1,6 +1,6 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
-import { AntUpgrades, CachedValue, CalculationCache, HepteractType, RedAmbrosiaUpgradeCalculationConfig, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
-import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, AmbrosiaUpgradeData, Runes, CorruptionLoadout } from "../../../types/data-types/hs-player-savedata";
+import { Achievement, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards } from "../../../types/data-types/hs-gamedata-api-types";
+import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, Runes, CorruptionLoadout, SingularityChallenges, goldenQuarkUpgrades } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
@@ -9,8 +9,7 @@ import { HSUI } from "../hs-ui";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSGameData } from "./hs-gamedata";
 import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
-import { c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection, ambrosiaUpgradeCalculationCollection, antUpgradeData } from "./stored-vars-and-calculations";
-import { achievements } from "../../../resource/data/achievements";
+import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, redAmbrosiaUpgradeCalculationCollection, ambrosiaUpgradeCalculationCollection, SINGULARITY_CHALLENGE_DATA } from "./stored-vars-and-calculations";
 
 /*
     If this looks silly, check details in hs-gamedata-api-partial.ts
@@ -143,6 +142,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         R_LuckConversion: { value: undefined, cachedBy: [] },
     }
 
+    R_singularityChallengeData: Record<
+        SingularityChallengeDataKeys,
+        ISingularityChallengeData
+    > = SINGULARITY_CHALLENGE_DATA;
+
     #calculationCacheTemplate: CalculationCache;
 
     // These are imported from stored-vars-and-calculationss.ts
@@ -260,6 +264,1828 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return levelFunction(level);
     }
 
+    R_calculateSigmoidExponential(constant: number, coefficient: number) {
+        return 1 + (constant - 1) * (1 - Math.exp(-coefficient))
+    }
+
+    R_allTalismanRuneBonusStatsSum = () => {
+        if (!this.gameData) return 0;
+        const data = this.gameData;
+        return (
+            1
+            + +this.R_getAchievementReward('talismanPower')
+            + ((this.gameData?.researches[106] ?? 0) / 1000)
+            + ((this.gameData?.researches[107] ?? 0) / 1000)
+            + (2 * (this.gameData?.researches[118] ?? 0) / 1000)
+            + (0.004 * Math.floor((this.gameData?.researches[200] ?? 0) / 10000))
+            + (0.006 * Math.floor((this.gameData?.cubeUpgrades[50] ?? 0) / 10000))
+            + (this.R_calculateChallenge15Reward('talismanBonus') - 1)
+            + this.R_getGQUpgradeEffect('singTalismanBonusRunes1')
+            + this.R_getGQUpgradeEffect('singTalismanBonusRunes2')
+            + this.R_getGQUpgradeEffect('singTalismanBonusRunes3')
+            + this.R_getGQUpgradeEffect('singTalismanBonusRunes4')
+            + this.R_getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel
+            + +(data.singularityChallenges.taxmanLastStand.rewards?.talismanRuneEffect ?? 0)
+        )
+    }
+
+    R_getAmbrosiaUpgradeEffectiveLevels = (upgradeKey: AmbrosiaUpgradeNames): number => {
+        const upgrade = ambrosiaUpgrades[upgradeKey]
+        return ((player.singularityChallenges.noAmbrosiaUpgrades.enabled
+            || player.singularityChallenges.sadisticPrequel.enabled) && !upgrade.ignoreEXALT)
+            ? 0
+            : upgrade.level + upgrade.extraLevelCalc()
+    }
+
+    R_getAmbrosiaUpgradeEffects = <T extends AmbrosiaUpgradeNames>(
+        upgradeKey: T
+    ): Partial<AmbrosiaUpgradeRewards> => {
+        const effectiveLevels = this.R_getAmbrosiaUpgradeEffectiveLevels(upgradeKey)
+        return ambrosiaUpgradeCalculationCollection[upgradeKey].effects(effectiveLevels)
+    }
+
+    R_getRuneBonusFromAllTalismans = (rune: RuneType): number => {
+        const specialMultiplier = this.R_allTalismanRuneBonusStatsSum()
+        let totalBonus = 0
+        for (const t of Object.keys(talismans) as TalismanKeys[]) {
+            totalBonus += getRuneBonusFromIndividualTalisman(t, rune)
+        }
+
+        return totalBonus * specialMultiplier
+    }
+
+    R_maxAPFromChallenges = Object.entries(this.R_singularityChallengeData).reduce(
+        (acc, [chalKey, challenge]) => {
+            const completions =
+                this.gameData?.singularityChallenges[chalKey as SingularityChallengeDataKeys]
+                    ?.completions ?? 0;
+
+            return acc + challenge.achievementPointValue(completions);
+        },
+        0
+    );
+
+    R_maxGoldenQuarkUpgradeAP = Object.values(goldenQuarkUpgradeMaxLevels).reduce((acc: number, upgrade) => {
+        if (upgrade.maxLevel === -1) {
+            return acc
+        }
+        return acc + 5
+    }, 0)
+
+    R_maxOcteractUpgradeAP = Object.values(octeractUpgradeMaxLevels).reduce((acc: number, upgrade) => {
+        if (upgrade.maxLevel === -1) {
+            return acc
+        }
+        return acc + 8
+    }, 0)
+
+    R_maxRedAmbrosiaUpgradeAP = Object.values(redAmbrosiaUpgradeCalculationCollection).reduce((acc: number, upgrade) => {
+        if (upgrade.maxLevel === -1) {
+            return acc
+        }
+        return acc + 10
+    }, 0)
+
+    R_maxTalismansRarityAP = 50 * Object.keys(talismans).length
+
+    R_computeFreeLevelMultiplierGQ(): number {
+        return ((this.gameData?.shopUpgrades.shopSingularityPotency ?? 0) > 0 ? 3.66 : 1) + 0.3 / 100 * player.cubeUpgrades[75]
+    }
+
+    R_computeGQUpgradeFreeLevelSoftcap(upgradeKey: GoldenQuarkUpgradeKey): number {
+        if (!this.gameData) {
+            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
+            return 0;
+        }
+
+        const data = this.gameData;
+        const upgrade = data.goldenQuarkUpgrades[upgradeKey]
+        const freeLevelMult = this.R_computeFreeLevelMultiplierGQ()
+        const baseRealFreeLevels = freeLevelMult * upgrade.freeLevels
+        return (
+            Math.min(upgrade.level, baseRealFreeLevels)
+            + Math.sqrt(Math.max(0, baseRealFreeLevels - upgrade.level))
+        )
+    }
+
+    R_getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey): number => {
+        if (!this.gameData) {
+            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
+            return 0;
+        }
+
+        const data = this.gameData;
+
+        const upgrade = octeractUpgradeMaxLevels[upgradeKey]
+        const totalLevels = this.R_actualOcteractUpgradeTotalLevels(upgradeKey)
+        return upgrade.effect ? upgrade.effect(totalLevels) : 0
+    }
+
+    R_computeFreeLevelMultiplierOCT(): number {
+        return 1 + 0.3 / 100 * (this.gameData?.cubeUpgrades[78] ?? 0)
+    }
+
+    R_computeOcteractFreeLevelSoftcap = (upgradeKey: OcteractUpgradeKey): number => {
+        if (!this.gameData) {
+            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
+            return 0;
+        }
+
+        const data = this.gameData;
+        const freeLevelMult = this.R_computeFreeLevelMultiplierOCT()
+        const upgrade = data.octUpgrades[upgradeKey];
+        return upgrade.freeLevels * freeLevelMult
+    }
+
+    R_actualOcteractUpgradeTotalLevels(upgradeKey: OcteractUpgradeKey): number {
+        if (!this.gameData) {
+            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
+            return 0;
+        }
+
+        const data = this.gameData;
+        const upgrade = data.octUpgrades[upgradeKey];
+
+        const actualFreeLevels = this.R_computeOcteractFreeLevelSoftcap(upgradeKey)
+
+        if (upgrade.level >= actualFreeLevels) {
+            return actualFreeLevels + upgrade.level
+        } else {
+            return 2 * Math.sqrt(actualFreeLevels * upgrade.level)
+        }
+    }
+
+    R_actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
+        if (!this.gameData) {
+            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
+            return 0;
+        }
+
+        const data = this.gameData;
+
+        const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey]
+
+        const actualFreeLevels = this.R_computeGQUpgradeFreeLevelSoftcap(upgradeKey)
+        const linearLevels = data.goldenQuarkUpgrades[upgradeKey].level + actualFreeLevels
+        let polynomialLevels = 0
+
+        if (this.R_getOcteractUpgradeEffect('octeractImprovedFree')) {
+            let exponent = 0.6
+            exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree2')
+            exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree3')
+            exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree4')
+            polynomialLevels = Math.pow(data.goldenQuarkUpgrades[upgradeKey].level * actualFreeLevels, exponent)
+        }
+
+        return Math.max(linearLevels, polynomialLevels)
+    }
+
+    R_getGQUpgradeEffect(upgradeKey: GoldenQuarkUpgradeKey): number {
+        const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey]
+        const totalLevels = this.R_actualGQUpgradeTotalLevels(upgradeKey)
+        return upgrade.effect ? upgrade.effect(totalLevels) : 0
+    }
+
+    R_getAntUpgradeEffect = <K extends AntUpgrades>(antUpgrade: K): AntUpgradeTypeMap[K] => {
+        const actualLevel = this.R_calculateTrueAntLevel(antUpgrade)
+        return this.R_antUpgradeData[antUpgrade].effect(actualLevel) as AntUpgradeTypeMap[K]
+    }
+
+    R_firstFiveFreeLevels = () => {
+        return (
+            this.R_getAntUpgradeEffect(AntUpgrades.FreeRunes).freeRuneLevel
+            + 7 * Math.min((this.gameData?.constantUpgrades[7] ?? 0), 1000)
+        )
+    }
+
+    R_antUpgradeData = {
+        [AntUpgrades.AntSpeed]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                let baseMul = 1.1
+                baseMul += (this.gameData?.researches[101] ?? 0) / 1000 // Research 5x1
+                baseMul += (this.gameData?.researches[162] ?? 0) / 1000 // Research 7x12
+                return {
+                    antSpeed: Decimal.pow(baseMul, n)
+                }
+            }
+        },
+        [AntUpgrades.Coins]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                let divisor = 1
+                if (this.gameData?.currentChallenge.ascension === 15) {
+                    divisor = 100 + 9900 * (1000 + n) / (1000 + n ** 2)
+                }
+                const baseExponent = 999999 + this.R_calculateSigmoidExponential(49000001, n / 3000)
+                const bonusExponent = 250 * n
+                const exponent = (baseExponent + bonusExponent) / divisor
+                const coinMult = Decimal.max(1, Decimal.pow(this.gameData?.ants.crumbs ?? 0, exponent))
+                return {
+                    crumbToCoinExp: exponent,
+                    coinMultiplier: coinMult
+                }
+            },
+        },
+        [AntUpgrades.Taxes]: {
+
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    taxReduction: 0.005 + 0.995 * Math.pow(0.99, n)
+                }
+            },
+        },
+        [AntUpgrades.AcceleratorBoosts]: {
+
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    acceleratorBoostMult: this.R_calculateSigmoidExponential(20, n / 1000)
+                }
+            },
+        },
+        [AntUpgrades.Multipliers]: {
+
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    multiplierMult: this.R_calculateSigmoidExponential(40, n / 1000)
+                }
+            },
+        },
+        [AntUpgrades.Offerings]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    offeringMult: Math.pow(1 + n / 10, 0.5)
+                }
+            },
+        },
+        [AntUpgrades.BuildingCostScale]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                const scalePercent = 3 * n
+                const buildingPowerMult = 1 + n / 100
+                return {
+                    buildingCostScale: scalePercent / 100,
+                    buildingPowerMult
+                }
+            },
+        },
+        [AntUpgrades.Salvage]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    salvage: 120 * (1 - Math.pow(0.995, n))
+                }
+            },
+        },
+        [AntUpgrades.FreeRunes]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    freeRuneLevel: 3000 * (1 - Math.pow(1 - 1 / 3000, n))
+                }
+            },
+        },
+        [AntUpgrades.Obtainium]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    obtainiumMult: Math.pow(1 + n / 10, 0.5)
+                }
+            },
+        },
+        [AntUpgrades.AntSacrifice]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                return {
+                    antSacrificeMultiplier: Math.pow(1 + n / 10, 0.5),
+                    elo: Math.round(5 * Math.min(200, n))
+                }
+            },
+        },
+        [AntUpgrades.Mortuus]: {
+            exemptFromCorruption: true,
+            effect: (n: number) => {
+                return {
+                    talismanUnlock: n > 0,
+                    globalSpeed: 2 - Math.pow(0.99, n)
+                }
+            },
+        },
+        [AntUpgrades.AntELO]: {
+            exemptFromCorruption: false,
+            effect: (n: number) => {
+                const antSacrificeLimitCount = n + 200 * Math.min(1, n)
+                const upgradeImprover = Math.min(n, +this.R_getAchievementReward('antSpeed2UpgradeImprover'))
+                const effectiveSacs = Math.min(
+                    antSacrificeLimitCount + upgradeImprover,
+                    this.gameData?.ants.antSacrificeCount ?? 0 + upgradeImprover
+                )
+                const antELO = effectiveSacs
+                return {
+                    antELO: antELO,
+                    antSacrificeLimitCount: antSacrificeLimitCount
+                }
+            },
+        },
+        [AntUpgrades.Mortuus2]: {
+            exemptFromCorruption: true,
+            effect: (n: number) => {
+                const talismanMaxLevels = Math.min(1200, Math.floor(n / 2))
+                const talismanEffectBuff = 1 + 0.9 * (1 - Math.pow(0.999, n)) + 0.005 * Math.min(20, n)
+                const ascensionSpeed = 2 - Math.pow(0.996, n)
+                return {
+                    talismanLevelIncreaser: talismanMaxLevels,
+                    talismanEffectBuff: talismanEffectBuff,
+                    ascensionSpeed: ascensionSpeed
+                }
+            },
+        },
+        [AntUpgrades.AscensionScore]: {
+            exemptFromCorruption: true,
+            effect: (n: number) => {
+                const ascensionScoreBase = 100000 * (1 - Math.pow(0.999, n))
+                const bankedCubes = 4 * Math.min(200, n) + n
+                return {
+                    cubesBanked: bankedCubes,
+                    ascensionScoreBase: ascensionScoreBase
+                }
+            },
+        },
+        [AntUpgrades.WowCubes]: {
+            exemptFromCorruption: true,
+            effect: (n: number) => {
+                return {
+                    wowCubes: 2 - Math.pow(0.999, n)
+                }
+            },
+        }
+    }
+
+    R_achievements: Achievement[] = [
+        {
+            pointValue: 15,
+            group: 'firstOwnedCoin',
+            reward: { acceleratorPower: () => 0.001 }
+        },
+        {
+            pointValue: 20,
+            group: 'firstOwnedCoin',
+        },
+        {
+            pointValue: 25,
+            group: 'firstOwnedCoin',
+            reward: { accelerators: () => Math.floor((this.gameData?.firstOwnedCoin ?? 0) / 500) }
+        },
+        {
+            pointValue: 30,
+            group: 'firstOwnedCoin',
+            reward: { multipliers: () => Math.floor((this.gameData?.firstOwnedCoin ?? 0) / 1000) }
+        },
+        {
+            pointValue: 35,
+            group: 'firstOwnedCoin',
+            reward: { accelBoosts: () => Math.floor((this.gameData?.firstOwnedCoin ?? 0) / 2000) }
+        },
+        {
+            pointValue: 15,
+            group: 'secondOwnedCoin',
+            reward: { acceleratorPower: () => 0.0015 }
+        },
+        {
+            pointValue: 20,
+            group: 'secondOwnedCoin',
+        },
+        {
+            pointValue: 25,
+            group: 'secondOwnedCoin',
+            reward: { accelerators: () => Math.floor((this.gameData?.secondOwnedCoin ?? 0) / 500) }
+        },
+        {
+            pointValue: 30,
+            group: 'secondOwnedCoin',
+            reward: { multipliers: () => Math.floor((this.gameData?.secondOwnedCoin ?? 0) / 1000) }
+        },
+        {
+            pointValue: 35,
+            group: 'secondOwnedCoin',
+            reward: { accelBoosts: () => Math.floor((this.gameData?.secondOwnedCoin ?? 0) / 2000) }
+        },
+        {
+            pointValue: 15,
+            group: 'thirdOwnedCoin',
+            reward: { acceleratorPower: () => 0.002 }
+        },
+        {
+            pointValue: 20,
+            group: 'thirdOwnedCoin',
+        },
+        {
+            pointValue: 25,
+            group: 'thirdOwnedCoin',
+            reward: { accelerators: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 500) }
+        },
+        {
+            pointValue: 30,
+            group: 'thirdOwnedCoin',
+            reward: { multipliers: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 1000) }
+        },
+        {
+            pointValue: 35,
+            group: 'thirdOwnedCoin',
+            reward: { accelBoosts: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 2000) }
+        },
+        {
+            pointValue: 15,
+            group: 'fourthOwnedCoin',
+            reward: { acceleratorPower: () => 0.002 }
+        },
+        {
+            pointValue: 20,
+            group: 'fourthOwnedCoin',
+        },
+        {
+            pointValue: 25,
+            group: 'fourthOwnedCoin',
+            reward: { accelerators: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 500) }
+        },
+        {
+            pointValue: 30,
+            group: 'fourthOwnedCoin',
+            reward: { multipliers: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 1000) }
+        },
+        {
+            pointValue: 35,
+            group: 'fourthOwnedCoin',
+            reward: { accelBoosts: () => Math.floor((this.gameData?.thirdOwnedCoin ?? 0) / 2000) }
+        },
+        {
+            pointValue: 15,
+            group: 'fifthOwnedCoin',
+            reward: { acceleratorPower: () => 0.003 }
+        },
+        {
+            pointValue: 20,
+            group: 'fifthOwnedCoin',
+        },
+        {
+            pointValue: 25,
+            group: 'fifthOwnedCoin',
+            reward: { accelerators: () => Math.floor((this.gameData?.fifthOwnedCoin ?? 0) / 500) }
+        },
+        {
+            pointValue: 30,
+            group: 'fifthOwnedCoin',
+            reward: { multipliers: () => Math.floor((this.gameData?.fifthOwnedCoin ?? 0) / 1000) }
+        },
+        {
+            pointValue: 35,
+            group: 'fifthOwnedCoin',
+            reward: { accelBoosts: () => Math.floor((this.gameData?.fifthOwnedCoin ?? 0) / 2000) }
+        },
+        {
+            pointValue: 5,
+            group: 'prestigePointGain',
+        },
+        {
+            pointValue: 10,
+            group: 'prestigePointGain',
+            reward: { crystalMultiplier: () => Math.max(1, Decimal.log(this.gameData?.prestigePoints ?? 0, Math.E)) },
+        },
+        {
+            pointValue: 15,
+            group: 'prestigePointGain',
+        },
+        {
+            pointValue: 5,
+            group: 'transcendPointGain',
+        },
+        {
+            pointValue: 10,
+            group: 'transcendPointGain',
+        },
+        {
+            pointValue: 15,
+            group: 'transcendPointGain',
+            reward: { taxReduction: () => 0.95 }
+        },
+        {
+            pointValue: 20,
+            group: 'transcendPointGain',
+            reward: { taxReduction: () => 0.95 }
+        },
+        {
+            pointValue: 25,
+            group: 'transcendPointGain',
+            reward: { taxReduction: () => 0.9 }
+        },
+        {
+            pointValue: 5,
+            group: 'reincarnationPointGain',
+            reward: { particleGain: () => 2 },
+        },
+        {
+            pointValue: 20,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 25,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 30,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 35,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 5,
+            group: 'ungrouped',
+            reward: { multipliers: () => 1 },
+        },
+        {
+            pointValue: 10,
+            group: 'ungrouped',
+            reward: { multipliers: () => 2 },
+        },
+        {
+            pointValue: 15,
+            group: 'ungrouped',
+            reward: { multipliers: () => 4 },
+        },
+        {
+            pointValue: 20,
+            group: 'ungrouped',
+            reward: { accelerators: () => 2 },
+        },
+        {
+            pointValue: 25,
+            group: 'ungrouped',
+            reward: { accelerators: () => 4 },
+        },
+        {
+            pointValue: 30,
+            group: 'ungrouped',
+            reward: { accelerators: () => 8 },
+        },
+        {
+            pointValue: 35,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 5,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 10,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 15,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 15,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 20,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 30,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 40,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 10,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 10,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 15,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 20,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 25,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 25,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 50,
+            group: 'ungrouped',
+            reward: { conversionExponent: () => 0.01 },
+        },
+        {
+            pointValue: 5,
+            group: 'challenge1',
+        },
+        {
+            pointValue: 10,
+            group: 'challenge1',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge1',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge1',
+            reward: { taxReduction: () => 0.96 }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge1',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge2',
+        },
+        {
+            pointValue: 10,
+            group: 'challenge2',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge2',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge2',
+            reward: { taxReduction: () => 0.96 }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge2',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge3',
+        },
+        {
+            pointValue: 10,
+            group: 'challenge3',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge3',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge3',
+            reward: { taxReduction: () => 0.96 }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge3',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge4',
+        },
+        {
+            pointValue: 10,
+            group: 'challenge4',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge4',
+        },
+        {
+            pointValue: 20,
+            group: 'challenge4',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge4',
+            reward: { taxReduction: () => 0.96 }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge4',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge5',
+        },
+        {
+            pointValue: 10,
+            group: 'challenge5',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge5',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge5',
+            reward: { taxReduction: () => 0.96 }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge5',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge6',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge6',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge6',
+            reward: { taxReduction: () => 0.95 }
+        },
+        {
+            pointValue: 30,
+            group: 'challenge6',
+            reward: {
+            }
+        },
+        {
+            pointValue: 35,
+            group: 'challenge6',
+        },
+        {
+            pointValue: 5,
+            group: 'challenge7',
+            reward: { diamondUpgrade18: () => 0 },
+        },
+        {
+            pointValue: 15,
+            group: 'challenge7',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge7',
+            reward: { taxReduction: () => 0.95 },
+        },
+        {
+            pointValue: 30,
+            group: 'challenge7',
+        },
+        {
+            pointValue: 35,
+            group: 'challenge7',
+            reward: { chronosTalisman: () => 1 }
+        },
+        {
+            pointValue: 5,
+            group: 'challenge8',
+            reward: { diamondUpgrade19: () => 1 },
+        },
+        {
+            pointValue: 15,
+            group: 'challenge8',
+        },
+        {
+            pointValue: 25,
+            group: 'challenge8',
+            reward: { taxReduction: () => 0.95 }
+        },
+        {
+            pointValue: 30,
+            group: 'challenge8',
+        },
+        {
+            pointValue: 35,
+            group: 'challenge8',
+            reward: { midasTalisman: () => 1 }
+        },
+        {
+            pointValue: 5,
+            group: 'challenge9',
+            reward: { diamondUpgrade20: () => 1 },
+        },
+        {
+            pointValue: 10,
+            group: 'challenge9',
+            reward: { talismanPower: () => 0.02 }
+        },
+        {
+            pointValue: 15,
+            group: 'challenge9',
+            reward: { talismanPower: () => 0.02 }
+        },
+        {
+            pointValue: 20,
+            group: 'challenge9',
+            reward: { sacrificeMult: () => 1.25, experientiaAutobuy: () => 1 }
+        },
+        {
+            pointValue: 30,
+            group: 'challenge9',
+        },
+        {
+            pointValue: 35,
+            group: 'challenge9',
+            reward: { metaphysicsTalisman: () => 1 }
+        },
+        {
+            pointValue: 5,
+            group: 'challenge10',
+        },
+        {
+            pointValue: 15,
+            group: 'challenge10',
+        },
+        {
+            pointValue: 20,
+            group: 'challenge10',
+            reward: { talismanPower: () => 0.025 }
+        },
+        {
+            pointValue: 25,
+            group: 'challenge10',
+            reward: { talismanPower: () => 0.025 }
+        },
+        {
+            pointValue: 30,
+            group: 'challenge10',
+        },
+        {
+            pointValue: 35,
+            group: 'challenge10',
+            reward: { polymathTalisman: () => 1 }
+        },
+        {
+            pointValue: 10,
+            group: 'accelerators',
+            reward: { acceleratorPower: () => 0.01 }
+        },
+        {
+            pointValue: 20,
+            group: 'accelerators',
+            reward: { accelerators: () => 5 }
+        },
+        {
+            pointValue: 25,
+            group: 'accelerators',
+            reward: { accelerators: () => 12 }
+        },
+        {
+            pointValue: 30,
+            group: 'accelerators',
+            reward: { accelerators: () => 25 }
+        },
+        {
+            pointValue: 35,
+            group: 'accelerators',
+            reward: { accelerators: () => 50 }
+        },
+        {
+            pointValue: 10,
+            group: 'multipliers',
+            reward: { multipliers: () => 1 }
+        },
+        {
+            pointValue: 20,
+            group: 'multipliers',
+            reward: { multipliers: () => 1 }
+        },
+        {
+            pointValue: 25,
+            group: 'multipliers',
+            reward: { multipliers: () => 3 }
+        },
+        {
+            pointValue: 30,
+            group: 'multipliers',
+            reward: { multipliers: () => 6 }
+        },
+        {
+            pointValue: 35,
+            group: 'multipliers',
+            reward: { multipliers: () => 10 }
+        },
+        {
+            pointValue: 5,
+            group: 'antCrumbs',
+            reward: { antSpeed: () => Decimal.log(this.gameData?.ants.crumbs.plus(10) ?? 0, 10) }
+        },
+        {
+            pointValue: 15,
+            group: 'antCrumbs',
+            reward: { antSpeed: () => 1.2 }
+        },
+        {
+            pointValue: 20,
+            group: 'antCrumbs',
+            reward: { antSpeed: () => 1.25 }
+        },
+        {
+            pointValue: 25,
+            group: 'antCrumbs',
+            reward: { antSpeed: () => 1.4, antSacrificeUnlock: () => 1, antAutobuyers: () => 1 }
+        },
+        {
+            pointValue: 30,
+            group: 'antCrumbs',
+            reward: { antSpeed: () => 1 + (this.gameData?.ants.immortalELO ?? 0) / 1000, scientiaAutobuy: () => 1 }
+        },
+        {
+            pointValue: 5,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1, inceptusAutobuy: () => 1, fortunaeAutobuy: () => 1 },
+        },
+        {
+            pointValue: 10,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1, tributumAutobuy: () => 1 },
+        },
+        {
+            pointValue: 15,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1, celeritasAutobuy: () => 1, exploratoremAutobuy: () => 1 },
+        },
+        {
+            pointValue: 20,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1, sacrificiumAutobuy: () => 1 },
+        },
+        {
+            pointValue: 25,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1 },
+        },
+        {
+            pointValue: 30,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1 },
+        },
+        {
+            pointValue: 35,
+            group: 'sacMult',
+            reward: { antAutobuyers: () => 1 },
+        },
+        {
+            pointValue: 5,
+            group: 'ascensionCount',
+            reward: { freeAntUpgrades: () => 2 }
+        },
+        {
+            pointValue: 10,
+            group: 'ascensionCount',
+            reward: { preserveAnthillCount: () => 1, antSacrificeCountMultiplier: () => 2 }
+        },
+        {
+            pointValue: 20,
+            group: 'ascensionCount',
+            reward: { wowSquareTalisman: () => 1 }
+        },
+        {
+            pointValue: 25,
+            group: 'ascensionCount',
+            reward: {
+            }
+        },
+        {
+            pointValue: 30,
+            group: 'ascensionCount',
+            reward: {
+            }
+        },
+        {
+            pointValue: 35,
+            group: 'ascensionCount',
+            reward: {
+            }
+        },
+        {
+            pointValue: 20,
+            group: 'constant',
+            reward: { wowCubeGain: () => 1 + Decimal.log(this.gameData?.ascendShards.add(1) ?? 0, 10) / 400 }
+        },
+        {
+            pointValue: 30,
+            group: 'constant',
+            reward: {
+            }
+        },
+        {
+            pointValue: 35,
+            group: 'constant',
+            reward: { wowPlatonicGain: () => 1 + 19 * Math.min(1, Decimal.log(this.gameData?.ascendShards.plus(1) ?? 0, 10) / 100000) }
+        },
+        {
+            pointValue: 10,
+            group: 'challenge11',
+            reward: { statTracker: () => 1 }
+        },
+        {
+            pointValue: 20,
+            group: 'challenge11',
+        },
+        {
+            pointValue: 30,
+            group: 'challenge11',
+        },
+        {
+            pointValue: 40,
+            group: 'challenge11',
+        },
+        {
+            pointValue: 50,
+            group: 'challenge11',
+        },
+        {
+            pointValue: 60,
+            group: 'challenge11',
+            reward: { ascensionCountAdditive: () => (this.gameData?.ascensionCounter ?? 0) * 2 }
+        },
+        {
+            pointValue: 70,
+            group: 'challenge11',
+            reward: { talismanPower: () => 0.01 }
+        },
+        {
+            pointValue: 10,
+            group: 'challenge12',
+            reward: { ascensionRewardScaling: () => 1 }
+        },
+        {
+            pointValue: 20,
+            group: 'challenge12',
+        },
+        {
+            pointValue: 30,
+            group: 'challenge12',
+        },
+        {
+            pointValue: 40,
+            group: 'challenge12',
+        },
+        {
+            pointValue: 50,
+            group: 'challenge12',
+        },
+        {
+            pointValue: 60,
+            group: 'challenge12',
+            reward: { ascensionCountAdditive: () => (this.gameData?.ascensionCounter ?? 0) * 2 }
+        },
+        {
+            pointValue: 70,
+            group: 'challenge12',
+            reward: { talismanPower: () => 0.01 }
+        },
+        {
+            pointValue: 10,
+            group: 'challenge13',
+        },
+        {
+            pointValue: 20,
+            group: 'challenge13',
+        },
+        {
+            pointValue: 30,
+            group: 'challenge13',
+        },
+        {
+            pointValue: 40,
+            group: 'challenge13',
+        },
+        {
+            pointValue: 50,
+            group: 'challenge13',
+        },
+        {
+            pointValue: 60,
+            group: 'challenge13',
+            reward: { ascensionCountAdditive: () => (this.gameData?.ascensionCounter ?? 0) * 2 }
+        },
+        {
+            pointValue: 70,
+            group: 'challenge13',
+            reward: { talismanPower: () => 0.01 }
+        },
+        {
+            pointValue: 10,
+            group: 'challenge14',
+        },
+        {
+            pointValue: 20,
+            group: 'challenge14',
+        },
+        {
+            pointValue: 30,
+            group: 'challenge14',
+        },
+        {
+            pointValue: 40,
+            group: 'challenge14',
+        },
+        {
+            pointValue: 50,
+            group: 'challenge14',
+        },
+        {
+            pointValue: 60,
+            group: 'challenge14',
+            reward: {
+            }
+        },
+        {
+            pointValue: 20,
+            group: 'speedBlessing',
+        },
+        {
+            pointValue: 10,
+            group: 'speedSpirit',
+        },
+        {
+            pointValue: 30,
+            group: 'speedSpirit',
+        },
+        {
+            pointValue: 50,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 50,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 50,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 100,
+            group: 'ungrouped',
+            reward: {
+            }
+        },
+        {
+            pointValue: 150,
+            group: 'ungrouped',
+            reward: {
+            }
+        },
+        {
+            pointValue: 50,
+            group: 'ungrouped',
+        },
+        {
+            pointValue: 40,
+            group: 'ascensionScore',
+            reward: { wowHypercubeGain: () => 1.1 }
+        },
+        {
+            pointValue: 45,
+            group: 'ascensionScore',
+            reward: { wowCubeGain: () => 1.1 }
+        },
+        {
+            pointValue: 50,
+            group: 'ascensionScore',
+            reward: { wowTesseractGain: () => 1.1 }
+        },
+        {
+            pointValue: 55,
+            group: 'ascensionScore',
+            reward: { wowPlatonicGain: () => 1.1, overfluxConversionRate: () => 1.05 }
+        },
+        {
+            pointValue: 60,
+            group: 'ascensionScore',
+            reward: { overfluxConversionRate: () => 1.05 }
+        },
+        {
+            pointValue: 65,
+            group: 'ascensionScore',
+            reward: { wowHepteractGain: () => 1.1 }
+        },
+        {
+            pointValue: 70,
+            group: 'ascensionScore',
+            reward: { ascensionScore: () => Math.pow(1.01, this.gameData?.hepteracts.abyss.TIMES_CAP_EXTENDED ?? 0) }
+        },
+        {
+            pointValue: 40,
+            group: 'ascensionCount',
+            reward: { ascensionCountMultiplier: () => 1.1 }
+        },
+        {
+            pointValue: 45,
+            group: 'ascensionCount',
+            reward: { ascensionCountMultiplier: () => 1.1 }
+        },
+        {
+            pointValue: 50,
+            group: 'ascensionCount',
+        },
+        {
+            pointValue: 55,
+            group: 'ascensionCount',
+        },
+        {
+            pointValue: 60,
+            group: 'ascensionCount',
+        },
+        {
+            pointValue: 65,
+            group: 'ascensionCount',
+        },
+        {
+            pointValue: 70,
+            group: 'ascensionCount',
+            reward: { quarkGain: () => 1 + 0.1 * Math.min((this.gameData?.ascensionCount ?? 0) / 1e15, 1) }
+        },
+        {
+            pointValue: 40,
+            group: 'constant',
+            reward: { ascensionScore: () => 1 + Math.min(Decimal.log((this.gameData?.ascendShards.add(1) ?? 0), 10) / 1e5, 1) }
+        },
+        {
+            pointValue: 55,
+            group: 'constant',
+            reward: {
+            }
+        },
+        {
+            pointValue: 60,
+            group: 'constant',
+            reward: { platonicToHypercubes: () => Math.min(1, Decimal.log((this.gameData?.ascendShards.add(1) ?? 0), 10) / 1e6) }
+        },
+        {
+            pointValue: 50,
+            group: 'prestigePointGain',
+        },
+        {
+            pointValue: 50,
+            group: 'transcendPointGain',
+        },
+        {
+            pointValue: 40,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 45,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 50,
+            group: 'reincarnationPointGain',
+        },
+        {
+            pointValue: 40,
+            group: 'sacMult',
+        },
+        {
+            pointValue: 45,
+            group: 'sacMult',
+        },
+        {
+            pointValue: 50,
+            reward: { antAutobuyers: () => 1 },
+            group: 'sacMult',
+        },
+        {
+            pointValue: 40,
+            group: 'speedBlessing',
+        },
+        {
+            pointValue: 60,
+            group: 'speedBlessing',
+        },
+        {
+            pointValue: 80,
+            group: 'speedBlessing',
+        },
+        {
+            pointValue: 100,
+            group: 'speedBlessing',
+        },
+        {
+            pointValue: 50,
+            group: 'speedSpirit',
+        },
+        {
+            pointValue: 70,
+            group: 'speedSpirit',
+        },
+        {
+            pointValue: 90,
+            group: 'speedSpirit',
+        },
+        {
+            pointValue: 2,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 6,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 10,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 14,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 18,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 22,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 24,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 26,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 28,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 30,
+            group: 'runeLevel',
+        },
+        {
+            pointValue: 2,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 6,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 10,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 14,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 18,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 22,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 26,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 30,
+            group: 'runeFreeLevel',
+        },
+        {
+            pointValue: 5,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 10,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 15,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 20,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 25,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 30,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 35,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 40,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 45,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 50,
+            group: 'campaignTokens',
+        },
+        {
+            pointValue: 2,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 4,
+            group: 'prestigeCount',
+            reward: { prestigeCountMultiplier: () => Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.prestigeCount ?? 0))) }
+        },
+        {
+            pointValue: 6,
+            group: 'prestigeCount',
+            reward: { duplicationRuneUnlock: () => 1 }
+        },
+        {
+            pointValue: 8,
+            group: 'prestigeCount',
+            reward: { offeringBonus: () => 1 + 0.02 * Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.prestigeCount ?? 0))) }
+        },
+        {
+            pointValue: 10,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 12,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 14,
+            group: 'prestigeCount',
+            reward: { transcendToPrestige: () => 1 }
+        },
+        {
+            pointValue: 16,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 18,
+            group: 'prestigeCount',
+            reward: { transcensionCountMultiplier: () => Math.min(4, 1.25 + 2.75 * Math.floor((this.gameData?.prestigecounter ?? 0) / 10)) }
+        },
+        {
+            pointValue: 20,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 22,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 24,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 26,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 28,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 30,
+            group: 'prestigeCount',
+        },
+        {
+            pointValue: 3,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 6,
+            group: 'transcensionCount',
+            reward: { transcensionCountMultiplier: () => Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.transcendCount ?? 0))) }
+        },
+        {
+            pointValue: 9,
+            group: 'transcensionCount',
+            reward: { salvage: () => 2 * Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.transcendCount ?? 0))) }
+        },
+        {
+            pointValue: 12,
+            group: 'transcensionCount',
+            reward: { prismRuneUnlock: () => 1 }
+        },
+        {
+            pointValue: 15,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 18,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 21,
+            group: 'transcensionCount',
+            reward: { reincarnationToTranscend: () => 1 }
+        },
+        {
+            pointValue: 24,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 27,
+            group: 'transcensionCount',
+            reward: { reincarnationCountMultiplier: () => Math.min(4, 1.25 + 2.75 * Math.floor((this.gameData?.prestigecounter ?? 0) / 1000)) }
+        },
+        {
+            pointValue: 30,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 33,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 36,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 39,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 42,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 45,
+            group: 'transcensionCount',
+        },
+        {
+            pointValue: 4,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 8,
+            group: 'reincarnationCount',
+            reward: { reincarnationCountMultiplier: () => Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.reincarnationCount ?? 0))) }
+        },
+        {
+            pointValue: 12,
+            group: 'reincarnationCount',
+            reward: { obtainiumBonus: () => 1 + 0.02 * Math.max(1, 1 + Math.floor(Math.log10(this.gameData?.reincarnationCount ?? 0))) }
+        },
+        {
+            pointValue: 16,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 20,
+            group: 'reincarnationCount',
+            reward: { thriftRuneUnlock: () => 1 }
+        },
+        {
+            pointValue: 24,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 28,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 32,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 36,
+            group: 'reincarnationCount',
+            reward: {
+            }
+        },
+        {
+            pointValue: 40,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 44,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 48,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 52,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 56,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 60,
+            group: 'reincarnationCount',
+        },
+        {
+            pointValue: 3,
+            group: 'sacCount',
+            reward: { freeAntUpgrades: () => 1 }
+        },
+        {
+            pointValue: 6,
+            group: 'sacCount',
+            reward: { antSacrificeCountMultiplier: () => 2, hicAutobuy: () => 1 }
+        },
+        {
+            pointValue: 9,
+            group: 'sacCount',
+            reward: { autoAntSacrifice: () => 1 }
+        },
+        {
+            pointValue: 12,
+            group: 'sacCount',
+            reward: { antELOAdditiveMultiplier: () => 0.01, praemoenioAutobuy: () => 1 }
+        },
+        {
+            pointValue: 15,
+            group: 'sacCount',
+            reward: { antELOAdditive: () => 25 }
+        },
+        {
+            pointValue: 17,
+            group: 'sacCount',
+            reward: { antSpeed2UpgradeImprover: () => this.R_calculateSynergismLevel(), phylacteriumAutobuy: () => 1 }
+        },
+        {
+            pointValue: 19,
+            group: 'sacCount',
+        },
+        {
+            pointValue: 21,
+            group: 'sacCount',
+        },
+        {
+            pointValue: 23,
+            group: 'sacCount',
+        },
+        {
+            pointValue: 25,
+            group: 'sacCount',
+            reward: { preserveAnthillCountSingularity: () => 1 }
+        },
+        {
+            pointValue: 40,
+            group: 'sacCount',
+        }
+    ]
+
+    R_progressiveAchievements: Record<ProgressiveAchievements, ProgressiveAchievement> = {
+        runeLevel: {
+            maxPointValue: 1000,
+            pointsAwarded: (cached: number) => {
+                console.log(cached)
+                return Math.min(200, Math.floor(cached / 1000)) + Math.min(400, Math.floor(cached / 2500))
+                    + Math.min(400, Math.floor(cached / 12500))
+            }
+        },
+        freeRuneLevel: {
+            maxPointValue: 500,
+            pointsAwarded: (cached: number) => {
+                return Math.min(100, Math.floor(cached / 250)) + Math.min(200, Math.floor(cached / 750))
+                    + Math.min(200, Math.floor(cached / 2500))
+            }
+        },
+        antMasteries: {
+            maxPointValue: 360,
+            pointsAwarded: (_cached: number) => {
+                let pointValue = 0
+                for (let ant = AntProducers.Workers; ant <= LAST_ANT_PRODUCER; ant++) {
+                    pointValue += 3 * (this.gameData?.ants.masteries[ant].highestMastery ?? 0)
+                    if ((this.gameData?.ants.masteries[ant].highestMastery ?? 0) >= 12) {
+                        pointValue += 4
+                    }
+                }
+                return pointValue
+            },
+        },
+        rebornELO: {
+            maxPointValue: 1000,
+            pointsAwarded: (_cached: number) => {
+                const leaderboardELO = this.R_calculateLeaderboardValue(this.gameData?.ants.highestRebornELOEver ?? [])
+                return Math.min(100, Math.floor(leaderboardELO / 100))
+                    + Math.min(150, Math.floor(leaderboardELO / 1000))
+                    + Math.min(150, Math.floor(leaderboardELO / 9000))
+                    + Math.min(200, Math.floor(leaderboardELO / 75000))
+                    + Math.min(400, Math.floor(leaderboardELO / 150000))
+            },
+        },
+        singularityCount: {
+            maxPointValue: 3600,
+            pointsAwarded: (_cached: number) => {
+                return 9 * (this.gameData?.highestSingularityCount ?? 0)
+                    + 3 * Math.max(0, (this.gameData?.highestSingularityCount ?? 0) - 100)
+                    + 3 * Math.max(0, (this.gameData?.highestSingularityCount ?? 0) - 200)
+            },
+        },
+        ambrosiaCount: {
+            maxPointValue: 800,
+            pointsAwarded: (cached: number) => {
+                return Math.min(200, Math.floor(cached / 100))
+                    + Math.min(200, Math.floor(cached / 10000))
+                    + Math.min(400, Math.floor(400 * Math.sqrt(cached / 1e8)))
+            },
+        },
+        redAmbrosiaCount: {
+            maxPointValue: 1000,
+            pointsAwarded: (cached: number) => {
+                return Math.min(200, Math.floor(cached / 25))
+                    + Math.min(200, Math.floor(cached / 2500))
+                    + Math.min(400, Math.floor(400 * cached / 5e6))
+                    + Math.min(200, Math.floor(200 * cached / 1.25e7))
+            },
+        },
+        exalts: {
+            maxPointValue: this.R_maxAPFromChallenges,
+            pointsAwarded: (_cached: number) => {
+                let pointValue = 0
+                for (const chal of Object.keys(this.gameData?.singularityChallenges ?? "") as SingularityChallengeDataKeys[]) {
+                    pointValue += this.getSingChalApReward(chal)
+                }
+                return pointValue
+            },
+        },
+        singularityUpgrades: {
+            maxPointValue: this.R_maxGoldenQuarkUpgradeAP,
+            pointsAwarded: (_cached: number) => {
+                let pointValue = 0
+                // Go through all sing upgrades. if the max level is NOT -1, add 5 points if the upgrade level equals max level
+                for (const upgradeKey of Object.keys(
+                    goldenQuarkUpgradeMaxLevels
+                ) as GoldenQuarkUpgradeKey[]) {
+                    const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey].maxLevel
+                    const playerLevel =
+                        this.gameData?.goldenQuarkUpgrades[upgradeKey]?.level ?? 0
+
+                    if (maxLevel !== -1 && playerLevel >= maxLevel) {
+                        pointValue += 5
+                    }
+                }
+                return pointValue;
+            },
+        },
+        octeractUpgrades: {
+            maxPointValue: this.R_maxOcteractUpgradeAP,
+            pointsAwarded: (_cached: number) => {
+                let pointValue = 0
+                // Go through all octeract upgrades. if the max level is NOT -1, add 8 points if the upgrade level equals max level
+                for (const upgradeKey of Object.keys(octeractUpgradeMaxLevels) as OcteractUpgradeKey[]) {
+                    const maxLevel = octeractUpgradeMaxLevels[upgradeKey].maxLevel
+                    const playerLevel =
+                        this.gameData?.octUpgrades[upgradeKey]?.level ?? 0
+                    if (maxLevel !== -1 && playerLevel >= maxLevel) {
+                        pointValue += 8
+                    }
+                }
+                return pointValue
+            },
+        },
+        redAmbrosiaUpgrades: {
+            maxPointValue: this.R_maxRedAmbrosiaUpgradeAP,
+            pointsAwarded: () => {
+                let pointValue = 0
+                for (const upgradeKey of Object.keys(redAmbrosiaUpgradeCalculationCollection) as RedAmbrosiaUpgradeKey[]) {
+                    const maxLevel = redAmbrosiaUpgradeCalculationCollection[upgradeKey].maxLevel
+                    const playerLevel = this.R_calculateRedAmbrosiaUpgradeValue(upgradeKey);
+                    if (maxLevel !== -1 && playerLevel >= maxLevel) {
+                        pointValue += 10
+                    }
+                }
+                return pointValue
+            },
+        },
+        talismanRarities: {
+            maxPointValue: this.R_maxTalismansRarityAP,
+            pointsAwarded: (cached: number) => {
+                return 5 * cached
+            },
+        }
+    }
+
     R_calculateConsumableEventBuff(buff: EventBuffType) {
         if (!this.eventData) return 0;
 
@@ -334,6 +2160,31 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         this.#updateCache(cacheName, { value: val, cachedBy: calculationVars });
 
         return val;
+    }
+
+
+
+    getSingChalApReward(chal: SingularityChallengeDataKeys): number {
+        if (!this.gameData) return 0;
+
+        const chalData = this.R_singularityChallengeData[chal];
+        if (!chalData) return 0;
+
+        const completions =
+            this.gameData.singularityChallenges[chal]?.completions ?? 0;
+
+        return chalData.achievementPointValue(completions);
+    }
+
+
+
+    R_calculateLeaderboardValue = (leaderboard: Array<{ elo: number; sacrificeId: number }>): number => {
+        let total = 0
+        const LEADERBOARD_WEIGHTS = [1, 0.8, 0.6, 0.4, 0.2]
+        for (let i = 0; i < Math.min(leaderboard.length, LEADERBOARD_WEIGHTS.length); i++) {
+            total += leaderboard[i].elo * LEADERBOARD_WEIGHTS[i]
+        }
+        return total
     }
 
     // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Calculate.ts#L2340
@@ -685,23 +2536,23 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
-    R_calculateSynergismLevel() {
+    R_calculateSynergismLevel(): number {
         if (!this.gameData) return 0;
         const data = this.gameData;
 
         let points = 0
 
-        points += achievements.reduce((sum, ach, index) => {
+        points += this.R_achievements.reduce((sum, ach, index) => {
             return sum + (data.achievements[index] ? ach.pointValue : 0)
         }, 0)
         /* later?
-        for (const k of Object.keys(progressiveAchievements) as ProgressiveAchievements[]) {
-            const pointsAwarded = progressiveAchievements[k].pointsAwarded(player.progressiveAchievements[k])
+        for (const k of Object.keys(progressivethis.R_achievements) as Progressivethis.R_achievements[]) {
+            const pointsAwarded = progressivethis.R_achievements[k].pointsAwarded(this.gameData?.progressivethis.R_achievements[k])
             achievementPoints += pointsAwarded
-            progressiveAchievements[k].rewardedAP = pointsAwarded
+            progressivethis.R_achievements[k].rewardedAP = pointsAwarded
             updateProgressiveCache(k, sourcedFromUpdate)
         }
-
+     
         let level: number;
         if (points < 2500) {
             level = Math.floor(points / 50)
@@ -709,10 +2560,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             level = 50 + Math.floor((points - 2500) / 100)
         }
         return level
-    }*/}
-
-
-
+    }*/
+        return 0;
+    }
 
     R_calculateRedAmbrosiaUpgradeValue(
         upgradeName: keyof RedAmbrosiaUpgrades,
@@ -1314,7 +3164,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         )
 
         let baseDebuffMultiplier = 1
-        baseDebuffMultiplier *= 1 - Math.min(300, data.shopUpgrades.shopHorseShoe * this.R_calculateHorseShoeLevel()) / 1000
+        baseDebuffMultiplier *= 1 - Math.min(300, data.shopUpgrades.shopHorseShoe * this.calculateHorseShoeLevel()) / 1000
 
         let val;
 
@@ -1385,7 +3235,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduce_vals ? reduced : vals;
     }
 
-    calculateChallenge15Reward(rewardName: keyof typeof challenge15Rewards) {
+    R_calculateChallenge15Reward(rewardName: keyof typeof challenge15Rewards) {
         if (!this.gameData) {
             HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
             return 0;
@@ -1449,7 +3299,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             // PlatonicOMEGA
             1 + 0.002 * this.getCorruptionTotalLevel() * data.platonicUpgrades[15],
             // Challenge15
-            this.calculateChallenge15Reward('ascensionSpeed'),
+            this.R_calculateChallenge15Reward('ascensionSpeed'),
             // CookieUpgrade9
             1 + (1 / 400) * cube59,
             // IntermediatePack
@@ -1498,82 +3348,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
 
         return base;
-    }
-
-    R_calculateFreeAntUpgradeLevels(): number {
-        if (!this.gameData) return 1;
-        const data = this.gameData;
-
-        const CalcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number) => { // ECC stands for "Effective Challenge Completions"
-            let effective = 0
-            switch (type) {
-                case 'transcend':
-                    effective += Math.min(100, completions)
-                    effective += 1 / 20 * (Math.min(1000, Math.max(100, completions)) - 100)
-                    effective += 1 / 100 * (Math.max(1000, completions) - 1000)
-                    return effective
-                case 'reincarnation':
-                    effective += Math.min(25, completions)
-                    effective += 1 / 2 * (Math.min(75, Math.max(25, completions)) - 25)
-                    effective += 1 / 10 * (Math.max(75, completions) - 75)
-                    return effective
-                case 'ascension':
-                    effective += Math.min(10, completions)
-                    effective += 1 / 2 * (Math.max(10, completions) - 10)
-                    return effective
-            }
-        }
-
-        let bonusLevels = 0;
-        bonusLevels += CalcECC('reincarnation', data.challengecompletions[9]);
-        bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)));
-        bonusLevels += 12 * CalcECC('ascension', data.challengecompletions[11]);
-        bonusLevels += 2 * data.researches[97];
-        bonusLevels += 2 * data.researches[98];
-        bonusLevels += data.researches[102];
-        bonusLevels += 2 * data.researches[132];
-        bonusLevels += Math.floor((1 / 200) * data.researches[200]);
-        bonusLevels += this.R_calculateAchievementReward();
-        bonusLevels *= this.calculateChallenge15Reward("bonusAntLevel");
-
-        if (data.currentChallenge.ascension === 11) {
-            bonusLevels += Math.floor(
-                3 * data.challengecompletions[8]
-                + 5 * data.challengecompletions[9]
-            )
-            return bonusLevels
-        }
-
-        return bonusLevels
-    }
-
-    R_calculateAchievementReward() {
-        if (!this.gameData) return 1;
-        const data = this.gameData;
-        const freeAntAchievements = achievements
-            .map((ach, index) => {
-                if (ach.reward && ach.reward.includes("freeAntUpgrades")) {
-                    const match = ach.reward.match(/freeAntUpgrades:\s*\(\)\s*=>\s*(\d+)/);
-                    if (match) {
-                        return {
-                            index,
-                            freeAntUpgrades: Number(match[1])
-                        };
-                    }
-                }
-                return null;
-            })
-            .filter(item => item !== null) as { index: number; freeAntUpgrades: number }[];
-
-        // Step 2: Sum freeAntUpgrades for unlocked achievements
-        let totalFreeAntUpgrades = 0;
-
-        freeAntAchievements.forEach(ach => {
-            if (data.achievements[ach.index] === 1) {
-                totalFreeAntUpgrades += ach.freeAntUpgrades;
-            }
-        });
-        return totalFreeAntUpgrades;
     }
 
     R_calculatePolymathAscSpeed(): number {
@@ -1735,19 +3509,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
 
     R_calculateMortuus2AscensionSpeed() {
-        if (!this.gameData) return 0;
-
-        const data = this.gameData;
-        const mortuus2Level = data.ants.upgrades[15];
-        const freeLevels = this.R_calculateFreeAntUpgradeLevels();
-        let totalLevels;
-        if (data.currentChallenge.ascension === 11) {
-            totalLevels = Math.min(data.ants.upgrades[15], freeLevels);
-        } else {
-            totalLevels = (data.ants.upgrades[15]
-                + Math.min(data.ants.upgrades[15], freeLevels))
-        }
-
+        const totalLevels = this.R_calculateTrueAntLevel(AntUpgrades.Mortuus2);
         const ascensionSpeed = 2 - Math.pow(0.996, totalLevels);
         return ascensionSpeed;
     }
@@ -1839,7 +3601,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return Math.max(1, baseEffect / divisor);
     }
 
-    CalcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number) => { // ECC stands for "Effective Challenge Completions"
+    R_CalcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number) => { // ECC stands for "Effective Challenge Completions"
         let effective = 0
         switch (type) {
             case 'transcend':
@@ -1865,16 +3627,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const data = this.gameData;
 
         let bonusLevels = 0
-        bonusLevels += this.CalcECC('reincarnation', data.challengecompletions[9])
+        bonusLevels += this.R_CalcECC('reincarnation', data.challengecompletions[9])
         bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)))
-        bonusLevels += 12 * this.CalcECC('ascension', data.challengecompletions[11])
+        bonusLevels += 12 * this.R_CalcECC('ascension', data.challengecompletions[11])
         bonusLevels += 2 * data.researches[97]
         bonusLevels += 2 * data.researches[98]
         bonusLevels += data.researches[102]
         bonusLevels += 2 * data.researches[132]
         bonusLevels += Math.floor((1 / 200) * data.researches[200])
-        bonusLevels += +getAchievementReward('freeAntUpgrades')
-        bonusLevels *= Globals.challenge15Rewards.bonusAntLevel.value
+        bonusLevels += +this.R_getAchievementReward('freeAntUpgrades')
+        bonusLevels *= this.R_calculateChallenge15Reward('bonusAntLevel')
 
         if (data.currentChallenge.ascension === 11) {
             bonusLevels += Math.floor(
@@ -1887,13 +3649,17 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return bonusLevels
     }
 
+    R_getAchievementReward = (rewardType: AchievementRewards): number | boolean => {
+        return this.R_AchRewards[rewardType]()
+    }
+
     R_calculateTrueAntLevel(antUpgrade: AntUpgrades): number {
         if (!this.gameData) return 0;
 
         const data = this.gameData;
 
         const freeLevels = this.R_computeFreeAntUpgradeLevels()
-        const corruptionDivisor = (antUpgradeData[antUpgrade].exemptFromCorruption)
+        const corruptionDivisor = (this.R_antUpgradeData[antUpgrade].exemptFromCorruption)
             ? 1
             : this.R_calculateCorruptionEffect(data.corruptions.used, "extinction");
         if (data.currentChallenge.ascension === 11) {
@@ -1904,7 +3670,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
     }
 
-    R_calculateHorseShoeLevel(): number {
+    calculateHorseShoeLevel(): number {
         if (!this.gameData) return 0;
 
         const data = this.gameData;
@@ -2145,7 +3911,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             this.R_calculateCookieUpgrade29Luck(),
             gameData.shopUpgrades.shopAmbrosiaUltra * this.R_calculateSumOfExaltCompletions(),
             Math.max(0, (this.R_calculateSynergismLevel() ?? 0 - 229) * 4),
-            this.R_calculateHorseShoeLevel(),
+            this.calculateHorseShoeLevel(),
         ]
 
         const rawLuckComponents2 = [
@@ -2187,7 +3953,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const c1 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement1')
         const c2 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement2')
         const c3 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement3')
-        const horseShoeLevel = this.R_calculateHorseShoeLevel();
+        const horseShoeLevel = this.calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
             data.shopUpgrades.shopRedLuck1,
@@ -2234,7 +4000,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
         const red1 = this.R_calculateRedAmbrosiaUpgradeValue('redLuck');
         const red2 = this.R_calculateRedAmbrosiaUpgradeValue('viscount');
-        const horseShoeLevel = this.R_calculateHorseShoeLevel();
+        const horseShoeLevel = this.calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
             pseudoLuck,
@@ -2281,6 +4047,335 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const goldenQuarksPerSecond = data.highestSingularityCount >= 100
             ? 1 - (0.5 * data.highestSingularityCount) / 250
             : 1;
+    }
+
+    R_calculateAchievementsByReward: Record<AchievementRewards, number[]> = this.R_achievements
+        .reduce((rewards, achievement, index) => {
+            if (achievement.reward) {
+                for (const rewardType of Object.keys(achievement.reward) as AchievementRewards[]) {
+                    if (!rewards[rewardType]) {
+                        rewards[rewardType] = []
+                    }
+                    rewards[rewardType].push(Number(index))
+                }
+            }
+            return rewards
+        }, {} as Record<AchievementRewards, number[]>)
+
+
+    R_AchRewards: Record<AchievementRewards, () => number | boolean> = {
+
+        acceleratorPower: (): number => {
+            return this.R_calculateAchievementsByReward.acceleratorPower.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.acceleratorPower!() : 0),
+                0
+            )
+        },
+        accelerators: (): number => {
+            return this.R_calculateAchievementsByReward.accelerators.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.accelerators!() : 0),
+                0
+            )
+        },
+        multipliers: (): number => {
+            return this.R_calculateAchievementsByReward.multipliers.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.multipliers!() : 0),
+                0
+            )
+        },
+        accelBoosts: (): number => {
+            return this.R_calculateAchievementsByReward.accelBoosts.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.accelBoosts!() : 0),
+                0
+            )
+        },
+        crystalMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.crystalMultiplier.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.crystalMultiplier!() : 1),
+                1
+            )
+        },
+        quarkGain: (): number => {
+            return this.R_calculateAchievementsByReward.quarkGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.quarkGain!() : 1),
+                1
+            )
+        },
+        taxReduction: (): number => {
+            return this.R_calculateAchievementsByReward.taxReduction.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.taxReduction!() : 1),
+                1
+            )
+        },
+        particleGain: (): number => {
+            return this.R_calculateAchievementsByReward.particleGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.particleGain!() : 1),
+                1
+            )
+        },
+        chronosTalisman: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.chronosTalisman[0]])
+        },
+        midasTalisman: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.midasTalisman[0]])
+        },
+        metaphysicsTalisman: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.metaphysicsTalisman[0]])
+        },
+        polymathTalisman: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.polymathTalisman[0]])
+        },
+        wowSquareTalisman: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.wowSquareTalisman[0]])
+        },
+        conversionExponent: (): number => {
+            return this.R_calculateAchievementsByReward.conversionExponent.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.conversionExponent!() : 0),
+                0
+            )
+        },
+        talismanPower: (): number => {
+            return this.R_calculateAchievementsByReward.talismanPower.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.talismanPower!() : 0),
+                0
+            )
+        },
+        sacrificeMult: (): number => {
+            return this.R_calculateAchievementsByReward.sacrificeMult.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.sacrificeMult!() : 1),
+                1
+            )
+        },
+        antSpeed: (): number => {
+            return this.R_calculateAchievementsByReward.antSpeed.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antSpeed!() : 1),
+                1
+            )
+        },
+        antSacrificeUnlock: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.antSacrificeUnlock[0]])
+        },
+        antAutobuyers: (): number => {
+            return this.R_calculateAchievementsByReward.antAutobuyers.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antAutobuyers!() : 0),
+                0
+            )
+        },
+        preserveAnthillCount: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.preserveAnthillCount[0]])
+        },
+        preserveAnthillCountSingularity: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.preserveAnthillCountSingularity[0]])
+        },
+        inceptusAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.inceptusAutobuy[0]])
+        },
+        fortunaeAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.fortunaeAutobuy[0]])
+        },
+        tributumAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.tributumAutobuy[0]])
+        },
+        celeritasAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.celeritasAutobuy[0]])
+        },
+        exploratoremAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.exploratoremAutobuy[0]])
+        },
+        sacrificiumAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.sacrificiumAutobuy[0]])
+        },
+        experientiaAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.experientiaAutobuy[0]])
+        },
+        hicAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.hicAutobuy[0]])
+        },
+        scientiaAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.scientiaAutobuy[0]])
+        },
+        praemoenioAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.praemoenioAutobuy[0]])
+        },
+        phylacteriumAutobuy: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.phylacteriumAutobuy[0]])
+        },
+        antELOAdditive: (): number => {
+            return this.R_calculateAchievementsByReward.antELOAdditive.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antELOAdditive!() : 0),
+                0
+            )
+        },
+        antELOAdditiveMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.antELOAdditiveMultiplier.reduce(
+                (prod, index) =>
+                    prod + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antELOAdditiveMultiplier!() : 0),
+                0
+            )
+        },
+        ascensionCountMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.ascensionCountMultiplier.reduce(
+                (prod, index) =>
+                    prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.ascensionCountMultiplier!() : 1),
+                1
+            )
+        },
+        ascensionCountAdditive: (): number => {
+            return this.R_calculateAchievementsByReward.ascensionCountAdditive.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.ascensionCountAdditive!() : 0),
+                0
+            )
+        },
+        wowCubeGain: (): number => {
+            return this.R_calculateAchievementsByReward.wowCubeGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.wowCubeGain!() : 1),
+                1
+            )
+        },
+        wowTesseractGain: (): number => {
+            return this.R_calculateAchievementsByReward.wowTesseractGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.wowTesseractGain!() : 1),
+                1
+            )
+        },
+        wowHypercubeGain: (): number => {
+            return this.R_calculateAchievementsByReward.wowHypercubeGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.wowHypercubeGain!() : 1),
+                1
+            )
+        },
+        wowPlatonicGain: (): number => {
+            return this.R_calculateAchievementsByReward.wowPlatonicGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.wowPlatonicGain!() : 1),
+                1
+            )
+        },
+        wowHepteractGain: (): number => {
+            return this.R_calculateAchievementsByReward.wowHepteractGain.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.wowHepteractGain!() : 1),
+                1
+            )
+        },
+        ascensionScore: (): number => {
+            return this.R_calculateAchievementsByReward.ascensionScore.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.ascensionScore!() : 1),
+                1
+            )
+        },
+        ascensionRewardScaling: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.ascensionRewardScaling[0]])
+        },
+        constUpgrade1Buff: (): number => {
+            return this.R_calculateAchievementsByReward.constUpgrade1Buff.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.constUpgrade1Buff!() : 0),
+                0
+            )
+        },
+        constUpgrade2Buff: (): number => {
+            return this.R_calculateAchievementsByReward.constUpgrade2Buff.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.constUpgrade2Buff!() : 0),
+                0
+            )
+        },
+        platonicToHypercubes: (): number => {
+            return this.R_calculateAchievementsByReward.platonicToHypercubes.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.platonicToHypercubes!() : 0),
+                0
+            )
+        },
+        statTracker: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.statTracker[0]])
+        },
+        overfluxConversionRate: (): number => {
+            return this.R_calculateAchievementsByReward.overfluxConversionRate.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.overfluxConversionRate!() : 1),
+                1
+            )
+        },
+        diamondUpgrade18: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade18[0]])
+        },
+        diamondUpgrade19: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade19[0]])
+        },
+        diamondUpgrade20: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade20[0]])
+        },
+        prestigeCountMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.prestigeCountMultiplier.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.prestigeCountMultiplier!() : 1),
+                1
+            )
+        },
+        transcensionCountMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.transcensionCountMultiplier.reduce(
+                (prod, index) =>
+                    prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.transcensionCountMultiplier!() : 1),
+                1
+            )
+        },
+        reincarnationCountMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.reincarnationCountMultiplier.reduce(
+                (prod, index) =>
+                    prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.reincarnationCountMultiplier!() : 1),
+                1
+            )
+        },
+        duplicationRuneUnlock: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.duplicationRuneUnlock[0]])
+        },
+        offeringBonus: (): number => {
+            return this.R_calculateAchievementsByReward.offeringBonus.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.offeringBonus!() : 1),
+                1
+            )
+        },
+        obtainiumBonus: (): number => {
+            return this.R_calculateAchievementsByReward.obtainiumBonus.reduce(
+                (prod, index) => prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.obtainiumBonus!() : 1),
+                1
+            )
+        },
+        salvage: (): number => {
+            return this.R_calculateAchievementsByReward.salvage.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.salvage!() : 0),
+                0
+            )
+        },
+        prismRuneUnlock: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.prismRuneUnlock[0]])
+        },
+        thriftRuneUnlock: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.thriftRuneUnlock[0]])
+        },
+        transcendToPrestige: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.transcendToPrestige[0]])
+        },
+        reincarnationToTranscend: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.reincarnationToTranscend[0]])
+        },
+        freeAntUpgrades: (): number => {
+            return this.R_calculateAchievementsByReward.freeAntUpgrades.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.freeAntUpgrades!() : 0),
+                0
+            )
+        },
+        antSacrificeCountMultiplier: (): number => {
+            return this.R_calculateAchievementsByReward.antSacrificeCountMultiplier.reduce(
+                (prod, index) =>
+                    prod * (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antSacrificeCountMultiplier!() : 1),
+                1
+            )
+        },
+        autoAntSacrifice: (): boolean => {
+            return Boolean(this.gameData?.achievements[this.R_calculateAchievementsByReward.autoAntSacrifice[0]])
+        },
+        antSpeed2UpgradeImprover: (): number => {
+            return this.R_calculateAchievementsByReward.antSpeed2UpgradeImprover.reduce(
+                (sum, index) => sum + (this.gameData?.achievements[index] ? this.R_achievements[index].reward!.antSpeed2UpgradeImprover!() : 0),
+                0
+            )
+        }
     }
 
     async dumpDataForHeater() {

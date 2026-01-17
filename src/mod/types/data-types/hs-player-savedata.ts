@@ -66,15 +66,15 @@ export interface Unlocks {
  * Represents the exp for each rune
  */
 export interface Runes {
-    antiquities: number;
-    duplication: number;
-    finiteDescent: number;
-    horseShoe: number;
-    infiniteAscent: number;
-    prism: number;
     speed: number;
-    superiorIntellect: number;
+    duplication: number;
+    prism: number;
     thrift: number;
+    superiorIntellect: number;
+    infiniteAscent: number;
+    antiquities: number;
+    horseShoe: number;
+    finiteDescent: number;
 }
 
 interface Ants {
@@ -266,15 +266,9 @@ export interface PlatonicBlessings {
  * Represents the state of a specific Hepteract craft type.
  */
 export interface HepteractCraft {
-    UNLOCKED: boolean;
-    BAL: number; // Balance?
-    CAP: number; // Capacity?
-    BASE_CAP: number;
-    HEPTERACT_CONVERSION: number;
+    BAL: number;
     AUTO: boolean;
-    DISCOUNT: number;
-    OTHER_CONVERSIONS: Record<string, number | string>; // Contains different resource types and amounts (string or number)
-    HTML_STRING: string; // Internal identifier string
+    TIMES_CAP_EXTENDED: number;
 }
 
 /**
@@ -603,6 +597,11 @@ export interface goldenQuarkUpgrades {
     singBonusTokens3: SingularityUpgradeData;
     singBonusTokens4: SingularityUpgradeData;
     singInfiniteShopUpgrades: SingularityUpgradeData;
+    singTalismanBonusRunes1: SingularityUpgradeData;
+    singTalismanBonusRunes2: SingularityUpgradeData;
+    singTalismanBonusRunes3: SingularityUpgradeData;
+    singTalismanBonusRunes4: SingularityUpgradeData;
+    favoriteUpgrade: SingularityUpgradeData;
 }
 
 /**
@@ -677,6 +676,7 @@ export interface SingularityChallengeStatus {
 
 export interface SingularityChallengeRewards {
     talismanFreeLevel: number;
+    talismanRuneEffect: number;
 }
 
 /**
@@ -721,6 +721,7 @@ export interface AmbrosiaUpgrades {
     ambrosiaQuarks3: AmbrosiaUpgradeData;
     ambrosiaCubes3: AmbrosiaUpgradeData;
     ambrosiaLuck3: AmbrosiaUpgradeData;
+    ambrosiaLuck4: AmbrosiaUpgradeData;
     ambrosiaPatreon: AmbrosiaUpgradeData;
     ambrosiaObtainium1: AmbrosiaUpgradeData;
     ambrosiaOffering1: AmbrosiaUpgradeData;
@@ -734,7 +735,6 @@ export interface AmbrosiaUpgrades {
     ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeData;
     ambrosiaSingReduction2: AmbrosiaUpgradeData;
 }
-
 /**
  * Represents a single saved blueberry loadout.
  * Keys are internal upgrade names, values are the levels in that loadout.
@@ -844,18 +844,18 @@ export interface Campaigns {
 }
 
 export interface progressiveAchievements {
-    "runeLevel": 3810952,
-    "freeRuneLevel": 573062.1333037298,
-    "antMasteries": 108,
-    "rebornELO": 60815898.0197857,
-    "singularityCount": 0,
-    "ambrosiaCount": 51193216,
-    "redAmbrosiaCount": 4863592,
-    "exalts": 0,
-    "talismanRarities": 92,
-    "singularityUpgrades": 0,
-    "octeractUpgrades": 0,
-    "redAmbrosiaUpgrades": 0
+    "runeLevel": number;
+    "freeRuneLevel": number;
+    "antMasteries": number;
+    "rebornELO": number;
+    "singularityCount": number;
+    "ambrosiaCount": number;
+    "redAmbrosiaCount": number;
+    "exalts": number;
+    "talismanRarities": number;
+    "singularityUpgrades": number;
+    "octeractUpgrades": number;
+    "redAmbrosiaUpgrades": number;
 }
 
 
