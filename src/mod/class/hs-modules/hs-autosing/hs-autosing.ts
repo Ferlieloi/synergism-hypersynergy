@@ -64,6 +64,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private AOAG!: HTMLButtonElement;
     private singBtn!: HTMLButtonElement;
     private singularityWasDisabled: boolean = false;
+    private endStageDone: boolean = false;
 
 
 
@@ -95,6 +96,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.singularityWasDisabled = false;
+        this.endStageDone = false;
         this.singBtn = document.querySelector('#singularitybtn') as HTMLButtonElement;
         if (!this.timerModal || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
@@ -260,28 +262,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.performSingularity();
                 let sawDisabled = false;
 
-                while (this.isAutosingEnabled()) {
-                    const singularityEnabled = this.checkSingularityActivated();
-                    if (this.singularityWasDisabled && singularityEnabled) {
-                        HSLogger.debug('Singularity button ACTIVATED!');
-                        break;
-                    }
-                    if (!singularityEnabled) {
-                        this.singularityWasDisabled = true;
-                    }
-
+                while (this.isAutosingEnabled() && !this.endStageDone) {
                     const stage = await this.getStage();
                     await this.matchStageToStrategy(stage);
-                }
-                if (this.isAutosingEnabled()) {
-                    const finalPhase = this.getFinalStrategyPhase();
-                    if (finalPhase) {
-                        HSLogger.debug(
-                            `Singularity activated — performing final phase: ${finalPhase.startPhase}-${finalPhase.endPhase}`,
-                            this.context
-                        );
-                        await this.matchStageToStrategy("final");
-                    }
                 }
             }
         } catch (error) {
@@ -289,11 +272,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.debug(`Error during autosing logic: ${errorMessage}`, this.context);
             this.stopAutosing();
         }
-    }
-
-    private getFinalStrategyPhase(): AutosingStrategyPhase | null {
-        if (!this.strategy || !this.strategy.strategy.length) return null;
-        return this.strategy.strategy[this.strategy.strategy.length - 1];
     }
 
     private getPhaseIndex(phase: PhaseOption): number {
@@ -314,63 +292,57 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         let phaseConfig: AutosingStrategyPhase | null = null;
 
-        if (stage.toLowerCase() === 'final') {
-            phaseConfig = this.getFinalStrategyPhase();
 
-            if (!phaseConfig) {
-                HSLogger.log('No final strategy phase found', this.context); return;
-            }
-        } else {
 
-            let stageStart: PhaseOption | null = null;
-            let stageEnd: PhaseOption | null = null;
+        let stageStart: PhaseOption | null = null;
+        let stageEnd: PhaseOption | null = null;
 
-            // Find a valid (start, end) phase pair
-            for (const start of phases) {
-                if (!stage.startsWith(`${start}-`)) continue;
+        // Find a valid (start, end) phase pair
+        for (const start of phases) {
+            if (!stage.startsWith(`${start}-`)) continue;
 
-                const possibleEnd = stage.slice(start.length + 1);
+            const possibleEnd = stage.slice(start.length + 1);
 
-                if (this.isPhaseOption(possibleEnd)) {
-                    stageStart = start;
-                    stageEnd = possibleEnd;
-                    break;
-                }
-            }
-
-            if (!stageStart || !stageEnd) {
-                stageStart = "singularity";
-                stageEnd = "end";
-            }
-
-            const stageStartIndex: number = this.getPhaseIndex(stageStart);
-            const stageEndIndex: number = this.getPhaseIndex(stageEnd);
-
-            if (stageStartIndex === -1 || stageEndIndex === -1) {
-                HSLogger.debug(`Unknown stage ${stage}`, this.context);
-                return;
-            }
-
-            phaseConfig =
-                this.strategy.strategy.find((p: AutosingStrategyPhase) => {
-                    const strategyStartIndex = this.getPhaseIndex(p.startPhase);
-                    const strategyEndIndex = this.getPhaseIndex(p.endPhase);
-
-                    if (strategyStartIndex === -1 || strategyEndIndex === -1) {
-                        return false;
-                    }
-
-                    return (
-                        stageStartIndex >= strategyStartIndex &&
-                        stageEndIndex <= strategyEndIndex
-                    );
-                }) ?? null;
-
-            if (!phaseConfig) {
-                HSLogger.debug(`No strategy phase matched for stage ${stage}`, this.context);
-                return;
+            if (this.isPhaseOption(possibleEnd)) {
+                stageStart = start;
+                stageEnd = possibleEnd;
+                break;
             }
         }
+
+        if (!stageStart || !stageEnd) {
+            stageStart = "singularity";
+            stageEnd = "end";
+        }
+
+        const stageStartIndex: number = this.getPhaseIndex(stageStart);
+        const stageEndIndex: number = this.getPhaseIndex(stageEnd);
+
+        if (stageStartIndex === -1 || stageEndIndex === -1) {
+            HSLogger.debug(`Unknown stage ${stage}`, this.context);
+            return;
+        }
+
+        phaseConfig =
+            this.strategy.strategy.find((p: AutosingStrategyPhase) => {
+                const strategyStartIndex = this.getPhaseIndex(p.startPhase);
+                const strategyEndIndex = this.getPhaseIndex(p.endPhase);
+
+                if (strategyStartIndex === -1 || strategyEndIndex === -1) {
+                    return false;
+                }
+
+                return (
+                    stageStartIndex >= strategyStartIndex &&
+                    stageEndIndex <= strategyEndIndex
+                );
+            }) ?? null;
+
+        if (!phaseConfig) {
+            HSLogger.debug(`No strategy phase matched for stage ${stage}`, this.context);
+            return;
+        }
+
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         if (this.timerModal) {
             this.timerModal.setCurrentPhase(phaseConfig.startPhase + '-' + phaseConfig.endPhase);
@@ -448,6 +420,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     challenge.challengeWaitTime,
                 );
             }
+        }
+        if (phaseConfig.endPhase == "end") {
+            this.endStageDone = true;
         }
         if (this.timerModal) {
             this.timerModal.recordPhase(`${phaseConfig.startPhase}-${phaseConfig.endPhase}`);
@@ -771,6 +746,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private async performSingularity(): Promise<void> {
         await this.enterAndLeaveExalt();
         this.singularityWasDisabled = false;
+        this.endStageDone = false;
         const gq = await this.getCurrentGoldenQuarks();
         const q = await this.getCurrentQuarks();
         if (this.timerModal) {
@@ -934,10 +910,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private checkSingularityActivated(): boolean {
-        const btn = document.querySelector('#singularitybtn');
-        if (!btn) return false;
-
-        const filter = getComputedStyle(btn).getPropertyValue('filter');
+        const filter = getComputedStyle(this.singBtn).getPropertyValue('filter');
         const isEnabled = !filter || filter !== 'contrast(1.25) sepia(1) grayscale(0.25)';
 
         return isEnabled;
