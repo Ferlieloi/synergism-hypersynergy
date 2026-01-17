@@ -121,58 +121,60 @@ export interface RedAmbrosiaUpgradeCalculationConfig {
     levelFunction: (n: number) => number
 }
 
-export interface AmbrosiaUpgradeCalculationConfig {
+export interface AmbrosiaUpgradeCalculationConfig<
+    K extends keyof AmbrosiaUpgradeRewards
+> {
     costPerLevel: number
     maxLevel: number
     costFunction: (n: number, cpl: number) => number
     levelFunction: (n: number) => number
-    effects: (n: number) => Partial<AmbrosiaUpgradeRewards>
+    effects: (n: number) => AmbrosiaUpgradeRewards[K]
 }
 
 
 export interface AmbrosiaUpgradeCalculationCollection {
-    ambrosiaTutorial: AmbrosiaUpgradeCalculationConfig
+    ambrosiaTutorial: AmbrosiaUpgradeCalculationConfig<'ambrosiaTutorial'>
 
-    ambrosiaQuarks1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaCubes1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuck1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaQuarks1: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks1'>
+    ambrosiaCubes1: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubes1'>
+    ambrosiaLuck1: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck1'>
 
-    ambrosiaQuarkCube1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuckCube1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaCubeQuark1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuckQuark1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaCubeLuck1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaQuarkLuck1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaQuarkCube1: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarkCube1'>
+    ambrosiaLuckCube1: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuckCube1'>
+    ambrosiaCubeQuark1: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubeQuark1'>
+    ambrosiaLuckQuark1: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuckQuark1'>
+    ambrosiaCubeLuck1: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubeLuck1'>
+    ambrosiaQuarkLuck1: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarkLuck1'>
 
-    ambrosiaQuarks2: AmbrosiaUpgradeCalculationConfig
-    ambrosiaCubes2: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuck2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaQuarks2: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks2'>
+    ambrosiaCubes2: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubes2'>
+    ambrosiaLuck2: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck2'>
 
-    ambrosiaQuarks3: AmbrosiaUpgradeCalculationConfig
-    ambrosiaCubes3: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuck3: AmbrosiaUpgradeCalculationConfig
-    ambrosiaLuck4: AmbrosiaUpgradeCalculationConfig
+    ambrosiaQuarks3: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks3'>
+    ambrosiaCubes3: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubes3'>
+    ambrosiaLuck3: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck3'>
+    ambrosiaLuck4: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck4'>
 
-    ambrosiaPatreon: AmbrosiaUpgradeCalculationConfig
+    ambrosiaPatreon: AmbrosiaUpgradeCalculationConfig<'ambrosiaPatreon'>
 
-    ambrosiaObtainium1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaOffering1: AmbrosiaUpgradeCalculationConfig
+    ambrosiaObtainium1: AmbrosiaUpgradeCalculationConfig<'ambrosiaObtainium1'>
+    ambrosiaOffering1: AmbrosiaUpgradeCalculationConfig<'ambrosiaOffering1'>
 
-    ambrosiaHyperflux: AmbrosiaUpgradeCalculationConfig
+    ambrosiaHyperflux: AmbrosiaUpgradeCalculationConfig<'ambrosiaHyperflux'>
 
-    ambrosiaBaseOffering1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaBaseObtainium1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaBaseOffering2: AmbrosiaUpgradeCalculationConfig
-    ambrosiaBaseObtainium2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaBaseOffering1: AmbrosiaUpgradeCalculationConfig<'ambrosiaBaseOffering1'>
+    ambrosiaBaseObtainium1: AmbrosiaUpgradeCalculationConfig<'ambrosiaBaseObtainium1'>
+    ambrosiaBaseOffering2: AmbrosiaUpgradeCalculationConfig<'ambrosiaBaseOffering2'>
+    ambrosiaBaseObtainium2: AmbrosiaUpgradeCalculationConfig<'ambrosiaBaseObtainium2'>
 
-    ambrosiaSingReduction1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaSingReduction2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaSingReduction1: AmbrosiaUpgradeCalculationConfig<'ambrosiaSingReduction1'>
+    ambrosiaSingReduction2: AmbrosiaUpgradeCalculationConfig<'ambrosiaSingReduction2'>
 
-    ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeCalculationConfig
-    ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeCalculationConfig
+    ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeCalculationConfig<'ambrosiaInfiniteShopUpgrades1'>
+    ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeCalculationConfig<'ambrosiaInfiniteShopUpgrades2'>
 
-    ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig
-    ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig
+    ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig<'ambrosiaTalismanBonusRuneLevel'>
+    ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig<'ambrosiaRuneOOMBonus'>
 }
 
 export type AmbrosiaUpgradeRewards = {
@@ -192,6 +194,7 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaQuarks3: { quarks: number }
     ambrosiaCubes3: { cubes: number }
     ambrosiaLuck3: { ambrosiaLuck: number }
+    ambrosiaLuck4: { ambrosiaLuck: number }
     ambrosiaPatreon: { blueberryGeneration: number }
     ambrosiaObtainium1: { luckMult: number; obtainiumMult: number }
     ambrosiaOffering1: { luckMult: number; offeringMult: number }

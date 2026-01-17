@@ -1,5 +1,5 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
-import { Achievement, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards } from "../../../types/data-types/hs-gamedata-api-types";
+import { Achievement, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection } from "../../../types/data-types/hs-gamedata-api-types";
 import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, Runes, CorruptionLoadout, SingularityChallenges, goldenQuarkUpgrades } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
@@ -453,6 +453,327 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             this.R_getAntUpgradeEffect(AntUpgrades.FreeRunes).freeRuneLevel
             + 7 * Math.min((this.gameData?.constantUpgrades[7] ?? 0), 1000)
         )
+    }
+    R_ambrosiaUpgradeCalculationCollection: AmbrosiaUpgradeCalculationCollection = {
+        ambrosiaTutorial: {
+            costPerLevel: 1,
+            maxLevel: 10,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const cubeAmount = 1 + 0.05 * n
+                const quarkAmount = 1 + 0.01 * n
+                return {
+                    quarks: quarkAmount,
+                    cubes: cubeAmount
+                }
+            },
+        },
+
+        ambrosiaQuarks1: {
+            costPerLevel: 1,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const quarkAmount = 1 + 0.01 * n
+                return {
+                    quarks: quarkAmount
+                }
+            },
+        },
+
+        ambrosiaCubes1: {
+            costPerLevel: 1,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const cubeAmount = (1 + 0.05 * n) * Math.pow(1.1, Math.floor(n / 5))
+                return {
+                    cubes: cubeAmount
+                }
+            },
+        },
+
+        ambrosiaLuck1: {
+            costPerLevel: 1,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = 2 * n + 12 * Math.floor(n / 10)
+                return {
+                    ambrosiaLuck: val
+                }
+            },
+
+        },
+
+        ambrosiaQuarkCube1: {
+            costPerLevel: 250,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.001 * n
+                const val = 1
+                    + baseVal
+                    * Math.floor(Math.pow(Math.log10(Number(this.gameData?.worlds) + 1) + 1, 2))
+                return {
+                    cubes: val
+                }
+            },
+
+        },
+
+        ambrosiaLuckCube1: {
+            costPerLevel: 250,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.0005 * n
+                const luck = this.calculateLuck() as { additive: number, raw: number, total: number }
+                const val = 1 + baseVal * luck.total
+                return {
+                    cubes: val
+                }
+            },
+        },
+
+        ambrosiaCubeQuark1: {
+            costPerLevel: 500,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.0001 * n
+                const val = 1
+                    + baseVal
+                    * (Math.floor(Math.log10(Number(this.gameData?.wowCubes) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowTesseracts) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowHypercubes) + 1))
+                        + Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes) + 1))
+                        + Math.floor(Math.log10(this.gameData?.wowAbyssals ?? 0 + 1))
+                        + Math.floor(Math.log10(this.gameData?.wowOcteracts ?? 0 + 1))
+                        + 6)
+                return {
+                    quarks: val
+                }
+            },
+        },
+
+        ambrosiaLuckQuark1: {
+            costPerLevel: 500,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.0001 * n
+                const luck = calculateAmbrosiaLuck()
+                const effectiveLuck = Math.min(
+                    luck,
+                    Math.pow(1000, 0.5) * Math.pow(luck, 0.5)
+                )
+                const val = 1 + baseVal * effectiveLuck
+                return {
+                    quarks: val
+                }
+            },
+        },
+
+        ambrosiaCubeLuck1: {
+            costPerLevel: 100,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaQuarkLuck1: {
+            costPerLevel: 100,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaQuarks2: {
+            costPerLevel: 500,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaCubes2: {
+            costPerLevel: 500,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaLuck2: {
+            costPerLevel: 250,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaQuarks3: {
+            costPerLevel: 750000,
+            maxLevel: 10,
+            costFunction: (n: number, cpl: number): number =>
+                cpl + 50000 * n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaCubes3: {
+            costPerLevel: 75000,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl + 5000 * n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaLuck3: {
+            costPerLevel: 50000,
+            maxLevel: 100,
+            costFunction: (_n: number, cpl: number): number =>
+                cpl,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaLuck4: {
+            costPerLevel: 250000,
+            maxLevel: 50,
+            costFunction: (n: number, cpl: number): number =>
+                cpl + 20000 * n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaPatreon: {
+            costPerLevel: 1,
+            maxLevel: 1,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaObtainium1: {
+            costPerLevel: 50000,
+            maxLevel: 2,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * 25 ** n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaOffering1: {
+            costPerLevel: 50000,
+            maxLevel: 2,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * 25 ** n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaHyperflux: {
+            costPerLevel: 33333,
+            maxLevel: 7,
+            costFunction: (n: number, cpl: number): number =>
+                (cpl + 33333 * Math.min(4, n)) * Math.max(1, 3 ** (n - 4)),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaBaseOffering1: {
+            costPerLevel: 5,
+            maxLevel: 40,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaBaseObtainium1: {
+            costPerLevel: 40,
+            maxLevel: 20,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaBaseOffering2: {
+            costPerLevel: 20,
+            maxLevel: 60,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaBaseObtainium2: {
+            costPerLevel: 160,
+            maxLevel: 30,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaSingReduction1: {
+            costPerLevel: 100000,
+            maxLevel: 2,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * 99 ** n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaInfiniteShopUpgrades1: {
+            costPerLevel: 25000,
+            maxLevel: 20,
+            costFunction: (_n: number, cpl: number): number =>
+                cpl,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaInfiniteShopUpgrades2: {
+            costPerLevel: 75000,
+            maxLevel: 20,
+            costFunction: (_n: number, cpl: number): number =>
+                cpl,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaSingReduction2: {
+            costPerLevel: 1.25e7,
+            maxLevel: 2,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * 3 ** n,
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaTalismanBonusRuneLevel: {
+            costPerLevel: 100,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 2 - n ** 2),
+            levelFunction: (n: number): number => n
+        },
+
+        ambrosiaRuneOOMBonus: {
+            costPerLevel: 2500,
+            maxLevel: 100,
+            costFunction: (n: number, cpl: number): number =>
+                Math.ceil(cpl * ((n + 1) ** 1.5 - n ** 1.5)),
+            levelFunction: (n: number): number => n
+        }
     }
 
     R_antUpgradeData = {
