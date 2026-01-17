@@ -1,4 +1,5 @@
 import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationCollection } from "../../../types/data-types/hs-gamedata-api-types"
+import { PlayerData } from "../../../types/data-types/hs-player-savedata";
 
 export const CASH_GRAB_ULTRA_QUARK = 0.08;
 export const CASH_GRAB_ULTRA_CUBE = 1.2;
@@ -146,7 +147,7 @@ export const ambrosiaUpgradeCalculationCollection: AmbrosiaUpgradeCalculationCol
   },
 
   ambrosiaPatreon: {
-    costPerLevel: 0,
+    costPerLevel: 1,
     maxLevel: 1,
     costFunction: (n: number, cpl: number): number =>
       cpl * ((n + 1) ** 2 - n ** 2),
@@ -653,7 +654,466 @@ export const challenge15Rewards = {
     HTMLColor: 'orange'
   }
 };
+/*
+export const antUpgradeData = {
+  [AntUpgrades.AntSpeed]: {
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Coins]: {
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Taxes]: {
 
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.AcceleratorBoosts]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Multipliers]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Offerings]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.BuildingCostScale]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Salvage]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.FreeRunes]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Obtainium]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.AntSacrifice]: {
+
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Mortuus]: {
+    exemptFromCorruption: true,
+  },
+  [AntUpgrades.AntELO]: {
+    exemptFromCorruption: false,
+  },
+  [AntUpgrades.Mortuus2]: {
+    exemptFromCorruption: true,
+  },
+  [AntUpgrades.AscensionScore]: {
+    exemptFromCorruption: true,
+  },
+  [AntUpgrades.WowCubes]: {
+    exemptFromCorruption: true,
+  }
+}
+*/
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+export const firstFiveFreeLevels = () => {
+  return (
+    getAntUpgradeEffect(AntUpgrades.FreeRunes).freeRuneLevel
+    + 7 * Math.min(player.constantUpgrades[7], 1000)
+  )
+}
+
+export const bonusRuneLevelsSpeed = () => {
+  return (
+    getRuneBonusFromAllTalismans('speed')
+    + (
+      player.upgrades[27] * (Math.min(50, Math.floor(Decimal.log(player.coins.add(1), 1e10)))
+        + Math.max(0, Math.min(50, Math.floor(Decimal.log(player.coins.add(1), 1e50)) - 10)))
+    )
+    + player.upgrades[29] * Math.floor(
+      Math.min(
+        100,
+        (player.firstOwnedCoin + player.secondOwnedCoin + player.thirdOwnedCoin + player.fourthOwnedCoin
+          + player.fifthOwnedCoin) / 400
+      )
+    )
+  )
+}
+
+export const bonusRuneLevelsDuplication = () => {
+  return (
+    getRuneBonusFromAllTalismans('duplication')
+    + player.upgrades[28] * Math.min(
+      100,
+      Math.floor(
+        (player.firstOwnedCoin + player.secondOwnedCoin + player.thirdOwnedCoin + player.fourthOwnedCoin
+          + player.fifthOwnedCoin) / 400
+      )
+    )
+    + (
+      player.upgrades[30] * (Math.min(50, Math.floor(Decimal.log(player.coins.add(1), 1e30)))
+        + Math.min(50, Math.floor(Decimal.log(player.coins.add(1), 1e300))))
+    )
+  )
+}
+
+export const bonusRuneLevelsPrism = () => {
+  return (
+    getRuneBonusFromAllTalismans('prism')
+  )
+}
+
+export const bonusRuneLevelsThrift = () => {
+  return (
+    getRuneBonusFromAllTalismans('thrift')
+  )
+}
+
+export const bonusRuneLevelsSI = () => {
+  return (
+    getRuneBonusFromAllTalismans('superiorIntellect')
+  )
+}
+
+export const bonusRuneLevelsIA = () => {
+  return (
+    (PCoinUpgradeEffects.INSTANT_UNLOCK_2 ? 6 : 0)
+    + player.cubeUpgrades[73]
+    + player.campaigns.bonusRune6
+    + getRuneBonusFromAllTalismans('infiniteAscent')
+    + getRuneEffects('finiteDescent').infiniteAscentFreeLevel
+  )
+}
+
+export const bonusRuneLevelsAntiquities = () => {
+  return getRuneBonusFromAllTalismans('antiquities')
+}
+
+export const bonusRuneLevelsHorseShoe = () => {
+  return getRuneBonusFromAllTalismans('horseShoe')
+    + (player.shopUpgrades.shopHorseShoe > 0 ? 3 : 0)
+}
+
+export const speedRuneOOMIncrease = () => {
+  return (
+    player.upgrades[66] * 2
+    + player.researches[78]
+    + player.researches[111]
+    + CalcECC('ascension', player.challengecompletions[11])
+    + 1.5 * CalcECC('ascension', player.challengecompletions[14])
+    + player.cubeUpgrades[16]
+    + getTalismanEffects('chronos').speedOOMBonus
+    + getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+    + getLevelMilestone('speedRune')
+  )
+}
+
+export const duplicationRuneOOMIncrease = () => {
+  return (
+    0.75 * CalcECC('transcend', player.challengecompletions[1])
+    + player.upgrades[66] * 2
+    + player.researches[90]
+    + player.researches[112]
+    + CalcECC('ascension', player.challengecompletions[11])
+    + 1.5 * CalcECC('ascension', player.challengecompletions[14])
+    + getTalismanEffects('exemption').duplicationOOMBonus
+    + getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+    + getLevelMilestone('duplicationRune')
+  )
+}
+
+export const prismRuneOOMIncrease = () => {
+  return (
+    player.upgrades[66] * 2
+    + player.researches[79]
+    + player.researches[113]
+    + CalcECC('ascension', player.challengecompletions[11])
+    + 1.5 * CalcECC('ascension', player.challengecompletions[14])
+    + player.cubeUpgrades[16]
+    + getTalismanEffects('mortuus').prismOOMBonus
+    + getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+    + getLevelMilestone('prismRune')
+  )
+}
+
+export const thriftRuneOOMIncrease = () => {
+  return (
+    player.upgrades[66] * 2
+    + player.researches[77]
+    + player.researches[114]
+    + CalcECC('ascension', player.challengecompletions[11])
+    + 1.5 * CalcECC('ascension', player.challengecompletions[14])
+    + player.cubeUpgrades[37]
+    + getTalismanEffects('midas').thriftOOMBonus
+    + getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+    + getLevelMilestone('thriftRune')
+  )
+}
+
+export const superiorIntellectOOMIncrease = () => {
+  return (
+    player.upgrades[66] * 2
+    + player.researches[115]
+    + CalcECC('ascension', player.challengecompletions[11])
+    + 1.5 * CalcECC('ascension', player.challengecompletions[14])
+    + player.cubeUpgrades[37]
+    + getTalismanEffects('polymath').SIOOMBonus
+    + getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+    + getLevelMilestone('SIRune')
+  )
+}
+
+export const infiniteAscentOOMIncrease = () => {
+  return (
+    getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').infiniteAscentOOMBonus
+  )
+}
+
+export const antiquitiesOOMIncrease = () => {
+  return (
+    +player.singularityChallenges.taxmanLastStand.rewards.antiquityOOM
+  )
+}
+
+export const horseShoeOOMIncrease = () => {
+  return (
+    +player.singularityChallenges.taxmanLastStand.rewards.horseShoeOOM
+  )
+}
+
+export const firstFiveEffectiveRuneLevelMult = () => {
+  return firstFiveRuneEffectivenessStats.reduce((x, y) => x * y.stat(), 1)
+}
+
+export const SIEffectiveRuneLevelMult = () => {
+  return runeEffectivenessStatsSI.reduce((x, y) => x * y.stat(), 1)
+}
+
+export const universalRuneEXPMult = (purchasedLevels: number): Decimal => {
+  // recycleMult accounted for all recycle chance, but inversed so it's a multiplier instead
+  const recycleMultiplier = calculateSalvageRuneEXPMultiplier()
+
+  // Rune multiplier that is summed instead of added
+  /* TODO: Replace the effects of these upgrades with new ones
+    const allRuneExpAdditiveMultiplier = sumContents([
+        // Challenge 3 completions
+        (1 / 100) * player.highestchallengecompletions[3],
+        // Reincarnation 2x1
+        1 * player.upgrades[66]
+      ])
+    }*//* 
+export const allRuneExpAdditiveMultiplier = (
+// Base amount multiplied per offering
+1
+// +1 if C1 completion
++ Math.min(1, player.highestchallengecompletions[1])
+// +0.10 per C1 completion
++ (0.4 / 10) * player.highestchallengecompletions[1]
+// Research 5x2
++ 0.6 * player.researches[22]
+// Research 5x3
++ 0.3 * player.researches[23]
+// Particle upgrade 3x1
++ (player.upgrades[71] * purchasedLevels) / 25
+)
+
+// Rune multiplier that gets applied to all runes
+const allRuneExpMultiplier = [
+// Research 4x16
+1 + player.researches[91] / 20,
+// Research 4x17
+1 + player.researches[92] / 20,
+// Cube Upgrade Bonus
+1 + (player.ascensionCounter / 1000) * player.cubeUpgrades[32],
+// Constant Upgrade Multiplier
+1 + (1 / 10) * player.constantUpgrades[8],
+// Challenge 15 reward multiplier
+G.challenge15Rewards.runeExp.value
+].reduce((x, y) => x.times(y), new Decimal('1'))
+
+return allRuneExpMultiplier.times(allRuneExpAdditiveMultiplier).times(recycleMultiplier)
+}
+
+export const runes = {
+speed: {
+costCoefficient: 50,
+levelsPerOOM: 150,
+levelsPerOOMIncrease: () => speedRuneOOMIncrease(),
+effects: (n: number) => {
+const acceleratorPower = 0.0002 * n
+const multiplicativeAccelerators = 1 + n / 400
+const globalSpeed = 2 - Math.exp(-Math.cbrt(n) / 100)
+return {
+acceleratorPower: acceleratorPower,
+multiplicativeAccelerators: multiplicativeAccelerators,
+globalSpeed: globalSpeed
+}
+},
+effectiveLevelMult: () => firstFiveEffectiveRuneLevelMult(),
+freeLevels: () => firstFiveFreeLevels() + bonusRuneLevelsSpeed(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: () => true,
+},
+duplication: {
+costCoefficient: 20000,
+levelsPerOOM: 120,
+levelsPerOOMIncrease: () => duplicationRuneOOMIncrease(),
+effects: (n: number) => {
+const multiplierBoosts = n / 5
+const multiplicativeMultipliers = 1 + n / 400
+const taxReduction = 0.001 + .999 * Math.exp(-Math.cbrt(n) / 5)
+return {
+multiplierBoosts: multiplierBoosts,
+multiplicativeMultipliers: multiplicativeMultipliers,
+taxReduction: taxReduction
+}
+},
+effectiveLevelMult: () => firstFiveEffectiveRuneLevelMult(),
+freeLevels: () => firstFiveFreeLevels() + bonusRuneLevelsDuplication(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+},
+prism: {
+costCoefficient: 5e5,
+levelsPerOOM: 90,
+levelsPerOOMIncrease: () => prismRuneOOMIncrease(),
+effects: (level: number) => {
+const productionLog10 = Math.max(0, 2 * Math.log10(1 + level / 2) + (level / 2) * Math.log10(2) - Math.log10(256))
+const costDivisorLog10 = Math.floor(level / 10)
+return {
+productionLog10: productionLog10,
+costDivisorLog10: costDivisorLog10
+}
+},
+effectiveLevelMult: () => firstFiveEffectiveRuneLevelMult(),
+freeLevels: () => firstFiveFreeLevels() + bonusRuneLevelsPrism(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: () => Boolean(getAchievementReward('prismRuneUnlock')),
+},
+thrift: {
+costCoefficient: 2.5e7,
+levelsPerOOM: 60,
+levelsPerOOMIncrease: () => thriftRuneOOMIncrease(),
+effects: (level: number) => {
+const costDelay = Math.min(1e15, level / 125)
+const salvage = 2.5 * Math.log(1 + level / 10)
+const taxReduction = 0.01 + 0.99 * Math.exp(-Math.cbrt(level) / 10)
+return {
+costDelay: costDelay,
+salvage: salvage,
+taxReduction: taxReduction
+}
+},
+effectiveLevelMult: () => firstFiveEffectiveRuneLevelMult(),
+freeLevels: () => firstFiveFreeLevels() + bonusRuneLevelsThrift(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: () => Boolean(getAchievementReward('thriftRuneUnlock')),
+},
+superiorIntellect: {
+costCoefficient: 1e12,
+levelsPerOOM: 30,
+levelsPerOOMIncrease: () => superiorIntellectOOMIncrease(),
+effects: (level: number) => {
+const offeringMult = 1 + level / 2000
+const obtainiumMult = 1 + level / 200
+const antSpeed = Math.pow(1 + level / 500, 2)
+return {
+offeringMult: offeringMult,
+obtainiumMult: obtainiumMult,
+antSpeed: antSpeed
+}
+},
+effectiveLevelMult: () => firstFiveEffectiveRuneLevelMult() * SIEffectiveRuneLevelMult(),
+freeLevels: () => firstFiveFreeLevels() + bonusRuneLevelsSI(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: (data: PlayerData) => data.researches[82] > 0,
+},
+infiniteAscent: {
+costCoefficient: 1e75,
+levelsPerOOM: 1 / 2,
+levelsPerOOMIncrease: () => infiniteAscentOOMIncrease(),
+effects: (level: number, data: PlayerData) => {
+const quarkMult = 1 + level / 500 + (level > 0 ? 0.1 : 0)
+const cubeMult = 1 + level / 100
+
+const salvagePerkLevels = [30, 40, 61, 81, 111, 131, 161, 191, 236, 260]
+const salvageCoefficient = 0.025 * salvagePerkLevels.filter((x) => x <= data.highestSingularityCount).length
+const salvage = salvageCoefficient * level
+
+return {
+quarkMult: quarkMult,
+cubeMult: cubeMult,
+salvage: salvage
+}
+},
+effectiveLevelMult: () => 1,
+freeLevels: () => bonusRuneLevelsIA(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: () => isIARuneUnlocked(),
+},
+antiquities: {
+costCoefficient: 1e206,
+levelsPerOOM: 1 / 50,
+levelsPerOOMIncrease: () => antiquitiesOOMIncrease(),
+effects: (level: number) => {
+const addCodeCooldownReduction = level > 0 ? 0.8 - 0.3 * (level - 1) / (level + 10) : 1
+const offeringLog10 = level
+const obtainiumLog10 = level
+return {
+addCodeCooldownReduction: addCodeCooldownReduction,
+offeringLog10: offeringLog10,
+obtainiumLog10: obtainiumLog10
+}
+},
+effectiveLevelMult: () => 1,
+freeLevels: () => bonusRuneLevelsAntiquities(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: (data: PlayerData) => data.platonicUpgrades[20] > 0,
+},
+horseShoe: {
+costCoefficient: '1e500',
+levelsPerOOM: 1 / 20,
+levelsPerOOMIncrease: () => horseShoeOOMIncrease(),
+effects: (level: number) => {
+const ambrosiaLuck = level
+const redLuck = level / 5
+const redLuckConversion = -0.5 * level / (level + 50)
+return {
+ambrosiaLuck: ambrosiaLuck,
+redLuck: redLuck,
+redLuckConversion: redLuckConversion
+}
+},
+effectiveLevelMult: () => 1,
+freeLevels: () => bonusRuneLevelsHorseShoe(),
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: (data: PlayerData) => {
+const condition = Boolean(data.singularityChallenges.taxmanLastStand.completions > 0)
+return condition
+}
+},
+finiteDescent: {
+costCoefficient: '1e-40',
+levelsPerOOM: 0.1,
+levelsPerOOMIncrease: () => 0,
+effects: (level: number) => {
+const ascensionScore = level >= 1 ? 1.04 + 0.96 * (level - 1) / (level + 25) : 1
+const corruptionFreeLevels = level >= 1 ? 0.01 + 0.14 * (level - 1) / (level + 16) : 0
+const infiniteAscentFreeLevel = Math.floor(level / 2)
+return {
+ascensionScore: ascensionScore,
+corruptionFreeLevels: corruptionFreeLevels,
+infiniteAscentFreeLevel: infiniteAscentFreeLevel
+}
+},
+effectiveLevelMult: () => 1,
+freeLevels: () => 0,
+runeEXPPerOffering: (purchasedLevels: number) => universalRuneEXPMult(purchasedLevels),
+isUnlocked: (data: PlayerData) => data.shopUpgrades.shopSadisticRune > 0,
+}
+}*/
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Calculate.ts#L1678
 export const calculateSigmoid = (
   constant: number,
@@ -662,6 +1122,8 @@ export const calculateSigmoid = (
 ) => {
   return 1 + (constant - 1) * (1 - Math.pow(2, -factor / divisor))
 }
+
+
 
 // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Variables.ts#L454
 export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: number) => number } = {

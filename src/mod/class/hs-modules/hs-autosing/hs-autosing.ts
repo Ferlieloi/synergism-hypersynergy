@@ -61,6 +61,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private timerModal!: HSAutosingTimerModal;
     private singTab2!: HTMLButtonElement;
     private prevActionTime: number = 0;
+    private AOAG!: HTMLButtonElement;
+    private AOAGBought: boolean = false;
 
 
 
@@ -90,6 +92,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
         this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
+        this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
 
         if (!this.timerModal || !this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
@@ -138,7 +141,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         if (quickbarSettng && !quickbarSettng.isEnabled()) {
             HSUI.Notify("You need to enable the ambrosia quickbar setting before you can use autosing.")
-            this.stopAutosing;
+            this.stopAutosing();
             return Promise.resolve();
         }
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
@@ -251,11 +254,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
             while (this.isAutosingEnabled()) {
                 await this.setAmbrosiaLoadout(this.ambrosia_quark);
-                await HSUtils.click(this.ascendBtn);
+                (this.ascendBtn).click();
                 await this.performSingularity();
                 let sawDisabled = false;
 
-                while (this.isAutosingEnabled()) {
+                while (this.isAutosingEnabled() && !this.AOAGBought) {
                     const btn = document.querySelector('#singularitybtn');
                     if (btn) {
                         const filter = getComputedStyle(btn).getPropertyValue('filter');
@@ -393,7 +396,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async executePhase(phaseConfig: AutosingStrategyPhase): Promise<void> {
         await this.setCorruptions(phaseConfig.corruptions);
-        await HSUtils.click(this.ascendBtn);
+        this.ascendBtn.click();
         this.challengeTab.click();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
@@ -445,16 +448,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private async performSpecialAction(actionId: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
-                await HSUtils.click(this.exitTranscBtn);
+                this.exitTranscBtn.click();
                 break;
             case 102: // Exit Reincarnation challenge
-                await HSUtils.click(this.exitReincBtn);
+                this.exitReincBtn.click();
                 break;
             case 103: // Exit Ascension challenge
-                await HSUtils.click(this.exitAscBtn);
+                this.exitAscBtn.click();
                 break;
             case 104: // Ascend
-                await HSUtils.click(this.ascendBtn);
+                this.ascendBtn.click();
                 break;
             case 105: // Early Cube
                 await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
@@ -467,7 +470,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.setAmbrosiaLoadout(this.ambrosia_quark);
                 break;
             case 108: // Ant sac
-                await HSUtils.click(this.antSacrifice);
+                await this.antSacrifice.click();
                 break;
             case 109: // Ant Corruptions
                 const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
@@ -488,7 +491,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
                 break;
             case 115: // auto Challenge Toggle
-                await HSUtils.click(this.autoChallengeButton);
+                this.autoChallengeButton.click();
+                this.exitTranscBtn.click();
+                this.exitReincBtn.click();
+                break;
+            case 116: // Buy AOAG
+                if (this.AOAG.classList.contains('runeButtonAvailable')) {
+                    this.AOAG.click();
+                    this.AOAGBought = true;
+                    HSLogger.log(`AOAG bought!`, this.context);
+                }
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
@@ -500,7 +512,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const maxAttempts = 50; // 50 * 20ms = 1 second max
         let attempts = 0;
         while (attempts < maxAttempts && !this.isInAmbLoadout(loadout)) {
-            await HSUtils.click(loadout);
+            loadout.click();
 
             // Check immediately after click
             if (this.isInAmbLoadout(loadout)) {
@@ -567,7 +579,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             const current = HSUtils.getCorruptions("next");
             if (JSON.stringify(current) === JSON.stringify(corruptions)) {
                 HSLogger.debug(`Corruptions set successfully: ${this.stringifyCorruptions(corruptions)}`, this.context);
-                return;
+                break;
             }
         }
         this.prevActionTime = performance.now();
@@ -579,7 +591,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
         if (this.timerModal) {
-            this.timerModal.hide();
+            this.timerModal.destroy();
+            this.timerModal = undefined!;
         }
         HSUtils.stopDialogWatcher();
     }
@@ -746,6 +759,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async performSingularity(): Promise<void> {
         await this.enterAndLeaveExalt();
+        this.AOAGBought = false;
         const gq = await this.getCurrentGoldenQuarks();
         const q = await this.getCurrentQuarks();
         if (this.timerModal) {

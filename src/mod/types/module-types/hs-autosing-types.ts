@@ -50,6 +50,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Cleanse corruptions", value: 110 },
     { label: "Wait", value: 111 },
     { label: "auto Challenge Toggle", value: 115 },
+    { label: "Buy AOAG", value: 116 },
     { label: "if-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
 ] as const;
