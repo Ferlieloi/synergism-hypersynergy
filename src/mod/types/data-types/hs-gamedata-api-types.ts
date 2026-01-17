@@ -194,7 +194,7 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaQuarks3: { quarks: number }
     ambrosiaCubes3: { cubes: number }
     ambrosiaLuck3: { ambrosiaLuck: number }
-    ambrosiaLuck4: { ambrosiaLuck: number }
+    ambrosiaLuck4: { ambrosiaLuckPercentage: number }
     ambrosiaPatreon: { blueberryGeneration: number }
     ambrosiaObtainium1: { luckMult: number; obtainiumMult: number }
     ambrosiaOffering1: { luckMult: number; offeringMult: number }

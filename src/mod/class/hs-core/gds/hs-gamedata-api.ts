@@ -618,7 +618,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const baseVal = 0.02 * n
+                const val = baseVal * Math.floor(Math.pow(Math.log10(Number(player.worlds) + 1) + 1, 2))
+                return {
+                    ambrosiaLuck: val
+                }
+            },
         },
 
         ambrosiaQuarks2: {
@@ -626,7 +633,17 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const quarkAmount = 1
+                    + (0.01
+                        + Math.floor(getAmbrosiaUpgradeEffectiveLevels('ambrosiaQuarks1') / 10)
+                        / 1000)
+                    * n
+                return {
+                    quarks: quarkAmount
+                }
+            },
         },
 
         ambrosiaCubes2: {
@@ -634,7 +651,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const cubeAmount = (1
+                    + (0.1
+                        + 10
+                        * (Math.floor(getAmbrosiaUpgradeEffectiveLevels('ambrosiaCubes1') / 10)
+                            / 1000))
+                    * n)
+                    * Math.pow(1.15, Math.floor(n / 5))
+                return {
+                    cubes: cubeAmount
+                }
+            },
         },
 
         ambrosiaLuck2: {
@@ -642,7 +671,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = (3
+                    + 0.3 * Math.floor(getAmbrosiaUpgradeEffectiveLevels('ambrosiaLuck1') / 10))
+                    * n
+                    + 40 * Math.floor(n / 10)
+                return {
+                    ambrosiaLuck: val
+                }
+            },
         },
 
         ambrosiaQuarks3: {
@@ -650,7 +688,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 10,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 50000 * n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const quark2Mult = 1 + getAmbrosiaUpgradeEffectiveLevels('ambrosiaQuarks2') / 100
+                const quark3Base = 0.05 * n
+                const quarkAmount = 1 + quark3Base * quark2Mult
+                return {
+                    quarks: quarkAmount
+                }
+            },
         },
 
         ambrosiaCubes3: {
@@ -658,7 +704,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 5000 * n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const cube2Multi = 1 + 3 * getAmbrosiaUpgradeEffectiveLevels('ambrosiaCubes2') / 100
+                const cube3Base = 0.2 * n
+                const cube3Exponential = Math.pow(1.2, Math.floor(n / 5))
+                const cubeAmount = (1 + cube3Base * cube2Multi) * cube3Exponential
+                return {
+                    cubes: cubeAmount
+                }
+            },
         },
 
         ambrosiaLuck3: {
@@ -666,7 +721,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const perLevel = calculateBlueberryInventory()
+                return {
+                    ambrosiaLuck: perLevel * n
+                }
+            },
         },
 
         ambrosiaLuck4: {
@@ -674,7 +735,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 50,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 20000 * n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const digits = Math.ceil(Math.log10(this.gameData?.lifetimeRedAmbrosia ?? 0 + 1))
+                    + Math.ceil(Math.log10(this.gameData?.lifetimeAmbrosia ?? 0 + 1))
+                return {
+                    ambrosiaLuckPercentage: 1 / 10000 * digits * n
+                }
+            },
         },
 
         ambrosiaPatreon: {
@@ -682,7 +750,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 1,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = 1 + (n * getQuarkBonus()) / 100
+                return {
+                    blueberryGeneration: val
+                }
+            },
         },
 
         ambrosiaObtainium1: {
@@ -690,7 +764,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 25 ** n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const luck = calculateAmbrosiaLuck()
+                return {
+                    luckMult: n,
+                    obtainiumMult: n * luck
+                }
+            },
         },
 
         ambrosiaOffering1: {
@@ -698,7 +779,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 25 ** n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const luck = calculateAmbrosiaLuck()
+                return {
+                    luckMult: n,
+                    offeringMult: n * luck
+                }
+            },
         },
 
         ambrosiaHyperflux: {
@@ -706,7 +794,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 7,
             costFunction: (n: number, cpl: number): number =>
                 (cpl + 33333 * Math.min(4, n)) * Math.max(1, 3 ** (n - 4)),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const fourByFourBase = n
+                return {
+                    hyperFlux: Math.pow(
+                        1 + (1 / 100) * fourByFourBase,
+                        player.platonicUpgrades[19]
+                    )
+                }
+            },
         },
 
         ambrosiaBaseOffering1: {
@@ -714,7 +811,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 40,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                return {
+                    offering: n
+                }
+            },
         },
 
         ambrosiaBaseObtainium1: {
@@ -722,7 +824,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                return {
+                    obtainium: val
+                }
+            },
         },
 
         ambrosiaBaseOffering2: {
@@ -730,7 +838,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 60,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                return {
+                    offering: val
+                }
+            },
         },
 
         ambrosiaBaseObtainium2: {
@@ -738,7 +852,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 30,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                return {
+                    obtainium: val
+                }
+            },
         },
 
         ambrosiaSingReduction1: {
@@ -746,7 +866,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 99 ** n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = (player.insideSingularityChallenge) ? 0 : n
+                return {
+                    singularityReduction: val
+                }
+            },
         },
 
         ambrosiaInfiniteShopUpgrades1: {
@@ -754,7 +880,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                return {
+                    freeLevels: val
+                }
+            },
         },
 
         ambrosiaInfiniteShopUpgrades2: {
@@ -762,7 +894,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                return {
+                    freeLevels: val
+                }
+            },
         },
 
         ambrosiaSingReduction2: {
@@ -770,7 +908,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 3 ** n,
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = (player.insideSingularityChallenge) ? n : 0
+                return {
+                    singularityReduction: val
+                }
+            },
         },
 
         ambrosiaTalismanBonusRuneLevel: {
@@ -778,7 +922,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n / 200
+                return {
+                    talismanBonusRuneLevel: val
+                }
+            },
         },
 
         ambrosiaRuneOOMBonus: {
@@ -786,7 +936,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 Math.ceil(cpl * ((n + 1) ** 1.5 - n ** 1.5)),
-            levelFunction: (n: number): number => n
+            levelFunction: (n: number): number => n,
+            effects: (n: number) => {
+                const val = n
+                const val2 = n / 1000
+                return {
+                    runeOOMBonus: val,
+                    infiniteAscentOOMBonus: val2
+                }
+            },
+
         }
     }
 
