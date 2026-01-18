@@ -139,6 +139,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async enableAutoSing(): Promise<void> {
+        this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
         HSUtils.startDialogWatcher();
         const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
@@ -481,7 +482,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.exitReincBtn.click();
                 break;
             case 116: // Buy AOAG
-                if (this.AOAG.classList.contains('runeButtonAvailable')) {
+                if (this.AOAG && this.AOAG.classList.contains('runeButtonAvailable')) {
                     this.AOAG.click();
                     HSLogger.log(`Tried to buy AOAG!`, this.context);
                 } else {
