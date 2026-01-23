@@ -565,7 +565,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.exitReincBtn.click();
                 break;
             case 116: // Buy store C15
-            case 116: // Buy store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
             default:
