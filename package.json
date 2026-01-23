@@ -15,5 +15,8 @@
     "esbuild": "^0.25.12",
     "esbuild-plugin-inline-import": "^1.1.0",
     "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "break_infinity.js": "^2.2.0"
   }
 }

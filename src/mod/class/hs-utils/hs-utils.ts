@@ -22,7 +22,7 @@ import { HSLogger } from "../hs-core/hs-logger";
 export class HSUtils {
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-    static sleepTime = 10;
+    static sleepTime = 5;
 
     // Simple promise-based wait/delay utility method
     static wait(delay: number) {
@@ -55,6 +55,10 @@ export class HSUtils {
         return "hs-rnd-00000000000".replace(/[018]/g, c =>
             (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
         );
+    }
+
+    static getExponent(num: number): number {
+        return Math.pow(10, num);
     }
 
     static hashCode(str: string): number {
@@ -409,41 +413,21 @@ export class HSUtils {
         return String(settingValue);
     }
 
-    static async waitForElement(id: string, timeoutMs: number = 5000): Promise<HTMLElement> {
-        return new Promise((resolve, reject) => {
-            const existing = document.getElementById(id);
-            if (existing) return resolve(existing);
-
-            const observer = new MutationObserver(() => {
-                const el = document.getElementById(id);
-                if (el) {
-                    observer.disconnect();
-                    clearTimeout(timeoutId);
-                    resolve(el);
-                }
-            });
-
-            const timeoutId = setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`Element ${id} not found within ${timeoutMs}ms`));
-            }, timeoutMs);
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        });
-    }
-
     static async waitForInnerText(
         el: HTMLElement,
-        predicate: (text: string) => boolean = t => t.trim().length > 0
+        predicate: (text: string) => boolean = t => t.trim().length > 0,
+        timeoutMs = 2000
     ): Promise<void> {
-        if (predicate(el.innerText)) return;
+        // 1️⃣ Always wait for a fresh DOM update first
+        await HSUtils.waitForNextMutation(el, timeoutMs);
 
-        return new Promise(resolve => {
+        // 2️⃣ Fast-path: check immediately after mutation
+        if (predicate(el.textContent ?? "")) return;
+
+        // 3️⃣ Then wait for the predicate to become true
+        return new Promise((resolve, reject) => {
             const observer = new MutationObserver(() => {
-                if (predicate(el.innerText)) {
+                if (predicate(el.textContent ?? "")) {
                     observer.disconnect();
                     resolve();
                 }
@@ -454,6 +438,37 @@ export class HSUtils {
                 characterData: true,
                 subtree: true
             });
+
+            const timeout = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error("Timed out waiting for inner text"));
+            }, timeoutMs);
+        });
+    }
+
+
+    static waitForNextMutation(
+        el: HTMLElement,
+        timeoutMs = 2000
+    ): Promise<void> {
+        const root = el.parentElement ?? el;
+
+        return new Promise((resolve, reject) => {
+            const observer = new MutationObserver(() => {
+                observer.disconnect();
+                resolve();
+            });
+
+            observer.observe(root, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+
+            const timeout = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error("Timed out waiting for next mutation"));
+            }, timeoutMs);
         });
     }
 
@@ -607,21 +622,16 @@ export class HSUtils {
         }
     }
 
-    static isBiggerThan1000(input: string): boolean {
-        const str = input.trim().toLowerCase();
+    static parseBigNumber(input: string): number {
+        const normalized = input.replace(",", ".").trim().toLowerCase();
 
-        if (/[a-df-z]/.test(str)) {
-            return true;
+        // scientific notation (1.23e9)
+        if (/e[+-]?\d+/.test(normalized)) {
+            const n = parseFloat(normalized);
+            return isNaN(n) ? 0 : n;
         }
 
-        if (str.includes('e')) {
-            const parts = str.split('e');
-            if (/[a-df-z]/.test(parts[1])) {
-                return true
-            }
-            const exponent = parseInt(parts[1], 10);
-            return exponent >= 3;
-        }
-        return parseFloat(str) > 1000;
+        const parsed = parseFloat(normalized);
+        return isNaN(parsed) ? 0 : parsed;
     }
 }
