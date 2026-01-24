@@ -677,6 +677,7 @@ export interface SingularityChallengeStatus {
 export interface SingularityChallengeRewards {
     talismanFreeLevel: number;
     talismanRuneEffect: number;
+    antiquityOOM: number;
 }
 
 /**
@@ -734,6 +735,9 @@ export interface AmbrosiaUpgrades {
     ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeData;
     ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeData;
     ambrosiaSingReduction2: AmbrosiaUpgradeData;
+    ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeData;
+    ambrosiaRuneOOMBonus: AmbrosiaUpgradeData;
+
 }
 /**
  * Represents a single saved blueberry loadout.
@@ -876,7 +880,7 @@ export interface PlayerData {
 
     // Core Currencies & Progression
     worlds: string; // Large number stored as string
-    coins: string; // Large number stored as string
+    coins: Decimal; // Large number stored as string
     coinsThisPrestige: string;
     coinsThisTranscension: string;
     coinsThisReincarnation: string;
@@ -889,12 +893,12 @@ export interface PlayerData {
     singularityCount: number;
     highestSingularityCount: number;
 
-    prestigePoints: string; // Can be large/decimal stored as string
-    transcendPoints: string;
-    reincarnationPoints: string;
-    prestigeShards: string;
-    transcendShards: string;
-    reincarnationShards: string;
+    prestigePoints: Decimal; // Can be large/decimal stored as string
+    transcendPoints: Decimal;
+    reincarnationPoints: Decimal;
+    prestigeShards: Decimal;
+    transcendShards: Decimal;
+    reincarnationShards: Decimal;
     ascendShards: Decimal;
 
     campaigns: Campaigns;
@@ -1049,13 +1053,13 @@ export interface PlayerData {
     runeBlessingLevels: number[]; // Represented as number, potentially large
     runeSpiritLevels: number[]; // Represented as number, potentially large
     talismans: Talismans;
-    talismanShards: number;
-    commonFragments: number;
-    uncommonFragments: number;
-    rareFragments: number;
-    epicFragments: number;
-    legendaryFragments: number;
-    mythicalFragments: number; // Represented as number, potentially large
+    talismanShards: Decimal;
+    commonFragments: Decimal;
+    uncommonFragments: Decimal;
+    rareFragments: Decimal;
+    epicFragments: Decimal;
+    legendaryFragments: Decimal;
+    mythicalFragments: Decimal;
 
     // Blessings & Crafts
     cubeBlessings: CubeTesseractHypercubeBlessings;

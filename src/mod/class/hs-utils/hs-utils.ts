@@ -624,4 +624,8 @@ export class HSUtils {
         }
         return parseFloat(str) > 1000;
     }
+
+    static sumContents(arr: (number | null)[]): number {
+        return arr.reduce<number>((acc, val) => acc + (val ?? 0), 0);
+    }
 }
