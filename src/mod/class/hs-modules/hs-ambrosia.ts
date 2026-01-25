@@ -887,7 +887,7 @@ export class HSAmbrosia extends HSModule
             const redAmbrosiaPercent = ((redAmbrosiaBarValue / redAmbrosiaBarMax) * 100);
 
             const blueberrySpeedMults = (gameDataAPI.calculateAmbrosiaSpeed() as number);
-            const blueberries = (gameDataAPI.calculateBlueBerries() as number);
+            const blueberries = (gameDataAPI.R_calculateBlueBerries() as number);
             const ambrosiaSpeed = blueberrySpeedMults * blueberries;
             const ambrosiaAcceleratorCount = gameData.shopUpgrades.shopAmbrosiaAccelerator;
             const ambrosiaLuck = gameDataAPI.calculateLuck() as { additive: number; raw: number; total: number; };
