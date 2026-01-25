@@ -329,8 +329,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         let value1 = this.coinsElement.textContent;
 
         while (value1.length !== 3) {
-            if (Date.now() - start >= timeout) return;
-
+            if (Date.now() - start >= timeout) {
+                await HSUtils.click(this.coin);
+                return;
+            }
             await HSUtils.sleep(0);
             value1 = this.coinsElement.textContent;
         }
