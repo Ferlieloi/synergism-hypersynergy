@@ -1672,8 +1672,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         + Math.floor(Math.log10(Number(this.gameData?.wowTesseracts) + 1))
                         + Math.floor(Math.log10(Number(this.gameData?.wowHypercubes) + 1))
                         + Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes) + 1))
-                        + Math.floor(Math.log10(this.gameData?.wowAbyssals ?? 0 + 1))
-                        + Math.floor(Math.log10(this.gameData?.wowOcteracts ?? 0 + 1))
+                        + Math.floor(Math.log10((this.gameData?.wowAbyssals ?? 0) + 1))
+                        + Math.floor(Math.log10((this.gameData?.wowOcteracts ?? 0) + 1))
                         + 6)
                 return {
                     quarks: val
@@ -1716,8 +1716,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         + Math.floor(Math.log10(Number(this.gameData?.wowTesseracts) + 1))
                         + Math.floor(Math.log10(Number(this.gameData?.wowHypercubes) + 1))
                         + Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes) + 1))
-                        + Math.floor(Math.log10(this.gameData?.wowAbyssals ?? 0 + 1))
-                        + Math.floor(Math.log10(this.gameData?.wowOcteracts ?? 0 + 1))
+                        + Math.floor(Math.log10((this.gameData?.wowAbyssals ?? 0) + 1))
+                        + Math.floor(Math.log10((this.gameData?.wowOcteracts ?? 0) + 1))
                         + 6)
                 return {
                     ambrosiaLuck: val
@@ -1857,8 +1857,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costFunction: (n: number, cpl: number): number =>
                 cpl + 20000 * n,
             effects: (n: number) => {
-                const digits = Math.ceil(Math.log10(this.gameData?.lifetimeRedAmbrosia ?? 0 + 1))
-                    + Math.ceil(Math.log10(this.gameData?.lifetimeAmbrosia ?? 0 + 1))
+                const digits = Math.ceil(Math.log10((this.gameData?.lifetimeRedAmbrosia ?? 0) + 1))
+                    + Math.ceil(Math.log10((this.gameData?.lifetimeAmbrosia ?? 0) + 1))
                 return {
                     ambrosiaLuckPercentage: 1 / 10000 * digits * n
                 }
@@ -5397,8 +5397,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
                 ? []
                 : [
-                    +this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
-                    +this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+                    +this.R_getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades1').freeLevels,
+                    +this.R_getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades2').freeLevels,
                 ]),
         ]
 
@@ -6403,8 +6403,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (!this.gameData) return 0;
 
         const data = this.gameData;
-
-        return data.singularityCount - (data.shopUpgrades.shopSingularityPenaltyDebuff + this.R_getAmbrosiaUpgradeEffects('ambrosiaSingReduction1').singularityReduction);
+        if (data.insideSingularityChallenge) {
+            return data.singularityCount - (data.shopUpgrades.shopSingularityPenaltyDebuff + this.R_getAmbrosiaUpgradeEffects('ambrosiaSingReduction2').singularityReduction);
+        } else {
+            return data.singularityCount - (data.shopUpgrades.shopSingularityPenaltyDebuff + this.R_getAmbrosiaUpgradeEffects('ambrosiaSingReduction1').singularityReduction);
+        }
     }
 
     R_calculateRedAmbrosiaLuck(reduce_vals = true) {
@@ -6449,7 +6452,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopRedLuck3 * 0.1,
             red2,
             horseShoeLevel * 0.2,
-            Math.max(0, this.R_calculateSynergismLevel() ?? 0 - 259),
+            Math.max(0, (this.R_calculateSynergismLevel() ?? 0) - 259),
         ]
 
         const reduced = vals.reduce((a, b) => a + b, 0)

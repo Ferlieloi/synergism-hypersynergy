@@ -193,7 +193,6 @@ export interface RedAmbrosiaUpgradeCalculationConfig<K extends keyof RedAmbrosia
     costPerLevel: number,
     maxLevel: number,
     costFunction: (n: number, cpl: number) => number,
-    levelFunction: (n: number) => number
     effects: (n: number) => RedAmbrosiaUpgradeRewards[K]
 }
 
@@ -242,7 +241,6 @@ export interface AmbrosiaUpgradeCalculationConfig<
     costPerLevel: number
     maxLevel: number
     costFunction: (n: number, cpl: number) => number
-    levelFunction: (n: number) => number
     effects: (n: number) => AmbrosiaUpgradeRewards[K]
     extraLevelCalc: () => number
 }
