@@ -12,6 +12,9 @@ import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSGameState, MainView, SingularityView } from "../../hs-core/hs-gamestate";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 /*
     Class: HSAutosing
@@ -88,7 +91,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
 
     init(): Promise<void> {
-        debugger;
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
         this.autosingEnabled = false;
@@ -289,6 +291,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
+        await this.useAddAndTimeCodes();
+
         try {
             if (this.timerModal) {
                 this.timerModal.start();
@@ -328,6 +332,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.click(this.coin)
             coins = await this.getCoins();
         }
+    }
+
+    private async useAddAndTimeCodes() {
+        const addAll = document.getElementById("addCodeAll") as HTMLButtonElement;
+        const time = document.getElementById("timeCode") as HTMLButtonElement;
+
+        addAll.click();
+        console.log("addAll");
+        time.click();
+        console.log("time");
     }
 
     private async getCoins(): Promise<number> {
@@ -741,15 +755,30 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async getCurrentGoldenQuarks(): Promise<number> {
+        const gameState = HSModuleManager.getModule<HSGameState>("HSGameState");
+        if (!gameState) return 0;
+        // 1. Save where the user was
+        const prevMainView = gameState.getCurrentUIView<MainView>('MAIN_VIEW');
+        const prevSingularityView =
+            gameState.getCurrentUIView<SingularityView>('SINGULARITY_VIEW');
+
+        // 2. Navigate to Golden Quarks
         this.singularityTab.click();
         if (this.singTab2) this.singTab2.click();
 
+
+        // 3. Read value
         const value = await this.getFromDOM<number>(this.goldenQuarksElement, {
             regex: /(\d+([.,]\d+)?[eE][+-]?\d+)/,
             parser: HSUtils.parseBigNumber
         });
 
         HSLogger.debug(`Current Golden Quarks: ${value}`, this.context);
+
+        // 4. Restore previous state
+        this.restoreViews(prevMainView, prevSingularityView);
+
+
         return value ?? 0;
     }
 
@@ -758,6 +787,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const parsed = parseFloat(quarksText.replace(",", "."));
         HSLogger.debug(`Current Quarks: ${parsed}`, this.context);
         return isNaN(parsed) ? 0 : parsed;
+    }
+
+    private restoreViews(
+        mainView: MainView,
+        singularityView?: SingularityView
+    ) {
+        // Restore main view
+        const mainTab = document.getElementById(mainView.getName());
+        mainTab?.click();
+
+        // Restore singularity sub-view (if applicable)
+        if (mainView.getId() === MAIN_VIEW.SINGULARITY && singularityView) {
+            const subTab = document.getElementById(singularityView.getName());
+            subTab?.click();
+        }
     }
 
     private async performSingularity(): Promise<void> {
