@@ -66,15 +66,15 @@ export interface Unlocks {
  * Represents the exp for each rune
  */
 export interface Runes {
-    antiquities: number;
-    duplication: number;
-    finiteDescent: number;
-    horseShoe: number;
-    infiniteAscent: number;
-    prism: number;
     speed: number;
-    superiorIntellect: number;
+    duplication: number;
+    prism: number;
     thrift: number;
+    superiorIntellect: number;
+    infiniteAscent: number;
+    antiquities: number;
+    horseShoe: number;
+    finiteDescent: number;
 }
 
 interface Ants {
@@ -87,7 +87,7 @@ interface Ants {
         highestMastery: number;
     }>;
     upgrades: Record<string, number>;
-    crumbs: string;
+    crumbs: Decimal;
     crumbsThisSacrifice: string;
     crumbsEverMade: string;
     immortalELO: number;
@@ -266,15 +266,9 @@ export interface PlatonicBlessings {
  * Represents the state of a specific Hepteract craft type.
  */
 export interface HepteractCraft {
-    UNLOCKED: boolean;
-    BAL: number; // Balance?
-    CAP: number; // Capacity?
-    BASE_CAP: number;
-    HEPTERACT_CONVERSION: number;
+    BAL: number;
     AUTO: boolean;
-    DISCOUNT: number;
-    OTHER_CONVERSIONS: Record<string, number | string>; // Contains different resource types and amounts (string or number)
-    HTML_STRING: string; // Internal identifier string
+    TIMES_CAP_EXTENDED: number;
 }
 
 /**
@@ -380,6 +374,21 @@ export interface CorruptionLevels {
     hyperchallenge: number;
 }
 
+export class CorruptionLoadout {
+    totalScoreMult = 1
+    corruptionScoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35]
+    levels: CorruptionLevels = {
+        viscosity: 0,
+        drought: 0,
+        deflation: 0,
+        extinction: 0,
+        illiteracy: 0,
+        recession: 0,
+        dilation: 0,
+        hyperchallenge: 0
+    }
+}
+
 /**
  * Represents saved loadouts for corruptions.
  * Keys are the names of the saved loadouts.
@@ -396,8 +405,8 @@ export interface CorruptionSaves {
  * Contains the current, next, and saved corruption states.
  */
 export interface Corruptions {
-    used: CorruptionLevels;
-    next: CorruptionLevels;
+    used: CorruptionLoadout;
+    next: CorruptionLoadout;
     saves: CorruptionSaves;
     showStats: boolean;
 }
@@ -588,6 +597,11 @@ export interface goldenQuarkUpgrades {
     singBonusTokens3: SingularityUpgradeData;
     singBonusTokens4: SingularityUpgradeData;
     singInfiniteShopUpgrades: SingularityUpgradeData;
+    singTalismanBonusRunes1: SingularityUpgradeData;
+    singTalismanBonusRunes2: SingularityUpgradeData;
+    singTalismanBonusRunes3: SingularityUpgradeData;
+    singTalismanBonusRunes4: SingularityUpgradeData;
+    favoriteUpgrade: SingularityUpgradeData;
 }
 
 /**
@@ -662,6 +676,8 @@ export interface SingularityChallengeStatus {
 
 export interface SingularityChallengeRewards {
     talismanFreeLevel: number;
+    talismanRuneEffect: number;
+    antiquityOOM: number;
 }
 
 /**
@@ -706,6 +722,7 @@ export interface AmbrosiaUpgrades {
     ambrosiaQuarks3: AmbrosiaUpgradeData;
     ambrosiaCubes3: AmbrosiaUpgradeData;
     ambrosiaLuck3: AmbrosiaUpgradeData;
+    ambrosiaLuck4: AmbrosiaUpgradeData;
     ambrosiaPatreon: AmbrosiaUpgradeData;
     ambrosiaObtainium1: AmbrosiaUpgradeData;
     ambrosiaOffering1: AmbrosiaUpgradeData;
@@ -718,8 +735,10 @@ export interface AmbrosiaUpgrades {
     ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeData;
     ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeData;
     ambrosiaSingReduction2: AmbrosiaUpgradeData;
-}
+    ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeData;
+    ambrosiaRuneOOMBonus: AmbrosiaUpgradeData;
 
+}
 /**
  * Represents a single saved blueberry loadout.
  * Keys are internal upgrade names, values are the levels in that loadout.
@@ -828,7 +847,20 @@ export interface Campaigns {
     fiftieth: number;
 }
 
-
+export interface progressiveAchievements {
+    "runeLevel": number;
+    "freeRuneLevel": number;
+    "antMasteries": number;
+    "rebornELO": number;
+    "singularityCount": number;
+    "ambrosiaCount": number;
+    "redAmbrosiaCount": number;
+    "exalts": number;
+    "talismanRarities": number;
+    "singularityUpgrades": number;
+    "octeractUpgrades": number;
+    "redAmbrosiaUpgrades": number;
+}
 
 
 /**
@@ -848,7 +880,7 @@ export interface PlayerData {
 
     // Core Currencies & Progression
     worlds: string; // Large number stored as string
-    coins: string; // Large number stored as string
+    coins: Decimal; // Large number stored as string
     coinsThisPrestige: string;
     coinsThisTranscension: string;
     coinsThisReincarnation: string;
@@ -861,13 +893,13 @@ export interface PlayerData {
     singularityCount: number;
     highestSingularityCount: number;
 
-    prestigePoints: string; // Can be large/decimal stored as string
-    transcendPoints: string;
-    reincarnationPoints: string;
-    prestigeShards: string;
-    transcendShards: string;
-    reincarnationShards: string;
-    ascendShards: string;
+    prestigePoints: Decimal; // Can be large/decimal stored as string
+    transcendPoints: Decimal;
+    reincarnationPoints: Decimal;
+    prestigeShards: Decimal;
+    transcendShards: Decimal;
+    reincarnationShards: Decimal;
+    ascendShards: Decimal;
 
     campaigns: Campaigns;
 
@@ -1021,13 +1053,13 @@ export interface PlayerData {
     runeBlessingLevels: number[]; // Represented as number, potentially large
     runeSpiritLevels: number[]; // Represented as number, potentially large
     talismans: Talismans;
-    talismanShards: number;
-    commonFragments: number;
-    uncommonFragments: number;
-    rareFragments: number;
-    epicFragments: number;
-    legendaryFragments: number;
-    mythicalFragments: number; // Represented as number, potentially large
+    talismanShards: Decimal;
+    commonFragments: Decimal;
+    uncommonFragments: Decimal;
+    rareFragments: Decimal;
+    epicFragments: Decimal;
+    legendaryFragments: Decimal;
+    mythicalFragments: Decimal;
 
     // Blessings & Crafts
     cubeBlessings: CubeTesseractHypercubeBlessings;
@@ -1053,6 +1085,7 @@ export interface PlayerData {
     toggles: Toggles;
     unlocks: Unlocks;
     achievements: number[]; // Status per achievement (0 or 1)
+    progressiveAchievements: progressiveAchievements;
     achievementPoints: number;
     shoptoggles: ShopToggles;
     shopBuyMaxToggle: boolean;

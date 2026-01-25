@@ -650,4 +650,8 @@ export class HSUtils {
         const number = Number(inputStr);
         return Number.isFinite(number) ? number : 0;
     }
+
+    static sumContents(arr: (number | null)[]): number {
+        return arr.reduce<number>((acc, val) => acc + (val ?? 0), 0);
+    }
 }
