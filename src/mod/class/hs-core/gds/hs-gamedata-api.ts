@@ -1,5 +1,5 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
-import { Achievement, AchievementGroups, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, PCoinUpgradeEffects, NumberStatLine, RedAmbrosiaUpgradeRewards, RedAmbrosiaNames, RuneTypeMap, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanCraftItems } from "../../../types/data-types/hs-gamedata-api-types";
+import { Achievement, AchievementGroups, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, PCoinUpgradeEffects, NumberStatLine, RedAmbrosiaUpgradeRewards, RedAmbrosiaNames, RuneTypeMap, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanCraftItems, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
 import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, Runes, CorruptionLoadout, SingularityChallenges, goldenQuarkUpgrades, PlayerData } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
@@ -194,7 +194,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 1,
             maxLevel: 100,
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => 1 + n / 500,
             effects: (n: number) => {
                 const val = 1 + n / 500
                 return {
@@ -207,7 +206,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 8000,
             maxLevel: 250,
             costFunction: (n: number, cpl: number) => cpl + 0 * n,
-            levelFunction: (n: number) => 1 + n / 1000,
             effects: (n: number) => {
                 const val = 1 + n / 1000
                 return {
@@ -220,7 +218,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 10,
             maxLevel: 5,
             costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-            levelFunction: (n: number) => n,
             effects: (n: number) => {
                 return {
                     freeLevels: n
@@ -232,7 +229,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 250,
             maxLevel: 5,
             costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-            levelFunction: (n: number) => n,
             effects: (n: number) => {
                 return {
                     freeLevels: n
@@ -244,7 +240,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 5000,
             maxLevel: 5,
             costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-            levelFunction: (n: number) => n,
             effects: (n: number) => {
                 return {
                     freeLevels: n
@@ -256,7 +251,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 50000,
             maxLevel: 5,
             costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-            levelFunction: (n: number) => n,
             effects: (n: number) => {
                 return {
                     freeLevels: n
@@ -268,7 +262,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 1,
             maxLevel: 100,
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => 2 * n,
             effects: (n: number) => {
                 const val = 2 * n
                 return {
@@ -281,7 +274,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 8000,
             maxLevel: 250,
             costFunction: (n: number, cpl: number) => cpl + 0 * n,
-            levelFunction: (n: number) => 2 * n,
             effects: (n: number) => {
                 const val = 2 * n
                 return {
@@ -294,7 +286,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costPerLevel: 99999,
             maxLevel: 1,
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => 125 * n,
             effects: (n: number) => {
                 return {
                     roleUnlock: n > 0,
@@ -307,7 +298,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         tutorial: {
             costFunction: (n: number, cpl: number) => cpl + 0 * n,
-            levelFunction: (n: number) => Math.pow(1.01, n),
             maxLevel: 100,
             costPerLevel: 1,
             effects: (n: number) => {
@@ -322,7 +312,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         conversionImprovement1: {
             costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-            levelFunction: (n: number) => -n,
             maxLevel: 5,
             costPerLevel: 5,
             effects: (n: number) => {
@@ -334,7 +323,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         conversionImprovement2: {
             costFunction: (n: number, cpl: number) => cpl * Math.pow(4, n),
-            levelFunction: (n: number) => -n,
             maxLevel: 3,
             costPerLevel: 200,
             effects: (n: number) => {
@@ -346,7 +334,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         conversionImprovement3: {
             costFunction: (n: number, cpl: number) => cpl * Math.pow(10, n),
-            levelFunction: (n: number) => -n,
             maxLevel: 2,
             costPerLevel: 10000,
             effects: (n: number) => {
@@ -358,7 +345,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         freeTutorialLevels: {
             costFunction: (n: number, cpl: number) => cpl + n,
-            levelFunction: (n: number) => n,
             maxLevel: 5,
             costPerLevel: 1,
             effects: (n: number) => {
@@ -370,7 +356,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redGenerationSpeed: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => 1 + 3 * n / 1000,
             maxLevel: 100,
             costPerLevel: 12,
             effects: (n: number) => {
@@ -383,7 +368,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redLuck: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => n,
             maxLevel: 100,
             costPerLevel: 4,
             effects: (n: number) => {
@@ -396,7 +380,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redAmbrosiaCube: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => n,
             maxLevel: 1,
             costPerLevel: 500,
             effects: (n: number) => {
@@ -408,7 +391,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redAmbrosiaObtainium: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => n,
             maxLevel: 1,
             costPerLevel: 1250,
             effects: (n: number) => {
@@ -420,7 +402,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redAmbrosiaOffering: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => n,
             maxLevel: 1,
             costPerLevel: 4000,
             effects: (n: number) => {
@@ -432,7 +413,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redAmbrosiaCubeImprover: {
             costFunction: (n: number, cpl: number) => cpl * (n + 1),
-            levelFunction: (n: number) => 0.01 * n,
             maxLevel: 20,
             costPerLevel: 100,
             effects: (n: number) => {
@@ -445,7 +425,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         infiniteShopUpgrades: {
             costFunction: (n: number, cpl: number) => cpl + 100 * n,
-            levelFunction: (n: number) => n,
             maxLevel: 40,
             costPerLevel: 200,
             effects: (n: number) => {
@@ -457,7 +436,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         redAmbrosiaAccelerator: {
             costFunction: (n: number, cpl: number) => cpl + n * 0,
-            levelFunction: (n: number) => 0.02 * n + ((n > 0) ? 1 : 0),
             maxLevel: 100,
             costPerLevel: 1000,
             effects: (n: number) => {
@@ -471,7 +449,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costFunction: (level: number, baseCost: number) => {
                 return baseCost * (level + 1)
             },
-            levelFunction: (n: number) => 10 * n,
             maxLevel: 100,
             costPerLevel: 200,
             effects: (n: number) => {
@@ -492,7 +469,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 const costValue = [100_000, 1_400_000, 3_000_000]
                 return costValue[level] ?? 0
             },
-            levelFunction: (n: number) => n,
             maxLevel: 3,
             costPerLevel: 1e5,
             effects: (n: number) => {
@@ -568,11 +544,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     #investToAmbrosiaUpgrade(
+        free: number,
         budget: number,
         costPerLevel: number,
         maxLevel: number,
-        constFunction: (n: number, cpl: number) => number,
-        levelFunction: (n: number) => number) {
+        constFunction: (n: number, cpl: number) => number) {
 
         let level = 0
 
@@ -583,20 +559,21 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             level += 1
             nextCost = constFunction(level, costPerLevel)
 
-            if (level >= maxLevel) {
+            if ((level) >= maxLevel) {
                 break;
             }
         }
 
-        return levelFunction(level);
+        level += free;
+
+        return level;
     }
 
     #investToRedAmbrosiaUpgrade(
         budget: number,
         costPerLevel: number,
         maxLevel: number,
-        constFunction: (n: number, cpl: number) => number,
-        levelFunction: (n: number) => number) {
+        constFunction: (n: number, cpl: number) => number) {
 
         let level = 0
 
@@ -611,8 +588,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 break;
             }
         }
-
-        return levelFunction(level);
+        return level;
     }
 
     R_calculateSigmoidExponential(constant: number, coefficient: number) {
@@ -927,11 +903,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return (this.gameData?.shopUpgrades.shopTalisman ?? 0) > 0;
     }
 
-    R_getAmbrosiaUpgradeEffectiveLevels = (upgradeKey: AmbrosiaUpgradeNames): number => {
-        const upgrade = this.R_ambrosiaUpgradeCalculationCollection[upgradeKey]
-        return (this.gameData?.ambrosiaUpgrades[upgradeKey].level ?? 0) + upgrade.extraLevelCalc()
-    }
-
     R_firstFiveRuneEffectivenessStats: NumberStatLine[] = [
         {
             i18n: 'Research1x4',
@@ -1231,7 +1202,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     R_getAmbrosiaUpgradeEffects = <T extends AmbrosiaUpgradeNames>(
         upgradeKey: T
     ): AmbrosiaUpgradeRewards[T] => {
-        const effectiveLevels = this.R_getAmbrosiaUpgradeEffectiveLevels(upgradeKey)
+        const effectiveLevels = this.R_calculateAmbrosiaUpgradeValue(upgradeKey)
         return this.R_ambrosiaUpgradeCalculationCollection[upgradeKey].effects(effectiveLevels) as AmbrosiaUpgradeRewards[T]
     }
 
@@ -1597,7 +1568,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 10,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const cubeAmount = 1 + 0.05 * n
                 const quarkAmount = 1 + 0.01 * n
@@ -1615,7 +1585,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const quarkAmount = 1 + 0.01 * n
                 return {
@@ -1630,7 +1599,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const cubeAmount = (1 + 0.05 * n) * Math.pow(1.1, Math.floor(n / 5))
                 return {
@@ -1646,7 +1614,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = 2 * n + 12 * Math.floor(n / 10)
                 return {
@@ -1662,7 +1629,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.001 * n
                 const val = 1
@@ -1681,7 +1647,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.0005 * n
                 const luck = this.calculateLuck() as { additive: number, raw: number, total: number }
@@ -1699,7 +1664,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.0001 * n
                 const val = 1
@@ -1724,7 +1688,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.0001 * n
                 const luck = this.calculateLuck() as { additive: number, raw: number, total: number }
@@ -1746,7 +1709,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.02 * n
                 const val = baseVal
@@ -1770,7 +1732,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const baseVal = 0.02 * n
                 const val = baseVal * Math.floor(Math.pow(Math.log10(Number(this.gameData?.worlds ?? 0) + 1) + 1, 2))
@@ -1787,11 +1748,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const quarkAmount = 1
                     + (0.01
-                        + Math.floor(this.R_getAmbrosiaUpgradeEffectiveLevels('ambrosiaQuarks1') / 10)
+                        + Math.floor(this.R_calculateAmbrosiaUpgradeValue('ambrosiaQuarks1') / 10)
                         / 1000)
                     * n
                 return {
@@ -1807,12 +1767,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const cubeAmount = (1
                     + (0.1
                         + 10
-                        * (Math.floor(this.R_getAmbrosiaUpgradeEffectiveLevels('ambrosiaCubes1') / 10)
+                        * (Math.floor(this.R_calculateAmbrosiaUpgradeValue('ambrosiaCubes1') / 10)
                             / 1000))
                     * n)
                     * Math.pow(1.15, Math.floor(n / 5))
@@ -1829,10 +1788,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = (3
-                    + 0.3 * Math.floor(this.R_getAmbrosiaUpgradeEffectiveLevels('ambrosiaLuck1') / 10))
+                    + 0.3 * Math.floor(this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck1') / 10))
                     * n
                     + 40 * Math.floor(n / 10)
                 return {
@@ -1848,9 +1806,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 10,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 50000 * n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
-                const quark2Mult = 1 + this.R_getAmbrosiaUpgradeEffectiveLevels('ambrosiaQuarks2') / 100
+                const quark2Mult = 1 + this.R_calculateAmbrosiaUpgradeValue('ambrosiaQuarks2') / 100
                 const quark3Base = 0.05 * n
                 const quarkAmount = 1 + quark3Base * quark2Mult
                 return {
@@ -1866,9 +1823,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 5000 * n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
-                const cube2Multi = 1 + 3 * this.R_getAmbrosiaUpgradeEffectiveLevels('ambrosiaCubes2') / 100
+                const cube2Multi = 1 + 3 * this.R_calculateAmbrosiaUpgradeValue('ambrosiaCubes2') / 100
                 const cube3Base = 0.2 * n
                 const cube3Exponential = Math.pow(1.2, Math.floor(n / 5))
                 const cubeAmount = (1 + cube3Base * cube2Multi) * cube3Exponential
@@ -1885,7 +1841,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const perLevel = this.R_calculateBlueBerries()
                 return {
@@ -1901,7 +1856,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 50,
             costFunction: (n: number, cpl: number): number =>
                 cpl + 20000 * n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const digits = Math.ceil(Math.log10(this.gameData?.lifetimeRedAmbrosia ?? 0 + 1))
                     + Math.ceil(Math.log10(this.gameData?.lifetimeAmbrosia ?? 0 + 1))
@@ -1918,7 +1872,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 1,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = 1 + (n * (this.meData?.bonus.quarkBonus ?? 0)) / 100
                 return {
@@ -1934,7 +1887,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 25 ** n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const { total } = this.calculateLuck(true) as { total: number };
                 return {
@@ -1951,7 +1903,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 25 ** n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
                 return {
@@ -1968,7 +1919,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 7,
             costFunction: (n: number, cpl: number): number =>
                 (cpl + 33333 * Math.min(4, n)) * Math.max(1, 3 ** (n - 4)),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const fourByFourBase = n
                 return {
@@ -1987,7 +1937,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 40,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 return {
                     offering: n
@@ -2002,7 +1951,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 return {
@@ -2018,7 +1966,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 60,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 return {
@@ -2034,7 +1981,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 30,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 3 - n ** 3),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 return {
@@ -2050,7 +1996,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 99 ** n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = (this.gameData?.insideSingularityChallenge) ? 0 : n
                 return {
@@ -2066,7 +2011,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 return {
@@ -2082,7 +2026,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 20,
             costFunction: (_n: number, cpl: number): number =>
                 cpl,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 return {
@@ -2098,7 +2041,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 2,
             costFunction: (n: number, cpl: number): number =>
                 cpl * 3 ** n,
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = (this.gameData?.insideSingularityChallenge) ? n : 0
                 return {
@@ -2114,7 +2056,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n / 200
                 return {
@@ -2130,7 +2071,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             maxLevel: 100,
             costFunction: (n: number, cpl: number): number =>
                 Math.ceil(cpl * ((n + 1) ** 1.5 - n ** 1.5)),
-            levelFunction: (n: number): number => n,
             effects: (n: number) => {
                 const val = n
                 const val2 = n / 1000
@@ -4331,66 +4271,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
     ]
 
-    R_calculateAmbrosiaUpgradeLevel(upgradeKey: AmbrosiaUpgradeNames): number {
-        if (!this.gameData) return 0;
-        const invested = this.gameData?.ambrosiaUpgrades[upgradeKey].ambrosiaInvested
-
-        const upgradeCost = this.R_ambrosiaUpgradeCalculationCollection[upgradeKey].costFunction
-        const perLevelCost = this.R_ambrosiaUpgradeCalculationCollection[upgradeKey].costPerLevel
-
-        let level = 0
-        let budget = invested
-
-        let nextCost = upgradeCost(level, perLevelCost)
-
-        while (budget >= nextCost) {
-            budget -= nextCost
-            level += 1
-            nextCost = upgradeCost(level, perLevelCost)
-
-            if (level >= this.R_ambrosiaUpgradeCalculationCollection[upgradeKey].maxLevel) {
-                break
-            }
-        }
-
-        if (budget > 0) {
-            this.gameData.ambrosiaUpgrades[upgradeKey].ambrosiaInvested -= budget
-            this.gameData.ambrosia += budget
-        }
-
-        return level
-    }
-
-    R_calculateRedAmbrosiaUpgradeLevel(upgradeKey: RedAmbrosiaNames): number {
-        if (!this.gameData) return 0;
-        const invested = this.gameData?.redAmbrosiaUpgrades[upgradeKey]
-
-        const upgradeCost = this.R_redAmbrosiaUpgradeCalculationCollection[upgradeKey].costFunction
-        const perLevelCost = this.R_redAmbrosiaUpgradeCalculationCollection[upgradeKey].costPerLevel
-
-        let level = 0
-        let budget = invested
-
-        let nextCost = upgradeCost(level, perLevelCost)
-
-        while (budget >= nextCost) {
-            budget -= nextCost
-            level += 1
-            nextCost = upgradeCost(level, perLevelCost)
-
-            if (level >= this.R_redAmbrosiaUpgradeCalculationCollection[upgradeKey].maxLevel) {
-                break
-            }
-        }
-
-        if (budget > 0) {
-            this.gameData.redAmbrosiaUpgrades[upgradeKey] -= budget
-            this.gameData.redAmbrosia += budget
-        }
-
-        return level
-    }
-
     R_progressiveAchievements: Record<ProgressiveAchievements, ProgressiveAchievement> = {
         runeLevel: {
             maxPointValue: 1000,
@@ -4580,7 +4460,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 if (!this.gameData) return 0;
                 for (const upgradeKey of Object.keys(this.R_redAmbrosiaUpgradeCalculationCollection) as RedAmbrosiaUpgradeKey[]) {
                     const maxLevel = this.R_redAmbrosiaUpgradeCalculationCollection[upgradeKey].maxLevel
-                    const playerLevel = this.R_calculateRedAmbrosiaUpgradeLevel(upgradeKey);
+                    const playerLevel = this.R_calculateRedAmbrosiaUpgradeValue(upgradeKey);
                     const playerLevelValue = typeof playerLevel === 'number' ? playerLevel : (playerLevel as any).value;
                     if (maxLevel !== -1 && playerLevelValue >= maxLevel) {
                         pointValue += 10
@@ -5045,20 +4925,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         if (cached) return cached;
 
-        const investmentParameters = ((this.R_ambrosiaUpgradeCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig<any>;
+        const investmentParameters = ((this.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
 
         const upgradeValue = this.#investToAmbrosiaUpgrade(
+            investmentParameters.extraLevelCalc(),
             data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
             investmentParameters.costPerLevel,
             investmentParameters.maxLevel,
             investmentParameters.costFunction,
-            investmentParameters.levelFunction
         );
 
         const reduced = upgradeValue;
 
         this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
-
         return reduced;
     }
 
@@ -5110,11 +4989,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             investmentParameters.costPerLevel,
             investmentParameters.maxLevel,
             investmentParameters.costFunction,
-            investmentParameters.levelFunction
         );
 
         const reduced = upgradeValue;
-
         this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
 
         return reduced;
@@ -5492,8 +5369,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
                 ? []
                 : [
-                    this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
-                    this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                    this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+                    this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
                 ]),
         ];
 
@@ -5512,7 +5389,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
 
         const vals: number[] = [
-            this.R_calculateRedAmbrosiaUpgradeValue('infiniteShopUpgrades'),
+            this.R_getRedAmbrosiaUpgradeEffects('infiniteShopUpgrades').freeLevels,
             dunno(),
             +data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
             +data.octUpgrades.octeractInfiniteShopUpgrades.level,
@@ -5520,8 +5397,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
                 ? []
                 : [
-                    +this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
-                    +this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                    +this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+                    +this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
                 ]),
         ]
 
@@ -5570,8 +5447,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const calculationVars: number[] = [
             data.insideSingularityChallenge ? 1 : 0,
-            this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction2"),
-            this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction1"),
+            this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction2").singularityReduction,
+            this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction1").singularityReduction,
             data.shopUpgrades.shopSingularityPenaltyDebuff
         ];
 
@@ -5582,9 +5459,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         let redu;
 
         if (data.insideSingularityChallenge) {
-            redu = this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction2")
+            redu = this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction2").singularityReduction;
         } else {
-            redu = this.R_calculateAmbrosiaUpgradeValue("ambrosiaSingReduction1")
+            redu = this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction1").singularityReduction;
         }
 
         const vals = [
@@ -6309,8 +6186,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const QUARK_BONUS = 100 * (1 + meBonuses.globalBonus / 100) * (1 + meBonuses.personalBonus / 100) - 100;
 
-        const RED_AMB_GEN_1 = this.R_calculateRedAmbrosiaUpgradeValue('blueberryGenerationSpeed');
-        const RED_AMB_GEN_2 = this.R_calculateRedAmbrosiaUpgradeValue('blueberryGenerationSpeed2');
+        const RED_AMB_GEN_1 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed;
+        const RED_AMB_GEN_2 = this.R_getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed;
 
         const cube76 = gameData.cubeUpgrades[76] ?? 1;
 
@@ -6321,7 +6198,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             (this.R_calculateAmbrosiaGenerationShopUpgrade() as number),
             (this.R_calculateAmbrosiaGenerationSingularityUpgrade() as number),
             (this.R_calculateAmbrosiaGenerationOcteractUpgrade() as number),
-            1 + (this.R_calculateAmbrosiaUpgradeValue('ambrosiaPatreon') * QUARK_BONUS) / 100,
+            1 + (this.R_getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration * QUARK_BONUS) / 100,
             (1 + gameData.singularityChallenges.oneChallengeCap.completions / 100),
             (1 + gameData.singularityChallenges.noAmbrosiaUpgrades.completions / 50),
             RED_AMB_GEN_1,
@@ -6356,7 +6233,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             +(gameData.singularityChallenges.noSingularityUpgrades.completions > 0),
             +(gameData.goldenQuarkUpgrades.blueberries.level),
             +(gameData.octUpgrades.octeractBlueberries.level),
-            +(this.R_calculateRedAmbrosiaUpgradeValue('blueberries')),
+            +(this.R_getRedAmbrosiaUpgradeEffects('blueberries').blueberries),
             this.R_calculateSingularityMilestoneBlueberries(),
             noAmbrosiaFactor
         ]
@@ -6383,17 +6260,18 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             gameData.shopUpgrades.shopAmbrosiaLuckMultiplier4 / 100,
             gameData.singularityChallenges.noAmbrosiaUpgrades.completions / 200,
             0.001 * cube77,
-            this.isEvent ? this.R_calculateConsumableEventBuff(EventBuffType.AmbrosiaLuck) : 0
+            this.isEvent ? this.R_calculateConsumableEventBuff(EventBuffType.AmbrosiaLuck) : 0,
+            this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck4').ambrosiaLuckPercentage
         ]
 
         const P_BUFF_LVL = pseudoData.playerUpgrades.find(u => u.internalName === "AMBROSIA_LUCK_BUFF")?.level;
         const P_BUFF = P_BUFF_LVL ? P_BUFF_LVL * 20 : 0;
         const campaignBonus = this.R_calculateCampaignLuckBonus()
 
-        const RED_AMB_FREE_ROW_2 = this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow2');
-        const RED_AMB_FREE_ROW_3 = this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow3');
-        const RED_AMB_FREE_ROW_4 = this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4');
-        const RED_AMB_FREE_ROW_5 = this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5');
+        const RED_AMB_FREE_ROW_2 = this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels;
+        const RED_AMB_FREE_ROW_3 = this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels;
+        const RED_AMB_FREE_ROW_4 = this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels;
+        const RED_AMB_FREE_ROW_5 = this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels;
 
         const RED_AMB_FREE_ROWS: { [key: number]: number } = {
             2: RED_AMB_FREE_ROW_2,
@@ -6402,26 +6280,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             5: RED_AMB_FREE_ROW_5,
         }
 
-        const effLevel = (level: number, rowNum: number) => {
-            if (true_base)
-                return RED_AMB_FREE_ROWS[rowNum];
-            else
-                return level + RED_AMB_FREE_ROWS[rowNum];
-        }
-
-        const blueLuck1 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck1');
-        const blueLuck2 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck2');
-        const blueLuck3 = this.R_calculateAmbrosiaUpgradeValue('ambrosiaLuck3');
-
         // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/BlueberryUpgrades.ts#L564
         const totalCubes = this.R_calculateTotalCubes();
 
-        const blueCubeLuck = this.R_calculateAmbrosiaUpgradeValue('ambrosiaCubeLuck1');
-        const blueQuarkLuck = this.R_calculateAmbrosiaUpgradeValue('ambrosiaQuarkLuck1');
+        const blueCubeLuck = this.R_getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1').ambrosiaLuck;
+        const blueQuarkLuck = this.R_getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1').ambrosiaLuck;
 
-        const RED_AMB_LUCK1 = this.R_calculateRedAmbrosiaUpgradeValue('regularLuck');
-        const RED_AMB_LUCK2 = this.R_calculateRedAmbrosiaUpgradeValue('regularLuck2');
-        const RED_AMB_VISCOUNT = this.R_calculateRedAmbrosiaUpgradeValue('viscount');
+        const RED_AMB_LUCK1 = this.R_getRedAmbrosiaUpgradeEffects('regularLuck').ambrosiaLuck;
+        const RED_AMB_LUCK2 = this.R_getRedAmbrosiaUpgradeEffects('regularLuck2').ambrosiaLuck;
+        const RED_AMB_VISCOUNT = this.R_getRedAmbrosiaUpgradeEffects('viscount').luckBonus;
 
         const rawLuckComponents1 = [
             100,
@@ -6432,17 +6299,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             (this.R_calculateAmbrosiaLuckSingularityUpgrade() as number),
             (this.R_calculateAmbrosiaLuckOcteractUpgrade() as number),
             // 1
-            2 * effLevel(blueLuck1, 2) + 12 * Math.floor(effLevel(blueLuck1, 2) / 10),
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck1').ambrosiaLuck),
             // 2
-            (3 + 0.3 * Math.floor(effLevel(blueLuck1, 2) / 10))
-            * effLevel(blueLuck2, 4) + 40 * Math.floor(effLevel(blueLuck2, 4) / 10),
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck2').ambrosiaLuck),
             // 3
-            (this.R_calculateBlueBerries()) * effLevel(blueLuck3, 5),
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck3').ambrosiaLuck),
             // cubeluck
-            this.R_calculateTotalCubes() * 0.02 * effLevel(blueCubeLuck, 3),
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1').ambrosiaLuck),
             // quarkluck
-            0.02 * effLevel(blueQuarkLuck, 3) *
-            Math.floor(Math.pow(Math.log10(Number(gameData.worlds) + 1) + 1, 2)),
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1').ambrosiaLuck),
             // sing 131
             gameData.highestSingularityCount >= 131 ? 131 : 0,
             // sing 269
@@ -6457,7 +6322,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             2 * cube77,
             this.R_calculateCookieUpgrade29Luck(),
             gameData.shopUpgrades.shopAmbrosiaUltra * this.R_calculateSumOfExaltCompletions(),
-            Math.max(0, (this.R_calculateSynergismLevel() ?? 0 - 229) * 4),
+            Math.max(0, ((this.R_calculateSynergismLevel() ?? 0) - 229) * 4),
             this.calculateHorseShoeLevel(),
         ]
 
@@ -6497,9 +6362,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cacheName = 'R_LuckConversion' as keyof CalculationCache;
 
-        const c1 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement1')
-        const c2 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement2')
-        const c3 = this.R_calculateRedAmbrosiaUpgradeValue('conversionImprovement3')
+        const c1 = this.R_getRedAmbrosiaUpgradeEffects('conversionImprovement1').conversionImprovement;
+        const c2 = this.R_getRedAmbrosiaUpgradeEffects('conversionImprovement2').conversionImprovement;
+        const c3 = this.R_getRedAmbrosiaUpgradeEffects('conversionImprovement3').conversionImprovement;
         const horseShoeLevel = this.calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
@@ -6539,7 +6404,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const data = this.gameData;
 
-        return data.singularityCount - (data.shopUpgrades.shopSingularityPenaltyDebuff + this.R_calculateAmbrosiaUpgradeValue('ambrosiaSingReduction1'));
+        return data.singularityCount - (data.shopUpgrades.shopSingularityPenaltyDebuff + this.R_getAmbrosiaUpgradeEffects('ambrosiaSingReduction1').singularityReduction);
     }
 
     R_calculateRedAmbrosiaLuck(reduce_vals = true) {
@@ -6553,8 +6418,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const pseudoLuck = pseudoData.playerUpgrades.find(u => u.internalName === "RED_LUCK_BUFF")?.level ?? 0;
         const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
-        const red1 = this.R_calculateRedAmbrosiaUpgradeValue('redLuck');
-        const red2 = this.R_calculateRedAmbrosiaUpgradeValue('viscount');
+        const red1 = this.R_getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
+        const red2 = this.R_getRedAmbrosiaUpgradeEffects('viscount').redLuckBonus;
         const horseShoeLevel = this.calculateHorseShoeLevel();
 
         const calculationVars: number[] = [
@@ -6979,10 +6844,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     transcription: 0.55 + data.octUpgrades.octeractOneMindImprover.level / 150,
                     ascSpeed: this.R_calculateAscensionSpeedMult(),
                     blueberries: blueberries,
-                    bonusRow2: this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow2'),
-                    bonusRow3: this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow3'),
-                    bonusRow4: this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
-                    bonusRow5: this.R_calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                    bonusRow2: this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+                    bonusRow3: this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+                    bonusRow4: this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+                    bonusRow5: this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
                     spread: this.R_calculateAscensionSpeedExponentSpread(),
                     totalInfinityVouchers: this.R_calculateAllShopTablets(),
                     tokens: this.campaignData?.tokens,
