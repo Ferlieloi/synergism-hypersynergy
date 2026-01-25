@@ -1,5 +1,5 @@
 import { HSModuleOptions } from "../../types/hs-types";
-import { CUBE_VIEW, GAME_STATE_CHANGE, HSViewState, HSViewStateRecord, MAIN_VIEW, SINGULARITY_VIEW, View, VIEW_KEY, VIEW_TYPE } from "../../types/module-types/hs-gamestate-types";
+import { ANT_VIEW, ANT_VIEW_BUTTON_IDS, BUILDING_VIEW, BUILDING_VIEW_BUTTON_IDS, CHALLENGE_VIEW, CHALLENGE_VIEW_BUTTON_IDS, CUBE_VIEW, CUBE_VIEW_BUTTON_IDS, GAME_STATE_CHANGE, HSViewState, HSViewStateRecord, MAIN_VIEW, MAIN_VIEW_BUTTON_IDS, PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS, RUNE_VIEW, RUNE_VIEW_BUTTON_IDS, SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS, SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS, View, VIEW_KEY, VIEW_TYPE } from "../../types/module-types/hs-gamestate-types";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
@@ -11,14 +11,26 @@ export class HSGameState extends HSModule {
     #UNKNOWN_VIEW = -1;
 
     #viewClasses: Record<string, new (name: string) => GameView<VIEW_TYPE>> = {
+        "BuildingView": BuildingView,
+        "RuneView": RuneView,
+        "ChallengeView": ChallengeView,
+        "AntView": AntView,
         "CubeView": CubeView,
+        "SettingsView": SettingsView,
         "SingularityView": SingularityView,
+        "PseudoCoinView": PseudoCoinView,
     };
 
     #viewStates: HSViewStateRecord = {
         MAIN_VIEW: { currentView: new MainView('unknown'), previousView: new MainView('unknown'), viewChangeSubscribers: new Map() },
+        BUILDING_VIEW: { currentView: new BuildingView('unknown'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
+        RUNE_VIEW: { currentView: new RuneView('unknown'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
+        CHALLENGE_VIEW: { currentView: new ChallengeView('unknown'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
+        ANT_VIEW: { currentView: new AntView('unknown'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
         CUBE_VIEW: { currentView: new CubeView('unknown'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
-        SINGULARITY_VIEW: { currentView: new SingularityView('unknown'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() }
+        SETTINGS_VIEW: { currentView: new SettingsView('unknown'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
+        SINGULARITY_VIEW: { currentView: new SingularityView('unknown'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
+        PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('unknown'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
     };
 
     #mainUIViews: string[] = [
@@ -263,6 +275,27 @@ export class HSGameState extends HSModule {
     getCurrentUIView<T extends GameView<VIEW_TYPE>>(viewKey: VIEW_KEY): T {
         return this.#viewStates[viewKey].currentView as T;
     }
+
+    /**
+     * Get the previous sub-view (if any) for a given main view
+     */
+    getPreviousSubViewForMainView(mainView: MainView): GameView<VIEW_TYPE> | undefined {
+        const mainViewId = mainView.getId();
+
+        const subViewMap: Record<number, VIEW_KEY> = {
+            [MAIN_VIEW.CUBES]: 'CUBE_VIEW',
+            [MAIN_VIEW.SINGULARITY]: 'SINGULARITY_VIEW',
+            [MAIN_VIEW.BUILDINGS]: 'BUILDING_VIEW',
+            [MAIN_VIEW.RUNES]: 'RUNE_VIEW',
+            [MAIN_VIEW.CHALLENGES]: 'CHALLENGE_VIEW',
+            [MAIN_VIEW.ANTS]: 'ANT_VIEW',
+            [MAIN_VIEW.SETTINGS]: 'SETTINGS_VIEW',
+            [MAIN_VIEW.PSEUDOCOINS]: 'PSEUDOCOIN_VIEW',
+        };
+
+        const viewKey = subViewMap[mainViewId];
+        return viewKey ? this.getCurrentUIView(viewKey) : undefined;
+    }
 }
 
 export abstract class GameView<T extends VIEW_TYPE> {
@@ -284,6 +317,48 @@ export abstract class GameView<T extends VIEW_TYPE> {
 
     abstract getId(): T
     abstract getViewEnum(view: string): T
+
+    /**
+     * Navigate to this view by clicking its associated button
+     */
+    goto(): void {
+        const id = this.getId();
+        let buttonId = '';
+
+        // Determine which button ID mapping to use based on view type
+        if (id in MAIN_VIEW_BUTTON_IDS) {
+            buttonId = MAIN_VIEW_BUTTON_IDS[id as MAIN_VIEW];
+        } else if (id in BUILDING_VIEW_BUTTON_IDS) {
+            buttonId = BUILDING_VIEW_BUTTON_IDS[id as BUILDING_VIEW];
+        } else if (id in RUNE_VIEW_BUTTON_IDS) {
+            buttonId = RUNE_VIEW_BUTTON_IDS[id as RUNE_VIEW];
+        } else if (id in CHALLENGE_VIEW_BUTTON_IDS) {
+            buttonId = CHALLENGE_VIEW_BUTTON_IDS[id as CHALLENGE_VIEW];
+        } else if (id in ANT_VIEW_BUTTON_IDS) {
+            buttonId = ANT_VIEW_BUTTON_IDS[id as ANT_VIEW];
+        } else if (id in CUBE_VIEW_BUTTON_IDS) {
+            buttonId = CUBE_VIEW_BUTTON_IDS[id as CUBE_VIEW];
+        } else if (id in SETTINGS_VIEW_BUTTON_IDS) {
+            buttonId = SETTINGS_VIEW_BUTTON_IDS[id as SETTINGS_VIEW];
+        } else if (id in SINGULARITY_VIEW_BUTTON_IDS) {
+            buttonId = SINGULARITY_VIEW_BUTTON_IDS[id as SINGULARITY_VIEW];
+        } else if (id in PSEUDOCOIN_VIEW_BUTTON_IDS) {
+            buttonId = PSEUDOCOIN_VIEW_BUTTON_IDS[id as PSEUDOCOIN_VIEW];
+        }
+
+        if (!buttonId) {
+            HSLogger.warn(`No button ID mapping found for view: ${this.getName()}`);
+            return;
+        }
+
+        const button = document.getElementById(buttonId);
+        if (!button) {
+            HSLogger.warn(`Button element not found for ID: ${buttonId} (view: ${this.getName()})`);
+            return;
+        }
+
+        button.click();
+    }
 }
 
 export class MainView extends GameView<MAIN_VIEW> {
@@ -366,6 +441,149 @@ export class SingularityView extends GameView<SINGULARITY_VIEW> {
     }
 
     getId(): SINGULARITY_VIEW {
+        return this.#id;
+    }
+}
+
+export class BuildingView extends GameView<BUILDING_VIEW> {
+    #id: BUILDING_VIEW;
+
+    constructor(name: string) {
+        super(name, 'BUILDING_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): BUILDING_VIEW {
+        switch (tab) {
+            case 'switchToCoinBuilding': return BUILDING_VIEW.COIN;
+            case 'switchToDiamondBuilding': return BUILDING_VIEW.DIAMOND;
+            case 'switchToMythosBuilding': return BUILDING_VIEW.MYTHOS;
+            case 'switchToParticleBuilding': return BUILDING_VIEW.PARTICLE;
+            case 'switchToTesseractBuilding': return BUILDING_VIEW.TESSERACT;
+        }
+        return BUILDING_VIEW.UNKNOWN;
+    }
+
+    getId(): BUILDING_VIEW {
+        return this.#id;
+    }
+}
+
+export class RuneView extends GameView<RUNE_VIEW> {
+    #id: RUNE_VIEW;
+
+    constructor(name: string) {
+        super(name, 'RUNE_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): RUNE_VIEW {
+        switch (tab) {
+            case 'toggleRuneSubTab1': return RUNE_VIEW.RUNE_1;
+            case 'toggleRuneSubTab2': return RUNE_VIEW.RUNE_2;
+            case 'toggleRuneSubTab3': return RUNE_VIEW.RUNE_3;
+            case 'toggleRuneSubTab4': return RUNE_VIEW.RUNE_4;
+        }
+        return RUNE_VIEW.UNKNOWN;
+    }
+
+    getId(): RUNE_VIEW {
+        return this.#id;
+    }
+}
+
+export class ChallengeView extends GameView<CHALLENGE_VIEW> {
+    #id: CHALLENGE_VIEW;
+
+    constructor(name: string) {
+        super(name, 'CHALLENGE_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): CHALLENGE_VIEW {
+        switch (tab) {
+            case 'toggleChallengesSubTab1': return CHALLENGE_VIEW.CHALLENGE_1;
+            case 'toggleChallengesSubTab2': return CHALLENGE_VIEW.CHALLENGE_2;
+        }
+        return CHALLENGE_VIEW.UNKNOWN;
+    }
+
+    getId(): CHALLENGE_VIEW {
+        return this.#id;
+    }
+}
+
+export class AntView extends GameView<ANT_VIEW> {
+    #id: ANT_VIEW;
+
+    constructor(name: string) {
+        super(name, 'ANT_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): ANT_VIEW {
+        switch (tab) {
+            case 'toggleAntSubtab1': return ANT_VIEW.ANT_1;
+            case 'toggleAntSubtab2': return ANT_VIEW.ANT_2;
+            case 'toggleAntSubtab3': return ANT_VIEW.ANT_3;
+        }
+        return ANT_VIEW.UNKNOWN;
+    }
+
+    getId(): ANT_VIEW {
+        return this.#id;
+    }
+}
+
+export class SettingsView extends GameView<SETTINGS_VIEW> {
+    #id: SETTINGS_VIEW;
+
+    constructor(name: string) {
+        super(name, 'SETTINGS_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): SETTINGS_VIEW {
+        switch (tab) {
+            case 'switchSettingSubTab1': return SETTINGS_VIEW.HEPTERACTS;
+            case 'switchSettingSubTab2': return SETTINGS_VIEW.UI;
+            case 'switchSettingSubTab3': return SETTINGS_VIEW.LOGGING;
+            case 'switchSettingSubTab4': return SETTINGS_VIEW.INPUT;
+            case 'switchSettingSubTab5': return SETTINGS_VIEW.AMBROSIA;
+            case 'switchSettingSubTab6': return SETTINGS_VIEW.PATCH;
+            case 'switchSettingSubTab7': return SETTINGS_VIEW.GAMEDATA;
+            case 'switchSettingSubTab8': return SETTINGS_VIEW.SHOP;
+            case 'switchSettingSubTab9': return SETTINGS_VIEW.DEBUGGING;
+        }
+        return SETTINGS_VIEW.UNKNOWN;
+    }
+
+    getId(): SETTINGS_VIEW {
+        return this.#id;
+    }
+}
+
+export class PseudoCoinView extends GameView<PSEUDOCOIN_VIEW> {
+    #id: PSEUDOCOIN_VIEW;
+
+    constructor(name: string) {
+        super(name, 'PSEUDOCOIN_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): PSEUDOCOIN_VIEW {
+        switch (tab) {
+            case 'cartSubTab1': return PSEUDOCOIN_VIEW.CART_1;
+            case 'cartSubTab2': return PSEUDOCOIN_VIEW.CART_2;
+            case 'cartSubTab3': return PSEUDOCOIN_VIEW.CART_3;
+            case 'cartSubTab4': return PSEUDOCOIN_VIEW.CART_4;
+            case 'cartSubTab5': return PSEUDOCOIN_VIEW.CART_5;
+            case 'cartSubTab6': return PSEUDOCOIN_VIEW.CART_6;
+        }
+        return PSEUDOCOIN_VIEW.UNKNOWN;
+    }
+
+    getId(): PSEUDOCOIN_VIEW {
         return this.#id;
     }
 }

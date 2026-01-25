@@ -622,16 +622,32 @@ export class HSUtils {
         }
     }
 
-    static parseBigNumber(input: string): number {
-        const normalized = input.replace(",", ".").trim().toLowerCase();
+    static isGreaterThan200(input: any): number {
+        if (input == null) return 0;
 
-        // scientific notation (1.23e9)
-        if (/e[+-]?\d+/.test(normalized)) {
-            const n = parseFloat(normalized);
-            return isNaN(n) ? 0 : n;
+        const str = String(input)
+            .trim()
+            .replace(/,/g, ".");
+
+        // If it contains anything other than digits or dot, it's huge
+        if (!/^[0-9.]+$/.test(str)) {
+            return 10000;
         }
 
-        const parsed = parseFloat(normalized);
-        return isNaN(parsed) ? 0 : parsed;
+        // Plain number case
+        const num = Number(str);
+        return num;
+    }
+
+    static parseBigNumber(input: any): number {
+        if (input == null) return 0;
+
+        const inputStr = String(input)
+            .replace(/,/g, ".")
+            .trim()
+            .toLowerCase();
+
+        const number = Number(inputStr);
+        return Number.isFinite(number) ? number : 0;
     }
 }
