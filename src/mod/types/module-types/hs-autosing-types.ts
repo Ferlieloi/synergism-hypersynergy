@@ -49,11 +49,18 @@ export const SPECIAL_ACTIONS = [
     { label: "Load Ant Speed Corruptions", value: 109 },
     { label: "Cleanse corruptions", value: 110 },
     { label: "Wait", value: 111 },
-    { label: "auto Challenge Toggle", value: 115 },
-    { label: "if-jump", value: IF_JUMP_VALUE },
+    { label: "Auto Challenge Toggle", value: 115 },
+    { label: "Store C15", value: 116 },
+    { label: "If-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
 ] as const;
 
+export type GetFromDOMOptions<T> = {
+    regex?: RegExp;
+    parser?: (raw: string) => T;
+    timeoutMs?: number;
+    predicate?: (text: string) => boolean;
+};
 
 export type PhaseOption = (typeof phases)[number];
 
@@ -82,9 +89,11 @@ export interface CorruptionLoadout {
 
 export interface IfJumpParams {
     id: string;
-    ifJumpChallenge: number;   // 1–15
+    ifJumpMode?: "challenges" | "stored_c15";  // Mode for if-jump comparison
+    ifJumpChallenge: number;   // 1–15 (used in challenges mode)
     ifJumpOperator: ">" | "<";
-    ifJumpValue: number;
+    ifJumpValue: number;       // Comparison value (used in challenges mode)
+    ifJumpMultiplier?: number; // 10^x multiplier (used in stored_c15 mode)
     ifJumpIndex: number;
 };
 
@@ -102,9 +111,11 @@ export interface Challenge {
 export type IsJumpChallenge = Challenge & {
     ifJump: {
         id: string;
+        ifJumpMode?: "challenges" | "stored_c15";
         ifJumpChallenge: number;   // 1–15
         ifJumpOperator: ">" | "<";
         ifJumpValue: number;
+        ifJumpMultiplier?: number;
         ifJumpIndex: number;
     };
 };

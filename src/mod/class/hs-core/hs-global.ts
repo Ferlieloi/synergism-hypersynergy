@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.9.6c',
+        currentModVersion: '2.9.7b',
         isLatestVersion: true,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
@@ -495,6 +495,44 @@ export const HSGlobal: IHSGlobal = class {
     // HSGameState
     static HSGameState = {
         viewProperties: new Map<MAIN_VIEW, HSViewProperties>([
+            [MAIN_VIEW.BUILDINGS, {
+                subViewIds: [
+                    'switchToCoinBuilding',
+                    'switchToDiamondBuilding',
+                    'switchToMythosBuilding',
+                    'switchToParticleBuilding',
+                    'switchToTesseractBuilding'
+                ],
+                subViewsSelector: ['#switchToCoinBuilding', '#switchToDiamondBuilding', '#switchToMythosBuilding', '#switchToParticleBuilding', '#switchToTesseractBuilding'],
+                viewClassName: 'BuildingView'
+            }],
+            [MAIN_VIEW.RUNES, {
+                subViewIds: [
+                    'toggleRuneSubTab1',
+                    'toggleRuneSubTab2',
+                    'toggleRuneSubTab3',
+                    'toggleRuneSubTab4'
+                ],
+                subViewsSelector: ['#toggleRuneSubTab1', '#toggleRuneSubTab2', '#toggleRuneSubTab3', '#toggleRuneSubTab4'],
+                viewClassName: 'RuneView'
+            }],
+            [MAIN_VIEW.CHALLENGES, {
+                subViewIds: [
+                    'toggleChallengesSubTab1',
+                    'toggleChallengesSubTab2'
+                ],
+                subViewsSelector: ['#toggleChallengesSubTab1', '#toggleChallengesSubTab2'],
+                viewClassName: 'ChallengeView'
+            }],
+            [MAIN_VIEW.ANTS, {
+                subViewIds: [
+                    'toggleAntSubtab1',
+                    'toggleAntSubtab2',
+                    'toggleAntSubtab3'
+                ],
+                subViewsSelector: ['#toggleAntSubtab1', '#toggleAntSubtab2', '#toggleAntSubtab3'],
+                viewClassName: 'AntView'
+            }],
             [MAIN_VIEW.CUBES, {
                 subViewIds: [
                     'cubeTab1',
@@ -507,6 +545,21 @@ export const HSGlobal: IHSGlobal = class {
                 ],
                 subViewsSelector: '.cubeTab',
                 viewClassName: 'CubeView'
+            }],
+            [MAIN_VIEW.SETTINGS, {
+                subViewIds: [
+                    'switchSettingSubTab1',
+                    'switchSettingSubTab2',
+                    'switchSettingSubTab3',
+                    'switchSettingSubTab4',
+                    'switchSettingSubTab5',
+                    'switchSettingSubTab6',
+                    'switchSettingSubTab7',
+                    'switchSettingSubTab8',
+                    'switchSettingSubTab9'
+                ],
+                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9'],
+                viewClassName: 'SettingsView'
             }],
             [MAIN_VIEW.SINGULARITY, {
                 subViewIds: [
@@ -524,6 +577,18 @@ export const HSGlobal: IHSGlobal = class {
                     '#singularityContainer5',
                 ],
                 viewClassName: 'SingularityView'
+            }],
+            [MAIN_VIEW.PSEUDOCOINS, {
+                subViewIds: [
+                    'cartSubTab1',
+                    'cartSubTab2',
+                    'cartSubTab3',
+                    'cartSubTab4',
+                    'cartSubTab5',
+                    'cartSubTab6'
+                ],
+                subViewsSelector: ['#cartSubTab1', '#cartSubTab2', '#cartSubTab3', '#cartSubTab4', '#cartSubTab5', '#cartSubTab6'],
+                viewClassName: 'PseudoCoinView'
             }]
         ])
     }

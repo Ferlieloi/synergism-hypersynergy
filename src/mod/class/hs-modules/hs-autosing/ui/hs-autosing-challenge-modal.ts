@@ -21,7 +21,31 @@ export async function openAutosingChallengesModal(
     const isIfJumpEntry = (entry: Challenge): entry is IsJumpChallenge => { return entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump !== undefined; };
     const formatMs = (ms: number) => `${ms.toLocaleString()}ms`;
 
-    const renderIfBlock = (entry: IsJumpChallenge, index: number) => `
+    const renderIfBlock = (entry: IsJumpChallenge, index: number) => {
+        const mode = entry.ifJump.ifJumpMode ?? "challenges";
+        const isChallengesMode = mode === "challenges";
+
+        let contentHtml: string;
+        if (isChallengesMode) {
+            contentHtml = `
+                <strong>IF</strong>
+                challenge ${entry.ifJump.ifJumpChallenge}
+                ${entry.ifJump.ifJumpOperator}
+                ${entry.ifJump.ifJumpValue}
+            `;
+        } else {
+            // Stored C15 mode
+            const multiplier = entry.ifJump.ifJumpMultiplier ?? 0;
+            const multiplierDisplay = multiplier === 0 ? "" : ` × 10^${multiplier}`;
+            contentHtml = `
+                <strong>IF</strong>
+                Stored C15${multiplierDisplay}
+                ${entry.ifJump.ifJumpOperator}
+                Current C15
+            `;
+        }
+
+        return `
     <div class="hs-challenge-item hs-if-block"
         data-index="${index}"
         data-if-index="${index}"
@@ -29,10 +53,7 @@ export async function openAutosingChallengesModal(
         <div class="hs-challenge-drag-handle">⋮⋮</div>
         
         <div class="hs-if-content">
-            <strong>IF</strong>
-            challenge ${entry.ifJump.ifJumpChallenge}
-            ${entry.ifJump.ifJumpOperator}
-            ${entry.ifJump.ifJumpValue}
+            ${contentHtml}
         </div>
 
         <div style="flex-grow: 1;"></div>
@@ -41,6 +62,7 @@ export async function openAutosingChallengesModal(
         <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
     </div>
     `;
+    };
 
     const renderIfTarget = (ifIndex: number, ifId: string) => `
         <div class="hs-challenge-item hs-if-target"
@@ -176,14 +198,22 @@ export async function openAutosingChallengesModal(
                 <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="0" value="10000" />
             </div>
             <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
+                <div class="hs-challenges-input-label">If Jump Mode</div>
+                <select id="hs-if-jump-mode" class="hs-challenges-input">
+                    <option value="challenges">Challenges</option>
+                    <option value="stored_c15">Stored C15 value</option>
+                </select>
+            </div>
+
+            <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-challenge-row" style="display:none;">
                 <div class="hs-challenges-input-label">If Challenge</div>
-                    <input type="number"
-                        id="hs-if-jump-challenge"
-                        class="hs-challenges-input"
-                        min="1"
-                        max="15"
-                        value="1" />
-                    </div>
+                <input type="number"
+                    id="hs-if-jump-challenge"
+                    class="hs-challenges-input"
+                    min="1"
+                    max="15"
+                    value="1" />
+            </div>
 
                 <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
                     <div class="hs-challenges-input-label">Condition</div>
@@ -193,7 +223,7 @@ export async function openAutosingChallengesModal(
                     </select>
                 </div>
 
-                <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
+                <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-value-row" style="display:none;">
                     <div class="hs-challenges-input-label">Value</div>
                     <input type="number"
                         id="hs-if-jump-value"
@@ -507,9 +537,14 @@ export async function openAutosingChallengesModal(
         const actionSelect = document.getElementById(
             "hs-challenge-action-select"
         ) as HTMLSelectElement;
+        const ifJumpModeSelect = document.getElementById(
+            "hs-if-jump-mode"
+        ) as HTMLSelectElement;
 
         const isSpecial = !!actionSelect?.value;
         const isIfJump = Number(actionSelect.value) === IF_JUMP_VALUE;
+        const ifJumpMode = ifJumpModeSelect?.value ?? "challenges";
+        const isChallengesMode = ifJumpMode === "challenges";
 
         const standardInputs = [
             "hs-challenge-num-input",
@@ -534,6 +569,90 @@ export async function openAutosingChallengesModal(
             .forEach(el => {
                 (el as HTMLElement).style.display = isIfJump ? "" : "none";
             });
+
+        // Handle if-jump challenge row based on mode (1st box)
+        const challengeRow = document.querySelector(".hs-if-jump-challenge-row") as HTMLElement;
+        const challengeInput = document.getElementById("hs-if-jump-challenge") as HTMLInputElement;
+        const challengeLabel = challengeRow?.querySelector(".hs-challenges-input-label") as HTMLElement;
+
+        // Handle if-jump value row (3rd box)
+        const valueRow = document.querySelector(".hs-if-jump-value-row") as HTMLElement;
+        const valueInput = document.getElementById("hs-if-jump-value") as HTMLInputElement;
+        const valueLabel = valueRow?.querySelector(".hs-challenges-input-label") as HTMLElement;
+
+        if (challengeRow && challengeInput && challengeLabel) {
+            if (isIfJump) {
+                challengeRow.style.display = "";
+
+                if (isChallengesMode) {
+                    // Editable mode for Challenges
+                    challengeLabel.textContent = "If Challenge";
+                    challengeInput.type = "number";
+                    challengeInput.min = "1";
+                    challengeInput.max = "15";
+                    challengeInput.disabled = false;
+                    challengeInput.value = challengeInput.dataset.lastChallengeValue ?? "1";
+                    challengeInput.style.opacity = "1";
+                    challengeInput.style.cursor = "";
+                    challengeRow.style.opacity = "1";
+                } else {
+                    // Stored C15 mode: show exponent input for 10^x multiplier
+                    // Store the current challenge value before switching
+                    if (challengeInput.max === "15" && challengeInput.value) {
+                        challengeInput.dataset.lastChallengeValue = challengeInput.value;
+                    }
+
+                    challengeLabel.textContent = "Multiplier (10^x)";
+                    challengeInput.type = "number";
+                    challengeInput.min = "";
+                    challengeInput.max = "";
+                    challengeInput.disabled = false;
+                    if (challengeInput.value === "") {
+                        challengeInput.value =
+                            challengeInput.dataset.lastExponentValue ?? "0";
+                    }
+                    challengeInput.style.opacity = "1";
+                    challengeInput.style.cursor = "";
+                    challengeRow.style.opacity = "1";
+                }
+            } else {
+                challengeRow.style.display = "none";
+            }
+        }
+
+        // Handle value row (3rd box) based on mode
+        if (valueRow && valueInput && valueLabel) {
+            if (isIfJump) {
+                valueRow.style.display = "";
+
+                if (isChallengesMode) {
+                    // Editable mode for Challenges - normal value input
+                    valueLabel.textContent = "Value";
+                    valueInput.type = "number";
+                    valueInput.disabled = false;
+                    valueInput.value = valueInput.dataset.lastValue ?? "1";
+                    valueInput.style.opacity = "1";
+                    valueInput.style.cursor = "";
+                    valueRow.style.opacity = "1";
+                } else {
+                    // Stored C15 mode: show "Current C15 value" as disabled
+                    // Store the current value before switching
+                    if (valueInput.type === "number" && valueInput.value && !valueInput.disabled) {
+                        valueInput.dataset.lastValue = valueInput.value;
+                    }
+
+                    valueLabel.textContent = "Compare To";
+                    valueInput.type = "text";
+                    valueInput.disabled = true;
+                    valueInput.value = "Current C15 value";
+                    valueInput.style.opacity = "0.6";
+                    valueInput.style.cursor = "not-allowed";
+                    valueRow.style.opacity = "0.8";
+                }
+            } else {
+                valueRow.style.display = "none";
+            }
+        }
     };
 
     const resetInputs = () => {
@@ -543,6 +662,7 @@ export async function openAutosingChallengesModal(
         (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
+        (document.getElementById("hs-if-jump-mode") as HTMLSelectElement).value = "challenges";
         (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
         editingIndex = null;
         updateInputState();
@@ -551,8 +671,10 @@ export async function openAutosingChallengesModal(
     setTimeout(() => {
         const root = document.getElementById(modalId);
         const actionSelect = document.getElementById("hs-challenge-action-select") as HTMLSelectElement;
+        const ifJumpModeSelect = document.getElementById("hs-if-jump-mode") as HTMLSelectElement;
 
         actionSelect?.addEventListener("change", updateInputState);
+        ifJumpModeSelect?.addEventListener("change", updateInputState);
         attachDragListeners();
         attachHoverListeners();
 
@@ -569,6 +691,9 @@ export async function openAutosingChallengesModal(
 
                 if (isIfJump) {
                     const existingEntry = editingIndex !== null ? workingChallenges[editingIndex] : null;
+                    const ifJumpMode = ifJumpModeSelect.value as "challenges" | "stored_c15";
+                    const isChallengesMode = ifJumpMode === "challenges";
+
                     newEntry = {
                         challengeNumber: IF_JUMP_VALUE,
                         challengeCompletions: 0,
@@ -576,14 +701,18 @@ export async function openAutosingChallengesModal(
                         challengeMaxTime: 0,
 
                         ifJump: {
-                            id: HSUtils.uuidv4(),
-                            ifJumpChallenge: Number(
-                                (document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value
-                            ),
+                            id: existingEntry?.ifJump?.id ?? HSUtils.uuidv4(),
+                            ifJumpMode: ifJumpMode,
+                            ifJumpChallenge: isChallengesMode
+                                ? Number((document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value)
+                                : 15, // Default to 15 for stored_c15 mode
                             ifJumpOperator: (document.getElementById("hs-if-jump-operator") as HTMLSelectElement).value as ">" | "<",
-                            ifJumpValue: Number(
-                                (document.getElementById("hs-if-jump-value") as HTMLInputElement).value
-                            ),
+                            ifJumpValue: isChallengesMode
+                                ? Number((document.getElementById("hs-if-jump-value") as HTMLInputElement).value)
+                                : 0, // Not used in stored_c15 mode
+                            ifJumpMultiplier: isChallengesMode
+                                ? 0 // Not used in challenges mode
+                                : Number((document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value),
                             ifJumpIndex: existingEntry?.ifJump?.ifJumpIndex ?? workingChallenges.length + 1
 
                         }
@@ -616,19 +745,30 @@ export async function openAutosingChallengesModal(
                 if (isIfJumpEntry(item)) {
                     actionSelect.value = String(IF_JUMP_VALUE);
 
-                    (document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value =
-                        String(item.ifJump?.ifJumpChallenge);
+                    // Set the mode first
+                    const mode = item.ifJump?.ifJumpMode ?? "challenges";
+                    ifJumpModeSelect.value = mode;
+
+                    // Set values based on mode
+                    if (mode === "challenges") {
+                        (document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value =
+                            String(item.ifJump?.ifJumpChallenge ?? 1);
+                        (document.getElementById("hs-if-jump-value") as HTMLInputElement).value =
+                            String(item.ifJump?.ifJumpValue ?? 1);
+                    } else {
+                        // stored_c15 mode - challenge input holds multiplier
+                        (document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value =
+                            String(item.ifJump?.ifJumpMultiplier ?? 0);
+                    }
 
                     (document.getElementById("hs-if-jump-operator") as HTMLSelectElement).value =
                         item.ifJump?.ifJumpOperator ?? '>';
-
-                    (document.getElementById("hs-if-jump-value") as HTMLInputElement).value =
-                        String(item.ifJump?.ifJumpValue);
 
                     (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
                     (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
 
                     (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+
                     updateInputState();
                     return;
                 }

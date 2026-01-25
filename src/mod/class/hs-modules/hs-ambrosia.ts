@@ -1194,7 +1194,7 @@ export class HSAmbrosia extends HSModule
                 }
 
                 // Click the loadout slot button
-                const loadoutBtn = document.getElementById(`blueberryLoadout${loadoutNumber} `) as HTMLButtonElement;
+                const loadoutBtn = document.getElementById(`blueberryLoadout${loadoutNumber}`) as HTMLButtonElement;
 
                 if (!loadoutBtn) {
                     console.warn(`Loadout button ${loadoutNumber} not found`);

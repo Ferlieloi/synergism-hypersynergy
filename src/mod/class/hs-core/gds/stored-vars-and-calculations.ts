@@ -547,6 +547,8 @@ export const calculateSigmoid = (
   return 1 + (constant - 1) * (1 - Math.pow(2, -factor / divisor))
 }
 
+
+
 // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Variables.ts#L454
 export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: number) => number } = {
   cube1: (e: number) => 1 + ((1 / 50) * Math.log2(e / 175)),
