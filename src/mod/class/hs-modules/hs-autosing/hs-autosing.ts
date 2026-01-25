@@ -323,11 +323,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async buyCoin(): Promise<void> {
-        let coins = await this.getCoins();
-
-        while (coins < 1000) {
+        let value1 = this.coinsElement.textContent;
+        while (value1.length != 3) {
+            await HSUtils.sleep(0);
+            value1 = this.coinsElement.textContent;
+        }
+        let value2 = this.coinsElement.textContent;
+        while (value1 == value2) {
             await HSUtils.click(this.coin)
-            coins = await this.getCoins();
+            value2 = this.coinsElement.textContent;
         }
     }
 
@@ -336,17 +340,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const time = document.getElementById("timeCode") as HTMLButtonElement;
 
         addAll.click();
-        console.log("addAll");
         time.click();
-        console.log("time");
-    }
-
-    private async getCoins(): Promise<number> {
-        const value = await this.getFromDOM<number>(this.coinsElement, {
-            parser: HSUtils.isGreaterThan200
-        });
-
-        return value ?? 0;
+        await HSUtils.sleep(0);
     }
 
     private isInAmbLoadout(loadout: HTMLButtonElement): boolean {
