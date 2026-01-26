@@ -483,7 +483,7 @@ export class HSAutosingTimerModal {
     }
 
     private formatNumber(num: number): string {
-        return num.toExponential(2).replace('+', '');
+        return Number(num).toExponential(2).replace('+', '');
     }
 
     private getPhaseAverage(phase: string): number | null {
