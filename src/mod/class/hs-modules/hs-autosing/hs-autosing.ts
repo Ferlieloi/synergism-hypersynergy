@@ -323,26 +323,20 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async buyCoin(): Promise<void> {
-        const start = Date.now();
-        const timeout = 100;
+        let coins = await this.getCoins();
 
-        let value1 = this.coinsElement.textContent;
-
-        while (value1.length !== 3) {
-            if (Date.now() - start >= timeout) {
-                await HSUtils.click(this.coin);
-                return;
-            }
-            await HSUtils.sleep(0);
-            value1 = this.coinsElement.textContent;
+        while (coins < 1000) {
+            await HSUtils.click(this.coin)
+            coins = await this.getCoins();
         }
+    }
 
-        let value2 = this.coinsElement.textContent;
+    private async getCoins(): Promise<number> {
+        const value = await this.getFromDOM<number>(this.coinsElement, {
+            parser: HSUtils.currentCoins
+        });
 
-        while (value1 === value2) {
-            await HSUtils.click(this.coin);
-            value2 = this.coinsElement.textContent;
-        }
+        return value ?? 0;
     }
 
     private async useAddAndTimeCodes() {
@@ -818,7 +812,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(1);
             stage = await this.getStage();
         }
-        this.buyCoin()
+        await this.buyCoin()
         this.observeAntiquitiesRune()
         return Promise.resolve()
     }

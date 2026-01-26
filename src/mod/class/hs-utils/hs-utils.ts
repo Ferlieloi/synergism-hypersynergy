@@ -639,16 +639,21 @@ export class HSUtils {
         return num;
     }
 
-    static parseBigNumber(input: any): number {
+
+    static currentCoins(input: any): number {
         if (input == null) return 0;
 
-        const inputStr = String(input)
-            .replace(/,/g, ".")
-            .trim()
-            .toLowerCase();
+        const raw = String(input).trim();
 
-        const number = Number(inputStr);
-        return Number.isFinite(number) ? number : 0;
+        // If the input contains any character other than digits, '.' or ',' => invalid
+        if (!/^[0-9.,]+$/.test(raw)) {
+            return 1001;
+        }
+
+        // Replace commas with dots for locales that use comma as decimal separator
+        const normalized = raw.replace(/,/g, '.');
+        const parsed = parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
     }
 
     static sumContents(arr: (number | null)[]): number {
