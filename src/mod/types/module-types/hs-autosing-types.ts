@@ -103,6 +103,7 @@ export interface Challenge {
     challengeWaitTime: number;
     challengeMaxTime: number;
     challengeWaitBefore?: number;
+    comment?: string;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

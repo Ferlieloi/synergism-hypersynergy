@@ -1,8 +1,13 @@
+// Challenge Modal Builder for Autosing
+// This file builds and manages the modal UI for configuring autosing challenge strategies.
+// It supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
+// Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
 import { AutosingStrategyPhase, Challenge } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 
+// Helper type for mapping IF jump targets in the challenge list
 type JumpTargetInfo = {
     ifIndex: number;
     ifId: string;
@@ -14,13 +19,18 @@ export async function openAutosingChallengesModal(
     startPhase: string,
     endPhase: string,
 ): Promise<void> {
+    // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
     const workingChallenges: Challenge[] = [...stratData];
 
+    // Utility: Get label for special actions
     const getSpecialActionLabel = (num: number): string | null => SPECIAL_ACTIONS.find(a => a.value === num)?.label ?? null;
+    // Type guard: Is this entry an IF jump?
     const isIfJumpEntry = (entry: Challenge): entry is IsJumpChallenge => { return entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump !== undefined; };
+    // Format milliseconds for display
     const formatMs = (ms: number) => `${ms.toLocaleString()}ms`;
 
+    // Render an IF jump block (conditional logic)
     const renderIfBlock = (entry: IsJumpChallenge, index: number) => {
         const mode = entry.ifJump.ifJumpMode ?? "challenges";
         const isChallengesMode = mode === "challenges";
@@ -64,6 +74,7 @@ export async function openAutosingChallengesModal(
     `;
     };
 
+    // Render a jump target placeholder for IF jumps
     const renderIfTarget = (ifIndex: number, ifId: string) => `
         <div class="hs-challenge-item hs-if-target"
             data-jump-for="${ifIndex}"
@@ -73,6 +84,7 @@ export async function openAutosingChallengesModal(
         </div>
     `;
 
+    // Render a standard challenge or special action entry
     const renderNormalEntry = (entry: Challenge, index: number) => {
         const actionLabel = getSpecialActionLabel(entry.challengeNumber);
 
@@ -97,6 +109,7 @@ export async function openAutosingChallengesModal(
                 ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
                 : ""}
                 </div>
+                ${entry.comment ? `<div class=\"hs-challenge-comment\">🗨️ ${entry.comment}</div>` : ""}
             </div>
             <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">✎</div>
             <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
@@ -104,7 +117,8 @@ export async function openAutosingChallengesModal(
         `;
     };
 
-    // Helper to render the list inside the modal
+    // Render the full challenge list, inserting jump targets at correct positions
+    // Handles mapping IF jumps to their targets and rendering all entries
     const renderChallengeList = () => {
         const elements: string[] = [];
 
@@ -157,6 +171,7 @@ export async function openAutosingChallengesModal(
     };
 
 
+    // Update the modal UI after changes (re-render list, re-attach listeners)
     const updateUI = () => {
         const container = document.getElementById("hs-challenge-list-container");
         if (container) {
@@ -166,6 +181,7 @@ export async function openAutosingChallengesModal(
         }
     };
 
+    // Modal content definition (HTML and title)
     const modalContent = {
         htmlContent: `
     <div id="${modalId}" class="hs-challenges-modal-container">
@@ -196,6 +212,10 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Max Time (ms):</div>
                 <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="0" value="10000" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Comment:</div>
+                <input type="text" id="hs-challenge-comment-input" class="hs-challenges-input" maxlength="200" placeholder="Add a comment (optional)" />
             </div>
             <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
                 <div class="hs-challenges-input-label">If Jump Mode</div>
@@ -248,6 +268,7 @@ export async function openAutosingChallengesModal(
     };
 
     const modalInstance = await uiMod.Modal(modalContent);
+    // State variables for editing, drag-and-drop, and jump target management
     let editingIndex: number | null = null;
     let draggedElement: HTMLElement | null = null;
     let draggedIndex: number | null = null;
@@ -255,7 +276,7 @@ export async function openAutosingChallengesModal(
     let isJumpTargetDrag = false;
     let jumpTargetIfIndex: number | null = null;
 
-    // Throttle function for performance optimization
+    // Throttle function for performance optimization (limits drag event frequency)
     const throttle = (func: Function, limit: number) => {
         let inThrottle: boolean;
         return function (this: any, ...args: any[]) {
@@ -267,7 +288,7 @@ export async function openAutosingChallengesModal(
         };
     };
 
-    // Attach hover listeners for highlighting jump pairs
+    // Attach hover listeners for highlighting IF jump pairs in the UI
     const attachHoverListeners = () => {
         document.querySelectorAll(".hs-challenge-item").forEach(item => {
             const el = item as HTMLElement;
@@ -288,7 +309,7 @@ export async function openAutosingChallengesModal(
         });
     };
 
-    // Get visual index (position in rendered list accounting for jump targets)
+    // Get visual index (position in rendered list, including jump targets)
     const getVisualIndex = (element: HTMLElement): number => {
         const container = document.getElementById("hs-challenge-list-container");
         if (!container) return 0;
@@ -316,7 +337,8 @@ export async function openAutosingChallengesModal(
         return Math.min(arrayIndex, workingChallenges.length);
     };
 
-    // Drag and drop functionality with optimizations
+    // Attach drag-and-drop listeners for reordering challenges and jump targets
+    // Handles both normal entries and IF jump target blocks
     const attachDragListeners = () => {
         const items = document.querySelectorAll(".hs-challenge-item");
 
@@ -532,7 +554,8 @@ export async function openAutosingChallengesModal(
         });
     };
 
-    // Logic to disable inputs based on whether a Special Action is selected
+    // Update input state: disables/enables fields based on selected action type
+    // Handles IF jump mode toggling and input visibility
     const updateInputState = () => {
         const actionSelect = document.getElementById(
             "hs-challenge-action-select"
@@ -655,6 +678,7 @@ export async function openAutosingChallengesModal(
         }
     };
 
+    // Reset all input fields to default values and update input state
     const resetInputs = () => {
         (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
         (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
@@ -668,6 +692,7 @@ export async function openAutosingChallengesModal(
         updateInputState();
     };
 
+    // Main modal event handler setup (runs after modal is rendered)
     setTimeout(() => {
         const root = document.getElementById(modalId);
         const actionSelect = document.getElementById("hs-challenge-action-select") as HTMLSelectElement;
@@ -678,6 +703,7 @@ export async function openAutosingChallengesModal(
         attachDragListeners();
         attachHoverListeners();
 
+        // Main click event handler for modal buttons (add, edit, delete, save, cancel)
         root?.addEventListener("click", (e) => {
             const el = e.target as HTMLElement;
             const id = el.id;
@@ -741,6 +767,9 @@ export async function openAutosingChallengesModal(
                 editingIndex = Number(el.dataset.index);
                 const item = workingChallenges[editingIndex];
                 const actionLabel = getSpecialActionLabel(item.challengeNumber);
+
+                // Set comment field for editing
+                (document.getElementById("hs-challenge-comment-input") as HTMLInputElement).value = item.comment ?? "";
 
                 if (isIfJumpEntry(item)) {
                     actionSelect.value = String(IF_JUMP_VALUE);
