@@ -812,8 +812,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(1);
             stage = await this.getStage();
         }
-        await this.buyCoin()
         this.observeAntiquitiesRune()
+        await this.buyCoin()
         return Promise.resolve()
     }
 
@@ -859,6 +859,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             );
             return Promise.resolve();
         }
+
+        this.coin.click();
 
         startTime = performance.now();
 
