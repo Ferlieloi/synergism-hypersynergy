@@ -587,6 +587,10 @@ export class HSUtils {
             parts.push(base64.slice(i, i + chunkSize));
         }
 
+        if (parts.length === 2) {
+            parts.push("");
+        }
+
         return parts.join("\r\n");
     }
 
