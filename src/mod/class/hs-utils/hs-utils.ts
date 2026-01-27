@@ -587,6 +587,11 @@ export class HSUtils {
             parts.push(base64.slice(i, i + chunkSize));
         }
 
+        // Add a thrid empty part if there's only 2, in order to fill the 3 cells on the ggsheet
+        if (parts.length === 2) {
+            parts.push(" ");
+        }
+
         return parts.join("\r\n");
     }
 
