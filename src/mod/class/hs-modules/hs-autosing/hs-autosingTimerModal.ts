@@ -7,6 +7,8 @@
     Author: XxmolkxX
 */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -40,6 +42,7 @@ export class HSAutosingTimerModal {
     private _currentPhaseName: string = ''; // Backing field for setter
     private phaseHistory: Map<string, { times: number[], totalTime: number, lastTime: number }> = new Map();
     private currentSingularityPhases: Map<string, number> = new Map();
+    private currentSingularityNumber: number = 0;
 
     // Merge Logic State
     private lastRecordedPhaseName: string | null = null;
@@ -52,6 +55,10 @@ export class HSAutosingTimerModal {
     private singularityBundles: SingularityBundle[] = [];
     private previousQuarks: number = 0;
     private previousGoldenQuarks: number = 0;
+
+    // Cached Stats (calculated at start)
+    private singTarget: number = 0;
+    private singHighest: number = 0;
 
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
@@ -338,6 +345,11 @@ export class HSAutosingTimerModal {
         this.singularityBundles = [];
         this.previousQuarks = 0;
         this.previousGoldenQuarks = 0;
+
+        // Cache stats at start
+        this.singTarget = this.getSingularityTarget();
+        this.singHighest = this.getSingularityHighest();
+
         this.startLiveTimer();
     }
 
@@ -435,6 +447,16 @@ export class HSAutosingTimerModal {
 
     private getSingularityCount(): number {
         return Math.max(0, this.timestamps.length);
+    }
+
+    private getSingularityTarget(): number {
+        return Number(HSSettings.getSetting('singularityNumber').getValue()) || 0;
+    }
+
+    private getSingularityHighest(): number {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameData = gameDataAPI?.getGameData();
+        return gameData?.highestSingularityCount ?? 0;
     }
 
     private getLastDuration(): number | null {
@@ -624,7 +646,7 @@ export class HSAutosingTimerModal {
 
         // Live Timer Section
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
-            <div style="font-size: 11px; color: #888; margin-bottom: 4px;">CURRENT SINGULARITY</div>
+            <div style="font-size: 11px; color: #bcb9b9ff; margin-bottom: 4px;">CURRENT SINGULARITY: #${this.singTarget} / #${this.singHighest}</div>
             <div style="margin-bottom: 4px;">Time: <span style="color: #00E676; font-weight: bold; font-size: 16px;">${this.currentLiveTime.toFixed(2)}s</span></div>`;
 
         // Use the backing field _currentPhaseName which is set via the setter
