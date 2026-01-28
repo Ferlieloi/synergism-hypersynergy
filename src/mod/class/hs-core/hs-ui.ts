@@ -284,6 +284,13 @@ export class HSUI extends HSModule {
             startY = e.clientY;
             startWidth = resizable.offsetWidth;
             startHeight = resizable.offsetHeight;
+
+            // Remove max-height constraint from challenges list container when user starts resizing
+            const challengesContainer = resizable.querySelector('.hs-challenges-list-container') as HTMLElement;
+            if (challengesContainer) {
+                challengesContainer.style.maxHeight = 'none';
+            }
+
             document.addEventListener('mousemove', resize);
             document.addEventListener('mouseup', stopResize);
         });
@@ -300,11 +307,11 @@ export class HSUI extends HSModule {
             if (newHeight <= 400)
                 newHeight = 400;
 
-            if (newWidth >= 1000)
-                newWidth = 1000;
+            if (newWidth >= 2500)
+                newWidth = 2500;
 
-            if (newHeight >= 700)
-                newHeight = 700;
+            if (newHeight >= 1500)
+                newHeight = 1500;
 
             resizable.style.width = newWidth + 'px';
             resizable.style.height = newHeight + 'px';

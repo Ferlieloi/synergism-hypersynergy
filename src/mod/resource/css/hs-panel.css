@@ -1081,18 +1081,14 @@ a.hs-link {
 }
 
 .hs-challenges-list-container {
-    flex: 1;
+    flex: 1 1 400px;
+    max-height: 400px;
     overflow-y: auto;
     padding: 10px;
     background-color: #1c1b22;
     border: 1px solid #353439;
     border-radius: 3px;
     box-sizing: border-box;
-}
-
-.hs-challenges-list-container {
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .hs-challenge-item {
