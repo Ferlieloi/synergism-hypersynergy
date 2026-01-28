@@ -147,7 +147,7 @@ export class HSAutosingStrategyModal {
 
                     await openStrategyPhaseModal(
                         uiMod,
-                        strategyDraft.strategy,
+                        strategyDraft.strategy.slice(0, index),
                         () => { }, // onCreate not needed for edit
                         (updatedPhase) => {
                             strategyDraft.strategy[index] = updatedPhase;
