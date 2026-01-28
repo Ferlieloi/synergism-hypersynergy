@@ -3078,7 +3078,7 @@ a.hs-link {
 #hs-autosing-timer-display {
     position: fixed;
     top: 10px;
-    right: 10px;
+    left: 50px;
     background: rgba(0, 0, 0, 0.9);
     color: #fff;
     border-radius: 8px;
