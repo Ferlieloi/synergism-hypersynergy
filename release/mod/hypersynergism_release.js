@@ -3086,7 +3086,7 @@ a.hs-link {
     font-size: 14px;
     z-index: 10000;
     min-width: 200px;
-    width: 360px;
+    width: 350px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3800,7 +3800,7 @@ ${i}`,this.context),v.Notify("Failed to calculate game data for heater export",{
         font-size: 14px;
         z-index: 10000;
         min-width: 200px;
-        width: 280px;
+        width: 350px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         display: none;
         overflow: hidden;
