@@ -18,6 +18,7 @@ export async function openAutosingChallengesModal(
     stratData: AutosingStrategyPhase["strat"],
     startPhase: string,
     endPhase: string,
+    parentModalId?: string
 ): Promise<void> {
     // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
@@ -267,7 +268,10 @@ export async function openAutosingChallengesModal(
         title: `Configure Strategy Actions (${startPhase}-${endPhase})`
     };
 
-    const modalInstance = await uiMod.Modal(modalContent);
+    const modalInstance = await uiMod.Modal({
+        ...modalContent,
+        parentModalId
+    });
     // State variables for editing, drag-and-drop, and jump target management
     let editingIndex: number | null = null;
     let draggedElement: HTMLElement | null = null;
