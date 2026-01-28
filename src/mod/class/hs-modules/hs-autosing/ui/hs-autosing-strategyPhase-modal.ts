@@ -13,7 +13,8 @@ export async function openStrategyPhaseModal(
     existingPhases: AutosingStrategyPhase[],
     onCreate: (phase: AutosingStrategyPhase) => void,
     onUpdate?: (phase: AutosingStrategyPhase) => void,
-    existingPhase?: AutosingStrategyPhase
+    existingPhase?: AutosingStrategyPhase,
+    parentModalId?: string
 ) {
     const isEditing = !!existingPhase;
 
@@ -90,7 +91,8 @@ export async function openStrategyPhaseModal(
             </div>
         </div>
         `,
-        title: isEditing ? `Edit Strategy Phase ${existingPhase.startPhase}-${existingPhase.endPhase}` : `Create Strategy Phase`
+        title: isEditing ? `Edit Strategy Phase ${existingPhase.startPhase}-${existingPhase.endPhase}` : `Create Strategy Phase`,
+        parentModalId: parentModalId
     };
 
     const modalId = await uiMod.Modal(modalContent);
@@ -126,11 +128,11 @@ export async function openStrategyPhaseModal(
             }
 
             if (el.id === "hs-autosing-phase-corruptions") {
-                await openAutosingCorruptionModal(uiMod, workingCorruptions);
+                await openAutosingCorruptionModal(uiMod, workingCorruptions, modalId);
             }
 
             if (el.id === "hs-autosing-phase-challenges") {
-                await openAutosingChallengesModal(uiMod, workingStrat, existingPhase?.startPhase ?? "error", existingPhase?.endPhase ?? "error");
+                await openAutosingChallengesModal(uiMod, workingStrat, existingPhase?.startPhase ?? "error", existingPhase?.endPhase ?? "error", modalId);
             }
         });
     }, 0);

@@ -215,9 +215,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (this.targetSingularity > gameData.highestSingularityCount) {
-            HSLogger.log(`target singularity cannot be bigger than highest singularity`);
-            this.stopAutosing();
-            return Promise.resolve();
+            HSLogger.log(`Target singularity bigger than highest singularity. Going to highest.`);
+            this.targetSingularity = gameData.highestSingularityCount;
         }
         this.unsubscribeGameDataChanges();
         HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);

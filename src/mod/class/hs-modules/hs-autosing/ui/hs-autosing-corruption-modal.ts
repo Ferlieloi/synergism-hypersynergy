@@ -35,7 +35,8 @@ const corruptionMeta: Record<CorruptionKey, { label: string }> = {
 
 export async function openAutosingCorruptionModal(
     uiMod: HSUI,
-    loadout: CorruptionLoadout
+    loadout: CorruptionLoadout,
+    parentModalId?: string
 ): Promise<void> {
     const modalId = "hs-autosing-corruption-modal";
 
@@ -70,7 +71,10 @@ export async function openAutosingCorruptionModal(
         title: "Configure Corruption Loadout"
     };
 
-    const modalInstance = await uiMod.Modal(modalContent);
+    const modalInstance = await uiMod.Modal({
+        ...modalContent,
+        parentModalId
+    });
 
     setTimeout(() => {
         document.getElementById("hs-corruption-save-btn")?.addEventListener("click", () => {

@@ -5,7 +5,7 @@ import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
 
 export class HSAutosingStrategyModal {
-    static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number): Promise<void> {
+    static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number, parentModalId?: string): Promise<void> {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
 
@@ -88,7 +88,8 @@ export class HSAutosingStrategyModal {
                     </div>
                 </div>
             `,
-            title: isEditMode ? "Edit Autosing Strategy" : "Create Autosing Strategy"
+            title: isEditMode ? "Edit Autosing Strategy" : "Create Autosing Strategy",
+            parentModalId: parentModalId
         };
 
         const modalID = await uiMod.Modal(modalContent);
@@ -112,7 +113,10 @@ export class HSAutosingStrategyModal {
                             strategyDraft.strategy.push(newPhase);
                             fixPhaseChain();
                             updatePhaseListUI();
-                        }
+                        },
+                        undefined, // onUpdate
+                        undefined, // existingPhase
+                        modalID // parentModalId
                     );
                 } else if (el.id === "hs-autosing-create-btn") {
                     const errorBox = document.getElementById("hs-strategy-error");
@@ -144,13 +148,14 @@ export class HSAutosingStrategyModal {
                     await openStrategyPhaseModal(
                         uiMod,
                         strategyDraft.strategy.slice(0, index),
-                        () => { },
+                        () => { }, // onCreate not needed for edit
                         (updatedPhase) => {
                             strategyDraft.strategy[index] = updatedPhase;
                             fixPhaseChain();
                             updatePhaseListUI();
                         },
-                        phase
+                        phase,
+                        modalID // parentModalId
                     );
                 } else if (action === "delete" && phaseIndex !== undefined) {
                     const index = parseInt(phaseIndex);

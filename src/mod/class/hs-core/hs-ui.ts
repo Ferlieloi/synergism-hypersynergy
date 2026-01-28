@@ -40,6 +40,7 @@ export class HSUI extends HSModule {
     static #modPanelOpen = false;
 
     #activeModals: Set<HTMLDivElement> = new Set();
+    #modalParents: Map<string, string> = new Map();
     static #injectedStyles = new Map<string, string>();
     static #injectedStylesHolder?: HTMLStyleElement;
 
@@ -284,6 +285,13 @@ export class HSUI extends HSModule {
             startY = e.clientY;
             startWidth = resizable.offsetWidth;
             startHeight = resizable.offsetHeight;
+
+            // Remove max-height constraint from challenges list container when user starts resizing
+            const challengesContainer = resizable.querySelector('.hs-challenges-list-container') as HTMLElement;
+            if (challengesContainer) {
+                challengesContainer.style.maxHeight = 'none';
+            }
+
             document.addEventListener('mousemove', resize);
             document.addEventListener('mouseup', stopResize);
         });
@@ -300,11 +308,11 @@ export class HSUI extends HSModule {
             if (newHeight <= 400)
                 newHeight = 400;
 
-            if (newWidth >= 1000)
-                newWidth = 1000;
+            if (newWidth >= 2500)
+                newWidth = 2500;
 
-            if (newHeight >= 700)
-                newHeight = 700;
+            if (newHeight >= 1500)
+                newHeight = 1500;
 
             resizable.style.width = newWidth + 'px';
             resizable.style.height = newHeight + 'px';
@@ -463,50 +471,51 @@ export class HSUI extends HSModule {
     }
 
     // Used by modals to calculate their open position
-    #resolveCoordinates(coordinates: HSUIDOMCoordinates = EPredefinedPosition.CENTER, relativeTo?: HTMLElement): HSUIXY {
-        let position = { x: 0, y: 0 };
+    #resolveCoordinates(coordinates: HSUIDOMCoordinates = EPredefinedPosition.CENTER, relativeTo?: HTMLElement, parentModalId?: string): HSUIXY {
+        let position = { x: 0, y: 10 };
 
         const windowCenterX = window.innerWidth / 2;
-        const windowCenterY = window.innerHeight / 2;
 
         let relativeX = 0;
-        let relativeY = 0;
 
         if (relativeTo) {
             const elementRect = relativeTo.getBoundingClientRect();
             relativeX = elementRect.width;
-            relativeY = elementRect.height;
         }
 
         if (Number.isInteger(coordinates)) {
             switch (coordinates) {
                 case EPredefinedPosition.CENTER:
-                    position = {
-                        x: windowCenterX - (relativeX / 2),
-                        y: windowCenterY - (relativeY / 2)
-                    };
+                    let prevModal: HTMLElement | null = null;
+
+                    if (parentModalId) {
+                        prevModal = document.querySelector(`#${parentModalId}`) as HTMLElement;
+                    }
+
+                    if (!prevModal && HSUI.#modPanelOpen) {
+                        prevModal = document.querySelector('#hs-panel') as HTMLElement;
+                    }
+
+                    if (prevModal) {
+                        position.x = prevModal.offsetLeft + 50;
+                    } else {
+                        position.x = windowCenterX - (relativeX / 2);
+                    }
                     break;
                 case EPredefinedPosition.RIGHT:
-                    position = {
-                        x: window.innerWidth - 25 - relativeX,
-                        y: windowCenterY - (relativeY / 2)
-                    };
+                    position.x = window.innerWidth - 25 - relativeX;
                     break;
                 case EPredefinedPosition.LEFT:
-                    position = {
-                        x: 25 + relativeX,
-                        y: windowCenterY - (relativeY / 2)
-                    };
+                    position.x = 25;
                     break;
                 default:
-                    position = {
-                        x: windowCenterX - (relativeX / 2),
-                        y: windowCenterY - (relativeY / 2)
-                    };
+                    position.x = windowCenterX - (relativeX / 2);
                     break;
             }
         } else {
-            position = coordinates as HSUIXY;
+            const custom = coordinates as HSUIXY;
+            position.x = custom.x;
+            position.y = custom.y;
         }
 
         return position;
@@ -531,6 +540,9 @@ export class HSUI extends HSModule {
         const modalHead = document.querySelector(`#${uuid} > .hs-modal-head`) as HTMLDivElement;
 
         this.#activeModals.add(modal);
+        if (modalOptions.parentModalId) {
+            this.#modalParents.set(uuid, modalOptions.parentModalId);
+        }
 
         // If the modal contains something (images mainly) which take time to load, needsToLoad should be set to true
         // And this is where we handle / wait for the loading to happen before showing the modal
@@ -555,13 +567,13 @@ export class HSUI extends HSModule {
         }
 
         if (modal) {
-            const coords = this.#resolveCoordinates(modalOptions.position, modal);
+            const finalCoords = this.#resolveCoordinates(modalOptions.position, modal, modalOptions.parentModalId);
             const modalRect = modal.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            let finalX = coords.x;
-            let finalY = coords.y;
+            let finalX = finalCoords.x;
+            let finalY = finalCoords.y;
 
             if (finalX + modalRect.width > viewportWidth - 10) {
                 finalX = viewportWidth - modalRect.width - 10;
@@ -593,37 +605,38 @@ export class HSUI extends HSModule {
                 this.#makeResizable(modal, modalResizer);
             }
 
-            // Make the modal's close button (X in the top right corner) close the modal
-            modal.addEventListener('click', async function (e) {
+            modal.addEventListener('click', async (e) => {
                 const dClose = (e.target as HTMLDivElement).dataset.close;
 
                 if (dClose) {
-                    const targetModal = document.querySelector(`#${dClose}`) as HTMLDivElement;
-
-                    if (targetModal) {
-                        await targetModal.transition({
-                            opacity: 0
-                        });
-
-                        targetModal.parentElement?.removeChild(targetModal);
-                    }
+                    await this.CloseModal(dClose);
                 }
             })
         }
         return uuid;
     }
 
-    CloseModal(modalId?: string): void {
+    async CloseModal(modalId?: string): Promise<void> {
         if (modalId) {
             const modal = document.getElementById(modalId) as HTMLDivElement;
             if (modal) {
+                await modal.transition({
+                    opacity: 0
+                });
                 modal.remove();
                 this.#activeModals.delete(modal);
+                this.#modalParents.delete(modalId);
             }
         } else {
             // Close all modals
-            this.#activeModals.forEach(modal => modal.remove());
+            for (const modal of this.#activeModals) {
+                await modal.transition({
+                    opacity: 0
+                });
+                modal.remove();
+            }
             this.#activeModals.clear();
+            this.#modalParents.clear();
         }
     }
 
