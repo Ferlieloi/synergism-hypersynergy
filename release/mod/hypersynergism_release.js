@@ -2118,6 +2118,7 @@
 
 #hs-panel-control {
     position: absolute;
+    z-index: 11111;
     top: 10px;
     left: 10px;
     width: 35px;
