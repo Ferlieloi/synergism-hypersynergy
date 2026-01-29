@@ -699,16 +699,17 @@ export class HSAutosingTimerModal {
         if (currentQuarks > 0) {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">QUARKS</div>
-                <div style="margin-bottom: 4px;">Total: 
+                <div style="margin-bottom: 4px;">Current Total: 
                     <span style="color: #00BCD4; font-weight: bold;">
                         ${this.formatNumber(currentQuarks)}
                     </span>
                 </div>`;
 
             if (quarksPerSec !== null && quarksPerSec > 0) {
+                const quarksPerHour = quarksPerSec * 3600;
                 html += `<div>Rate: 
                     <span style="color: #4DD0E1; font-weight: bold;">
-                        ${this.formatNumber(quarksPerSec)}/s
+                        ${this.formatNumber(quarksPerSec)}/s - ${this.formatNumber(quarksPerHour)}/hr
                     </span>
                 </div>`;
             }
@@ -726,11 +727,12 @@ export class HSAutosingTimerModal {
         if (currentGoldenQuarks > 0) {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
-                <div style="margin-bottom: 4px;">Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentGoldenQuarks)}</span></div>`;
+                <div style="margin-bottom: 4px;">Current Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentGoldenQuarks)}</span></div>`;
 
 
             if (goldenQuarksPerSec !== null && goldenQuarksPerSec > 0) {
-                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s</span></div>`;
+                const goldenQuarksPerHour = goldenQuarksPerSec * 3600;
+                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s - ${this.formatNumber(goldenQuarksPerHour)}/hr</span></div>`;
             }
 
             if (this.goldenQuarksGains.length > 1) {
