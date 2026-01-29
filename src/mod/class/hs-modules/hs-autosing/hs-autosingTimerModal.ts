@@ -59,6 +59,8 @@ export class HSAutosingTimerModal {
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
     private singHighest: number = 0;
+    private strategyName: string = '';
+    private loadoutsOrder: string[] = [];
 
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
@@ -349,6 +351,8 @@ export class HSAutosingTimerModal {
         // Cache stats at start
         this.singTarget = this.getSingularityTarget();
         this.singHighest = this.getSingularityHighest();
+        this.strategyName = this.getStrategyName();
+        this.loadoutsOrder = this.getLoadoutsOrder();
 
         this.startLiveTimer();
     }
@@ -457,6 +461,26 @@ export class HSAutosingTimerModal {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         const gameData = gameDataAPI?.getGameData();
         return gameData?.highestSingularityCount ?? 0;
+    }
+
+    private getStrategyName(): string {
+        const setting = HSSettings.getSetting('autosingStrategy');
+        const value = setting.getValue();
+        const definition = setting.getDefinition();
+        const option = definition.settingControl?.selectOptions?.find(opt => String(opt.value) === String(value));
+
+        return option ? option.text : String(value || 'None');
+    }
+
+    private getLoadoutsOrder(): string[] {
+        return [
+            String(HSSettings.getSetting('autosingEarlyCubeLoadout').getValue()).replace('Loadout ', ''),
+            String(HSSettings.getSetting('autosingLateCubeLoadout').getValue()).replace('Loadout ', ''),
+            String(HSSettings.getSetting('autosingQuarkLoadout').getValue()).replace('Loadout ', ''),
+            String(HSSettings.getSetting('autosingObtLoadout').getValue()).replace('Loadout ', ''),
+            String(HSSettings.getSetting('autosingOffLoadout').getValue()).replace('Loadout ', ''),
+            String(HSSettings.getSetting('autosingAmbrosiaLoadout').getValue()).replace('Loadout ', '')
+        ];
     }
 
     private getLastDuration(): number | null {
@@ -743,6 +767,8 @@ export class HSAutosingTimerModal {
             html += `</div>`;
         }
 
+        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Strategy: ${this.strategyName}</div>`;
+        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Loadouts: ${this.loadoutsOrder.map(l => l || 'None').join(', ')}</div>`;
 
         if (this.dynamicContent) {
             this.dynamicContent.innerHTML = html;
