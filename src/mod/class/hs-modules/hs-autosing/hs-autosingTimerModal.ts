@@ -715,8 +715,10 @@ export class HSAutosingTimerModal {
             }
 
             if (this.quarksGains.length > 1) {
+                const avgY = this.getSparklineAverage(this.quarksGains, 30);
                 const path = this.generateSparklinePath(this.quarksGains, 300, 30);
                 html += `<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
+                    <line x1="0" y1="${avgY.toFixed(1)}" x2="300" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.4" />
                     <path d="${path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                 </svg>`;
             }

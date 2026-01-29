@@ -3923,8 +3923,9 @@ ${i}`,this.context),v.Notify("Failed to calculate game data for heater export",{
                     <span style="color: #4DD0E1; font-weight: bold;">
                         ${this.formatNumber(m)}/s - ${this.formatNumber(h)}/hr
                     </span>
-                </div>`}if(this.quarksGains.length>1){let h=this.generateSparklinePath(this.quarksGains,300,30);p+=`<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
-                    <path d="${h}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                </div>`}if(this.quarksGains.length>1){let h=this.getSparklineAverage(this.quarksGains,30),C=this.generateSparklinePath(this.quarksGains,300,30);p+=`<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
+                    <line x1="0" y1="${h.toFixed(1)}" x2="300" y2="${h.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.4" />
+                    <path d="${C}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                 </svg>`}p+="</div>"}if(u>0){if(p+=`<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
                 <div style="margin-bottom: 4px;">Current Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(u)}</span></div>`,s!==null&&s>0){let h=s*3600;p+=`<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(s)}/s - ${this.formatNumber(h)}/hr</span></div>`}if(this.goldenQuarksGains.length>1){let h=this.getSparklineAverage(this.goldenQuarksGains,30),C=this.generateSparklinePath(this.goldenQuarksGains,300,30);p+=`<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
