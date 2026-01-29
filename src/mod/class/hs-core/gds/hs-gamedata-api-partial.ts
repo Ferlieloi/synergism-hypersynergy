@@ -39,10 +39,10 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     static readonly Calculations: HSCalculationDefinition[] = HSCalculationDefinitions;
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
     }
-        
+
     async init() {
         const self = this;
         HSLogger.log(`Initializing HSGameDataAPI module`, this.context);
@@ -71,8 +71,8 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     _updateEventData(data: ConsumableGameEvents) {
         this.eventData = data;
 
-        if(this.eventData) {
-            if("HAPPY_HOUR_BELL" in this.eventData) {
+        if (this.eventData) {
+            if ("HAPPY_HOUR_BELL" in this.eventData) {
                 this.isEvent = this.eventData.HAPPY_HOUR_BELL.amount > 0;
             }
         }
@@ -88,12 +88,12 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     }
 
     getMeData(): MeData {
-        if(this.meData) {
+        if (this.meData) {
             return this.meData;
         } else {
             return {
                 bonus: {
-                    quarkBonus: 0
+                    quarks: 0
                 },
                 globalBonus: 0,
                 personalBonus: 0,
@@ -112,10 +112,10 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     static getCalculationDefinitions(filter?: {
         supportsReduce?: "true" | "false" | "both",
         toolingSupport?: "true" | "false" | "both"
-    }) : HSCalculationDefinition[] {
+    }): HSCalculationDefinition[] {
         const createFilter = (f?: string) => {
-            if(f) {
-                switch(f) {
+            if (f) {
+                switch (f) {
                     case "true":
                         return (x: boolean) => x;
                     case "false":

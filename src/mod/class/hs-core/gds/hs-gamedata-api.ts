@@ -844,9 +844,17 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_getPCoinUpgradeEffect(name: keyof typeof PCoinUpgradeEffects): number {
-        const upgrade = this.pseudoData?.playerUpgrades.find(u => u.internalName === name);
-        if (!upgrade) return 0;
-        return upgrade.level;
+        const pseudoData = this.getPseudoData?.() ?? this.pseudoData;
+        if (!pseudoData) return 0;
+
+        // New structure: pseudoData.upgrades contains metadata, pseudoData.playerUpgrades contains levels.
+        // Prefer resolving by upgradeId (stable), then fall back to internalName if present.
+        const upgradeId = pseudoData.upgrades?.find(u => u.internalName === name)?.upgradeId;
+        if (upgradeId !== undefined) {
+            return pseudoData.playerUpgrades[upgradeId] ?? 0;
+        }
+
+        return 0
     }
 
     R_getTalismanMaxLevel(t: TalismanKeys): number {
@@ -1204,6 +1212,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     ): AmbrosiaUpgradeRewards[T] => {
         const effectiveLevels = this.R_calculateAmbrosiaUpgradeValue(upgradeKey)
         return this.R_ambrosiaUpgradeCalculationCollection[upgradeKey].effects(effectiveLevels) as AmbrosiaUpgradeRewards[T]
+    }
+
+    R_getAmbrosiaUpgradeEffectsFreeLevelsOnly = <T extends AmbrosiaUpgradeNames>(
+        upgradeKey: T
+    ): AmbrosiaUpgradeRewards[T] => {
+        const upgradeConfig = this.R_ambrosiaUpgradeCalculationCollection[upgradeKey];
+        const freeLevels = upgradeConfig.extraLevelCalc();
+        return upgradeConfig.effects(freeLevels) as AmbrosiaUpgradeRewards[T]
     }
 
     R_maxAPFromChallenges = Object.entries(this.R_singularityChallengeData).reduce(
@@ -1873,7 +1889,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             costFunction: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
             effects: (n: number) => {
-                const val = 1 + (n * (this.meData?.bonus.quarkBonus ?? 0)) / 100
+                const val = 1 + (n * (this.meData?.bonus.quarks ?? 0)) / 100
                 return {
                     blueberryGeneration: val
                 }
@@ -6168,7 +6184,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         // Maybe caching for these later?
         /*const cacheName = 'R_RequiredRedAmbrosiaTime' as keyof CalculationCache;
      
-        const P_GEN_BUFF_LVL = pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_GENERATION_BUFF")?.level ?? 0;
+        const P_GEN_BUFF_LVL = this.R_getPCoinUpgradeEffect('AMBROSIA_GENERATION_BUFF');
      
         const calculationVars : number[] = [
             P_GEN_BUFF_LVL,
@@ -6179,7 +6195,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
      
         if(cached) return cached;*/
 
-        const P_GEN_BUFF_LVL = pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_GENERATION_BUFF")?.level;
+        const P_GEN_BUFF_LVL = this.R_getPCoinUpgradeEffect('AMBROSIA_GENERATION_BUFF');
         const P_GEN_BUFF = P_GEN_BUFF_LVL ? 1 + P_GEN_BUFF_LVL * 0.05 : 1;
 
         const campaignBlueberrySpeedBonus = this.R_calculateCampaignAmbrosiaSpeedBonus()
@@ -6261,10 +6277,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             gameData.singularityChallenges.noAmbrosiaUpgrades.completions / 200,
             0.001 * cube77,
             this.isEvent ? this.R_calculateConsumableEventBuff(EventBuffType.AmbrosiaLuck) : 0,
-            this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck4').ambrosiaLuckPercentage
+            true_base
+                ? this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaLuck4').ambrosiaLuckPercentage
+                : this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck4').ambrosiaLuckPercentage
         ]
 
-        const P_BUFF_LVL = pseudoData.playerUpgrades.find(u => u.internalName === "AMBROSIA_LUCK_BUFF")?.level;
+        const P_BUFF_LVL = this.R_getPCoinUpgradeEffect('AMBROSIA_LUCK_BUFF');
         const P_BUFF = P_BUFF_LVL ? P_BUFF_LVL * 20 : 0;
         const campaignBonus = this.R_calculateCampaignLuckBonus()
 
@@ -6298,16 +6316,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             (this.R_calculateAmbrosiaLuckShopUpgrade() as number),
             (this.R_calculateAmbrosiaLuckSingularityUpgrade() as number),
             (this.R_calculateAmbrosiaLuckOcteractUpgrade() as number),
-            // 1
-            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck1').ambrosiaLuck),
-            // 2
-            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck2').ambrosiaLuck),
-            // 3
-            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck3').ambrosiaLuck),
-            // cubeluck
-            (this.R_getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1').ambrosiaLuck),
-            // quarkluck
-            (this.R_getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1').ambrosiaLuck),
             // sing 131
             gameData.highestSingularityCount >= 131 ? 131 : 0,
             // sing 269
@@ -6327,13 +6335,35 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         ]
 
         const rawLuckComponents2 = [
-            0
+            // 1
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck1').ambrosiaLuck),
+            // 2
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck2').ambrosiaLuck),
+            // 3
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck3').ambrosiaLuck),
+            // cubeluck
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1').ambrosiaLuck),
+            // quarkluck
+            (this.R_getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1').ambrosiaLuck),
+        ]
+
+        const rawLuckComponents2FreeLevelsOnly = [
+            // 1
+            (this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaLuck1').ambrosiaLuck),
+            // 2
+            (this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaLuck2').ambrosiaLuck),
+            // 3
+            (this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaLuck3').ambrosiaLuck),
+            // cubeluck
+            (this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaCubeLuck1').ambrosiaLuck),
+            // quarkluck
+            (this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly('ambrosiaQuarkLuck1').ambrosiaLuck),
         ]
 
         let rawLuckComponents = [];
 
         if (true_base) {
-            rawLuckComponents = rawLuckComponents1;
+            rawLuckComponents = [...rawLuckComponents1, ...rawLuckComponents2FreeLevelsOnly];
         } else {
             rawLuckComponents = [...rawLuckComponents1, ...rawLuckComponents2];
         }
@@ -6419,7 +6449,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cacheName = 'R_RedAmbrosiaLuck' as keyof CalculationCache;
 
-        const pseudoLuck = pseudoData.playerUpgrades.find(u => u.internalName === "RED_LUCK_BUFF")?.level ?? 0;
+        const pseudoLvl = this.R_getPCoinUpgradeEffect('RED_LUCK_BUFF');
+        const pseudoLuck = pseudoLvl ? pseudoLvl * 20 : 0;
         const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
         const red1 = this.R_getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
         const red2 = this.R_getRedAmbrosiaUpgradeEffects('viscount').redLuckBonus;
@@ -6858,7 +6889,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     isAtMaxTokens: this.campaignData?.isAtMaxTokens,
                     isEvent: this.isEvent,
                     bellStacks: this.eventData?.HAPPY_HOUR_BELL.amount,
-                    personalQuarkBonus: this.meData?.bonus.quarkBonus,
+                    personalQuarkBonus: this.meData?.bonus.quarks,
                     blueAmbrosiaBarValue: data.blueberryTime,
                     redAmbrosiaBarValue: data.redAmbrosiaTime,
                     blueAmbrosiaBarMax: this.R_calculateRequiredBlueberryTime(),
@@ -6869,13 +6900,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     trueAmbrosiaGainChance: trueAmbrosiaGainChance,
                     ambrosiaAcceleratorCount: data.shopUpgrades.shopAmbrosiaAccelerator,
                     pseudoCoinUpgrades: {
-                        ambrosiaGenerationBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_GENERATION_BUFF")?.level,
-                        ambrosiaLuckBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "AMBROSIA_LUCK_BUFF")?.level,
-                        baseObtainiumBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "BASE_OBTAINIUM_BUFF")?.level,
-                        baseOfferingBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "BASE_OFFERING_BUFF")?.level,
-                        cubeBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "CUBE_BUFF")?.level,
-                        redAmbrosiaGenerationBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "RED_GENERATION_BUFF")?.level,
-                        redAmbrosiaLuckBuffLevel: this.pseudoData?.playerUpgrades.find(u => u.internalName === "RED_LUCK_BUFF")?.level,
+                        ambrosiaGenerationBuffLevel: this.R_getPCoinUpgradeEffect('AMBROSIA_GENERATION_BUFF'),
+                        ambrosiaLuckBuffLevel: this.R_getPCoinUpgradeEffect('AMBROSIA_LUCK_BUFF'),
+                        baseObtainiumBuffLevel: this.R_getPCoinUpgradeEffect('BASE_OBTAINIUM_BUFF'),
+                        baseOfferingBuffLevel: this.R_getPCoinUpgradeEffect('BASE_OFFERING_BUFF'),
+                        cubeBuffLevel: this.R_getPCoinUpgradeEffect('CUBE_BUFF'),
+                        redAmbrosiaGenerationBuffLevel: this.R_getPCoinUpgradeEffect('RED_GENERATION_BUFF'),
+                        redAmbrosiaLuckBuffLevel: this.R_getPCoinUpgradeEffect('RED_LUCK_BUFF'),
                     },
                     redAmbrosiaUpgrades: {
                         tutorial: this.R_calculateRedAmbrosiaUpgradeValue('tutorial'),

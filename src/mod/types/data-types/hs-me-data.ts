@@ -8,8 +8,8 @@ interface User {
     accent_color: null;
     flags: number;
     public_flags: number;
-  }
-  
+}
+
 interface Member {
     user: User;
     nick: string | null;
@@ -25,7 +25,7 @@ interface Member {
 }
 
 export interface Bonus {
-    quarkBonus: number;
+    quarks: number;
 }
 
 export interface MeData {
