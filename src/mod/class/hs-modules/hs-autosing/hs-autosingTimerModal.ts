@@ -9,6 +9,7 @@
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
+import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -61,6 +62,7 @@ export class HSAutosingTimerModal {
     private singHighest: number = 0;
     private strategyName: string = '';
     private loadoutsOrder: string[] = [];
+    private strategy: HSAutosingStrategy | null = null;
 
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
@@ -338,7 +340,7 @@ export class HSAutosingTimerModal {
         }
     }
 
-    public start(): void {
+    public start(strategy: HSAutosingStrategy): void {
         this.timestamps = [];
         this.quarksHistory = [];
         this.goldenQuarksHistory = [];
@@ -349,6 +351,7 @@ export class HSAutosingTimerModal {
         this.previousGoldenQuarks = 0;
 
         // Cache stats at start
+        this.strategy = strategy;
         this.singTarget = this.getSingularityTarget();
         this.singHighest = this.getSingularityHighest();
         this.strategyName = this.getStrategyName();
@@ -749,8 +752,12 @@ export class HSAutosingTimerModal {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PHASE STATISTICS</div>`;
 
-            // Sort by time
-            const sortedPhases = Array.from(this.phaseHistory.entries()).sort((a, b) => a[1].totalTime - b[1].totalTime);
+            const sortedPhases = Array.from(this.phaseHistory.entries()).sort((a, b) => {
+                if (!this.strategy) return 0;
+                const indexA = this.strategy.strategy.findIndex(p => `${p.startPhase}-${p.endPhase}` === a[0]);
+                const indexB = this.strategy.strategy.findIndex(p => `${p.startPhase}-${p.endPhase}` === b[0]);
+                return indexA - indexB;
+            });
 
             for (const [phase, data] of sortedPhases) {
                 const avg = this.getPhaseAverage(phase);
