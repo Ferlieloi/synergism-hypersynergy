@@ -59,6 +59,10 @@ export class HSAutosingTimerModal {
     private previousQuarks: number = 0;
     private previousGoldenQuarks: number = 0;
 
+    // Silent session baseline
+    private sessionStartQuarks: number = 0;
+    private sessionStartGoldenQuarks: number = 0;
+
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
     private singHighest: number = 0;
@@ -342,15 +346,19 @@ export class HSAutosingTimerModal {
         }
     }
 
-    public start(strategy: HSAutosingStrategy): void {
+    public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
         this.timestamps = [];
         this.quarksHistory = [];
         this.goldenQuarksHistory = [];
+        this.quarksGains = [];
+        this.goldenQuarksGains = [];
         this.startTime = performance.now();
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.previousQuarks = 0;
-        this.previousGoldenQuarks = 0;
+        this.previousQuarks = initialQuarks;
+        this.previousGoldenQuarks = initialGoldenQuarks;
+        this.sessionStartQuarks = initialQuarks;
+        this.sessionStartGoldenQuarks = initialGoldenQuarks;
 
         // Cache stats at start
         this.strategy = strategy;
@@ -416,6 +424,9 @@ export class HSAutosingTimerModal {
 
     public recordSingularity(quarks: number, goldenQuarks: number): void {
         const now = performance.now();
+        const singularityTime = this.timestamps.length === 0
+            ? (now - this.startTime) / 1000
+            : (now - this.timestamps[this.timestamps.length - 1]) / 1000;
 
         this.timestamps.push(now);
         this.quarksHistory.push(quarks);
@@ -424,18 +435,11 @@ export class HSAutosingTimerModal {
         // Advanced data collection
         const advancedDataCollectionSetting = HSSettings.getSetting('advancedDataCollection');
         if (advancedDataCollectionSetting && advancedDataCollectionSetting.isEnabled()) {
-            const singularityTime = this.timestamps.length < 2
-                ? (now - this.startTime) / 1000
-                : (now - this.timestamps[this.timestamps.length - 2]) / 1000;
-
-            const quarksGained = this.previousQuarks > 0 ? quarks - this.previousQuarks : 0;
-            const goldenQuarksGained = this.previousGoldenQuarks > 0 ? goldenQuarks - this.previousGoldenQuarks : 0;
-
             const bundle: SingularityBundle = {
                 singularityNumber: this.timestamps.length,
                 totalTime: singularityTime,
-                quarksGained: quarksGained,
-                goldenQuarksGained: goldenQuarksGained,
+                quarksGained: this.previousQuarks > 0 ? quarks - this.previousQuarks : 0,
+                goldenQuarksGained: this.previousGoldenQuarks > 0 ? goldenQuarks - this.previousGoldenQuarks : 0,
                 totalQuarks: quarks,
                 totalGoldenQuarks: goldenQuarks,
                 phases: Object.fromEntries(this.currentSingularityPhases),
@@ -445,10 +449,18 @@ export class HSAutosingTimerModal {
             this.singularityBundles.push(bundle);
         }
 
-        const qGain = this.previousQuarks > 0 ? quarks - this.previousQuarks : 0;
-        const gqGain = this.previousGoldenQuarks > 0 ? goldenQuarks - this.previousGoldenQuarks : 0;
-        this.quarksGains.push(qGain);
-        this.goldenQuarksGains.push(gqGain);
+        if (singularityTime > 0) {
+            const qGain = quarks - this.previousQuarks;
+            const gqGain = goldenQuarks - this.previousGoldenQuarks;
+
+            // Ignore initial dummy calls with no gain to keep chart clean
+            if (qGain > 0 || this.quarksGains.length > 0) {
+                this.quarksGains.push(qGain / singularityTime);
+            }
+            if (gqGain > 0 || this.goldenQuarksGains.length > 0) {
+                this.goldenQuarksGains.push(gqGain / singularityTime);
+            }
+        }
 
         this.previousQuarks = quarks;
         this.previousGoldenQuarks = goldenQuarks;
@@ -514,13 +526,14 @@ export class HSAutosingTimerModal {
     }
 
     private getQuarksPerSecond(quarks: number[]): number | null {
-        if (quarks.length < 2) {
+        if (quarks.length < 1) {
             return null;
         }
 
-        const firstQuarks = quarks[0];
+        const isGolden = quarks === this.goldenQuarksHistory;
+        const baseline = isGolden ? this.sessionStartGoldenQuarks : this.sessionStartQuarks;
         const lastQuarks = quarks[quarks.length - 1];
-        const quarksDiff = lastQuarks - firstQuarks;
+        const quarksDiff = lastQuarks - baseline;
 
         const totalTimeSeconds = (this.timestamps[this.timestamps.length - 1] - this.startTime) / 1000;
 
@@ -532,8 +545,13 @@ export class HSAutosingTimerModal {
     }
 
     private getLastQuarksGained(quarks: number[]): number | null {
-        if (quarks.length < 2) {
+        if (quarks.length === 0) {
             return null;
+        }
+        if (quarks.length === 1) {
+            const isGolden = quarks === this.goldenQuarksHistory;
+            const baseline = isGolden ? this.sessionStartGoldenQuarks : this.sessionStartQuarks;
+            return quarks[0] - baseline;
         }
         return quarks[quarks.length - 1] - quarks[quarks.length - 2];
     }
@@ -709,18 +727,26 @@ export class HSAutosingTimerModal {
                 const quarksPerHour = quarksPerSec * 3600;
                 html += `<div>Rate: 
                     <span style="color: #4DD0E1; font-weight: bold;">
-                        ${this.formatNumber(quarksPerSec)}/s - ${this.formatNumber(quarksPerHour)}/hr
+                        ${this.formatNumber(quarksPerSec)}/s</span><span style="color: #666;"> (${this.formatNumber(quarksPerHour)}/hr)</span>
                     </span>
                 </div>`;
-            }
 
-            if (this.quarksGains.length > 1) {
-                const avgY = this.getSparklineAverage(this.quarksGains, 30);
-                const path = this.generateSparklinePath(this.quarksGains, 300, 30);
-                html += `<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
-                    <line x1="0" y1="${avgY.toFixed(1)}" x2="300" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.4" />
-                    <path d="${path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-                </svg>`;
+                if (this.quarksGains.length >= 1) {
+                    const avgY = this.getSparklineAverage(this.quarksGains, 30);
+                    const spark = this.generateSparklineMetadata(this.quarksGains, 250, 30);
+                    html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
+                        <svg width="250" height="30" style="display: block; overflow: visible;">
+                            <line x1="250" y1="0" x2="255" y2="0" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="250" y1="30" x2="255" y2="30" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" />
+                            <path d="${spark.path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                        </svg>
+                        <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #888; line-height: 1;">
+                            <span>${this.formatNumber(spark.max)}/s</span>
+                            <span>${this.formatNumber(spark.min)}/s</span>
+                        </div>
+                    </div>`;
+                }
             }
 
             html += `</div>`;
@@ -731,19 +757,26 @@ export class HSAutosingTimerModal {
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
                 <div style="margin-bottom: 4px;">Current Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentGoldenQuarks)}</span></div>`;
 
-
             if (goldenQuarksPerSec !== null && goldenQuarksPerSec > 0) {
                 const goldenQuarksPerHour = goldenQuarksPerSec * 3600;
-                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s - ${this.formatNumber(goldenQuarksPerHour)}/hr</span></div>`;
-            }
+                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s</span><span style="color: #666;"> (${this.formatNumber(goldenQuarksPerHour)}/hr)</span></div>`;
 
-            if (this.goldenQuarksGains.length > 1) {
-                const avgY = this.getSparklineAverage(this.goldenQuarksGains, 30);
-                const path = this.generateSparklinePath(this.goldenQuarksGains, 300, 30);
-                html += `<svg width="100%" height="30" style="margin-top: 4px; display: block; overflow: visible;">
-                    <line x1="0" y1="${avgY.toFixed(1)}" x2="300" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.4" />
-                    <path d="${path}" fill="none" stroke="#FFD700" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-                </svg>`;
+                if (this.goldenQuarksGains.length >= 1) {
+                    const avgY = this.getSparklineAverage(this.goldenQuarksGains, 30);
+                    const spark = this.generateSparklineMetadata(this.goldenQuarksGains, 250, 30);
+                    html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
+                        <svg width="250" height="30" style="display: block; overflow: visible;">
+                            <line x1="250" y1="0" x2="255" y2="0" stroke="#FFD700" stroke-width="1" />
+                            <line x1="250" y1="30" x2="255" y2="30" stroke="#FFD700" stroke-width="1" />
+                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" />
+                            <path d="${spark.path}" fill="none" stroke="#FFD700" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                        </svg>
+                        <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #888; line-height: 1;">
+                            <span>${this.formatNumber(spark.max)}/s</span>
+                            <span>${this.formatNumber(spark.min)}/s</span>
+                        </div>
+                    </div>`;
+                }
             }
 
             html += `</div>`;
@@ -847,31 +880,58 @@ export class HSAutosingTimerModal {
         }
     }
 
-    private generateSparklinePath(data: number[], width: number, height: number): string {
-        if (data.length < 2) return '';
+    private generateSparklineMetadata(data: number[], width: number, height: number): { path: string, max: number, min: number } {
+        if (data.length < 1) return { path: '', max: 0, min: 0 };
 
-        // Only show last 50 points to keep it clean
         const history = data.slice(-50);
         const max = Math.max(...history);
         const min = Math.min(...history);
-        const range = max - min || 1;
+        const range = max - min;
+
+        if (range === 0 || history.length === 1) {
+            return {
+                path: `M 0,${(height / 2).toFixed(1)} L ${width},${(height / 2).toFixed(1)}`,
+                max: max,
+                min: min
+            };
+        }
+
+        // Add 10% padding to top and bottom
+        const padding = range * 0.1;
+        const displayMin = min - padding;
+        const displayRange = range + 2 * padding;
 
         const points = history.map((val, i) => {
             const x = (i / (history.length - 1)) * width;
-            const y = height - ((val - min) / range) * height;
+            const y = height - ((val - displayMin) / displayRange) * height;
             return `${x.toFixed(1)},${y.toFixed(1)}`;
         });
 
-        return `M ${points.join(' L ')}`;
+        return {
+            path: `M ${points.join(' L ')}`,
+            max: max,
+            min: min
+        };
+    }
+
+    private generateSparklinePath(data: number[], width: number, height: number): string {
+        return this.generateSparklineMetadata(data, width, height).path;
     }
 
     private getSparklineAverage(data: number[], height: number): number {
         const history = data.slice(-50);
-        if (history.length === 0) return height;
+        if (history.length === 0) return height / 2;
         const max = Math.max(...history);
         const min = Math.min(...history);
-        const range = max - min || 1;
+        const range = max - min;
+
+        if (range === 0) return height / 2;
+
+        const padding = range * 0.1;
+        const displayMin = min - padding;
+        const displayRange = range + 2 * padding;
+
         const avg = history.reduce((a, b) => a + b, 0) / history.length;
-        return height - ((avg - min) / range) * height;
+        return height - ((avg - displayMin) / displayRange) * height;
     }
 }

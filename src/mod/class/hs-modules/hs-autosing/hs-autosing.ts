@@ -291,7 +291,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         try {
             if (this.timerModal) {
-                this.timerModal.start(this.strategy!);
+                const q = await this.getCurrentQuarks();
+                const gq = await this.getCurrentGoldenQuarks();
+                this.timerModal.start(this.strategy!, q, gq);
             }
             await this.performSingularity();
             while (this.isAutosingEnabled()) {
