@@ -781,7 +781,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async getCurrentQuarks(): Promise<number> {
         const quarksText = this.quarksElement.textContent;
-        const parsed = parseFloat(quarksText?.replace(",", ".") || "0");
+        const parsed = parseFloat(quarksText.replace(",", "."));
         HSLogger.debug(`Current Quarks: ${parsed}`, this.context);
         return isNaN(parsed) ? 0 : parsed;
     }
