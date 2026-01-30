@@ -102,6 +102,7 @@ export class HSGameData extends HSModule {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
 
         try {
+            debugger;
             const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
             const data = await upgradesQuery.json() as PseudoGameData;
 
