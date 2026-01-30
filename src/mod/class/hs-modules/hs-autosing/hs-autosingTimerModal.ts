@@ -109,70 +109,24 @@ export class HSAutosingTimerModal {
     private createTimerDisplay(): void {
         this.timerDisplay = document.createElement('div');
         this.timerDisplay.id = 'hs-autosing-timer-display';
-        this.timerDisplay.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.9);
-        color: #fff;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 14px;
-        z-index: 10000;
-        min-width: 200px;
-        width: 335px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        display: none;
-        overflow: hidden;
-    `;
+        this.timerDisplay.style.display = 'none';
 
         /* ---------- HEADER ---------- */
         this.timerHeader = document.createElement('div');
-        this.timerHeader.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 8px 12px;
-        cursor: move;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        user-select: none;
-        border-radius: 8px 8px 0 0;
-    `;
+        this.timerHeader.className = 'hs-timer-header';
 
         const title = document.createElement('span');
         title.textContent = '⏱️ Autosing Timer';
-        title.style.fontWeight = 'bold';
+        title.className = 'hs-timer-title';
 
         const minimizeBtn = document.createElement('button');
         minimizeBtn.textContent = '−';
         minimizeBtn.title = "Minimize";
         minimizeBtn.className = 'hs-minimize-btn';
-        minimizeBtn.style.cssText = `
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        width: 30px;
-        height: 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 0;
-    `;
         this.stopButton = document.createElement('button');
         this.stopButton.textContent = '🛑';
         this.stopButton.title = "Stop Autosing";
-        this.stopButton.style.cssText = `
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        width: 30px;
-        height: 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        padding: 0;
-        margin-right: 10px;
-    `;
+        this.stopButton.className = 'hs-stop-btn';
         this.stopButton.onclick = () => {
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
@@ -191,10 +145,7 @@ export class HSAutosingTimerModal {
 
         /* ---------- CONTENT ---------- */
         this.timerContent = document.createElement('div');
-        this.timerContent.style.cssText = `
-        padding: 12px;
-        background: rgba(0, 0, 0, 0.9);
-    `;
+        this.timerContent.className = 'hs-timer-content';
 
         // Dynamic area (updated every tick)
         this.dynamicContent = document.createElement('div');
@@ -226,38 +177,6 @@ export class HSAutosingTimerModal {
         this.timerDisplay.appendChild(this.timerContent);
         this.timerDisplay.appendChild(resizeHandle);
         document.body.appendChild(this.timerDisplay);
-
-        /* ---------- STATIC STYLES ---------- */
-        const style = document.createElement('style');
-        style.textContent = `
-        @keyframes hs-color_rotate {
-            0% { color: #ff5e00; }
-            100% { color: #ff5e00; }
-        }
-
-        .hs-rainbow-text {
-            font-weight: bold;
-            animation: hs-color_rotate 6s linear infinite;
-        }
-
-        .hs-export-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 8px;
-            width: 100%;
-        }
-
-        .hs-export-btn:hover {
-            box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
-        }
-    `;
-        document.head.appendChild(style);
     }
 
     private updateExportButton(): void {

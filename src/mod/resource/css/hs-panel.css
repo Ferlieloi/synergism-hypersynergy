@@ -1244,7 +1244,7 @@ a.hs-link {
     background: rgba(0, 0, 0, 0.9);
     color: #fff;
     border-radius: 8px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: monospace;
     font-size: 14px;
     z-index: 10000;
     min-width: 200px;
@@ -1262,6 +1262,7 @@ a.hs-link {
     justify-content: space-between;
     align-items: center;
     user-select: none;
+    border-radius: 8px 8px 0 0;
 }
 
 .hs-timer-title {
@@ -1288,6 +1289,25 @@ a.hs-link {
 .hs-minimize-btn:hover {
     background: rgba(255, 255, 255, 0.4);
 }
+
+.hs-stop-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    margin-right: 10px;
+    transition: background 0.2s;
+}
+
+.hs-stop-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
 
 .hs-timer-content {
     padding: 12px;
