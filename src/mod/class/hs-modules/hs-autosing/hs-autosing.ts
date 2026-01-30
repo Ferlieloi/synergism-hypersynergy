@@ -781,7 +781,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async getCurrentQuarks(): Promise<number> {
         const quarksText = this.quarksElement.textContent;
-        const parsed = parseFloat(quarksText.replace(",", "."));
+        const parsed = parseFloat(quarksText?.replace(",", ".") || "0");
         HSLogger.debug(`Current Quarks: ${parsed}`, this.context);
         return isNaN(parsed) ? 0 : parsed;
     }
@@ -792,20 +792,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async performSingularity(): Promise<void> {
+
+        const gqBefore = await this.getCurrentGoldenQuarks();
         await this.enterAndLeaveExalt();
+
         this.endStageDone = false;
         this.observerActivated = false;
-        const gq = await this.getCurrentGoldenQuarks();
-        const q = await this.getCurrentQuarks();
-        if (this.timerModal) {
-            this.timerModal.recordSingularity(q, gq);
-        }
 
         this.elevatorInput.value = this.targetSingularity.toString();
         // Trigger input event to update the game state
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
 
         this.elevatorTeleportButton.click();
+
+        const gqAfter = await this.getCurrentGoldenQuarks();
+        const gqGain = Math.max(0, gqAfter - gqBefore);
+        if (this.timerModal) {
+            this.timerModal.recordSingularity(gqGain, gqAfter);
+        }
 
         HSLogger.debug("Singularity performed", this.context);
         let stage = await this.getStage();

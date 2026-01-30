@@ -10,6 +10,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
+import { HSGlobal } from "../../hs-core/hs-global";
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -37,6 +38,8 @@ export class HSAutosingTimerModal {
     private goldenQuarksHistory: number[] = [];
     private quarksGains: number[] = [];
     private goldenQuarksGains: number[] = [];
+    private quarksAmounts: number[] = [];
+    private goldenQuarksAmounts: number[] = [];
     private startTime: number = 0;
 
     // Phase tracking
@@ -56,22 +59,34 @@ export class HSAutosingTimerModal {
 
     // Advanced data collection
     private singularityBundles: SingularityBundle[] = [];
-    private previousQuarks: number = 0;
-    private previousGoldenQuarks: number = 0;
+    private sessionQuarksGained: number = 0;
+    private sessionGoldenQuarksGained: number = 0;
+    private initialQuarksWallet: number = 0;
+    private initialGoldenQuarksWallet: number = 0;
+    private lastGoldenQuarksWallet: number = 0;
 
-    // Silent session baseline
-    private sessionStartQuarks: number = 0;
-    private sessionStartGoldenQuarks: number = 0;
+    // Checksum for O(1) avg calculations
+    private cumulativeQuarksGained: number = 0;
+    private cumulativeGoldenQuarksGained: number = 0;
+    private cumulativeSingularityTime: number = 0;
+    private cumulativeQuarksRate: number = 0;
+    private cumulativeGoldenQuarksRate: number = 0;
+
+    // Latest snapshot for UI display
+    private latestQuarksTotal: number = 0;
+    private latestGoldenQuarksTotal: number = 0;
 
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
     private singHighest: number = 0;
     private strategyName: string = '';
     private loadoutsOrder: string[] = [];
+    private modVersion: string = '';
     private strategy: HSAutosingStrategy | null = null;
 
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
+    private stopButton!: HTMLButtonElement;
 
     constructor() {
         this.createTimerDisplay();
@@ -105,7 +120,7 @@ export class HSAutosingTimerModal {
         font-size: 14px;
         z-index: 10000;
         min-width: 200px;
-        width: 350px;
+        width: 335px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         display: none;
         overflow: hidden;
@@ -130,21 +145,49 @@ export class HSAutosingTimerModal {
 
         const minimizeBtn = document.createElement('button');
         minimizeBtn.textContent = '−';
+        minimizeBtn.title = "Minimize";
+        minimizeBtn.className = 'hs-minimize-btn';
         minimizeBtn.style.cssText = `
         background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        width: 20px;
+        width: 30px;
         height: 20px;
         border-radius: 4px;
         cursor: pointer;
         font-size: 16px;
         padding: 0;
     `;
+        this.stopButton = document.createElement('button');
+        this.stopButton.textContent = '🛑';
+        this.stopButton.title = "Stop Autosing";
+        this.stopButton.style.cssText = `
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 30px;
+        height: 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+        margin-right: 10px;
+    `;
+        this.stopButton.onclick = () => {
+            const toggle = document.getElementById('hs-setting-auto-sing-enabled');
+            if (toggle) toggle.click();
+        };
+
         minimizeBtn.onclick = () => this.toggleMinimize();
 
         this.timerHeader.appendChild(title);
-        this.timerHeader.appendChild(minimizeBtn);
+        this.timerHeader.appendChild(document.createElement('div')); // Spacer
+
+        const controls = document.createElement('div');
+        controls.style.display = 'flex';
+        controls.appendChild(this.stopButton);
+        controls.appendChild(minimizeBtn);
+        this.timerHeader.appendChild(controls);
 
         /* ---------- CONTENT ---------- */
         this.timerContent = document.createElement('div');
@@ -313,12 +356,14 @@ export class HSAutosingTimerModal {
         if (this.isMinimized) {
             this.timerContent.style.display = 'none';
             this.timerDisplay.style.height = 'auto';
-            const minimizeBtn = this.timerHeader?.querySelector('button');
+            if (this.stopButton) this.stopButton.style.display = 'none';
+            const minimizeBtn = this.timerHeader?.querySelector('.hs-minimize-btn');
             if (minimizeBtn) minimizeBtn.textContent = '+';
         } else {
             this.timerContent.style.display = 'block';
             this.timerDisplay.style.height = '';
-            const minimizeBtn = this.timerHeader?.querySelector('button');
+            if (this.stopButton) this.stopButton.style.display = 'block';
+            const minimizeBtn = this.timerHeader?.querySelector('.hs-minimize-btn');
             if (minimizeBtn) minimizeBtn.textContent = '−';
             this.updateDisplay();
         }
@@ -355,10 +400,20 @@ export class HSAutosingTimerModal {
         this.startTime = performance.now();
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.previousQuarks = initialQuarks;
-        this.previousGoldenQuarks = initialGoldenQuarks;
-        this.sessionStartQuarks = initialQuarks;
-        this.sessionStartGoldenQuarks = initialGoldenQuarks;
+        this.sessionQuarksGained = 0;
+        this.sessionGoldenQuarksGained = 0;
+        this.initialQuarksWallet = initialQuarks;
+        this.initialGoldenQuarksWallet = initialGoldenQuarks;
+        this.lastGoldenQuarksWallet = initialGoldenQuarks;
+
+        this.cumulativeQuarksGained = 0;
+        this.cumulativeGoldenQuarksGained = 0;
+        this.cumulativeSingularityTime = 0;
+        this.cumulativeQuarksRate = 0;
+        this.cumulativeGoldenQuarksRate = 0;
+
+        this.latestQuarksTotal = initialQuarks;
+        this.latestGoldenQuarksTotal = initialGoldenQuarks;
 
         // Cache stats at start
         this.strategy = strategy;
@@ -366,6 +421,7 @@ export class HSAutosingTimerModal {
         this.singHighest = this.getSingularityHighest();
         this.strategyName = this.getStrategyName();
         this.loadoutsOrder = this.getLoadoutsOrder();
+        this.modVersion = HSGlobal.General.currentModVersion;
 
         this.startLiveTimer();
     }
@@ -422,26 +478,47 @@ export class HSAutosingTimerModal {
         this.updateDisplay();
     }
 
-    public recordSingularity(quarks: number, goldenQuarks: number): void {
+    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number): void {
         const now = performance.now();
-        const singularityTime = this.timestamps.length === 0
+        const isFirstCall = this.timestamps.length === 0;
+
+        const singularityDuration = isFirstCall
             ? (now - this.startTime) / 1000
             : (now - this.timestamps[this.timestamps.length - 1]) / 1000;
 
         this.timestamps.push(now);
-        this.quarksHistory.push(quarks);
-        this.goldenQuarksHistory.push(goldenQuarks);
+
+        if (isFirstCall) {
+            this.sessionQuarksGained = 0;
+        }
+
+        this.latestGoldenQuarksTotal = currentGoldenQuarks;
+
+        // Calculate Real Quark Gain via Wallet Delta (DOM-based)
+        const previousQuarksTotal = this.latestQuarksTotal;
+        let currentQuarksTotal = previousQuarksTotal;
+        const quarkDisplay = document.getElementById('quarkDisplay');
+        if (quarkDisplay && quarkDisplay.textContent) {
+            const text = quarkDisplay.textContent.replace(/,/g, '');
+            currentQuarksTotal = parseFloat(text);
+        }
+
+        const realQuarksGain = currentQuarksTotal - previousQuarksTotal;
+        this.latestQuarksTotal = currentQuarksTotal;
+
+        this.quarksHistory.push(this.latestQuarksTotal);
+        this.goldenQuarksHistory.push(currentGoldenQuarks);
 
         // Advanced data collection
         const advancedDataCollectionSetting = HSSettings.getSetting('advancedDataCollection');
         if (advancedDataCollectionSetting && advancedDataCollectionSetting.isEnabled()) {
             const bundle: SingularityBundle = {
-                singularityNumber: this.timestamps.length,
-                totalTime: singularityTime,
-                quarksGained: this.previousQuarks > 0 ? quarks - this.previousQuarks : 0,
-                goldenQuarksGained: this.previousGoldenQuarks > 0 ? goldenQuarks - this.previousGoldenQuarks : 0,
-                totalQuarks: quarks,
-                totalGoldenQuarks: goldenQuarks,
+                singularityNumber: this.timestamps.length - 1,
+                totalTime: singularityDuration,
+                quarksGained: realQuarksGain,
+                goldenQuarksGained: gainedGoldenQuarks,
+                totalQuarks: this.latestQuarksTotal,
+                totalGoldenQuarks: currentGoldenQuarks,
                 phases: Object.fromEntries(this.currentSingularityPhases),
                 timestamp: Date.now()
             };
@@ -449,21 +526,30 @@ export class HSAutosingTimerModal {
             this.singularityBundles.push(bundle);
         }
 
-        if (singularityTime > 0) {
-            const qGain = quarks - this.previousQuarks;
-            const gqGain = goldenQuarks - this.previousGoldenQuarks;
-
+        if (singularityDuration > 0 && !isFirstCall) {
             // Ignore initial dummy calls with no gain to keep chart clean
-            if (qGain > 0 || this.quarksGains.length > 0) {
-                this.quarksGains.push(qGain / singularityTime);
+            // Use realQuarksGain here instead of the inaccurate passed argument
+            this.quarksGains.push(realQuarksGain / singularityDuration);
+            this.quarksAmounts.push(realQuarksGain);
+
+            if (gainedGoldenQuarks > 0 || this.goldenQuarksGains.length > 0) {
+                this.goldenQuarksGains.push(gainedGoldenQuarks / singularityDuration);
+                this.goldenQuarksAmounts.push(gainedGoldenQuarks);
             }
-            if (gqGain > 0 || this.goldenQuarksGains.length > 0) {
-                this.goldenQuarksGains.push(gqGain / singularityTime);
+
+            // O(1) optimization updates
+            this.cumulativeSingularityTime += singularityDuration;
+            this.cumulativeQuarksGained += realQuarksGain;
+            this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
+
+            // Track sum of rates for O(1) average rate calculation
+            this.cumulativeQuarksRate += (realQuarksGain / singularityDuration);
+            if (gainedGoldenQuarks > 0 || this.goldenQuarksGains.length > 0) {
+                this.cumulativeGoldenQuarksRate += (gainedGoldenQuarks / singularityDuration);
             }
         }
 
-        this.previousQuarks = quarks;
-        this.previousGoldenQuarks = goldenQuarks;
+        this.sessionQuarksGained += realQuarksGain;
 
         // Reset phase tracking for new singularity
         this.startLiveTimer();
@@ -517,6 +603,13 @@ export class HSAutosingTimerModal {
             return null;
         }
 
+        // OPTIMIZATION: If requesting average of ALL singularities, use cached total
+        // Note: timestamps has 1 more entry than intervals (start time)
+        // so count-1 is the number of intervals.
+        if (n === this.timestamps.length - 1) {
+            return this.cumulativeSingularityTime / n;
+        }
+
         let sum = 0;
         for (let i = 1; i <= n; i++) {
             sum += this.timestamps[this.timestamps.length - i] - this.timestamps[this.timestamps.length - (i + 1)];
@@ -526,22 +619,15 @@ export class HSAutosingTimerModal {
     }
 
     private getQuarksPerSecond(quarks: number[]): number | null {
-        if (quarks.length < 1) {
-            return null;
-        }
-
         const isGolden = quarks === this.goldenQuarksHistory;
-        const baseline = isGolden ? this.sessionStartGoldenQuarks : this.sessionStartQuarks;
-        const lastQuarks = quarks[quarks.length - 1];
-        const quarksDiff = lastQuarks - baseline;
+        const gains = isGolden ? this.goldenQuarksGains : this.quarksGains;
+        if (gains.length === 0) return null;
 
-        const totalTimeSeconds = (this.timestamps[this.timestamps.length - 1] - this.startTime) / 1000;
+        // OPTIMIZATION: Use cached cumulative rates
+        // This preserves the "Arithmetic Mean of Rates" logic [(r1+r2+...rn)/n]
+        const totalRateProxy = isGolden ? this.cumulativeGoldenQuarksRate : this.cumulativeQuarksRate;
 
-        if (totalTimeSeconds <= 0) {
-            return null;
-        }
-
-        return quarksDiff / totalTimeSeconds;
+        return totalRateProxy / gains.length;
     }
 
     private getLastQuarksGained(quarks: number[]): number | null {
@@ -550,8 +636,12 @@ export class HSAutosingTimerModal {
         }
         if (quarks.length === 1) {
             const isGolden = quarks === this.goldenQuarksHistory;
-            const baseline = isGolden ? this.sessionStartGoldenQuarks : this.sessionStartQuarks;
-            return quarks[0] - baseline;
+            const gains = isGolden ? this.goldenQuarksGains : this.quarksGains;
+            if (gains.length === 0) return null;
+
+            // Reconstruct the gain from the rate and the time of the first singularity
+            const firstSingTime = (this.timestamps[0] - this.startTime) / 1000;
+            return gains[0] * firstSingTime;
         }
         return quarks[quarks.length - 1] - quarks[quarks.length - 2];
     }
@@ -642,59 +732,19 @@ export class HSAutosingTimerModal {
         const avgAll = this.getAverageLast(count - 1);
         const goldenQuarksPerSec = this.getQuarksPerSecond(this.goldenQuarksHistory);
         const lastGoldenQuarks = this.getLastQuarksGained(this.goldenQuarksHistory);
-        const currentGoldenQuarks = this.goldenQuarksHistory.length > 0
-            ? this.goldenQuarksHistory[this.goldenQuarksHistory.length - 1]
-            : 0;
+        const currentGoldenQuarks = this.latestGoldenQuarksTotal;
+        const previousGoldenQuarks = this.goldenQuarksHistory.length > 1
+            ? this.goldenQuarksHistory[this.goldenQuarksHistory.length - 2]
+            : this.initialGoldenQuarksWallet;
+
         const quarksPerSec = this.getQuarksPerSecond(this.quarksHistory);
         const lastQuarks = this.getLastQuarksGained(this.quarksHistory);
-        const currentQuarks = this.quarksHistory.length > 0
-            ? this.quarksHistory[this.quarksHistory.length - 1]
-            : 0;
+        const currentQuarks = this.latestQuarksTotal;
+        const previousQuarks = this.quarksHistory.length > 1
+            ? this.quarksHistory[this.quarksHistory.length - 2]
+            : this.initialQuarksWallet;
 
-        let html = `<style>
-@keyframes hs-color_rotate {
-    0%   { color: #ff5e00; }
-    9%   { color: #ff9a00; }
-    18%  { color: #ffcd00; }
-    27%  { color: #e5ff00; }
-    36%  { color: #a5ff00; }
-    45%  { color: #00ffc8; }
-    54%  { color: #00c8ff; }
-    63%  { color: #00a5ff; }
-    72%  { color: #9500ff; }
-    81%  { color: #ff00e1; }
-    90%  { color: #ff0095; }
-    100% { color: #ff5e00; }
-}
-
-.hs-rainbow-text {
-    color: #ff5e00;
-    font-weight: bold;
-    animation: hs-color_rotate 6s linear infinite;
-}
-
-.hs-export-btn {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    border: none;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    margin-top: 8px;
-    width: 100%;
-    transition: all 0.3s ease;
-}
-
-.hs-export-btn:hover {
-    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
-}
-
-.hs-export-btn:active {
-    transform: translateY(0);
-}
-</style>`;
+        let html = '';
 
         // Live Timer Section
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
@@ -714,66 +764,92 @@ export class HSAutosingTimerModal {
             <div>Singularities: <span style="color: #4CAF50; font-weight: bold;">${count}</span></div>
         </div>`;
 
-        if (currentQuarks > 0) {
-            html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
-                <div style="font-size: 11px; color: #888; margin-bottom: 4px;">QUARKS</div>
-                <div style="margin-bottom: 4px;">Current Total: 
-                    <span style="color: #00BCD4; font-weight: bold;">
-                        ${this.formatNumber(currentQuarks)}
-                    </span>
-                </div>`;
+        // Quarks section
+        html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
+            <div style="font-size: 11px; color: #888; margin-bottom: 4px;">QUARKS</div>
+            <div style="margin-bottom: 4px;">Latest Total: 
+                <span style="color: #00BCD4; font-weight: bold;">
+                    ${this.formatNumber(currentQuarks)}
+                </span>
+                <span style="color: #666;"> (⇦${this.formatNumber(previousQuarks)})</span>
+           </div>`;
 
-            if (quarksPerSec !== null && quarksPerSec > 0) {
-                const quarksPerHour = quarksPerSec * 3600;
-                html += `<div>Rate: 
-                    <span style="color: #4DD0E1; font-weight: bold;">
-                        ${this.formatNumber(quarksPerSec)}/s</span><span style="color: #666;"> (${this.formatNumber(quarksPerHour)}/hr)</span>
-                    </span>
-                </div>`;
+        if (quarksPerSec !== null && this.quarksAmounts.length > 0) {
+            const quarksPerHour = quarksPerSec * 3600;
+            html += `<div>Rate: 
+                <span style="color: #4DD0E1; font-weight: bold;">
+                    ${this.formatNumber(quarksPerSec)}/s
+                </span>
+                <span style="color: #666;"> (${this.formatNumber(quarksPerHour)}/hr)</span>
+            </div>`;
 
-                if (this.quarksGains.length >= 1) {
-                    const avgY = this.getSparklineAverage(this.quarksGains, 30);
-                    const spark = this.generateSparklineMetadata(this.quarksGains, 250, 30);
-                    html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
-                        <svg width="250" height="30" style="display: block; overflow: visible;">
-                            <line x1="250" y1="0" x2="255" y2="0" stroke="#00BCD4" stroke-width="1" />
-                            <line x1="250" y1="30" x2="255" y2="30" stroke="#00BCD4" stroke-width="1" />
-                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" />
-                            <path d="${spark.path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-                        </svg>
-                        <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #888; line-height: 1;">
-                            <span>${this.formatNumber(spark.max)}/s</span>
-                            <span>${this.formatNumber(spark.min)}/s</span>
-                        </div>
-                    </div>`;
-                }
+            if (this.quarksAmounts.length >= 1) {
+                // Rate Average (Label)
+                const recentRates = this.quarksGains.slice(-50);
+                const valAvg = recentRates.reduce((a, b) => a + b, 0) / recentRates.length;
+
+                // Amount Curve & Position
+                const avgY = this.getSparklineAverage(this.quarksAmounts, 30);
+                const spark = this.generateSparklineMetadata(this.quarksAmounts, 250, 30);
+
+                html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
+                    <svg width="250" height="30" style="display: block; overflow: visible;">
+                        <line x1="250" y1="0" x2="255" y2="0" stroke="#00BCD4" stroke-width="1" />
+                        <line x1="250" y1="30" x2="255" y2="30" stroke="#00BCD4" stroke-width="1" />
+                        <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
+                        <path d="${spark.path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                    </svg>
+                    <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #ccc; line-height: 1;">
+                        <span>+${this.formatNumber(spark.max)}</span>
+                        <span style="color: #00BCD4; opacity: 0.9;">${this.formatNumber(valAvg)}/s</span>
+                        <span>+${this.formatNumber(spark.min)}</span>
+                    </div>
+                </div>`;
             }
-
-            html += `</div>`;
         }
 
+        html += `</div>`;
+
+        // Golden Quarks section
         if (currentGoldenQuarks > 0) {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">GOLDEN QUARKS</div>
-                <div style="margin-bottom: 4px;">Current Total: <span style="color: #FFD700; font-weight: bold;">${this.formatNumber(currentGoldenQuarks)}</span></div>`;
+                <div style="margin-bottom: 4px;">Latest Total:
+                    <span style="color: #FFD700; font-weight: bold;">
+                        ${this.formatNumber(currentGoldenQuarks)}
+                    </span>
+                    <span style="color: #666;"> (⇦${this.formatNumber(previousGoldenQuarks)})</span>
+                </div>`;
 
-            if (goldenQuarksPerSec !== null && goldenQuarksPerSec > 0) {
+            if (goldenQuarksPerSec !== null && this.goldenQuarksAmounts.length > 0) {
                 const goldenQuarksPerHour = goldenQuarksPerSec * 3600;
-                html += `<div>Rate: <span style="color: #ffbf00; font-weight: bold;">${this.formatNumber(goldenQuarksPerSec)}/s</span><span style="color: #666;"> (${this.formatNumber(goldenQuarksPerHour)}/hr)</span></div>`;
+                html += `<div>Rate:
+                    <span style="color: #ffbf00; font-weight: bold;">
+                        ${this.formatNumber(goldenQuarksPerSec)}/s
+                    </span>
+                    <span style="color: #666;"> (${this.formatNumber(goldenQuarksPerHour)}/hr)</span>
+                </div>`;
 
-                if (this.goldenQuarksGains.length >= 1) {
-                    const avgY = this.getSparklineAverage(this.goldenQuarksGains, 30);
-                    const spark = this.generateSparklineMetadata(this.goldenQuarksGains, 250, 30);
+                if (this.goldenQuarksAmounts.length >= 1) {
+                    // Rate Average (Label)
+                    const recentRates = this.goldenQuarksGains.slice(-50);
+                    const valAvg = recentRates.reduce((a, b) => a + b, 0) / recentRates.length;
+
+                    // Amount Curve & Position
+                    const avgY = this.getSparklineAverage(this.goldenQuarksAmounts, 30);
+                    const spark = this.generateSparklineMetadata(this.goldenQuarksAmounts, 250, 30);
+
                     html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
                         <svg width="250" height="30" style="display: block; overflow: visible;">
                             <line x1="250" y1="0" x2="255" y2="0" stroke="#FFD700" stroke-width="1" />
                             <line x1="250" y1="30" x2="255" y2="30" stroke="#FFD700" stroke-width="1" />
-                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.6" />
+                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
                             <path d="${spark.path}" fill="none" stroke="#FFD700" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                         </svg>
-                        <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #888; line-height: 1;">
-                            <span>${this.formatNumber(spark.max)}/s</span>
-                            <span>${this.formatNumber(spark.min)}/s</span>
+                        <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #ccc; line-height: 1;">
+                            <span>+${this.formatNumber(spark.max)}</span>
+                            <span style="color: #FFD700; opacity: 0.9;">${this.formatNumber(valAvg)}/s</span>
+                            <span>+${this.formatNumber(spark.min)}</span>
                         </div>
                     </div>`;
                 }
@@ -782,6 +858,7 @@ export class HSAutosingTimerModal {
             html += `</div>`;
         }
 
+        // Timing section
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">TIMING</div>`;
 
@@ -807,7 +884,7 @@ export class HSAutosingTimerModal {
 
         html += `</div>`;
 
-        // Phase Statistics
+        // Phase Statistics Section
         if (this.phaseHistory.size > 0) {
             html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
                 <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PHASE STATISTICS</div>`;
@@ -834,8 +911,10 @@ export class HSAutosingTimerModal {
             html += `</div>`;
         }
 
-        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Strategy: ${this.strategyName}</div>`;
-        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Loadouts: ${this.loadoutsOrder.map(l => l || 'None').join(', ')}</div>`;
+        // Misc section (Mod version, Strategy, Loadouts)
+        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Mod version: v${this.modVersion}</div>`;
+        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Strategy name: ${this.strategyName}</div>`;
+        html += `<div style="margin-top: 4px; font-size: 11px; color: #888;">Loadouts order: ${this.loadoutsOrder.map(l => l || 'None').join(', ')}</div>`;
 
         if (this.dynamicContent) {
             this.dynamicContent.innerHTML = html;
@@ -862,11 +941,13 @@ export class HSAutosingTimerModal {
         this.goldenQuarksHistory = [];
         this.quarksGains = [];
         this.goldenQuarksGains = [];
+        this.quarksAmounts = [];
+        this.goldenQuarksAmounts = [];
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.previousQuarks = 0;
-        this.previousGoldenQuarks = 0;
+        this.sessionQuarksGained = 0;
+        this.sessionGoldenQuarksGained = 0;
         this.lastRecordedPhaseName = null;
         this.stopLiveTimer();
         this.currentLiveTime = 0;
@@ -886,6 +967,16 @@ export class HSAutosingTimerModal {
         const history = data.slice(-50);
         const max = Math.max(...history);
         const min = Math.min(...history);
+
+        // If the formatted values are identical, treat as flat line to avoid "noise bumps"
+        if (this.formatNumber(max) === this.formatNumber(min)) {
+            return {
+                path: `M 0,${(height / 2).toFixed(1)} L ${width},${(height / 2).toFixed(1)}`,
+                max: max,
+                min: min
+            };
+        }
+
         const range = max - min;
 
         if (range === 0 || history.length === 1) {
@@ -926,6 +1017,11 @@ export class HSAutosingTimerModal {
         const range = max - min;
 
         if (range === 0) return height / 2;
+
+        // If the formatted values are identical, treat as flat line (center the average)
+        if (this.formatNumber(max) === this.formatNumber(min)) {
+            return height / 2;
+        }
 
         const padding = range * 0.1;
         const displayMin = min - padding;
