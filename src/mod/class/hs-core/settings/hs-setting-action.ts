@@ -10,6 +10,7 @@ import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSGlobal } from "../hs-global";
 
 /*
     Class: HSSettingActions
@@ -89,6 +90,11 @@ export class HSSettingActions {
                 if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableBerryMinibars();
                 } else {
+                    // Auto-enable GDS if not already enabled
+                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
+                    if (!gdsSettingEnabled) {
+                        HSSettings.getSetting('useGameData')?.enable();
+                    }
                     await ambrosiaMod.enableBerryMinibars();
                 }
             }
@@ -152,6 +158,11 @@ export class HSSettingActions {
                 if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableIdleSwap();
                 } else {
+                    // Auto-enable GDS if not already enabled
+                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
+                    if (!gdsSettingEnabled) {
+                        HSSettings.getSetting('useGameData')?.enable();
+                    }
                     await ambrosiaMod.enableIdleSwap();
                 }
             }
@@ -165,6 +176,11 @@ export class HSSettingActions {
                 if (params.disable && params.disable === true) {
                     await autosingMod.disableAutoSing();
                 } else {
+                    // Auto-enable GDS if not already enabled
+                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
+                    if (!gdsSettingEnabled) {
+                        HSSettings.getSetting('useGameData')?.enable();
+                    }
                     await autosingMod.enableAutoSing();
                 }
             }

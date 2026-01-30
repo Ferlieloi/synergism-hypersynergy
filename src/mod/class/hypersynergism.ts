@@ -140,7 +140,7 @@ export class Hypersynergism {
                             gridColumn: 'span 2'
                         }
                     }),
-                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia heater' }),
+                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia Heater' }),
                     HSUIC.Div({
                         html: 'References',
                         styles: {

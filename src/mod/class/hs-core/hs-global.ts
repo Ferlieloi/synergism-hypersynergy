@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.10.0e',
+        currentModVersion: '2.10.0f',
         isLatestVersion: true,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
@@ -132,7 +132,11 @@ export const HSGlobal: IHSGlobal = class {
         // This blacklist is to ensure that auto-disable ignores these features even if they use game data
         gameDataCheckBlacklist: [
             'useGameData',
-            'stopSniffOnError'
+            'stopSniffOnError',
+            // These three settings auto-enable GDS when toggled on, so they should be allowed to toggle even when GDS is off
+            'startAutosing',
+            'ambrosiaIdleSwap',
+            'ambrosiaMinibars'
         ]
     }
 

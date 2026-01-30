@@ -514,8 +514,8 @@
     },
     "startAutosing": {
         "settingName": "startAutosing",
-        "settingDescription": "Start auto-sing",
-        "settingHelpText": "when enabled, the mod will automatically perform singularities.",
+        "settingDescription": "Start/Stop Auto-Sing",
+        "settingHelpText": "When enabled, the mod will automatically perform singularities.",
         "settingType": "boolean",
         "enabled": false,
         "usesGameData": true,
@@ -529,8 +529,8 @@
     },
     "singularityNumber": {
         "settingName": "singularityNumber",
-        "settingDescription": "Singularity",
-        "settingHelpText": "Controls at what singularity you wil auto-sing.",
+        "settingDescription": "Singularity to farm",
+        "settingHelpText": "Controls at what singularity you will auto-sing.",
         "settingType": "numeric",
         "enabled": true,
         "settingValue": 1,
@@ -548,7 +548,7 @@
     },
     "autosingEarlyCubeLoadout": {
         "settingName": "autosingEarlyCubeLoadout",
-        "settingDescription": "Pre-AOAG ambrosia cube loadout",
+        "settingDescription": "Pre-AOAG Cube Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the early game",
         "settingType": "selectstring",
         "enabled": true,
@@ -600,7 +600,7 @@
     },
     "autosingLateCubeLoadout": {
         "settingName": "autosingLateCubeLoadout",
-        "settingDescription": "Post-AOAG ambrosia cube loadout",
+        "settingDescription": "Post-AOAG Cube Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the late game",
         "settingType": "selectstring",
         "enabled": true,
@@ -652,7 +652,7 @@
     },
     "autosingQuarkLoadout": {
         "settingName": "autosingQuarkLoadout",
-        "settingDescription": "Quark loadout",
+        "settingDescription": "Quark Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most quarks. Note: this loadout is automatically selected right before the autosing presses the singularity button, the ascension button is also clicked so you gain the extra quarks.",
         "settingType": "selectstring",
         "enabled": true,
@@ -704,7 +704,7 @@
     },
     "autosingObtLoadout": {
         "settingName": "autosingObtLoadout",
-        "settingDescription": "Obtainium Loadout",
+        "settingDescription": "Obtainium Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most obtainium.",
         "settingType": "selectstring",
         "enabled": true,
@@ -756,7 +756,7 @@
     },
     "autosingOffLoadout": {
         "settingName": "autosingOffLoadout",
-        "settingDescription": "Offerings Loadout",
+        "settingDescription": "Offerings Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most offerings.",
         "settingType": "selectstring",
         "enabled": true,
@@ -808,7 +808,7 @@
     },
     "autosingAmbrosiaLoadout": {
         "settingName": "autosingAmbrosiaLoadout",
-        "settingDescription": "Ambrosia loadout",
+        "settingDescription": "Luck Ambrosia Loadout",
         "settingHelpText": "This is the ambrosia loadout that gives you the most ambrosia.",
         "settingType": "selectstring",
         "enabled": true,
@@ -860,7 +860,7 @@
     },
     "autosingStrategy": {
         "settingName": "autosingStrategy",
-        "settingDescription": "autosing strategy",
+        "settingDescription": "Auto-Sing Strategy",
         "settingHelpText": "This is the strategy that the autosinger will follow",
         "settingType": "selectstring",
         "enabled": true,
@@ -875,7 +875,7 @@
     },
     "editAutosingStrategy": {
         "settingName": "editAutosingStrategy",
-        "settingDescription": "edit strategy",
+        "settingDescription": "Edit Strategy",
         "settingHelpText": "Opens a new window where you can edit the selected autosing strategy",
         "settingType": "button",
         "enabled": true,
@@ -890,7 +890,7 @@
     },
     "deleteAutosingStrategy": {
         "settingName": "deleteAutosingStrategy",
-        "settingDescription": "delete strategy",
+        "settingDescription": "Delete Strategy",
         "settingHelpText": "deletes the selected strategy",
         "settingType": "button",
         "enabled": true,
@@ -905,7 +905,7 @@
     },
     "createAutosingStrategy": {
         "settingName": "createAutosingStrategy",
-        "settingDescription": "create strategy",
+        "settingDescription": "Create Strategy",
         "settingHelpText": "Opens a new window where you can create your own autosing strategy",
         "settingType": "button",
         "enabled": true,
@@ -920,7 +920,7 @@
     },
     "exportAutosingStrategy": {
         "settingName": "exportAutosingStrategy",
-        "settingDescription": "export strategy",
+        "settingDescription": "Export Strategy",
         "settingHelpText": "exports the selected strategy to your clipboard",
         "settingType": "button",
         "enabled": true,
@@ -935,7 +935,7 @@
     },
     "importAutosingStrategy": {
         "settingName": "importAutosingStrategy",
-        "settingDescription": "import strategy",
+        "settingDescription": "Import Strategy",
         "settingHelpText": "Opens a Modal where you can paste a strategy that you want to import",
         "settingType": "button",
         "enabled": true,
@@ -950,7 +950,7 @@
     },
     "advancedDataCollection": {
         "settingName": "advancedDataCollection",
-        "settingDescription": "Advanced data collection",
+        "settingDescription": "Advanced Data Collection",
         "settingHelpText": "When enabled, collects advanced autosing data for debugging purposes.",
         "settingType": "boolean",
         "enabled": true,
