@@ -144,14 +144,22 @@ export abstract class HSSetting<T extends HSSettingType> {
 
         this.definition.enabled = newState;
 
-        const toggleElement = document.querySelector(`#${this.definition.settingControl?.controlEnabledId}`) as HTMLDivElement;
+        // Use getElementById for safer and faster lookup
+        // Check if controlEnabledId is defined before trying to find it
+        if (this.definition.settingControl?.controlEnabledId) {
+            const toggleElement = document.getElementById(this.definition.settingControl.controlEnabledId) as HTMLDivElement;
 
-        if (newState && toggleElement) {
-            toggleElement.innerText = this.#settingEnabledString;
-            toggleElement.classList.remove('hs-disabled');
-        } else {
-            toggleElement.innerText = this.#settingDisabledString;
-            toggleElement.classList.add('hs-disabled');
+            if (toggleElement) {
+                if (newState) {
+                    toggleElement.innerText = this.#settingEnabledString;
+                    toggleElement.classList.remove('hs-disabled');
+                } else {
+                    toggleElement.innerText = this.#settingDisabledString;
+                    toggleElement.classList.add('hs-disabled');
+                }
+            } else {
+                HSLogger.debug(`Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl.controlEnabledId})`, this.context);
+            }
         }
 
         this.handleSettingAction('state', newState);

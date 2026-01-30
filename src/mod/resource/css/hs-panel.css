@@ -1407,3 +1407,17 @@ a.hs-link {
         background-position: 100% 50%;
     }
 }
+
+/* Strategy buttons inline layout - using class for maintainability */
+.hs-inline-button {
+    display: inline-block;
+    width: auto;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    vertical-align: top;
+}
+
+.hs-inline-button button {
+    min-width: 120px;
+    padding: 8px 16px;
+}
