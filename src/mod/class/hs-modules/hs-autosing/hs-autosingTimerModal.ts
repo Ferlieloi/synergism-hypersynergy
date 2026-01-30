@@ -477,7 +477,8 @@ export class HSAutosingTimerModal {
     }
 
     private getSingularityCount(): number {
-        return Math.max(0, this.timestamps.length);
+        // Return completed singularities (timestamps includes start time)
+        return Math.max(0, this.timestamps.length - 1);
     }
 
     private getSingularityTarget(): number {
@@ -524,8 +525,9 @@ export class HSAutosingTimerModal {
 
         // OPTIMIZATION: If requesting average of ALL singularities, use cached total
         // Note: timestamps has 1 more entry than intervals (start time)
-        // so count-1 is the number of intervals.
-        if (n === this.timestamps.length - 1) {
+        // so the count of completed singularities equals the number of intervals.
+        const completedCount = this.timestamps.length - 1;
+        if (n === completedCount) {
             return this.cumulativeSingularityTime / n;
         }
 
@@ -648,7 +650,7 @@ export class HSAutosingTimerModal {
         const avg5 = this.getAverageLast(5);
         const avg10 = this.getAverageLast(10);
         const avg50 = this.getAverageLast(50);
-        const avgAll = this.getAverageLast(count - 1);
+        const avgAll = this.getAverageLast(count);
         const goldenQuarksPerSec = this.getQuarksPerSecond(this.goldenQuarksHistory);
         const lastGoldenQuarks = this.getLastQuarksGained(this.goldenQuarksHistory);
         const currentGoldenQuarks = this.latestGoldenQuarksTotal;
@@ -680,7 +682,7 @@ export class HSAutosingTimerModal {
 
         html += `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444;">
             <div style="font-size: 11px; color: #888; margin-bottom: 4px;">PROGRESS</div>
-            <div>Singularities: <span style="color: #4CAF50; font-weight: bold;">${count}</span></div>
+            <div>Singularities Done: <span style="color: #4CAF50; font-weight: bold;">${count}</span></div>
         </div>`;
 
         // Quarks section
