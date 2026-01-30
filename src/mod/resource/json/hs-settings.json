@@ -556,7 +556,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-early-cube-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -608,7 +608,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-late-cube-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -660,7 +660,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-quark-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -712,7 +712,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-obt-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -764,7 +764,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-off-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -816,7 +816,7 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-ambrosia-loadout-value",
             "controlType": "select",
-            "controlGroup": "auto-sing",
+            "controlGroup": "auto-sing-ambrosia",
             "controlPage": "auto-sing",
             "selectOptions": [
                 {
@@ -868,14 +868,14 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy",
             "controlType": "select",
-            "controlGroup": "auto-sing-strategy",
+            "controlGroup": "auto-sing-strategy-row1",
             "controlPage": "auto-sing",
             "selectOptions": []
         }
     },
     "editAutosingStrategy": {
         "settingName": "editAutosingStrategy",
-        "settingDescription": "Edit Strategy",
+        "settingDescription": "✏️ Edit",
         "settingHelpText": "Opens a new window where you can edit the selected autosing strategy",
         "settingType": "button",
         "enabled": true,
@@ -884,28 +884,13 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy-editor-button",
             "controlType": "button",
-            "controlGroup": "auto-sing-strategy",
-            "controlPage": "auto-sing"
-        }
-    },
-    "deleteAutosingStrategy": {
-        "settingName": "deleteAutosingStrategy",
-        "settingDescription": "Delete Strategy",
-        "settingHelpText": "deletes the selected strategy",
-        "settingType": "button",
-        "enabled": true,
-        "settingValue": "",
-        "settingAction": "deleteAutosingStrategy",
-        "settingControl": {
-            "controlId": "hs-setting-auto-sing-strategy-deleter-button",
-            "controlType": "button",
-            "controlGroup": "auto-sing-strategy",
+            "controlGroup": "auto-sing-strategy-row1",
             "controlPage": "auto-sing"
         }
     },
     "createAutosingStrategy": {
         "settingName": "createAutosingStrategy",
-        "settingDescription": "Create Strategy",
+        "settingDescription": "➕ Create",
         "settingHelpText": "Opens a new window where you can create your own autosing strategy",
         "settingType": "button",
         "enabled": true,
@@ -914,28 +899,28 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy-maker-button",
             "controlType": "button",
-            "controlGroup": "auto-sing-strategy",
+            "controlGroup": "auto-sing-strategy-row1",
             "controlPage": "auto-sing"
         }
     },
-    "exportAutosingStrategy": {
-        "settingName": "exportAutosingStrategy",
-        "settingDescription": "Export Strategy",
-        "settingHelpText": "exports the selected strategy to your clipboard",
+    "deleteAutosingStrategy": {
+        "settingName": "deleteAutosingStrategy",
+        "settingDescription": "🗑️ Delete",
+        "settingHelpText": "deletes the selected strategy",
         "settingType": "button",
         "enabled": true,
         "settingValue": "",
-        "settingAction": "exportAutosingStrategy",
+        "settingAction": "deleteAutosingStrategy",
         "settingControl": {
-            "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+            "controlId": "hs-setting-auto-sing-strategy-deleter-button",
             "controlType": "button",
-            "controlGroup": "auto-sing-strategy",
+            "controlGroup": "auto-sing-strategy-row1",
             "controlPage": "auto-sing"
         }
     },
     "importAutosingStrategy": {
         "settingName": "importAutosingStrategy",
-        "settingDescription": "Import Strategy",
+        "settingDescription": "� Import",
         "settingHelpText": "Opens a Modal where you can paste a strategy that you want to import",
         "settingType": "button",
         "enabled": true,
@@ -944,7 +929,22 @@
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy-importer-button",
             "controlType": "button",
-            "controlGroup": "auto-sing-strategy",
+            "controlGroup": "auto-sing-strategy-row2",
+            "controlPage": "auto-sing"
+        }
+    },
+    "exportAutosingStrategy": {
+        "settingName": "exportAutosingStrategy",
+        "settingDescription": "� Export",
+        "settingHelpText": "exports the selected strategy to your clipboard",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "exportAutosingStrategy",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy-row2",
             "controlPage": "auto-sing"
         }
     },
