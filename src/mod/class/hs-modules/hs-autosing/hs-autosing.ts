@@ -85,6 +85,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
 
+    private stopAtSingularitysEnd: boolean = false;
+
     private storedC15: Decimal = new Decimal(0);
 
 
@@ -140,12 +142,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
+
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
     }
 
     isAutosingEnabled(): boolean {
         return this.autosingEnabled;
+    }
+
+    public setStopAtSingularitysEnd(value: boolean) {
+        this.stopAtSingularitysEnd = value;
+    }
+
+    public isStopAtSingularitysEnd(): boolean {
+        return this.stopAtSingularitysEnd;
     }
 
     subscribeGameDataChanges() {
@@ -178,6 +189,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async enableAutoSing(): Promise<void> {
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
+        this.stopAtSingularitysEnd = false;
         HSUtils.startDialogWatcher();
         const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
 
@@ -449,13 +461,39 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async executePhase(phaseConfig: AutosingStrategyPhase): Promise<void> {
+        if (this.timerModal) {
+            this.timerModal.setCurrentPhase(`${phaseConfig.startPhase}-${phaseConfig.endPhase}`);
+        }
         await this.setCorruptions(phaseConfig.corruptions);
         this.ascendBtn.click();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
-            if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) return;
+            if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
+                if (this.timerModal) this.timerModal.setCurrentStep('');
+                return;
+            }
 
             const challenge = phaseConfig.strat[i];
+
+            // Report current step to modal
+            if (this.timerModal) {
+                let stepLabel = "";
+                let maxTime: number | null = null;
+
+                if (challenge.challengeNumber === 201) {
+                    stepLabel = "Sync Corruptions";
+                } else if (challenge.challengeNumber === 200) {
+                    stepLabel = "Jump Logic";
+                } else if (challenge.challengeNumber >= 100) {
+                    const actionLabel = SPECIAL_ACTIONS.find(a => a.value === challenge.challengeNumber)?.label ?? `Action ${challenge.challengeNumber}`;
+                    stepLabel = actionLabel;
+                } else {
+                    stepLabel = `Wait for C${challenge.challengeNumber} x${challenge.challengeCompletions || 0}`;
+                    if (challenge.challengeMaxTime) maxTime = challenge.challengeMaxTime;
+                }
+                this.timerModal.setCurrentStep(stepLabel, maxTime);
+            }
+
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
             else if (challenge.challengeNumber == 200) { // Jump action (200)
                 const mode = challenge.ifJump?.ifJumpMode;
@@ -656,9 +694,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.prevActionTime = performance.now();
     }
 
-    private stopAutosing() {
+    public stopAutosing() {
         this.autosingEnabled = false;
         this.unsubscribeGameDataChanges();
+        this.antiquitiesObserver?.disconnect(); // Ensure observer is cleared
+        this.antiquitiesObserver = undefined;
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
         if (this.timerModal) {
@@ -972,9 +1012,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     const style = (mutation.target as HTMLElement).style;
                     if (style.display === 'none') {
                         HSLogger.debug('antiquitiesRuneLockedContainer hidden - buying antiquities', this.context);
+                        this.observerActivated = true;
                         this.antiquitiesObserver?.disconnect();
                         this.antiquitiesObserver = undefined;
-                        this.observerActivated = true;
                         this.performFinalStage();
                         break;
                     }
@@ -1002,11 +1042,49 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
             this.ascendBtn.click();
+
+            // Stop at singularity's end requested
+            if (this.stopAtSingularitysEnd && this.autosingEnabled) {
+                await this.pushSingularityBeforeStop();
+
+                HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+                this.stopAutosing();
+                return;
+            }
             await this.performSingularity();
         }
 
         this.endStageResolve?.();
         this.endStagePromise = undefined;
         this.endStageResolve = undefined;
+    }
+
+    private async pushSingularityBeforeStop(): Promise<void> {
+        this.ambrosia_late_cube.click();
+
+        await this.setCorruptions(ZERO_CORRUPTIONS);
+
+        await this.waitForCompletion(11, 0, 7777, 0);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await this.waitForCompletion(12, 0, 7777, 0);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await this.waitForCompletion(13, 0, 7777, 0);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await this.waitForCompletion(14, 0, 7777, 0);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
+
+        await this.waitForCompletion(15, 0, 7777, 0);
+        this.autoChallengeButton.click();
+        await HSUtils.sleep(3000);
+
+        this.exitAscBtn.click();
+        this.ambrosia_ambrosia.click();
+
+        return Promise.resolve();
     }
 }

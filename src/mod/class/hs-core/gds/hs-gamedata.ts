@@ -11,6 +11,8 @@ import { HSModuleManager } from "../module/hs-module-manager";
 import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
+import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
@@ -20,9 +22,12 @@ export class HSGameData extends HSModule {
     #saveDataLocalStorageKey = 'Synergysave2';
 
     #saveDataCheckInterval?: number;
-
     #saveData?: PlayerData;
 
+    #mitm_gamedata: string | undefined;
+    #mitm_atob_data: string | undefined;
+    #btoaHacked = false;
+    #atobHacked = false;
     // Turbo mode
     #turboEnabled = false;
     #manualSaveButton?: HTMLButtonElement;
@@ -78,8 +83,7 @@ export class HSGameData extends HSModule {
         },
     };
 
-    #btoaHacked = false;
-    #mitm_gamedata?: string;
+
 
     #saveTriggerEvent: Event;
 
@@ -102,7 +106,6 @@ export class HSGameData extends HSModule {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
 
         try {
-            debugger;
             const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
             const data = await upgradesQuery.json() as PseudoGameData;
 
@@ -125,6 +128,23 @@ export class HSGameData extends HSModule {
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#registerWebSocket();
         this.isInitialized = true;
+
+        // Always hook the import button regardless of GDS setting
+        // We do this asynchronously to not block init if the element takes time to appear
+        (async () => {
+            if (!this.#importSaveButton) {
+                // Try to hook with a short timeout, but keep trying via the HookElement internal retry if properly configured
+                // Or just await it here since we are in a detached async block
+                const btn = await HSElementHooker.HookElement('#importFileButton');
+                if (btn) this.#importSaveButton = btn as HTMLLabelElement;
+            }
+
+            if (this.#importSaveButton && !this.#loadFromFileEventHandler) {
+                this.#loadFromFileEventHandler = async (e: MouseEvent) => { self.#loadFromFileHandler(e); }
+                this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
+                HSLogger.log("Save file import interceptor registered", this.context);
+            }
+        })();
     }
 
     async forceUpdateAllData() {
@@ -141,6 +161,7 @@ export class HSGameData extends HSModule {
         await this.#refreshCampaignTokens();
         await this.#refreshFetchedData();
         this.#hackJSNativebtoa();
+        this.#hackJSNativeAtob();
 
         const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
 
@@ -339,32 +360,37 @@ export class HSGameData extends HSModule {
         if (!this.#singularityChallengeButtons)
             this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
 
-        if (!this.#importSaveButton)
-            this.#importSaveButton = await HSElementHooker.HookElement('#importFileButton') as HTMLLabelElement;
 
-        if (!this.#singularityEventHandler)
-            this.#singularityEventHandler = async (e: MouseEvent) => { self.#singularityHandler(e); }
-
-        if (!this.#loadFromFileEventHandler)
-            this.#loadFromFileEventHandler = async (e: MouseEvent) => { self.#loadFromFileHandler(e); }
-
-        this.#singularityButton.addEventListener('click', this.#singularityEventHandler, { capture: true });
-
-        this.#singularityChallengeButtons.forEach((btn) => {
-            btn.addEventListener('click', self.#singularityEventHandler!, { capture: true });
-        })
-
-        this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
 
         HSLogger.info(`GDS = ON`, this.context);
         this.#turboEnabled = true;
 
         if (HSGlobal.Common.experimentalGDS) {
             this.#hackJSNativebtoa();
+            this.#hackJSNativeAtob();
             this.#processSaveDataWithRAFExperimental();
         } else {
             this.#processSaveDataWithRAF();
         }
+    }
+
+
+    #hackJSNativeAtob() {
+        if (this.#atobHacked) return;
+
+        const self = this;
+        const _atob = window.atob;
+
+        window.atob = function (s) {
+            const decoded = _atob(s);
+            // Quick check for JSON-like structure to capture save data
+            if (decoded && decoded.trim().startsWith('{')) {
+                self.#mitm_atob_data = decoded;
+            }
+            return decoded;
+        }
+
+        this.#atobHacked = true;
     }
 
     #hackJSNativebtoa() {
@@ -391,17 +417,173 @@ export class HSGameData extends HSModule {
     }
 
     async #loadFromFileHandler(e: MouseEvent) {
+        this.#mitm_atob_data = undefined; // Clear stale save data
         const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
+
+        // Capture state BEFORE we potentially change it
+        // If GDS is disabled, this will be false, so the Flash GDS logic will correctly "Flash" it (Enable -> Clean -> Disable)
+        this.#wasUsingGDS = gameDataSetting ? gameDataSetting.isEnabled() : false;
 
         if (gameDataSetting && gameDataSetting.isEnabled()) {
             gameDataSetting.disable();
 
-            await HSUI.Notify('GDS has been disabled for save file import', {
-                position: 'top',
-                notificationType: 'warning'
-            });
+            const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            if (autosing && autosing.isAutosingEnabled()) {
+                HSLogger.log("Load from file clicked - Stopping Auto-Sing (GDS)", this.context);
+                autosing.stopAutosing();
+                HSUI.Notify("Auto-Sing stopped and GDS disabled for save file import", { position: 'top', notificationType: 'warning' });
+            } else {
+                HSUI.Notify('GDS has been disabled for save file import', { position: 'top', notificationType: 'warning' });
+            }
         }
+
+        // Always run the detection/cleanup logic, regardless of previous GDS state
+        // We start watching the offline container to detect when the save is actually loaded
+        const offlineContainer = await HSElementHooker.HookElement('#offlineContainer') as HTMLDivElement;
+        const self = this;
+        let watcherStopped = false;
+
+        const watcherId = HSElementHooker.watchElement(offlineContainer, async (viewState: { view: string, state: string }) => {
+            if (viewState.state !== 'none' && !watcherStopped) {
+                // IMMEDIATELY mark as stopped and disconnect to prevent multiple fires during lag
+                watcherStopped = true;
+                if (watcherId) {
+                    HSElementHooker.stopWatching(watcherId);
+                }
+
+                try {
+                    HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
+
+                    // Ensure GDS is enabled for UI sync - AWAIT it because it triggers CPU heavy refreshes
+                    await self.enableGDS();
+
+                    const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+                    if (ambrosiaModule) {
+                        // AWAIT reset to ensure it finishes before we start matching or setting
+                        await ambrosiaModule.resetActiveLoadout();
+                    }
+
+                    // --- Restore Correct Loadout Logic ---
+                    if (self.#mitm_atob_data) {
+                        try {
+                            const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
+                            const currentUpgrades = saveData.ambrosiaUpgrades;
+                            const savedLoadouts = saveData.blueberryLoadouts;
+
+                            if (currentUpgrades && savedLoadouts) {
+                                let bestMatchId: string | undefined;
+                                let highestScore = 0;
+                                const SIMILARITY_THRESHOLD = 0.8; // 80% match required
+
+                                HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, self.context);
+
+                                // Iterate all loadouts found in the save
+                                for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
+                                    if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
+
+                                    let matches = 0;
+                                    let totalUpgrades = 0;
+                                    const upgrades = Object.entries(loadoutDef);
+
+                                    HSLogger.debug(` -> Checking Loadout ${loadoutId}...`, self.context);
+
+                                    for (const [upgradeKey, savedLevel] of upgrades) {
+                                        // Skip special upgrades
+                                        if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
+
+                                        totalUpgrades++;
+
+                                        // Current level in the save
+                                        // @ts-ignore
+                                        const currentLevelData = currentUpgrades[upgradeKey] as { ambrosiaInvested: number, blueberriesInvested: number } | undefined;
+                                        const totalLevel = currentLevelData ? self.#calculateLevelFromSave(upgradeKey, currentLevelData.ambrosiaInvested, saveData) : 0;
+
+                                        if (totalLevel === savedLevel) {
+                                            matches++;
+                                        } else {
+                                            HSLogger.debug(`    - ${upgradeKey} Mismatch: Save=${totalLevel}, Loadout=${savedLevel}`, self.context);
+                                        }
+                                    }
+
+                                    const score = totalUpgrades > 0 ? (matches / totalUpgrades) : 0;
+                                    HSLogger.debug(`    - Similarity score: ${(score * 100).toFixed(1)}% (${matches}/${totalUpgrades})`, self.context);
+
+                                    if (score > highestScore) {
+                                        highestScore = score;
+                                        bestMatchId = loadoutId;
+                                    }
+
+                                    // If we found a 100% match, we can stop early
+                                    if (score === 1) break;
+                                }
+
+                                if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
+                                    HSLogger.debug(` -> BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, self.context);
+                                    if (ambrosiaModule) {
+                                        // AWAIT the activation to ensure it completes before any other logic runs
+                                        await ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
+                                    }
+                                } else if (bestMatchId) {
+                                    HSLogger.debug(`No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, self.context);
+                                } else {
+                                    HSLogger.debug(`No saved loadouts found to match.`, self.context);
+                                }
+                            } else {
+                                HSLogger.debug(`Missing currentUpgrades or savedLoadouts in the save data analysis.`, self.context);
+                            }
+                        } catch (e) {
+                            HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
+                        }
+                    } else {
+                        HSLogger.debug(`No captured save data (mitm_atob_data is empty).`, self.context);
+                    }
+
+                    if (!self.#wasUsingGDS) {
+                        // Wait for game state to settle and cleanup to take effect, then restore OFF state
+                        setTimeout(() => {
+                            self.disableGDS();
+                            HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
+                        }, 2000);
+                    } else {
+                        HSLogger.debug("GDS remained enabled (Restored state)", self.context);
+                    }
+                } catch (e) {
+                    HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
+                }
+            }
+        }, {
+            attributes: true,
+            attributeFilter: ['style'],
+            valueParser: (element, mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        const target = mutation.target as HTMLElement;
+                        const display = target.style.getPropertyValue('display');
+                        return {
+                            view: target.id,
+                            state: display
+                        }
+                    }
+                }
+                return { view: element.id, state: element.style.getPropertyValue('display') };
+            }
+        });
+
+        // Cleanup watcher if user cancels file dialog (focus returns to window)
+        const focusHandler = () => {
+            setTimeout(() => {
+                if (watcherId && !watcherStopped) {
+                    if (HSElementHooker.stopWatching(watcherId)) {
+                        HSLogger.log("GDS Save Load Watcher timed out (User likely cancelled)", self.context);
+                    }
+                    watcherStopped = true;
+                }
+            }, 5000);
+            window.removeEventListener('focus', focusHandler);
+        };
+        window.addEventListener('focus', focusHandler);
     }
+
 
     async #singularityHandler(e: MouseEvent) {
         const target = e.target as HTMLElement;
@@ -518,10 +700,12 @@ export class HSGameData extends HSModule {
             this.#singularityEventHandler = undefined;
         }
 
-        if (this.#loadFromFileEventHandler) {
-            this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
-            this.#loadFromFileEventHandler = undefined;
-        }
+        // We do NOT remove the loadFromFileEventHandler here.
+        // It must remain active to intercept save loads even when GDS is disabled.
+        // if (this.#loadFromFileEventHandler) {
+        //    this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
+        //    this.#loadFromFileEventHandler = undefined;
+        // }
 
         HSLogger.info(`GDS turbo = OFF`, this.context);
         this.#turboEnabled = false;
@@ -595,7 +779,7 @@ export class HSGameData extends HSModule {
         const TOKEN_EL = this.#campaignTokenElement;
 
         if (TOKEN_EL) {
-            const match = TOKEN_EL.innerText.match(/^You have (\d+) \/ (\d+) .+$/);
+            const match = TOKEN_EL.textContent?.match(/^You have (\d+) \/ (\d+) .+$/);
 
             if (match && match[1] && match[2]) {
                 const leftValue = parseInt(match[1], 10);
@@ -611,5 +795,64 @@ export class HSGameData extends HSModule {
             HSLogger.debug(`Dynamic clear of campaign token refresh interval, player is at max`, this.context);
             clearInterval(this.#campaignTokenRefreshInterval);
         }
+    }
+
+    #calculateLevelFromSave(upgradeKey: string, invested: number, saveData: PlayerData): number {
+        if (!this.#gameDataAPI) return 0;
+
+        const collection = this.#gameDataAPI.R_ambrosiaUpgradeCalculationCollection;
+        // @ts-ignore
+        const config = collection[upgradeKey];
+        if (!config) return 0;
+
+        let level = 0;
+        let budget = invested;
+        let nextCost = config.costFunction(level, config.costPerLevel);
+
+        while (budget >= nextCost && level < config.maxLevel) {
+            budget -= nextCost;
+            level++;
+            nextCost = config.costFunction(level, config.costPerLevel);
+        }
+
+        let freeLevels = 0;
+        if (config.extraLevelCalc) {
+            const row2 = ['ambrosiaQuarks1', 'ambrosiaCubes1', 'ambrosiaLuck1'];
+            const row3 = ['ambrosiaQuarkCube1', 'ambrosiaLuckCube1', 'ambrosiaCubeQuark1', 'ambrosiaLuckQuark1', 'ambrosiaCubeLuck1', 'ambrosiaQuarkLuck1'];
+            const row4 = ['ambrosiaQuarks2', 'ambrosiaCubes2', 'ambrosiaLuck2'];
+            const row5 = ['ambrosiaQuarks3', 'ambrosiaCubes3', 'ambrosiaLuck3', 'ambrosiaLuck4'];
+
+            let redUpgradeKey = '';
+            if (upgradeKey === 'ambrosiaTutorial') redUpgradeKey = 'freeTutorialLevels';
+            else if (row2.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow2';
+            else if (row3.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow3';
+            else if (row4.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow4';
+            else if (row5.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow5';
+
+            if (redUpgradeKey) {
+                const redInvested = (saveData.ambrosiaUpgrades[redUpgradeKey as keyof typeof saveData.ambrosiaUpgrades] as any)?.ambrosiaInvested ?? 0;
+                freeLevels = this.#calculateRedLevelFromSave(redUpgradeKey, redInvested);
+            }
+        }
+
+        return level + freeLevels;
+    }
+
+    #calculateRedLevelFromSave(upgradeKey: string, invested: number): number {
+        if (!this.#gameDataAPI) return 0;
+        const collection = this.#gameDataAPI.R_redAmbrosiaUpgradeCalculationCollection;
+        // @ts-ignore
+        const config = collection[upgradeKey];
+        if (!config) return 0;
+
+        let level = 0;
+        let budget = invested;
+        let nextCost = config.costFunction(level, config.costPerLevel);
+        while (budget >= nextCost && level < config.maxLevel) {
+            budget -= nextCost;
+            level++;
+            nextCost = config.costFunction(level, config.costPerLevel);
+        }
+        return level;
     }
 }
