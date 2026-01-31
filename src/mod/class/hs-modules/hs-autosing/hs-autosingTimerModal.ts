@@ -40,6 +40,7 @@ export class HSAutosingTimerModal {
     private goldenQuarksGains: number[] = [];
     private quarksAmounts: number[] = [];
     private goldenQuarksAmounts: number[] = [];
+    private durationsHistory: number[] = [];
     private startTime: number = 0;
 
     // Phase tracking
@@ -86,6 +87,8 @@ export class HSAutosingTimerModal {
 
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
+    private showCharts: boolean = true;
+    private chartToggleBtn: HTMLButtonElement | null = null;
     private stopButton!: HTMLButtonElement;
     private finishStopBtn!: HTMLButtonElement;
     private minimizeBtn!: HTMLButtonElement;
@@ -148,6 +151,27 @@ export class HSAutosingTimerModal {
             if (toggle) toggle.click();
         };
 
+        this.chartToggleBtn = document.createElement('button');
+        this.chartToggleBtn.textContent = '📊';
+        this.chartToggleBtn.title = "Toggle Charts Visibility";
+        this.chartToggleBtn.className = 'hs-minimize-btn'; // Reusing style
+        this.chartToggleBtn.style.marginRight = '8px';
+        this.chartToggleBtn.onclick = () => {
+            this.showCharts = !this.showCharts;
+            this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
+            this.updateDisplay();
+        };
+
+        this.chartToggleBtn.onmouseenter = () => {
+            if (this.showCharts) {
+                this.chartToggleBtn!.textContent = '✖️';
+            }
+        };
+
+        this.chartToggleBtn.onmouseleave = () => {
+            this.chartToggleBtn!.textContent = '📊';
+        };
+
         this.minimizeBtn.onclick = () => this.toggleMinimize();
 
         this.timerHeader.appendChild(title);
@@ -157,8 +181,9 @@ export class HSAutosingTimerModal {
 
         const controls = document.createElement('div');
         controls.style.display = 'flex';
-        controls.appendChild(this.finishStopBtn);
         controls.appendChild(this.stopButton);
+        controls.appendChild(this.finishStopBtn);
+        controls.appendChild(this.chartToggleBtn);
         controls.appendChild(this.minimizeBtn);
         this.timerHeader.appendChild(controls);
 
@@ -469,6 +494,7 @@ export class HSAutosingTimerModal {
             // Use realQuarksGain here instead of the inaccurate passed argument
             this.quarksGains.push(realQuarksGain / singularityDuration);
             this.quarksAmounts.push(realQuarksGain);
+            this.durationsHistory.push(singularityDuration);
 
             if (gainedGoldenQuarks > 0 || this.goldenQuarksGains.length > 0) {
                 this.goldenQuarksGains.push(gainedGoldenQuarks / singularityDuration);
@@ -723,25 +749,25 @@ export class HSAutosingTimerModal {
                 <span style="color: #666;"> (${this.formatNumber(quarksPerHour)}/hr)</span>
             </div>`;
 
-            if (this.quarksAmounts.length >= 1) {
-                // Rate Average (Label)
-                const recentRates = this.quarksGains.slice(-50);
-                const valAvg = recentRates.reduce((a, b) => a + b, 0) / recentRates.length;
+            if (this.quarksAmounts.length >= 1 && this.showCharts) {
+                // AMOUNT Average (Label) - Now using amounts instead of rates
+                const recentAmounts = this.quarksAmounts.slice(-50);
+                const valAvg = recentAmounts.reduce((a, b) => a + b, 0) / recentAmounts.length;
 
                 // Amount Curve & Position
                 const avgY = this.getSparklineAverage(this.quarksAmounts, 30);
-                const spark = this.generateSparklineMetadata(this.quarksAmounts, 250, 30);
+                const spark = this.generateSparklineMetadata(this.quarksAmounts, 230, 30);
 
                 html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
-                    <svg width="250" height="30" style="display: block; overflow: visible;">
-                        <line x1="250" y1="0" x2="255" y2="0" stroke="#00BCD4" stroke-width="1" />
-                        <line x1="250" y1="30" x2="255" y2="30" stroke="#00BCD4" stroke-width="1" />
-                        <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
+                    <svg width="230" height="30" style="display: block; overflow: visible;">
+                        <line x1="230" y1="0" x2="235" y2="0" stroke="#00BCD4" stroke-width="1" />
+                        <line x1="230" y1="30" x2="235" y2="30" stroke="#00BCD4" stroke-width="1" />
+                        <line x1="0" y1="${avgY.toFixed(1)}" x2="230" y2="${avgY.toFixed(1)}" stroke="#00BCD4" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
                         <path d="${spark.path}" fill="none" stroke="#00BCD4" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                     </svg>
                     <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #ccc; line-height: 1;">
                         <span>+${this.formatNumber(spark.max)}</span>
-                        <span style="color: #00BCD4; opacity: 0.9;">${this.formatNumber(valAvg)}/s</span>
+                        <span style="color: #00BCD4; opacity: 0.9;">+${this.formatNumber(valAvg)} avg</span>
                         <span>+${this.formatNumber(spark.min)}</span>
                     </div>
                 </div>`;
@@ -770,25 +796,25 @@ export class HSAutosingTimerModal {
                     <span style="color: #666;"> (${this.formatNumber(goldenQuarksPerHour)}/hr)</span>
                 </div>`;
 
-                if (this.goldenQuarksAmounts.length >= 1) {
-                    // Rate Average (Label)
-                    const recentRates = this.goldenQuarksGains.slice(-50);
-                    const valAvg = recentRates.reduce((a, b) => a + b, 0) / recentRates.length;
+                if (this.goldenQuarksAmounts.length >= 1 && this.showCharts) {
+                    // AMOUNT Average (Label) - Now using amounts instead of rates
+                    const recentAmounts = this.goldenQuarksAmounts.slice(-50);
+                    const valAvg = recentAmounts.reduce((a, b) => a + b, 0) / recentAmounts.length;
 
                     // Amount Curve & Position
                     const avgY = this.getSparklineAverage(this.goldenQuarksAmounts, 30);
-                    const spark = this.generateSparklineMetadata(this.goldenQuarksAmounts, 250, 30);
+                    const spark = this.generateSparklineMetadata(this.goldenQuarksAmounts, 230, 30);
 
                     html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 4px;">
-                        <svg width="250" height="30" style="display: block; overflow: visible;">
-                            <line x1="250" y1="0" x2="255" y2="0" stroke="#FFD700" stroke-width="1" />
-                            <line x1="250" y1="30" x2="255" y2="30" stroke="#FFD700" stroke-width="1" />
-                            <line x1="0" y1="${avgY.toFixed(1)}" x2="250" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
+                        <svg width="230" height="30" style="display: block; overflow: visible;">
+                            <line x1="230" y1="0" x2="235" y2="0" stroke="#FFD700" stroke-width="1" />
+                            <line x1="230" y1="30" x2="235" y2="30" stroke="#FFD700" stroke-width="1" />
+                            <line x1="0" y1="${avgY.toFixed(1)}" x2="230" y2="${avgY.toFixed(1)}" stroke="#FFD700" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
                             <path d="${spark.path}" fill="none" stroke="#FFD700" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                         </svg>
                         <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #ccc; line-height: 1;">
                             <span>+${this.formatNumber(spark.max)}</span>
-                            <span style="color: #FFD700; opacity: 0.9;">${this.formatNumber(valAvg)}/s</span>
+                            <span style="color: #FFD700; opacity: 0.9;">+${this.formatNumber(valAvg)} avg</span>
                             <span>+${this.formatNumber(spark.min)}</span>
                         </div>
                     </div>`;
@@ -820,6 +846,30 @@ export class HSAutosingTimerModal {
 
         if (avgAll !== null) {
             html += `<div>Avg (All): <span class="hs-rainbow-text">${avgAll.toFixed(2)}s</span></div>`;
+        }
+
+        if (this.durationsHistory.length >= 1 && this.showCharts) {
+            // Timing Average (Label)
+            const recentDurations = this.durationsHistory.slice(-50);
+            const valAvg = recentDurations.reduce((a, b) => a + b, 0) / recentDurations.length;
+
+            // Duration Curve & Position
+            const avgY = this.getSparklineAverage(this.durationsHistory, 30);
+            const spark = this.generateSparklineMetadata(this.durationsHistory, 230, 30);
+
+            html += `<div style="display: flex; align-items: stretch; gap: 4px; margin-top: 6px;">
+                <svg width="230" height="30" style="display: block; overflow: visible;">
+                    <line x1="230" y1="0" x2="235" y2="0" stroke="#2196F3" stroke-width="1" />
+                    <line x1="230" y1="30" x2="235" y2="30" stroke="#2196F3" stroke-width="1" />
+                    <line x1="0" y1="${avgY.toFixed(1)}" x2="230" y2="${avgY.toFixed(2)}" stroke="#2196F3" stroke-width="1" stroke-dasharray="2,2" opacity="0.9" />
+                    <path d="${spark.path}" fill="none" stroke="#2196F3" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                </svg>
+                <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #ccc; line-height: 1;">
+                    <span>${spark.max.toFixed(2)}s</span>
+                    <span style="color: #2196F3; opacity: 0.9;">${valAvg.toFixed(2)}s avg</span>
+                    <span>${spark.min.toFixed(2)}s</span>
+                </div>
+            </div>`;
         }
 
         html += `</div>`;
@@ -883,6 +933,7 @@ export class HSAutosingTimerModal {
         this.goldenQuarksGains = [];
         this.quarksAmounts = [];
         this.goldenQuarksAmounts = [];
+        this.durationsHistory = [];
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
