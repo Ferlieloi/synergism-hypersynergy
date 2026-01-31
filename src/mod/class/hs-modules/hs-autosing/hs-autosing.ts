@@ -1016,13 +1016,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
             this.ascendBtn.click();
 
+            // Stop at singularity's end requested
             if (this.stopAtSingularitysEnd && this.autosingEnabled) {
-                this.ambrosia_late_cube.click();
-                this.exitAscBtn.click();
-                this.autoChallengeButton.click();
-                this.ambrosia_ambrosia.click();
-                this.stopAutosing();
+                await this.pushSingularityBeforeStop();
+
                 HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+                this.stopAutosing();
                 return;
             }
             await this.performSingularity();
@@ -1031,5 +1030,34 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.endStageResolve?.();
         this.endStagePromise = undefined;
         this.endStageResolve = undefined;
+    }
+
+    private async pushSingularityBeforeStop(): Promise<void> {
+        this.ambrosia_late_cube.click();
+
+        await this.setCorruptions(ZERO_CORRUPTIONS);
+
+        await HSUtils.DblClick(this.challengeButtons[11]);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await HSUtils.DblClick(this.challengeButtons[12]);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await HSUtils.DblClick(this.challengeButtons[13]);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await HSUtils.DblClick(this.challengeButtons[14]);
+        await this.waitForCompletion(10, 130, 9999, 0);
+
+        await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
+
+        await HSUtils.DblClick(this.challengeButtons[15]);
+        this.autoChallengeButton.click();
+        await HSUtils.sleep(3000);
+
+        this.exitAscBtn.click();
+        this.ambrosia_ambrosia.click();
+
+        return Promise.resolve();
     }
 }
