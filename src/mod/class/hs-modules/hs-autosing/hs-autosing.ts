@@ -461,13 +461,39 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async executePhase(phaseConfig: AutosingStrategyPhase): Promise<void> {
+        if (this.timerModal) {
+            this.timerModal.setCurrentPhase(`${phaseConfig.startPhase}-${phaseConfig.endPhase}`);
+        }
         await this.setCorruptions(phaseConfig.corruptions);
         this.ascendBtn.click();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
-            if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) return;
+            if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
+                if (this.timerModal) this.timerModal.setCurrentStep('');
+                return;
+            }
 
             const challenge = phaseConfig.strat[i];
+
+            // Report current step to modal
+            if (this.timerModal) {
+                let stepLabel = "";
+                let maxTime: number | null = null;
+
+                if (challenge.challengeNumber === 201) {
+                    stepLabel = "Sync Corruptions";
+                } else if (challenge.challengeNumber === 200) {
+                    stepLabel = "Jump Logic";
+                } else if (challenge.challengeNumber >= 100) {
+                    const actionLabel = SPECIAL_ACTIONS.find(a => a.value === challenge.challengeNumber)?.label ?? `Action ${challenge.challengeNumber}`;
+                    stepLabel = actionLabel;
+                } else {
+                    stepLabel = `Wait for C${challenge.challengeNumber} x${challenge.challengeCompletions || 0}`;
+                    if (challenge.challengeMaxTime) maxTime = challenge.challengeMaxTime;
+                }
+                this.timerModal.setCurrentStep(stepLabel, maxTime);
+            }
+
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
             else if (challenge.challengeNumber == 200) { // Jump action (200)
                 const mode = challenge.ifJump?.ifJumpMode;
