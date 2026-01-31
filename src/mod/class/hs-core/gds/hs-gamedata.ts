@@ -12,6 +12,7 @@ import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
@@ -125,6 +126,23 @@ export class HSGameData extends HSModule {
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#registerWebSocket();
         this.isInitialized = true;
+
+        // Always hook the import button regardless of GDS setting
+        // We do this asynchronously to not block init if the element takes time to appear
+        (async () => {
+            if (!this.#importSaveButton) {
+                // Try to hook with a short timeout, but keep trying via the HookElement internal retry if properly configured
+                // Or just await it here since we are in a detached async block
+                const btn = await HSElementHooker.HookElement('#importFileButton');
+                if (btn) this.#importSaveButton = btn as HTMLLabelElement;
+            }
+
+            if (this.#importSaveButton && !this.#loadFromFileEventHandler) {
+                this.#loadFromFileEventHandler = async (e: MouseEvent) => { self.#loadFromFileHandler(e); }
+                this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
+                HSLogger.log("Save file import interceptor registered", this.context);
+            }
+        })();
     }
 
     async forceUpdateAllData() {
@@ -339,22 +357,7 @@ export class HSGameData extends HSModule {
         if (!this.#singularityChallengeButtons)
             this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
 
-        if (!this.#importSaveButton)
-            this.#importSaveButton = await HSElementHooker.HookElement('#importFileButton') as HTMLLabelElement;
 
-        if (!this.#singularityEventHandler)
-            this.#singularityEventHandler = async (e: MouseEvent) => { self.#singularityHandler(e); }
-
-        if (!this.#loadFromFileEventHandler)
-            this.#loadFromFileEventHandler = async (e: MouseEvent) => { self.#loadFromFileHandler(e); }
-
-        this.#singularityButton.addEventListener('click', this.#singularityEventHandler, { capture: true });
-
-        this.#singularityChallengeButtons.forEach((btn) => {
-            btn.addEventListener('click', self.#singularityEventHandler!, { capture: true });
-        })
-
-        this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
 
         HSLogger.info(`GDS = ON`, this.context);
         this.#turboEnabled = true;
@@ -393,6 +396,10 @@ export class HSGameData extends HSModule {
     async #loadFromFileHandler(e: MouseEvent) {
         const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
 
+        // Capture state BEFORE we potentially change it
+        // If GDS is disabled, this will be false, so the Flash GDS logic will correctly "Flash" it (Enable -> Clean -> Disable)
+        this.#wasUsingGDS = gameDataSetting ? gameDataSetting.isEnabled() : false;
+
         if (gameDataSetting && gameDataSetting.isEnabled()) {
             gameDataSetting.disable();
 
@@ -405,7 +412,85 @@ export class HSGameData extends HSModule {
                 HSUI.Notify('GDS has been disabled for save file import', { position: 'top', notificationType: 'warning' });
             }
         }
+
+        // Always run the detection/cleanup logic, regardless of previous GDS state
+        // We start watching the offline container to detect when the save is actually loaded
+        const offlineContainer = await HSElementHooker.HookElement('#offlineContainer') as HTMLDivElement;
+        const self = this;
+        let watcherStopped = false;
+
+        const watcherId = HSElementHooker.watchElement(offlineContainer, (viewState: { view: string, state: string }) => {
+            if (viewState.state !== 'none') {
+                HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
+
+                // Flash GDS Strategy:
+                // To ensure cleanup works reliably, we temporarily enable GDS (if it was off).
+                // This forces all UI components to initialize and be hookable/cleanable.
+
+                const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+
+                if (self.#wasUsingGDS) {
+                    // User had GDS ON. Just turn it back on and clean.
+                    HSLogger.debug("Restoring GDS state (ON)...", self.context);
+                    self.enableGDS();
+                    if (ambrosiaModule) ambrosiaModule.resetActiveLoadout();
+                } else {
+                    // User had GDS OFF. We must "Flash" it ON to clean up, then turn OFF.
+                    HSLogger.debug("Flashing GDS for cleanup...", self.context);
+                    self.enableGDS();
+
+                    // Clean
+                    if (ambrosiaModule) ambrosiaModule.resetActiveLoadout();
+
+                    // Wait for game state to settle and cleanup to take effect, then restore OFF state
+                    setTimeout(() => {
+                        self.disableGDS();
+                        HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
+                    }, 2000);
+                }
+
+                // Stop watching offline container
+                setTimeout(() => {
+                    if (watcherId && !watcherStopped) {
+                        HSElementHooker.stopWatching(watcherId);
+                        watcherStopped = true;
+                    }
+                }, 1000);
+
+            }
+        }, {
+            attributes: true,
+            attributeFilter: ['style'],
+            valueParser: (element, mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        const target = mutation.target as HTMLElement;
+                        const display = target.style.getPropertyValue('display');
+                        return {
+                            view: target.id,
+                            state: display
+                        }
+                    }
+                }
+                return { view: element.id, state: element.style.getPropertyValue('display') };
+            }
+        });
+
+        // Cleanup watcher if user cancels file dialog (focus returns to window)
+        const focusHandler = () => {
+            setTimeout(() => {
+                if (watcherId && !watcherStopped) {
+                    if (HSElementHooker.stopWatching(watcherId)) {
+                        HSLogger.log("GDS Save Load Watcher timed out (User likely cancelled)", self.context);
+                    }
+                    watcherStopped = true;
+                }
+            }, 1000);
+            window.removeEventListener('focus', focusHandler);
+        };
+        window.addEventListener('focus', focusHandler);
     }
+
 
     async #singularityHandler(e: MouseEvent) {
         const target = e.target as HTMLElement;
@@ -522,10 +607,12 @@ export class HSGameData extends HSModule {
             this.#singularityEventHandler = undefined;
         }
 
-        if (this.#loadFromFileEventHandler) {
-            this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
-            this.#loadFromFileEventHandler = undefined;
-        }
+        // We do NOT remove the loadFromFileEventHandler here.
+        // It must remain active to intercept save loads even when GDS is disabled.
+        // if (this.#loadFromFileEventHandler) {
+        //    this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
+        //    this.#loadFromFileEventHandler = undefined;
+        // }
 
         HSLogger.info(`GDS turbo = OFF`, this.context);
         this.#turboEnabled = false;

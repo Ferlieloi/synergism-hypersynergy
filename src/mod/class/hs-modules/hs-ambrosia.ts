@@ -672,6 +672,37 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    async resetActiveLoadout() {
+        this.#currentLoadout = undefined;
+
+        const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
+        if (loadoutStateSetting) {
+            loadoutStateSetting.setValue('<red>Unknown</red>');
+
+            // Force save to storage to be absolutely sure
+            // HSSettings.saveSettingsToStorage() is called by setValue, but let's double check
+            // logic or if there's an async delay.
+            HSSettings.saveSettingsToStorage();
+        }
+
+        // Clear visual state from both containers
+        const containers = [
+            this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`),
+            document.querySelector('#bbLoadoutContainer'),
+            document.querySelector('#hs-ambrosia-quick-loadout-container') // Just in case
+        ];
+
+        containers.forEach(container => {
+            if (container) {
+                container.querySelectorAll('.hs-ambrosia-active-slot').forEach(slot => {
+                    slot.classList.remove('hs-ambrosia-active-slot');
+                });
+            }
+        });
+
+        HSLogger.log('Ambrosia loadout state reset (Storage Updated)', this.context);
+    }
+
     async enableAutoLoadout() {
         const self = this;
 
