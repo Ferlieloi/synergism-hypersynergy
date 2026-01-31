@@ -87,6 +87,8 @@ export class HSAutosingTimerModal {
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
     private stopButton!: HTMLButtonElement;
+    private finishStopBtn!: HTMLButtonElement;
+    private minimizeBtn!: HTMLButtonElement;
 
     constructor() {
         this.createTimerDisplay();
@@ -119,12 +121,26 @@ export class HSAutosingTimerModal {
         title.textContent = '⏱️ Autosing Timer';
         title.className = 'hs-timer-title';
 
-        const minimizeBtn = document.createElement('button');
-        minimizeBtn.textContent = '−';
-        minimizeBtn.title = "Minimize";
-        minimizeBtn.className = 'hs-minimize-btn';
+        this.minimizeBtn = document.createElement('button');
+        this.minimizeBtn.textContent = '−';
+        this.minimizeBtn.title = "Minimize";
+        this.minimizeBtn.className = 'hs-minimize-btn';
+
+        this.finishStopBtn = document.createElement('button');
+        this.finishStopBtn.textContent = '🏁🛑';
+        this.finishStopBtn.title = "Go to the very end of current Singularity, then Stop.";
+        this.finishStopBtn.className = 'hs-stop-btn';
+        this.finishStopBtn.onclick = () => {
+            const autosingMod = HSModuleManager.getModule<any>('HSAutosing');
+            if (autosingMod) {
+                const newState = !autosingMod.isStopAtSingularitysEnd();
+                autosingMod.setStopAtSingularitysEnd(newState);
+                this.finishStopBtn.style.backgroundColor = newState ? '#ff9800' : '';
+            }
+        };
+
         this.stopButton = document.createElement('button');
-        this.stopButton.textContent = '🛑';
+        this.stopButton.textContent = '👇🛑';
         this.stopButton.title = "Stop Autosing";
         this.stopButton.className = 'hs-stop-btn';
         this.stopButton.onclick = () => {
@@ -132,15 +148,18 @@ export class HSAutosingTimerModal {
             if (toggle) toggle.click();
         };
 
-        minimizeBtn.onclick = () => this.toggleMinimize();
+        this.minimizeBtn.onclick = () => this.toggleMinimize();
 
         this.timerHeader.appendChild(title);
         this.timerHeader.appendChild(document.createElement('div')); // Spacer
 
+
+
         const controls = document.createElement('div');
         controls.style.display = 'flex';
+        controls.appendChild(this.finishStopBtn);
         controls.appendChild(this.stopButton);
-        controls.appendChild(minimizeBtn);
+        controls.appendChild(this.minimizeBtn);
         this.timerHeader.appendChild(controls);
 
         /* ---------- CONTENT ---------- */
@@ -276,14 +295,14 @@ export class HSAutosingTimerModal {
             this.timerContent.style.display = 'none';
             this.timerDisplay.style.height = 'auto';
             if (this.stopButton) this.stopButton.style.display = 'none';
-            const minimizeBtn = this.timerHeader?.querySelector('.hs-minimize-btn');
-            if (minimizeBtn) minimizeBtn.textContent = '+';
+            if (this.finishStopBtn) this.finishStopBtn.style.display = 'none';
+            if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
             this.timerContent.style.display = 'block';
             this.timerDisplay.style.height = '';
             if (this.stopButton) this.stopButton.style.display = 'block';
-            const minimizeBtn = this.timerHeader?.querySelector('.hs-minimize-btn');
-            if (minimizeBtn) minimizeBtn.textContent = '−';
+            if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
+            if (this.minimizeBtn) this.minimizeBtn.textContent = '−';
             this.updateDisplay();
         }
     }

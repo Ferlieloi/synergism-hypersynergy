@@ -85,6 +85,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
 
+    private stopAtSingularitysEnd: boolean = false;
+
     private storedC15: Decimal = new Decimal(0);
 
 
@@ -148,6 +150,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return this.autosingEnabled;
     }
 
+    public setStopAtSingularitysEnd(value: boolean) {
+        this.stopAtSingularitysEnd = value;
+    }
+
+    public isStopAtSingularitysEnd(): boolean {
+        return this.stopAtSingularitysEnd;
+    }
+
     subscribeGameDataChanges() {
         const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
 
@@ -178,6 +188,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async enableAutoSing(): Promise<void> {
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
+        this.stopAtSingularitysEnd = false;
         HSUtils.startDialogWatcher();
         const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
 
@@ -659,6 +670,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private stopAutosing() {
         this.autosingEnabled = false;
         this.unsubscribeGameDataChanges();
+        this.antiquitiesObserver?.disconnect(); // Ensure observer is cleared
+        this.antiquitiesObserver = undefined;
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
         if (this.timerModal) {
@@ -972,9 +985,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     const style = (mutation.target as HTMLElement).style;
                     if (style.display === 'none') {
                         HSLogger.debug('antiquitiesRuneLockedContainer hidden - buying antiquities', this.context);
+                        this.observerActivated = true;
                         this.antiquitiesObserver?.disconnect();
                         this.antiquitiesObserver = undefined;
-                        this.observerActivated = true;
                         this.performFinalStage();
                         break;
                     }
@@ -1002,6 +1015,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
             this.ascendBtn.click();
+
+            if (this.stopAtSingularitysEnd && this.autosingEnabled) {
+                this.ambrosia_late_cube.click();
+                this.exitAscBtn.click();
+                this.autoChallengeButton.click();
+                this.ambrosia_ambrosia.click();
+                this.stopAutosing();
+                HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+                return;
+            }
             await this.performSingularity();
         }
 

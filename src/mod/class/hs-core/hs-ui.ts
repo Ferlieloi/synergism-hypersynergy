@@ -192,10 +192,6 @@ export class HSUI extends HSModule {
                 self.#uiPanel.style.opacity = '0';
                 self.#uiPanel.classList.remove('hs-panel-closed');
 
-                const resetCoords = self.#resolveCoordinates(EPredefinedPosition.CENTER, self.#uiPanel);
-                self.#uiPanel.style.left = `${resetCoords.x}px`;
-                self.#uiPanel.style.top = `${resetCoords.y}px`;
-
                 HSLogger.scrollToBottom();
 
                 await self.#uiPanel.transition({
