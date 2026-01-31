@@ -703,6 +703,40 @@ export class HSAmbrosia extends HSModule
         HSLogger.log('Ambrosia loadout state reset (Storage Updated)', this.context);
     }
 
+    /**
+     * Sets the active loadout programmatically.
+     * @param slotNumber The loadout number (1...N)
+     * @param forceUpdate Whether to force visual update
+     */
+    async setActiveLoadout(slotNumber: number, forceUpdate: boolean = false) {
+        // Convert number to enum if possible
+        let slotEnum: AMBROSIA_LOADOUT_SLOT | undefined;
+
+        // Try searching by value (e.g., 'blueberryLoadout3')
+        // Or construct the expected value from the slotNumber
+        const expectedValue = `blueberryLoadout${slotNumber}`;
+        slotEnum = Object.values(AMBROSIA_LOADOUT_SLOT).find(val => val === expectedValue || val === slotNumber.toString()) as AMBROSIA_LOADOUT_SLOT;
+
+        if (!slotEnum) {
+            HSLogger.warn(`Invalid loadout slot sent to setActiveLoadout: ${slotNumber}`, this.context);
+            return;
+        }
+
+        this.#currentLoadout = slotEnum;
+
+        // Update Setting (Persistence)
+        const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
+        if (loadoutStateSetting) {
+            loadoutStateSetting.setValue(`<green>Loadout ${slotNumber}</green>`);
+            HSSettings.saveSettingsToStorage();
+        }
+
+        // Update Visuals
+        await this.#updateCurrentLoadout(slotEnum);
+
+        HSLogger.log(`Programmatically set active loadout to ${slotNumber}`, this.context);
+    }
+
     async enableAutoLoadout() {
         const self = this;
 
