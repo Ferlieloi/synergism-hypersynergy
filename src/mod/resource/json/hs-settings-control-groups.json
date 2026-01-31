@@ -47,20 +47,16 @@
         "groupName": "Auto-Sing settings",
         "order": 12
     },
-    "auto-sing-strategy-row1": {
-        "groupName": "Auto-Sing strategy settings",
+    "auto-sing-strategy-controls": {
+        "groupName": "Auto-Sing Strategy settings",
         "order": 13
     },
-    "auto-sing-strategy-row2": {
-        "groupName": " ",
-        "order": 14
-    },
     "auto-sing-ambrosia": {
-        "groupName": "Autosing Ambrosia settings",
+        "groupName": "Auto-Sing Ambrosia Loadouts settings",
         "order": 15
     },
     "auto-sing-timer-modal": {
-        "groupName": "Auto-Sing timer modal settings",
+        "groupName": "Auto-Sing Advanced settings",
         "order": 16
     },
     "quickbar-qol": {

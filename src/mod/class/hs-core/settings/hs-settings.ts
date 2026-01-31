@@ -385,17 +385,15 @@ export class HSSettings extends HSModule {
                     currentControlGroup = controls.controlGroup;
                     const controlGroup = HSSettings.#settingsControlGroups[currentControlGroup];
 
-                    // Create control group header (skip for auto-sing-strategy-row2 to avoid separator between button rows)
-                    if (currentControlGroup !== 'auto-sing-strategy-row2') {
-                        pageHTMLs.push(HSUIC.Div({
-                            html: controlGroup.groupName,
-                            styles: {
-                                borderBottom: '1px solid limegreen',
-                                gridColumn: 'span 2',
-                                marginBottom: '15px'
-                            }
-                        }))
-                    }
+                    // Create control group header
+                    pageHTMLs.push(HSUIC.Div({
+                        html: controlGroup.groupName,
+                        styles: {
+                            borderBottom: '1px solid limegreen',
+                            gridColumn: 'span 2',
+                            marginBottom: '15px'
+                        }
+                    }))
                 }
 
                 if (controls.controlType === "switch") {
@@ -505,7 +503,7 @@ export class HSSettings extends HSModule {
                 // Add special class for inline button layout in strategy rows
                 let blockClass = 'hs-panel-setting-block';
                 if (controls.controlType === "button" &&
-                    (controls.controlGroup === "auto-sing-strategy-row1" || controls.controlGroup === "auto-sing-strategy-row2")) {
+                    (controls.controlGroup === "auto-sing-strategy-controls")) {
                     blockClass += ' hs-inline-button';
                 }
 
