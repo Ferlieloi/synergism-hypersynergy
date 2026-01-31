@@ -1038,21 +1038,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await HSUtils.DblClick(this.challengeButtons[11]);
+        await this.waitForCompletion(11, 0, 7777, 0);
         await this.waitForCompletion(10, 130, 9999, 0);
 
-        await HSUtils.DblClick(this.challengeButtons[12]);
+        await this.waitForCompletion(12, 0, 7777, 0);
         await this.waitForCompletion(10, 130, 9999, 0);
 
-        await HSUtils.DblClick(this.challengeButtons[13]);
+        await this.waitForCompletion(13, 0, 7777, 0);
         await this.waitForCompletion(10, 130, 9999, 0);
 
-        await HSUtils.DblClick(this.challengeButtons[14]);
+        await this.waitForCompletion(14, 0, 7777, 0);
         await this.waitForCompletion(10, 130, 9999, 0);
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
-        await HSUtils.DblClick(this.challengeButtons[15]);
+        await this.waitForCompletion(15, 0, 7777, 0);
         this.autoChallengeButton.click();
         await HSUtils.sleep(3000);
 

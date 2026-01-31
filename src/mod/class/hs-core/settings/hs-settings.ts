@@ -41,6 +41,7 @@ export class HSSettings extends HSModule {
 
     static #settingsParsed = false;
     static #settingsSynced = false;
+    static #saveTimeout: any;
 
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
@@ -1027,18 +1028,25 @@ export class HSSettings extends HSModule {
     }
 
     static saveSettingsToStorage() {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-
-        if (storageMod) {
-            const serializedSettings = this.#serializeSettings();
-            const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
-
-            if (!saved) {
-                HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
-            } else {
-                HSLogger.debug(`<green>Settings saved to localStorage</green>`, this.#staticContext);
-            }
+        if (this.#saveTimeout) {
+            clearTimeout(this.#saveTimeout);
         }
+
+        this.#saveTimeout = setTimeout(() => {
+            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+
+            if (storageMod) {
+                const serializedSettings = this.#serializeSettings();
+                const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
+
+                if (!saved) {
+                    HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
+                } else {
+                    HSLogger.debug(`<green>Settings saved to localStorage</green>`, this.#staticContext);
+                }
+            }
+            this.#saveTimeout = undefined;
+        }, 250);
     }
 
     // Parses the default strategies read from strategies.json
@@ -1279,12 +1287,10 @@ export class HSSettings extends HSModule {
 
     static async #settingChangeDelegate(e: Event, settingObj: HSSetting<HSSettingType>) {
         await settingObj.handleChange(e);
-        this.saveSettingsToStorage();
     }
 
     static async #settingToggleDelegate(e: MouseEvent, settingObj: HSSetting<HSSettingType>) {
         await settingObj.handleToggle(e);
-        this.saveSettingsToStorage();
     }
 
     static dumpToConsole() {

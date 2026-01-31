@@ -395,7 +395,7 @@ export class HSAmbrosia extends HSModule
 
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
 
-        if (loadoutStateSetting) {
+        if (loadoutStateSetting && !HSUtils.removeColorTags(loadoutStateSetting.getValue()).startsWith('Loadout')) {
             loadoutStateSetting.setValue(`<green>${slotEnum}</green>`);
         }
 
@@ -678,11 +678,6 @@ export class HSAmbrosia extends HSModule
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
         if (loadoutStateSetting) {
             loadoutStateSetting.setValue('<red>Unknown</red>');
-
-            // Force save to storage to be absolutely sure
-            // HSSettings.saveSettingsToStorage() is called by setValue, but let's double check
-            // logic or if there's an async delay.
-            HSSettings.saveSettingsToStorage();
         }
 
         // Clear visual state from both containers
@@ -728,7 +723,6 @@ export class HSAmbrosia extends HSModule
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
         if (loadoutStateSetting) {
             loadoutStateSetting.setValue(`<green>Loadout ${slotNumber}</green>`);
-            HSSettings.saveSettingsToStorage();
         }
 
         // Update Visuals

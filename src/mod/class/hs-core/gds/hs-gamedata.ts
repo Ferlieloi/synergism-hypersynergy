@@ -374,71 +374,6 @@ export class HSGameData extends HSModule {
         }
     }
 
-    #calculateAmbrosiaLevel(upgradeKey: string, ambrosiaInvested: number): number {
-        if (ambrosiaInvested <= 0) return 0;
-
-        // Row 2 & 3: Cubic (invested = cpl * level^3)
-        const cubicUpgrades: Record<string, number> = {
-            'ambrosiaQuarks1': 1,
-            'ambrosiaCubes1': 1,
-            'ambrosiaLuck1': 1,
-            'ambrosiaQuarkCube1': 250,
-            'ambrosiaLuckCube1': 250,
-            'ambrosiaCubeQuark1': 500,
-            'ambrosiaLuckQuark1': 500,
-            'ambrosiaCubeLuck1': 100,
-            'ambrosiaQuarkLuck1': 100
-        };
-
-        if (cubicUpgrades[upgradeKey]) {
-            return Math.round(Math.pow(ambrosiaInvested / cubicUpgrades[upgradeKey], 1 / 3));
-        }
-
-        // Row 4: Quadratic (invested = cpl * level^2)
-        const quadraticUpgrades: Record<string, number> = {
-            'ambrosiaQuarks2': 500,
-            'ambrosiaCubes2': 500,
-            'ambrosiaLuck2': 250,
-            'ambrosiaTutorial': 1
-        };
-
-        if (quadraticUpgrades[upgradeKey]) {
-            return Math.round(Math.sqrt(ambrosiaInvested / quadraticUpgrades[upgradeKey]));
-        }
-
-        // Row 5: Arithmetic (approximate or linear)
-        if (upgradeKey === 'ambrosiaQuarks3') {
-            let count = 0;
-            let total = 0;
-            const cpl = 750000;
-            while (count < 10) {
-                const cost = cpl + 50000 * count;
-                if (total + cost > ambrosiaInvested) break;
-                total += cost;
-                count++;
-            }
-            return count;
-        }
-
-        if (upgradeKey === 'ambrosiaCubes3') {
-            let count = 0;
-            let total = 0;
-            const cpl = 75000;
-            while (count < 100) {
-                const cost = cpl + 5000 * count;
-                if (total + cost > ambrosiaInvested) break;
-                total += cost;
-                count++;
-            }
-            return count;
-        }
-
-        if (upgradeKey === 'ambrosiaLuck3') {
-            return Math.floor(ambrosiaInvested / 50000);
-        }
-
-        return 0;
-    }
 
     #hackJSNativeAtob() {
         if (this.#atobHacked) return;
@@ -508,101 +443,113 @@ export class HSGameData extends HSModule {
         const self = this;
         let watcherStopped = false;
 
-        const watcherId = HSElementHooker.watchElement(offlineContainer, (viewState: { view: string, state: string }) => {
-            if (viewState.state !== 'none') {
-                HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
+        const watcherId = HSElementHooker.watchElement(offlineContainer, async (viewState: { view: string, state: string }) => {
+            if (viewState.state !== 'none' && !watcherStopped) {
+                // IMMEDIATELY mark as stopped and disconnect to prevent multiple fires during lag
+                watcherStopped = true;
+                if (watcherId) {
+                    HSElementHooker.stopWatching(watcherId);
+                }
 
-                // Ensure GDS is enabled for UI sync
-                self.enableGDS();
+                try {
+                    HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
 
-                const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-                if (ambrosiaModule) ambrosiaModule.resetActiveLoadout();
+                    // Ensure GDS is enabled for UI sync - AWAIT it because it triggers CPU heavy refreshes
+                    await self.enableGDS();
 
-                // --- Restore Correct Loadout Logic ---
-                if (self.#mitm_atob_data) {
-                    try {
-                        const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
-                        const currentUpgrades = saveData.ambrosiaUpgrades;
-                        const savedLoadouts = saveData.blueberryLoadouts;
+                    const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+                    if (ambrosiaModule) {
+                        // AWAIT reset to ensure it finishes before we start matching or setting
+                        await ambrosiaModule.resetActiveLoadout();
+                    }
 
-                        if (currentUpgrades && savedLoadouts) {
-                            let matchedLoadoutId: string | undefined;
+                    // --- Restore Correct Loadout Logic ---
+                    if (self.#mitm_atob_data) {
+                        try {
+                            const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
+                            const currentUpgrades = saveData.ambrosiaUpgrades;
+                            const savedLoadouts = saveData.blueberryLoadouts;
 
-                            HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, self.context);
-                            HSLogger.debug(`Current Ambrosia Keys: ${Object.keys(currentUpgrades).slice(0, 5).join(', ')}...`, self.context);
+                            if (currentUpgrades && savedLoadouts) {
+                                let bestMatchId: string | undefined;
+                                let highestScore = 0;
+                                const SIMILARITY_THRESHOLD = 0.8; // 80% match required
 
-                            // Iterate all loadouts found in the save
-                            for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
-                                if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
+                                HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, self.context);
 
-                                HSLogger.debug(`Checking Loadout ${loadoutId}...`, self.context);
-                                let match = true;
-                                // Check if every upgrade in the loadout matches the current player level
-                                for (const [upgradeKey, savedLevel] of Object.entries(loadoutDef)) {
-                                    // Skip special upgrades that might not track blueberries correctly or are assumed maxed
-                                    if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
+                                // Iterate all loadouts found in the save
+                                for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
+                                    if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
 
-                                    // Current level in the save
-                                    // @ts-ignore
-                                    const currentLevelData = currentUpgrades[upgradeKey] as { ambrosiaInvested: number, blueberriesInvested: number } | undefined;
+                                    let matches = 0;
+                                    let totalUpgrades = 0;
+                                    const upgrades = Object.entries(loadoutDef);
 
-                                    // Calculate level from Ambrosia investment ONLY (Blueberries are ignored for matching)
-                                    const totalLevel = currentLevelData ? self.#calculateAmbrosiaLevel(upgradeKey, currentLevelData.ambrosiaInvested) : 0;
+                                    HSLogger.debug(` -> Checking Loadout ${loadoutId}...`, self.context);
 
-                                    if (totalLevel !== savedLevel) {
-                                        HSLogger.debug(` -> Mismatch on '${upgradeKey}': Loadout requires ${savedLevel}, Player has ${totalLevel}`, self.context);
-                                        match = false;
-                                        break;
+                                    for (const [upgradeKey, savedLevel] of upgrades) {
+                                        // Skip special upgrades
+                                        if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
+
+                                        totalUpgrades++;
+
+                                        // Current level in the save
+                                        // @ts-ignore
+                                        const currentLevelData = currentUpgrades[upgradeKey] as { ambrosiaInvested: number, blueberriesInvested: number } | undefined;
+                                        const totalLevel = currentLevelData ? self.#calculateLevelFromSave(upgradeKey, currentLevelData.ambrosiaInvested, saveData) : 0;
+
+                                        if (totalLevel === savedLevel) {
+                                            matches++;
+                                        } else {
+                                            HSLogger.debug(`    - ${upgradeKey} Mismatch: Save=${totalLevel}, Loadout=${savedLevel}`, self.context);
+                                        }
                                     }
+
+                                    const score = totalUpgrades > 0 ? (matches / totalUpgrades) : 0;
+                                    HSLogger.debug(`    - Similarity score: ${(score * 100).toFixed(1)}% (${matches}/${totalUpgrades})`, self.context);
+
+                                    if (score > highestScore) {
+                                        highestScore = score;
+                                        bestMatchId = loadoutId;
+                                    }
+
+                                    // If we found a 100% match, we can stop early
+                                    if (score === 1) break;
                                 }
 
-                                if (match) {
-                                    HSLogger.debug(` -> MATCH FOUND! Loadout ${loadoutId} is compliant.`, self.context);
-                                    matchedLoadoutId = loadoutId;
-                                    break; // Found the first matching loadout
-                                }
-                            }
-
-                            if (matchedLoadoutId) {
-                                HSLogger.debug(`Detected Active Ambrosia Loadout: ${matchedLoadoutId}`, self.context);
-                                if (ambrosiaModule) {
-                                    // Slight delay to ensure the reset has cleared properly before setting new one
-                                    // Though resetActiveLoadout is synchronous in state clearing, the visual update is async-ish
-                                    setTimeout(() => {
-                                        ambrosiaModule.setActiveLoadout(parseInt(matchedLoadoutId!), true); // true = forceful/silent update if needed
-                                    }, 100);
+                                if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
+                                    HSLogger.debug(` -> BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, self.context);
+                                    if (ambrosiaModule) {
+                                        // AWAIT the activation to ensure it completes before any other logic runs
+                                        await ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
+                                    }
+                                } else if (bestMatchId) {
+                                    HSLogger.debug(`No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, self.context);
+                                } else {
+                                    HSLogger.debug(`No saved loadouts found to match.`, self.context);
                                 }
                             } else {
-                                HSLogger.debug(`No matching Ambrosia loadout found. Remaining reset.`, self.context);
+                                HSLogger.debug(`Missing currentUpgrades or savedLoadouts in the save data analysis.`, self.context);
                             }
-                        } else {
-                            HSLogger.debug(`Missing currentUpgrades or savedLoadouts in the save data analysis.`, self.context);
+                        } catch (e) {
+                            HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
                         }
-                    } catch (e) {
-                        HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
+                    } else {
+                        HSLogger.debug(`No captured save data (mitm_atob_data is empty).`, self.context);
                     }
-                } else {
-                    HSLogger.debug(`No captured save data (mitm_atob_data is empty).`, self.context);
-                }
 
-                if (!self.#wasUsingGDS) {
-                    // Wait for game state to settle and cleanup to take effect, then restore OFF state
-                    setTimeout(() => {
-                        self.disableGDS();
-                        HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
-                    }, 2000);
-                } else {
-                    HSLogger.debug("GDS remained enabled (Restored state)", self.context);
-                }
-
-                // Stop watching offline container
-                setTimeout(() => {
-                    if (watcherId && !watcherStopped) {
-                        HSElementHooker.stopWatching(watcherId);
-                        watcherStopped = true;
+                    if (!self.#wasUsingGDS) {
+                        // Wait for game state to settle and cleanup to take effect, then restore OFF state
+                        setTimeout(() => {
+                            self.disableGDS();
+                            HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
+                        }, 2000);
+                    } else {
+                        HSLogger.debug("GDS remained enabled (Restored state)", self.context);
                     }
-                }, 1000);
-
+                } catch (e) {
+                    HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
+                }
             }
         }, {
             attributes: true,
@@ -832,7 +779,7 @@ export class HSGameData extends HSModule {
         const TOKEN_EL = this.#campaignTokenElement;
 
         if (TOKEN_EL) {
-            const match = TOKEN_EL.innerText.match(/^You have (\d+) \/ (\d+) .+$/);
+            const match = TOKEN_EL.textContent?.match(/^You have (\d+) \/ (\d+) .+$/);
 
             if (match && match[1] && match[2]) {
                 const leftValue = parseInt(match[1], 10);
@@ -848,5 +795,64 @@ export class HSGameData extends HSModule {
             HSLogger.debug(`Dynamic clear of campaign token refresh interval, player is at max`, this.context);
             clearInterval(this.#campaignTokenRefreshInterval);
         }
+    }
+
+    #calculateLevelFromSave(upgradeKey: string, invested: number, saveData: PlayerData): number {
+        if (!this.#gameDataAPI) return 0;
+
+        const collection = this.#gameDataAPI.R_ambrosiaUpgradeCalculationCollection;
+        // @ts-ignore
+        const config = collection[upgradeKey];
+        if (!config) return 0;
+
+        let level = 0;
+        let budget = invested;
+        let nextCost = config.costFunction(level, config.costPerLevel);
+
+        while (budget >= nextCost && level < config.maxLevel) {
+            budget -= nextCost;
+            level++;
+            nextCost = config.costFunction(level, config.costPerLevel);
+        }
+
+        let freeLevels = 0;
+        if (config.extraLevelCalc) {
+            const row2 = ['ambrosiaQuarks1', 'ambrosiaCubes1', 'ambrosiaLuck1'];
+            const row3 = ['ambrosiaQuarkCube1', 'ambrosiaLuckCube1', 'ambrosiaCubeQuark1', 'ambrosiaLuckQuark1', 'ambrosiaCubeLuck1', 'ambrosiaQuarkLuck1'];
+            const row4 = ['ambrosiaQuarks2', 'ambrosiaCubes2', 'ambrosiaLuck2'];
+            const row5 = ['ambrosiaQuarks3', 'ambrosiaCubes3', 'ambrosiaLuck3', 'ambrosiaLuck4'];
+
+            let redUpgradeKey = '';
+            if (upgradeKey === 'ambrosiaTutorial') redUpgradeKey = 'freeTutorialLevels';
+            else if (row2.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow2';
+            else if (row3.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow3';
+            else if (row4.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow4';
+            else if (row5.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow5';
+
+            if (redUpgradeKey) {
+                const redInvested = (saveData.ambrosiaUpgrades[redUpgradeKey as keyof typeof saveData.ambrosiaUpgrades] as any)?.ambrosiaInvested ?? 0;
+                freeLevels = this.#calculateRedLevelFromSave(redUpgradeKey, redInvested);
+            }
+        }
+
+        return level + freeLevels;
+    }
+
+    #calculateRedLevelFromSave(upgradeKey: string, invested: number): number {
+        if (!this.#gameDataAPI) return 0;
+        const collection = this.#gameDataAPI.R_redAmbrosiaUpgradeCalculationCollection;
+        // @ts-ignore
+        const config = collection[upgradeKey];
+        if (!config) return 0;
+
+        let level = 0;
+        let budget = invested;
+        let nextCost = config.costFunction(level, config.costPerLevel);
+        while (budget >= nextCost && level < config.maxLevel) {
+            budget -= nextCost;
+            level++;
+            nextCost = config.costFunction(level, config.costPerLevel);
+        }
+        return level;
     }
 }

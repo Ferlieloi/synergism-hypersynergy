@@ -247,7 +247,7 @@ export class HSButtonSetting extends HSSetting<null> {
     }
 
     setValue(_: null): void {
-
+        HSSettings.saveSettingsToStorage();
     }
 
     async handleChange(e: Event): Promise<void> {
@@ -281,7 +281,8 @@ export class HSNumericSetting extends HSSetting<number> {
     }
 
     setValue(value: number) {
-        return this.definition.settingValue = value;
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
     }
 
     // Number type settings need to handle the change event differently
@@ -312,7 +313,8 @@ export class HSStringSetting extends HSSetting<string> {
     }
 
     setValue(value: string) {
-        return this.definition.settingValue = value;
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
     }
 
     async handleChange(e: Event) {
@@ -343,6 +345,7 @@ export class HSBooleanSetting extends HSSetting<boolean> {
         this.definition.settingValue = value;
         this.definition.calculatedSettingValue = value;
         this.definition.enabled = value;
+        HSSettings.saveSettingsToStorage();
     }
 
     // Boolean type settings have no value, they are just toggled on/off
@@ -366,7 +369,8 @@ export class HSSelectNumericSetting extends HSSetting<number> {
     }
 
     setValue(value: number) {
-        //this.definition.settingValue = value;
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
     }
 
     // Number type settings need to handle the change event differently
@@ -397,7 +401,8 @@ export class HSSelectStringSetting extends HSSetting<string> {
     }
 
     setValue(value: string) {
-        //this.definition.settingValue = value;
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
     }
 
     async handleChange(e: Event) {

@@ -128,7 +128,7 @@ export class HSAutosingTimerModal {
 
         this.finishStopBtn = document.createElement('button');
         this.finishStopBtn.textContent = '🏁🛑';
-        this.finishStopBtn.title = "Go to the very end of current Singularity, then Stop.";
+        this.finishStopBtn.title = "Stop Autosing at the end of current Singularity.";
         this.finishStopBtn.className = 'hs-stop-btn';
         this.finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<any>('HSAutosing');
@@ -141,7 +141,7 @@ export class HSAutosingTimerModal {
 
         this.stopButton = document.createElement('button');
         this.stopButton.textContent = '👇🛑';
-        this.stopButton.title = "Stop Autosing";
+        this.stopButton.title = "Stop Autosing NOW";
         this.stopButton.className = 'hs-stop-btn';
         this.stopButton.onclick = () => {
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
