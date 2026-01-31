@@ -11,6 +11,7 @@ import { HSModuleManager } from "../module/hs-module-manager";
 import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
+import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
@@ -395,10 +396,14 @@ export class HSGameData extends HSModule {
         if (gameDataSetting && gameDataSetting.isEnabled()) {
             gameDataSetting.disable();
 
-            await HSUI.Notify('GDS has been disabled for save file import', {
-                position: 'top',
-                notificationType: 'warning'
-            });
+            const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            if (autosing && autosing.isAutosingEnabled()) {
+                HSLogger.log("Load from file clicked - Stopping Auto-Sing (GDS)", this.context);
+                autosing.stopAutosing();
+                HSUI.Notify("Auto-Sing stopped and GDS disabled for save file import", { position: 'top', notificationType: 'warning' });
+            } else {
+                HSUI.Notify('GDS has been disabled for save file import', { position: 'top', notificationType: 'warning' });
+            }
         }
     }
 

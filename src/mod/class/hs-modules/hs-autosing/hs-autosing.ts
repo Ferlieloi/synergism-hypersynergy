@@ -15,6 +15,7 @@ import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGameState, MainView, SingularityView } from "../../hs-core/hs-gamestate";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
+import { HSElementHooker } from "../../hs-core/hs-elementhooker";
 
 /*
     Class: HSAutosing
@@ -84,6 +85,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private endStagePromise?: Promise<void>;
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
+    private importFileButton!: HTMLLabelElement;
 
     private stopAtSingularitysEnd: boolean = false;
 
@@ -141,6 +143,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
             return Promise.resolve();
         }
+
 
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
@@ -667,7 +670,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.prevActionTime = performance.now();
     }
 
-    private stopAutosing() {
+    public stopAutosing() {
         this.autosingEnabled = false;
         this.unsubscribeGameDataChanges();
         this.antiquitiesObserver?.disconnect(); // Ensure observer is cleared
