@@ -1323,53 +1323,51 @@ a.hs-link {
 
 .hs-timer-section {
     margin-bottom: 15px !important;
-    padding-bottom: 12px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+    padding-bottom: 4px !important;
 }
 
-.hs-section-header {
-    font-size: 10px !important;
-    font-weight: bold !important;
-    color: #ffd700 !important;
-    margin-bottom: 10px !important;
-    letter-spacing: 1.2px !important;
-    text-transform: uppercase !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+#hs-panel .hs-section-header {
+    font-size: 13px;
+    font-weight: bold;
+    color: #bcb9b9;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
 }
 
-.hs-info-line {
-    font-size: 11px !important;
-    margin-bottom: 6px !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    line-height: 1.2 !important;
+#hs-panel .hs-info-line {
+    font-size: 11px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
 }
 
-.hs-footer-label {
-    color: #888 !important;
-    font-size: 10px !important;
+#hs-panel .hs-footer-label {
+    color: #ffffff;
+    font-size: 10px;
 }
 
-.hs-footer-value {
+#hs-panel .hs-footer-value {
     color: #bcb9b9 !important;
     font-weight: bold !important;
-    font-size: 11px !important;
+    font-size: 11px;
 }
 
-.hs-sparkline-labels {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin-top: 5px !important;
-    font-size: 9px !important;
-    line-height: normal !important;
+#hs-panel .hs-sparkline-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 9px;
+    line-height: normal;
 }
 
-.hs-sparkline-muted {
-    color: #777 !important;
-    font-size: 9px !important;
+#hs-panel .hs-sparkline-muted {
+    color: #777;
+    font-size: 9px;
+    font-weight: bold;
 }
 
 .hs-export-btn {
@@ -1468,17 +1466,17 @@ a.hs-link {
 }
 
 /* --- Phase Statistics Grid --- */
-.hs-stats-grid {
-    display: grid !important;
-    grid-template-columns: 2.2fr 0.8fr 1fr 1fr 1fr !important;
-    gap: 4px 10px;
+#hs-panel .hs-stats-grid {
+    display: grid;
+    grid-template-columns: minmax(60px, 2fr) 0.7fr 1fr 1fr 1fr;
+    gap: 4px 4px;
     font-size: 11px;
     align-items: center;
     margin-top: 8px;
 }
 
-.hs-stats-row {
-    color: #bcb9b9 !important;
+#hs-panel .hs-stats-row {
+    color: #bcb9b9;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

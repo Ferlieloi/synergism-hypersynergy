@@ -230,65 +230,74 @@ export class HSAutosingTimerModal {
         this.dynamicContent = document.createElement('div');
         this.dynamicContent.innerHTML = `
             <div class="hs-timer-section">
-                <div class="hs-section-header">FARMING SINGULARITY <span id="hs-sing-val" class="hs-footer-value">S0 / S0</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">Completed</span> <span id="hs-progress-val" style="color: #4CAF50; font-weight: bold;">0</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">Phase</span> <span id="hs-phase-name-val" style="color: #FF6B6B; font-weight: bold;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #FFD93D;"></span></div>
-                <div id="hs-step-container" class="hs-info-line">
-                    <span class="hs-footer-label">Step</span> <span id="hs-step-name-val" class="hs-footer-value">&nbsp;</span> <span id="hs-step-timer-val" class="hs-footer-value"></span>
+                <div class="hs-section-header">FARMING SINGULARITY <span id="hs-sing-val" style="color: #fff; font-weight: normal; margin-left: 8px;">#0 / #0</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Completed:</span> <span id="hs-progress-val" style="color: #00E676; font-weight: bold; margin-left: 6px;">0</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Phase:</span> <span id="hs-phase-name-val" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #F1FA8C; margin-left: 4px;"></span></div>
+                <div id="hs-step-container" class="hs-info-line" style="font-size: 11px; opacity: 0.8;">
+                    <span class="hs-footer-label" style="color: #fff; opacity: 0.6;">Step:</span> <span id="hs-step-name-val" style="color: #999; margin-left: 6px;">&nbsp;</span> <span id="hs-step-timer-val" style="color: #999; margin-left: 4px;"></span>
                 </div>
             </div>
 
+            <hr class="hs-timer-hr">
+
             <div class="hs-timer-section">
                 <div class="hs-section-header">QUARKS</div>
-                <div class="hs-info-line"><span class="hs-footer-label">Total Gained</span> 
-                    <div>
-                        <span id="hs-quarks-total" style="color: #00BCD4; font-weight: bold;">0</span>
-                        <span id="hs-quarks-prev" class="hs-footer-label" style="font-size: 10px;"> (⇦0)</span>
-                    </div>
+                <div class="hs-info-line">
+                    <span class="hs-footer-label" style="color: #fff;">Total Gained:</span>
+                    <span id="hs-quarks-total" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0</span>
+                    <span id="hs-quarks-prev" style="color: #666; font-size: 11px; margin-left: 4px;"> (⇦0)</span>
                 </div>
-                <div id="hs-quarks-rate-row" class="hs-info-line"><span class="hs-footer-label">Efficiency</span> 
-                    <div>
-                        <span id="hs-quarks-rate-val" style="color: #4DD0E1; font-weight: bold;">0/s</span>
-                        <span id="hs-quarks-rate-val-hr" class="hs-footer-label" style="font-size: 10px;"> (0/hr)</span>
-                    </div>
+                <div id="hs-quarks-rate-row" class="hs-info-line">
+                    <span class="hs-footer-label" style="color: #fff;">Efficiency:</span>
+                    <span id="hs-quarks-rate-val" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0/s</span>
+                    <span id="hs-quarks-rate-val-hr" style="color: #666; font-size: 11px; margin-left: 4px;"> (0/hr)</span>
                 </div>
                 <div id="hs-sparkline-container-1" class="hs-sparkline-row"></div>
             </div>
 
+            <hr class="hs-timer-hr">
+
             <div class="hs-timer-section">
                 <div class="hs-section-header">GOLDEN QUARKS</div>
-                <div class="hs-info-line"><span class="hs-footer-label">Total Gained</span> 
-                    <div>
-                        <span id="hs-gquarks-total" style="color: #FFEB3B; font-weight: bold;">0</span>
-                        <span id="hs-gquarks-prev" class="hs-footer-label" style="font-size: 10px;"> (⇦0)</span>
-                    </div>
+                <div class="hs-info-line">
+                    <span class="hs-footer-label" style="color: #fff;">Total Gained:</span>
+                    <span id="hs-gquarks-total" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">0</span>
+                    <span id="hs-gquarks-prev" style="color: #666; font-size: 11px; margin-left: 4px;"> (⇦0)</span>
                 </div>
-                <div id="hs-gquarks-rate-row" class="hs-info-line"><span class="hs-footer-label">Efficiency</span> 
-                    <div>
-                        <span id="hs-gquarks-rate-val" style="color: #FFF176; font-weight: bold;">0/s</span>
-                        <span id="hs-gquarks-rate-val-hr" class="hs-footer-label" style="font-size: 10px;"> (0/hr)</span>
-                    </div>
+                <div id="hs-gquarks-rate-row" class="hs-info-line">
+                    <span class="hs-footer-label" style="color: #fff;">Efficiency:</span>
+                    <span id="hs-gquarks-rate-val" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">0/s</span>
+                    <span id="hs-gquarks-rate-val-hr" style="color: #666; font-size: 11px; margin-left: 4px;"> (0/hr)</span>
                 </div>
                 <div id="hs-sparkline-container-2" class="hs-sparkline-row"></div>
             </div>
 
+            <hr class="hs-timer-hr">
+
             <div class="hs-timer-section">
                 <div class="hs-section-header">SINGULARITY TIMES</div>
-                <div class="hs-info-line"><span class="hs-footer-label">Current Time</span> <span id="hs-live-timer-val" style="color: #00E676; font-weight: bold;">0.00s</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">Last Run</span> <span id="hs-avg-1" class="hs-footer-value">-</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">Last 5 Runs</span> <span id="hs-avg-5" class="hs-footer-value">-</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">All-Time Avg</span> <div><span id="hs-avg-all-count" class="hs-footer-label" style="font-size: 9px;"></span> <span id="hs-avg-all" style="color: #FFAB40; font-weight: bold;">-</span></div></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Current Time:</span> <span id="hs-live-timer-val" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0.00s</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last:</span> <span id="hs-avg-1" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">-</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 5:</span> <span id="hs-avg-5" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 10:</span> <span id="hs-avg-10" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 50:</span> <span id="hs-avg-50" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
+                <div class="hs-info-line"><span id="hs-avg-all-lbl" class="hs-footer-label" style="color: #fff;">All 0:</span> <span id="hs-avg-all" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">-</span></div>
                 <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
             </div>
 
+            <hr class="hs-timer-hr">
+
             <div id="hs-phase-stats-section" class="hs-timer-section">
-                <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
+                <div class="hs-section-header">PHASE STATISTICS</div>
+                <div id="hs-phase-stats-container" class="hs-stats-grid" style="display: grid; grid-template-columns: minmax(70px, 2fr) minmax(40px, 0.7fr) minmax(45px, 1fr) minmax(45px, 1fr) minmax(45px, 1fr); grid-column-gap: 8px; justify-items: stretch;"></div>
             </div>
 
-            <div id="hs-footer-section" class="hs-footer-info hs-timer-section" style="border-bottom: none; opacity: 0.8; padding-top: 5px;">
-                <div class="hs-info-line"><span class="hs-footer-label">Module Version</span> <span id="hs-footer-version" class="hs-footer-value"></span></div>
-                <div class="hs-info-line"><span class="hs-footer-label">Active Strategy</span> <span id="hs-footer-strategy" class="hs-footer-value"></span></div>
-                <div class="hs-info-line" style="white-space: pre-wrap; margin-top: 2px;"><span class="hs-footer-label">Loadout Order</span> <span id="hs-footer-loadouts" class="hs-footer-value"></span></div>
+            <hr class="hs-timer-hr">
+
+            <div id="hs-footer-section" class="hs-footer-info hs-timer-section" style="border-bottom: none; opacity: 0.7; padding-top: 0;">
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Module Version:</span> <span id="hs-footer-version" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
+                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Active Strategy:</span> <span id="hs-footer-strategy" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
+                <div class="hs-info-line" style="white-space: pre-wrap; margin-top: 2px;"><span class="hs-footer-label" style="color: #fff;">Loadout Order:</span> <span id="hs-footer-loadouts" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
             </div>
         `;
         this.timerContent.appendChild(this.dynamicContent);
@@ -855,7 +864,7 @@ export class HSAutosingTimerModal {
         }
 
         this.renderGeneralStats();
-        this.renderPhaseStats();
+        this.renderPhaseStatistics();
         this.renderSparklines();
 
         // Update Export Button state
@@ -938,60 +947,46 @@ export class HSAutosingTimerModal {
         setHtml('hs-avg-10', fmt(avg10, sd10));
         setHtml('hs-avg-50', fmt(avg50, sd50));
 
-        setText('hs-avg-all-lbl', `All`);
-        setText('hs-avg-all-count', `${count}`);
+        // Use a <span> for the label to allow dynamic counting
+        setHtml('hs-avg-all-lbl', `All <span id="hs-avg-all-count" style="color: inherit;">${count}</span>:`);
         setHtml('hs-avg-all', fmt(avgAll, sdAll));
     }
 
-    private renderPhaseStats(): void {
+    private renderPhaseStatistics(): void {
         const phaseContainer = document.getElementById('hs-phase-stats-container');
         if (!phaseContainer) return;
 
-        // Headers - Style this to match .hs-section-header but span the grid
         let html = `
-            <div class="hs-section-header" style="grid-column: span 5; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 4px; margin-bottom: 5px;">PHASE STATISTICS</div>
-            <div style="text-align: center; color: #888; font-size: 9px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">↻</div>
-            <div style="text-align: center; color: #888; font-size: 9px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">Avg</div>
-            <div style="text-align: center; color: #888; font-size: 9px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">SD</div>
-            <div style="text-align: center; color: #888; font-size: 9px; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px;">Last</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Name</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Loops</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Avg</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">SD</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Last</div>
         `;
 
-        const sortedPhases = Array.from(this.phaseHistory.entries()).sort((a, b) => {
-            const getSortIndex = (key: string) => {
-                let idx = phases.indexOf(key as any);
-                if (idx !== -1) return idx;
-                idx = phases.findIndex(p => key.startsWith(p + '-'));
-                return idx;
-            };
-
-            const idxA = getSortIndex(a[0]);
-            const idxB = getSortIndex(b[0]);
-
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return a[0].localeCompare(b[0]);
-        });
+        const sortedPhases = Array.from(this.phaseHistory.entries())
+            .sort((a, b) => b[1].lastTime - a[1].lastTime);
 
         sortedPhases.forEach(([phaseName, data]) => {
-            const avg = data.totalTime / data.times.length;
-            const sd = this.getPhaseStandardDeviation(phaseName);
-            const last = data.lastTime;
-            const avgLoops = 1 + (data.repeats / data.times.length);
-
-            if (data.totalTime > 0) {
+            if (data.times.length > 0) {
+                const avg = data.totalTime / data.times.length;
+                const last = data.lastTime;
+                const sd = this.getPhaseStandardDeviation(phaseName);
                 const sdStr = sd !== null ? `±${sd.toFixed(2)}s` : '-';
+                const avgLoops = 1 + (data.repeats / data.times.length);
+                const count = data.times.length;
 
                 html += `
-                    <div class="hs-stats-row"><span class="hs-stats-phase">${phaseName}</span> <span class="hs-stats-label">(x${data.times.length})</span></div>
-                    <div class="hs-stats-row hs-stats-loops">x${avgLoops.toFixed(2)}</div>
-                    <div class="hs-stats-row hs-stats-avg">${avg.toFixed(2)}s</div>
-                    <div class="hs-stats-row hs-stats-sd">${sdStr}</div>
-                    <div class="hs-stats-row hs-stats-last">${last.toFixed(2)}s</div>
+                    <div style="color: #FF79C6; font-size: 12px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #222; text-align: left;">x${count} ${phaseName}</div>
+                    <div style="color: #888; font-size: 11px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">x${avgLoops.toFixed(2)}</div>
+                    <div style="color: #F1FA8C; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${avg.toFixed(2)}s</div>
+                    <div style="color: #888; font-size: 10px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${sdStr}</div>
+                    <div style="color: #00BCD4; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${last.toFixed(2)}s</div>
                 `;
             }
         });
-        phaseContainer.innerHTML = html || '';
+
+        phaseContainer.innerHTML = html || '<div style="color: #666; font-style: italic; font-size: 12px; grid-column: span 5;">No data yet...</div>';
     }
 
     private renderSparklines(): void {
@@ -1033,14 +1028,14 @@ export class HSAutosingTimerModal {
                 if (container2) {
                     container2.innerHTML = `
                         <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark2.avgY}" x2="230" y2="${spark2.avgY}" stroke="#FFEB3B" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
-                            <polyline fill="none" stroke="#FFEB3B" stroke-width="1" stroke-opacity="0.7" points="${spark2.points}" />
-                            <line x1="226" y1="${spark2.maxY}" x2="230" y2="${spark2.maxY}" stroke="#FFEB3B" stroke-width="1" />
-                            <line x1="226" y1="${spark2.minY}" x2="230" y2="${spark2.minY}" stroke="#FFEB3B" stroke-width="1" />
+                            <line x1="0" y1="${spark2.avgY}" x2="230" y2="${spark2.avgY}" stroke="#F1FA8C" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                            <polyline fill="none" stroke="#F1FA8C" stroke-width="1" stroke-opacity="0.7" points="${spark2.points}" />
+                            <line x1="226" y1="${spark2.maxY}" x2="230" y2="${spark2.maxY}" stroke="#F1FA8C" stroke-width="1" />
+                            <line x1="226" y1="${spark2.minY}" x2="230" y2="${spark2.minY}" stroke="#F1FA8C" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">+${this.formatNumber(spark2.max)}</span>
-                            <span style="color: #FFEB3B; font-weight: bold;">+${this.formatNumber(spark2.avg)} avg</span>
+                            <span style="color: #F1FA8C; font-weight: bold;">+${this.formatNumber(spark2.avg)} avg</span>
                             <span class="hs-sparkline-muted">+${this.formatNumber(spark2.min)}</span>
                         </div>
                     `;
@@ -1054,14 +1049,14 @@ export class HSAutosingTimerModal {
                 if (container3) {
                     container3.innerHTML = `
                         <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark3.avgY}" x2="230" y2="${spark3.avgY}" stroke="#448AFF" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
-                            <polyline fill="none" stroke="#448AFF" stroke-width="1" stroke-opacity="0.8" points="${spark3.points}" />
-                            <line x1="226" y1="${spark3.maxY}" x2="230" y2="${spark3.maxY}" stroke="#448AFF" stroke-width="1" />
-                            <line x1="226" y1="${spark3.minY}" x2="230" y2="${spark3.minY}" stroke="#448AFF" stroke-width="1" />
+                            <line x1="0" y1="${spark3.avgY}" x2="230" y2="${spark3.avgY}" stroke="#00BCD4" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                            <polyline fill="none" stroke="#00BCD4" stroke-width="1" stroke-opacity="0.8" points="${spark3.points}" />
+                            <line x1="226" y1="${spark3.maxY}" x2="230" y2="${spark3.maxY}" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="226" y1="${spark3.minY}" x2="230" y2="${spark3.minY}" stroke="#00BCD4" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">${spark3.max.toFixed(2)}s</span>
-                            <span style="color: #448AFF; font-weight: bold;">${spark3.avg.toFixed(2)}s avg</span>
+                            <span style="color: #00BCD4; font-weight: bold;">${spark3.avg.toFixed(2)}s avg</span>
                             <span class="hs-sparkline-muted">${spark3.min.toFixed(2)}s</span>
                         </div>
                     `;
