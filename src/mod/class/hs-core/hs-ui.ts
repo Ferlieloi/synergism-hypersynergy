@@ -448,15 +448,12 @@ export class HSUI extends HSModule {
                 document.body.appendChild(div.firstChild);
             }
         };
-
-        HSLogger.debug(`Injected new HTML`, this.#staticContext);
     }
 
     // Can be used to inject arbitrary HTML
     // injectFunction can be supplied to control where the HTML is injected
     static injectHTMLElement(element: HTMLElement, injectFunction: (htmlElement: HTMLElement) => void) {
         injectFunction(element);
-        HSLogger.debug(`Injected new HTML`, this.#staticContext);
     }
 
     renameTab(tabId: number, newName: string) {

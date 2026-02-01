@@ -359,6 +359,11 @@ window.__HS_BACKDOOR__ = {
 
         s.onload = () => {
             log('Mod script loaded');
+            try {
+                window.hypersynergism.init();
+            } catch (e) {
+                warn('Mod init failed:', e);
+            }
         };
 
         s.onerror = () => warn('Mod failed to load');

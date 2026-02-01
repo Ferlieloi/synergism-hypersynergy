@@ -31,6 +31,7 @@ export class Hypersynergism {
 
     #versionCheckIvl?: number;
     #latestRelease?: HSReleaseInfo;
+    #isInitialized = false;
 
     constructor(modulesToEnable: HSModuleDefinition[]) {
         // Instantiate the module manager
@@ -43,6 +44,9 @@ export class Hypersynergism {
 
     // Called from loader
     async init() {
+        if (this.#isInitialized) return;
+        this.#isInitialized = true;
+
         // Wait for game to be ready before doing ANYTHING substantial
         if (!await this.#waitForGameReady()) {
             HSLogger.warn("Hypersynergism: Game load timed out, attempting init anyway...", this.#context);
