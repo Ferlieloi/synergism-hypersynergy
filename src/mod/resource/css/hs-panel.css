@@ -1,30 +1,39 @@
 .hs-panel-body::-webkit-scrollbar,
-#hs-ui-log::-webkit-scrollbar {
+.hs-panel-body::-webkit-scrollbar,
+#hs-ui-log::-webkit-scrollbar,
+.hs-timer-content::-webkit-scrollbar {
     width: 5px;
     height: 5px;
 }
 
 .hs-panel-body::-webkit-scrollbar-track,
-#hs-ui-log::-webkit-scrollbar-track {
+.hs-panel-body::-webkit-scrollbar-track,
+#hs-ui-log::-webkit-scrollbar-track,
+.hs-timer-content::-webkit-scrollbar-track {
     background: #1c1b22;
     border-radius: 3px;
 }
 
 .hs-panel-body::-webkit-scrollbar-thumb,
-#hs-ui-log::-webkit-scrollbar-thumb {
+.hs-panel-body::-webkit-scrollbar-thumb,
+#hs-ui-log::-webkit-scrollbar-thumb,
+.hs-timer-content::-webkit-scrollbar-thumb {
     background: #a22a2a;
     border-radius: 3px;
 }
 
 .hs-panel-body::-webkit-scrollbar-corner,
-#hs-ui-log::-webkit-scrollbar-corner {
+.hs-panel-body::-webkit-scrollbar-corner,
+#hs-ui-log::-webkit-scrollbar-corner,
+.hs-timer-content::-webkit-scrollbar-corner {
     background: #1c1b22;
 }
 
 @supports not selector(::-webkit-scrollbar) {
 
     .hs-panel-body::-webkit-scrollbar,
-    #hs-ui-log::-webkit-scrollbar {
+    #hs-ui-log::-webkit-scrollbar,
+    .hs-timer-content::-webkit-scrollbar {
         scrollbar-color: #a22a2a #1c1b22;
     }
 }
@@ -260,9 +269,7 @@
     display: none;
 }
 
-.hs-log-ctx {}
 
-.hs-log-ts {}
 
 #hs-ui-log-controls {
     width: 100%;
@@ -411,10 +418,7 @@
     padding-left: 10px;
 }
 
-#hs-settings-panel>.hs-panel-setting-block:not(:last-child) {
-    /*padding-bottom: 10px;
-    margin-bottom: 10px;*/
-}
+
 
 .hs-panel-setting-block-text-wrapper {
     grid-column: 1 / span 2;
@@ -1252,6 +1256,8 @@ a.hs-link {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
 }
 
 .hs-timer-header {
@@ -1311,20 +1317,59 @@ a.hs-link {
 
 .hs-timer-content {
     padding: 12px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .hs-timer-section {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 15px !important;
+    padding-bottom: 12px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
-.hs-timer-label {
-    font-size: 10px;
-    color: #888;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.hs-section-header {
+    font-size: 10px !important;
+    font-weight: bold !important;
+    color: #ffd700 !important;
+    margin-bottom: 10px !important;
+    letter-spacing: 1.2px !important;
+    text-transform: uppercase !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.hs-info-line {
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    line-height: 1.2 !important;
+}
+
+.hs-footer-label {
+    color: #888 !important;
+    font-size: 10px !important;
+}
+
+.hs-footer-value {
+    color: #bcb9b9 !important;
+    font-weight: bold !important;
+    font-size: 11px !important;
+}
+
+.hs-sparkline-labels {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 5px !important;
+    font-size: 9px !important;
+    line-height: normal !important;
+}
+
+.hs-sparkline-muted {
+    color: #777 !important;
+    font-size: 9px !important;
 }
 
 .hs-export-btn {
@@ -1337,7 +1382,7 @@ a.hs-link {
     font-size: 12px;
     font-weight: bold;
     width: 100%;
-    margin-top: 4px;
+    margin-top: 10px;
     transition: filter 0.2s, box-shadow 0.2s;
     display: block;
 }
@@ -1420,4 +1465,53 @@ a.hs-link {
 .hs-inline-button button {
     min-width: 120px;
     padding: 8px 16px;
+}
+
+/* --- Phase Statistics Grid --- */
+.hs-stats-grid {
+    display: grid !important;
+    grid-template-columns: 2.2fr 0.8fr 1fr 1fr 1fr !important;
+    gap: 4px 10px;
+    font-size: 11px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.hs-stats-row {
+    color: #bcb9b9 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hs-stats-label {
+    color: #666 !important;
+    font-size: 9px;
+    margin-left: 4px;
+}
+
+.hs-stats-phase {
+    color: #ff6b6b !important;
+    font-weight: bold;
+}
+
+.hs-stats-loops {
+    text-align: center;
+    color: #888 !important;
+}
+
+.hs-stats-avg {
+    text-align: center;
+    color: #eee !important;
+}
+
+.hs-stats-sd {
+    text-align: center;
+    color: #555 !important;
+    font-size: 10px;
+}
+
+.hs-stats-last {
+    text-align: center;
+    color: #00bcd4 !important;
 }

@@ -426,7 +426,7 @@ export class HSAmbrosia extends HSModule
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
 
-            const activeSlot = originalQuickBar.querySelector(`#${slotEnum}`) as HTMLElement;
+            const activeSlot = originalQuickBar.querySelector(`[id="${slotEnum}"]`) as HTMLElement;
 
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
@@ -549,8 +549,8 @@ export class HSAmbrosia extends HSModule
     }
 
     #applyIconToQuickbarSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix} -${slot} `;
-        const slotElement = document.querySelector(`#${quickbarSlotId} `) as HTMLElement;
+        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${slot}`;
+        const slotElement = document.querySelector(`[id="${quickbarSlotId}"]`) as HTMLElement;
 
         if (!slotElement) {
             HSLogger.warn(`Could not find quickbar slot element for ${slot}`, this.context);
@@ -581,7 +581,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #applyIconToSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const slotElement = document.querySelector(`#${slot} `) as HTMLElement;
+        const slotElement = document.querySelector(`[id="${slot}"]`) as HTMLElement;
 
         if (!slotElement) {
             HSLogger.warn(`Could not find slot element for ${slot}`, this.context);
