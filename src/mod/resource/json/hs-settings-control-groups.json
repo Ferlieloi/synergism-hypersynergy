@@ -47,24 +47,28 @@
         "groupName": "Auto-Sing settings",
         "order": 12
     },
-    "auto-sing-strategy": {
-        "groupName": "Auto-Sing strategy settings",
+    "auto-sing-strategy-controls": {
+        "groupName": "Auto-Sing Strategy settings",
         "order": 13
     },
+    "auto-sing-ambrosia": {
+        "groupName": "Auto-Sing Ambrosia Loadouts settings",
+        "order": 15
+    },
     "auto-sing-timer-modal": {
-        "groupName": "Auto-Sing timer modal settings",
-        "order": 14
+        "groupName": "Auto-Sing Advanced settings",
+        "order": 16
     },
     "quickbar-qol": {
         "groupName": "Quickbar QOL settings",
-        "order": 15
+        "order": 17
     },
     "Golden-quarks-qol-settings": {
         "groupName": "Golden Quarks QOL settings",
-        "order": 16
+        "order": 18
     },
     "Octeracts-qol-settings": {
         "groupName": "Octeracts QOL settings",
-        "order": 17
+        "order": 19
     }
 }
