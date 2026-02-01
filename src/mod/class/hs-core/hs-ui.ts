@@ -393,8 +393,6 @@ export class HSUI extends HSModule {
             }
 
             this.updateInjectedStyleBlock();
-
-            HSLogger.debug(`Injected new CSS`, this.#staticContext);
         }
     }
 
@@ -409,20 +407,32 @@ export class HSUI extends HSModule {
         }
     }
 
+    static #updatePending = false;
+
     static updateInjectedStyleBlock() {
-        const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
+        if (HSUI.#updatePending) return;
 
-        if (!this.#injectedStylesHolder) {
-            this.#injectedStylesHolder = document.createElement('style');
-            this.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
-            document.head.appendChild(this.#injectedStylesHolder);
-        }
+        HSUI.#updatePending = true;
 
-        this.#injectedStylesHolder.innerHTML = '';
+        setTimeout(() => {
+            HSUI.#updatePending = false;
 
-        this.#injectedStyles.forEach((style, styleId) => {
-            HSUI.#injectedStylesHolder!.innerHTML += style;
-        });
+            const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
+
+            if (!HSUI.#injectedStylesHolder) {
+                HSUI.#injectedStylesHolder = document.createElement('style');
+                HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
+                document.head.appendChild(HSUI.#injectedStylesHolder);
+            }
+
+            HSUI.#injectedStylesHolder.innerHTML = '';
+
+            HSUI.#injectedStyles.forEach((style, styleId) => {
+                HSUI.#injectedStylesHolder!.innerHTML += style;
+            });
+
+            HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
+        }, 0);
     }
 
     // Can be used to inject arbitrary HTML
@@ -438,15 +448,12 @@ export class HSUI extends HSModule {
                 document.body.appendChild(div.firstChild);
             }
         };
-
-        HSLogger.debug(`Injected new HTML`, this.#staticContext);
     }
 
     // Can be used to inject arbitrary HTML
     // injectFunction can be supplied to control where the HTML is injected
     static injectHTMLElement(element: HTMLElement, injectFunction: (htmlElement: HTMLElement) => void) {
         injectFunction(element);
-        HSLogger.debug(`Injected new HTML`, this.#staticContext);
     }
 
     renameTab(tabId: number, newName: string) {

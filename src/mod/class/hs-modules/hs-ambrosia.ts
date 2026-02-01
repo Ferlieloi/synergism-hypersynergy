@@ -348,7 +348,7 @@ export class HSAmbrosia extends HSModule
 
         // Check if already exists
         if (this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
-            HSLogger.warn('Minibar wrapper already exists', this.context);
+            HSLogger.debug('Minibar wrapper already exists', this.context);
             return;
         }
 
@@ -426,7 +426,7 @@ export class HSAmbrosia extends HSModule
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
 
-            const activeSlot = originalQuickBar.querySelector(`#${slotEnum}`) as HTMLElement;
+            const activeSlot = originalQuickBar.querySelector(`[id="${slotEnum}"]`) as HTMLElement;
 
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
@@ -549,8 +549,8 @@ export class HSAmbrosia extends HSModule
     }
 
     #applyIconToQuickbarSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix} -${slot} `;
-        const slotElement = document.querySelector(`#${quickbarSlotId} `) as HTMLElement;
+        const quickbarSlotId = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${slot}`;
+        const slotElement = document.querySelector(`[id="${quickbarSlotId}"]`) as HTMLElement;
 
         if (!slotElement) {
             HSLogger.warn(`Could not find quickbar slot element for ${slot}`, this.context);
@@ -581,7 +581,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #applyIconToSlot(slot: AMBROSIA_LOADOUT_SLOT, iconEnum: AMBROSIA_ICON) {
-        const slotElement = document.querySelector(`#${slot} `) as HTMLElement;
+        const slotElement = document.querySelector(`[id="${slot}"]`) as HTMLElement;
 
         if (!slotElement) {
             HSLogger.warn(`Could not find slot element for ${slot}`, this.context);
@@ -634,8 +634,10 @@ export class HSAmbrosia extends HSModule
 
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
 
-        if (loadoutStateSetting && !this.#currentLoadout) {
-            this.#currentLoadout = HSUtils.removeColorTags(loadoutStateSetting.getValue()) as AMBROSIA_LOADOUT_SLOT;
+        if (loadoutStateSetting) {
+            if (!this.#currentLoadout) {
+                this.#currentLoadout = HSUtils.removeColorTags(loadoutStateSetting.getValue()) as AMBROSIA_LOADOUT_SLOT;
+            }
         } else {
             HSLogger.warn(`loadState - Could not find autoLoadoutState setting`, this.context);
         }
