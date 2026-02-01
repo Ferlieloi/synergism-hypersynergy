@@ -879,8 +879,8 @@ export interface PlayerData {
     promoCodeTiming: PromoCodeTiming;
 
     // Core Currencies & Progression
-    worlds: string; // Large number stored as string
-    coins: Decimal; // Large number stored as string
+    worlds: number;
+    coins: Decimal;
     coinsThisPrestige: string;
     coinsThisTranscension: string;
     coinsThisReincarnation: string;

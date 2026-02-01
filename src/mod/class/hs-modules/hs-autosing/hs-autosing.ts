@@ -40,6 +40,8 @@ const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 
+    private gameDataAPI?: HSGameDataAPI;
+
     private gameDataResolver?: (value: void) => void;
 
     private strategy?: HSAutosingStrategy;
@@ -103,6 +105,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private readonly phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
     private strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
     private finalPhaseConfig?: AutosingStrategyPhase;
+
+    private getGameDataAPI(): HSGameDataAPI | undefined {
+        if (!this.gameDataAPI) {
+            this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        }
+
+        return this.gameDataAPI;
+    }
 
 
 
@@ -175,6 +185,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         if (!this.timerModal) {
             this.timerModal = new HSAutosingTimerModal();
+        }
+
+        // Cache GameDataAPI module reference once during init for hot-path reads (quarks, coins).
+        this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!this.gameDataAPI) {
+            HSLogger.debug("HSAutosing init: HSGameDataAPI module not found (will retry lazily when needed)", this.context);
         }
 
 
@@ -250,7 +266,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         })
 
 
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameDataAPI = this.getGameDataAPI();
         if (!gameDataAPI) {
             HSLogger.debug("Could not find HSGameDataAPI module", this.context);
             this.stopAutosing();
@@ -385,8 +401,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private async buyCoin(): Promise<void> {
         let coins = await this.getCoins();
 
-        while (coins < 1000) {
-            await HSUtils.click(this.coin)
+        while (coins < 1000 && this.autosingEnabled) {
+            await HSUtils.click(this.coin);
             coins = await this.getCoins();
         }
     }
@@ -396,13 +412,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
      * Optimized to avoid DOM manipulation and heavy parsing.
      */
     private async getCoins(): Promise<number> {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        return this.getCoinsViaGDS();
+    }
+
+    private async getCoinsViaGDS(): Promise<number> {
+        const gameDataAPI = this.getGameDataAPI();
         if (!gameDataAPI) return 0;
 
         const data = gameDataAPI.getGameData();
         if (!data || data.coins === undefined) return 0;
 
-        // Wrap in Decimal constructor to ensure .toNumber() exists, 
+        // Wrap in Decimal constructor to ensure .toNumber() exists,
         // as serialized data may lose class methods.
         return new Decimal(data.coins).toNumber();
     }
@@ -601,7 +621,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
 
-                HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}` , this.context);
+                HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
                     await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
                 }
@@ -909,7 +929,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async getCurrentGoldenQuarks(): Promise<number> {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameDataAPI = this.getGameDataAPI();
         if (!gameDataAPI) return 0;
 
         const data = gameDataAPI.getGameData();
@@ -917,11 +937,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async getCurrentQuarks(): Promise<number> {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameDataAPI = this.getGameDataAPI();
         if (!gameDataAPI) return 0;
 
         const data = gameDataAPI.getGameData();
-        return data?.quarks ?? 0;
+        return data?.worlds ?? 0;
     }
 
     private restoreView(mainView: MainView) {
@@ -932,6 +952,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private async performSingularity(): Promise<void> {
 
         const gqBefore = await this.getCurrentGoldenQuarks();
+        const qBefore = await this.getCurrentQuarks();
         await this.enterAndLeaveExalt();
 
         this.endStageDone = false;
@@ -945,8 +966,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         const gqAfter = await this.getCurrentGoldenQuarks();
         const gqGain = Math.max(0, gqAfter - gqBefore);
+        const qAfter = await this.getCurrentQuarks();
+        const qGain = Math.max(0, qAfter - qBefore);
         if (this.timerModal) {
-            this.timerModal.recordSingularity(gqGain, gqAfter);
+            this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter);
         }
 
         HSLogger.debug("Singularity performed", this.context);
@@ -956,7 +979,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stage = await this.getStage();
         }
         this.observeAntiquitiesRune()
-        await this.buyCoin()
+        //await this.buyCoin()
         return Promise.resolve()
     }
 
@@ -1028,6 +1051,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletions)) {
                 // Special handling for C10 when C11-14 are active
+                /*
                 if (challengeIndex === 10) {
                     const activeC11to14 = this.getActiveC11to14Challenge();
                     if (activeC11to14 !== null) {
@@ -1062,7 +1086,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     } else {
                         return Promise.resolve();
                     }
-                } else if (currentCompletions.gte(minCompletions)) {
+                } */
+                if (currentCompletions.gte(minCompletions)) {
                     if (waitTime > 0) {
                         await HSUtils.sleep(waitTime);
                     }

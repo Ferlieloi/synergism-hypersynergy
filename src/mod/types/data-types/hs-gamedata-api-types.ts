@@ -67,6 +67,7 @@ export interface CalculationCache {
     REDAMB_viscount: CachedValue;
 
     R_CampaignAmbrosiaSpeedBonus: CachedValue;
+    R_CampaignRune6Bonus: CachedValue;
     R_CampaignLuckBonus: CachedValue;
     R_calculateCampaignRune6Bonus: CachedValue;
     R_CookieUpgrade29Luck: CachedValue;

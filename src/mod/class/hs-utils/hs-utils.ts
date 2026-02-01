@@ -418,31 +418,37 @@ export class HSUtils {
         predicate: (text: string) => boolean = t => t.trim().length > 0,
         timeoutMs = 2000
     ): Promise<void> {
-        // 1️⃣ Always wait for a fresh DOM update first
-        await HSUtils.waitForNextMutation(el, timeoutMs);
-
-        // 2️⃣ Fast-path: check immediately after mutation
+        // Fast-path: if already satisfied, don't set up observers/timers.
         if (predicate(el.textContent ?? "")) return;
 
-        // 3️⃣ Then wait for the predicate to become true
+        // Wait until a mutation makes the predicate true.
         return new Promise((resolve, reject) => {
+            let finished = false;
+
             const observer = new MutationObserver(() => {
                 if (predicate(el.textContent ?? "")) {
-                    observer.disconnect();
+                    cleanup();
                     resolve();
                 }
             });
+
+            const timeout = window.setTimeout(() => {
+                cleanup();
+                reject(new Error("Timed out waiting for inner text"));
+            }, timeoutMs);
+
+            const cleanup = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeout);
+                observer.disconnect();
+            };
 
             observer.observe(el, {
                 childList: true,
                 characterData: true,
                 subtree: true
             });
-
-            const timeout = setTimeout(() => {
-                observer.disconnect();
-                reject(new Error("Timed out waiting for inner text"));
-            }, timeoutMs);
         });
     }
 
@@ -454,21 +460,30 @@ export class HSUtils {
         const root = el.parentElement ?? el;
 
         return new Promise((resolve, reject) => {
+            let finished = false;
+
             const observer = new MutationObserver(() => {
-                observer.disconnect();
+                cleanup();
                 resolve();
             });
+
+            const timeout = window.setTimeout(() => {
+                cleanup();
+                reject(new Error("Timed out waiting for next mutation"));
+            }, timeoutMs);
+
+            const cleanup = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeout);
+                observer.disconnect();
+            };
 
             observer.observe(root, {
                 childList: true,
                 subtree: true,
                 characterData: true
             });
-
-            const timeout = setTimeout(() => {
-                observer.disconnect();
-                reject(new Error("Timed out waiting for next mutation"));
-            }, timeoutMs);
         });
     }
 

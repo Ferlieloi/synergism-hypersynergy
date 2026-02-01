@@ -11,7 +11,6 @@ import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
-import { HSLogger } from "../../hs-core/hs-logger";
 import { HSAutosing } from "./hs-autosing";
 
 interface SingularityBundle {
@@ -114,6 +113,47 @@ export class HSAutosingTimerModal {
 
     private cachedStrategyOrder: string[] = [];
 
+    // Cached nodes for general stats updates
+    private quarksTotalSpan: HTMLElement | null = null;
+    private quarksPrevSpan: HTMLElement | null = null;
+    private quarksRateValSpan: HTMLElement | null = null;
+    private quarksRateHrSpan: HTMLElement | null = null;
+    private gquarksTotalSpan: HTMLElement | null = null;
+    private gquarksPrevSpan: HTMLElement | null = null;
+    private gquarksRateValSpan: HTMLElement | null = null;
+    private gquarksRateHrSpan: HTMLElement | null = null;
+    private avg1Span: HTMLElement | null = null;
+    private avg10Span: HTMLElement | null = null;
+    private avg50Span: HTMLElement | null = null;
+    private avgAllSpan: HTMLElement | null = null;
+    private avgAllCountSpan: HTMLElement | null = null;
+    private avg10LabelSpan: HTMLElement | null = null;
+    private avg50LabelSpan: HTMLElement | null = null;
+
+    // Cached nodes for phase stats & sparklines
+    private phaseStatsContainer: HTMLElement | null = null;
+    private phaseStatsWrapper: HTMLElement | null = null;
+    private sparklineContainer1: HTMLElement | null = null;
+    private sparklineContainer2: HTMLElement | null = null;
+    private sparklineContainer3: HTMLElement | null = null;
+    private footerVersionSpan: HTMLElement | null = null;
+    private footerStrategySpan: HTMLElement | null = null;
+    private footerLoadoutsSpan: HTMLElement | null = null;
+
+    // Render batching / change tracking
+    private renderPending: boolean = false;
+    private renderGeneralPending: boolean = false;
+    private renderPhasesPending: boolean = false;
+    private renderSparklinesPending: boolean = false;
+    private renderExportPending: boolean = false;
+
+    private phaseHistoryVersion: number = 0;
+    private lastRenderedPhaseHistoryVersion: number = -1;
+    private sparklineVersion: number = 0;
+    private lastRenderedSparklineVersion: number = -1;
+    private detailsVisibilityVersion: number = 0;
+    private lastRenderedDetailsVisibilityVersion: number = -1;
+
     constructor() {
         this.createTimerDisplay();
         this.setupDragAndResize();
@@ -143,6 +183,69 @@ export class HSAutosingTimerModal {
             this.stepNameSpan.textContent = name || '\u00A0';
         }
         this.updateTimers();
+    }
+
+    private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
+        if (opts.general) this.renderGeneralPending = true;
+        if (opts.phases) this.renderPhasesPending = true;
+        if (opts.sparklines) this.renderSparklinesPending = true;
+        if (opts.exportBtn) this.renderExportPending = true;
+
+        if (this.renderPending) return;
+        this.renderPending = true;
+
+        window.requestAnimationFrame(() => {
+            this.renderPending = false;
+            this.flushRender();
+        });
+    }
+
+    private flushRender(): void {
+        if (!this.timerContent || !this.timerDisplay) {
+            this.renderGeneralPending = false;
+            this.renderPhasesPending = false;
+            this.renderSparklinesPending = false;
+            this.renderExportPending = false;
+            return;
+        }
+        if (this.timerDisplay.style.display === 'none' || this.isMinimized) {
+            // UI is hidden; skip DOM work. Next explicit show/unminimize will request a full render.
+            this.renderGeneralPending = false;
+            this.renderPhasesPending = false;
+            this.renderSparklinesPending = false;
+            this.renderExportPending = false;
+            return;
+        }
+
+        if (this.renderGeneralPending) {
+            this.renderGeneralStats();
+        }
+        if (this.renderPhasesPending) {
+            // Avoid rebuilding the phase table if nothing changed.
+            if (this.phaseHistoryVersion !== this.lastRenderedPhaseHistoryVersion) {
+                this.renderPhaseStatistics();
+                this.lastRenderedPhaseHistoryVersion = this.phaseHistoryVersion;
+            }
+        }
+        if (this.renderSparklinesPending) {
+            const needsSparklineRender =
+                this.sparklineVersion !== this.lastRenderedSparklineVersion ||
+                this.detailsVisibilityVersion !== this.lastRenderedDetailsVisibilityVersion;
+
+            if (needsSparklineRender) {
+                this.renderSparklines();
+                this.lastRenderedSparklineVersion = this.sparklineVersion;
+                this.lastRenderedDetailsVisibilityVersion = this.detailsVisibilityVersion;
+            }
+        }
+        if (this.renderExportPending) {
+            this.updateExportButton();
+        }
+
+        this.renderGeneralPending = false;
+        this.renderPhasesPending = false;
+        this.renderSparklinesPending = false;
+        this.renderExportPending = false;
     }
 
     public getCurrentPhase(): string {
@@ -192,7 +295,9 @@ export class HSAutosingTimerModal {
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
-            this.updateDisplay();
+            this.detailsVisibilityVersion++;
+            // Sparklines render also handles detailed-only visibility toggles.
+            this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
 
         this.chartToggleBtn.onmouseenter = () => {
@@ -235,10 +340,24 @@ export class HSAutosingTimerModal {
             <div class="hs-timer-section">
                 <div class="hs-section-header">FARMING <span id="hs-sing-val" style="color: #fff; font-weight: normal; margin-left: 8px;">#0 / #0</span></div>
                 <div class="hs-info-line"><span class="hs-timer-label" style="color: #fff;">Completed:</span> <span id="hs-progress-val" style="color: #00E676; font-weight: bold; margin-left: 6px;">0</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label" style="color: #fff;">Phase:</span> <span id="hs-phase-name-val" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #F1FA8C; margin-left: 4px;"></span></div>
+                <div class="hs-info-line"><span class="hs-timer-label" style="color: #fff;">Phase:</span> <span id="hs-phase-name-val" style="color: #B33A3A; font-weight: bold; margin-left: 6px;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #FF8A80; margin-left: 4px;"></span></div>
                 <div id="hs-step-container" class="hs-info-line-detailed">
-                    <span class="hs-timer-label">Step:</span> <span id="hs-step-name-val" class="hs-detailed-value" style="margin-left: 6px;">&nbsp;</span> <span id="hs-step-timer-val" class="hs-detailed-value" style="margin-left: 4px;"></span>
+                    <span class="hs-timer-label">Step:</span> <span id="hs-step-name-val" class="hs-detailed-value" style="margin-left: 6px;">&nbsp;</span> <span id="hs-step-timer-val" class="hs-detailed-value" style="margin-left: 4px; color: #FF8A80;"></span>
                 </div>
+            </div>
+
+            <hr class="hs-timer-hr">
+
+            <div class="hs-timer-section">
+                <div class="hs-section-header">TIMES</div>
+                <div class="hs-times-grid">
+                    <span class="hs-timer-label" style="color: #fff;">Current:</span> <span id="hs-live-timer-val" style="color: #FF8A80; font-weight: bold;">0.00s</span>
+                    <span class="hs-timer-label" style="color: #fff;">Last 1:</span> <span id="hs-avg-1" style="color: #FF8A80; font-weight: bold;">-</span>
+                     <span id="hs-avg-10-lbl" class="hs-timer-label" style="color: #fff;">Last 10:</span> <span id="hs-avg-10" style="color: #FF8A80; font-weight: bold;">-</span>
+                     <span id="hs-avg-50-lbl" class="hs-timer-label" style="color: #fff;">Last 50:</span> <span id="hs-avg-50" style="color: #FF8A80; font-weight: bold;">-</span>
+                    <span id="hs-avg-all-lbl" class="hs-timer-label" style="color: #fff;">All <span id="hs-avg-all-count" style="color: #fff; font-weight: bold;">0</span>:</span> <span id="hs-avg-all" style="color: #FF8A80; font-weight: bold;">-</span>
+                </div>
+                <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
             </div>
 
             <hr class="hs-timer-hr">
@@ -275,29 +394,14 @@ export class HSAutosingTimerModal {
                 <div id="hs-sparkline-container-2" class="hs-sparkline-row"></div>
             </div>
 
-            <hr class="hs-timer-hr">
-
-            <div class="hs-timer-section">
-                <div class="hs-section-header">TIMES</div>
-                <div class="hs-times-grid">
-                    <span class="hs-timer-label" style="color: #fff;">Current:</span> <span id="hs-live-timer-val" style="color: #00BCD4; font-weight: bold;">0.00s</span>
-                    <span class="hs-timer-label" style="color: #fff;">Last 1:</span> <span id="hs-avg-1" style="color: #00BCD4; font-weight: bold;">-</span>
-                    <span class="hs-timer-label" style="color: #fff;">Last 5:</span> <span id="hs-avg-5" style="color: #FF79C6; font-weight: bold;">-</span>
-                    <span class="hs-timer-label" style="color: #fff;">Last 10:</span> <span id="hs-avg-10" style="color: #FF79C6; font-weight: bold;">-</span>
-                    <span class="hs-timer-label" style="color: #fff;">Last 50:</span> <span id="hs-avg-50" style="color: #FF79C6; font-weight: bold;">-</span>
-                    <span id="hs-avg-all-lbl" class="hs-timer-label" style="color: #fff;">All <span id="hs-avg-all-count" style="color: #00E676;">0</span>:</span> <span id="hs-avg-all" style="color: #F1FA8C; font-weight: bold;">-</span>
+            <div id="hs-phase-stats-wrapper">
+                <hr class="hs-timer-hr">
+                <div id="hs-phase-stats-section" class="hs-timer-section">
+                    <div class="hs-section-header">PHASE STATISTICS</div>
+                    <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
                 </div>
-                <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
+                <hr class="hs-timer-hr">
             </div>
-
-            <hr class="hs-timer-hr">
-
-            <div id="hs-phase-stats-section" class="hs-timer-section">
-                <div class="hs-section-header">PHASE STATISTICS</div>
-                <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
-            </div>
-
-            <hr class="hs-timer-hr">
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section" style="border-bottom: none; opacity: 0.7; padding-top: 0;">
                 <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version:</span> <span id="hs-footer-version" class="hs-detailed-value" style="margin-left: 6px; font-weight: normal;"></span></div>
@@ -328,6 +432,36 @@ export class HSAutosingTimerModal {
         this.footerSection = document.getElementById('hs-footer-section');
         this.singValSpan = document.getElementById('hs-sing-val');
         this.progressValSpan = document.getElementById('hs-progress-val');
+
+        // Cache frequently updated nodes (avoid repeated getElementById during renders)
+        this.quarksTotalSpan = document.getElementById('hs-quarks-total');
+        this.quarksPrevSpan = document.getElementById('hs-quarks-prev');
+        this.quarksRateValSpan = document.getElementById('hs-quarks-rate-val');
+        this.quarksRateHrSpan = document.getElementById('hs-quarks-rate-val-hr');
+        this.gquarksTotalSpan = document.getElementById('hs-gquarks-total');
+        this.gquarksPrevSpan = document.getElementById('hs-gquarks-prev');
+        this.gquarksRateValSpan = document.getElementById('hs-gquarks-rate-val');
+        this.gquarksRateHrSpan = document.getElementById('hs-gquarks-rate-val-hr');
+
+        this.avg1Span = document.getElementById('hs-avg-1');
+        this.avg10Span = document.getElementById('hs-avg-10');
+        this.avg50Span = document.getElementById('hs-avg-50');
+        this.avgAllSpan = document.getElementById('hs-avg-all');
+        this.avgAllCountSpan = document.getElementById('hs-avg-all-count');
+
+        this.avg10LabelSpan = document.getElementById('hs-avg-10-lbl');
+        this.avg50LabelSpan = document.getElementById('hs-avg-50-lbl');
+
+        this.phaseStatsContainer = document.getElementById('hs-phase-stats-container');
+        this.phaseStatsWrapper = document.getElementById('hs-phase-stats-wrapper');
+
+        this.sparklineContainer1 = document.getElementById('hs-sparkline-container-1');
+        this.sparklineContainer2 = document.getElementById('hs-sparkline-container-2');
+        this.sparklineContainer3 = document.getElementById('hs-sparkline-container-3');
+
+        this.footerVersionSpan = document.getElementById('hs-footer-version');
+        this.footerStrategySpan = document.getElementById('hs-footer-strategy');
+        this.footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
 
         // Persistent export button
         this.exportButton = document.createElement('button');
@@ -481,12 +615,14 @@ export class HSAutosingTimerModal {
     }
 
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
-        this.timestamps = [];
         this.quarksHistory = [];
         this.goldenQuarksHistory = [];
         this.quarksGains = [];
         this.goldenQuarksGains = [];
         this.startTime = performance.now();
+        // IMPORTANT: `timestamps` includes the start time at index 0.
+        // This keeps duration/rate math consistent for the first singularity.
+        this.timestamps = [this.startTime];
         this.phaseHistory.clear();
         this.singularityBundles = [];
         this.sessionQuarksGained = 0;
@@ -512,6 +648,16 @@ export class HSAutosingTimerModal {
         this.loadoutsOrder = this.getLoadoutsOrder();
         this.cachedStrategyOrder = this.strategy.strategy.map(p => `${p.startPhase}-${p.endPhase}`);
         this.modVersion = HSGlobal.General.currentModVersion;
+
+        // Reset render versions so next render is a full refresh
+        this.phaseHistoryVersion = 0;
+        this.lastRenderedPhaseHistoryVersion = -1;
+        this.sparklineVersion = 0;
+        this.lastRenderedSparklineVersion = -1;
+        this.detailsVisibilityVersion = 0;
+        this.lastRenderedDetailsVisibilityVersion = -1;
+
+        this.requestRender({ general: true, phases: true, sparklines: true, exportBtn: true });
 
         this.startLiveTimer();
     }
@@ -563,7 +709,11 @@ export class HSAutosingTimerModal {
         // Prepare for next phase
         this.currentPhaseStart = now;
 
-        this.updateDisplay();
+        // Phase stats are the only section that changes per phase.
+        this.phaseHistoryVersion++;
+        if (this.showDetailedData) {
+            this.requestRender({ phases: true });
+        }
     }
 
     private pruneHistory(): void {
@@ -579,33 +729,18 @@ export class HSAutosingTimerModal {
         if (this.singularityBundles.length > MAX_HISTORY) this.singularityBundles = this.singularityBundles.slice(-MAX_HISTORY);
     }
 
-    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number): void {
+    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number): void {
         const now = performance.now();
-        const isFirstCall = this.timestamps.length === 0;
-
-        const singularityDuration = isFirstCall
-            ? (now - this.startTime) / 1000
-            : (now - this.timestamps[this.timestamps.length - 1]) / 1000;
+        // `timestamps[0]` is the session start time.
+        const singularityDuration = (now - this.timestamps[this.timestamps.length - 1]) / 1000;
 
         this.timestamps.push(now);
 
-        if (isFirstCall) {
-            this.sessionQuarksGained = 0;
-        }
-
         this.latestGoldenQuarksTotal = currentGoldenQuarks;
 
-        // Calculate Real Quark Gain via Wallet Delta (DOM-based)
-        const previousQuarksTotal = this.latestQuarksTotal;
-        let currentQuarksTotal = previousQuarksTotal;
-        const quarkDisplay = document.getElementById('quarkDisplay');
-        if (quarkDisplay && quarkDisplay.textContent) {
-            const text = quarkDisplay.textContent.replace(/,/g, '');
-            currentQuarksTotal = parseFloat(text);
-        }
-
-        const realQuarksGain = currentQuarksTotal - previousQuarksTotal;
-        this.latestQuarksTotal = currentQuarksTotal;
+        // Handle quarks exactly like golden quarks: use passed totals/gains.
+        const realQuarksGain = gainedQuarks;
+        this.latestQuarksTotal = currentQuarks;
 
         this.quarksHistory.push(this.latestQuarksTotal);
         this.goldenQuarksHistory.push(currentGoldenQuarks);
@@ -627,14 +762,16 @@ export class HSAutosingTimerModal {
             this.singularityBundles.push(bundle);
         }
 
-        if (singularityDuration > 0 && !isFirstCall) {
-            // Ignore initial dummy calls with no gain to keep chart clean
-            // Use realQuarksGain here instead of the inaccurate passed argument
-            this.quarksGains.push(realQuarksGain / singularityDuration);
+        if (singularityDuration > 0) {
+            // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
+            const qRate = realQuarksGain / singularityDuration;
+            const gqRate = gainedGoldenQuarks / singularityDuration;
+
+            this.quarksGains.push(qRate);
             this.quarksAmounts.push(realQuarksGain);
             this.durationsHistory.push(singularityDuration);
 
-            this.goldenQuarksGains.push(gainedGoldenQuarks / singularityDuration);
+            this.goldenQuarksGains.push(gqRate);
             this.goldenQuarksAmounts.push(gainedGoldenQuarks);
 
             // O(1) optimization updates
@@ -643,18 +780,21 @@ export class HSAutosingTimerModal {
             this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
 
             // Track sum of rates for O(1) average rate calculation
-            this.cumulativeQuarksRate += (realQuarksGain / singularityDuration);
-            this.cumulativeGoldenQuarksRate += (gainedGoldenQuarks / singularityDuration);
+            this.cumulativeQuarksRate += qRate;
+            this.cumulativeGoldenQuarksRate += gqRate;
         }
 
         this.sessionQuarksGained += realQuarksGain;
 
         this.pruneHistory();
 
+        // New singularity affects general stats + charts.
+        this.sparklineVersion++;
+
         // Reset phase tracking for new singularity
         this.startLiveTimer();
 
-        this.updateDisplay();
+        this.requestRender({ general: true, sparklines: true, exportBtn: true });
     }
 
     private getSingularityCount(): number {
@@ -864,17 +1004,7 @@ export class HSAutosingTimerModal {
     }
 
     private updateDisplay(): void {
-        if (!this.timerContent || !this.timerDisplay) return;
-        if (this.timerDisplay.style.display === 'none' || this.isMinimized) {
-            return;
-        }
-
-        this.renderGeneralStats();
-        this.renderPhaseStatistics();
-        this.renderSparklines();
-
-        // Update Export Button state
-        this.updateExportButton();
+        this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
 
@@ -890,54 +1020,60 @@ export class HSAutosingTimerModal {
             ? this.goldenQuarksHistory[this.goldenQuarksHistory.length - 2]
             : this.initialGoldenQuarksWallet;
 
-        const setText = (id: string, text: string) => {
-            const el = document.getElementById(id);
+        const setTextEl = (el: HTMLElement | null, text: string) => {
             if (el) el.textContent = text;
         };
 
-        const setHtml = (id: string, html: string) => {
-            const el = document.getElementById(id);
+        const setHtmlEl = (el: HTMLElement | null, html: string) => {
             if (el) el.innerHTML = html;
         };
 
         // 1. Singularity & Progress
-        if (this.singValSpan) this.singValSpan.innerHTML = `<span style="color: #00E676; font-weight: bold; font-size: 13px;">S${this.getSingularityTarget()}</span> <span style="color: #bcb9b9ff;">/ S${this.singHighest}</span>`;
-        if (this.progressValSpan) this.progressValSpan.textContent = count.toString();
+        const target = this.getSingularityTarget();
+        if (target !== this.singTarget) {
+            this.singTarget = target;
+        }
+        const highest = this.getSingularityHighest();
+        if (highest !== this.singHighest) {
+            this.singHighest = highest;
+        }
+        if (this.singValSpan) {
+            this.singValSpan.innerHTML = `<span style="color: #bcb9b9ff; font-weight: bold; font-size: 13px;">S${this.singTarget}</span> <span style="color: #bcb9b9ff;">/ S${this.singHighest}</span>`;
+        }
+        setTextEl(this.progressValSpan, count.toString());
 
         // 2. Quarks
-        setText('hs-quarks-total', this.formatNumber(currentQuarks));
-        setText('hs-quarks-prev', `(⇦${this.formatNumber(previousQuarks)})`);
+        setTextEl(this.quarksTotalSpan, this.formatNumber(currentQuarks));
+        setTextEl(this.quarksPrevSpan, `(⇦${this.formatNumber(previousQuarks)})`);
 
         const quarksPerSec = this.getQuarksPerSecond(this.quarksHistory);
         if (quarksPerSec !== null) {
-            setText('hs-quarks-rate-val', `${this.formatNumber(quarksPerSec)}/s`);
-            setText('hs-quarks-rate-val-hr', `(${this.formatNumber(quarksPerSec * 3600)}/hr)`);
+            setTextEl(this.quarksRateValSpan, `${this.formatNumber(quarksPerSec)}/s`);
+            setTextEl(this.quarksRateHrSpan, `(${this.formatNumber(quarksPerSec * 3600)}/hr)`);
         } else {
-            setText('hs-quarks-rate-val', `0/s`);
-            setText('hs-quarks-rate-val-hr', `(0/hr)`);
+            setTextEl(this.quarksRateValSpan, `0/s`);
+            setTextEl(this.quarksRateHrSpan, `(0/hr)`);
         }
 
         // 3. Golden Quarks
-        setText('hs-gquarks-total', this.formatNumber(currentGoldenQuarks));
-        setText('hs-gquarks-prev', `(⇦${this.formatNumber(previousGoldenQuarks)})`);
+        setTextEl(this.gquarksTotalSpan, this.formatNumber(currentGoldenQuarks));
+        setTextEl(this.gquarksPrevSpan, `(⇦${this.formatNumber(previousGoldenQuarks)})`);
 
         const goldenQuarksPerSec = this.getQuarksPerSecond(this.goldenQuarksHistory);
         if (goldenQuarksPerSec !== null) {
-            setText('hs-gquarks-rate-val', `${this.formatNumber(goldenQuarksPerSec)}/s`);
-            setText('hs-gquarks-rate-val-hr', `(${this.formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
+            setTextEl(this.gquarksRateValSpan, `${this.formatNumber(goldenQuarksPerSec)}/s`);
+            setTextEl(this.gquarksRateHrSpan, `(${this.formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
         } else {
-            setText('hs-gquarks-rate-val', `0/s`);
-            setText('hs-gquarks-rate-val-hr', `(0/hr)`);
+            setTextEl(this.gquarksRateValSpan, `0/s`);
+            setTextEl(this.gquarksRateHrSpan, `(0/hr)`);
         }
 
         // 4. Averages
         const avg1 = this.getLastDuration();
-        const avg5 = this.getAverageLast(5);
         const avg10 = this.getAverageLast(10);
         const avg50 = this.getAverageLast(50);
         const avgAll = this.getAverageLast(count);
 
-        const sd5 = this.getStandardDeviation(5);
         const sd10 = this.getStandardDeviation(10);
         const sd50 = this.getStandardDeviation(50);
         const sdAll = this.getStandardDeviation(count);
@@ -948,18 +1084,15 @@ export class HSAutosingTimerModal {
             return `${val.toFixed(2)}s${sdStr}`;
         };
 
-        setHtml('hs-avg-1', avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
-        setHtml('hs-avg-5', fmt(avg5, sd5));
-        setHtml('hs-avg-10', fmt(avg10, sd10));
-        setHtml('hs-avg-50', fmt(avg50, sd50));
-
-        // Use a <span> for the label to allow dynamic counting with green coloring
-        setHtml('hs-avg-all-lbl', `All <span id="hs-avg-all-count" style="color: #00E676;">${count}</span>:`);
-        setHtml('hs-avg-all', fmt(avgAll, sdAll));
+        setHtmlEl(this.avg1Span, avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
+        setHtmlEl(this.avg10Span, fmt(avg10, sd10));
+        setHtmlEl(this.avg50Span, fmt(avg50, sd50));
+        setTextEl(this.avgAllCountSpan, count.toString());
+        setHtmlEl(this.avgAllSpan, fmt(avgAll, sdAll));
     }
 
     private renderPhaseStatistics(): void {
-        const phaseContainer = document.getElementById('hs-phase-stats-container');
+        const phaseContainer = this.phaseStatsContainer;
         if (!phaseContainer) return;
 
         let html = `
@@ -1001,11 +1134,11 @@ export class HSAutosingTimerModal {
                 const count = data.times.length;
 
                 html += `
-                    <div style="color: #FF79C6; font-size: 12px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #222; text-align: left; justify-self: start;"><span style="color: #888; font-size: 10px; margin-right: 2px;">x${count}</span> ${phaseName}</div>
+                    <div style="color: #B33A3A; font-size: 12px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #222; text-align: left; justify-self: start;"><span style="color: #888; font-size: 10px; margin-right: 2px;">x${count}</span> ${phaseName}</div>
                     <div style="color: #888; font-size: 11px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">x${avgLoops.toFixed(2)}</div>
-                    <div style="color: #F1FA8C; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${avg.toFixed(2)}s</div>
+                    <div style="color: #FF8A80; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${avg.toFixed(2)}s</div>
                     <div style="color: #888; font-size: 10px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${sdStr}</div>
-                    <div style="color: #00BCD4; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${last.toFixed(2)}s</div>
+                    <div style="color: #FF8A80; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${last.toFixed(2)}s</div>
                 `;
             }
         });
@@ -1014,22 +1147,20 @@ export class HSAutosingTimerModal {
     }
 
     private renderSparklines(): void {
-        const setText = (id: string, text: string) => {
-            const el = document.getElementById(id);
+        const setTextEl = (el: HTMLElement | null, text: string) => {
             if (el) el.textContent = text;
         };
 
         if (this.showDetailedData) {
-            setText('hs-footer-version', this.modVersion);
-            setText('hs-footer-strategy', this.strategyName);
-            setText('hs-footer-loadouts', this.loadoutsOrder.join(', '));
+            setTextEl(this.footerVersionSpan, this.modVersion);
+            setTextEl(this.footerStrategySpan, this.strategyName);
+            setTextEl(this.footerLoadoutsSpan, this.loadoutsOrder.join(', '));
 
             // Quarks
             if (this.quarksAmounts.length >= 2) {
                 const spark1 = this.generateSparklineMetadata(this.quarksAmounts, 230, 30);
-                const container1 = document.getElementById('hs-sparkline-container-1');
-                if (container1) {
-                    container1.innerHTML = `
+                if (this.sparklineContainer1) {
+                    this.sparklineContainer1.innerHTML = `
                         <svg width="230" height="30" style="display: block; overflow: visible;">
                             <line x1="0" y1="${spark1.avgY}" x2="230" y2="${spark1.avgY}" stroke="#00BCD4" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
                             <polyline fill="none" stroke="#00BCD4" stroke-width="1" stroke-opacity="0.7" points="${spark1.points}" />
@@ -1048,9 +1179,8 @@ export class HSAutosingTimerModal {
             // Golden Quarks
             if (this.goldenQuarksAmounts.length >= 2) {
                 const spark2 = this.generateSparklineMetadata(this.goldenQuarksAmounts, 230, 30);
-                const container2 = document.getElementById('hs-sparkline-container-2');
-                if (container2) {
-                    container2.innerHTML = `
+                if (this.sparklineContainer2) {
+                    this.sparklineContainer2.innerHTML = `
                         <svg width="230" height="30" style="display: block; overflow: visible;">
                             <line x1="0" y1="${spark2.avgY}" x2="230" y2="${spark2.avgY}" stroke="#F1FA8C" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
                             <polyline fill="none" stroke="#F1FA8C" stroke-width="1" stroke-opacity="0.7" points="${spark2.points}" />
@@ -1069,18 +1199,17 @@ export class HSAutosingTimerModal {
             // Times
             if (this.durationsHistory.length >= 2) {
                 const spark3 = this.generateSparklineMetadata(this.durationsHistory, 230, 30);
-                const container3 = document.getElementById('hs-sparkline-container-3');
-                if (container3) {
-                    container3.innerHTML = `
+                if (this.sparklineContainer3) {
+                    this.sparklineContainer3.innerHTML = `
                         <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark3.avgY}" x2="230" y2="${spark3.avgY}" stroke="#00BCD4" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
-                            <polyline fill="none" stroke="#00BCD4" stroke-width="1" stroke-opacity="0.8" points="${spark3.points}" />
-                            <line x1="226" y1="${spark3.maxY}" x2="230" y2="${spark3.maxY}" stroke="#00BCD4" stroke-width="1" />
-                            <line x1="226" y1="${spark3.minY}" x2="230" y2="${spark3.minY}" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="0" y1="${spark3.avgY}" x2="230" y2="${spark3.avgY}" stroke="#FF8A80" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                            <polyline fill="none" stroke="#FF8A80" stroke-width="1" stroke-opacity="0.8" points="${spark3.points}" />
+                            <line x1="226" y1="${spark3.maxY}" x2="230" y2="${spark3.maxY}" stroke="#FF8A80" stroke-width="1" />
+                            <line x1="226" y1="${spark3.minY}" x2="230" y2="${spark3.minY}" stroke="#FF8A80" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">${spark3.max.toFixed(2)}s</span>
-                            <span style="color: #00BCD4; font-weight: bold;">${spark3.avg.toFixed(2)}s avg</span>
+                            <span style="color: #FF8A80; font-weight: bold;">${spark3.avg.toFixed(2)}s avg</span>
                             <span class="hs-sparkline-muted">${spark3.min.toFixed(2)}s</span>
                         </div>
                     `;
@@ -1090,18 +1219,30 @@ export class HSAutosingTimerModal {
             if (this.stepContainer) this.stepContainer.style.display = 'block';
             if (this.footerSection) this.footerSection.style.display = 'block';
 
-            ['hs-sparkline-container-1', 'hs-sparkline-container-2', 'hs-sparkline-container-3'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'flex';
-            });
+            // Detailed-only: Phase stats + extended averages
+            if (this.phaseStatsWrapper) this.phaseStatsWrapper.style.display = 'block';
+            if (this.avg10LabelSpan) this.avg10LabelSpan.style.display = '';
+            if (this.avg10Span) this.avg10Span.style.display = '';
+            if (this.avg50LabelSpan) this.avg50LabelSpan.style.display = '';
+            if (this.avg50Span) this.avg50Span.style.display = '';
+
+            if (this.sparklineContainer1) this.sparklineContainer1.style.display = 'flex';
+            if (this.sparklineContainer2) this.sparklineContainer2.style.display = 'flex';
+            if (this.sparklineContainer3) this.sparklineContainer3.style.display = 'flex';
         } else {
             if (this.stepContainer) this.stepContainer.style.display = 'none';
             if (this.footerSection) this.footerSection.style.display = 'none';
 
-            ['hs-sparkline-container-1', 'hs-sparkline-container-2', 'hs-sparkline-container-3'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
-            });
+            // Detailed-only: Phase stats + extended averages
+            if (this.phaseStatsWrapper) this.phaseStatsWrapper.style.display = 'none';
+            if (this.avg10LabelSpan) this.avg10LabelSpan.style.display = 'none';
+            if (this.avg10Span) this.avg10Span.style.display = 'none';
+            if (this.avg50LabelSpan) this.avg50LabelSpan.style.display = 'none';
+            if (this.avg50Span) this.avg50Span.style.display = 'none';
+
+            if (this.sparklineContainer1) this.sparklineContainer1.style.display = 'none';
+            if (this.sparklineContainer2) this.sparklineContainer2.style.display = 'none';
+            if (this.sparklineContainer3) this.sparklineContainer3.style.display = 'none';
         }
     }
 
@@ -1138,7 +1279,9 @@ export class HSAutosingTimerModal {
         this._currentStepMaxTime = null;
         this.stopLiveTimer();
         this.currentLiveTime = 0;
-        this.updateDisplay();
+        this.phaseHistoryVersion++;
+        this.sparklineVersion++;
+        this.requestRender({ general: true, phases: true, sparklines: true, exportBtn: true });
     }
 
     public destroy(): void {
@@ -1185,10 +1328,19 @@ export class HSAutosingTimerModal {
     private generateSparklineMetadata(data: number[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, avgY: number, maxY: number, minY: number, lastX: number, lastY: number } {
         if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, avgY: height / 2, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
 
-        const history = data.slice(-50);
-        const max = Math.max(...history);
-        const min = Math.min(...history);
-        const avg = history.reduce((a, b) => a + b, 0) / history.length;
+        const startIdx = Math.max(0, data.length - 50);
+        let max = -Infinity;
+        let min = Infinity;
+        let sum = 0;
+        let count = 0;
+        for (let i = startIdx; i < data.length; i++) {
+            const v = data[i];
+            if (v > max) max = v;
+            if (v < min) min = v;
+            sum += v;
+            count++;
+        }
+        const avg = count > 0 ? (sum / count) : 0;
 
         // If the formatted values are identical, treat as flat line to avoid "noise bumps"
         if (this.formatNumber(max) === this.formatNumber(min)) {
@@ -1208,7 +1360,7 @@ export class HSAutosingTimerModal {
         }
 
         const range = max - min;
-        if (range === 0 || history.length === 1) {
+        if (range === 0 || count === 1) {
             const centerY = height / 2;
             return {
                 path: `M 0,${centerY.toFixed(1)} L ${width},${centerY.toFixed(1)}`,
@@ -1229,8 +1381,10 @@ export class HSAutosingTimerModal {
         const displayMin = min - padding;
         const displayRange = range + 2 * padding;
 
-        const pointsArray = history.map((val, i) => {
-            const x = (i / (history.length - 1)) * width;
+        // Use the relevant slice of the provided data (respecting startIdx)
+        const subset = data.slice(startIdx);
+        const pointsArray = subset.map((val, i) => {
+            const x = (i / (subset.length - 1)) * width;
             const y = height - ((val - displayMin) / displayRange) * height;
             return { x, y, str: `${x.toFixed(1)},${y.toFixed(1)}` };
         });

@@ -106,6 +106,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         REDAMB_viscount: { value: undefined, cachedBy: [] },
 
         R_CampaignAmbrosiaSpeedBonus: { value: undefined, cachedBy: [] },
+        R_CampaignRune6Bonus: { value: undefined, cachedBy: [] },
         R_CampaignLuckBonus: { value: undefined, cachedBy: [] },
         R_calculateCampaignRune6Bonus: { value: undefined, cachedBy: [] },
         R_CookieUpgrade29Luck: { value: undefined, cachedBy: [] },
@@ -486,10 +487,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return this.R_redAmbrosiaUpgradeCalculationCollection[upgradeKey].effects(currentLevel) as RedAmbrosiaUpgradeRewards[T]
     }
 
-    #checkCache(cacheName: keyof CalculationCache, checkCacheAgainst: number[]) {
+    #checkCache(cacheName: keyof CalculationCache, checkCacheAgainst: number[]): any | undefined {
         if (!(cacheName in this.#calculationCache)) {
             HSLogger.debug(`Could not find cache for '${cacheName}'`);
-            return false;
+            return undefined;
         }
 
         const cached = this.#calculationCache[cacheName] as any;
@@ -498,14 +499,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             if (HSGlobal.Debug.calculationCacheDebugMode)
                 console.log(`Cache missed (reason: null value or empty cache) for ${cacheName} with value ${cached.value}`);
 
-            return false;
+            return undefined;
         }
 
         if (cached.cachedBy.length !== checkCacheAgainst.length) {
             if (HSGlobal.Debug.calculationCacheDebugMode)
                 console.warn(`Cache missed (reason: cache length mismatch) for ${cacheName} with value ${cached.value}`);
 
-            return false;
+            return undefined;
         }
 
         for (let i = 0; i < cached.cachedBy.length; i++) {
@@ -514,7 +515,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     console.log(`Cache missed (reason: calc var mismatch) for ${cacheName} (${cached.cachedBy[i]})`);
                 }
 
-                return false;
+                return undefined;
             }
         }
 
@@ -777,7 +778,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             increase += this.R_getAntUpgradeEffect(AntUpgrades.Mortuus2).talismanLevelIncreaser;
         }
         if (t === 'plastic') {
-            increase += (this.R_getPCoinUpgradeEffect('INSTANT_UNLOCK_1') as number) ? 10 : 0;
+            increase += (this.R_getPCoinUpgradeLevel('INSTANT_UNLOCK_1') as number) ? 10 : 0;
         }
         if (t === 'achievement') {
             increase += this.R_getLevelMilestone('achievementTalismanEnhancement');
@@ -843,19 +844,18 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
     }
 
-    R_getPCoinUpgradeEffect(name: keyof typeof PCoinUpgradeEffects): number {
-        debugger;
+    R_getPCoinUpgradeLevel(name: keyof typeof PCoinUpgradeEffects): number {
         const pseudoData = this.getPseudoData?.() ?? this.pseudoData;
         if (!pseudoData) return 0;
 
         // New structure: pseudoData.upgrades contains metadata, pseudoData.playerUpgrades contains levels.
         // Prefer resolving by upgradeId (stable), then fall back to internalName if present.
-        const upgradeId = pseudoData.upgrades?.find(u => u.internalName === name)?.upgradeId;
-        if (upgradeId !== undefined) {
-            return pseudoData.playerUpgrades[upgradeId] ?? 0;
+        const level = pseudoData.playerUpgrades?.find(u => u.internalName === name)?.level;
+        if (level !== undefined) {
+            return level;
         }
 
-        return 0
+        return 0;
     }
 
     R_getTalismanMaxLevel(t: TalismanKeys): number {
@@ -1423,7 +1423,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     R_bonusRuneLevelsIA = () => {
         return (
-            (this.R_getPCoinUpgradeEffect('INSTANT_UNLOCK_2') ? 6 : 0)
+            (this.R_getPCoinUpgradeLevel('INSTANT_UNLOCK_2') ? 6 : 0)
             + (this.gameData?.cubeUpgrades[73] ?? 0)
             + this.R_calculateCampaignRune6Bonus()
             + this.R_getRuneBonusFromAllTalismans('infiniteAscent')
@@ -4522,7 +4522,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const { HAPPY_HOUR_BELL } = this.eventData;
 
@@ -4625,7 +4625,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             1 + data.shopUpgrades.shopAmbrosiaGeneration1 / 100,
@@ -4657,7 +4657,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             1 + data.goldenQuarkUpgrades.singAmbrosiaGeneration.level / 100,
@@ -4688,7 +4688,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             1 + data.octUpgrades.octeractAmbrosiaGeneration.level / 100,
@@ -4716,7 +4716,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let val = 0
 
@@ -4745,7 +4745,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const singThresholds = [100, 150, 200, 225, 250, 255, 260, 265, 269, 272]
         let val = singThresholds.length / 100;
@@ -4776,7 +4776,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let bonus = 0
         const singThresholds1 = [35, 42, 49, 56, 63, 70, 77];
@@ -4816,7 +4816,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             2 * data.shopUpgrades.shopAmbrosiaLuck1,
@@ -4847,7 +4847,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             +data.goldenQuarkUpgrades.singAmbrosiaLuck.level * 4,
@@ -4877,7 +4877,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             +data.octUpgrades.octeractAmbrosiaLuck.level * 4,
@@ -4909,7 +4909,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const reduced = (Math.floor(Math.log10(Number(data.wowCubes) + 1))
             + Math.floor(Math.log10(Number(data.wowTesseracts) + 1))
@@ -4940,7 +4940,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const investmentParameters = ((this.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
 
@@ -4997,7 +4997,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         ]
 
         const cached = this.#checkCache(cacheName, calculationVars);
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const investmentParameters = ((this.#redAmbrosiaCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig<any>;
 
@@ -5015,7 +5015,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_calculateCampaignRune6Bonus() {
-        const cacheName = 'R_CampaignAmbrosiaSpeedBonus' as keyof CalculationCache;
+        const cacheName = 'R_CampaignRune6Bonus' as keyof CalculationCache;
 
         const tokens = this.campaignData?.tokens ?? 0;
 
@@ -5025,16 +5025,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
-
+        if (cached !== undefined) return cached;
 
         const thresholdReqs = [500, 750, 1000, 1250, 1500, 1750, 2000, 3000, 4000, 6000, 8000, 10000]
         for (let i = 0; i < thresholdReqs.length; i++) {
             if (tokens < thresholdReqs[i]) {
-                return i
+                const reduced = i;
+                this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
+                return reduced;
             }
         }
-        return 12
+        const reduced = 12;
+        this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
+        return reduced;
     }
 
     R_calculateCampaignAmbrosiaSpeedBonus() {
@@ -5048,7 +5051,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let campaignBlueberrySpeedBonus;
 
@@ -5076,7 +5079,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let campaignBonus;
 
@@ -5110,7 +5113,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let val;
 
@@ -5139,7 +5142,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let sum = 0
 
@@ -5167,7 +5170,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const numDigits = data.lifetimeAmbrosia > 0 ? 1 + Math.floor(Math.log10(data.lifetimeAmbrosia)) : 0
         const matissa = Math.floor(data.lifetimeAmbrosia / Math.pow(10, numDigits - 1))
@@ -5194,7 +5197,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const numThresholds = this.R_calculateNumberOfThresholds();
 
@@ -5232,7 +5235,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let val = timePerAmbrosia;
         val += Math.floor(data.lifetimeAmbrosia / 500)
@@ -5267,7 +5270,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         const redBarRequirementMultiplier = 1 - (0.01 * data.singularityChallenges.limitedTime.completions);
 
@@ -5313,7 +5316,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let effectiveValue = Math.min(data.hepteracts[heptType].BAL, this.#hepteractEffectiveValues[heptType].LIMIT);
         let exponentBoost = 0;
@@ -5393,7 +5396,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const dunno = () => {
             if (data.highestSingularityCount >= 280) {
@@ -5441,7 +5444,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let exponent = data.ascensionCount
             - Math.max(
@@ -5471,7 +5474,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         let redu;
 
@@ -5507,7 +5510,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (cached !== undefined) return cached;
 
         let effectiveSingularities = singularityCount === -1 ? data.singularityCount : singularityCount;
 
@@ -5659,7 +5662,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             data.goldenQuarkUpgrades.singAscensionSpeed.level > 0 ? 0.03 : 0,
@@ -6196,7 +6199,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
      
         if(cached) return cached;*/
 
-        const P_GEN_BUFF_LVL = this.R_getPCoinUpgradeEffect('AMBROSIA_GENERATION_BUFF');
+        const P_GEN_BUFF_LVL = this.R_getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF');
         const P_GEN_BUFF = P_GEN_BUFF_LVL ? 1 + P_GEN_BUFF_LVL * 0.05 : 1;
 
         const campaignBlueberrySpeedBonus = this.R_calculateCampaignAmbrosiaSpeedBonus()
@@ -6283,7 +6286,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 : this.R_getAmbrosiaUpgradeEffects('ambrosiaLuck4').ambrosiaLuckPercentage
         ]
 
-        const P_BUFF_LVL = this.R_getPCoinUpgradeEffect('AMBROSIA_LUCK_BUFF');
+        const P_BUFF_LVL = this.R_getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF');
         const P_BUFF = P_BUFF_LVL ? P_BUFF_LVL * 20 : 0;
         const campaignBonus = this.R_calculateCampaignLuckBonus()
 
@@ -6410,7 +6413,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             20,
@@ -6450,7 +6453,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cacheName = 'R_RedAmbrosiaLuck' as keyof CalculationCache;
 
-        const pseudoLvl = this.R_getPCoinUpgradeEffect('RED_LUCK_BUFF');
+        const pseudoLvl = this.R_getPCoinUpgradeLevel('RED_LUCK_BUFF');
         const pseudoLuck = pseudoLvl ? pseudoLvl * 20 : 0;
         const luck = this.calculateLuck() as { additive: number, raw: number, total: number };
         const red1 = this.R_getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
@@ -6471,7 +6474,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const cached = this.#checkCache(cacheName, calculationVars);
 
-        if (cached) return cached;
+        if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
             100,
@@ -6901,13 +6904,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     trueAmbrosiaGainChance: trueAmbrosiaGainChance,
                     ambrosiaAcceleratorCount: data.shopUpgrades.shopAmbrosiaAccelerator,
                     pseudoCoinUpgrades: {
-                        ambrosiaGenerationBuffLevel: this.R_getPCoinUpgradeEffect('AMBROSIA_GENERATION_BUFF'),
-                        ambrosiaLuckBuffLevel: this.R_getPCoinUpgradeEffect('AMBROSIA_LUCK_BUFF'),
-                        baseObtainiumBuffLevel: this.R_getPCoinUpgradeEffect('BASE_OBTAINIUM_BUFF'),
-                        baseOfferingBuffLevel: this.R_getPCoinUpgradeEffect('BASE_OFFERING_BUFF'),
-                        cubeBuffLevel: this.R_getPCoinUpgradeEffect('CUBE_BUFF'),
-                        redAmbrosiaGenerationBuffLevel: this.R_getPCoinUpgradeEffect('RED_GENERATION_BUFF'),
-                        redAmbrosiaLuckBuffLevel: this.R_getPCoinUpgradeEffect('RED_LUCK_BUFF'),
+                        ambrosiaGenerationBuffLevel: this.R_getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF'),
+                        ambrosiaLuckBuffLevel: this.R_getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF'),
+                        baseObtainiumBuffLevel: this.R_getPCoinUpgradeLevel('BASE_OBTAINIUM_BUFF'),
+                        baseOfferingBuffLevel: this.R_getPCoinUpgradeLevel('BASE_OFFERING_BUFF'),
+                        cubeBuffLevel: this.R_getPCoinUpgradeLevel('CUBE_BUFF'),
+                        redAmbrosiaGenerationBuffLevel: this.R_getPCoinUpgradeLevel('RED_GENERATION_BUFF'),
+                        redAmbrosiaLuckBuffLevel: this.R_getPCoinUpgradeLevel('RED_LUCK_BUFF'),
                     },
                     redAmbrosiaUpgrades: {
                         tutorial: this.R_calculateRedAmbrosiaUpgradeValue('tutorial'),
