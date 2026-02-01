@@ -34,7 +34,7 @@ export class HSWebSocket extends HSModule {
         const self = this;
 
         if (this.#webSockets.has(name)) {
-            HSLogger.warn(`Tried to register websocket ${name} again`, this.context);
+            HSLogger.debug(`Tried to register websocket ${name} again`, this.context);
             return;
         }
 

@@ -409,20 +409,32 @@ export class HSUI extends HSModule {
         }
     }
 
+    static #updatePending = false;
+
     static updateInjectedStyleBlock() {
-        const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
+        if (HSUI.#updatePending) return;
 
-        if (!this.#injectedStylesHolder) {
-            this.#injectedStylesHolder = document.createElement('style');
-            this.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
-            document.head.appendChild(this.#injectedStylesHolder);
-        }
+        HSUI.#updatePending = true;
 
-        this.#injectedStylesHolder.innerHTML = '';
+        setTimeout(() => {
+            HSUI.#updatePending = false;
 
-        this.#injectedStyles.forEach((style, styleId) => {
-            HSUI.#injectedStylesHolder!.innerHTML += style;
-        });
+            const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
+
+            if (!HSUI.#injectedStylesHolder) {
+                HSUI.#injectedStylesHolder = document.createElement('style');
+                HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
+                document.head.appendChild(HSUI.#injectedStylesHolder);
+            }
+
+            HSUI.#injectedStylesHolder.innerHTML = '';
+
+            HSUI.#injectedStyles.forEach((style, styleId) => {
+                HSUI.#injectedStylesHolder!.innerHTML += style;
+            });
+
+            HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} injected styles to DOM`, HSUI.#staticContext);
+        }, 0);
     }
 
     // Can be used to inject arbitrary HTML

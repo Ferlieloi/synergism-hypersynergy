@@ -12,6 +12,7 @@ import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSLogger } from "../../hs-core/hs-logger";
+import { HSAutosing } from "./hs-autosing";
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -111,6 +112,8 @@ export class HSAutosingTimerModal {
     private singValSpan: HTMLElement | null = null;
     private progressValSpan: HTMLElement | null = null;
 
+    private cachedStrategyOrder: string[] = [];
+
     constructor() {
         this.createTimerDisplay();
         this.setupDragAndResize();
@@ -173,7 +176,7 @@ export class HSAutosingTimerModal {
         this.finishStopBtn.title = "Stop Autosing at the end of current Singularity";
         this.finishStopBtn.className = 'hs-stop-btn';
         this.finishStopBtn.onclick = () => {
-            const autosingMod = HSModuleManager.getModule<any>('HSAutosing');
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
                 const newState = !autosingMod.isStopAtSingularitysEnd();
                 autosingMod.setStopAtSingularitysEnd(newState);
@@ -230,11 +233,11 @@ export class HSAutosingTimerModal {
         this.dynamicContent = document.createElement('div');
         this.dynamicContent.innerHTML = `
             <div class="hs-timer-section">
-                <div class="hs-section-header">FARMING SINGULARITY <span id="hs-sing-val" style="color: #fff; font-weight: normal; margin-left: 8px;">#0 / #0</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Completed:</span> <span id="hs-progress-val" style="color: #00E676; font-weight: bold; margin-left: 6px;">0</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Phase:</span> <span id="hs-phase-name-val" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #F1FA8C; margin-left: 4px;"></span></div>
-                <div id="hs-step-container" class="hs-info-line" style="font-size: 11px; opacity: 0.8;">
-                    <span class="hs-footer-label" style="color: #fff; opacity: 0.6;">Step:</span> <span id="hs-step-name-val" style="color: #999; margin-left: 6px;">&nbsp;</span> <span id="hs-step-timer-val" style="color: #999; margin-left: 4px;"></span>
+                <div class="hs-section-header">FARMING <span id="hs-sing-val" style="color: #fff; font-weight: normal; margin-left: 8px;">#0 / #0</span></div>
+                <div class="hs-info-line"><span class="hs-timer-label" style="color: #fff;">Completed:</span> <span id="hs-progress-val" style="color: #00E676; font-weight: bold; margin-left: 6px;">0</span></div>
+                <div class="hs-info-line"><span class="hs-timer-label" style="color: #fff;">Phase:</span> <span id="hs-phase-name-val" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">&nbsp;</span> <span id="hs-phase-timer-val" style="color: #F1FA8C; margin-left: 4px;"></span></div>
+                <div id="hs-step-container" class="hs-info-line-detailed">
+                    <span class="hs-timer-label">Step:</span> <span id="hs-step-name-val" class="hs-detailed-value" style="margin-left: 6px;">&nbsp;</span> <span id="hs-step-timer-val" class="hs-detailed-value" style="margin-left: 4px;"></span>
                 </div>
             </div>
 
@@ -243,12 +246,12 @@ export class HSAutosingTimerModal {
             <div class="hs-timer-section">
                 <div class="hs-section-header">QUARKS</div>
                 <div class="hs-info-line">
-                    <span class="hs-footer-label" style="color: #fff;">Total Gained:</span>
+                    <span class="hs-timer-label" style="color: #fff;">Total:</span>
                     <span id="hs-quarks-total" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0</span>
                     <span id="hs-quarks-prev" style="color: #666; font-size: 11px; margin-left: 4px;"> (⇦0)</span>
                 </div>
                 <div id="hs-quarks-rate-row" class="hs-info-line">
-                    <span class="hs-footer-label" style="color: #fff;">Efficiency:</span>
+                    <span class="hs-timer-label" style="color: #fff;">Rate:</span>
                     <span id="hs-quarks-rate-val" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0/s</span>
                     <span id="hs-quarks-rate-val-hr" style="color: #666; font-size: 11px; margin-left: 4px;"> (0/hr)</span>
                 </div>
@@ -260,12 +263,12 @@ export class HSAutosingTimerModal {
             <div class="hs-timer-section">
                 <div class="hs-section-header">GOLDEN QUARKS</div>
                 <div class="hs-info-line">
-                    <span class="hs-footer-label" style="color: #fff;">Total Gained:</span>
+                    <span class="hs-timer-label" style="color: #fff;">Total:</span>
                     <span id="hs-gquarks-total" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">0</span>
                     <span id="hs-gquarks-prev" style="color: #666; font-size: 11px; margin-left: 4px;"> (⇦0)</span>
                 </div>
                 <div id="hs-gquarks-rate-row" class="hs-info-line">
-                    <span class="hs-footer-label" style="color: #fff;">Efficiency:</span>
+                    <span class="hs-timer-label" style="color: #fff;">Rate:</span>
                     <span id="hs-gquarks-rate-val" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">0/s</span>
                     <span id="hs-gquarks-rate-val-hr" style="color: #666; font-size: 11px; margin-left: 4px;"> (0/hr)</span>
                 </div>
@@ -275,13 +278,15 @@ export class HSAutosingTimerModal {
             <hr class="hs-timer-hr">
 
             <div class="hs-timer-section">
-                <div class="hs-section-header">SINGULARITY TIMES</div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Current Time:</span> <span id="hs-live-timer-val" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">0.00s</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last:</span> <span id="hs-avg-1" style="color: #00BCD4; font-weight: bold; margin-left: 6px;">-</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 5:</span> <span id="hs-avg-5" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 10:</span> <span id="hs-avg-10" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Last 50:</span> <span id="hs-avg-50" style="color: #FF79C6; font-weight: bold; margin-left: 6px;">-</span></div>
-                <div class="hs-info-line"><span id="hs-avg-all-lbl" class="hs-footer-label" style="color: #fff;">All 0:</span> <span id="hs-avg-all" style="color: #F1FA8C; font-weight: bold; margin-left: 6px;">-</span></div>
+                <div class="hs-section-header">TIMES</div>
+                <div class="hs-times-grid">
+                    <span class="hs-timer-label" style="color: #fff;">Current:</span> <span id="hs-live-timer-val" style="color: #00BCD4; font-weight: bold;">0.00s</span>
+                    <span class="hs-timer-label" style="color: #fff;">Last 1:</span> <span id="hs-avg-1" style="color: #00BCD4; font-weight: bold;">-</span>
+                    <span class="hs-timer-label" style="color: #fff;">Last 5:</span> <span id="hs-avg-5" style="color: #FF79C6; font-weight: bold;">-</span>
+                    <span class="hs-timer-label" style="color: #fff;">Last 10:</span> <span id="hs-avg-10" style="color: #FF79C6; font-weight: bold;">-</span>
+                    <span class="hs-timer-label" style="color: #fff;">Last 50:</span> <span id="hs-avg-50" style="color: #FF79C6; font-weight: bold;">-</span>
+                    <span id="hs-avg-all-lbl" class="hs-timer-label" style="color: #fff;">All <span id="hs-avg-all-count" style="color: #00E676;">0</span>:</span> <span id="hs-avg-all" style="color: #F1FA8C; font-weight: bold;">-</span>
+                </div>
                 <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
             </div>
 
@@ -289,15 +294,15 @@ export class HSAutosingTimerModal {
 
             <div id="hs-phase-stats-section" class="hs-timer-section">
                 <div class="hs-section-header">PHASE STATISTICS</div>
-                <div id="hs-phase-stats-container" class="hs-stats-grid" style="display: grid; grid-template-columns: minmax(70px, 2fr) minmax(40px, 0.7fr) minmax(45px, 1fr) minmax(45px, 1fr) minmax(45px, 1fr); grid-column-gap: 8px; justify-items: stretch;"></div>
+                <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
             </div>
 
             <hr class="hs-timer-hr">
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section" style="border-bottom: none; opacity: 0.7; padding-top: 0;">
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Module Version:</span> <span id="hs-footer-version" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
-                <div class="hs-info-line"><span class="hs-footer-label" style="color: #fff;">Active Strategy:</span> <span id="hs-footer-strategy" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
-                <div class="hs-info-line" style="white-space: pre-wrap; margin-top: 2px;"><span class="hs-footer-label" style="color: #fff;">Loadout Order:</span> <span id="hs-footer-loadouts" class="hs-footer-value" style="margin-left: 6px; color: #fff; font-weight: normal;"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version:</span> <span id="hs-footer-version" class="hs-detailed-value" style="margin-left: 6px; font-weight: normal;"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy:</span> <span id="hs-footer-strategy" class="hs-detailed-value" style="margin-left: 6px; font-weight: normal;"></span></div>
+                <div class="hs-info-line-detailed" style="white-space: pre-wrap; margin-top: 2px;"><span class="hs-timer-label">Amb Loadouts Order:</span> <span id="hs-footer-loadouts" class="hs-detailed-value" style="margin-left: 6px; font-weight: normal;"></span></div>
             </div>
         `;
         this.timerContent.appendChild(this.dynamicContent);
@@ -505,6 +510,7 @@ export class HSAutosingTimerModal {
         this.singHighest = this.getSingularityHighest();
         this.strategyName = this.getStrategyName();
         this.loadoutsOrder = this.getLoadoutsOrder();
+        this.cachedStrategyOrder = this.strategy.strategy.map(p => `${p.startPhase}-${p.endPhase}`);
         this.modVersion = HSGlobal.General.currentModVersion;
 
         this.startLiveTimer();
@@ -947,8 +953,8 @@ export class HSAutosingTimerModal {
         setHtml('hs-avg-10', fmt(avg10, sd10));
         setHtml('hs-avg-50', fmt(avg50, sd50));
 
-        // Use a <span> for the label to allow dynamic counting
-        setHtml('hs-avg-all-lbl', `All <span id="hs-avg-all-count" style="color: inherit;">${count}</span>:`);
+        // Use a <span> for the label to allow dynamic counting with green coloring
+        setHtml('hs-avg-all-lbl', `All <span id="hs-avg-all-count" style="color: #00E676;">${count}</span>:`);
         setHtml('hs-avg-all', fmt(avgAll, sdAll));
     }
 
@@ -957,15 +963,33 @@ export class HSAutosingTimerModal {
         if (!phaseContainer) return;
 
         let html = `
-            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Name</div>
-            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Loops</div>
-            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Avg</div>
-            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">SD</div>
-            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center;">Last</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center; justify-self: stretch;">Name</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center; justify-self: stretch;">Loops</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center; justify-self: stretch;">Avg</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center; justify-self: stretch;">SD</div>
+            <div style="color: #888; font-size: 10px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; display: flex; justify-content: center; justify-self: stretch;">Last</div>
         `;
 
         const sortedPhases = Array.from(this.phaseHistory.entries())
-            .sort((a, b) => b[1].lastTime - a[1].lastTime);
+            .sort((a, b) => {
+                const idxA = this.cachedStrategyOrder.indexOf(a[0]);
+                const idxB = this.cachedStrategyOrder.indexOf(b[0]);
+
+                // If both are in the strategy, respect strategy order
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+
+                // If one is in strategy, it comes first
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+
+                // Fallback: Use previous reliable sort or just keep A-B
+                // Using global phases list fallback for sorting unknown phases somewhat predictably
+                const globalIdxA = phases.indexOf(a[0] as any);
+                const globalIdxB = phases.indexOf(b[0] as any);
+                const safeA = globalIdxA === -1 ? 999 : globalIdxA;
+                const safeB = globalIdxB === -1 ? 999 : globalIdxB;
+                return safeA - safeB;
+            });
 
         sortedPhases.forEach(([phaseName, data]) => {
             if (data.times.length > 0) {
@@ -977,7 +1001,7 @@ export class HSAutosingTimerModal {
                 const count = data.times.length;
 
                 html += `
-                    <div style="color: #FF79C6; font-size: 12px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #222; text-align: left;">x${count} ${phaseName}</div>
+                    <div style="color: #FF79C6; font-size: 12px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #222; text-align: left; justify-self: start;"><span style="color: #888; font-size: 10px; margin-right: 2px;">x${count}</span> ${phaseName}</div>
                     <div style="color: #888; font-size: 11px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">x${avgLoops.toFixed(2)}</div>
                     <div style="color: #F1FA8C; font-size: 12px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${avg.toFixed(2)}s</div>
                     <div style="color: #888; font-size: 10px; padding: 2px 4px; text-align: right; border-bottom: 1px solid #222;">${sdStr}</div>

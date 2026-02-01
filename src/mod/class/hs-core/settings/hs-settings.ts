@@ -199,7 +199,6 @@ export class HSSettings extends HSModule {
 
         // Update the setting UI controls with the configured values in hs-settings.json
         for (const [key, settingObj] of Object.typedEntries(HSSettings.#settings)) {
-            HSLogger.debug(`Syncing ${key} settings`, HSSettings.#staticContext);
 
             const setting = settingObj.getDefinition();
             const controlSettings = settingObj.hasControls() ? setting.settingControl : undefined;
