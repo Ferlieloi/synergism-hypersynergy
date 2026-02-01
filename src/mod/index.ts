@@ -136,12 +136,7 @@ declare global {
     ];
 
     const hypersynergism = new Hypersynergism(enabledModules);
-    await hypersynergism.preprocessModules();
-
     window.hypersynergism = hypersynergism;
+
+    await hypersynergism.init();
 })();
-
-
-
-
-

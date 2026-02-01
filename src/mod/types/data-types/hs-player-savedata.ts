@@ -419,7 +419,7 @@ export interface AntSacrificeHistoryEntry {
     seconds: number;
     kind: 'antsacrifice';
     offerings: number;
-    obtainium: number; // Represented as number, potentially large
+    obtainium: number;
     antSacrificePointsBefore: number;
     antSacrificePointsAfter: number;
     baseELO: number;
@@ -459,15 +459,15 @@ export interface SingularityHistoryEntry {
     seconds: number;
     date: number; // Timestamp
     singularityCount: number;
-    quarks: number;        // Represented as number, potentially large
-    c15Score: number;      // Represented as number, potentially large (e+)
-    goldenQuarks: number;  // Represented as number, potentially large
-    wowTribs: number;      // Represented as number, potentially large (e+)
-    tessTribs: number;     // Represented as number, potentially large (e+)
-    hyperTribs: number;    // Represented as number, potentially large (e+)
-    platTribs: number;     // Represented as number, potentially large (e+)
-    octeracts: number;     // Represented as number, potentially large (e+)
-    quarkHept: number;     // Represented as number, potentially large
+    quarks: number;
+    c15Score: number;
+    goldenQuarks: number;
+    wowTribs: number;
+    tessTribs: number;
+    hyperTribs: number;
+    platTribs: number;
+    octeracts: number;
+    quarkHept: number;
     kind: 'singularity';
 }
 
@@ -515,7 +515,7 @@ export interface UpgradeData {
  * Represents data for a specific singularity upgrade.
  */
 export interface SingularityUpgradeData extends UpgradeData {
-    goldenQuarksInvested: number; // Represented as number, potentially large
+    goldenQuarksInvested: number;
 }
 
 /**
@@ -608,7 +608,7 @@ export interface goldenQuarkUpgrades {
  * Represents data for a specific octeract upgrade.
  */
 export interface OcteractUpgradeData extends UpgradeData {
-    octeractsInvested: number; // Represented as number, potentially large (e+)
+    octeractsInvested: number;
 }
 
 /**
@@ -903,27 +903,28 @@ export interface PlayerData {
 
     campaigns: Campaigns;
 
-    researchPoints: number; // Represented as number, potentially large (e+)
-    runeshards: number; // Represented as number, potentially large (e+)
-    maxofferings: number; // Represented as number, potentially large (e+)
-    offeringpersecond: number; // Represented as number, potentially large
+    researchPoints: number;
+    runeshards: number;
+    maxofferings: number;
+    offeringpersecond: number;
     obtainiumtimer: number;
     obtainiumpersecond: number;
     maxobtainiumpersecond: number;
-    maxobtainium: number; // Represented as number, potentially large (e+)
+    maxobtainium: number;
     overfluxOrbs: number;
     overfluxPowder: number;
     dailyPowderResetUses: number;
+    quarks: number;
     quarksThisSingularity: number;
-    totalQuarksEver: number; // Represented as number, potentially large
-    goldenQuarks: number; // Represented as number, potentially large
+    totalQuarksEver: number;
+    goldenQuarks: number;
     wowCubes: number;
     wowTesseracts: number;
     wowHypercubes: number;
     wowPlatonicCubes: number;
     wowAbyssals: number;
-    wowOcteracts: number; // Represented as number, potentially large (e+)
-    totalWowOcteracts: number; // Represented as number, potentially large (e+)
+    wowOcteracts: number;
+    totalWowOcteracts: number;
     ambrosia: number;
     lifetimeAmbrosia: number;
     ambrosiaRNG: number;
@@ -1049,9 +1050,9 @@ export interface PlayerData {
 
     // Runes & Talismans
     runes: Runes;
-    runeexp: number[]; // Represented as number, potentially large (e+)
-    runeBlessingLevels: number[]; // Represented as number, potentially large
-    runeSpiritLevels: number[]; // Represented as number, potentially large
+    runeexp: number[];
+    runeBlessingLevels: number[];
+    runeSpiritLevels: number[];
     talismans: Talismans;
     talismanShards: Decimal;
     commonFragments: Decimal;
@@ -1198,8 +1199,8 @@ export interface PlayerData {
     tesseractbuyamount: number;
     tesseractAutoBuyerToggle: number; // Likely boolean represented as number
     tesseractAutoBuyerAmount: number;
-    runeBlessingBuyAmount: number; // Represented as number, potentially large (e+)
-    runeSpiritBuyAmount: number; // Represented as number, potentially large (e+)
+    runeBlessingBuyAmount: number;
+    runeSpiritBuyAmount: number;
 
     // Codes & Version Loads
     codes: [number, boolean][]; // Array of [codeId, redeemedStatus] tuples
