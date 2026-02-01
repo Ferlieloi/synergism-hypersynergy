@@ -43,7 +43,15 @@ export class Hypersynergism {
 
     // Called from loader
     async init() {
+        // Wait for game to be ready before doing ANYTHING substantial
+        if (!await this.#waitForGameReady()) {
+            HSLogger.warn("Hypersynergism: Game load timed out, attempting init anyway...", this.#context);
+        }
+
         HSLogger.log("Initialising Hypersynergism modules", this.#context);
+
+        // Now that game is ready, we can process modules (which might init immediate modules like HSUI)
+        await this.preprocessModules();
         await this.#moduleManager.initModules();
 
         HSLogger.log("Building UI Panel", this.#context);
@@ -538,5 +546,21 @@ export class Hypersynergism {
                 }
             })
         );
+    }
+
+    async #waitForGameReady(): Promise<boolean> {
+        let attempts = 0;
+        // Wait up to 30 seconds
+        while (attempts < 300) {
+            // Check for key DOM element (buildingstab is usually first to appear)
+            // We used to check for (window as any).player but it seems flaky/unavailable in some contexts
+            // despite the game being ready. The DOM element is a reliable enough proxy.
+            if (document.getElementById('buildingstab')) {
+                return true;
+            }
+            await new Promise(r => setTimeout(r, 100));
+            attempts++;
+        }
+        return false;
     }
 }

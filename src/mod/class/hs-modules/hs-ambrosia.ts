@@ -348,7 +348,7 @@ export class HSAmbrosia extends HSModule
 
         // Check if already exists
         if (this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
-            HSLogger.warn('Minibar wrapper already exists', this.context);
+            HSLogger.debug('Minibar wrapper already exists', this.context);
             return;
         }
 
