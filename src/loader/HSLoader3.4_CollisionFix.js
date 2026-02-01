@@ -178,11 +178,25 @@ if(!window.__HS_EXPOSED){
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
 
+            // CRITICAL: Wait for body to ensure game script doesn't crash on early querySelectors
+            if (!document.body) {
+                log('Waiting for body before injection...');
+                await new Promise(resolve => {
+                    const observer = new MutationObserver(() => {
+                        if (document.body) {
+                            observer.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.documentElement, { childList: true });
+                });
+            }
+
             // UNLOCK DEFINITIONS JUST BEFORE INJECTION
             allowCustomElements = true;
             log('Custom Elements unlocked for patched bundle');
 
-            (document.head || document.documentElement).appendChild(gameScript);
+            (document.body || document.head || document.documentElement).appendChild(gameScript);
             patchedScriptInjected = true;
             log('Game script injected');
 
