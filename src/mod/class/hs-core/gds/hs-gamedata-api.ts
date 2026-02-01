@@ -543,7 +543,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         console.table(this.#calculationCache);
     }
 
-    #investToAmbrosiaUpgrade(
+    investToAmbrosiaUpgrade(
         free: number,
         budget: number,
         costPerLevel: number,
@@ -569,7 +569,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return level;
     }
 
-    #investToRedAmbrosiaUpgrade(
+    investToRedAmbrosiaUpgrade(
         budget: number,
         costPerLevel: number,
         maxLevel: number,
@@ -844,6 +844,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_getPCoinUpgradeEffect(name: keyof typeof PCoinUpgradeEffects): number {
+        debugger;
         const pseudoData = this.getPseudoData?.() ?? this.pseudoData;
         if (!pseudoData) return 0;
 
@@ -4928,7 +4929,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     ) {
         if (!this.gameData) return 0;
         const data = this.gameData;
-        const cacheName = `REDAMB_${upgradeName}` as keyof CalculationCache;
+        const cacheName = `AMB_${upgradeName}` as keyof CalculationCache;
 
         if (!(upgradeName in data.ambrosiaUpgrades)) return 0;
         if (!(upgradeName in this.R_ambrosiaUpgradeCalculationCollection)) return 0;
@@ -4943,7 +4944,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const investmentParameters = ((this.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
 
-        const upgradeValue = this.#investToAmbrosiaUpgrade(
+        const upgradeValue = this.investToAmbrosiaUpgrade(
             investmentParameters.extraLevelCalc(),
             data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
             investmentParameters.costPerLevel,
@@ -5000,7 +5001,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const investmentParameters = ((this.#redAmbrosiaCalculationCollection as any)[upgradeName]) as RedAmbrosiaUpgradeCalculationConfig<any>;
 
-        const upgradeValue = this.#investToRedAmbrosiaUpgrade(
+        const upgradeValue = this.investToRedAmbrosiaUpgrade(
             data.redAmbrosiaUpgrades[upgradeName],
             investmentParameters.costPerLevel,
             investmentParameters.maxLevel,

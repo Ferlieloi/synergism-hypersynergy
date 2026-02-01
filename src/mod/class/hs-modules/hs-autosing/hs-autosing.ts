@@ -35,6 +35,8 @@ const ZERO_CORRUPTIONS: CorruptionLoadout = {
     hyperchallenge: 0,
 };
 
+const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
+
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 
@@ -88,6 +90,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private stopAtSingularitysEnd: boolean = false;
 
     private storedC15: Decimal = new Decimal(0);
+
+    private readonly phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
+    private strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
+    private finalPhaseConfig?: AutosingStrategyPhase;
 
 
 
@@ -279,6 +285,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
+        this.rebuildStrategyPhaseCaches();
+
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
@@ -327,7 +335,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private getPhaseIndex(phase: PhaseOption): number {
-        return phases.indexOf(phase);
+        return this.phaseIndexByOption.get(phase) ?? -1;
     }
 
     private isInChallenge(challengeIndex: number): boolean {
@@ -368,12 +376,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async matchStageToStrategy(stage: string | null): Promise<void> {
         if (!stage || !this.strategy) return;
 
+        if (!this.strategyPhaseRanges) this.rebuildStrategyPhaseCaches();
+
         let phaseConfig: AutosingStrategyPhase | null = null;
         let stageStart: PhaseOption | null = null;
         let stageEnd: PhaseOption | null = null;
 
         if (stage === 'final') {
-            phaseConfig = this.strategy.strategy.find(p => p.endPhase === "end") ?? null;
+            phaseConfig = this.finalPhaseConfig ?? null;
             if (!phaseConfig) {
                 HSLogger.debug("No final phase found in strategy", this.context);
                 return;
@@ -391,15 +401,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        // Find a valid (start, end) phase pair
-        for (const start of phases) {
-            if (!stage.startsWith(`${start}-`)) continue;
+        // Find the unique dash split where both sides are valid PhaseOptions.
+        // This supports stage strings that may contain multiple '-' characters.
+        for (let dashIndex = stage.indexOf('-'); dashIndex !== -1; dashIndex = stage.indexOf('-', dashIndex + 1)) {
+            const startCandidate = stage.slice(0, dashIndex);
+            const endCandidate = stage.slice(dashIndex + 1);
 
-            const possibleEnd = stage.slice(start.length + 1);
-
-            if (this.isPhaseOption(possibleEnd)) {
-                stageStart = start;
-                stageEnd = possibleEnd;
+            if (this.isPhaseOption(startCandidate) && this.isPhaseOption(endCandidate)) {
+                stageStart = startCandidate;
+                stageEnd = endCandidate;
                 break;
             }
         }
@@ -417,20 +427,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        phaseConfig =
-            this.strategy.strategy.find((p: AutosingStrategyPhase) => {
-                const strategyStartIndex = this.getPhaseIndex(p.startPhase);
-                const strategyEndIndex = this.getPhaseIndex(p.endPhase);
-
-                if (strategyStartIndex === -1 || strategyEndIndex === -1) {
-                    return false;
-                }
-
-                return (
-                    stageStartIndex >= strategyStartIndex &&
-                    stageEndIndex <= strategyEndIndex
-                );
-            }) ?? null;
+        const ranges = this.strategyPhaseRanges ?? [];
+        phaseConfig = ranges.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
 
         if (!phaseConfig) {
             HSLogger.debug(`No strategy phase matched for stage ${stage}`, this.context);
@@ -446,7 +444,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private isPhaseOption(value: string): value is PhaseOption {
-        return (phases as readonly string[]).includes(value);
+        return this.phaseIndexByOption.has(value as PhaseOption);
+    }
+
+    private rebuildStrategyPhaseCaches(): void {
+        if (!this.strategy) {
+            this.strategyPhaseRanges = undefined;
+            this.finalPhaseConfig = undefined;
+            return;
+        }
+
+        this.finalPhaseConfig = this.strategy.strategy.find(p => p.endPhase === 'end') ?? undefined;
+        this.strategyPhaseRanges = this.strategy.strategy
+            .map((p) => {
+                const startIndex = this.getPhaseIndex(p.startPhase);
+                const endIndex = this.getPhaseIndex(p.endPhase);
+                return { phase: p, startIndex, endIndex };
+            })
+            .filter((r) => r.startIndex !== -1 && r.endIndex !== -1);
     }
 
     private getChallengeCompletions(challengeNumber: number): Decimal {
@@ -458,6 +473,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         const currentCompletions = this.parseDecimal(chal.innerText.split('/')[0]);
         return currentCompletions;
+    }
+
+    private getStepLabelAndMaxTime(challenge: any): { label: string; maxTime: number | null } {
+        let label = "";
+        let maxTime: number | null = null;
+
+        if (challenge.challengeNumber === 201) {
+            label = "Sync Corruptions";
+        } else if (challenge.challengeNumber === 200) {
+            label = "Jump Logic";
+        } else if (challenge.challengeNumber >= 100) {
+            label = SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? `Action ${challenge.challengeNumber}`;
+        } else {
+            label = `Wait for C${challenge.challengeNumber} x${challenge.challengeCompletions || 0}`;
+            if (challenge.challengeMaxTime) maxTime = challenge.challengeMaxTime;
+        }
+
+        return { label, maxTime };
     }
 
     private async executePhase(phaseConfig: AutosingStrategyPhase): Promise<void> {
@@ -477,21 +510,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             // Report current step to modal
             if (this.timerModal) {
-                let stepLabel = "";
-                let maxTime: number | null = null;
-
-                if (challenge.challengeNumber === 201) {
-                    stepLabel = "Sync Corruptions";
-                } else if (challenge.challengeNumber === 200) {
-                    stepLabel = "Jump Logic";
-                } else if (challenge.challengeNumber >= 100) {
-                    const actionLabel = SPECIAL_ACTIONS.find(a => a.value === challenge.challengeNumber)?.label ?? `Action ${challenge.challengeNumber}`;
-                    stepLabel = actionLabel;
-                } else {
-                    stepLabel = `Wait for C${challenge.challengeNumber} x${challenge.challengeCompletions || 0}`;
-                    if (challenge.challengeMaxTime) maxTime = challenge.challengeMaxTime;
-                }
-                this.timerModal.setCurrentStep(stepLabel, maxTime);
+                const { label, maxTime } = this.getStepLabelAndMaxTime(challenge);
+                this.timerModal.setCurrentStep(label, maxTime);
             }
 
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
@@ -537,7 +557,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
 
-                HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTIONS.find(a => a.value === challenge.challengeNumber)?.label ?? challenge.challengeNumber}`, this.context);
+                HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}` , this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
                     await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
                 }
@@ -909,7 +929,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         startTime = performance.now();
 
-        let maxPossible: Decimal = new Decimal(9999);
+        let maxPossible: Decimal;
 
         if (challengeIndex === 15) {
             maxPossible = new Decimal(Infinity);
@@ -942,9 +962,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                         }
 
                         const c11to14MaxPossibleText = c11to14LevelElement.innerText;
-                        let c11to14MaxPossible = 72;
+
                         const parts = c11to14MaxPossibleText.split('/');
-                        c11to14MaxPossible = this.parseNumber(parts[1].trim());
                         let c11to14CurrentCompletions = this.parseNumber(c11to14LevelElement.innerText.split('/')[0]);
                         while (true) {
                             await HSUtils.sleep(this.sleepTime);
@@ -1031,10 +1050,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.endStageResolve = resolve;
         });
         await this.setCorruptions(ZERO_CORRUPTIONS);
-        const current = HSUtils.getCorruptions("current");
         this.ascendBtn.click();
-        const current2 = HSUtils.getCorruptions("current");
-        await HSUtils.sleep(50);
+        await HSUtils.sleep(30);
         this.antSacrifice.click();
         this.AOAG.click();
 

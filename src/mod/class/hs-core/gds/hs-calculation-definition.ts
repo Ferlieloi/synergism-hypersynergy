@@ -297,7 +297,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Challenge 15 Reward",
-        fnName: "calculateChallenge15Reward",
+        fnName: "R_calculateChallenge15Reward",
         fnParams: [
             {
                 paramName: "rewardName",
@@ -342,7 +342,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Blueberries",
-        fnName: "calculateBlueBerries",
+        fnName: "R_calculateBlueBerries",
         fnParams: [
             {
                 paramName: "reduce_vals",

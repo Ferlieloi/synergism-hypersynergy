@@ -1,5 +1,5 @@
 import { MeData } from "../../../types/data-types/hs-me-data";
-import { PlayerData } from "../../../types/data-types/hs-player-savedata";
+import { AmbrosiaUpgradeData, AmbrosiaUpgrades, PlayerData } from "../../../types/data-types/hs-player-savedata";
 import { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSElementHooker } from "../hs-elementhooker";
@@ -17,6 +17,7 @@ import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
 
 export class HSGameData extends HSModule {
     #saveDataLocalStorageKey = 'Synergysave2';
@@ -28,6 +29,9 @@ export class HSGameData extends HSModule {
     #mitm_atob_data: string | undefined;
     #btoaHacked = false;
     #atobHacked = false;
+
+    #nativeBtoa?: typeof window.btoa;
+    #nativeAtob?: typeof window.atob;
     // Turbo mode
     #turboEnabled = false;
     #manualSaveButton?: HTMLButtonElement;
@@ -263,7 +267,7 @@ export class HSGameData extends HSModule {
         }
     }
 
-    #processSaveDataWithRAF() {
+    #processSaveDataWithRAF = () => {
         if (!this.#turboEnabled) return;
 
         const saveDataB64 = localStorage.getItem(this.#saveDataLocalStorageKey);
@@ -280,10 +284,10 @@ export class HSGameData extends HSModule {
             }
         }
 
-        requestAnimationFrame(this.#processSaveDataWithRAF.bind(this));
+        requestAnimationFrame(this.#processSaveDataWithRAF);
     }
 
-    #processSaveDataWithRAFExperimental() {
+    #processSaveDataWithRAFExperimental = () => {
         if (!this.#turboEnabled) return;
 
         if (this.#mitm_gamedata) {
@@ -296,7 +300,7 @@ export class HSGameData extends HSModule {
             }
         }
 
-        requestAnimationFrame(this.#processSaveDataWithRAFExperimental.bind(this));
+        requestAnimationFrame(this.#processSaveDataWithRAFExperimental);
     }
 
     #maybeStopSniffOnError() {
@@ -381,6 +385,8 @@ export class HSGameData extends HSModule {
         const self = this;
         const _atob = window.atob;
 
+        if (!this.#nativeAtob) this.#nativeAtob = _atob;
+
         window.atob = function (s) {
             const decoded = _atob(s);
             // Quick check for JSON-like structure to capture save data
@@ -401,6 +407,8 @@ export class HSGameData extends HSModule {
 
         // Store ref to native btoa
         const _btoa = window.btoa;
+
+        if (!this.#nativeBtoa) this.#nativeBtoa = _btoa;
 
         // Overwrite btoa
         window.btoa = function (s) {
@@ -494,9 +502,8 @@ export class HSGameData extends HSModule {
                                         totalUpgrades++;
 
                                         // Current level in the save
-                                        // @ts-ignore
-                                        const currentLevelData = currentUpgrades[upgradeKey] as { ambrosiaInvested: number, blueberriesInvested: number } | undefined;
-                                        const totalLevel = currentLevelData ? self.#calculateLevelFromSave(upgradeKey, currentLevelData.ambrosiaInvested, saveData) : 0;
+                                        const currentLevelData = currentUpgrades[upgradeKey as keyof AmbrosiaUpgrades] as AmbrosiaUpgradeData;
+                                        const totalLevel = currentLevelData ? self.#calculateLevelFromSave(upgradeKey as keyof AmbrosiaUpgrades, currentLevelData.ambrosiaInvested, saveData) : 0;
 
                                         if (totalLevel === savedLevel) {
                                             matches++;
@@ -681,6 +688,17 @@ export class HSGameData extends HSModule {
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.turboCSSId);
 
+        // Restore native atob/btoa if we previously patched them
+        if (this.#nativeAtob && window.atob !== this.#nativeAtob) {
+            window.atob = this.#nativeAtob;
+            this.#atobHacked = false;
+        }
+
+        if (this.#nativeBtoa && window.btoa !== this.#nativeBtoa) {
+            window.btoa = this.#nativeBtoa;
+            this.#btoaHacked = false;
+        }
+
         if (!this.#singularityButton)
             this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
 
@@ -797,62 +815,20 @@ export class HSGameData extends HSModule {
         }
     }
 
-    #calculateLevelFromSave(upgradeKey: string, invested: number, saveData: PlayerData): number {
+    #calculateLevelFromSave(upgradeName: keyof AmbrosiaUpgrades, invested: number, saveData: PlayerData): number {
         if (!this.#gameDataAPI) return 0;
 
-        const collection = this.#gameDataAPI.R_ambrosiaUpgradeCalculationCollection;
-        // @ts-ignore
-        const config = collection[upgradeKey];
-        if (!config) return 0;
+        const investmentParameters = ((this.#gameDataAPI.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
+        if (!investmentParameters) return 0;
 
-        let level = 0;
-        let budget = invested;
-        let nextCost = config.costFunction(level, config.costPerLevel);
-
-        while (budget >= nextCost && level < config.maxLevel) {
-            budget -= nextCost;
-            level++;
-            nextCost = config.costFunction(level, config.costPerLevel);
-        }
-
-        let freeLevels = 0;
-        if (config.extraLevelCalc) {
-            const row2 = ['ambrosiaQuarks1', 'ambrosiaCubes1', 'ambrosiaLuck1'];
-            const row3 = ['ambrosiaQuarkCube1', 'ambrosiaLuckCube1', 'ambrosiaCubeQuark1', 'ambrosiaLuckQuark1', 'ambrosiaCubeLuck1', 'ambrosiaQuarkLuck1'];
-            const row4 = ['ambrosiaQuarks2', 'ambrosiaCubes2', 'ambrosiaLuck2'];
-            const row5 = ['ambrosiaQuarks3', 'ambrosiaCubes3', 'ambrosiaLuck3', 'ambrosiaLuck4'];
-
-            let redUpgradeKey = '';
-            if (upgradeKey === 'ambrosiaTutorial') redUpgradeKey = 'freeTutorialLevels';
-            else if (row2.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow2';
-            else if (row3.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow3';
-            else if (row4.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow4';
-            else if (row5.includes(upgradeKey)) redUpgradeKey = 'freeLevelsRow5';
-
-            if (redUpgradeKey) {
-                const redInvested = (saveData.ambrosiaUpgrades[redUpgradeKey as keyof typeof saveData.ambrosiaUpgrades] as any)?.ambrosiaInvested ?? 0;
-                freeLevels = this.#calculateRedLevelFromSave(redUpgradeKey, redInvested);
-            }
-        }
-
-        return level + freeLevels;
-    }
-
-    #calculateRedLevelFromSave(upgradeKey: string, invested: number): number {
-        if (!this.#gameDataAPI) return 0;
-        const collection = this.#gameDataAPI.R_redAmbrosiaUpgradeCalculationCollection;
-        // @ts-ignore
-        const config = collection[upgradeKey];
-        if (!config) return 0;
-
-        let level = 0;
-        let budget = invested;
-        let nextCost = config.costFunction(level, config.costPerLevel);
-        while (budget >= nextCost && level < config.maxLevel) {
-            budget -= nextCost;
-            level++;
-            nextCost = config.costFunction(level, config.costPerLevel);
-        }
+        // Calculate purchased levels only; free levels are handled separately below.
+        const level = this.#gameDataAPI.investToAmbrosiaUpgrade(
+            investmentParameters.extraLevelCalc(),
+            invested,
+            investmentParameters.costPerLevel,
+            investmentParameters.maxLevel,
+            investmentParameters.costFunction
+        );
         return level;
     }
 }
