@@ -634,8 +634,10 @@ export class HSAmbrosia extends HSModule
 
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
 
-        if (loadoutStateSetting && !this.#currentLoadout) {
-            this.#currentLoadout = HSUtils.removeColorTags(loadoutStateSetting.getValue()) as AMBROSIA_LOADOUT_SLOT;
+        if (loadoutStateSetting) {
+            if (!this.#currentLoadout) {
+                this.#currentLoadout = HSUtils.removeColorTags(loadoutStateSetting.getValue()) as AMBROSIA_LOADOUT_SLOT;
+            }
         } else {
             HSLogger.warn(`loadState - Could not find autoLoadoutState setting`, this.context);
         }

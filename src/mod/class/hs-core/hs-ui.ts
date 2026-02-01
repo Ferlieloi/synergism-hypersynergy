@@ -393,8 +393,6 @@ export class HSUI extends HSModule {
             }
 
             this.updateInjectedStyleBlock();
-
-            HSLogger.debug(`Injected new CSS`, this.#staticContext);
         }
     }
 
@@ -433,7 +431,7 @@ export class HSUI extends HSModule {
                 HSUI.#injectedStylesHolder!.innerHTML += style;
             });
 
-            HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} injected styles to DOM`, HSUI.#staticContext);
+            HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
         }, 0);
     }
 
