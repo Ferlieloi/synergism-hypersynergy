@@ -1051,7 +1051,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletions)) {
                 // Special handling for C10 when C11-14 are active
-                /*
+
                 if (challengeIndex === 10) {
                     const activeC11to14 = this.getActiveC11to14Challenge();
                     if (activeC11to14 !== null) {
@@ -1086,8 +1086,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     } else {
                         return Promise.resolve();
                     }
-                } */
-                if (currentCompletions.gte(minCompletions)) {
+                } else if (currentCompletions.gte(minCompletions)) {
                     if (waitTime > 0) {
                         await HSUtils.sleep(waitTime);
                     }
@@ -1156,9 +1155,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.endStagePromise = new Promise<void>(resolve => {
             this.endStageResolve = resolve;
         });
+        this.exitAscBtn.click();
         await this.setCorruptions(ZERO_CORRUPTIONS);
         this.ascendBtn.click();
-        await HSUtils.sleep(30);
+        await HSUtils.sleep(50);
         this.antSacrifice.click();
         this.AOAG.click();
 
