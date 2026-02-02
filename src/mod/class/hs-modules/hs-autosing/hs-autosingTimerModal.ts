@@ -139,6 +139,7 @@ export class HSAutosingTimerModal {
     private footerVersionSpan: HTMLElement | null = null;
     private footerStrategySpan: HTMLElement | null = null;
     private footerLoadoutsSpan: HTMLElement | null = null;
+    private resizeHandleElem: HTMLElement | null = null;
 
     // Render batching / change tracking
     private renderPending: boolean = false;
@@ -153,6 +154,12 @@ export class HSAutosingTimerModal {
     private lastRenderedSparklineVersion: number = -1;
     private detailsVisibilityVersion: number = 0;
     private lastRenderedDetailsVisibilityVersion: number = -1;
+
+    // Auto-resize / graph sizing
+    private autoResized: boolean = false;
+    private computedMaxWidth: number | null = null; // px
+    private computedMaxHeight: number | null = null; // px
+    private computedGraphWidth: number | null = null; // px
 
     constructor() {
         this.createTimerDisplay();
@@ -415,6 +422,7 @@ export class HSAutosingTimerModal {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'hs-resize-handle';
         resizeHandle.onmousedown = (e) => this.startResize(e);
+        this.resizeHandleElem = resizeHandle;
 
         /* ---------- ASSEMBLE ---------- */
         this.timerDisplay.appendChild(this.timerHeader);
@@ -510,6 +518,54 @@ export class HSAutosingTimerModal {
         window.addEventListener('mouseup', this.onMouseUpHandler);
     }
 
+    /**
+     * Apply a fixed modal size on first open (no text measuring).
+     * Also sets a fixed graph SVG width so the right-side labels remain visible.
+     */
+    private computeAndApplyAutoWidth(): void {
+        if (!this.timerDisplay || this.autoResized) return;
+
+        // Hard-coded defaults (adjust as desired)
+        const FIXED_WIDTH = 350; // px
+        const FIXED_HEIGHT = 650; // px
+
+        // Sparkline SVG width: leave space for the label column on the right.
+        // (Sparkline row is flex: [svg][labels])
+        const FIXED_GRAPH_WIDTH = 400; // px
+        const LABELS_ESTIMATE = 92; // px; right-side label column width
+
+        // Respect viewport so the modal doesn't go off-screen by default.
+        // NOTE: do not force a minimum larger than the fixed width.
+        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 40));
+        const appliedHeight = Math.max(240, Math.min(FIXED_HEIGHT, window.innerHeight - 40));
+
+        this.computedMaxWidth = appliedWidth;
+        this.computedMaxHeight = appliedHeight + 250;
+        // Graph (SVG) width must fit inside the modal next to the label column.
+        this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
+
+        // Lock max width to this value
+        this.timerDisplay.style.maxWidth = `${this.computedMaxWidth}px`;
+        this.timerDisplay.style.maxHeight = `${this.computedMaxHeight}px`;
+        this.timerDisplay.style.width = `${this.computedMaxWidth}px`;
+        this.timerDisplay.style.height = `${appliedHeight}px`;
+
+        if (this.sparklineContainer1) {
+            this.sparklineContainer1.style.width = `${appliedWidth}px`;
+            this.sparklineContainer1.style.maxWidth = `${appliedWidth}px`;
+        }
+        if (this.sparklineContainer2) {
+            this.sparklineContainer2.style.width = `${appliedWidth}px`;
+            this.sparklineContainer2.style.maxWidth = `${appliedWidth}px`;
+        }
+        if (this.sparklineContainer3) {
+            this.sparklineContainer3.style.width = `${appliedWidth}px`;
+            this.sparklineContainer3.style.maxWidth = `${appliedWidth}px`;
+        }
+
+        this.autoResized = true;
+    }
+
     private onMouseMove(e: MouseEvent): void {
         if (this.isDragging) {
             this.drag(e);
@@ -534,8 +590,12 @@ export class HSAutosingTimerModal {
     private drag(e: MouseEvent): void {
         if (!this.timerDisplay || !this.isDragging) return;
 
-        const x = e.clientX - this.dragOffset.x;
-        const y = e.clientY - this.dragOffset.y;
+        const rect = this.timerDisplay.getBoundingClientRect();
+        const maxX = Math.max(0, window.innerWidth - rect.width);
+        const maxY = Math.max(0, window.innerHeight - rect.height);
+
+        const x = Math.min(Math.max(0, e.clientX - this.dragOffset.x), maxX);
+        const y = Math.min(Math.max(0, e.clientY - this.dragOffset.y), maxY);
 
         this.timerDisplay.style.left = `${x}px`;
         this.timerDisplay.style.top = `${y}px`;
@@ -545,6 +605,7 @@ export class HSAutosingTimerModal {
 
     private startResize(e: MouseEvent): void {
         if (!this.timerDisplay) return;
+        if (this.isMinimized) return;
         e.preventDefault();
         this.isResizing = true;
         const rect = this.timerDisplay.getBoundingClientRect();
@@ -565,7 +626,11 @@ export class HSAutosingTimerModal {
         const newWidth = Math.max(200, this.resizeStart.width + deltaX);
         const newHeight = Math.max(100, this.resizeStart.height + deltaY);
 
-        this.timerDisplay.style.width = `${newWidth}px`;
+        // Clamp width to computed max if present (locks max width)
+        const maxW = this.computedMaxWidth || Infinity;
+        const finalWidth = Math.min(newWidth, maxW);
+
+        this.timerDisplay.style.width = `${finalWidth}px`;
         this.timerDisplay.style.height = `${newHeight}px`;
     }
 
@@ -580,6 +645,7 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'none';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'none';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'none';
+            if (this.resizeHandleElem) this.resizeHandleElem.style.display = 'none';
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
             this.timerContent.style.display = 'block';
@@ -587,6 +653,7 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'block';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'block';
+            if (this.resizeHandleElem) this.resizeHandleElem.style.display = '';
             if (this.minimizeBtn) this.minimizeBtn.textContent = '−';
             this.updateDisplay();
         }
@@ -733,6 +800,29 @@ export class HSAutosingTimerModal {
         const now = performance.now();
         // `timestamps[0]` is the session start time.
         const singularityDuration = (now - this.timestamps[this.timestamps.length - 1]) / 1000;
+
+        // If autosing starts and a singularity immediately fires, treat it as
+        // a session-start marker and do NOT count it in the statistics.
+        // Detect: only the seeded start timestamp exists and the event is very
+        // close to start (<= 1s). In that case reset the session origin to now
+        // and update baseline totals without recording gains/rates.
+        const isInitialImmediate = this.timestamps.length === 1 && (now - this.startTime) <= 1000;
+        if (isInitialImmediate) {
+            // Reset session origin to avoid counting the initial instant singularity
+            this.startTime = now;
+            this.timestamps = [now];
+
+            // Update latest totals baseline but do not push gains or update cumulative stats
+            this.latestGoldenQuarksTotal = currentGoldenQuarks;
+            this.latestQuarksTotal = currentQuarks;
+            this.quarksHistory.push(this.latestQuarksTotal);
+            this.goldenQuarksHistory.push(this.latestGoldenQuarksTotal);
+
+            // Restart live timer from this moment and refresh general UI
+            this.startLiveTimer();
+            this.requestRender({ general: true, exportBtn: true });
+            return;
+        }
 
         this.timestamps.push(now);
 
@@ -1158,14 +1248,16 @@ export class HSAutosingTimerModal {
 
             // Quarks
             if (this.quarksAmounts.length >= 2) {
-                const spark1 = this.generateSparklineMetadata(this.quarksAmounts, 230, 30);
+                const gw = this.computedGraphWidth || 230;
+                const spark1 = this.generateSparklineMetadata(this.quarksAmounts, gw, 30);
+                const markerX = Math.max(0, gw - 4);
                 if (this.sparklineContainer1) {
                     this.sparklineContainer1.innerHTML = `
-                        <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark1.avgY}" x2="230" y2="${spark1.avgY}" stroke="#00BCD4" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                        <svg width="${gw}" height="30" style="display: block; overflow: visible;">
+                            <line x1="0" y1="${spark1.avgY}" x2="${gw}" y2="${spark1.avgY}" stroke="#00BCD4" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
                             <polyline fill="none" stroke="#00BCD4" stroke-width="1" stroke-opacity="0.7" points="${spark1.points}" />
-                            <line x1="226" y1="${spark1.maxY}" x2="230" y2="${spark1.maxY}" stroke="#00BCD4" stroke-width="1" />
-                            <line x1="226" y1="${spark1.minY}" x2="230" y2="${spark1.minY}" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark1.maxY}" x2="${gw}" y2="${spark1.maxY}" stroke="#00BCD4" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark1.minY}" x2="${gw}" y2="${spark1.minY}" stroke="#00BCD4" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">+${this.formatNumber(spark1.max)}</span>
@@ -1178,14 +1270,16 @@ export class HSAutosingTimerModal {
 
             // Golden Quarks
             if (this.goldenQuarksAmounts.length >= 2) {
-                const spark2 = this.generateSparklineMetadata(this.goldenQuarksAmounts, 230, 30);
+                const gw = this.computedGraphWidth || 230;
+                const spark2 = this.generateSparklineMetadata(this.goldenQuarksAmounts, gw, 30);
+                const markerX = Math.max(0, gw - 4);
                 if (this.sparklineContainer2) {
                     this.sparklineContainer2.innerHTML = `
-                        <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark2.avgY}" x2="230" y2="${spark2.avgY}" stroke="#F1FA8C" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                        <svg width="${gw}" height="30" style="display: block; overflow: visible;">
+                            <line x1="0" y1="${spark2.avgY}" x2="${gw}" y2="${spark2.avgY}" stroke="#F1FA8C" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
                             <polyline fill="none" stroke="#F1FA8C" stroke-width="1" stroke-opacity="0.7" points="${spark2.points}" />
-                            <line x1="226" y1="${spark2.maxY}" x2="230" y2="${spark2.maxY}" stroke="#F1FA8C" stroke-width="1" />
-                            <line x1="226" y1="${spark2.minY}" x2="230" y2="${spark2.minY}" stroke="#F1FA8C" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark2.maxY}" x2="${gw}" y2="${spark2.maxY}" stroke="#F1FA8C" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark2.minY}" x2="${gw}" y2="${spark2.minY}" stroke="#F1FA8C" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">+${this.formatNumber(spark2.max)}</span>
@@ -1198,14 +1292,16 @@ export class HSAutosingTimerModal {
 
             // Times
             if (this.durationsHistory.length >= 2) {
-                const spark3 = this.generateSparklineMetadata(this.durationsHistory, 230, 30);
+                const gw = this.computedGraphWidth || 230;
+                const spark3 = this.generateSparklineMetadata(this.durationsHistory, gw, 30);
+                const markerX = Math.max(0, gw - 4);
                 if (this.sparklineContainer3) {
                     this.sparklineContainer3.innerHTML = `
-                        <svg width="230" height="30" style="display: block; overflow: visible;">
-                            <line x1="0" y1="${spark3.avgY}" x2="230" y2="${spark3.avgY}" stroke="#FF8A80" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
+                        <svg width="${gw}" height="30" style="display: block; overflow: visible;">
+                            <line x1="0" y1="${spark3.avgY}" x2="${gw}" y2="${spark3.avgY}" stroke="#FF8A80" stroke-opacity="0.9" stroke-width="1" stroke-dasharray="4, 2" />
                             <polyline fill="none" stroke="#FF8A80" stroke-width="1" stroke-opacity="0.8" points="${spark3.points}" />
-                            <line x1="226" y1="${spark3.maxY}" x2="230" y2="${spark3.maxY}" stroke="#FF8A80" stroke-width="1" />
-                            <line x1="226" y1="${spark3.minY}" x2="230" y2="${spark3.minY}" stroke="#FF8A80" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark3.maxY}" x2="${gw}" y2="${spark3.maxY}" stroke="#FF8A80" stroke-width="1" />
+                            <line x1="${markerX}" y1="${spark3.minY}" x2="${gw}" y2="${spark3.minY}" stroke="#FF8A80" stroke-width="1" />
                         </svg>
                         <div class="hs-sparkline-labels">
                             <span class="hs-sparkline-muted">${spark3.max.toFixed(2)}s</span>
@@ -1248,6 +1344,10 @@ export class HSAutosingTimerModal {
 
     public show(): void {
         if (this.timerDisplay) {
+            // On first open, compute and apply an appropriate width so that
+            // every strategy phase fits on a single line and graphs match.
+            if (!this.autoResized) this.computeAndApplyAutoWidth();
+
             this.timerDisplay.style.display = 'block';
         }
     }

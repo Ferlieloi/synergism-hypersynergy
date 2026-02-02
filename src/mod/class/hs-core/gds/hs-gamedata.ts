@@ -688,17 +688,6 @@ export class HSGameData extends HSModule {
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.turboCSSId);
 
-        // Restore native atob/btoa if we previously patched them
-        if (this.#nativeAtob && window.atob !== this.#nativeAtob) {
-            window.atob = this.#nativeAtob;
-            this.#atobHacked = false;
-        }
-
-        if (this.#nativeBtoa && window.btoa !== this.#nativeBtoa) {
-            window.btoa = this.#nativeBtoa;
-            this.#btoaHacked = false;
-        }
-
         if (!this.#singularityButton)
             this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
 
@@ -823,7 +812,7 @@ export class HSGameData extends HSModule {
 
         // Calculate purchased levels only; free levels are handled separately below.
         const level = this.#gameDataAPI.investToAmbrosiaUpgrade(
-            investmentParameters.extraLevelCalc(),
+            0,
             invested,
             investmentParameters.costPerLevel,
             investmentParameters.maxLevel,

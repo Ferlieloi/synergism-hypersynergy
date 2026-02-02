@@ -37,7 +37,7 @@
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Log once per unique nAame to avoid spam, but BLOCK IT.
+            // Log once per unique name to avoid spam, but BLOCK IT.
             // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
             // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
             if (!customElements.get(name)) {
