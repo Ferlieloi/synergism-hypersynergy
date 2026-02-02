@@ -1,5 +1,5 @@
-javascript:(function() {
-    if('hypersynergism' in window) {
+javascript: (function () {
+    if ('hypersynergism' in window) {
         alert('Hypersynergism is already loaded on the page, please refresh if you want to reload the mod');
         return;
     };
@@ -8,12 +8,12 @@ javascript:(function() {
     const script = document.createElement('script');
     script.src = scriptSrc;
 
-    script.onload = function() {
+    script.onload = function () {
         console.log('[HSMain] Script loaded successfully!');
         window.hypersynergism.init();
     };
 
-    script.onerror = function() {
+    script.onerror = function () {
         console.error('[HSMain] Failed to load the mod!');
     };
 

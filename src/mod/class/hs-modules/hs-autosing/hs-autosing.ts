@@ -13,6 +13,7 @@ import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionL
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
+import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 
 /*
     Class: HSAutosing
@@ -80,6 +81,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private endStagePromise?: Promise<void>;
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
+    private gamestate!: HSGameState;
 
     // Cached DOM Elements
     private corrCurrent: Record<string, HTMLElement | null> = {};
@@ -138,6 +140,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
         this.exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
         this.antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
+        this.gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
 
         // Cache elements for corruptions and codes
         this.corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
@@ -678,9 +681,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
-        const maxAttempts = 50; // 50 * 20ms = 1 second max
-        let attempts = 0;
-        while (attempts < maxAttempts && !this.isInAmbLoadout(loadout)) {
+        while (!this.isInAmbLoadout(loadout)) {
             loadout.click();
 
             // Check immediately after click
@@ -690,11 +691,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             // Only sleep if not yet loaded
             await HSUtils.sleep(this.sleepTime);
-            attempts++;
-        }
-
-        if (!this.isInAmbLoadout(loadout)) {
-            HSLogger.debug("Warning: Failed to set ambrosia loadout after max attempts", this.context);
         }
     }
 
@@ -733,9 +729,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const targetDilation = corruptions.dilation;
         const targetHyperchallenge = corruptions.hyperchallenge;
 
-        const maxAttempts = 10;
-        let attempts = 0;
-        while (attempts < maxAttempts) {
+        while (true) {
             this.importBtn.click();
             this.corruptionPromptInput.value = jsonString;
             await HSUtils.click(this.corruptionPromptOkBtn);
@@ -754,12 +748,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 HSLogger.debug(`Corruptions set successfully: ${this.stringifyCorruptions(corruptions)}`, this.context);
                 break;
             }
-            attempts++;
             await HSUtils.sleep(this.sleepTime);
-        }
-
-        if (attempts >= maxAttempts) {
-            HSLogger.debug(`Warning: Failed to set corruptions after ${maxAttempts} attempts`, this.context);
         }
         this.prevActionTime = performance.now();
     }
@@ -868,28 +857,25 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     /**
      * Handles the complex animation of entering and leaving an Exaltation challenge.
-     * Includes a safety 'maxAttempts' to prevent infinite loops if the game fails to react.
      */
     private async enterAndLeaveExalt(): Promise<void> {
+        const prevMainView = this.gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+
         const isInChallenge = () => {
             const style = window.getComputedStyle(this.exaltTimer);
             return style.display !== "none";
         };
         // Enter the challenge
-        let attempts = 0;
-        const maxAttempts = 50;
-        while (!isInChallenge() && attempts < maxAttempts) {
+        while (!isInChallenge()) {
             await HSUtils.click(this.exalt2Btn);
             await HSUtils.sleep(this.sleepTime);
-            attempts++;
         }
         // Leave the challenge
-        attempts = 0;
-        while (isInChallenge() && attempts < maxAttempts) {
+        while (isInChallenge()) {
             await HSUtils.click(this.exalt2Btn);
             await HSUtils.sleep(this.sleepTime);
-            attempts++;
         }
+        prevMainView.goto();
     }
 
     private async getCurrentGoldenQuarks(): Promise<number> {
@@ -1043,9 +1029,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
                         const parts = c11to14MaxPossibleText.split('/');
                         let c11to14CurrentCompletions = this.parseNumber(c11to14LevelElement.innerText.split('/')[0]);
-                        let attempts = 0;
-                        const maxAttempts = 500; // 5 seconds max wait for C10 cascade
-                        while (attempts < maxAttempts) {
+                        while (true) {
                             await HSUtils.sleep(this.sleepTime);
                             const c11to14CurrentCompletions2 = this.parseNumber(
                                 c11to14LevelElement.innerText.split('/')[0]
@@ -1056,7 +1040,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                             }
 
                             c11to14CurrentCompletions = c11to14CurrentCompletions2;
-                            attempts++;
                         }
                         return Promise.resolve();
                     } else {

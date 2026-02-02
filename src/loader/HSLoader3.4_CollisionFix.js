@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         HSLoader3.4_CollisionFix
+// @name         HSLoader3.4
 // @namespace    https://github.com/Ferlieloi
 // @version      3.4
 // @description  Expose game functions and load Hypersynergism mod safely (Chrome Collision Fix)
@@ -77,8 +77,9 @@
     };
 
     // Firefox-specific: Use beforescriptexecute event
+    let beforeScriptExecute;
     if (isFirefox) {
-        document.addEventListener('beforescriptexecute', function (e) {
+        beforeScriptExecute = function (e) {
             const script = e.target;
             const src = script.src || '';
 
@@ -93,7 +94,9 @@
                     setTimeout(injectPatchedBundle, 0);
                 }
             }
-        }, true);
+        };
+
+        document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
     // MutationObserver for Chrome and fallback
@@ -197,6 +200,18 @@ if(!window.__HS_EXPOSED){
             log('Custom Elements unlocked for patched bundle');
 
             (document.body || document.head || document.documentElement).appendChild(gameScript);
+            try {
+                mo.disconnect();
+                log('MutationObserver disconnected');
+            } catch { }
+
+            if (isFirefox && beforeScriptExecute) {
+                document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
+                log('beforescriptexecute listener removed');
+            }
+            customElements.define = origDefine;
+            log('customElements.define restored');
+
             patchedScriptInjected = true;
             log('Game script injected');
 
