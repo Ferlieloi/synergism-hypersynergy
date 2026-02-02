@@ -1399,6 +1399,92 @@ a.hs-link {
     text-align: left;
 }
 
+/* Additional styles previously provided inline in the timer modal */
+#hs-autosing-timer-display .hs-timer-controls {
+    display: flex;
+    align-items: center;
+}
+
+#hs-autosing-timer-display #hs-sing-val {
+    color: #ffffff;
+    font-weight: normal;
+    margin-left: 8px;
+}
+
+#hs-autosing-timer-display #hs-progress-val {
+    color: #00E676;
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-autosing-timer-display #hs-phase-name-val {
+    color: #B33A3A;
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-autosing-timer-display #hs-phase-timer-val {
+    color: #FF8A80;
+    margin-left: 4px;
+}
+
+#hs-autosing-timer-display #hs-step-name-val {
+    margin-left: 6px;
+}
+
+#hs-autosing-timer-display #hs-step-timer-val {
+    margin-left: 4px;
+    color: #FF8A80;
+}
+
+#hs-autosing-timer-display #hs-live-timer-val,
+#hs-autosing-timer-display #hs-avg-1,
+#hs-autosing-timer-display #hs-avg-10,
+#hs-autosing-timer-display #hs-avg-50,
+#hs-autosing-timer-display #hs-avg-all {
+    color: #FF8A80;
+    font-weight: bold;
+}
+
+#hs-autosing-timer-display #hs-avg-all-count {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+#hs-autosing-timer-display #hs-quarks-total,
+#hs-autosing-timer-display #hs-quarks-rate-val {
+    color: #00BCD4;
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-autosing-timer-display #hs-quarks-prev,
+#hs-autosing-timer-display #hs-quarks-rate-val-hr,
+#hs-autosing-timer-display #hs-gquarks-prev,
+#hs-autosing-timer-display #hs-gquarks-rate-val-hr {
+    color: #666;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+#hs-autosing-timer-display #hs-gquarks-total,
+#hs-autosing-timer-display #hs-gquarks-rate-val {
+    color: #F1FA8C;
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-autosing-timer-display .hs-footer-loadouts {
+    white-space: pre-wrap;
+    margin-top: 2px;
+}
+
+#hs-autosing-timer-display .hs-footer-info {
+    border-bottom: none;
+    opacity: 0.7;
+    padding-top: 0;
+}
+
 #hs-autosing-timer-display .hs-sparkline-row {
     display: flex;
     align-items: center;
@@ -1514,6 +1600,86 @@ a.hs-link {
     align-items: center;
     justify-items: end;
     margin-top: 8px;
+}
+
+/* Timer: singularity header structure */
+#hs-autosing-timer-display #hs-sing-target {
+    color: #bcb9b9;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#hs-autosing-timer-display #hs-sing-highest {
+    color: #bcb9b9;
+}
+
+/* Timer: averages (sigma) */
+#hs-autosing-timer-display .hs-avg-sd {
+    color: #888;
+    font-size: 10px;
+}
+
+/* Timer: phase statistics header + cells */
+#hs-autosing-timer-display .hs-phase-header {
+    color: #888;
+    font-size: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    justify-self: stretch;
+}
+
+#hs-autosing-timer-display .hs-phase-empty {
+    color: #666;
+    font-style: italic;
+    font-size: 12px;
+    grid-column: span 5;
+    justify-self: start;
+}
+
+#hs-autosing-timer-display .hs-phase-name {
+    color: #B33A3A;
+    font-size: 12px;
+    padding: 2px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid #222;
+    text-align: left;
+    justify-self: start;
+}
+
+#hs-autosing-timer-display .hs-phase-count {
+    color: #888;
+    font-size: 10px;
+    margin-right: 2px;
+}
+
+#hs-autosing-timer-display .hs-phase-loops {
+    color: #888;
+    font-size: 11px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
+}
+
+#hs-autosing-timer-display .hs-phase-avg,
+#hs-autosing-timer-display .hs-phase-last {
+    color: #FF8A80;
+    font-size: 12px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
+}
+
+#hs-autosing-timer-display .hs-phase-sd {
+    color: #888;
+    font-size: 10px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
 }
 
 #hs-autosing-timer-display .hs-stats-row {

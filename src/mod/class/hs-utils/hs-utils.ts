@@ -508,32 +508,48 @@ export class HSUtils {
             return;
         }
 
+        let confirmWrapper: HTMLElement | null = null;
+        let alertWrapper: HTMLElement | null = null;
+        let promptWrapper: HTMLElement | null = null;
+        let okConfirm: HTMLButtonElement | null = null;
+        let okAlert: HTMLButtonElement | null = null;
+        let okPrompt: HTMLButtonElement | null = null;
+
         this.#dialogWatcherInterval = window.setInterval(() => {
             // Check for confirm dialog
-            const confirmWrapper = document.getElementById('confirmWrapper');
+            if (!confirmWrapper || !confirmWrapper.isConnected) {
+                confirmWrapper = document.getElementById('confirmWrapper');
+            }
             if (confirmWrapper && confirmWrapper.style.display === 'block') {
-                const okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                if (!okConfirm || !okConfirm.isConnected) {
+                    okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                }
                 if (okConfirm) {
                     okConfirm.click();
-                    HSLogger.debug('Auto-clicked ok_confirm');
                 }
             }
 
             // Check for alert dialog
-            const alertWrapper = document.getElementById('alertWrapper');
+            if (!alertWrapper || !alertWrapper.isConnected) {
+                alertWrapper = document.getElementById('alertWrapper');
+            }
             if (alertWrapper && alertWrapper.style.display === 'block') {
-                const okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                if (!okAlert || !okAlert.isConnected) {
+                    okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                }
                 if (okAlert) {
                     okAlert.click();
-                    HSLogger.debug('Auto-clicked ok_alert');
                 }
             }
-            const promptWrapper = document.getElementById("promptWrapper");
+            if (!promptWrapper || !promptWrapper.isConnected) {
+                promptWrapper = document.getElementById("promptWrapper");
+            }
             if (promptWrapper && promptWrapper.style.display === "block") {
-                const okPrompt = document.getElementById('ok_prompt') as HTMLButtonElement;
+                if (!okPrompt || !okPrompt.isConnected) {
+                    okPrompt = document.getElementById('ok_prompt') as HTMLButtonElement;
+                }
                 if (okPrompt) {
                     okPrompt.click();
-                    HSLogger.debug('Auto-clicked ok_prompt');
                 }
             }
 
@@ -545,27 +561,38 @@ export class HSUtils {
             let emptyLoopCount = 0;
             const maxEmptyLoops = 3; // Wait for 3 consecutive empty loops before stopping
 
+            let confirmWrapper: HTMLElement | null = null;
+            let alertWrapper: HTMLElement | null = null;
+            let okConfirm: HTMLButtonElement | null = null;
+            let okAlert: HTMLButtonElement | null = null;
+
             const shutdownInterval = window.setInterval(() => {
                 let foundDialog = false;
 
                 // Check for confirm dialog
-                const confirmWrapper = document.getElementById('confirmWrapper');
+                if (!confirmWrapper || !confirmWrapper.isConnected) {
+                    confirmWrapper = document.getElementById('confirmWrapper');
+                }
                 if (confirmWrapper && confirmWrapper.style.display === 'block') {
-                    const okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                    if (!okConfirm || !okConfirm.isConnected) {
+                        okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
+                    }
                     if (okConfirm) {
                         okConfirm.click();
-                        HSLogger.debug('Auto-clicked ok_confirm during shutdown');
                         foundDialog = true;
                     }
                 }
 
                 // Check for alert dialog
-                const alertWrapper = document.getElementById('alertWrapper');
+                if (!alertWrapper || !alertWrapper.isConnected) {
+                    alertWrapper = document.getElementById('alertWrapper');
+                }
                 if (alertWrapper && alertWrapper.style.display === 'block') {
-                    const okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                    if (!okAlert || !okAlert.isConnected) {
+                        okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
+                    }
                     if (okAlert) {
                         okAlert.click();
-                        HSLogger.debug('Auto-clicked ok_alert during shutdown');
                         foundDialog = true;
                     }
                 }

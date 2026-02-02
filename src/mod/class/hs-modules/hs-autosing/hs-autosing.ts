@@ -12,9 +12,7 @@ import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
-import { HSGameState, MainView, SingularityView } from "../../hs-core/hs-gamestate";
 import { HSGlobal } from "../../hs-core/hs-global";
-import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 /*
     Class: HSAutosing
@@ -46,15 +44,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private strategy?: HSAutosingStrategy;
     private autosingEnabled = false;
+    private advancedDataCollectionEnabledAtStart: boolean = false;
     private targetSingularity = 0;
     private sleepTime = 10;
-    private buildingsTab!: HTMLButtonElement;
-    private challengeTab!: HTMLButtonElement;
     private settingsTab!: HTMLButtonElement;
     private settingsSubTab!: HTMLButtonElement;
     private misc!: HTMLButtonElement;
     private stage!: HTMLParagraphElement;
-    private singularityTab!: HTMLButtonElement;
     private challengeButtons: Record<number, HTMLButtonElement> = {};
     private levelElements: Record<number, HTMLParagraphElement> = {};
     private exitTranscBtn!: HTMLButtonElement;
@@ -63,7 +59,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ascendBtn!: HTMLButtonElement;
     private elevatorTeleportButton!: HTMLButtonElement;
     private elevatorInput!: HTMLInputElement;
-    private coinsElement!: HTMLDivElement;
     private autoChallengeButton!: HTMLButtonElement;
     private ambrosia_early_cube!: HTMLButtonElement;
     private ambrosia_late_cube!: HTMLButtonElement;
@@ -74,7 +69,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private antSacrifice!: HTMLButtonElement;
     private coin!: HTMLButtonElement;
     private timerModal!: HSAutosingTimerModal;
-    private singTab2!: HTMLButtonElement;
     private prevActionTime: number = 0;
     private AOAG!: HTMLButtonElement;
     private endStageDone: boolean = false;
@@ -82,8 +76,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private importBtn!: HTMLButtonElement;
     private exalt2Btn!: HTMLButtonElement;
     private exaltTimer!: HTMLSpanElement;
-    private goldenQuarksElement!: HTMLParagraphElement;
-    private quarksElement!: HTMLDivElement;
     private antiquitiesObserver?: MutationObserver;
     private endStagePromise?: Promise<void>;
     private endStageResolve?: () => void;
@@ -105,16 +97,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private readonly phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
     private strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
     private finalPhaseConfig?: AutosingStrategyPhase;
-
-    private getGameDataAPI(): HSGameDataAPI | undefined {
-        if (!this.gameDataAPI) {
-            this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        }
-
-        return this.gameDataAPI;
-    }
-
-
+    private antiquitiesRuneLockedContainer!: HTMLDivElement;
 
 
     init(): Promise<void> {
@@ -122,12 +105,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         this.autosingEnabled = false;
         this.targetSingularity = 0;
-
-        this.buildingsTab = document.getElementById('buildingstab') as HTMLButtonElement;
-        this.challengeTab = document.getElementById('challengetab') as HTMLButtonElement;
         this.settingsTab = document.getElementById('settingstab') as HTMLButtonElement;
         this.settingsSubTab = document.getElementById('switchSettingSubTab4') as HTMLButtonElement;
-        this.singularityTab = document.getElementById('singularitytab') as HTMLButtonElement;
         this.misc = document.getElementById('kMisc') as HTMLButtonElement;
         this.stage = document.getElementById('gameStageStatistic') as HTMLParagraphElement;
         for (let i = 1; i <= 15; i++) {
@@ -149,21 +128,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
-        this.singTab2 = document.getElementById('toggleSingularitySubTab2') as HTMLButtonElement;
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.endStageDone = false;
         this.observerActivated = false;
         this.stageFunc = (window as any).__HS_synergismStage;
         this.elevatorTeleportButton = document.getElementById('elevatorTeleportButton') as HTMLButtonElement;
         this.elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
-        this.coinsElement = document.getElementById("coinDisplay") as HTMLDivElement;
         this.importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
         this.exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
         this.exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
-        this.goldenQuarksElement = document.getElementById('goldenQuarkamount') as HTMLParagraphElement;
-        this.quarksElement = document.getElementById("quarkDisplay") as HTMLDivElement;
-        this.goldenQuarksElement = document.getElementById('goldenQuarkamount') as HTMLParagraphElement;
-        this.quarksElement = document.getElementById("quarkDisplay") as HTMLDivElement;
+        this.antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
 
         // Cache elements for corruptions and codes
         this.corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
@@ -178,22 +152,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.corrNext[name] = document.getElementById(`corrNext${name}`);
         });
 
-        if (!this.buildingsTab || !this.challengeTab || !this.settingsTab || !this.singularityTab || !this.challengeButtons || !this.exitAscBtn || !this.exitReincBtn) {
-            HSLogger.debug("Error during autosing initialization: could not find main tabs", this.context);
-            return Promise.resolve();
-        }
-
         if (!this.timerModal) {
             this.timerModal = new HSAutosingTimerModal();
         }
-
-        // Cache GameDataAPI module reference once during init for hot-path reads (quarks, coins).
-        this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!this.gameDataAPI) {
-            HSLogger.debug("HSAutosing init: HSGameDataAPI module not found (will retry lazily when needed)", this.context);
-        }
-
-
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
     }
@@ -241,10 +202,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
         this.stopAtSingularitysEnd = false;
-        HSUtils.startDialogWatcher();
-        const quickbarSettng = HSSettings.getSetting('ambrosiaQuickBar');
 
-        if (quickbarSettng && !quickbarSettng.isEnabled()) {
+        // Advanced data collection is checked once at autosing start.
+        // While autosing is running, we use this cached value to avoid repeated setting lookups.
+        this.advancedDataCollectionEnabledAtStart = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
+
+        HSUtils.startDialogWatcher();
+        const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar');
+
+        if (quickbarSetting && !quickbarSetting.isEnabled()) {
             HSUI.Notify("You need to enable the ambrosia quickbar setting before you can use autosing.")
             this.stopAutosing();
             return Promise.resolve();
@@ -252,28 +218,20 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.targetSingularity = singularitySetting.getValue();
 
-        if (!this.timerModal) {
-            this.timerModal = new HSAutosingTimerModal();
-        }
-
-        if (this.timerModal) {
-            this.timerModal.show();
-        }
-
         this.subscribeGameDataChanges();
         new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
         })
 
 
-        const gameDataAPI = this.getGameDataAPI();
-        if (!gameDataAPI) {
+        this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!this.gameDataAPI) {
             HSLogger.debug("Could not find HSGameDataAPI module", this.context);
             this.stopAutosing();
             return Promise.resolve();
         }
 
-        const gameData = gameDataAPI.getGameData();
+        const gameData = this.gameDataAPI.getGameData();
         if (!gameData) {
             HSLogger.debug("Could not get game data", this.context);
             this.stopAutosing();
@@ -284,24 +242,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.log(`Target singularity bigger than highest singularity. Going to highest.`);
             this.targetSingularity = gameData.highestSingularityCount;
         }
-        this.unsubscribeGameDataChanges();
-        HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
-        this.performAutosingLogic();
-        return Promise.resolve();
-    }
 
-    async disableAutoSing(): Promise<void> {
-        this.autosingEnabled = false;
-        this.stopAutosing();
-        if (this.timerModal) {
-            this.timerModal.hide();
-        }
-        HSLogger.log(`Autosing disabled`, this.context);
-        return Promise.resolve();
-    }
-
-    private async performAutosingLogic(): Promise<void> {
-        // START of Autosinging Logic
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
 
@@ -358,6 +299,34 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
+        HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
+
+        if (!this.timerModal) {
+            this.timerModal = new HSAutosingTimerModal();
+        }
+
+        if (this.timerModal) {
+            this.timerModal.show();
+        }
+
+        this.performAutosingLogic();
+        return Promise.resolve();
+    }
+
+    async disableAutoSing(): Promise<void> {
+        this.autosingEnabled = false;
+        this.advancedDataCollectionEnabledAtStart = false;
+        this.stopAutosing();
+        if (this.timerModal) {
+            this.timerModal.hide();
+        }
+        HSLogger.log(`Autosing disabled`, this.context);
+        this.unsubscribeGameDataChanges();
+        return Promise.resolve();
+    }
+
+    private async performAutosingLogic(): Promise<void> {
+        this.ambrosia_ambrosia.click();
         await this.useAddAndTimeCodes();
 
         try {
@@ -366,7 +335,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const gq = await this.getCurrentGoldenQuarks();
                 this.timerModal.start(this.strategy!, q, gq);
             }
-            await this.performSingularity();
+            // The first singularity triggered by autosing startup is used
+            // to reach the target state but should not be counted in the
+            // recorded history—skip recording for this initial run.
+            await this.performSingularity(true);
             while (this.isAutosingEnabled()) {
                 if (this.endStageDone || this.observerActivated) {
                     await this.endStagePromise;
@@ -416,10 +388,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async getCoinsViaGDS(): Promise<number> {
-        const gameDataAPI = this.getGameDataAPI();
-        if (!gameDataAPI) return 0;
-
-        const data = gameDataAPI.getGameData();
+        const data = this.gameDataAPI?.getGameData();
         if (!data || data.coins === undefined) return 0;
 
         // Wrap in Decimal constructor to ensure .toNumber() exists,
@@ -532,10 +501,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const chal = this.levelElements[challengeNumber];
         if (!chal) return new Decimal(0);
         if (challengeNumber === 15) {
-            const currentCompletions = this.parseDecimal(chal.innerText);
+            const currentCompletions = this.parseDecimal(chal.textContent ?? '0');
             return currentCompletions;
         }
-        const currentCompletions = this.parseDecimal(chal.innerText.split('/')[0]);
+        const currentCompletions = this.parseDecimal((chal.textContent ?? '0').split('/')[0]);
         return currentCompletions;
     }
 
@@ -566,14 +535,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
-                if (this.timerModal) this.timerModal.setCurrentStep('');
+                if (this.timerModal && this.advancedDataCollectionEnabledAtStart) {
+                    this.timerModal.setCurrentStep('');
+                }
                 return;
             }
 
             const challenge = phaseConfig.strat[i];
 
             // Report current step to modal
-            if (this.timerModal) {
+            if (this.timerModal && this.advancedDataCollectionEnabledAtStart) {
                 const { label, maxTime } = this.getStepLabelAndMaxTime(challenge);
                 this.timerModal.setCurrentStep(label, maxTime);
             }
@@ -752,19 +723,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        const loadoutJson = {
-            viscosity: corruptions.viscosity,
-            drought: corruptions.drought,
-            deflation: corruptions.deflation,
-            extinction: corruptions.extinction,
-            illiteracy: corruptions.illiteracy,
-            recession: corruptions.recession,
-            dilation: corruptions.dilation,
-            hyperchallenge: corruptions.hyperchallenge
-        };
-
-        const jsonString = JSON.stringify(loadoutJson);
-        const targetString = JSON.stringify(corruptions);
+        const jsonString = JSON.stringify(corruptions);
+        const targetViscosity = corruptions.viscosity;
+        const targetDrought = corruptions.drought;
+        const targetDeflation = corruptions.deflation;
+        const targetExtinction = corruptions.extinction;
+        const targetIlliteracy = corruptions.illiteracy;
+        const targetRecession = corruptions.recession;
+        const targetDilation = corruptions.dilation;
+        const targetHyperchallenge = corruptions.hyperchallenge;
 
         const maxAttempts = 10;
         let attempts = 0;
@@ -774,12 +741,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.click(this.corruptionPromptOkBtn);
 
             const current = this.getNextCorruptionsFromCache();
-            if (JSON.stringify(current) === targetString) {
+            if (
+                current.viscosity === targetViscosity &&
+                current.drought === targetDrought &&
+                current.deflation === targetDeflation &&
+                current.extinction === targetExtinction &&
+                current.illiteracy === targetIlliteracy &&
+                current.recession === targetRecession &&
+                current.dilation === targetDilation &&
+                current.hyperchallenge === targetHyperchallenge
+            ) {
                 HSLogger.debug(`Corruptions set successfully: ${this.stringifyCorruptions(corruptions)}`, this.context);
                 break;
             }
             attempts++;
-            await HSUtils.sleep(50);
+            await HSUtils.sleep(this.sleepTime);
         }
 
         if (attempts >= maxAttempts) {
@@ -895,18 +871,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
      * Includes a safety 'maxAttempts' to prevent infinite loops if the game fails to react.
      */
     private async enterAndLeaveExalt(): Promise<void> {
-        const gameState = HSModuleManager.getModule<HSGameState>("HSGameState");
-        if (!gameState) return;
-
-        // 1. Save where the user was
-        const prevMainView = gameState.getCurrentUIView<MainView>('MAIN_VIEW');
-
-        // Returns true if we're currently IN the challenge (timer is visible)
         const isInChallenge = () => {
             const style = window.getComputedStyle(this.exaltTimer);
             return style.display !== "none";
         };
-
         // Enter the challenge
         let attempts = 0;
         const maxAttempts = 50;
@@ -915,7 +883,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(this.sleepTime);
             attempts++;
         }
-
         // Leave the challenge
         attempts = 0;
         while (isInChallenge() && attempts < maxAttempts) {
@@ -923,64 +890,66 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(this.sleepTime);
             attempts++;
         }
-
-        // 2. Restore previous state
-        this.restoreView(prevMainView);
     }
 
     private async getCurrentGoldenQuarks(): Promise<number> {
-        const gameDataAPI = this.getGameDataAPI();
-        if (!gameDataAPI) return 0;
-
-        const data = gameDataAPI.getGameData();
+        const data = this.gameDataAPI?.getGameData();
         return data?.goldenQuarks ?? 0;
     }
 
     private async getCurrentQuarks(): Promise<number> {
-        const gameDataAPI = this.getGameDataAPI();
-        if (!gameDataAPI) return 0;
-
-        const data = gameDataAPI.getGameData();
+        const data = this.gameDataAPI?.getGameData();
         return data?.worlds ?? 0;
     }
 
-    private restoreView(mainView: MainView) {
-        // Restore main view using the new goto() method
-        mainView.goto();
+    private async getQuarksGain(): Promise<number> {
+        const data = this.gameDataAPI?.getGameData();
+        return data?.quarksThisSingularity ?? 0;
     }
 
-    private async performSingularity(): Promise<void> {
-
-        const gqBefore = await this.getCurrentGoldenQuarks();
-        const qBefore = await this.getCurrentQuarks();
+    private async performSingularity(skipRecord: boolean = false): Promise<void> {
+        const [qBefore, gqBefore] = await Promise.all([
+            this.getCurrentQuarks(),
+            this.getCurrentGoldenQuarks(),
+        ]);
         await this.enterAndLeaveExalt();
 
         this.endStageDone = false;
         this.observerActivated = false;
-
         this.elevatorInput.value = this.targetSingularity.toString();
         // Trigger input event to update the game state
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
-
         this.elevatorTeleportButton.click();
 
-        const gqAfter = await this.getCurrentGoldenQuarks();
+        const [qAfter, gqAfter, stageInitial] = await Promise.all([
+            this.getCurrentQuarks(),
+            this.getCurrentGoldenQuarks(),
+            this.getStage(),
+        ]);
+
         const gqGain = Math.max(0, gqAfter - gqBefore);
-        const qAfter = await this.getCurrentQuarks();
         const qGain = Math.max(0, qAfter - qBefore);
-        if (this.timerModal) {
+        if (this.timerModal && !skipRecord) {
             this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter);
         }
 
         HSLogger.debug("Singularity performed", this.context);
-        let stage = await this.getStage();
-        while (!Object.values(ALLOWED).some(phase => stage.includes(phase))) {
+
+        let stage = stageInitial;
+        while (!this.isAllowedStage(stage)) {
             await HSUtils.sleep(1);
             stage = await this.getStage();
         }
         this.observeAntiquitiesRune()
         //await this.buyCoin()
         return Promise.resolve()
+    }
+
+    private isAllowedStage(stage: string): boolean {
+        for (let i = 0, len = ALLOWED.length; i < len; i++) {
+            if (stage.indexOf(ALLOWED[i]) !== -1) return true;
+        }
+        return false;
     }
 
     private getActiveC11to14Challenge(): number | null {
@@ -1010,9 +979,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
-        let startTime = performance.now();
-        while (!this.isInChallenge(challengeIndex) && performance.now() - startTime < maxTime) {
-            await HSUtils.DblClick(challengeBtn);
+
+        while (!this.isInChallenge(challengeIndex)) {
+            this.fastDoubleClick(challengeBtn);
             if (this.isInChallenge(challengeIndex)) {
                 break;
             }
@@ -1028,30 +997,37 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         this.coin.click();
 
-        startTime = performance.now();
+        const startTime = performance.now();
+        const endTime = startTime + maxTime;
 
         let maxPossible: Decimal;
-
         if (challengeIndex === 15) {
             maxPossible = new Decimal(Infinity);
         } else {
-            const maxPossibleText = levelElement.innerText;
+            const maxPossibleText = levelElement.textContent ?? '';
             const parts = maxPossibleText.split('/');
-            maxPossible = this.parseDecimal(parts[1].trim());
+            maxPossible = this.parseDecimal((parts[1] ?? '0').trim());
         }
 
-        while (performance.now() - startTime < maxTime) {
+        const minCompletionsDecimal = new Decimal(minCompletions);
+        let lastText = '';
+        let currentCompletions = new Decimal(0);
+
+        while (performance.now() < endTime) {
             if (!this.isAutosingEnabled()) {
                 this.stopAutosing();
                 return Promise.resolve();
             }
 
-            const currentText = levelElement.innerText.split('/')[0];
-            const currentCompletions = this.parseDecimal(currentText);
+            const rawText = levelElement.textContent ?? '';
+            if (rawText !== lastText) {
+                lastText = rawText;
+                currentCompletions = this.parseDecimal(rawText.split('/')[0] ?? '0');
+            }
 
-            if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletions)) {
+            if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletionsDecimal)) {
                 // Special handling for C10 when C11-14 are active
-
+                /*
                 if (challengeIndex === 10) {
                     const activeC11to14 = this.getActiveC11to14Challenge();
                     if (activeC11to14 !== null) {
@@ -1086,7 +1062,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     } else {
                         return Promise.resolve();
                     }
-                } else if (currentCompletions.gte(minCompletions)) {
+                } else*/ if (currentCompletions.gte(minCompletionsDecimal)) {
                     if (waitTime > 0) {
                         await HSUtils.sleep(waitTime);
                     }
@@ -1121,9 +1097,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
+    private fastDoubleClick(element: HTMLElement): void {
+        element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    }
+
     private observeAntiquitiesRune(): void {
-        const elem = document.getElementById('antiquitiesRuneLockedContainer');
-        if (!elem) {
+
+        if (!this.antiquitiesRuneLockedContainer) {
             HSLogger.debug("Could not find antiquitiesRuneLockedContainer element", this.context);
             return;
         }
@@ -1146,7 +1126,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             }
         });
-        this.antiquitiesObserver.observe(elem, { attributes: true, attributeFilter: ['style'] });
+        this.antiquitiesObserver.observe(this.antiquitiesRuneLockedContainer, { attributes: true, attributeFilter: ['style'] });
     }
 
     private async performFinalStage() {
@@ -1155,6 +1135,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.endStagePromise = new Promise<void>(resolve => {
             this.endStageResolve = resolve;
         });
+
         this.exitAscBtn.click();
         await this.setCorruptions(ZERO_CORRUPTIONS);
         this.ascendBtn.click();
