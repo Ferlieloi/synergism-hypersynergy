@@ -101,6 +101,7 @@
         "enabled": false,
         "settingAction": "forceReconnectAction",
         "settingControl": {
+            "controlId": "hs-setting-force-reconnect-value",
             "controlType": "button",
             "controlGroup": "debug",
             "controlPage": "debug",
