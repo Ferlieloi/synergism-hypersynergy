@@ -601,7 +601,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 await this.performSpecialAction(challenge.challengeNumber);
-                continue;
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 await this.waitForCompletion(
