@@ -216,24 +216,24 @@ export class HSUI extends HSModule {
         const quickMenu = document.createElement('div');
         quickMenu.id = 'hs-quick-access-menu';
         quickMenu.style.cssText = `
-            position: fixed;
-            bottom: 70px;
-            right: 15px;
-            background: rgba(25, 42, 86, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 8px;
+            position: absolute;
+            top: 45px;
+            left: 10px;
+            background: rgba(28, 27, 34, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            padding: 6px;
             display: none;
             flex-direction: column;
-            gap: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            gap: 4px;
+            box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, 0.5);
             z-index: 999999;
-            min-width: 160px;
+            min-width: 140px;
         `;
 
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
-        autoSingBtn.textContent = '▶ Toggle Auto-Sing';
+        autoSingBtn.textContent = '▶ Start Auto-Sing';
         autoSingBtn.style.cssText = `
             background: rgba(76, 175, 80, 0.2);
             border: 1px solid rgba(76, 175, 80, 0.4);
@@ -264,7 +264,7 @@ export class HSUI extends HSModule {
 
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
-        heaterBtn.textContent = '🔥 Export Heater';
+        heaterBtn.textContent = '🔥 Amb Heater Export';
         heaterBtn.style.cssText = `
             background: rgba(255, 152, 0, 0.2);
             border: 1px solid rgba(255, 152, 0, 0.4);
