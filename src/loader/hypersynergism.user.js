@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         HSLoader3.4_CollisionFix
+// @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
 // @version      3.4
-// @description  Expose game functions and load Hypersynergism mod safely (Chrome Collision Fix)
+// @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start

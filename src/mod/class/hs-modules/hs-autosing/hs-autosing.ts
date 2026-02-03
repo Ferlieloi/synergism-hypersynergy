@@ -535,6 +535,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         await this.setCorruptions(phaseConfig.corruptions);
         this.ascendBtn.click();
+        this.prevActionTime = performance.now();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
@@ -597,13 +598,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
                 }
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber},waiting before: ${challenge.challengeWaitBefore}ms, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
-                await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
+                if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
+                }
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
@@ -692,6 +695,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             // Only sleep if not yet loaded
             await HSUtils.sleep(this.sleepTime);
         }
+        this.prevActionTime = performance.now();
     }
 
     private stringifyCorruptions(loadout: CorruptionLoadout): string {
@@ -906,6 +910,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Trigger input event to update the game state
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
+        this.prevActionTime = performance.now();
 
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),
@@ -1012,48 +1017,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletionsDecimal)) {
-                // Special handling for C10 when C11-14 are active
-                /*
-                if (challengeIndex === 10) {
-                    const activeC11to14 = this.getActiveC11to14Challenge();
-                    if (activeC11to14 !== null) {
-
-                        const c11to14LevelElement = document.getElementById(
-                            `challenge${activeC11to14}level`
-                        ) as HTMLParagraphElement | null;
-                        if (!c11to14LevelElement) {
-                            return Promise.resolve();
-                        }
-
-                        const c11to14MaxPossibleText = c11to14LevelElement.innerText;
-
-                        const parts = c11to14MaxPossibleText.split('/');
-                        let c11to14CurrentCompletions = this.parseNumber(c11to14LevelElement.innerText.split('/')[0]);
-                        while (true) {
-                            await HSUtils.sleep(this.sleepTime);
-                            const c11to14CurrentCompletions2 = this.parseNumber(
-                                c11to14LevelElement.innerText.split('/')[0]
-                            );
-
-                            if (c11to14CurrentCompletions2 === c11to14CurrentCompletions) {
-                                break;
-                            }
-
-                            c11to14CurrentCompletions = c11to14CurrentCompletions2;
-                        }
-                        return Promise.resolve();
-                    } else {
-                        return Promise.resolve();
-                    }
-                } else*/ if (currentCompletions.gte(minCompletionsDecimal)) {
-                    if (waitTime > 0) {
-                        await HSUtils.sleep(waitTime);
-                    }
-                    return Promise.resolve();
+                if (waitTime > 0) {
+                    await HSUtils.sleep(waitTime);
                 }
-                else {
-                    return Promise.resolve();
-                }
+                this.prevActionTime = performance.now();
+                return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
         }

@@ -11,6 +11,7 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
+import { HSWebSocket } from "../hs-websocket";
 
 /*
     Class: HSSettingActions
@@ -210,6 +211,16 @@ export class HSSettingActions {
             await HSSettings.importStrategy();
         },
 
+        exportModSettings: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.exportAllModSettings();
+        },
+
+        importModSettings: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.importAllModSettings();
+        },
+
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
@@ -220,6 +231,16 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) qolButtonsMod.octUpgradesInitialized = false;
+        },
+
+        forceReconnectAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const wsMod = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
+            if (wsMod) {
+                // Manually trigger reconnection for the main event socket
+                wsMod.forceReconnect('consumable-event-socket');
+                // The onOpen handler in HSGameData will handle the rest (logging, fuzzy match, etc.)
+            }
         }
     }
 

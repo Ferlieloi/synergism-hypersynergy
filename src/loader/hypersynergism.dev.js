@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         DEV_HSLoader3.4_CollisionFix
+// @name         HyperSynergism Dev Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.4
-// @description  Expose game functions and load Hypersynergism mod safely (Chrome Collision Fix)
+// @version      3.4-dev
+// @description  Load Hypersynergism mod from local dev server
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
@@ -16,9 +16,9 @@
     window.HS_LOADER_INITIALIZED = true;
 
     const startTime = performance.now();
-    const log = (...a) => console.log(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
-    const warn = (...a) => console.warn(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
-    const debug = (...a) => console.debug(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+    const log = (...a) => console.log(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const warn = (...a) => console.warn(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
+    const debug = (...a) => console.debug(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
 
     const originalFetch = window.fetch.bind(window);
 
@@ -31,15 +31,9 @@
     let allowCustomElements = false; // LOCK definitions by default
 
     // CRITICAL FIX: Override customElements.define to BLOCK the original script
-    // If the original script runs, it will try to define elements. We IGNORE it.
-    // This effectively causes the original script to crash (safely) or fail to register,
-    // leaving the registry clean for our patched script.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Log once per unique name to avoid spam, but BLOCK IT.
-            // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
-            // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
             if (!customElements.get(name)) {
                 debug(`[HS] Blocked original script from defining ${name} (Lock active)`);
             }
@@ -157,7 +151,7 @@
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
             // Patch for function exposure
-            const g6Pattern = /g6=\(\)=>\{/;
+            const g6Pattern = /g6=\(\)=>{/;
             const g6Match = code.match(g6Pattern);
 
             if (g6Match) {
@@ -194,6 +188,9 @@ if(!window.__HS_EXPOSED){
                     observer.observe(document.documentElement, { childList: true });
                 });
             }
+
+            // Additional safety: wait a bit for DOM to stabilize
+            await new Promise(r => setTimeout(r, 50));
 
             // UNLOCK DEFINITIONS JUST BEFORE INJECTION
             allowCustomElements = true;
@@ -316,6 +313,11 @@ window.__HS_BACKDOOR__ = {
                     const style = getComputedStyle(container);
                     if (style.display !== 'none') {
                         seenOpen = true;
+                        const exitBtn = document.getElementById('exitOffline');
+                        if (exitBtn) {
+                            log('Auto-clicking exitOffline button...');
+                            exitBtn.click();
+                        }
                     } else if (seenOpen) {
                         log('offlineContainer closed, UI ready');
                         resolve(true);
@@ -367,13 +369,14 @@ window.__HS_BACKDOOR__ = {
 
         await returnToBuildingsTab();
 
-        log('Loading mod');
+        log('Loading mod from LOCAL DEV SERVER');
 
         const s = document.createElement('script');
+        // Load from local dev server instead of CDN
         s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
 
         s.onload = () => {
-            log('Mod script loaded');
+            log('✅ Mod script loaded from dev server');
             try {
                 window.hypersynergism.init();
             } catch (e) {
@@ -381,10 +384,10 @@ window.__HS_BACKDOOR__ = {
             }
         };
 
-        s.onerror = () => warn('Mod failed to load');
+        s.onerror = () => warn('❌ Mod failed to load from dev server - is it running?');
         (document.head || document.documentElement).appendChild(s);
     }
 
-    log('Initialized');
+    log('DEV LOADER Initialized - will load from http://127.0.0.1:8080');
 
 })();

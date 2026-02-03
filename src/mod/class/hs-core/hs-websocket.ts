@@ -27,10 +27,27 @@ export class HSWebSocket extends HSModule {
         }
 
         this.#webSockets.delete(name);
-        this.registerWebSocket(name, ws.regParams);
+        // Pass the preserved reconnection tries to the new instance
+        this.registerWebSocket(name, ws.regParams, ws.reconnectionTries);
     }
 
-    registerWebSocket<T>(name: string, regParams: HSWebSocketRegistrationParams<T>) {
+    /**
+     * Forces a reconnection of the named WebSocket.
+     * Use this to manually trigger a reconnect if the connection seems stuck.
+     */
+    forceReconnect(name: string) {
+        HSLogger.log(`Forcing reconnection of ${name}...`, this.context);
+        const ws = this.#webSockets.get(name);
+        if (ws) {
+            // Reset retries because this is a manual user action; they expect it to try immediately/freshly.
+            ws.reconnectionTries = 0;
+            this.#reconnectWebSocket(name);
+        } else {
+            HSLogger.warn(`Cannot force reconnect ${name}: Socket not found`, this.context);
+        }
+    }
+
+    registerWebSocket<T>(name: string, regParams: HSWebSocketRegistrationParams<T>, previousTries: number = 0) {
         const self = this;
 
         if (this.#webSockets.has(name)) {

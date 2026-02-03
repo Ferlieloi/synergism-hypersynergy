@@ -139,7 +139,7 @@ export class Hypersynergism {
             HSUIC.Grid({
                 html: [
                     HSUIC.Div({
-                        html: 'Export tools',
+                        html: 'Export/Import Tools',
                         styles: {
                             borderBottom: '1px solid limegreen',
                             gridColumn: 'span 2'
@@ -147,12 +147,22 @@ export class Hypersynergism {
                     }),
                     HSUIC.Div({
                         id: 'hs-panel-amb-heater-p',
-                        html: `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater.</a>`,
+                        html: `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater</a><span style="color: white">:</span>`,
                         styles: {
                             gridColumn: 'span 2'
                         }
                     }),
-                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia Heater' }),
+                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: '📥🔥 Export Ambrosia Heater', styles: { width: 'auto', color: 'indianred', borderColor: 'red', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
+                    HSUIC.Div({
+                        id: 'hs-panel-mod-settings-p',
+                        html: 'Export and Import all your <span style="color: deepskyblue">HyperSynergism Mod Settings</span>:',
+                        styles: {
+                            gridColumn: 'span 2'
+                        }
+                    }),
+                    HSUIC.Button({ id: 'hs-panel-export-mod-settings-btn', text: '📤 Export Mod Settings', styles: { width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
+                    HSUIC.Button({ id: 'hs-panel-import-mod-settings-btn', text: '📥 Import Mod Settings', styles: { width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
+                    HSUIC.Button({ id: 'hs-panel-restore-mod-settings-btn', text: '♻️ Restore Mod Settings', styles: { width: 'auto', color: '#cc7a00', borderColor: 'orange', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
                     HSUIC.Div({
                         html: 'References',
                         styles: {
@@ -160,8 +170,8 @@ export class Hypersynergism {
                             gridColumn: 'span 2'
                         }
                     }),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: 'Corruption Ref.' }),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: 'Crpt. Onemind' }),
+                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: '<img src="https://synergism.cc/Pictures/Default/CorruptHyperchallenge.png" width="22" height="22" style="margin-right: 5px; display: inline-block;">Corruption References', styles: { width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
+                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: '<img src="https://synergism.cc/Pictures/Default/SingularityOneMind.png" width="22" height="22" style="margin-right: 5px; display: inline-block;">Corruptions Onemind', styles: { width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } }),
                     HSUIC.Div({
                         html: 'Mod links',
                         styles: {
@@ -256,6 +266,20 @@ export class Hypersynergism {
                         notificationType: "success"
                     });
                 }
+            }
+        });
+        document.querySelector('#hs-panel-export-mod-settings-btn')?.addEventListener('click', async () => {
+            await HSSettings.exportAllModSettings();
+        });
+
+        document.querySelector('#hs-panel-import-mod-settings-btn')?.addEventListener('click', async () => {
+            await HSSettings.importAllModSettings();
+        });
+
+        document.querySelector('#hs-panel-restore-mod-settings-btn')?.addEventListener('click', async () => {
+            const confirmRestore = confirm("Are you sure you want to RESTORE ALL MOD SETTINGS to defaults? \n\nThis will PERMANENTLY DELETE all your custom settings, strategies, and loadouts. The page will reload immediately.");
+            if (confirmRestore) {
+                await HSSettings.restoreAllModSettings();
             }
         });
 
