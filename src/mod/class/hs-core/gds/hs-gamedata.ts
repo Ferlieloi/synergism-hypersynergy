@@ -22,7 +22,7 @@ import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig 
 export class HSGameData extends HSModule {
     #saveDataLocalStorageKey = 'Synergysave2';
 
-    #saveDataPollInterval?: number;
+    #saveDataCheckInterval?: number;
     #saveData?: PlayerData;
 
     #mitm_gamedata: string | undefined;
@@ -267,7 +267,7 @@ export class HSGameData extends HSModule {
         }
     }
 
-    #processSaveData = () => {
+    #processSaveDataWithRAF = () => {
         if (!this.#turboEnabled) return;
 
         const saveDataB64 = localStorage.getItem(this.#saveDataLocalStorageKey);
@@ -283,9 +283,11 @@ export class HSGameData extends HSModule {
                 this.#maybeStopSniffOnError();
             }
         }
+
+        requestAnimationFrame(this.#processSaveDataWithRAF);
     }
 
-    #processSaveDataExperimental = () => {
+    #processSaveDataWithRAFExperimental = () => {
         if (!this.#turboEnabled) return;
 
         if (this.#mitm_gamedata) {
@@ -297,10 +299,12 @@ export class HSGameData extends HSModule {
                 this.#maybeStopSniffOnError();
             }
         }
+
+        requestAnimationFrame(this.#processSaveDataWithRAFExperimental);
     }
 
     #maybeStopSniffOnError() {
-        if (!this.#saveDataPollInterval) return;
+        if (!this.#saveDataCheckInterval) return;
 
         const useGameDataSetting = HSSettings.getSetting('useGameData') as HSBooleanSetting;
         const stopSniffOnErrorSetting = HSSettings.getSetting('stopSniffOnError') as HSBooleanSetting;
@@ -365,14 +369,12 @@ export class HSGameData extends HSModule {
         HSLogger.info(`GDS = ON`, this.context);
         this.#turboEnabled = true;
 
-        if (this.#saveDataPollInterval) clearInterval(this.#saveDataPollInterval);
-
         if (HSGlobal.Common.experimentalGDS) {
             this.#hackJSNativebtoa();
             this.#hackJSNativeAtob();
-            this.#saveDataPollInterval = setInterval(this.#processSaveDataExperimental, HSGlobal.HSGameData.turboModeSpeedMs);
+            this.#processSaveDataWithRAFExperimental();
         } else {
-            this.#saveDataPollInterval = setInterval(this.#processSaveData, HSGlobal.HSGameData.turboModeSpeedMs);
+            this.#processSaveDataWithRAF();
         }
     }
 
@@ -676,11 +678,6 @@ export class HSGameData extends HSModule {
         if (this.#saveInterval) {
             clearInterval(this.#saveInterval);
             this.#saveInterval = undefined;
-        }
-
-        if (this.#saveDataPollInterval) {
-            clearInterval(this.#saveDataPollInterval);
-            this.#saveDataPollInterval = undefined;
         }
 
         if (this.#fetchedDataRefreshInterval)
