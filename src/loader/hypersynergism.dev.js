@@ -189,6 +189,9 @@ if(!window.__HS_EXPOSED){
                 });
             }
 
+            // Additional safety: wait a bit for DOM to stabilize
+            await new Promise(r => setTimeout(r, 50));
+
             // UNLOCK DEFINITIONS JUST BEFORE INJECTION
             allowCustomElements = true;
             log('Custom Elements unlocked for patched bundle');
@@ -310,6 +313,11 @@ window.__HS_BACKDOOR__ = {
                     const style = getComputedStyle(container);
                     if (style.display !== 'none') {
                         seenOpen = true;
+                        const exitBtn = document.getElementById('exitOffline');
+                        if (exitBtn) {
+                            log('Auto-clicking exitOffline button...');
+                            exitBtn.click();
+                        }
                     } else if (seenOpen) {
                         log('offlineContainer closed, UI ready');
                         resolve(true);
