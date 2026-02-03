@@ -535,7 +535,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         await this.setCorruptions(phaseConfig.corruptions);
         this.ascendBtn.click();
-        ActionTime = performance.now();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
@@ -553,9 +552,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.timerModal.setCurrentStep(label, maxTime);
             }
             
-            HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
+            
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleepUntilElapsed(ActionTime, challenge.challengeWaitBefore);
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
                 }
 
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
@@ -600,9 +599,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                         break;
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
+                HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
+                HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
@@ -671,8 +672,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
-            case 116: // 
-                store C15
+            case 116: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
             default:
@@ -1059,7 +1059,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime}ms`);
-        ActionTime = performance.now();
     }
 
     private parseNumber(text: string): number {
