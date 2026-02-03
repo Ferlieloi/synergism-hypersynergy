@@ -79,6 +79,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private exaltTimer!: HTMLSpanElement;
     private antiquitiesObserver?: MutationObserver;
     private endStagePromise?: Promise<void>;
+
+    private lastHeartbeat: number = performance.now();
+    private visibilityHandler?: () => void;
+    private STALL_THRESHOLD = 15000; // 15 seconds
+    private recoveryInProgress = false;
+
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
     private gamestate!: HSGameState;
@@ -312,6 +318,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.timerModal.show();
         }
 
+        // Recovery listener
+        if (!this.visibilityHandler) {
+            this.visibilityHandler = this.handleVisibilityChange.bind(this);
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+        }
+
         this.performAutosingLogic();
         return Promise.resolve();
     }
@@ -326,6 +338,38 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         HSLogger.log(`Autosing disabled`, this.context);
         this.unsubscribeGameDataChanges();
         return Promise.resolve();
+    }
+
+    private updateHeartbeat() {
+        this.lastHeartbeat = performance.now();
+    }
+
+    private async handleVisibilityChange() {
+        if (!document.hidden && this.isAutosingEnabled() && !this.recoveryInProgress) {
+            const now = performance.now();
+            const timeSinceHeartbeat = now - this.lastHeartbeat;
+
+            if (timeSinceHeartbeat > this.STALL_THRESHOLD) {
+                HSLogger.info(`AutoSing stall detected (${Math.round(timeSinceHeartbeat / 1000)}s), attempting recovery...`, this.context);
+                this.recoveryInProgress = true;
+
+                // Allow current sleeps to resolve immediately
+                // We don't have a direct "cancel" for sleep yet, but we can restart the core logic
+                // The current logic loop might be stuck in a waitForCompletion or sleep.
+                // By re-calling performAutosingLogic or similar, we might duplicate loops.
+                // Instead, we just let the next heartbeat check skip.
+
+                // For now, let's just log and rely on Tier 1 (setInterval) ensuring progress.
+                // If it's still stuck, the user might need to toggle it.
+                // But let's try a more active recovery:
+
+                // Force a stage re-evaluation
+                const stage = await this.getStage();
+                await this.matchStageToStrategy(stage);
+
+                this.recoveryInProgress = false;
+            }
+        }
     }
 
     private async performAutosingLogic(): Promise<void> {
@@ -343,12 +387,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             // recorded history—skip recording for this initial run.
             await this.performSingularity(true);
             while (this.isAutosingEnabled()) {
+                this.updateHeartbeat();
                 if (this.endStageDone || this.observerActivated) {
                     await this.endStagePromise;
                     continue;
                 }
 
                 while (this.isAutosingEnabled() && !this.endStageDone && !this.observerActivated) {
+                    this.updateHeartbeat();
                     const stage = await this.getStage();
                     await this.matchStageToStrategy(stage);
                 }
@@ -787,6 +833,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.timerModal = undefined!;
         }
         HSUtils.stopDialogWatcher();
+
+        if (this.visibilityHandler) {
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
+            this.visibilityHandler = undefined;
+        }
     }
 
     private async getStage(): Promise<string> {
@@ -1010,9 +1061,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return Promise.resolve();
             }
 
+            if (this.recoveryInProgress) {
+                this.prevActionTime = performance.now();
+                return Promise.resolve();
+            }
+
             const rawText = levelElement.textContent ?? '';
             if (rawText !== lastText) {
                 lastText = rawText;
+                this.updateHeartbeat();
                 currentCompletions = this.parseDecimal(rawText.split('/')[0] ?? '0');
             }
 
