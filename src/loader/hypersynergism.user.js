@@ -77,6 +77,7 @@
     };
 
     // Firefox-specific: Use beforescriptexecute event
+    let beforeScriptExecute;
     if (isFirefox) {
         beforeScriptExecute = function (e) {
             const script = e.target;
