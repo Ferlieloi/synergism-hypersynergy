@@ -310,6 +310,8 @@ window.__HS_BACKDOOR__ = {
                     const style = getComputedStyle(container);
                     if (style.display !== 'none') {
                         seenOpen = true;
+                        const exitBtn = document.getElementById('exitOffline');
+                        if (exitBtn) exitBtn.click();
                     } else if (seenOpen) {
                         log('offlineContainer closed, UI ready');
                         resolve(true);
