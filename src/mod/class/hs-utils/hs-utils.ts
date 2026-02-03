@@ -41,7 +41,10 @@ export class HSUtils {
         const remaining = delayMs - elapsed;
 
         if (remaining > 0) {
-            await HSUtils.sleep(remaining);
+            await Promise.all([
+                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, 'HSUtils'),
+                HSUtils.sleep(remaining)
+            ]);
         }
     }
 

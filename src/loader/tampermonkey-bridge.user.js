@@ -13,5 +13,5 @@
 // ==/UserScript==
 
 // Production Evergreen Bridge.
-// Install once - auto-updates from owner's CDN.
-// Loads the full HSLoader3.4_CollisionFix.js which handles game patching and mod loading.
+// Install once - auto-updates.
+// Loads the newest version of hypersynergism.

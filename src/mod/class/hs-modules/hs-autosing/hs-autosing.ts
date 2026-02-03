@@ -551,11 +551,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const { label, maxTime } = this.getStepLabelAndMaxTime(challenge);
                 this.timerModal.setCurrentStep(label, maxTime);
             }
-            
-            
-                if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
-                }
+
+
+            if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
+                await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
+            }
 
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
             else if (challenge.challengeNumber == 200) { // Jump action (200)
@@ -927,7 +927,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.observeAntiquitiesRune()
         //await this.buyCoin()
         this.prevActionTime = performance.now();
-        
+
         return Promise.resolve()
     }
 
@@ -1011,60 +1011,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 currentCompletions = this.parseDecimal(rawText.split('/')[0] ?? '0');
             }
 
-            if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletionsDecimal)) {
-                // Special handling for C10 when C11-14 are active
-                /*
-                if (challengeIndex === 10) {
-                    const activeC11to14 = this.getActiveC11to14Challenge();
-                    if (activeC11to14 !== null) {
-
-                        const c11to14LevelElement = document.getElementById(
-                            `challenge${activeC11to14}level`
-                        ) as HTMLParagraphElement | null;
-                        if (!c11to14LevelElement) {
-                            return Promise.resolve();
-                        }
-
-                        const c11to14MaxPossibleText = c11to14LevelElement.innerText;
-
-                        const parts = c11to14MaxPossibleText.split('/');
-                        let c11to14CurrentCompletions = this.parseNumber(c11to14LevelElement.innerText.split('/')[0]);
-                        while (true) {
-                            await HSUtils.sleep(this.sleepTime);
-                            const c11to14CurrentCompletions2 = this.parseNumber(
-                                c11to14LevelElement.innerText.split('/')[0]
-                            );
-
-                            if (c11to14CurrentCompletions2 === c11to14CurrentCompletions) {
-                                break;
-                            }
-
-                            c11to14CurrentCompletions = c11to14CurrentCompletions2;
-                        }
-                        return Promise.resolve();
-                    } else {
-                        return Promise.resolve();
-                    }
-                } else*/ if (currentCompletions.gte(minCompletionsDecimal)) {
-                    if (waitTime > 0) {
-                        await HSUtils.sleep(waitTime);
-                    }
-                    return Promise.resolve();
+            if (currentCompletions.gte(maxPossible)) {
+                return Promise.resolve();
+            } else if (currentCompletions.gte(minCompletionsDecimal)) {
+                if (waitTime > 0) {
+                    await HSUtils.sleep(waitTime);
                 }
-                else {
-                    return Promise.resolve();
-                }
+                return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
         }
-
-        HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime}ms`);
-    }
-
-    private parseNumber(text: string): number {
-        let cleanText = text.replace(/,/g, '.').trim();
-        const result = Number(cleanText);
-        return isNaN(result) ? 0 : result;
+        HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`);
     }
 
     private parseDecimal(text: string): Decimal {
