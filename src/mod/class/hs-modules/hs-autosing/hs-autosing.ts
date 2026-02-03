@@ -597,13 +597,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
+                    await HSUtils.sleep(challenge.challengeWaitBefore);
                 }
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber},waiting before: ${challenge.challengeWaitBefore}ms, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
-                await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
+                if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
+                    await HSUtils.sleep(challenge.challengeWaitBefore);
+                }
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,

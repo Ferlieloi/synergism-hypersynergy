@@ -132,6 +132,7 @@ export class HSAutosingTimerModal {
     private showDetailedData: boolean = true;
     private advancedDataCollectionEnabled: boolean = false;
     private stopButton!: HTMLButtonElement;
+    private restartButton!: HTMLButtonElement;
     private finishStopBtn!: HTMLButtonElement;
     private chartToggleBtn: HTMLButtonElement | null = null;
     private minimizeBtn!: HTMLButtonElement;
@@ -643,6 +644,23 @@ export class HSAutosingTimerModal {
             if (toggle) toggle.click();
         };
 
+        this.restartButton = document.createElement('button');
+        this.restartButton.textContent = '🔄';
+        this.restartButton.title = "Restart Singularity from the beginning";
+        this.restartButton.className = 'hs-stop-btn';
+        this.restartButton.onclick = async () => {
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            if (autosingMod) {
+                // Stop autosing
+                autosingMod.stopAutosing();
+                // Wait a bit for cleanup
+                await new Promise(resolve => setTimeout(resolve, 100));
+                // Re-enable autosing (simulates starting from beginning)
+                const toggle = document.getElementById('hs-setting-auto-sing-enabled');
+                if (toggle) toggle.click();
+            }
+        };
+
         this.finishStopBtn = document.createElement('button');
         this.finishStopBtn.textContent = '🟠';
         this.finishStopBtn.title = "Stop Autosing at the end of current Singularity";
@@ -692,6 +710,7 @@ export class HSAutosingTimerModal {
 
         const controls = document.createElement('div');
         controls.className = 'hs-timer-controls';
+        controls.appendChild(this.restartButton);
         controls.appendChild(this.stopButton);
         controls.appendChild(this.finishStopBtn);
         controls.appendChild(this.chartToggleBtn);
