@@ -551,6 +551,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const { label, maxTime } = this.getStepLabelAndMaxTime(challenge);
                 this.timerModal.setCurrentStep(label, maxTime);
             }
+            
+            
+                if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
+                }
 
             if (challenge.challengeNumber == 201) await this.setCorruptions(phaseConfig.corruptions);
             else if (challenge.challengeNumber == 200) { // Jump action (200)
@@ -594,16 +599,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                         break;
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
-
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
-                if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
-                }
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
-                HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber},waiting before: ${challenge.challengeWaitBefore}ms, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
-                await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore ?? 0);
+                HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 await this.waitForCompletion(
                     challenge.challengeNumber,
                     challenge.challengeCompletions ?? 0,
@@ -611,6 +611,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     challenge.challengeWaitTime,
                 );
             }
+            this.prevActionTime = performance.now();
         }
         if (phaseConfig.endPhase == "end") {
             this.endStageDone = true;
@@ -671,13 +672,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
-            case 116: // Buy store C15
+            case 116: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
         }
-        this.prevActionTime = performance.now();
     }
 
     private async setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
@@ -750,7 +750,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
             await HSUtils.sleep(this.sleepTime);
         }
-        this.prevActionTime = performance.now();
     }
 
     private getNextCorruptionsFromCache(): CorruptionLoadout {
@@ -906,7 +905,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Trigger input event to update the game state
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
-
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),
             this.getCurrentGoldenQuarks(),
@@ -928,6 +926,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         this.observeAntiquitiesRune()
         //await this.buyCoin()
+        this.prevActionTime = performance.now();
+        
         return Promise.resolve()
     }
 
@@ -1059,7 +1059,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime}ms`);
-        this.prevActionTime = performance.now();
     }
 
     private parseNumber(text: string): number {
@@ -1125,7 +1124,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await HSUtils.sleep(50);
         this.antSacrifice.click();
         this.AOAG.click();
-
+        this.prevActionTime = performance.now();
         await this.matchStageToStrategy('final');
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);

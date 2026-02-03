@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         DEV_HSLoader3.4_CollisionFix
+// @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
 // @version      3.4
-// @description  Expose game functions and load Hypersynergism mod safely (Chrome Collision Fix)
+// @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
@@ -95,7 +95,6 @@
                 }
             }
         };
-
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
@@ -211,7 +210,6 @@ if(!window.__HS_EXPOSED){
             }
             customElements.define = origDefine;
             log('customElements.define restored');
-
             patchedScriptInjected = true;
             log('Game script injected');
 
@@ -316,6 +314,8 @@ window.__HS_BACKDOOR__ = {
                     const style = getComputedStyle(container);
                     if (style.display !== 'none') {
                         seenOpen = true;
+                        const exitBtn = document.getElementById('exitOffline');
+                        if (exitBtn) exitBtn.click();
                     } else if (seenOpen) {
                         log('offlineContainer closed, UI ready');
                         resolve(true);
@@ -370,7 +370,7 @@ window.__HS_BACKDOOR__ = {
         log('Loading mod');
 
         const s = document.createElement('script');
-        s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+        s.src = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
 
         s.onload = () => {
             log('Mod script loaded');
