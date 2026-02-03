@@ -535,6 +535,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         await this.setCorruptions(phaseConfig.corruptions);
         this.ascendBtn.click();
+        this.prevActionTime = performance.now();
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end"))) {
@@ -597,14 +598,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleep(challenge.challengeWaitBefore);
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
                 }
                 await this.performSpecialAction(challenge.challengeNumber);
                 continue;
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber},waiting before: ${challenge.challengeWaitBefore}ms, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-                    await HSUtils.sleep(challenge.challengeWaitBefore);
+                    await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
                 }
                 await this.waitForCompletion(
                     challenge.challengeNumber,
@@ -694,6 +695,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             // Only sleep if not yet loaded
             await HSUtils.sleep(this.sleepTime);
         }
+        this.prevActionTime = performance.now();
     }
 
     private stringifyCorruptions(loadout: CorruptionLoadout): string {
@@ -908,6 +910,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Trigger input event to update the game state
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
+        this.prevActionTime = performance.now();
 
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),
@@ -1051,9 +1054,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                     if (waitTime > 0) {
                         await HSUtils.sleep(waitTime);
                     }
+                    this.prevActionTime = performance.now();
                     return Promise.resolve();
                 }
                 else {
+                    this.prevActionTime = performance.now();
                     return Promise.resolve();
                 }
             }
