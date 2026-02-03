@@ -1017,50 +1017,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             if (currentCompletions.gte(maxPossible) || currentCompletions.gte(minCompletionsDecimal)) {
-                // Special handling for C10 when C11-14 are active
-                /*
-                if (challengeIndex === 10) {
-                    const activeC11to14 = this.getActiveC11to14Challenge();
-                    if (activeC11to14 !== null) {
-
-                        const c11to14LevelElement = document.getElementById(
-                            `challenge${activeC11to14}level`
-                        ) as HTMLParagraphElement | null;
-                        if (!c11to14LevelElement) {
-                            return Promise.resolve();
-                        }
-
-                        const c11to14MaxPossibleText = c11to14LevelElement.innerText;
-
-                        const parts = c11to14MaxPossibleText.split('/');
-                        let c11to14CurrentCompletions = this.parseNumber(c11to14LevelElement.innerText.split('/')[0]);
-                        while (true) {
-                            await HSUtils.sleep(this.sleepTime);
-                            const c11to14CurrentCompletions2 = this.parseNumber(
-                                c11to14LevelElement.innerText.split('/')[0]
-                            );
-
-                            if (c11to14CurrentCompletions2 === c11to14CurrentCompletions) {
-                                break;
-                            }
-
-                            c11to14CurrentCompletions = c11to14CurrentCompletions2;
-                        }
-                        return Promise.resolve();
-                    } else {
-                        return Promise.resolve();
-                    }
-                } else*/ if (currentCompletions.gte(minCompletionsDecimal)) {
-                    if (waitTime > 0) {
-                        await HSUtils.sleep(waitTime);
-                    }
-                    this.prevActionTime = performance.now();
-                    return Promise.resolve();
+                if (waitTime > 0) {
+                    await HSUtils.sleep(waitTime);
                 }
-                else {
-                    this.prevActionTime = performance.now();
-                    return Promise.resolve();
-                }
+                this.prevActionTime = performance.now();
+                return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
         }

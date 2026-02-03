@@ -93,6 +93,20 @@
             "controlEnabledId": "hs-setting-display-debug-logs-btn"
         }
     },
+    "forceReconnect": {
+        "settingName": "forceReconnect",
+        "settingDescription": "Force socket reconnect",
+        "settingHelpText": "Forcefully reconnect the game socket. Use this if your game data sniffing or auto-sing seems stuck.",
+        "settingType": "boolean",
+        "enabled": false,
+        "settingAction": "forceReconnectAction",
+        "settingControl": {
+            "controlType": "button",
+            "controlGroup": "debug",
+            "controlPage": "debug",
+            "controlEnabledId": "hs-setting-force-reconnect-btn"
+        }
+    },
     "reactiveMouseHover": {
         "settingName": "reactiveMouseHover",
         "settingDescription": "Reactive mouse hover (when SHIFT is held)",

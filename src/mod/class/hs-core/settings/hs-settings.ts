@@ -992,6 +992,130 @@ export class HSSettings extends HSModule {
         }
     }
 
+    static async exportAllModSettings() {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+        if (!storageMod) {
+            HSUI.Notify("Storage module not found", { notificationType: "error" });
+            return;
+        }
+
+        try {
+            const data = {
+                settings: storageMod.getData(HSGlobal.HSSettings.storageKey),
+                strategies: storageMod.getData(HSGlobal.HSSettings.strategiesKey),
+                ambrosia: storageMod.getData(HSGlobal.HSAmbrosia.storageKey),
+                version: HSGlobal.General.currentModVersion,
+                timestamp: Date.now()
+            };
+
+            const json = JSON.stringify(data);
+            // Use btoa safely for UTF-8 (escape/unescape is a common hack for this)
+            const encoded = btoa(unescape(encodeURIComponent(json)));
+            await navigator.clipboard.writeText(encoded);
+
+            HSUI.Notify("All mod settings exported to clipboard!", {
+                notificationType: "success"
+            });
+        } catch (error) {
+            HSUI.Notify("Export failed", { notificationType: "error" });
+            HSLogger.error(`Full export failed: ${error}`, HSSettings.#staticContext);
+        }
+    }
+
+    static async importAllModSettings() {
+        const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
+        if (!uiMod) {
+            HSUI.Notify("UI module not found", { notificationType: "error" });
+            return;
+        }
+
+        const modalId = await uiMod.Modal({
+            title: 'Import All Mod Settings',
+            htmlContent: `
+                <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
+                    <div style="color: #ff4444; font-weight: bold; border: 1px solid #ff4444; padding: 10px; border-radius: 4px; background: rgba(255, 68, 68, 0.1);">
+                        ⚠️ WARNING: This will overwrite ALL your current settings, strategies, and Ambrosia loadouts. This action is permanent and cannot be undone!
+                    </div>
+                    <div>
+                        <label for="import-all-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Paste Export Code:</label>
+                        <textarea id="import-all-json" placeholder="Paste your export code here..." rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace; background: #111; color: #eee; border: 1px solid #444; border-radius: 4px;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button id="import-all-cancel" style="padding: 10px 20px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">Cancel</button>
+                        <button id="import-all-submit" style="padding: 10px 20px; cursor: pointer; background-color: #d32f2f; color: white; border: none; border-radius: 4px; font-weight: bold; box-shadow: 0 0 10px rgba(211, 47, 47, 0.5);">OVERWRITE & IMPORT</button>
+                    </div>
+                </div>
+            `
+        });
+
+        const modal = document.querySelector(`#${modalId}`) as HTMLDivElement;
+        const submitBtn = modal.querySelector('#import-all-submit') as HTMLButtonElement;
+        const jsonInput = modal.querySelector('#import-all-json') as HTMLTextAreaElement;
+        const cancelBtn = modal.querySelector('#import-all-cancel') as HTMLButtonElement;
+
+        cancelBtn.addEventListener('click', async () => {
+            // Close the modal
+            if (modal) {
+                await (modal as any).transition({ opacity: 0 });
+                modal.parentElement?.removeChild(modal);
+            }
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const code = jsonInput.value.trim();
+            if (!code) {
+                HSUI.Notify("Please paste an export code", { notificationType: "warning" });
+                return;
+            }
+
+            try {
+                // Decode safely for UTF-8
+                const json = decodeURIComponent(escape(atob(code)));
+                const decoded = JSON.parse(json);
+
+                // Basic validation
+                if (!decoded || (!decoded.settings && !decoded.strategies && !decoded.ambrosia)) {
+                    throw new Error("Invalid export code format");
+                }
+
+                const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+                if (!storageMod) throw new Error("Storage module not found");
+
+                // Overwrite the storage
+                if (decoded.settings) storageMod.setData(HSGlobal.HSSettings.storageKey, decoded.settings);
+                if (decoded.strategies) storageMod.setData(HSGlobal.HSSettings.strategiesKey, decoded.strategies);
+                if (decoded.ambrosia) storageMod.setData(HSGlobal.HSAmbrosia.storageKey, decoded.ambrosia);
+
+                HSUI.Notify("Settings imported successfully! Reloading...", { notificationType: "success" });
+
+                // Close modal and reload
+                setTimeout(() => location.reload(), 1500);
+
+            } catch (error) {
+                HSUI.Notify("Import failed: " + (error as Error).message, { notificationType: "error" });
+                HSLogger.error(`Full import failed: ${error}`, HSSettings.#staticContext);
+            }
+        });
+    }
+
+    static async restoreAllModSettings() {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+
+        if (storageMod) {
+            HSLogger.info(`Restoring all mod settings to defaults...`, HSSettings.#staticContext);
+
+            // Clear all mod data
+            storageMod.clearData(HSGlobal.HSSettings.storageKey);
+            storageMod.clearData(HSGlobal.HSSettings.strategiesKey);
+            storageMod.clearData(HSGlobal.HSAmbrosia.storageKey);
+
+            // Reload the page to reset state
+            location.reload();
+        } else {
+            HSLogger.error(`Could not find HSStorage module for restoration`, HSSettings.#staticContext);
+        }
+    }
+
     static async editSelectedStrategy() {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
