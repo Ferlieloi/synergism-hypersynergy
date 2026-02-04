@@ -1087,11 +1087,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Wait for the C11-14 completions to stop increasing
         let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
         while (true) {
-            if (challengeIndex == 13) {
-                await HSUtils.sleep(20);
-            } else {
-                await HSUtils.sleep(10);
-            }
+            await HSUtils.sleep(10);
             const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
             if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
                 return Promise.resolve(); // Completions stopped, exit
