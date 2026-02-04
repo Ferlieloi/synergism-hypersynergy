@@ -1176,7 +1176,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.matchStageToStrategy('final');
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
-            this.saveType.checked = false;
+            this.saveType.checked = true;
             this.exportBtn.click();
             this.ascendBtn.click();
 
