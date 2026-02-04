@@ -1087,24 +1087,28 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Wait for the C11-14 completions to stop increasing
         let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
         while (true) {
-            await HSUtils.sleep(20);
+            if (challengeIndex == 13) {
+                await HSUtils.sleep(20);
+            } else {
+                await HSUtils.sleep(10);
+            }
             const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
-            if (c11to14CurrentCompletions2 == c11to14CurrentCompletions) {
+            if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
                 return Promise.resolve(); // Completions stopped, exit
             }
             c11to14CurrentCompletions = c11to14CurrentCompletions2;
         }
     }
 
-    private getChallengeGoal(challenge: number): Decimal {
+    private getChallengeGoal(challenge: number): number {
         const chal = document.getElementById(`challenge${challenge}level`) as HTMLParagraphElement | null;
-        if (!chal) return new Decimal(0);
+        if (!chal) return 0;
         const text = chal.innerText;
         if (text.includes('/')) {
             const parts = text.split('/');
-            return this.parseDecimal(parts[1].trim());
+            return this.parseNumber(parts[1].trim());
         }
-        return new Decimal(9999);
+        return 9999;
     }
 
     private parseNumber(text: string): number {
