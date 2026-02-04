@@ -396,7 +396,7 @@
 .hs-timer-hr {
     border: none;
     border-top: 1px solid #444;
-    margin: 4px 0 8px 0;
+    margin: 2px 0 4px 0;
 }
 
 .hs-modal-img {
@@ -1255,12 +1255,12 @@ a.hs-link {
     color: #fff;
     border-radius: 8px;
     font-family: monospace;
-    font-size: 14px;
+    font-size: 13px;
     z-index: 10000;
-    min-width: 200px;
-    width: 335px;
+    min-width: 300px;
+    width: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
@@ -1268,7 +1268,7 @@ a.hs-link {
 
 .hs-timer-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 8px 12px;
+    padding: 4px 12px;
     cursor: move;
     display: flex;
     justify-content: space-between;
@@ -1283,26 +1283,8 @@ a.hs-link {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.hs-minimize-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    width: 30px;
-    height: 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-#hs-autosing-timer-display .hs-minimize-btn:hover {
-    background: rgba(255, 255, 255, 0.4);
-}
-
-#hs-autosing-timer-display .hs-stop-btn {
+/* Timer control buttons - base class for all buttons in hs-timer-controls */
+#hs-autosing-timer-display .hs-timer-ctrl-btn {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
@@ -1313,34 +1295,52 @@ a.hs-link {
     font-size: 12px;
     padding: 0;
     margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.2s;
 }
 
-#hs-autosing-timer-display .hs-stop-btn:hover {
+#hs-autosing-timer-display .hs-timer-ctrl-btn:hover {
     background: rgba(255, 255, 255, 0.4);
+}
+
+/* Secondary variant for smaller icon buttons (chart toggle, minimize) */
+#hs-autosing-timer-display .hs-timer-ctrl-btn-secondary {
+    width: 30px;
+    font-size: 16px;
+    margin-right: 0;
+}
+
+#hs-autosing-timer-display #hs-timer-ctrl-chart-toggle {
+    margin-right: 8px;
 }
 
 
 .hs-timer-content {
-    padding: 12px;
-    overflow-y: auto;
-    flex: 1;
+    padding: 6px 10px 0px 10px;
+    overflow: visible;
 }
 
 .hs-timer-section {
     margin-bottom: 0px !important;
-    padding-bottom: 4px !important;
+    /*padding-bottom: 4px !important;*/
 }
 
 #hs-autosing-timer-display .hs-section-header {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: bold;
     color: #888;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     display: flex;
     align-items: center;
+}
+
+/* Phase stats section header replaces first column header */
+#hs-phase-stats-section .hs-section-header {
+    margin-bottom: 0;
 }
 
 #hs-autosing-timer-display .hs-info-line {
@@ -1372,7 +1372,7 @@ a.hs-link {
     display: grid;
     grid-template-columns: max-content max-content;
     column-gap: 5px;
-    row-gap: 6px;
+    row-gap: 3px;
     align-items: center;
 }
 
@@ -1606,7 +1606,6 @@ a.hs-link {
 #hs-autosing-timer-display #hs-sing-target {
     color: #bcb9b9;
     font-weight: bold;
-    font-size: 13px;
 }
 
 #hs-autosing-timer-display #hs-sing-highest {
@@ -1628,6 +1627,22 @@ a.hs-link {
     padding-bottom: 4px;
     display: flex;
     justify-content: center;
+    align-items: flex-end;
+    justify-self: stretch;
+    align-self: stretch;
+}
+
+/* Phase stats section title acting as first column header */
+#hs-autosing-timer-display .hs-phase-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: flex-start;
     justify-self: stretch;
 }
 

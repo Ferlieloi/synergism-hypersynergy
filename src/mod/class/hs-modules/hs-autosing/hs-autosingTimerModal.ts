@@ -313,14 +313,14 @@ export class HSAutosingTimerModal {
         this.phaseEmptyNode.className = 'hs-phase-empty';
         this.phaseEmptyNode.textContent = 'No data yet...';
 
-        const mkHeader = (label: string) => {
+        const mkHeader = (label: string, isTitle = false) => {
             const div = document.createElement('div');
-            div.className = 'hs-phase-header';
+            div.className = isTitle ? 'hs-phase-header-title' : 'hs-phase-header';
             div.textContent = label;
             return div;
         };
 
-        this.phaseHeaderNodes.push(mkHeader('Name'));
+        this.phaseHeaderNodes.push(mkHeader('PHASE STATISTICS', true));
         this.phaseHeaderNodes.push(mkHeader('Loops'));
         this.phaseHeaderNodes.push(mkHeader('Avg'));
         this.phaseHeaderNodes.push(mkHeader('SD'));
@@ -632,22 +632,24 @@ export class HSAutosingTimerModal {
         this.timerHeader.className = 'hs-timer-header';
 
         const title = document.createElement('span');
-        title.textContent = '⏱️ Autosing Timer';
+        title.textContent = '⏱️ Autosing';
         title.className = 'hs-timer-title';
 
         this.stopButton = document.createElement('button');
+        this.stopButton.id = 'hs-timer-ctrl-stop';
         this.stopButton.textContent = '🔴';
         this.stopButton.title = "Stop Autosing NOW";
-        this.stopButton.className = 'hs-stop-btn';
+        this.stopButton.className = 'hs-timer-ctrl-btn';
         this.stopButton.onclick = () => {
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
         };
 
         this.restartButton = document.createElement('button');
+        this.restartButton.id = 'hs-timer-ctrl-restart';
         this.restartButton.textContent = '🔄';
         this.restartButton.title = "Restart Singularity from the beginning";
-        this.restartButton.className = 'hs-stop-btn';
+        this.restartButton.className = 'hs-timer-ctrl-btn';
         this.restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -662,9 +664,10 @@ export class HSAutosingTimerModal {
         };
 
         this.finishStopBtn = document.createElement('button');
+        this.finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
         this.finishStopBtn.textContent = '🟠';
         this.finishStopBtn.title = "Stop Autosing at the end of current Singularity";
-        this.finishStopBtn.className = 'hs-stop-btn';
+        this.finishStopBtn.className = 'hs-timer-ctrl-btn';
         this.finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -675,14 +678,25 @@ export class HSAutosingTimerModal {
         };
 
         this.chartToggleBtn = document.createElement('button');
+        this.chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.chartToggleBtn.textContent = '📊';
         this.chartToggleBtn.title = "Toggle Detailed Data Visibility";
-        this.chartToggleBtn.className = 'hs-minimize-btn'; // Reusing style
-        this.chartToggleBtn.style.marginRight = '8px';
+        this.chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
             this.detailsVisibilityVersion++;
+
+            if (this.showDetailedData) {
+                // Showing detailed data: enable auto-sizing
+                this.timerDisplay!.style.width = 'auto';
+                this.timerDisplay!.style.height = 'auto';
+            } else {
+                // Hiding detailed data: lock current width to prevent shrinking
+                const currentWidth = this.timerDisplay!.offsetWidth;
+                this.timerDisplay!.style.width = `${currentWidth}px`;
+            }
+
             // Sparklines render also handles detailed-only visibility toggles.
             this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
@@ -698,9 +712,10 @@ export class HSAutosingTimerModal {
         };
 
         this.minimizeBtn = document.createElement('button');
+        this.minimizeBtn.id = 'hs-timer-ctrl-minimize';
         this.minimizeBtn.textContent = '−';
         this.minimizeBtn.title = "Minimize";
-        this.minimizeBtn.className = 'hs-minimize-btn';
+        this.minimizeBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.minimizeBtn.onclick = () => this.toggleMinimize();
 
         this.timerHeader.appendChild(title);
@@ -783,16 +798,15 @@ export class HSAutosingTimerModal {
             <div id="hs-phase-stats-wrapper">
                 <hr class="hs-timer-hr">
                 <div id="hs-phase-stats-section" class="hs-timer-section">
-                    <div class="hs-section-header">PHASE STATISTICS</div>
                     <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
                 </div>
                 <hr class="hs-timer-hr">
             </div>
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section">
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version:</span> <span id="hs-footer-version" class="hs-detailed-value"></span></div>
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy:</span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
-                <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order:</span> <span id="hs-footer-loadouts" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version: v</span> <span id="hs-footer-version" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy: </span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order: </span> <span id="hs-footer-loadouts" class="hs-detailed-value"></span></div>
             </div>
         `;
         this.timerContent.appendChild(this.dynamicContent);
@@ -927,23 +941,18 @@ export class HSAutosingTimerModal {
         // Graph (SVG) width must fit inside the modal next to the label column.
         this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
 
-        // Lock max width to this value
-        this.timerDisplay.style.maxWidth = `${this.computedMaxWidth}px`;
-        this.timerDisplay.style.maxHeight = `${this.computedMaxHeight}px`;
-        this.timerDisplay.style.width = `${this.computedMaxWidth}px`;
-        this.timerDisplay.style.height = `${appliedHeight}px`;
+        this.timerDisplay.style.width = 'auto';
+        this.timerDisplay.style.height = 'auto';
 
+        // Sparkline containers also use auto width to allow modal to auto-size
         if (this.sparklineContainer1) {
-            this.sparklineContainer1.style.width = `${appliedWidth}px`;
-            this.sparklineContainer1.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer1.style.width = 'auto';
         }
         if (this.sparklineContainer2) {
-            this.sparklineContainer2.style.width = `${appliedWidth}px`;
-            this.sparklineContainer2.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer2.style.width = 'auto';
         }
         if (this.sparklineContainer3) {
-            this.sparklineContainer3.style.width = `${appliedWidth}px`;
-            this.sparklineContainer3.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer3.style.width = 'auto';
         }
 
         this.autoResized = true;
@@ -1023,6 +1032,9 @@ export class HSAutosingTimerModal {
         this.isMinimized = !this.isMinimized;
 
         if (this.isMinimized) {
+            // Lock width to current size before hiding content
+            const currentWidth = this.timerDisplay.offsetWidth;
+            this.timerDisplay.style.minWidth = `${currentWidth}px`;
             this.timerContent.style.display = 'none';
             this.timerDisplay.style.height = 'auto';
             if (this.stopButton) this.stopButton.style.display = 'none';
@@ -1031,8 +1043,11 @@ export class HSAutosingTimerModal {
             if (this.resizeHandleElem) this.resizeHandleElem.style.display = 'none';
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
+            // Restore auto-sizing - recalculate dimensions for new content
+            this.timerDisplay.style.minWidth = '';
+            this.timerDisplay.style.width = 'auto';
+            this.timerDisplay.style.height = 'auto';
             this.timerContent.style.display = 'block';
-            this.timerDisplay.style.height = '';
             if (this.stopButton) this.stopButton.style.display = 'block';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'block';

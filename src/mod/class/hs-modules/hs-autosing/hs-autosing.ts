@@ -674,6 +674,54 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 116: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
+            case 117: // Max C11
+                await this.maxC11to14WithC10(11);
+                break;
+            case 118: // Max C12
+                await this.maxC11to14WithC10(12);
+                break;
+            case 119: // Max C13
+                await this.maxC11to14WithC10(13);
+                break;
+            case 120: // Max C14
+                await this.maxC11to14WithC10(14);
+                break;
+            case 501: // Special Corruptions 1 - challenge14 - w5x10max
+                const corruptions501 = { viscosity: 1, drought: 7, deflation: 4, extinction: 11, illiteracy: 0, recession: 14, dilation: 4, hyperchallenge: 2 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions501);
+                break;
+            case 502: // Special Corruptions 2 - w5x10max - p2x1x10
+                const corruptions502 = { viscosity: 2, drought: 15, deflation: 3, extinction: 11, illiteracy: 14, recession: 14, dilation: 5, hyperchallenge: 2 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions502);
+                break;
+            case 503: // Special Corruptions 3 - p2x1x10 - p3x1
+                const corruptions503 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions503);
+                break;
+            case 504: // Special Corruptions 4 - p3x1 - beta
+                const corruptions504 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions504);
+                break;
+            case 505: // Special Corruptions 5 - beta - 1e15-expo
+                const corruptions505 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions505);
+                break;
+            case 506: // Special Corruptions 6 - 1e15-expo - omega
+                const corruptions506 = { viscosity: 6, drought: 16, deflation: 16, extinction: 13, illiteracy: 16, recession: 16, dilation: 11, hyperchallenge: 10 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions506);
+                break;
+            case 507: // Special Corruptions 7 - omega - singularity
+                const corruptions507 = { viscosity: 10, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 14, dilation: 14, hyperchallenge: 13 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions507);
+                break;
+            case 508: // Special Corruptions 8 - singularity - end
+                const corruptions508 = { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions508);
+                break;
+            case 999: // Restart AutoSing
+                const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
+                if (restartBtn) restartBtn.click();
+                break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
         }
@@ -1021,6 +1069,43 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(sleepInterval);
         }
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`);
+    }
+
+    /**
+     * Maxes out a C11-14 challenge by entering it and waiting for C10 to push completions.
+     * Waits until C11-14 completions stop increasing, then returns.
+     */
+    private async maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14): Promise<void> {
+        // Enter the C11-14 challenge, then C10
+        await this.waitForCompletion(challengeIndex, 0, 0, 0);
+        await this.waitForCompletion(10, 0, 0, 0);
+
+        // Wait for the C11-14 completions to stop increasing
+        let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
+        while (true) {
+            await HSUtils.sleep(10);
+            const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
+            if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
+                return Promise.resolve(); // Completions stopped, exit
+            }
+            c11to14CurrentCompletions = c11to14CurrentCompletions2;
+        }
+    }
+
+    private getChallengeGoal(challenge: number): number {
+        const chal = document.getElementById(`challenge${challenge}level`) as HTMLParagraphElement | null;
+        if (!chal) return 0;
+        const text = chal.innerText;
+        if (text.includes('/')) {
+            const parts = text.split('/');
+            return this.parseNumber(parts[1].trim());
+        }
+        return 9999;
+    }
+
+    private parseNumber(text: string): number {
+        const parsed = parseFloat(text.replace(/,/g, '').trim());
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     private parseDecimal(text: string): Decimal {
