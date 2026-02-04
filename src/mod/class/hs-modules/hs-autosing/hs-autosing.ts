@@ -686,41 +686,37 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 120: // Max C14
                 await this.maxC11to14WithC10(14);
                 break;
-            case 501: // Special Corruptions 1
-                const corruptions501 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 501: // Special Corruptions 1 - challenge14 - w5x10max
+                const corruptions501 = { viscosity: 1, drought: 7, deflation: 4, extinction: 11, illiteracy: 0, recession: 14, dilation: 4, hyperchallenge: 2 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions501);
                 break;
-            case 502: // Special Corruptions 2
-                const corruptions502 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 502: // Special Corruptions 2 - w5x10max - p2x1x10
+                const corruptions502 = { viscosity: 2, drought: 15, deflation: 3, extinction: 11, illiteracy: 14, recession: 14, dilation: 5, hyperchallenge: 2 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions502);
                 break;
-            case 503: // Special Corruptions 3
-                const corruptions503 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 503: // Special Corruptions 3 - p2x1x10 - p3x1
+                const corruptions503 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions503);
                 break;
-            case 504: // Special Corruptions 4
-                const corruptions504 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 504: // Special Corruptions 4 - p3x1 - beta
+                const corruptions504 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions504);
                 break;
-            case 505: // Special Corruptions 5
-                const corruptions505 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 505: // Special Corruptions 5 - beta - 1e15-expo
+                const corruptions505 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions505);
                 break;
-            case 506: // Special Corruptions 6
-                const corruptions506 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 506: // Special Corruptions 6 - 1e15-expo - omega
+                const corruptions506 = { viscosity: 6, drought: 16, deflation: 16, extinction: 13, illiteracy: 16, recession: 16, dilation: 11, hyperchallenge: 10 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions506);
                 break;
-            case 507: // Special Corruptions 7
-                const corruptions507 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 507: // Special Corruptions 7 - omega - singularity
+                const corruptions507 = { viscosity: 10, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 14, dilation: 14, hyperchallenge: 13 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions507);
                 break;
-            case 508: // Special Corruptions 8
-                const corruptions508 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+            case 508: // Special Corruptions 8 - singularity - end
+                const corruptions508 = { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions508);
-                break;
-            case 509: // Special Corruptions 9
-                const corruptions509 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
-                await this.setCorruptions(corruptions509);
                 break;
             case 999: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
