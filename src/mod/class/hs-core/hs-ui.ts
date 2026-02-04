@@ -137,6 +137,11 @@ export class HSUI extends HSModule {
                 const tab = e.target as HTMLDivElement;
                 const tabId = tab.dataset.tab ? parseInt(tab.dataset.tab, 10) : null;
 
+                // Always scroll to bottom when clicking log tab (even if already selected)
+                if (tabId === 1) {
+                    HSLogger.scrollToBottom();
+                }
+
                 if (tab.classList.contains('hs-tab-selected'))
                     return;
 
@@ -170,10 +175,6 @@ export class HSUI extends HSModule {
                                 targetPanel.classList.add('hs-panel-body-open-block');
                                 break;
                         }
-
-                        // Log panel (auto scroll to bottom when log tab selected)
-                        if (tabId === 1)
-                            HSLogger.scrollToBottom();
                     }
                 } else {
                     HSLogger.error(`tabId is null`, self.context);
