@@ -90,6 +90,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private corruptionPromptOkBtn!: HTMLButtonElement;
     private addCodeAllBtn!: HTMLButtonElement;
     private timeCodeBtn!: HTMLButtonElement;
+    private saveType!: HTMLInputElement;
+    private exportBtn!: HTMLButtonElement;
 
     private stopAtSingularitysEnd: boolean = false;
     private hasWarnedMissingStageFunc: boolean = false;
@@ -141,6 +143,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
         this.antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
         this.gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
+        this.saveType = document.getElementById('saveType') as HTMLInputElement;
+        this.exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
 
         // Cache elements for corruptions and codes
         this.corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
@@ -320,6 +324,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.autosingEnabled = false;
         this.advancedDataCollectionEnabledAtStart = false;
         this.stopAutosing();
+        this.saveType.checked = false;
+
         if (this.timerModal) {
             this.timerModal.hide();
         }
@@ -1083,7 +1089,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Wait for the C11-14 completions to stop increasing
         let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
         while (true) {
-            await HSUtils.sleep(10);
+            await HSUtils.sleep(50);
             const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
             if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
                 return Promise.resolve(); // Completions stopped, exit
@@ -1162,13 +1168,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exitAscBtn.click();
         await this.setCorruptions(ZERO_CORRUPTIONS);
         this.ascendBtn.click();
-        await HSUtils.sleep(50);
+        await HSUtils.sleep(100);
         this.antSacrifice.click();
+        await HSUtils.sleep(1);
         this.AOAG.click();
         this.prevActionTime = performance.now();
         await this.matchStageToStrategy('final');
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
+            this.saveType.checked = false;
+            this.exportBtn.click();
             this.ascendBtn.click();
 
             // Stop at singularity's end requested
@@ -1192,17 +1201,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.waitForCompletion(11, 0, 7777, 0);
-        await this.waitForCompletion(10, 130, 9999, 0);
-
-        await this.waitForCompletion(12, 0, 7777, 0);
-        await this.waitForCompletion(10, 130, 9999, 0);
-
-        await this.waitForCompletion(13, 0, 7777, 0);
-        await this.waitForCompletion(10, 130, 9999, 0);
-
-        await this.waitForCompletion(14, 0, 7777, 0);
-        await this.waitForCompletion(10, 130, 9999, 0);
+        await this.performSpecialAction(117); // Max C11
+        await this.performSpecialAction(118); // Max C12
+        await this.performSpecialAction(119); // Max C13
+        await this.performSpecialAction(120); // Max C14
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
