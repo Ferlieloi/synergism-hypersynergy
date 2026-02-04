@@ -152,10 +152,14 @@ export class HSLogger {
         }
     }
 
-    // Scrolls the log element to the bottom
+    // Scrolls the log element to the bottom only if user is already near the bottom
     static scrollToBottom() {
         if (this.#integratedToUI && this.#logElement) {
-            this.#logElement.scrollTop = this.#logElement.scrollHeight;
+            // Only auto-scroll if the user is within 50px of the bottom
+            const isNearBottom = this.#logElement.scrollHeight - this.#logElement.scrollTop - this.#logElement.clientHeight < 50;
+            if (isNearBottom) {
+                this.#logElement.scrollTop = this.#logElement.scrollHeight;
+            }
         }
     }
 

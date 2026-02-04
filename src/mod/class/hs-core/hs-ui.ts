@@ -202,8 +202,125 @@ export class HSUI extends HSModule {
 
         document.body.appendChild(this.#uiPanelOpenBtn);
 
+        // Create quick access hover menu
+        this.#createQuickAccessMenu();
+
         this.uiReady = true;
         this.isInitialized = true;
+    }
+
+    #createQuickAccessMenu() {
+        if (!this.#uiPanelOpenBtn) return;
+
+        // Create the menu container
+        const quickMenu = document.createElement('div');
+        quickMenu.id = 'hs-quick-access-menu';
+        quickMenu.style.cssText = `
+            position: absolute;
+            top: 45px;
+            left: 10px;
+            background: rgba(28, 27, 34, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, 0.5);
+            z-index: 999999;
+            min-width: 140px;
+        `;
+
+        // Create Auto-Sing toggle button
+        const autoSingBtn = document.createElement('button');
+        autoSingBtn.textContent = '▶ Start Auto-Sing';
+        autoSingBtn.style.cssText = `
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            color: #4caf50;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        `;
+        autoSingBtn.addEventListener('mouseenter', () => {
+            autoSingBtn.style.background = 'rgba(76, 175, 80, 0.3)';
+            autoSingBtn.style.borderColor = 'rgba(76, 175, 80, 0.6)';
+        });
+        autoSingBtn.addEventListener('mouseleave', () => {
+            autoSingBtn.style.background = 'rgba(76, 175, 80, 0.2)';
+            autoSingBtn.style.borderColor = 'rgba(76, 175, 80, 0.4)';
+        });
+        autoSingBtn.addEventListener('click', () => {
+            const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
+            if (autoSingToggle) {
+                autoSingToggle.click();
+                HSLogger.log('Auto-Sing toggled via quick menu', this.context);
+            }
+        });
+
+        // Create Ambrosia Heater export button
+        const heaterBtn = document.createElement('button');
+        heaterBtn.textContent = '🔥 Amb Heater Export';
+        heaterBtn.style.cssText = `
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid rgba(255, 152, 0, 0.4);
+            color: #ff9800;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        `;
+        heaterBtn.addEventListener('mouseenter', () => {
+            heaterBtn.style.background = 'rgba(255, 152, 0, 0.3)';
+            heaterBtn.style.borderColor = 'rgba(255, 152, 0, 0.6)';
+        });
+        heaterBtn.addEventListener('mouseleave', () => {
+            heaterBtn.style.background = 'rgba(255, 152, 0, 0.2)';
+            heaterBtn.style.borderColor = 'rgba(255, 152, 0, 0.4)';
+        });
+        heaterBtn.addEventListener('click', () => {
+            const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
+            if (heaterExportBtn) {
+                heaterExportBtn.click();
+                HSLogger.log('Ambrosia Heater exported via quick menu', this.context);
+            }
+        });
+
+        quickMenu.appendChild(autoSingBtn);
+        quickMenu.appendChild(heaterBtn);
+        document.body.appendChild(quickMenu);
+
+        // Show/hide menu on hover
+        let hoverTimeout: number | null = null;
+
+        this.#uiPanelOpenBtn.addEventListener('mouseenter', () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+            quickMenu.style.display = 'flex';
+        });
+
+        this.#uiPanelOpenBtn.addEventListener('mouseleave', () => {
+            hoverTimeout = window.setTimeout(() => {
+                quickMenu.style.display = 'none';
+            }, 200);
+        });
+
+        quickMenu.addEventListener('mouseenter', () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+            quickMenu.style.display = 'flex';
+        });
+
+        quickMenu.addEventListener('mouseleave', () => {
+            hoverTimeout = window.setTimeout(() => {
+                quickMenu.style.display = 'none';
+            }, 200);
+        });
     }
 
     static isModPanelOpen() {

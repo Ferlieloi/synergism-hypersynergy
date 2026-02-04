@@ -632,7 +632,7 @@ export class HSAutosingTimerModal {
         this.timerHeader.className = 'hs-timer-header';
 
         const title = document.createElement('span');
-        title.textContent = '⏱️ Autosing Timer';
+        title.textContent = '⏱️ Autosing';
         title.className = 'hs-timer-title';
 
         this.stopButton = document.createElement('button');
@@ -931,23 +931,18 @@ export class HSAutosingTimerModal {
         // Graph (SVG) width must fit inside the modal next to the label column.
         this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
 
-        // Lock max width to this value
-        this.timerDisplay.style.maxWidth = `${this.computedMaxWidth}px`;
-        this.timerDisplay.style.maxHeight = `${this.computedMaxHeight}px`;
-        this.timerDisplay.style.width = `${this.computedMaxWidth}px`;
-        this.timerDisplay.style.height = `${appliedHeight}px`;
+        this.timerDisplay.style.width = 'auto';
+        this.timerDisplay.style.height = 'auto';
 
+        // Sparkline containers also use auto width to allow modal to auto-size
         if (this.sparklineContainer1) {
-            this.sparklineContainer1.style.width = `${appliedWidth}px`;
-            this.sparklineContainer1.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer1.style.width = 'auto';
         }
         if (this.sparklineContainer2) {
-            this.sparklineContainer2.style.width = `${appliedWidth}px`;
-            this.sparklineContainer2.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer2.style.width = 'auto';
         }
         if (this.sparklineContainer3) {
-            this.sparklineContainer3.style.width = `${appliedWidth}px`;
-            this.sparklineContainer3.style.maxWidth = `${appliedWidth}px`;
+            this.sparklineContainer3.style.width = 'auto';
         }
 
         this.autoResized = true;
@@ -1027,6 +1022,9 @@ export class HSAutosingTimerModal {
         this.isMinimized = !this.isMinimized;
 
         if (this.isMinimized) {
+            // Lock width to current size before hiding content
+            const currentWidth = this.timerDisplay.offsetWidth;
+            this.timerDisplay.style.minWidth = `${currentWidth}px`;
             this.timerContent.style.display = 'none';
             this.timerDisplay.style.height = 'auto';
             if (this.stopButton) this.stopButton.style.display = 'none';
@@ -1035,6 +1033,8 @@ export class HSAutosingTimerModal {
             if (this.resizeHandleElem) this.resizeHandleElem.style.display = 'none';
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
+            // Restore auto-sizing
+            this.timerDisplay.style.minWidth = '';
             this.timerContent.style.display = 'block';
             this.timerDisplay.style.height = '';
             if (this.stopButton) this.stopButton.style.display = 'block';
