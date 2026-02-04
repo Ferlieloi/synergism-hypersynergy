@@ -674,6 +674,46 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 116: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
+            case 501: // Special Corruptions 1
+                const corruptions501 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions501);
+                break;
+            case 502: // Special Corruptions 2
+                const corruptions502 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions502);
+                break;
+            case 503: // Special Corruptions 3
+                const corruptions503 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions503);
+                break;
+            case 504: // Special Corruptions 4
+                const corruptions504 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions504);
+                break;
+            case 505: // Special Corruptions 5
+                const corruptions505 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions505);
+                break;
+            case 506: // Special Corruptions 6
+                const corruptions506 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions506);
+                break;
+            case 507: // Special Corruptions 7
+                const corruptions507 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions507);
+                break;
+            case 508: // Special Corruptions 8
+                const corruptions508 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions508);
+                break;
+            case 509: // Special Corruptions 9
+                const corruptions509 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions509);
+                break;
+            case 510: // Special Corruptions 10
+                const corruptions510 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions510);
+                break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
         }

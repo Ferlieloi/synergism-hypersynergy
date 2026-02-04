@@ -636,18 +636,20 @@ export class HSAutosingTimerModal {
         title.className = 'hs-timer-title';
 
         this.stopButton = document.createElement('button');
+        this.stopButton.id = 'hs-timer-ctrl-stop';
         this.stopButton.textContent = '🔴';
         this.stopButton.title = "Stop Autosing NOW";
-        this.stopButton.className = 'hs-stop-btn';
+        this.stopButton.className = 'hs-timer-ctrl-btn';
         this.stopButton.onclick = () => {
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
         };
 
         this.restartButton = document.createElement('button');
+        this.restartButton.id = 'hs-timer-ctrl-restart';
         this.restartButton.textContent = '🔄';
         this.restartButton.title = "Restart Singularity from the beginning";
-        this.restartButton.className = 'hs-stop-btn';
+        this.restartButton.className = 'hs-timer-ctrl-btn';
         this.restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -662,9 +664,10 @@ export class HSAutosingTimerModal {
         };
 
         this.finishStopBtn = document.createElement('button');
+        this.finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
         this.finishStopBtn.textContent = '🟠';
         this.finishStopBtn.title = "Stop Autosing at the end of current Singularity";
-        this.finishStopBtn.className = 'hs-stop-btn';
+        this.finishStopBtn.className = 'hs-timer-ctrl-btn';
         this.finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -675,10 +678,10 @@ export class HSAutosingTimerModal {
         };
 
         this.chartToggleBtn = document.createElement('button');
+        this.chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.chartToggleBtn.textContent = '📊';
         this.chartToggleBtn.title = "Toggle Detailed Data Visibility";
-        this.chartToggleBtn.className = 'hs-minimize-btn'; // Reusing style
-        this.chartToggleBtn.style.marginRight = '8px';
+        this.chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
@@ -698,9 +701,10 @@ export class HSAutosingTimerModal {
         };
 
         this.minimizeBtn = document.createElement('button');
+        this.minimizeBtn.id = 'hs-timer-ctrl-minimize';
         this.minimizeBtn.textContent = '−';
         this.minimizeBtn.title = "Minimize";
-        this.minimizeBtn.className = 'hs-minimize-btn';
+        this.minimizeBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.minimizeBtn.onclick = () => this.toggleMinimize();
 
         this.timerHeader.appendChild(title);

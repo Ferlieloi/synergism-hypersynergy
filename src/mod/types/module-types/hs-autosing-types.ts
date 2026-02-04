@@ -53,6 +53,16 @@ export const SPECIAL_ACTIONS = [
     { label: "Store C15", value: 116 },
     { label: "If-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
+    { label: "Set corruptions 1", value: 501 },
+    { label: "Set corruptions 2", value: 502 },
+    { label: "Set corruptions 3", value: 503 },
+    { label: "Set corruptions 4", value: 504 },
+    { label: "Set corruptions 5", value: 505 },
+    { label: "Set corruptions 6", value: 506 },
+    { label: "Set corruptions 7", value: 507 },
+    { label: "Set corruptions 8", value: 508 },
+    { label: "Set corruptions 9", value: 509 },
+    { label: "Set corruptions 10", value: 510 },
 ] as const;
 
 export type GetFromDOMOptions<T> = {
