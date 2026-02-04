@@ -313,14 +313,14 @@ export class HSAutosingTimerModal {
         this.phaseEmptyNode.className = 'hs-phase-empty';
         this.phaseEmptyNode.textContent = 'No data yet...';
 
-        const mkHeader = (label: string) => {
+        const mkHeader = (label: string, isTitle = false) => {
             const div = document.createElement('div');
-            div.className = 'hs-phase-header';
+            div.className = isTitle ? 'hs-phase-header-title' : 'hs-phase-header';
             div.textContent = label;
             return div;
         };
 
-        this.phaseHeaderNodes.push(mkHeader('Name'));
+        this.phaseHeaderNodes.push(mkHeader('PHASE STATISTICS', true));
         this.phaseHeaderNodes.push(mkHeader('Loops'));
         this.phaseHeaderNodes.push(mkHeader('Avg'));
         this.phaseHeaderNodes.push(mkHeader('SD'));
@@ -686,9 +686,17 @@ export class HSAutosingTimerModal {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
             this.detailsVisibilityVersion++;
-            // Reset to auto-sizing when toggling charts
-            this.timerDisplay!.style.width = 'auto';
-            this.timerDisplay!.style.height = 'auto';
+
+            if (this.showDetailedData) {
+                // Showing detailed data: enable auto-sizing
+                this.timerDisplay!.style.width = 'auto';
+                this.timerDisplay!.style.height = 'auto';
+            } else {
+                // Hiding detailed data: lock current width to prevent shrinking
+                const currentWidth = this.timerDisplay!.offsetWidth;
+                this.timerDisplay!.style.width = `${currentWidth}px`;
+            }
+
             // Sparklines render also handles detailed-only visibility toggles.
             this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
@@ -790,16 +798,15 @@ export class HSAutosingTimerModal {
             <div id="hs-phase-stats-wrapper">
                 <hr class="hs-timer-hr">
                 <div id="hs-phase-stats-section" class="hs-timer-section">
-                    <div class="hs-section-header">PHASE STATISTICS</div>
                     <div id="hs-phase-stats-container" class="hs-stats-grid"></div>
                 </div>
                 <hr class="hs-timer-hr">
             </div>
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section">
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version:</span> <span id="hs-footer-version" class="hs-detailed-value"></span></div>
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy:</span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
-                <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order:</span> <span id="hs-footer-loadouts" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version: v</span> <span id="hs-footer-version" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy: </span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order: </span> <span id="hs-footer-loadouts" class="hs-detailed-value"></span></div>
             </div>
         `;
         this.timerContent.appendChild(this.dynamicContent);

@@ -396,7 +396,7 @@
 .hs-timer-hr {
     border: none;
     border-top: 1px solid #444;
-    margin: 4px 0 8px 0;
+    margin: 2px 0 4px 0;
 }
 
 .hs-modal-img {
@@ -1255,7 +1255,7 @@ a.hs-link {
     color: #fff;
     border-radius: 8px;
     font-family: monospace;
-    font-size: 14px;
+    font-size: 13px;
     z-index: 10000;
     min-width: 300px;
     width: auto;
@@ -1268,7 +1268,7 @@ a.hs-link {
 
 .hs-timer-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 8px 12px;
+    padding: 4px 12px;
     cursor: move;
     display: flex;
     justify-content: space-between;
@@ -1324,18 +1324,23 @@ a.hs-link {
 
 .hs-timer-section {
     margin-bottom: 0px !important;
-    padding-bottom: 4px !important;
+    /*padding-bottom: 4px !important;*/
 }
 
 #hs-autosing-timer-display .hs-section-header {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: bold;
     color: #888;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     display: flex;
     align-items: center;
+}
+
+/* Phase stats section header replaces first column header */
+#hs-phase-stats-section .hs-section-header {
+    margin-bottom: 0;
 }
 
 #hs-autosing-timer-display .hs-info-line {
@@ -1367,7 +1372,7 @@ a.hs-link {
     display: grid;
     grid-template-columns: max-content max-content;
     column-gap: 5px;
-    row-gap: 6px;
+    row-gap: 3px;
     align-items: center;
 }
 
@@ -1601,7 +1606,6 @@ a.hs-link {
 #hs-autosing-timer-display #hs-sing-target {
     color: #bcb9b9;
     font-weight: bold;
-    font-size: 13px;
 }
 
 #hs-autosing-timer-display #hs-sing-highest {
@@ -1623,6 +1627,22 @@ a.hs-link {
     padding-bottom: 4px;
     display: flex;
     justify-content: center;
+    align-items: flex-end;
+    justify-self: stretch;
+    align-self: stretch;
+}
+
+/* Phase stats section title acting as first column header */
+#hs-autosing-timer-display .hs-phase-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: flex-start;
     justify-self: stretch;
 }
 
