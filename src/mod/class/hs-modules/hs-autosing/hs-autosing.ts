@@ -710,9 +710,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const corruptions509 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions509);
                 break;
-            case 510: // Special Corruptions 10
-                const corruptions510 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
-                await this.setCorruptions(corruptions510);
+            case 999: // Restart AutoSing
+                const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
+                if (restartBtn) restartBtn.click();
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
