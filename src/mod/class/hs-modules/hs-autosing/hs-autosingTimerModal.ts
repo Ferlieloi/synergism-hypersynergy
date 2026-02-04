@@ -686,6 +686,9 @@ export class HSAutosingTimerModal {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
             this.detailsVisibilityVersion++;
+            // Reset to auto-sizing when toggling charts
+            this.timerDisplay!.style.width = 'auto';
+            this.timerDisplay!.style.height = 'auto';
             // Sparklines render also handles detailed-only visibility toggles.
             this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
@@ -1033,10 +1036,11 @@ export class HSAutosingTimerModal {
             if (this.resizeHandleElem) this.resizeHandleElem.style.display = 'none';
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
-            // Restore auto-sizing
+            // Restore auto-sizing - recalculate dimensions for new content
             this.timerDisplay.style.minWidth = '';
+            this.timerDisplay.style.width = 'auto';
+            this.timerDisplay.style.height = 'auto';
             this.timerContent.style.display = 'block';
-            this.timerDisplay.style.height = '';
             if (this.stopButton) this.stopButton.style.display = 'block';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'block';

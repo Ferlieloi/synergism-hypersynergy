@@ -51,6 +51,10 @@ export const SPECIAL_ACTIONS = [
     { label: "Wait", value: 111 },
     { label: "Auto Challenge Toggle", value: 115 },
     { label: "Store C15", value: 116 },
+    { label: "Max C11", value: 117 },
+    { label: "Max C12", value: 118 },
+    { label: "Max C13", value: 119 },
+    { label: "Max C14", value: 120 },
     { label: "If-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
     { label: "Set corruptions 1", value: 501 },
@@ -62,7 +66,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Set corruptions 7", value: 507 },
     { label: "Set corruptions 8", value: 508 },
     { label: "Set corruptions 9", value: 509 },
-    { label: "Set corruptions 10", value: 510 },
+    { label: "Restart Autosing", value: 999 },
 ] as const;
 
 export type GetFromDOMOptions<T> = {

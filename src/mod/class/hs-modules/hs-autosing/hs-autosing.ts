@@ -674,6 +674,18 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 116: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
+            case 117: // Max C11
+                await this.maxC11to14WithC10(11);
+                break;
+            case 118: // Max C12
+                await this.maxC11to14WithC10(12);
+                break;
+            case 119: // Max C13
+                await this.maxC11to14WithC10(13);
+                break;
+            case 120: // Max C14
+                await this.maxC11to14WithC10(14);
+                break;
             case 501: // Special Corruptions 1
                 const corruptions501 = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions501);
@@ -1061,6 +1073,43 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(sleepInterval);
         }
         HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`);
+    }
+
+    /**
+     * Maxes out a C11-14 challenge by entering it and waiting for C10 to push completions.
+     * Waits until C11-14 completions stop increasing, then returns.
+     */
+    private async maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14): Promise<void> {
+        // Enter the C11-14 challenge, then C10
+        await this.waitForCompletion(challengeIndex, 0, 0, 0);
+        await this.waitForCompletion(10, 0, 0, 0);
+
+        // Wait for the C11-14 completions to stop increasing
+        let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
+        while (true) {
+            await HSUtils.sleep(20);
+            const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
+            if (c11to14CurrentCompletions2 == c11to14CurrentCompletions) {
+                return Promise.resolve(); // Completions stopped, exit
+            }
+            c11to14CurrentCompletions = c11to14CurrentCompletions2;
+        }
+    }
+
+    private getChallengeGoal(challenge: number): Decimal {
+        const chal = document.getElementById(`challenge${challenge}level`) as HTMLParagraphElement | null;
+        if (!chal) return new Decimal(0);
+        const text = chal.innerText;
+        if (text.includes('/')) {
+            const parts = text.split('/');
+            return this.parseDecimal(parts[1].trim());
+        }
+        return new Decimal(9999);
+    }
+
+    private parseNumber(text: string): number {
+        const parsed = parseFloat(text.replace(/,/g, '').trim());
+        return isNaN(parsed) ? 0 : parsed;
     }
 
     private parseDecimal(text: string): Decimal {
