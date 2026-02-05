@@ -1183,6 +1183,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.saveType.checked = true;
             if (HSSettings.getSetting('autoSingSilentRewardExport')?.isEnabled()) {
                 await HSUtils.performSilentRewardExport();
+            } else {
+                this.exportBtn.click();
+                this.ascendBtn.click();
             }
             // Stop at singularity's end requested
             if (this.stopAtSingularitysEnd && this.autosingEnabled) {
