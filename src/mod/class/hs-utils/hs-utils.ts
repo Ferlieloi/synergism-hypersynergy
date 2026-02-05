@@ -380,7 +380,32 @@ export class HSUtils {
      */
     static async performSilentRewardExport(): Promise<void> {
         const win = window as any;
-        const exportFn = win.exportSynergism;
+        let exportFn = win.__HS_exportSynergism;
+
+        // If not found, try to find it dynamically
+        if (typeof exportFn !== 'function') {
+            // Try common function names or search window object
+            const possibleNames = ['__HS_exportSynergism', 'exportSynergism', 'exportGame', 'saveAndExport', 'exportSave'];
+            for (const name of possibleNames) {
+                if (typeof win[name] === 'function') {
+                    exportFn = win[name];
+                    HSLogger.debug(`Found export function as: ${name}`, 'HSUtils');
+                    break;
+                }
+            }
+            
+            // If still not found, try to find any function that uses clipboard
+            if (typeof exportFn !== 'function') {
+                for (const key in win) {
+                    const obj = win[key];
+                    if (typeof obj === 'function' && obj.toString().includes('clipboard.writeText')) {
+                        exportFn = obj;
+                        HSLogger.debug(`Found export function by content: ${key}`, 'HSUtils');
+                        break;
+                    }
+                }
+            }
+        }
 
         if (typeof exportFn !== 'function') {
             HSLogger.warn('exportSynergism not found, rewards may not be granted.', 'HSUtils');
