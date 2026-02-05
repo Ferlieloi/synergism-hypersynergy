@@ -163,6 +163,94 @@ if(!window.__HS_EXPOSED){
     window.__HS_loadStatistics=Qe;
     window.__HS_loadMiscellaneousStats=g6;
     window.__HS_i18next=s;
+    
+    // Additional function exposures for modding
+    try {
+        // Buy functions
+        if (typeof pr !== 'undefined') window.__HS_buyBuilding=pr;
+        if (typeof pu !== 'undefined') window.__HS_buyAccelerator=pu;
+        if (typeof mu !== 'undefined') window.__HS_buyMultiplier=mu;
+        if (typeof Jl !== 'undefined') window.__HS_buyAcceleratorBoost=Jl;
+        if (typeof Ns !== 'undefined') window.__HS_buyParticle=Ns;
+        if (typeof Qd !== 'undefined') window.__HS_buyAscend=Qd;
+        if (typeof Xl !== 'undefined') window.__HS_buyTesseract=Xl;
+        
+        // Upgrade functions  
+        if (typeof qd !== 'undefined') window.__HS_upgrade=qd;
+        if (typeof ua !== 'undefined') window.__HS_upgradeCrystal=ua;
+        if (typeof pg !== 'undefined') window.__HS_upgradeRune=pg;
+        
+        // Reset functions
+        if (typeof tn !== 'undefined') window.__HS_reset=tn;
+        if (typeof Ti !== 'undefined') window.__HS_singularityReset=Ti;
+        
+        // Challenge functions
+        if (typeof Ia !== 'undefined') window.__HS_enterChallenge=Ia;
+        if (typeof Hn !== 'undefined') window.__HS_exitChallenge=Hn;
+        if (typeof Fd !== 'undefined') window.__HS_calculateChallenge15=Fd;
+        
+        // Achievement functions
+        if (typeof Je !== 'undefined') window.__HS_unlockAchievement=Je;
+        if (typeof Da !== 'undefined') window.__HS_updateAchievement=Da;
+        
+        // Rune/Talisman functions
+        if (typeof ta !== 'undefined') window.__HS_runeSacrifice=ta;
+        if (typeof zy !== 'undefined') window.__HS_updateRunes=zy;
+        if (typeof TS !== 'undefined') window.__HS_updateRuneBlessings=TS;
+        if (typeof BS !== 'undefined') window.__HS_updateRuneSpirits=BS;
+        if (typeof mS !== 'undefined') window.__HS_updateTalismans=mS;
+        
+        // Singularity functions
+        if (typeof Ur !== 'undefined') window.__HS_calculateSingularity=Ur;
+        if (typeof xa !== 'undefined') window.__HS_calculateSingularity2=xa;
+        if (typeof Aa !== 'undefined') window.__HS_calculateSingularity3=Aa;
+        if (typeof Yr !== 'undefined') window.__HS_singularityFunction=Yr;
+        
+        // Corruption functions
+        if (typeof Is !== 'undefined') window.__HS_initCorruptions=Is;
+        if (typeof Us !== 'undefined') window.__HS_updateCorruptions=Us;
+        if (typeof NL !== 'undefined') window.__HS_corruptionFunction1=NL;
+        if (typeof iS !== 'undefined') window.__HS_corruptionFunction2=iS;
+        if (typeof yx !== 'undefined') window.__HS_corruptionFunction3=yx;
+        if (typeof _S !== 'undefined') window.__HS_corruptionFunction4=_S;
+        
+        // UI functions
+        if (typeof Cb !== 'undefined') window.__HS_confirmReset=Cb;
+        if (typeof xr !== 'undefined') window.__HS_resetResources=xr;
+        if (typeof Vt !== 'undefined') window.__HS_updateUI=Vt;
+        if (typeof kt !== 'undefined') window.__HS_switchTab=kt;
+        if (typeof xC !== 'undefined') window.__HS_toggleStatSymbols=xC;
+        
+        // Calculation functions
+        if (typeof BT !== 'undefined') window.__HS_initGame=BT;
+        if (typeof Vp !== 'undefined') window.__HS_gameFunction1=Vp;
+        if (typeof of !== 'undefined') window.__HS_gameFunction2=of;
+        if (typeof Pi !== 'undefined') window.__HS_gameFunction3=Pi;
+        if (typeof qT !== 'undefined') window.__HS_gameFunction4=qT;
+        if (typeof Kw !== 'undefined') window.__HS_gameFunction5=Kw;
+        if (typeof Ww !== 'undefined') window.__HS_gameFunction6=Ww;
+        if (typeof sf !== 'undefined') window.__HS_gameFunction7=sf;
+        if (typeof zv !== 'undefined') window.__HS_gameFunction8=zv;
+        if (typeof _2 !== 'undefined') window.__HS_gameFunction9=_2;
+        if (typeof Aj !== 'undefined') window.__HS_gameFunction10=Aj;
+        if (typeof _a !== 'undefined') window.__HS_gameFunction11=_a;
+        if (typeof tC !== 'undefined') window.__HS_gameFunction12=tC;
+        if (typeof Tj !== 'undefined') window.__HS_gameFunction13=Tj;
+        if (typeof jp !== 'undefined') window.__HS_gameFunction14=jp;
+        if (typeof Bj !== 'undefined') window.__HS_gameFunction15=Bj;
+        if (typeof Lp !== 'undefined') window.__HS_gameFunction16=Lp;
+        if (typeof du !== 'undefined') window.__HS_gameFunction17=du;
+        if (typeof w0 !== 'undefined') window.__HS_gameFunction18=w0;
+        if (typeof k0 !== 'undefined') window.__HS_gameFunction19=k0;
+        if (typeof x0 !== 'undefined') window.__HS_gameFunction20=x0;
+        if (typeof oa !== 'undefined') window.__HS_gameFunction21=oa;
+        if (typeof Eh !== 'undefined') window.__HS_gameFunction22=Eh;
+        
+        console.log('[HS] ✅ Extended functions exposed');
+    } catch(e) {
+        console.warn('[HS] Some function exposures failed:', e);
+    }
+    
     window.__HS_EXPOSED=true;
     console.log('[HS] ✅ Functions exposed');
 }`;
@@ -260,7 +348,68 @@ window.__HS_BACKDOOR__ = {
             DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
             loadStatistics: typeof window.__HS_loadStatistics,
             loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
+            i18next: typeof window.__HS_i18next,
+            // Extended exposures
+            buyBuilding: typeof window.__HS_buyBuilding,
+            buyAccelerator: typeof window.__HS_buyAccelerator,
+            buyMultiplier: typeof window.__HS_buyMultiplier,
+            buyAcceleratorBoost: typeof window.__HS_buyAcceleratorBoost,
+            buyParticle: typeof window.__HS_buyParticle,
+            buyAscend: typeof window.__HS_buyAscend,
+            buyTesseract: typeof window.__HS_buyTesseract,
+            upgrade: typeof window.__HS_upgrade,
+            upgradeCrystal: typeof window.__HS_upgradeCrystal,
+            upgradeRune: typeof window.__HS_upgradeRune,
+            reset: typeof window.__HS_reset,
+            singularityReset: typeof window.__HS_singularityReset,
+            enterChallenge: typeof window.__HS_enterChallenge,
+            exitChallenge: typeof window.__HS_exitChallenge,
+            calculateChallenge15: typeof window.__HS_calculateChallenge15,
+            unlockAchievement: typeof window.__HS_unlockAchievement,
+            updateAchievement: typeof window.__HS_updateAchievement,
+            runeSacrifice: typeof window.__HS_runeSacrifice,
+            updateRunes: typeof window.__HS_updateRunes,
+            updateRuneBlessings: typeof window.__HS_updateRuneBlessings,
+            updateRuneSpirits: typeof window.__HS_updateRuneSpirits,
+            updateTalismans: typeof window.__HS_updateTalismans,
+            calculateSingularity: typeof window.__HS_calculateSingularity,
+            calculateSingularity2: typeof window.__HS_calculateSingularity2,
+            calculateSingularity3: typeof window.__HS_calculateSingularity3,
+            singularityFunction: typeof window.__HS_singularityFunction,
+            initCorruptions: typeof window.__HS_initCorruptions,
+            updateCorruptions: typeof window.__HS_updateCorruptions,
+            corruptionFunction1: typeof window.__HS_corruptionFunction1,
+            corruptionFunction2: typeof window.__HS_corruptionFunction2,
+            corruptionFunction3: typeof window.__HS_corruptionFunction3,
+            corruptionFunction4: typeof window.__HS_corruptionFunction4,
+            confirmReset: typeof window.__HS_confirmReset,
+            resetResources: typeof window.__HS_resetResources,
+            updateUI: typeof window.__HS_updateUI,
+            switchTab: typeof window.__HS_switchTab,
+            toggleStatSymbols: typeof window.__HS_toggleStatSymbols,
+            initGame: typeof window.__HS_initGame,
+            gameFunction1: typeof window.__HS_gameFunction1,
+            gameFunction2: typeof window.__HS_gameFunction2,
+            gameFunction3: typeof window.__HS_gameFunction3,
+            gameFunction4: typeof window.__HS_gameFunction4,
+            gameFunction5: typeof window.__HS_gameFunction5,
+            gameFunction6: typeof window.__HS_gameFunction6,
+            gameFunction7: typeof window.__HS_gameFunction7,
+            gameFunction8: typeof window.__HS_gameFunction8,
+            gameFunction9: typeof window.__HS_gameFunction9,
+            gameFunction10: typeof window.__HS_gameFunction10,
+            gameFunction11: typeof window.__HS_gameFunction11,
+            gameFunction12: typeof window.__HS_gameFunction12,
+            gameFunction13: typeof window.__HS_gameFunction13,
+            gameFunction14: typeof window.__HS_gameFunction14,
+            gameFunction15: typeof window.__HS_gameFunction15,
+            gameFunction16: typeof window.__HS_gameFunction16,
+            gameFunction17: typeof window.__HS_gameFunction17,
+            gameFunction18: typeof window.__HS_gameFunction18,
+            gameFunction19: typeof window.__HS_gameFunction19,
+            gameFunction20: typeof window.__HS_gameFunction20,
+            gameFunction21: typeof window.__HS_gameFunction21,
+            gameFunction22: typeof window.__HS_gameFunction22
         };
     }
 };
