@@ -2,7 +2,7 @@
 // This file builds and manages the modal UI for configuring autosing challenge strategies.
 // It supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
 // Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
-import { AutosingStrategyPhase, Challenge } from "../../../../types/module-types/hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_ACTION_VALUE } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -18,14 +18,24 @@ export async function openAutosingChallengesModal(
     stratData: AutosingStrategyPhase["strat"],
     startPhase: string,
     endPhase: string,
-    parentModalId?: string
+    corruptionLoadouts: CorruptionLoadoutDefinition[],
+    parentModalId?: string,
+    displayName?: string
 ): Promise<void> {
     // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
     const workingChallenges: Challenge[] = [...stratData];
 
-    // Utility: Get label for special actions
-    const getSpecialActionLabel = (num: number): string | null => SPECIAL_ACTIONS.find(a => a.value === num)?.label ?? null;
+    // Precompute map for fast special-action label lookup
+    const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map(a => [a.value, a.label] as const));
+
+    // Utility: Get label for special actions (fast via map)
+    const getSpecialActionLabel = (entry: Challenge): string | null => {
+        if (entry.challengeNumber === LOADOUT_ACTION_VALUE) {
+            return entry.loadoutName ? `Load Corruption Loadout: ${entry.loadoutName}` : "Load Corruption Loadout";
+        }
+        return SPECIAL_ACTION_LABEL_BY_ID.get(entry.challengeNumber) ?? null;
+    };
     // Type guard: Is this entry an IF jump?
     const isIfJumpEntry = (entry: Challenge): entry is IsJumpChallenge => { return entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump !== undefined; };
     // Format milliseconds for display
@@ -87,7 +97,7 @@ export async function openAutosingChallengesModal(
 
     // Render a standard challenge or special action entry
     const renderNormalEntry = (entry: Challenge, index: number) => {
-        const actionLabel = getSpecialActionLabel(entry.challengeNumber);
+        const actionLabel = getSpecialActionLabel(entry);
 
         const isSpecial = !!actionLabel;
 
@@ -182,6 +192,15 @@ export async function openAutosingChallengesModal(
         }
     };
 
+    const loadoutOptions = corruptionLoadouts.length > 0
+        ? `
+            <option value="" disabled>-- Corruption Loadouts --</option>
+            ${corruptionLoadouts
+                .map(loadout => `<option value="loadout:${loadout.name}">Load Corruption Loadout: ${loadout.name}</option>`)
+                .join("")}
+        `
+        : "";
+
     // Modal content definition (HTML and title)
     const modalContent = {
         htmlContent: `
@@ -192,6 +211,7 @@ export async function openAutosingChallengesModal(
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
                     <option value="">None (Standard Challenge)</option>
                     ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
+                    ${loadoutOptions}
                 </select>
             </div>
             <div class="hs-challenges-input-row">
@@ -265,7 +285,7 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">Save Strategy</div>
         </div>
     </div>`,
-        title: `Configure Strategy Actions (${startPhase}-${endPhase})`
+        title: displayName ? `Configure ${displayName}` : `Configure Strategy Actions (${startPhase}-${endPhase})`
     };
 
     const modalInstance = await uiMod.Modal({
@@ -568,8 +588,9 @@ export async function openAutosingChallengesModal(
             "hs-if-jump-mode"
         ) as HTMLSelectElement;
 
-        const isSpecial = !!actionSelect?.value;
-        const isIfJump = Number(actionSelect.value) === IF_JUMP_VALUE;
+        const actionValue = actionSelect?.value ?? "";
+        const isSpecial = actionValue !== "";
+        const isIfJump = actionValue === String(IF_JUMP_VALUE);
         const ifJumpMode = ifJumpModeSelect?.value ?? "challenges";
         const isChallengesMode = ifJumpMode === "challenges";
 
@@ -714,10 +735,13 @@ export async function openAutosingChallengesModal(
 
             // ADD / UPDATE
             if (id === "hs-challenge-add-btn") {
-                const isSpecial = !!actionSelect.value;
-                const isIfJump = Number(actionSelect.value) === IF_JUMP_VALUE;
+                const actionValue = actionSelect.value;
+                const isIfJump = actionValue === String(IF_JUMP_VALUE);
+                const isLoadout = actionValue.startsWith("loadout:");
+                const isSpecial = actionValue !== "";
 
                 let newEntry: Challenge;
+                const commentValue = (document.getElementById("hs-challenge-comment-input") as HTMLInputElement)?.value?.trim() ?? "";
 
                 if (isIfJump) {
                     const existingEntry = editingIndex !== null ? workingChallenges[editingIndex] : null;
@@ -747,16 +771,29 @@ export async function openAutosingChallengesModal(
 
                         }
                     } as Challenge & any;
+                    if (commentValue) (newEntry as any).comment = commentValue;
+                } else if (isLoadout) {
+                    const loadoutName = actionValue.replace("loadout:", "");
+                    newEntry = {
+                        challengeNumber: LOADOUT_ACTION_VALUE,
+                        challengeCompletions: 0,
+                        challengeWaitTime: Number((document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value),
+                        challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
+                        challengeMaxTime: 0,
+                        loadoutName
+                    };
+                    if (commentValue) (newEntry as any).comment = commentValue;
                 } else {
                     newEntry = {
                         challengeNumber: isSpecial
-                            ? Number(actionSelect.value)
+                            ? Number(actionValue)
                             : Number((document.getElementById("hs-challenge-num-input") as HTMLInputElement).value),
                         challengeCompletions: isSpecial ? 0 : Number((document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value),
                         challengeWaitTime: Number((document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value),
                         challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
                         challengeMaxTime: isSpecial ? 0 : Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
                     };
+                    if (commentValue) (newEntry as any).comment = commentValue;
                 }
 
                 if (editingIndex !== null) workingChallenges[editingIndex] = newEntry;
@@ -770,7 +807,7 @@ export async function openAutosingChallengesModal(
             if (id.startsWith("hs-challenge-edit-")) {
                 editingIndex = Number(el.dataset.index);
                 const item = workingChallenges[editingIndex];
-                const actionLabel = getSpecialActionLabel(item.challengeNumber);
+                const actionLabel = getSpecialActionLabel(item);
 
                 // Set comment field for editing
                 (document.getElementById("hs-challenge-comment-input") as HTMLInputElement).value = item.comment ?? "";
@@ -806,7 +843,9 @@ export async function openAutosingChallengesModal(
                     return;
                 }
 
-                if (actionLabel) {
+                if (item.challengeNumber === LOADOUT_ACTION_VALUE) {
+                    actionSelect.value = item.loadoutName ? `loadout:${item.loadoutName}` : "";
+                } else if (actionLabel) {
                     actionSelect.value = String(item.challengeNumber);
                 } else {
                     actionSelect.value = "";

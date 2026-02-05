@@ -1,8 +1,9 @@
 import { HSUI } from "../../../hs-core/hs-ui"
-import { HSAutosingStrategy } from "../../../../types/module-types/hs-autosing-types"
+import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../../types/module-types/hs-autosing-types"
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
+import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 
 export class HSAutosingStrategyModal {
     static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number, parentModalId?: string): Promise<void> {
@@ -11,15 +12,39 @@ export class HSAutosingStrategyModal {
 
         const isEditMode = !!existingStrategy;
 
+        const clonePhase = (phase: AutosingStrategyPhase) => JSON.parse(JSON.stringify(phase)) as AutosingStrategyPhase;
+        const cloneLoadouts = (loadouts: CorruptionLoadoutDefinition[]) => JSON.parse(JSON.stringify(loadouts)) as CorruptionLoadoutDefinition[];
+        const defaultAoagPhase = createDefaultAoagPhase();
+
         const strategyDraft: HSAutosingStrategy = existingStrategy
             ? {
                 strategyName: existingStrategy.strategyName,
-                strategy: JSON.parse(JSON.stringify(existingStrategy.strategy))
+                strategy: JSON.parse(JSON.stringify(existingStrategy.strategy)),
+                aoagPhase: existingStrategy.aoagPhase
+                    ? clonePhase(existingStrategy.aoagPhase)
+                    : clonePhase(defaultAoagPhase),
+                corruptionLoadouts: cloneLoadouts(existingStrategy.corruptionLoadouts ?? [])
             }
             : {
                 strategyName: "",
-                strategy: []
+                strategy: [],
+                aoagPhase: clonePhase(defaultAoagPhase),
+                corruptionLoadouts: []
             };
+
+        if (strategyDraft.strategy.length > 0) {
+            const aoagIndex = strategyDraft.strategy.findIndex(p => p.phaseId === AOAG_PHASE_ID);
+            if (aoagIndex !== -1) {
+                if (!strategyDraft.aoagPhase) {
+                    strategyDraft.aoagPhase = clonePhase(strategyDraft.strategy[aoagIndex]);
+                }
+                strategyDraft.strategy.splice(aoagIndex, 1);
+            }
+        }
+
+        if (strategyDraft.aoagPhase) {
+            strategyDraft.aoagPhase.phaseId = AOAG_PHASE_ID;
+        }
 
         const fixPhaseChain = () => {
             for (let i = 1; i < strategyDraft.strategy.length; i++) {
@@ -33,26 +58,38 @@ export class HSAutosingStrategyModal {
             const listDiv = document.getElementById("hs-autosing-phase-list");
             if (!listDiv) return;
 
-            if (strategyDraft.strategy.length === 0) {
-                listDiv.innerHTML = '<div class="hs-strategy-empty-state">No strategy phases added yet.</div>';
-                return;
-            }
-
-            listDiv.innerHTML = strategyDraft.strategy
-                .map((p, i) => `
+            const aoagHtml = strategyDraft.aoagPhase
+                ? `
                     <div class="hs-strategy-phase-item">
                         <div class="hs-strategy-phase-text">
-                            Phase ${i + 1}: ${p.startPhase} <span class="hs-strategy-phase-arrow">→</span> <strong>${p.endPhase}</strong>
+                            <strong>${AOAG_PHASE_NAME}</strong>
                         </div>
-                        <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-phase-index="${i}" data-action="edit">
+                        <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-action="edit-aoag">
                             ✎
                         </div>
-                        <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-phase-index="${i}" data-action="delete">
-                            ×
-                        </div>
                     </div>
-                `)
-                .join("");
+                `
+                : '';
+
+            const phaseHtml = strategyDraft.strategy.length === 0
+                ? '<div class="hs-strategy-empty-state">No strategy phases added yet.</div>'
+                : strategyDraft.strategy
+                    .map((p, i) => `
+                        <div class="hs-strategy-phase-item">
+                            <div class="hs-strategy-phase-text">
+                                Phase ${i + 1}: ${p.startPhase} <span class="hs-strategy-phase-arrow">→</span> <strong>${p.endPhase}</strong>
+                            </div>
+                            <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-phase-index="${i}" data-action="edit">
+                                ✎
+                            </div>
+                            <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-phase-index="${i}" data-action="delete">
+                                ×
+                            </div>
+                        </div>
+                    `)
+                    .join("");
+
+            listDiv.innerHTML = `${aoagHtml}${phaseHtml}`;
         };
 
         const modalContent = {
@@ -79,6 +116,9 @@ export class HSAutosingStrategyModal {
                     <div class="hs-strategy-error" id="hs-strategy-error" style="display: none; color: #ef5350; padding: 10px; background: rgba(239, 83, 80, 0.1); border: 1px solid #ef5350; border-radius: 3px; margin-top: 10px;"></div>
 
                     <div class="hs-strategy-btn-group">
+                        <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-loadouts-btn">
+                            Create Corruption Loadouts
+                        </div>
                         <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-add-phase-btn">
                             + Add Phase
                         </div>
@@ -109,6 +149,7 @@ export class HSAutosingStrategyModal {
                     await openStrategyPhaseModal(
                         uiMod,
                         strategyDraft.strategy,
+                        strategyDraft.corruptionLoadouts ?? [],
                         (newPhase) => {
                             strategyDraft.strategy.push(newPhase);
                             fixPhaseChain();
@@ -141,6 +182,23 @@ export class HSAutosingStrategyModal {
                             errorBox.style.display = "block";
                         }
                     }
+                } else if (action === "edit-aoag") {
+                    if (!strategyDraft.aoagPhase) return;
+
+                    await openStrategyPhaseModal(
+                        uiMod,
+                        [],
+                        strategyDraft.corruptionLoadouts ?? [],
+                        () => { },
+                        (updatedPhase) => {
+                            updatedPhase.phaseId = AOAG_PHASE_ID;
+                            strategyDraft.aoagPhase = updatedPhase;
+                            updatePhaseListUI();
+                        },
+                        strategyDraft.aoagPhase,
+                        modalID,
+                        { isSpecialPhase: true, displayName: AOAG_PHASE_NAME }
+                    );
                 } else if (action === "edit" && phaseIndex !== undefined) {
                     const index = parseInt(phaseIndex);
                     const phase = strategyDraft.strategy[index];
@@ -148,6 +206,7 @@ export class HSAutosingStrategyModal {
                     await openStrategyPhaseModal(
                         uiMod,
                         strategyDraft.strategy.slice(0, index),
+                        strategyDraft.corruptionLoadouts ?? [],
                         () => { }, // onCreate not needed for edit
                         (updatedPhase) => {
                             strategyDraft.strategy[index] = updatedPhase;
@@ -162,6 +221,8 @@ export class HSAutosingStrategyModal {
                     strategyDraft.strategy.splice(index, 1);
                     fixPhaseChain();
                     updatePhaseListUI();
+                } else if (el.id === "hs-autosing-loadouts-btn") {
+                    await openAutosingCorruptionLoadoutsModal(uiMod, strategyDraft, modalID);
                 }
             });
         }, 0);

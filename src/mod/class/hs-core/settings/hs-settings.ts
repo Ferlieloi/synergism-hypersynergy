@@ -1,5 +1,5 @@
 import { AutosingStrategy, HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
-import { HSAutosingStrategy, AutosingStrategyPhase, phases } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
@@ -543,6 +543,10 @@ export class HSSettings extends HSModule {
     }
 
     static validateStrategy(strategy: HSAutosingStrategy) {
+        let normalized = HSSettings.ensureAoagPhase(strategy);
+        normalized = HSSettings.ensureCorruptionLoadouts(normalized);
+        strategy = normalized;
+
         if (!strategy) throw new Error('Strategy is undefined');
         if (!('strategyName' in strategy)) throw new Error('Strategy is missing strategyName property');
         if (!('strategy' in strategy)) throw new Error('Strategy is missing strategy property');
@@ -551,6 +555,24 @@ export class HSSettings extends HSModule {
         if (components.length === 0) {
             throw new Error('Strategy has no components');
         }
+        const aoagPhase = strategy.aoagPhase;
+        if (!aoagPhase) {
+            throw new Error(`Strategy is missing "${AOAG_PHASE_NAME}" phase`);
+        }
+        if (!aoagPhase.corruptions) {
+            throw new Error(`"${AOAG_PHASE_NAME}" phase has no corruptions defined`);
+        }
+        if (!Array.isArray(aoagPhase.strat) || aoagPhase.strat.length === 0) {
+            throw new Error(`"${AOAG_PHASE_NAME}" phase must have at least one action`);
+        }
+
+        const loadouts = strategy.corruptionLoadouts ?? [];
+        const loadoutNames = loadouts.map(l => l.name);
+        const uniqueNames = new Set(loadoutNames);
+        if (uniqueNames.size !== loadoutNames.length) {
+            throw new Error('Corruption loadout names must be unique.');
+        }
+
         let remainingPhases = [...phases];
 
         for (let i = 0; i < components.length; i++) {
@@ -560,6 +582,12 @@ export class HSSettings extends HSModule {
             if (!corruptions) {
                 throw new Error(
                     `Component ${i + 1} (${startPhase} → ${endPhase}) has no corruptions defined`,
+                );
+            }
+
+            if (component.corruptionLoadoutName && !loadoutNames.includes(component.corruptionLoadoutName)) {
+                throw new Error(
+                    `Component ${i + 1} (${startPhase} → ${endPhase}) references missing corruption loadout "${component.corruptionLoadoutName}"`,
                 );
             }
 
@@ -593,6 +621,79 @@ export class HSSettings extends HSModule {
                 `Uncovered phases: ${remainingPhases.join(', ')}`,
             );
         }
+
+        if (aoagPhase?.corruptionLoadoutName && !loadoutNames.includes(aoagPhase.corruptionLoadoutName)) {
+            throw new Error(
+                `"${AOAG_PHASE_NAME}" phase references missing corruption loadout "${aoagPhase.corruptionLoadoutName}"`,
+            );
+        }
+    }
+
+    static ensureAoagPhase(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        if (!strategy) return strategy;
+
+        const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
+
+        if (!Array.isArray(cloned.strategy)) cloned.strategy = [];
+
+        if (!cloned.aoagPhase) {
+            const aoagIndex = cloned.strategy.findIndex(p => p.phaseId === AOAG_PHASE_ID);
+            if (aoagIndex !== -1) {
+                const [aoagFromList] = cloned.strategy.splice(aoagIndex, 1);
+                cloned.aoagPhase = aoagFromList;
+            } else {
+                cloned.aoagPhase = createDefaultAoagPhase();
+            }
+        }
+
+        if (cloned.aoagPhase && cloned.aoagPhase.phaseId !== AOAG_PHASE_ID) {
+            cloned.aoagPhase.phaseId = AOAG_PHASE_ID;
+        }
+
+        return cloned;
+    }
+
+    static ensureCorruptionLoadouts(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        if (!strategy) return strategy;
+
+        const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
+        if (!Array.isArray(cloned.corruptionLoadouts)) cloned.corruptionLoadouts = [];
+
+        const loadouts = cloned.corruptionLoadouts as CorruptionLoadoutDefinition[];
+        const usedNames = new Set(loadouts.map(l => l.name));
+
+        const makeUniqueName = (baseName: string): string => {
+            let name = baseName;
+            let counter = 2;
+            while (usedNames.has(name)) {
+                name = `${baseName} (${counter})`;
+                counter++;
+            }
+            usedNames.add(name);
+            return name;
+        };
+
+        const ensureLoadoutForPhase = (phase: AutosingStrategyPhase | undefined) => {
+            if (!phase) return;
+            if (phase.corruptionLoadoutName === undefined) {
+                const isAoag = phase.phaseId === AOAG_PHASE_ID;
+                const baseName = isAoag ? `Loadout ${AOAG_PHASE_NAME}` : `Loadout ${phase.startPhase}-${phase.endPhase}`;
+                const name = makeUniqueName(baseName);
+                loadouts.push({ name, loadout: { ...phase.corruptions } });
+                phase.corruptionLoadoutName = name;
+                return;
+            }
+
+            if (phase.corruptionLoadoutName && !usedNames.has(phase.corruptionLoadoutName)) {
+                usedNames.add(phase.corruptionLoadoutName);
+                loadouts.push({ name: phase.corruptionLoadoutName, loadout: { ...phase.corruptions } });
+            }
+        };
+
+        cloned.strategy?.forEach(phase => ensureLoadoutForPhase(phase));
+        ensureLoadoutForPhase(cloned.aoagPhase);
+
+        return cloned;
     }
 
     #validateSetting(setting: HSSettingBase<HSSettingType>, controlGroups: Record<string, HSSettingControlGroup>) {
@@ -735,16 +836,18 @@ export class HSSettings extends HSModule {
         }
 
         if (strategy) {
-            this.validateStrategy(strategy);
+            let normalizedStrategy = HSSettings.ensureAoagPhase(strategy);
+            normalizedStrategy = HSSettings.ensureCorruptionLoadouts(normalizedStrategy);
+            this.validateStrategy(normalizedStrategy);
             const isUpdate = !!strategyName;
             const nameExists = strategies.some(s => {
-                if (s.strategyName !== strategy.strategyName) return false;
+                if (s.strategyName !== normalizedStrategy.strategyName) return false;
                 if (!isUpdate) return true;
                 return s.strategyName !== strategyName;
             });
 
             if (nameExists) {
-                throw new Error(`Strategy with name "${strategy.strategyName}" already exists.`);
+                throw new Error(`Strategy with name "${normalizedStrategy.strategyName}" already exists.`);
             }
 
             let updatedStrategies = strategies;
@@ -761,17 +864,17 @@ export class HSSettings extends HSModule {
                 );
             }
 
-            updatedStrategies = updatedStrategies.concat(strategy);
+            updatedStrategies = updatedStrategies.concat(normalizedStrategy);
 
             // Add to memory instead of replacing
-            HSSettings.#strategies.push(strategy);
+            HSSettings.#strategies.push(normalizedStrategy);
 
             const saved = storageMod.setData(
                 HSGlobal.HSSettings.strategiesKey,
                 updatedStrategies.filter(s => s.strategyName !== "default_strategy")
             );
 
-            this.#addStrategyToOptions(strategy);
+            this.#addStrategyToOptions(normalizedStrategy);
 
             if (!saved) {
                 HSLogger.warn(
@@ -1051,13 +1154,15 @@ export class HSSettings extends HSModule {
     // Parses the default strategies read from strategies.json
     #parseDefaultStrategies(): HSAutosingStrategy[] {
         const defaultStrategies = JSON.parse(strategies) as HSAutosingStrategy[];
+        const normalized = defaultStrategies
+            .filter(Boolean)
+            .map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
 
-        for (const strategy of defaultStrategies) {
-            if (!strategy) continue;
+        for (const strategy of normalized) {
             HSSettings.validateStrategy(strategy);
         }
 
-        return defaultStrategies as HSAutosingStrategy[];
+        return normalized as HSAutosingStrategy[];
     }
 
     // Parses the default settings read from settings.json
@@ -1123,7 +1228,8 @@ export class HSSettings extends HSModule {
         const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
 
         if (loaded) {
-            return Array.isArray(loaded) ? loaded : [loaded];
+            const list = Array.isArray(loaded) ? loaded : [loaded];
+            return list.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
         }
 
         return null;

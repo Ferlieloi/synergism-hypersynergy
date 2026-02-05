@@ -42,9 +42,11 @@ export class HSUtils {
 
         if (remaining > 0) {
             await Promise.all([
+                HSUtils.sleep(remaining),
                 HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, 'HSUtils'),
-                HSUtils.sleep(remaining)
             ]);
+        } else {
+            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, 'HSUtils');
         }
     }
 

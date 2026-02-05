@@ -656,7 +656,7 @@ export class HSAutosingTimerModal {
                 // Stop autosing
                 autosingMod.stopAutosing();
                 // Wait a bit for cleanup
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 500));
                 // Re-enable autosing (simulates starting from beginning)
                 const toggle = document.getElementById('hs-setting-auto-sing-enabled');
                 if (toggle) toggle.click();
@@ -1110,6 +1110,29 @@ export class HSAutosingTimerModal {
         this.strategyName = this.getStrategyName();
         this.loadoutsOrder = this.getLoadoutsOrder();
         this.cachedStrategyOrder = this.strategy.strategy.map(p => `${p.startPhase}-${p.endPhase}`);
+
+        // Ensure AOAG appears before the final 'end' phase in the timer ordering.
+        // Some phases are recorded using the human-friendly AOAG_PHASE_NAME (override),
+        // so include that name in the cached order directly just before the phase that ends with 'end'.
+        const AOAG_NAME = (this.strategy.aoagPhase && this.strategy.aoagPhase.phaseId === 'aoag') ?
+            // Use the display name constant when available in strategy aoagPhase.displayName, else fallback
+            (this.strategy.aoagPhase.displayName ?? 'AOAG Unlocked Phase') :
+            'AOAG Unlocked Phase';
+
+        const finalIdx = this.cachedStrategyOrder.findIndex(s => s.endsWith('-end'));
+        if (finalIdx >= 0) {
+            // Insert AOAG just before the final end-phase marker
+            // But avoid duplicating if already present
+            if (!this.cachedStrategyOrder.includes(AOAG_NAME)) {
+                this.cachedStrategyOrder.splice(finalIdx, 0, AOAG_NAME);
+            }
+        } else {
+            // No explicit end phase found; append AOAG at the end if not present
+            if (!this.cachedStrategyOrder.includes(AOAG_NAME)) {
+                this.cachedStrategyOrder.push(AOAG_NAME);
+            }
+        }
+
         this.cachedStrategyOrderIndex.clear();
         for (let i = 0; i < this.cachedStrategyOrder.length; i++) {
             this.cachedStrategyOrderIndex.set(this.cachedStrategyOrder[i], i);
@@ -1144,7 +1167,7 @@ export class HSAutosingTimerModal {
         this.startLiveTimer();
     }
 
-    public recordPhase(phase: string): void {
+    public async recordPhase(phase: string): Promise<void> {
         const now = performance.now();
         const timeSinceStart = (now - this.currentSingularityStart) / 1000;
         const phaseDuration = (now - this.currentPhaseStart) / 1000;
