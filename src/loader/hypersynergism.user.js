@@ -160,6 +160,76 @@
             const g6Match = code.match(g6Pattern);
 
             if (g6Match) {
+                // Dynamically find exportSynergism and updateAll
+                // Try multiple patterns for exportSynergism
+                let expName = null;
+                const expPatterns = [
+                    /(\w+)=async\(\w+=!0\)=>\{.*?navigator\.clipboard\.writeText/,  // Original pattern
+                    /(\w+)=async.*?navigator\.clipboard\.writeText/,  // Simpler async pattern
+                    /(\w+).*?=.*?async.*?\{.*?navigator\.clipboard\.writeText/,  // Variable assignment with async
+                    /exportSynergism\s*=\s*(\w+)/,  // Direct assignment
+                    /(\w+)\s*=\s*async.*clipboard/  // Any async function with clipboard
+                ];
+                
+                for (const pattern of expPatterns) {
+                    const match = code.match(pattern);
+                    if (match && match[1]) {
+                        expName = match[1];
+                        break;
+                    }
+                }
+
+                // Try for updateAll
+                let updName = null;
+                const updPatterns = [
+                    /(\w+)=\(\)=>\{.*?\.antiquities\.level/,  // Original pattern
+                    /(\w+).*?antiquities.*?level/,  // Simpler pattern
+                    /updateAll\s*=\s*(\w+)/,  // Direct assignment
+                    /(\w+)\s*=.*antiquities/  // Any function with antiquities
+                ];
+                
+                for (const pattern of updPatterns) {
+                    const match = code.match(pattern);
+                    if (match && match[1]) {
+                        updName = match[1];
+                        break;
+                    }
+                }
+
+                // If still not found, try broader search
+                if (!expName) {
+                    // Look for any function that contains clipboard.writeText
+                    const clipboardMatch = code.match(/(\w+)\s*[:=]\s*.*?async.*?\{[\s\S]*?navigator\.clipboard\.writeText[\s\S]*?\}/);
+                    if (clipboardMatch) {
+                        expName = clipboardMatch[1];
+                    }
+                }
+                
+                if (!updName) {
+                    // Look for any function that accesses antiquities.level
+                    const antiqMatch = code.match(/(\w+)\s*[:=]\s*.*?\{[\s\S]*?\.antiquities\.level[\s\S]*?\}/);
+                    if (antiqMatch) {
+                        updName = antiqMatch[1];
+                    }
+                }
+
+                // Debug: log some context around potential matches
+                const clipboardIndex = code.indexOf('navigator.clipboard.writeText');
+                if (clipboardIndex !== -1) {
+                    const start = Math.max(0, clipboardIndex - 100);
+                    const end = Math.min(code.length, clipboardIndex + 100);
+                    log(`Clipboard context: ${code.substring(start, end).replace(/\s+/g, ' ')}`);
+                }
+                
+                const antiqIndex = code.indexOf('antiquities.level');
+                if (antiqIndex !== -1) {
+                    const start = Math.max(0, antiqIndex - 100);
+                    const end = Math.min(code.length, antiqIndex + 100);
+                    log(`Antiquities context: ${code.substring(start, end).replace(/\s+/g, ' ')}`);
+                }
+
+                log(`Dynamic Exposure: exportSynergism=${expName}, updateAll=${updName}`);
+
                 const insertAt = g6Match.index + g6Match[0].length;
                 const expose = `
 if(!window.__HS_EXPOSED){
@@ -168,11 +238,13 @@ if(!window.__HS_EXPOSED){
     window.__HS_loadStatistics=Qe;
     window.__HS_loadMiscellaneousStats=g6;
     window.__HS_i18next=s;
+    if (${expName}) window.__HS_exportSynergism = ${expName};
+    if (${updName}) window.__HS_updateAll = ${updName};
     window.__HS_EXPOSED=true;
-    console.log('[HS] ✅ Functions exposed');
+    console.log('[HS] ✅ Functions exposed (Dynamic)');
 }`;
                 code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log('Patched bundle successfully');
+                log('Patched bundle successfully with dynamic exposures');
             } else {
                 warn('Could not patch bundle');
             }
@@ -264,7 +336,9 @@ window.__HS_BACKDOOR__ = {
             DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
             loadStatistics: typeof window.__HS_loadStatistics,
             loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
+            i18next: typeof window.__HS_i18next,
+            exportSynergism: typeof window.__HS_exportSynergism,
+            updateAll: typeof window.__HS_updateAll
         };
     }
 };

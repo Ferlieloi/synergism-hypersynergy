@@ -702,6 +702,19 @@
             ]
         }
     },
+    "autoSingSilentRewardExport": {
+        "settingName": "autoSingSilentRewardExport",
+        "settingDescription": "Silent Reward Export (Performance)",
+        "settingHelpText": "When enabled, Auto-Sing will bypass the heavy save-logic during the final stage to grant rewards without stuttering. This also prevents clipboard pollution.",
+        "settingType": "boolean",
+        "enabled": true,
+        "settingControl": {
+            "controlType": "switch",
+            "controlGroup": "auto-sing-perf",
+            "controlPage": "auto-sing",
+            "controlEnabledId": "hs-setting-auto-sing-silent-reward-export"
+        }
+    },
     "autosingObtLoadout": {
         "settingName": "autosingObtLoadout",
         "settingDescription": "Obtainium Loadout",

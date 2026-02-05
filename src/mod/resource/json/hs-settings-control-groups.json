@@ -47,6 +47,10 @@
         "groupName": "Auto-Sing settings",
         "order": 12
     },
+    "auto-sing-perf": {
+        "groupName": "Auto-Sing Performance settings",
+        "order": 14
+    },
     "auto-sing-strategy-controls": {
         "groupName": "Auto-Sing Strategy settings",
         "order": 13
