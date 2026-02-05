@@ -1,4 +1,5 @@
 export const IF_JUMP_VALUE = 200;
+export const LOADOUT_ACTION_VALUE = 202;
 
 export const ALLOWED = [
     "start",
@@ -34,6 +35,9 @@ export const phases = [
     "end",
 ] as const;
 
+export const AOAG_PHASE_ID = "aoag" as const;
+export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
+
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge", value: 101 },
     { label: "Exit Reincarnation challenge", value: 102 },
@@ -47,7 +51,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Ambrosia loadout", value: 114 },
     { label: "Ant Sacrifice", value: 108 },
     { label: "Load Ant Speed Corruptions", value: 109 },
-    { label: "Cleanse corruptions", value: 110 },
+    { label: "Zero corruptions", value: 110 },
     { label: "Wait", value: 111 },
     { label: "Auto Challenge Toggle", value: 115 },
     { label: "Store C15", value: 116 },
@@ -55,6 +59,7 @@ export const SPECIAL_ACTIONS = [
     { label: "Max C12", value: 118 },
     { label: "Max C13", value: 119 },
     { label: "Max C14", value: 120 },
+    { label: "Click AOAG", value: 121 },
     { label: "If-jump", value: IF_JUMP_VALUE },
     { label: "Set phase corruptions", value: 201 },
     { label: "Corrup challenge14->w5x10max", value: 501 },
@@ -68,6 +73,68 @@ export const SPECIAL_ACTIONS = [
     { label: "Restart Autosing", value: 999 },
 ] as const;
 
+export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
+    phaseId: AOAG_PHASE_ID,
+    startPhase: "ascension",
+    endPhase: "ascension",
+    corruptions: {
+        viscosity: 0,
+        drought: 0,
+        deflation: 0,
+        extinction: 0,
+        illiteracy: 0,
+        recession: 0,
+        dilation: 0,
+        hyperchallenge: 0
+    },
+    strat: [
+        {
+            challengeNumber: 103,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0
+        },
+        {
+            challengeNumber: 110,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0
+        },
+        {
+            challengeNumber: 104,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0
+        },
+        {
+            challengeNumber: 111,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0,
+            challengeWaitBefore: 100
+        },
+        {
+            challengeNumber: 108,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0
+        },
+        {
+            challengeNumber: 111,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0,
+            challengeWaitBefore: 1
+        },
+        {
+            challengeNumber: 121,
+            challengeCompletions: 0,
+            challengeWaitTime: 0,
+            challengeMaxTime: 0
+        }
+    ]
+});
+
 export type GetFromDOMOptions<T> = {
     regex?: RegExp;
     parser?: (raw: string) => T;
@@ -80,13 +147,22 @@ export type PhaseOption = (typeof phases)[number];
 export interface HSAutosingStrategy {
     strategyName: string;
     strategy: AutosingStrategyPhase[];
+    aoagPhase?: AutosingStrategyPhase;
+    corruptionLoadouts?: CorruptionLoadoutDefinition[];
 }
 
 export interface AutosingStrategyPhase {
+    phaseId?: string;
     startPhase: PhaseOption;
     endPhase: PhaseOption;
     corruptions: CorruptionLoadout;
+    corruptionLoadoutName?: string | null;
     strat: Challenge[];
+}
+
+export interface CorruptionLoadoutDefinition {
+    name: string;
+    loadout: CorruptionLoadout;
 }
 
 export interface CorruptionLoadout {
@@ -117,6 +193,7 @@ export interface Challenge {
     challengeMaxTime: number;
     challengeWaitBefore?: number;
     comment?: string;
+    loadoutName?: string;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

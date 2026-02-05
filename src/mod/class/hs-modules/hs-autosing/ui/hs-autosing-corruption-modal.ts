@@ -1,65 +1,39 @@
 import { HSUI } from "../../../hs-core/hs-ui";
-import { CorruptionLoadout } from "../../../../types/module-types/hs-autosing-types";
-import viscosity from "../../../../resource/txt/viscosity_icon.txt";
-import drought from "../../../../resource/txt/drought_icon.txt";
-import deflation from "../../../../resource/txt/deflation_icon.txt";
-import extinction from "../../../../resource/txt/extinction_icon.txt";
-import illiteracy from "../../../../resource/txt/illiteracy_icon.txt";
-import recession from "../../../../resource/txt/recession_icon.txt";
-import dilation from "../../../../resource/txt/dilation_icon.txt";
-import hyperchallenge from "../../../../resource/txt/hyperchallenge_icon.txt";
-
-type CorruptionKey = keyof CorruptionLoadout;
-
-export const CorruptionIcons: Record<CorruptionKey, string> = {
-    viscosity,
-    drought,
-    deflation,
-    extinction,
-    illiteracy,
-    recession,
-    dilation,
-    hyperchallenge
-};
-
-const corruptionMeta: Record<CorruptionKey, { label: string }> = {
-    viscosity: { label: "Viscosity" },
-    drought: { label: "Drought" },
-    deflation: { label: "Deflation" },
-    extinction: { label: "Extinction" },
-    illiteracy: { label: "Illiteracy" },
-    recession: { label: "Recession" },
-    dilation: { label: "Dilation" },
-    hyperchallenge: { label: "Hyperchallenged" }
-};
+import { CorruptionLoadoutDefinition } from "../../../../types/module-types/hs-autosing-types";
 
 export async function openAutosingCorruptionModal(
     uiMod: HSUI,
-    loadout: CorruptionLoadout,
-    parentModalId?: string
+    loadouts: CorruptionLoadoutDefinition[],
+    selectedLoadoutRef: { value: string | null },
+    parentModalId?: string,
+    onDone?: (selectedValue: string | null) => void
 ): Promise<void> {
     const modalId = "hs-autosing-corruption-modal";
+    const selectedName = selectedLoadoutRef.value ?? "";
 
-    const corruptionRows = (Object.keys(corruptionMeta) as CorruptionKey[]).map(key => `
-        <div class="hs-corruption-item">
-            <img src="${CorruptionIcons[key]}" class="hs-corruption-icon" alt="${corruptionMeta[key].label}" />
-            <div class="hs-corruption-label">${corruptionMeta[key].label}</div>
-            <input 
-                type="number" 
-                id="hs-corruption-${key}" 
-                class="hs-corruption-input"
-                min="0" 
-                max="16" 
-                value="${loadout[key] ?? 0}"
-            />
-        </div>
-    `).join("");
+    const loadoutRows = loadouts.length
+        ? loadouts.map(loadout => {
+            const isChecked = loadout.name === selectedName ? "checked" : "";
+            return `
+                <label class="hs-corruption-loadout-item">
+                    <input type="radio" name="hs-corruption-loadout" value="${loadout.name}" ${isChecked} />
+                    <span class="hs-corruption-loadout-name">${loadout.name}</span>
+                </label>
+            `;
+        }).join("")
+        : `<div class="hs-corruption-empty">No corruption loadouts created yet.</div>`;
+
+    const noneChecked = selectedName === "" ? "checked" : "";
 
     const modalContent = {
         htmlContent: `
             <div id="${modalId}" class="hs-corruption-modal-container">
-                <div class="hs-corruption-grid">
-                    ${corruptionRows}
+                <div class="hs-corruption-list">
+                    <label class="hs-corruption-loadout-item">
+                        <input type="radio" name="hs-corruption-loadout" value="" ${noneChecked} />
+                        <span class="hs-corruption-loadout-name">None</span>
+                    </label>
+                    ${loadoutRows}
                 </div>
                 <div class="hs-corruption-footer">
                     <div class="hs-corruption-done-btn" id="hs-corruption-save-btn">
@@ -68,7 +42,7 @@ export async function openAutosingCorruptionModal(
                 </div>
             </div>
         `,
-        title: "Configure Corruption Loadout"
+        title: "Select Corruption Loadout"
     };
 
     const modalInstance = await uiMod.Modal({
@@ -78,11 +52,11 @@ export async function openAutosingCorruptionModal(
 
     setTimeout(() => {
         document.getElementById("hs-corruption-save-btn")?.addEventListener("click", () => {
-            (Object.keys(corruptionMeta) as CorruptionKey[]).forEach(key => {
-                const input = document.getElementById(`hs-corruption-${key}`) as HTMLInputElement;
-                const value = Math.max(0, Math.min(16, Number(input?.value) || 0));
-                loadout[key] = value;
-            });
+            const selected = document.querySelector('input[name="hs-corruption-loadout"]:checked') as HTMLInputElement | null;
+            const value = selected?.value ?? "";
+            selectedLoadoutRef.value = value.length > 0 ? value : null;
+
+            onDone?.(selectedLoadoutRef.value);
 
             HSUI.removeInjectedStyle('hs-corruption-modal-styles');
             uiMod.CloseModal(modalInstance);
