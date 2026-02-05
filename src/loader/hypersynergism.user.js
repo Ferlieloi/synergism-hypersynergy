@@ -160,6 +160,15 @@
             const g6Match = code.match(g6Pattern);
 
             if (g6Match) {
+                // Dynamically find exportSynergism and updateAll
+                const expMatch = code.match(/(\w+)=async\(\w+=!0\)=>\{.*?navigator\.clipboard\.writeText/);
+                const updMatch = code.match(/(\w+)=\(\)=>\{.*?\.antiquities\.level/);
+
+                const expName = expMatch ? expMatch[1] : 'null';
+                const updName = updMatch ? updMatch[1] : 'null';
+
+                log(`Dynamic Exposure: exportSynergism=${expName}, updateAll=${updName}`);
+
                 const insertAt = g6Match.index + g6Match[0].length;
                 const expose = `
 if(!window.__HS_EXPOSED){
@@ -168,11 +177,13 @@ if(!window.__HS_EXPOSED){
     window.__HS_loadStatistics=Qe;
     window.__HS_loadMiscellaneousStats=g6;
     window.__HS_i18next=s;
+    if (${expName}) window.exportSynergism = ${expName};
+    if (${updName}) window.updateAll = ${updName};
     window.__HS_EXPOSED=true;
-    console.log('[HS] ✅ Functions exposed');
+    console.log('[HS] ✅ Functions exposed (Dynamic)');
 }`;
                 code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log('Patched bundle successfully');
+                log('Patched bundle successfully with dynamic exposures');
             } else {
                 warn('Could not patch bundle');
             }

@@ -55,6 +55,7 @@ export interface HSSettingsDefinition {
     autosingObtLoadout: AutosingObtLoadout;
     autosingOffLoadout: AutosingOffLoadout;
     autosingAmbrosiaLoadout: AutosingAmbrosiaLoadout;
+    autoSingSilentRewardExport: AutoSingSilentRewardExport;
 
     autosingStrategy: AutosingStrategy;
     autosingSelectStrategy: AutosingSelectStrategy;
@@ -170,6 +171,7 @@ export interface SingularityNumber extends HSSettingBase<number> { }
 export interface AutosingEarlyCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingLateCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingQuarkLoadout extends HSSettingBase<string> { }
+export interface AutoSingSilentRewardExport extends HSSettingBase<boolean> { }
 export interface AutosingAmbrosiaLoadout extends HSSettingBase<string> { }
 export interface AutosingObtLoadout extends HSSettingBase<string> { }
 export interface AutosingOffLoadout extends HSSettingBase<string> { }

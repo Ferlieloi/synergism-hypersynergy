@@ -374,6 +374,50 @@ export class HSUtils {
         }
     }
 
+    /**
+     * Triggers the vanilla game's reward logic (Quarks/Golden Quarks) without the performance cost
+     * of a full save export.
+     */
+    static async performSilentRewardExport(): Promise<void> {
+        const win = window as any;
+        const exportFn = win.exportSynergism;
+
+        if (typeof exportFn !== 'function') {
+            HSLogger.warn('exportSynergism not found, rewards may not be granted.', 'HSUtils');
+            return;
+        }
+
+        // Save original functions to restore later
+        const originalSaveSynergy = win.saveSynergy;
+        const originalClipboardWrite = navigator.clipboard.writeText.bind(navigator.clipboard);
+
+        try {
+            // 1. No-op saveSynergy to skip the expensive stringification/localStorage write stutter
+            // exportSynergism checks the return value of saveSynergy(), so we return true.
+            win.saveSynergy = () => true;
+
+            // 2. Hijack navigator.clipboard to prevent the save string from overwriting the user's clipboard
+            // This also prevents any export success/failure popups in the game UI.
+            (navigator.clipboard as any).writeText = async (text: string) => {
+                HSLogger.debug('Silent reward export intercepted save string', 'HSUtils');
+                return Promise.resolve();
+            };
+
+            // 3. Trigger the actual logic.
+            // true = shouldSetLastSave... which activates the Quark/GQ reward math and updates player.lastExportedSave
+            await exportFn(true);
+
+            HSLogger.debug('Officially triggered rewards via silent export', 'HSUtils');
+        } catch (e) {
+            HSLogger.error('Failed to perform silent reward export', 'HSUtils');
+            console.error(e);
+        } finally {
+            // 4. Restore everything to normal
+            win.saveSynergy = originalSaveSynergy;
+            navigator.clipboard.writeText = originalClipboardWrite;
+        }
+    }
+
     static async Noop() {
         return;
     }

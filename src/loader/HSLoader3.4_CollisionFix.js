@@ -79,7 +79,7 @@
     // Firefox-specific: Use beforescriptexecute event
     let beforeScriptExecute;
     if (isFirefox) {
-         beforeScriptExecute = function (e) {
+        beforeScriptExecute = function (e) {
             const script = e.target;
             const src = script.src || '';
 

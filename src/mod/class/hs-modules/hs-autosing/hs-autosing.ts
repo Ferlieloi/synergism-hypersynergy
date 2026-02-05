@@ -1074,7 +1074,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
             await HSUtils.sleep(sleepInterval);
         }
-        HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`);
+        if (challengeIndex <= 10) {
+            HSLogger.debug(`Timeout: Challenge ${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`);
+        } else {
+            return Promise.resolve();
+        }
     }
 
     /**
@@ -1177,9 +1181,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
             this.saveType.checked = true;
-            this.exportBtn.click();
-            this.ascendBtn.click();
-
+            if (HSSettings.getSetting('autoSingSilentRewardExport')?.isEnabled()) {
+                await HSUtils.performSilentRewardExport();
+            }
             // Stop at singularity's end requested
             if (this.stopAtSingularitysEnd && this.autosingEnabled) {
                 await this.pushSingularityBeforeStop();
