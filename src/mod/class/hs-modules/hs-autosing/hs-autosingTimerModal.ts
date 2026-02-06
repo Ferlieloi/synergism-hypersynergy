@@ -74,14 +74,22 @@ export class HSAutosingTimerModal {
     private onMouseMoveHandler = (e: MouseEvent) => this.onMouseMove(e);
     private onMouseUpHandler = () => this.onMouseUp();
 
-    private timestamps: number[] = [];
-    private quarksHistory: number[] = [];
-    private goldenQuarksHistory: number[] = [];
-    private quarksGains: number[] = [];
-    private goldenQuarksGains: number[] = [];
+    private singularityCount: number = 0;
+    private lastSingularityTimestamp: number = 0;
+    private lastSingularityDuration: number | null = null;
+    private prevQuarksTotal: number = 0;
+    private prevGoldenQuarksTotal: number = 0;
+    private quarksGainsCount: number = 0;
+    private goldenQuarksGainsCount: number = 0;
     private quarksAmounts: number[] = [];
     private goldenQuarksAmounts: number[] = [];
-    private c15History: Decimal[] = [];
+    private c15Count: number = 0;
+    private c15Mean: Decimal = new Decimal(0);
+    private c15M2: Decimal = new Decimal(0);
+    // Online (Welford) stats for log(C15) to enable O(1) variance/std computation
+    private logC15Count: number = 0;
+    private logC15Mean: number = 0;
+    private logC15M2: number = 0;
     private durationsHistory: number[] = [];
     private startTime: number = 0;
 
@@ -92,7 +100,7 @@ export class HSAutosingTimerModal {
     private _currentStepName: string = '';  // Tracking current execution step
     private _currentStepStart: number = 0;
     private _currentStepMaxTime: number | null = null;
-    private phaseHistory: Map<string, { times: number[], totalTime: number, lastTime: number, repeats: number }> = new Map();
+    private phaseHistory: Map<string, { count: number, totalTime: number, sumSq: number, lastTime: number, repeats: number }> = new Map();
     private currentSingularityPhases: Map<string, number> = new Map();
     private currentSingularityNumber: number = 0;
 
@@ -117,6 +125,11 @@ export class HSAutosingTimerModal {
     private cumulativeSingularityTime: number = 0;
     private cumulativeQuarksRate: number = 0;
     private cumulativeGoldenQuarksRate: number = 0;
+
+    // Prefix sums for O(1) windowed averages/variance of singularity durations
+    private durationsPrefixSum: number[] = [0];
+    private durationsPrefixSumSq: number[] = [0];
+    private readonly sparklineMaxPoints: number = 600;
 
     // Latest snapshot for UI display
     private latestQuarksTotal: number = 0;
@@ -1083,14 +1096,18 @@ export class HSAutosingTimerModal {
     }
 
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
-        this.quarksHistory = [];
-        this.goldenQuarksHistory = [];
-        this.quarksGains = [];
-        this.goldenQuarksGains = [];
+        this.singularityCount = 0;
+        this.lastSingularityTimestamp = 0;
+        this.lastSingularityDuration = null;
+        this.prevQuarksTotal = initialQuarks;
+        this.prevGoldenQuarksTotal = initialGoldenQuarks;
+        this.quarksGainsCount = 0;
+        this.goldenQuarksGainsCount = 0;
+        this.durationsHistory = [];
+        this.durationsPrefixSum = [0];
+        this.durationsPrefixSumSq = [0];
         this.startTime = performance.now();
-        // IMPORTANT: `timestamps` includes the start time at index 0.
-        // This keeps duration/rate math consistent for the first singularity.
-        this.timestamps = [this.startTime];
+        this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
         this.singularityBundles = [];
         this.sessionQuarksGained = 0;
@@ -1104,6 +1121,16 @@ export class HSAutosingTimerModal {
         this.cumulativeSingularityTime = 0;
         this.cumulativeQuarksRate = 0;
         this.cumulativeGoldenQuarksRate = 0;
+
+        // Reset C15 online stats
+        this.c15Count = 0;
+        this.c15Mean = new Decimal(0);
+        this.c15M2 = new Decimal(0);
+
+        // Reset log(C15) online stats
+        this.logC15Count = 0;
+        this.logC15Mean = 0;
+        this.logC15M2 = 0;
 
         this.latestQuarksTotal = initialQuarks;
         this.latestGoldenQuarksTotal = initialGoldenQuarks;
@@ -1180,14 +1207,15 @@ export class HSAutosingTimerModal {
             // 1. Update Global History (extend the last entry)
             if (this.phaseHistory.has(phase)) {
                 const phaseData = this.phaseHistory.get(phase)!;
-                if (phaseData.times.length > 0) {
-                    const lastIdx = phaseData.times.length - 1;
+                if (phaseData.count > 0) {
                     // Add the new duration chunk to the existing chunk
-                    phaseData.times[lastIdx] += phaseDuration;
+                    const prev = phaseData.lastTime;
+                    const next = prev + phaseDuration;
 
                     // Update stats
                     phaseData.totalTime += phaseDuration;
-                    phaseData.lastTime = phaseData.times[lastIdx]; // Update lastTime to reflect total merged time
+                    phaseData.sumSq += (next * next) - (prev * prev);
+                    phaseData.lastTime = next; // Update lastTime to reflect total merged time
                     phaseData.repeats++; // Increment repeat count for this sequence
                 }
             }
@@ -1199,12 +1227,13 @@ export class HSAutosingTimerModal {
         } else {
             // STANDARD LOGIC: New Phase
             if (!this.phaseHistory.has(phase)) {
-                this.phaseHistory.set(phase, { times: [], totalTime: 0, lastTime: 0, repeats: 0 });
+                this.phaseHistory.set(phase, { count: 0, totalTime: 0, sumSq: 0, lastTime: 0, repeats: 0 });
             }
 
             const phaseData = this.phaseHistory.get(phase)!;
-            phaseData.times.push(phaseDuration);
+            phaseData.count += 1;
             phaseData.totalTime += phaseDuration; // Accumulate duration
+            phaseData.sumSq += phaseDuration * phaseDuration;
             phaseData.lastTime = phaseDuration;
 
             // Store phase time for current singularity
@@ -1226,31 +1255,29 @@ export class HSAutosingTimerModal {
 
     public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number, c15Score?: Decimal): void {
         const now = performance.now();
-        // `timestamps[0]` is the session start time.
-        const singularityDuration = (now - this.timestamps[this.timestamps.length - 1]) / 1000;
+        const singularityDuration = (now - this.lastSingularityTimestamp) / 1000;
+        this.lastSingularityTimestamp = now;
+        this.lastSingularityDuration = singularityDuration;
+        this.singularityCount += 1;
 
-        this.timestamps.push(now);
-
+        this.prevGoldenQuarksTotal = this.latestGoldenQuarksTotal;
         this.latestGoldenQuarksTotal = currentGoldenQuarks;
 
         // Handle quarks exactly like golden quarks: use passed totals/gains.
         const realQuarksGain = gainedQuarks;
+        this.prevQuarksTotal = this.latestQuarksTotal;
         this.latestQuarksTotal = currentQuarks;
-
-        this.quarksHistory.push(this.latestQuarksTotal);
-        this.goldenQuarksHistory.push(currentGoldenQuarks);
 
         if (singularityDuration > 0) {
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
             const qRate = realQuarksGain / singularityDuration;
             const gqRate = gainedGoldenQuarks / singularityDuration;
 
-            this.quarksGains.push(qRate);
-            this.quarksAmounts.push(realQuarksGain);
-            this.durationsHistory.push(singularityDuration);
+            this.quarksGainsCount += 1;
+            this.pushSparklineValue(this.quarksAmounts, realQuarksGain);
 
-            this.goldenQuarksGains.push(gqRate);
-            this.goldenQuarksAmounts.push(gainedGoldenQuarks);
+            this.goldenQuarksGainsCount += 1;
+            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks);
 
             // O(1) optimization updates
             this.cumulativeSingularityTime += singularityDuration;
@@ -1262,10 +1289,17 @@ export class HSAutosingTimerModal {
             this.cumulativeGoldenQuarksRate += gqRate;
         }
 
+        // Track duration sums for O(1) windowed average/variance
+        this.pushSparklineValue(this.durationsHistory, singularityDuration);
+        const lastDurationSum = this.durationsPrefixSum[this.durationsPrefixSum.length - 1] || 0;
+        const lastDurationSumSq = this.durationsPrefixSumSq[this.durationsPrefixSumSq.length - 1] || 0;
+        this.durationsPrefixSum.push(lastDurationSum + singularityDuration);
+        this.durationsPrefixSumSq.push(lastDurationSumSq + (singularityDuration * singularityDuration));
+
         // Advanced data collection
         if (this.advancedDataCollectionEnabled) {
             const bundle: SingularityBundle = {
-                singularityNumber: this.timestamps.length - 1,
+                singularityNumber: this.singularityCount,
                 totalTime: singularityDuration,
                 quarksGained: realQuarksGain,
                 goldenQuarksGained: gainedGoldenQuarks,
@@ -1284,7 +1318,29 @@ export class HSAutosingTimerModal {
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
-            this.c15History.push(new Decimal(c15Score));
+            // Update C15 online stats (Decimal Welford)
+            const dec = new Decimal(c15Score);
+            const k = this.c15Count + 1;
+            const delta = dec.minus(this.c15Mean);
+            this.c15Mean = this.c15Mean.plus(delta.div(k));
+            const delta2 = dec.minus(this.c15Mean);
+            this.c15M2 = this.c15M2.plus(delta.times(delta2));
+            this.c15Count = k;
+
+            // Update online stats for log(C15) using Welford's algorithm (natural log)
+            try {
+                const asNumber = Number(dec);
+                if (!Number.isNaN(asNumber) && asNumber > 0) {
+                    const logVal = Math.log(asNumber);
+                    const k = this.logC15Count + 1;
+                    const delta = logVal - this.logC15Mean;
+                    this.logC15Mean += delta / k;
+                    this.logC15M2 += delta * (logVal - this.logC15Mean);
+                    this.logC15Count = k;
+                }
+            } catch (e) {
+                // If conversion/logging fails, skip updating online stats but keep the Decimal history
+            }
         }
 
         this.sessionQuarksGained += realQuarksGain;
@@ -1299,8 +1355,7 @@ export class HSAutosingTimerModal {
     }
 
     private getSingularityCount(): number {
-        // Return completed singularities (timestamps includes start time)
-        return Math.max(0, this.timestamps.length - 1);
+        return this.singularityCount;
     }
 
     private getSingularityTarget(): number {
@@ -1334,59 +1389,26 @@ export class HSAutosingTimerModal {
     }
 
     private getLastDuration(): number | null {
-        if (this.timestamps.length < 2) {
-            return null;
-        }
-        return (this.timestamps[this.timestamps.length - 1] - this.timestamps[this.timestamps.length - 2]) / 1000;
+        return this.lastSingularityDuration;
     }
 
     private getAverageLast(n: number): number | null {
-        if (n <= 0 || this.timestamps.length <= n) {
+        const totalCount = this.durationsPrefixSum.length - 1;
+        if (n <= 0 || totalCount < n) {
             return null;
         }
-
-        // OPTIMIZATION: If requesting average of ALL singularities, use cached total
-        // Note: timestamps has 1 more entry than intervals (start time)
-        // so the count of completed singularities equals the number of intervals.
-        const completedCount = this.timestamps.length - 1;
-        if (n === completedCount) {
-            return this.cumulativeSingularityTime / n;
-        }
-
-        let sum = 0;
-        for (let i = 1; i <= n; i++) {
-            sum += this.timestamps[this.timestamps.length - i] - this.timestamps[this.timestamps.length - (i + 1)];
-        }
-
-        return sum / n / 1000;
+        const sum = this.durationsPrefixSum[totalCount] - this.durationsPrefixSum[totalCount - n];
+        return sum / n;
     }
 
-    private getQuarksPerSecond(quarks: number[]): number | null {
-        const isGolden = quarks === this.goldenQuarksHistory;
-        const gains = isGolden ? this.goldenQuarksGains : this.quarksGains;
-        if (gains.length === 0) return null;
+    private getQuarksPerSecond(isGolden: boolean): number | null {
+        const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
+        if (count === 0) return null;
 
         // OPTIMIZATION: Use cached cumulative rates
         // This preserves the "Arithmetic Mean of Rates" logic [(r1+r2+...rn)/n]
         const totalRateProxy = isGolden ? this.cumulativeGoldenQuarksRate : this.cumulativeQuarksRate;
-
-        return totalRateProxy / gains.length;
-    }
-
-    private getLastQuarksGained(quarks: number[]): number | null {
-        if (quarks.length === 0) {
-            return null;
-        }
-        if (quarks.length === 1) {
-            const isGolden = quarks === this.goldenQuarksHistory;
-            const gains = isGolden ? this.goldenQuarksGains : this.quarksGains;
-            if (gains.length === 0) return null;
-
-            // Reconstruct the gain from the rate and the time of the first singularity
-            const firstSingTime = (this.timestamps[0] - this.startTime) / 1000;
-            return gains[0] * firstSingTime;
-        }
-        return quarks[quarks.length - 1] - quarks[quarks.length - 2];
+        return totalRateProxy / count;
     }
 
     private formatNumber(num: number): string {
@@ -1413,75 +1435,69 @@ export class HSAutosingTimerModal {
 
     private getPhaseAverage(phase: string): number | null {
         const phaseData = this.phaseHistory.get(phase);
-        if (!phaseData || phaseData.times.length === 0) {
+        if (!phaseData || phaseData.count === 0) {
             return null;
         }
-
-        const sum = phaseData.times.reduce((acc, time) => acc + time, 0);
-        return sum / phaseData.times.length;
+        return phaseData.totalTime / phaseData.count;
     }
 
     private getPhaseStandardDeviation(phase: string): number | null {
         const phaseData = this.phaseHistory.get(phase);
-        if (!phaseData || phaseData.times.length <= 1) {
+        if (!phaseData || phaseData.count <= 1) {
             return null;
         }
-
-        const count = phaseData.times.length;
+        const count = phaseData.count;
         const mean = phaseData.totalTime / count;
-
-        let sumSq = 0;
-        for (const t of phaseData.times) {
-            sumSq += Math.pow(t - mean, 2);
-        }
-
-        return Math.sqrt(sumSq / count);
+        const variance = (phaseData.sumSq / count) - (mean * mean);
+        return Math.sqrt(Math.max(0, variance));
     }
 
     private getStandardDeviation(n: number): number | null {
-        if (n <= 0 || this.timestamps.length <= 1) { // Need at least 2 timestamps for 1 interval
+        const totalCount = this.durationsPrefixSum.length - 1;
+        if (n <= 0 || totalCount <= 0) {
             return null;
         }
-
-        const count = Math.min(n, this.timestamps.length - 1);
-
-        // Calculate Mean
-        let sum = 0;
-        for (let i = 1; i <= count; i++) {
-            sum += (this.timestamps[this.timestamps.length - i] - this.timestamps[this.timestamps.length - (i + 1)]) / 1000;
-        }
+        const count = Math.min(n, totalCount);
+        const sum = this.durationsPrefixSum[totalCount] - this.durationsPrefixSum[totalCount - count];
+        const sumSq = this.durationsPrefixSumSq[totalCount] - this.durationsPrefixSumSq[totalCount - count];
         const mean = sum / count;
-
-        // Calculate Sum of Squares without allocating an array
-        let sumSq = 0;
-        for (let i = 1; i <= count; i++) {
-            const duration = (this.timestamps[this.timestamps.length - i] - this.timestamps[this.timestamps.length - (i + 1)]) / 1000;
-            const diff = duration - mean;
-            sumSq += diff * diff;
-        }
-
-        return Math.sqrt(sumSq / count);
+        const variance = (sumSq / count) - (mean * mean);
+        return Math.sqrt(Math.max(0, variance));
     }
 
     private getC15AverageLast(n: number): Decimal | null {
-        if (n <= 0 || this.c15History.length === 0) return null;
-        const count = Math.min(n, this.c15History.length);
-        const sum = this.c15History.slice(this.c15History.length - count).reduce((acc, v) => acc.plus(v), new Decimal(0));
-        return sum.div(count);
+        if (n <= 0 || this.c15Count === 0) return null;
+        return this.c15Mean;
     }
 
     private getC15StdLast(n: number): Decimal | null {
-        if (n <= 0 || this.c15History.length <= 1) return null;
-        const count = Math.min(n, this.c15History.length);
-        const slice = this.c15History.slice(this.c15History.length - count);
-        const mean = slice.reduce((acc, v) => acc.plus(v), new Decimal(0)).div(count);
-        let sumSq = new Decimal(0);
-        for (const v of slice) {
-            const diff = v.minus(mean);
-            sumSq = sumSq.plus(diff.pow(2));
-        }
-        const variance = sumSq.div(count);
+        if (n <= 0 || this.c15Count <= 1) return null;
+        const variance = this.c15M2.div(this.c15Count);
         return variance.pow(0.5);
+    }
+
+    /**
+     * Return population variance of ln(C15) using incremental Welford stats.
+     * O(1) time.
+     */
+    public getLogC15Variance(): number | null {
+        if (this.logC15Count === 0) return null;
+        return this.logC15M2 / this.logC15Count;
+    }
+
+    /**
+     * Return population standard deviation of ln(C15).
+     */
+    public getLogC15Std(): number | null {
+        const v = this.getLogC15Variance();
+        return v === null ? null : Math.sqrt(v);
+    }
+
+    /**
+     * Return mean of ln(C15).
+     */
+    public getLogC15Mean(): number | null {
+        return this.logC15Count === 0 ? null : this.logC15Mean;
     }
 
     private exportDataAsCSV(): void {
@@ -1548,6 +1564,14 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
+    private pushSparklineValue(buffer: number[], value: number): void {
+        buffer.push(value);
+        const max = this.sparklineMaxPoints;
+        if (buffer.length > max * 2) {
+            buffer.splice(0, buffer.length - max);
+        }
+    }
+
     // Small utility helpers lifted out of render loops to avoid per-render allocations.
     private setTextEl(el: HTMLElement | null, text: string): void {
         if (!el) return;
@@ -1575,14 +1599,10 @@ export class HSAutosingTimerModal {
     private renderGeneralStats(): void {
         const count = this.getSingularityCount();
         const currentQuarks = this.latestQuarksTotal;
-        const previousQuarks = this.quarksHistory.length > 1
-            ? this.quarksHistory[this.quarksHistory.length - 2]
-            : this.initialQuarksWallet;
+        const previousQuarks = this.prevQuarksTotal;
 
         const currentGoldenQuarks = this.latestGoldenQuarksTotal;
-        const previousGoldenQuarks = this.goldenQuarksHistory.length > 1
-            ? this.goldenQuarksHistory[this.goldenQuarksHistory.length - 2]
-            : this.initialGoldenQuarksWallet;
+        const previousGoldenQuarks = this.prevGoldenQuarksTotal;
 
         // 1. Singularity & Progress
         const target = this.getSingularityTarget();
@@ -1601,7 +1621,7 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.quarksTotalSpan, this.formatNumber(currentQuarks));
         this.setTextEl(this.quarksPrevSpan, `(⇦${this.formatNumber(previousQuarks)})`);
 
-        const quarksPerSec = this.getQuarksPerSecond(this.quarksHistory);
+        const quarksPerSec = this.getQuarksPerSecond(false);
         if (quarksPerSec !== null) {
             this.setTextEl(this.quarksRateValSpan, `${this.formatNumber(quarksPerSec)}/s`);
             this.setTextEl(this.quarksRateHrSpan, `(${this.formatNumber(quarksPerSec * 3600)}/hr)`);
@@ -1614,7 +1634,7 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.gquarksTotalSpan, this.formatNumber(currentGoldenQuarks));
         this.setTextEl(this.gquarksPrevSpan, `(⇦${this.formatNumber(previousGoldenQuarks)})`);
 
-        const goldenQuarksPerSec = this.getQuarksPerSecond(this.goldenQuarksHistory);
+        const goldenQuarksPerSec = this.getQuarksPerSecond(true);
         if (goldenQuarksPerSec !== null) {
             this.setTextEl(this.gquarksRateValSpan, `${this.formatNumber(goldenQuarksPerSec)}/s`);
             this.setTextEl(this.gquarksRateHrSpan, `(${this.formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
@@ -1639,12 +1659,12 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.avgAllCountSpan, count.toString());
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
-        // C15 display: show average (over recorded singularities) and std (inline)
+        // C15 display: show average and std of log(C15) (inline)
         if (this.c15TopSpan) {
             const avgC15 = this.getC15AverageLast(count);
-            const sdC15 = this.getC15StdLast(count);
+            const sdLogC15 = this.getLogC15Std();
             const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
-            const sdText = sdC15 ? ` (σ ±${this.formatDecimal(sdC15)})` : '';
+            const sdText = sdLogC15 !== null ? ` (σlog ±${sdLogC15.toFixed(3)})` : '';
             this.setTextEl(this.c15TopSpan, `C15 ${valText}${sdText}`);
             this.c15TopSpan.title = '';
         }
@@ -1677,14 +1697,14 @@ export class HSAutosingTimerModal {
         const orderedRows: PhaseRowDom[] = [];
 
         for (const [phaseName, data] of sortedPhases) {
-            if (data.times.length <= 0) continue;
+            if (data.count <= 0) continue;
 
-            const avg = data.totalTime / data.times.length;
+            const avg = data.totalTime / data.count;
             const last = data.lastTime;
             const sd = this.getPhaseStandardDeviation(phaseName);
             const sdStr = sd !== null ? `±${sd.toFixed(2)}s` : '-';
-            const avgLoops = 1 + (data.repeats / data.times.length);
-            const count = data.times.length;
+            const avgLoops = 1 + (data.repeats / data.count);
+            const count = data.count;
 
             let row = this.phaseRowMap.get(phaseName);
             if (!row) {
@@ -1776,15 +1796,24 @@ export class HSAutosingTimerModal {
     }
 
     public reset(): void {
-        this.timestamps = [];
-        this.quarksHistory = [];
-        this.goldenQuarksHistory = [];
-        this.quarksGains = [];
-        this.goldenQuarksGains = [];
+        this.singularityCount = 0;
+        this.lastSingularityTimestamp = 0;
+        this.lastSingularityDuration = null;
+        this.prevQuarksTotal = 0;
+        this.prevGoldenQuarksTotal = 0;
+        this.quarksGainsCount = 0;
+        this.goldenQuarksGainsCount = 0;
         this.quarksAmounts = [];
         this.goldenQuarksAmounts = [];
-        this.c15History = [];
+        this.c15Count = 0;
+        this.c15Mean = new Decimal(0);
+        this.c15M2 = new Decimal(0);
+        this.logC15Count = 0;
+        this.logC15Mean = 0;
+        this.logC15M2 = 0;
         this.durationsHistory = [];
+        this.durationsPrefixSum = [0];
+        this.durationsPrefixSumSq = [0];
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
