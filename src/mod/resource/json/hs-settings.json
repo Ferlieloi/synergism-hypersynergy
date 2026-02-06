@@ -935,7 +935,7 @@
     },
     "importAutosingStrategyOldToNew": {
         "settingName": "importAutosingStrategyOldToNew",
-        "settingDescription": "\ud83d\udd04 Import (Old→New)",
+        "settingDescription": "(Old→New)",
         "settingHelpText": "Opens import modal and converts old special action IDs to new ones",
         "settingType": "button",
         "enabled": true,
@@ -950,7 +950,7 @@
     },
     "importAutosingStrategyNewToOld": {
         "settingName": "importAutosingStrategyNewToOld",
-        "settingDescription": "\ud83d\udd04 Import (New→Old)",
+        "settingDescription": "(New→Old)",
         "settingHelpText": "Opens import modal and converts new special action IDs to old ones",
         "settingType": "button",
         "enabled": true,
