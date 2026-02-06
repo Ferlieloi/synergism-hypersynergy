@@ -150,7 +150,19 @@
             let code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
-            // Patch for function exposure
+            // Patch for function exposures in RL
+            const rlMatch = code.match(/RL\s*=\s*async\s*\(e=!0\)\s*=>\s*{/);
+            if (rlMatch) {
+                const insertAt = rlMatch.index + rlMatch[0].length;
+                const expose = `
+if(!window.__HS_EXPORT_EXPOSED){
+    window.__HS_exportData=Np;
+    window.__HS_EXPORT_EXPOSED=true;
+}`;
+                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+            }
+
+            // Patch for other function exposures in g6
             const g6Pattern = /g6=\(\)=>{/;
             const g6Match = code.match(g6Pattern);
 
@@ -256,15 +268,13 @@ if(!window.__HS_EXPOSED){
 window.__HS_BACKDOOR__ = {
     get exposed() {
         return {
-            synergismStage: typeof window.__HS_synergismStage,
             DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
-            loadStatistics: typeof window.__HS_loadStatistics,
-            loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
+            synergismStage: typeof window.__HS_synergismStage,
+            exportData: typeof window.__HS_exportData,
         };
     }
 };
-`;
+        `;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
     }
@@ -330,10 +340,21 @@ window.__HS_BACKDOOR__ = {
 
     async function exposeViaUI() {
         await clickWhenAvailable('settingstab');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 50));
         await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 5));
         await clickWhenAvailable('kMisc');
+        await new Promise(r => setTimeout(r, 5));
+        // Auto-check export checkbox and click export, mirroring in-mod behavior
+        const saveType = document.getElementById('saveType');
+        if (saveType && 'checked' in saveType) {
+            saveType.checked = true;
+            saveType.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const exportBtn = document.getElementById('exportgame');
+        if (exportBtn) {
+            exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {

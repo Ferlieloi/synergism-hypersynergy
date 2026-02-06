@@ -12,6 +12,7 @@ import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
+import Decimal from "break_infinity.js";
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -22,6 +23,7 @@ interface SingularityBundle {
     totalGoldenQuarks: number;
     phases: { [phaseName: string]: number };
     timestamp: number;
+    c15?: string;
 }
 
 interface SparklineDom {
@@ -79,6 +81,7 @@ export class HSAutosingTimerModal {
     private goldenQuarksGains: number[] = [];
     private quarksAmounts: number[] = [];
     private goldenQuarksAmounts: number[] = [];
+    private c15History: Decimal[] = [];
     private durationsHistory: number[] = [];
     private startTime: number = 0;
 
@@ -149,6 +152,7 @@ export class HSAutosingTimerModal {
     private singTargetSpan: HTMLElement | null = null;
     private singHighestSpan: HTMLElement | null = null;
     private progressValSpan: HTMLElement | null = null;
+    private c15TopSpan: HTMLElement | null = null;
 
     private cachedStrategyOrder: string[] = [];
     private cachedStrategyOrderIndex: Map<string, number> = new Map();
@@ -163,6 +167,7 @@ export class HSAutosingTimerModal {
     private gquarksPrevSpan: HTMLElement | null = null;
     private gquarksRateValSpan: HTMLElement | null = null;
     private gquarksRateHrSpan: HTMLElement | null = null;
+
     private avg1Span: HTMLElement | null = null;
     private avg10Span: HTMLElement | null = null;
     private avg50Span: HTMLElement | null = null;
@@ -721,8 +726,6 @@ export class HSAutosingTimerModal {
         this.timerHeader.appendChild(title);
         this.timerHeader.appendChild(document.createElement('div')); // Spacer
 
-
-
         const controls = document.createElement('div');
         controls.className = 'hs-timer-controls';
         controls.appendChild(this.restartButton);
@@ -740,7 +743,7 @@ export class HSAutosingTimerModal {
         this.dynamicContent = document.createElement('div');
         this.dynamicContent.innerHTML = `
             <div class="hs-timer-section">
-                <div class="hs-section-header">FARMING <span id="hs-sing-val">#0 / #0</span></div>
+                <div class="hs-section-header">FARMING <span id="hs-sing-val">#0 / #0</span><span id="hs-c15-top" class="hs-c15-top"></span></div>
                 <div class="hs-info-line"><span class="hs-timer-label">Completed:</span> <span id="hs-progress-val">0</span></div>
                 <div class="hs-info-line"><span class="hs-timer-label">Phase:</span> <span id="hs-phase-name-val">&nbsp;</span> <span id="hs-phase-timer-val"></span></div>
                 <div id="hs-step-container" class="hs-info-line-detailed">
@@ -849,6 +852,8 @@ export class HSAutosingTimerModal {
         this.avg50Span = document.getElementById('hs-avg-50');
         this.avgAllSpan = document.getElementById('hs-avg-all');
         this.avgAllCountSpan = document.getElementById('hs-avg-all-count');
+
+        this.c15TopSpan = document.getElementById('hs-c15-top');
 
         this.avg10LabelSpan = document.getElementById('hs-avg-10-lbl');
         this.avg50LabelSpan = document.getElementById('hs-avg-50-lbl');
@@ -1114,10 +1119,7 @@ export class HSAutosingTimerModal {
         // Ensure AOAG appears before the final 'end' phase in the timer ordering.
         // Some phases are recorded using the human-friendly AOAG_PHASE_NAME (override),
         // so include that name in the cached order directly just before the phase that ends with 'end'.
-        const AOAG_NAME = (this.strategy.aoagPhase && this.strategy.aoagPhase.phaseId === 'aoag') ?
-            // Use the display name constant when available in strategy aoagPhase.displayName, else fallback
-            (this.strategy.aoagPhase.displayName ?? 'AOAG Unlocked Phase') :
-            'AOAG Unlocked Phase';
+        const AOAG_NAME = 'AOAG Unlocked Phase';
 
         const finalIdx = this.cachedStrategyOrder.findIndex(s => s.endsWith('-end'));
         if (finalIdx >= 0) {
@@ -1222,7 +1224,7 @@ export class HSAutosingTimerModal {
     }
 
 
-    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number): void {
+    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number, c15Score?: Decimal): void {
         const now = performance.now();
         // `timestamps[0]` is the session start time.
         const singularityDuration = (now - this.timestamps[this.timestamps.length - 1]) / 1000;
@@ -1273,7 +1275,16 @@ export class HSAutosingTimerModal {
                 timestamp: Date.now()
             };
 
+            if (c15Score !== undefined) {
+                bundle.c15 = c15Score.toString();
+            }
+
             this.singularityBundles.push(bundle);
+        }
+
+        // Store c15 into history if provided (store Decimal for accurate statistics)
+        if (c15Score !== undefined) {
+            this.c15History.push(new Decimal(c15Score));
         }
 
         this.sessionQuarksGained += realQuarksGain;
@@ -1382,6 +1393,24 @@ export class HSAutosingTimerModal {
         return Number(num).toExponential(2).replace('+', '');
     }
 
+    private formatDecimal(d: Decimal | null | undefined): string {
+        if (d === null || d === undefined) return '-';
+        try {
+            let s = (d as Decimal).toExponential(2);
+            // Normalize to lowercase 'e' and remove explicit plus signs in exponent
+            s = s.replace(/E/g, 'e').replace(/\+/g, '');
+            return s;
+        } catch (e) {
+            try {
+                let s2 = new Decimal(d as any).toExponential(2);
+                s2 = s2.replace(/E/g, 'e').replace(/\+/g, '');
+                return s2;
+            } catch (e2) {
+                return String(d);
+            }
+        }
+    }
+
     private getPhaseAverage(phase: string): number | null {
         const phaseData = this.phaseHistory.get(phase);
         if (!phaseData || phaseData.times.length === 0) {
@@ -1434,6 +1463,27 @@ export class HSAutosingTimerModal {
         return Math.sqrt(sumSq / count);
     }
 
+    private getC15AverageLast(n: number): Decimal | null {
+        if (n <= 0 || this.c15History.length === 0) return null;
+        const count = Math.min(n, this.c15History.length);
+        const sum = this.c15History.slice(this.c15History.length - count).reduce((acc, v) => acc.plus(v), new Decimal(0));
+        return sum.div(count);
+    }
+
+    private getC15StdLast(n: number): Decimal | null {
+        if (n <= 0 || this.c15History.length <= 1) return null;
+        const count = Math.min(n, this.c15History.length);
+        const slice = this.c15History.slice(this.c15History.length - count);
+        const mean = slice.reduce((acc, v) => acc.plus(v), new Decimal(0)).div(count);
+        let sumSq = new Decimal(0);
+        for (const v of slice) {
+            const diff = v.minus(mean);
+            sumSq = sumSq.plus(diff.pow(2));
+        }
+        const variance = sumSq.div(count);
+        return variance.pow(0.5);
+    }
+
     private exportDataAsCSV(): void {
         if (this.singularityBundles.length === 0) {
             alert('No data to export');
@@ -1451,6 +1501,7 @@ export class HSAutosingTimerModal {
         const headers = [
             'Singularity Number',
             'Total Time (s)',
+            'C15',
             'Quarks Gained',
             'Golden Quarks Gained',
             'Total Quarks',
@@ -1464,6 +1515,7 @@ export class HSAutosingTimerModal {
             const row = [
                 bundle.singularityNumber.toString(),
                 bundle.totalTime.toFixed(3),
+                bundle.c15 ?? '',
                 bundle.quarksGained.toExponential(6),
                 bundle.goldenQuarksGained.toExponential(6),
                 bundle.totalQuarks.toExponential(6),
@@ -1586,6 +1638,16 @@ export class HSAutosingTimerModal {
         this.setAvgEl(this.avg50Span, avg50, sd50);
         this.setTextEl(this.avgAllCountSpan, count.toString());
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
+
+        // C15 display: show average (over recorded singularities) and std (inline)
+        if (this.c15TopSpan) {
+            const avgC15 = this.getC15AverageLast(count);
+            const sdC15 = this.getC15StdLast(count);
+            const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
+            const sdText = sdC15 ? ` (σ ±${this.formatDecimal(sdC15)})` : '';
+            this.setTextEl(this.c15TopSpan, `C15 ${valText}${sdText}`);
+            this.c15TopSpan.title = '';
+        }
     }
 
     private renderPhaseStatistics(): void {
@@ -1721,6 +1783,7 @@ export class HSAutosingTimerModal {
         this.goldenQuarksGains = [];
         this.quarksAmounts = [];
         this.goldenQuarksAmounts = [];
+        this.c15History = [];
         this.durationsHistory = [];
         this.startTime = 0;
         this.phaseHistory.clear();

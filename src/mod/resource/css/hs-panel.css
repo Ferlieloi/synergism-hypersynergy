@@ -1338,6 +1338,16 @@ a.hs-link {
     align-items: center;
 }
 
+.hs-c15-top {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: normal;
+    font-size: 12px;
+    line-height: 1.1;
+    text-align: right;
+}
+
 /* Phase stats section header replaces first column header */
 #hs-phase-stats-section .hs-section-header {
     margin-bottom: 0;
