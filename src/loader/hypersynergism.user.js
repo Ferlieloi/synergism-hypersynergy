@@ -155,8 +155,20 @@
             let code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
-            // Patch for function exposure
-            const g6Pattern = /g6=\(\)=>\{/;
+            // Patch for function exposures in RL
+            const rlMatch = code.match(/RL\s*=\s*async\s*\(e=!0\)\s*=>\s*{/);
+            if (rlMatch) {
+                const insertAt = rlMatch.index + rlMatch[0].length;
+                const expose = `
+if(!window.__HS_EXPORT_EXPOSED){
+    window.__HS_exportData=Np;
+    window.__HS_EXPORT_EXPOSED=true;
+}`;
+                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+            }
+
+            // Patch for other function exposures in g6
+            const g6Pattern = /g6=\(\)=>{/;
             const g6Match = code.match(g6Pattern);
 
             if (g6Match) {
