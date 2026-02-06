@@ -116,7 +116,10 @@ export abstract class HSSetting<T extends HSSettingType> {
             targetElement.classList.add('hs-disabled');
         }
 
-        this.handleSettingAction('state', newState);
+        await this.handleSettingAction('state', newState);
+
+        // Persist the changed enabled state to storage so UI toggles stick
+        HSSettings.saveSettingsToStorage();
     }
 
     #handleManualToggle(newState: boolean) {
@@ -296,6 +299,9 @@ export class HSNumericSetting extends HSSetting<number> {
         this.definition.calculatedSettingValue = newValue * this.definition.settingValueMultiplier;
 
         await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
     }
 }
 
@@ -325,6 +331,9 @@ export class HSStringSetting extends HSSetting<string> {
         this.definition.settingValue = newValue;
         this.definition.calculatedSettingValue = newValue;
         await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
     }
 }
 
@@ -384,6 +393,9 @@ export class HSSelectNumericSetting extends HSSetting<number> {
         this.definition.calculatedSettingValue = newValue * this.definition.settingValueMultiplier;
 
         await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
     }
 }
 
@@ -413,6 +425,9 @@ export class HSSelectStringSetting extends HSSetting<string> {
         this.definition.settingValue = newValue;
         this.definition.calculatedSettingValue = newValue;
         await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
     }
 }
 
