@@ -976,7 +976,7 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static async importStrategy() {
+    static async importStrategy(convertOldToNew: boolean = false, convertNewToOld: boolean = false) {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (uiMod) {
             const modalId = await uiMod.Modal({
@@ -1067,6 +1067,19 @@ export class HSSettings extends HSModule {
                         notificationType: "error"
                     });
                     return;
+                }
+
+                // Apply conversion if requested
+                if (convertOldToNew) {
+                    parsedStrategy = this.#migrateStrategyActionIds(parsedStrategy);
+                    HSUI.Notify("Converted old action IDs to new format", {
+                        notificationType: "info"
+                    });
+                } else if (convertNewToOld) {
+                    parsedStrategy = this.#reverseMigrateStrategyActionIds(parsedStrategy);
+                    HSUI.Notify("Converted new action IDs to old format", {
+                        notificationType: "info"
+                    });
                 }
 
                 this.validateStrategy(parsedStrategy);
@@ -1297,6 +1310,53 @@ export class HSSettings extends HSModule {
 
         // Migrate AOAG phase
         strategy.aoagPhase?.strat?.forEach(migrateChallenge);
+
+        return strategy;
+    }
+
+    #reverseMigrateStrategyActionIds(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        const newToOldActionIds: Record<number, number> = {
+            301: 105, // Ambrosia pre-AOAG loadout
+            302: 106, // Ambrosia post-AOAG Cube loadout
+            303: 107, // Ambrosia Quark loadout
+            304: 112, // Ambrosia Obt loadout
+            305: 113, // Ambrosia Off loadout
+            306: 114, // Ambrosia Ambrosia loadout
+            152: 108, // Ant Sacrifice
+            409: 109, // Load Ant Speed Corruptions -> Corrup Ants
+            400: 110, // Zero corruptions -> Corrup 0*
+            151: 111, // Wait
+            153: 115, // Auto Challenge Toggle
+            215: 116, // Store C15
+            211: 117, // Max C11
+            212: 118, // Max C12
+            213: 119, // Max C13
+            214: 120, // Max C14
+            901: 121, // Click AOAG
+            410: 201, // Set phase corruptions -> Corrup from phase (restore)
+            401: 501, // Corrup challenge14->w5x10max
+            402: 502, // Corrup w5x10max->p2x1x10
+            403: 503, // Corrup p2x1x10->p3x1
+            404: 504, // Corrup p3x1->beta
+            405: 505, // Corrup beta->1e15-expo
+            406: 506, // Corrup 1e15-expo->omega
+            407: 507, // Corrup omega->sing
+            408: 508, // Corrup sing->end
+        };
+
+        const reverseMigrateChallenge = (challenge: any) => {
+            if (challenge.challengeNumber && newToOldActionIds[challenge.challengeNumber]) {
+                challenge.challengeNumber = newToOldActionIds[challenge.challengeNumber];
+            }
+        };
+
+        // Reverse migrate strategy phases
+        strategy.strategy?.forEach(phase => {
+            phase.strat?.forEach(reverseMigrateChallenge);
+        });
+
+        // Reverse migrate AOAG phase
+        strategy.aoagPhase?.strat?.forEach(reverseMigrateChallenge);
 
         return strategy;
     }

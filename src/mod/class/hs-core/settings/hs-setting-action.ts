@@ -210,6 +210,16 @@ export class HSSettingActions {
             await HSSettings.importStrategy();
         },
 
+        importAutosingStrategyOldToNew: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.importStrategy(true, false); // convertOldToNew = true, convertNewToOld = false
+        },
+
+        importAutosingStrategyNewToOld: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.importStrategy(false, true); // convertOldToNew = false, convertNewToOld = true
+        },
+
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');

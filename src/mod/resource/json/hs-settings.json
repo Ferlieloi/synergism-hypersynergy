@@ -933,16 +933,31 @@
             "controlPage": "auto-sing"
         }
     },
-    "exportAutosingStrategy": {
-        "settingName": "exportAutosingStrategy",
-        "settingDescription": "\ud83d\udce4 Export",
-        "settingHelpText": "exports the selected strategy to your clipboard",
+    "importAutosingStrategyOldToNew": {
+        "settingName": "importAutosingStrategyOldToNew",
+        "settingDescription": "\ud83d\udd04 Import (Old→New)",
+        "settingHelpText": "Opens import modal and converts old special action IDs to new ones",
         "settingType": "button",
         "enabled": true,
         "settingValue": "",
-        "settingAction": "exportAutosingStrategy",
+        "settingAction": "importAutosingStrategyOldToNew",
         "settingControl": {
-            "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+            "controlId": "hs-setting-auto-sing-strategy-import-old-to-new-button",
+            "controlType": "button",
+            "controlGroup": "auto-sing-strategy-controls",
+            "controlPage": "auto-sing"
+        }
+    },
+    "importAutosingStrategyNewToOld": {
+        "settingName": "importAutosingStrategyNewToOld",
+        "settingDescription": "\ud83d\udd04 Import (New→Old)",
+        "settingHelpText": "Opens import modal and converts new special action IDs to old ones",
+        "settingType": "button",
+        "enabled": true,
+        "settingValue": "",
+        "settingAction": "importAutosingStrategyNewToOld",
+        "settingControl": {
+            "controlId": "hs-setting-auto-sing-strategy-import-new-to-old-button",
             "controlType": "button",
             "controlGroup": "auto-sing-strategy-controls",
             "controlPage": "auto-sing"
