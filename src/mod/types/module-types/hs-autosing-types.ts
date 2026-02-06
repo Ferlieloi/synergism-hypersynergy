@@ -43,33 +43,39 @@ export const SPECIAL_ACTIONS = [
     { label: "Exit Reincarnation challenge", value: 102 },
     { label: "Exit Ascension challenge", value: 103 },
     { label: "Ascend", value: 104 },
-    { label: "Ambrosia pre-AOAG loadout", value: 105 },
-    { label: "Ambrosia post-AOAG Cube loadout", value: 106 },
-    { label: "Ambrosia Quark loadout", value: 107 },
-    { label: "Ambrosia Obt loadout", value: 112 },
-    { label: "Ambrosia Off loadout", value: 113 },
-    { label: "Ambrosia Ambrosia loadout", value: 114 },
-    { label: "Ant Sacrifice", value: 108 },
-    { label: "Load Ant Speed Corruptions", value: 109 },
-    { label: "Zero corruptions", value: 110 },
-    { label: "Wait", value: 111 },
-    { label: "Auto Challenge Toggle", value: 115 },
-    { label: "Store C15", value: 116 },
-    { label: "Max C11", value: 117 },
-    { label: "Max C12", value: 118 },
-    { label: "Max C13", value: 119 },
-    { label: "Max C14", value: 120 },
-    { label: "Click AOAG", value: 121 },
-    { label: "If-jump", value: IF_JUMP_VALUE },
-    { label: "Set phase corruptions", value: 201 },
-    { label: "Corrup challenge14->w5x10max", value: 501 },
-    { label: "Corrup w5x10max->p2x1x10", value: 502 },
-    { label: "Corrup p2x1x10->p3x1", value: 503 },
-    { label: "Corrup p3x1->beta", value: 504 },
-    { label: "Corrup beta->1e15-expo", value: 505 },
-    { label: "Corrup 1e15-expo->omega", value: 506 },
-    { label: "Corrup omega->sing", value: 507 },
-    { label: "Corrup sing->end", value: 508 },
+
+    { label: "Wait", value: 151 },
+    { label: "Ant Sacrifice", value: 152 },
+    { label: "Auto Challenge Toggle", value: 153 },    
+
+    { label: "If-jump", value: IF_JUMP_VALUE }, // 200
+
+    { label: "Max C11", value: 211 },
+    { label: "Max C12", value: 212 },
+    { label: "Max C13", value: 213 },
+    { label: "Max C14", value: 214 },
+    { label: "Store C15", value: 215 },
+
+    { label: "Ambrosia pre-AOAG loadout", value: 301 },
+    { label: "Ambrosia post-AOAG Cube loadout", value: 302 },
+    { label: "Ambrosia Quark loadout", value: 303 },
+    { label: "Ambrosia Obt loadout", value: 304 },
+    { label: "Ambrosia Off loadout", value: 305 },
+    { label: "Ambrosia Luck loadout", value: 306 },
+
+    { label: "Corrup 0*", value: 400 },
+    { label: "Corrup challenge14->w5x10max", value: 401 },
+    { label: "Corrup w5x10max->p2x1x10", value: 402 },
+    { label: "Corrup p2x1x10->p3x1", value: 403 },
+    { label: "Corrup p3x1->beta", value: 404 },
+    { label: "Corrup beta->1e15-expo", value: 405 },
+    { label: "Corrup 1e15-expo->omega", value: 406 },
+    { label: "Corrup omega->sing", value: 407 },
+    { label: "Corrup sing->end", value: 408 },
+    { label: "Corrup Ants", value: 409 },
+    { label: "Corrup from phase (restore)", value: 410 },
+
+    { label: "Click AOAG", value: 901 },
     { label: "Restart Autosing", value: 999 },
 ] as const;
 
@@ -95,7 +101,7 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 110,
+            challengeNumber: 400,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
@@ -107,27 +113,27 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 111,
+            challengeNumber: 151,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0,
             challengeWaitBefore: 100
         },
         {
-            challengeNumber: 108,
+            challengeNumber: 152,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 111,
+            challengeNumber: 151,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0,
             challengeWaitBefore: 1
         },
         {
-            challengeNumber: 121,
+            challengeNumber: 901,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0

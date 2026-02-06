@@ -6,7 +6,7 @@ import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
-import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
+import strategies from "../../../resource/json/hs-settings-strategies.json";
 import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
@@ -42,6 +42,8 @@ export class HSSettings extends HSModule {
     static #settingsParsed = false;
     static #settingsSynced = false;
     static #saveTimeout: any;
+
+    static readonly defaultStrategyName = "default_strategy (TAS_v2.10.4_v2.3)";
 
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
@@ -185,6 +187,11 @@ export class HSSettings extends HSModule {
     }
 
     async init(): Promise<void> {
+        // Load default strategies if not already loaded
+        if (HSSettings.#strategies.length === 0) {
+            const defaultStrategies = this.#parseDefaultStrategies();
+            HSSettings.#strategies.push(...defaultStrategies);
+        }
         this.#addStrategiesToOptions(HSSettings.#strategies)
         this.isInitialized = true;
     }
@@ -871,7 +878,7 @@ export class HSSettings extends HSModule {
 
             const saved = storageMod.setData(
                 HSGlobal.HSSettings.strategiesKey,
-                updatedStrategies.filter(s => s.strategyName !== "default_strategy")
+                updatedStrategies.filter(s => s.strategyName !== HSSettings.defaultStrategyName)
             );
 
             this.#addStrategyToOptions(normalizedStrategy);
@@ -909,7 +916,7 @@ export class HSSettings extends HSModule {
 
         const strategyName = selectedOption.text;
 
-        if (strategyName == "default_strategy") {
+        if (strategyName == HSSettings.defaultStrategyName) {
             HSUI.Notify("cannot delete default strategy")
             return;
         }
@@ -969,7 +976,7 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static async importStrategy() {
+    static async importStrategy(convertOldToNew: boolean = false, convertNewToOld: boolean = false) {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (uiMod) {
             const modalId = await uiMod.Modal({
@@ -1062,6 +1069,19 @@ export class HSSettings extends HSModule {
                     return;
                 }
 
+                // Apply conversion if requested
+                if (convertOldToNew) {
+                    parsedStrategy = this.#migrateStrategyActionIds(parsedStrategy);
+                    HSUI.Notify("Converted old action IDs to new format", {
+                        notificationType: "info"
+                    });
+                } else if (convertNewToOld) {
+                    parsedStrategy = this.#reverseMigrateStrategyActionIds(parsedStrategy);
+                    HSUI.Notify("Converted new action IDs to old format", {
+                        notificationType: "info"
+                    });
+                }
+
                 this.validateStrategy(parsedStrategy);
 
                 // Update the strategy name to the user's input
@@ -1121,7 +1141,7 @@ export class HSSettings extends HSModule {
             });
             return;
         }
-        if (strategy.strategyName == "default_strategy") {
+        if (strategy.strategyName == HSSettings.defaultStrategyName) {
             HSUI.Notify("cannot edit default strategy")
             return;
         }
@@ -1229,10 +1249,116 @@ export class HSSettings extends HSModule {
 
         if (loaded) {
             const list = Array.isArray(loaded) ? loaded : [loaded];
-            return list.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+            const migrated = list.map(s => this.#migrateStrategyActionIds(s));
+            const processed = migrated.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+            
+            // Save migrated strategies back to storage (only non-default ones)
+            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+            if (storageMod) {
+                const nonDefaultMigrated = migrated.filter(s => s.strategyName !== HSSettings.defaultStrategyName);
+                if (nonDefaultMigrated.length > 0) {
+                    storageMod.setData(HSGlobal.HSSettings.strategiesKey, nonDefaultMigrated);
+                }
+            }
+            
+            return processed;
         }
 
         return null;
+    }
+
+    #migrateStrategyActionIds(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        const oldToNewActionIds: Record<number, number> = {
+            105: 301, // Ambrosia pre-AOAG loadout
+            106: 302, // Ambrosia post-AOAG Cube loadout
+            107: 303, // Ambrosia Quark loadout
+            112: 304, // Ambrosia Obt loadout
+            113: 305, // Ambrosia Off loadout
+            114: 306, // Ambrosia Ambrosia loadout
+            108: 152, // Ant Sacrifice
+            109: 409, // Load Ant Speed Corruptions -> Corrup Ants
+            110: 400, // Zero corruptions -> Corrup 0*
+            111: 151, // Wait
+            115: 153, // Auto Challenge Toggle
+            116: 215, // Store C15
+            117: 211, // Max C11
+            118: 212, // Max C12
+            119: 213, // Max C13
+            120: 214, // Max C14
+            121: 901, // Click AOAG
+            201: 410, // Set phase corruptions -> Corrup from phase (restore)
+            501: 401, // Corrup challenge14->w5x10max
+            502: 402, // Corrup w5x10max->p2x1x10
+            503: 403, // Corrup p2x1x10->p3x1
+            504: 404, // Corrup p3x1->beta
+            505: 405, // Corrup beta->1e15-expo
+            506: 406, // Corrup 1e15-expo->omega
+            507: 407, // Corrup omega->sing
+            508: 408, // Corrup sing->end
+        };
+
+        const migrateChallenge = (challenge: any) => {
+            if (challenge.challengeNumber && oldToNewActionIds[challenge.challengeNumber]) {
+                challenge.challengeNumber = oldToNewActionIds[challenge.challengeNumber];
+            }
+        };
+
+        // Migrate strategy phases
+        strategy.strategy?.forEach(phase => {
+            phase.strat?.forEach(migrateChallenge);
+        });
+
+        // Migrate AOAG phase
+        strategy.aoagPhase?.strat?.forEach(migrateChallenge);
+
+        return strategy;
+    }
+
+    #reverseMigrateStrategyActionIds(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        const newToOldActionIds: Record<number, number> = {
+            301: 105, // Ambrosia pre-AOAG loadout
+            302: 106, // Ambrosia post-AOAG Cube loadout
+            303: 107, // Ambrosia Quark loadout
+            304: 112, // Ambrosia Obt loadout
+            305: 113, // Ambrosia Off loadout
+            306: 114, // Ambrosia Ambrosia loadout
+            152: 108, // Ant Sacrifice
+            409: 109, // Load Ant Speed Corruptions -> Corrup Ants
+            400: 110, // Zero corruptions -> Corrup 0*
+            151: 111, // Wait
+            153: 115, // Auto Challenge Toggle
+            215: 116, // Store C15
+            211: 117, // Max C11
+            212: 118, // Max C12
+            213: 119, // Max C13
+            214: 120, // Max C14
+            901: 121, // Click AOAG
+            410: 201, // Set phase corruptions -> Corrup from phase (restore)
+            401: 501, // Corrup challenge14->w5x10max
+            402: 502, // Corrup w5x10max->p2x1x10
+            403: 503, // Corrup p2x1x10->p3x1
+            404: 504, // Corrup p3x1->beta
+            405: 505, // Corrup beta->1e15-expo
+            406: 506, // Corrup 1e15-expo->omega
+            407: 507, // Corrup omega->sing
+            408: 508, // Corrup sing->end
+        };
+
+        const reverseMigrateChallenge = (challenge: any) => {
+            if (challenge.challengeNumber && newToOldActionIds[challenge.challengeNumber]) {
+                challenge.challengeNumber = newToOldActionIds[challenge.challengeNumber];
+            }
+        };
+
+        // Reverse migrate strategy phases
+        strategy.strategy?.forEach(phase => {
+            phase.strat?.forEach(reverseMigrateChallenge);
+        });
+
+        // Reverse migrate AOAG phase
+        strategy.aoagPhase?.strat?.forEach(reverseMigrateChallenge);
+
+        return strategy;
     }
 
 
@@ -1321,8 +1447,9 @@ export class HSSettings extends HSModule {
 
     #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();
-        const defaultStrategies = this.#parseDefaultStrategies();
-        HSSettings.#strategies.push(...defaultStrategies)
+        // Strategies are now loaded in init()
+        // const defaultStrategies = await this.#parseDefaultStrategies();
+        // HSSettings.#strategies.push(...defaultStrategies)
 
         try {
             const loadedSettings = this.#parseStoredSettings();
