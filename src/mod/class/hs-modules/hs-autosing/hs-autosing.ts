@@ -716,44 +716,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 104: // Ascend
                 this.ascendBtn.click();
                 break;
-            case 301: // Ambrosia pre-AOAG loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
-                break;
-            case 302: // Ambrosia post-AOAG Cube loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-
-                break;
-            case 303: // Ambrosia Quark loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_quark);
+            case 151: // Wait
                 break;
             case 152: // Ant Sacrifice
                 await this.antSacrifice.click();
-                break;
-            case 409: // Corrup Ants
-                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
-                await this.setCorruptions(antCorruptions);
-                break;
-            case 400: // Corrup 0*
-                await this.setCorruptions(ZERO_CORRUPTIONS);
-                break;
-            case 151: // Wait
-                break;
-            case 304: // Ambrosia Obt loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_obt);
-                break;
-            case 305: // Ambrosia Off loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_off);
-                break;
-            case 306: // Ambrosia Luck loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
                 break;
             case 153: // Auto Challenge Toggle
                 this.autoChallengeButton.click();
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
-                break;
-            case 215: // store C15
-                this.storedC15 = this.getChallengeCompletions(15);
                 break;
             case 211: // Max C11
                 await this.maxC11to14WithC10(11);
@@ -767,8 +738,30 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 214: // Max C14
                 await this.maxC11to14WithC10(14);
                 break;
-            case 901: // Click AOAG
-                this.AOAG.click();
+            case 215: // store C15
+                this.storedC15 = this.getChallengeCompletions(15);
+                break;
+            case 301: // Ambrosia pre-AOAG loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+                break;
+            case 302: // Ambrosia post-AOAG Cube loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+
+                break;
+            case 303: // Ambrosia Quark loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_quark);
+                break;
+            case 304: // Ambrosia Obt loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_obt);
+                break;
+            case 305: // Ambrosia Off loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_off);
+                break;
+            case 306: // Ambrosia Luck loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
+                break;
+            case 400: // Corrup 0*
+                await this.setCorruptions(ZERO_CORRUPTIONS);
                 break;
             case 401: // Corrup challenge14->w5x10max
                 const corruptions501 = { viscosity: 1, drought: 7, deflation: 4, extinction: 11, illiteracy: 0, recession: 14, dilation: 4, hyperchallenge: 2 } as CorruptionLoadout;
@@ -801,6 +794,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 408: // Corrup sing->end
                 const corruptions508 = { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions508);
+                break;
+            case 409: // Corrup Ants
+                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(antCorruptions);
+                break;
+            case 901: // Click AOAG
+                this.AOAG.click();
                 break;
             case 999: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
