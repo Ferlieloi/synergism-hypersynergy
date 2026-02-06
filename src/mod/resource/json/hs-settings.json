@@ -864,7 +864,7 @@
         "settingHelpText": "This is the strategy that the autosinger will follow",
         "settingType": "selectstring",
         "enabled": true,
-        "settingValue": "default_strategy",
+        "settingValue": "default_strategy (TAS_v2.10.4_v2.3)",
         "settingControl": {
             "controlId": "hs-setting-auto-sing-strategy",
             "controlType": "select",

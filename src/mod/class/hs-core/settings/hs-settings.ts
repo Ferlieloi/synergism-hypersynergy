@@ -43,6 +43,8 @@ export class HSSettings extends HSModule {
     static #settingsSynced = false;
     static #saveTimeout: any;
 
+    static readonly defaultStrategyName = "default_strategy (TAS_v2.10.4_v2.3)";
+
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
 
@@ -876,7 +878,7 @@ export class HSSettings extends HSModule {
 
             const saved = storageMod.setData(
                 HSGlobal.HSSettings.strategiesKey,
-                updatedStrategies.filter(s => s.strategyName !== "default_strategy")
+                updatedStrategies.filter(s => s.strategyName !== HSSettings.defaultStrategyName)
             );
 
             this.#addStrategyToOptions(normalizedStrategy);
@@ -914,7 +916,7 @@ export class HSSettings extends HSModule {
 
         const strategyName = selectedOption.text;
 
-        if (strategyName == "default_strategy") {
+        if (strategyName == HSSettings.defaultStrategyName) {
             HSUI.Notify("cannot delete default strategy")
             return;
         }
@@ -1126,7 +1128,7 @@ export class HSSettings extends HSModule {
             });
             return;
         }
-        if (strategy.strategyName == "default_strategy") {
+        if (strategy.strategyName == HSSettings.defaultStrategyName) {
             HSUI.Notify("cannot edit default strategy")
             return;
         }
@@ -1240,7 +1242,7 @@ export class HSSettings extends HSModule {
             // Save migrated strategies back to storage (only non-default ones)
             const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
             if (storageMod) {
-                const nonDefaultMigrated = migrated.filter(s => s.strategyName !== "default_strategy");
+                const nonDefaultMigrated = migrated.filter(s => s.strategyName !== HSSettings.defaultStrategyName);
                 if (nonDefaultMigrated.length > 0) {
                     storageMod.setData(HSGlobal.HSSettings.strategiesKey, nonDefaultMigrated);
                 }
@@ -1265,11 +1267,11 @@ export class HSSettings extends HSModule {
             110: 400, // Zero corruptions -> Corrup 0*
             111: 151, // Wait
             115: 153, // Auto Challenge Toggle
-            116: 115, // Store C15
-            117: 111, // Max C11
-            118: 112, // Max C12
-            119: 113, // Max C13
-            120: 114, // Max C14
+            116: 215, // Store C15
+            117: 211, // Max C11
+            118: 212, // Max C12
+            119: 213, // Max C13
+            120: 214, // Max C14
             121: 901, // Click AOAG
             201: 410, // Set phase corruptions -> Corrup from phase (restore)
             501: 401, // Corrup challenge14->w5x10max

@@ -1,6 +1,6 @@
 [
   {
-    "strategyName": "default_strategy",
+    "strategyName": "default_strategy (TAS_v2.10.4_v2.3)",
     "strategy": [
       {
         "startPhase": "start",
