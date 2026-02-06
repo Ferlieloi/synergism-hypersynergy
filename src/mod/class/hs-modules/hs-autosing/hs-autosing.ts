@@ -534,7 +534,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         if (challenge.challengeNumber === LOADOUT_ACTION_VALUE) {
             label = challenge.loadoutName ? `Load Corruption Loadout: ${challenge.loadoutName}` : "Load Corruption Loadout";
-        } else if (challenge.challengeNumber === 201) {
+        } else if (challenge.challengeNumber === 410) {
             label = "Load Phase Corruptions";
         } else if (challenge.challengeNumber === IF_JUMP_VALUE) {
             label = "Jump Logic";
@@ -632,7 +632,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
             }
 
-            if (challenge.challengeNumber == 201) {
+            if (challenge.challengeNumber == 410) {
                 const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
                 if (phaseLoadout) {
                     await this.setCorruptions(phaseLoadout);
@@ -716,89 +716,89 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 104: // Ascend
                 this.ascendBtn.click();
                 break;
-            case 105: // Early Cube
+            case 301: // Ambrosia pre-AOAG loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
                 break;
-            case 106: // Late Cube
+            case 302: // Ambrosia post-AOAG Cube loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
 
                 break;
-            case 107: // Quark
+            case 303: // Ambrosia Quark loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_quark);
                 break;
-            case 108: // Ant sac
+            case 152: // Ant Sacrifice
                 await this.antSacrifice.click();
                 break;
-            case 109: // Ant Corruptions
+            case 409: // Corrup Ants
                 const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
                 await this.setCorruptions(antCorruptions);
                 break;
-            case 110: // Cleanse
+            case 400: // Corrup 0*
                 await this.setCorruptions(ZERO_CORRUPTIONS);
                 break;
-            case 111: // Wait
+            case 151: // Wait
                 break;
-            case 112: // Obt loadout
+            case 304: // Ambrosia Obt loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_obt);
                 break;
-            case 113: // Off loadout
+            case 305: // Ambrosia Off loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_off);
                 break;
-            case 114: // Ambrosia loadout
+            case 306: // Ambrosia Luck loadout
                 await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
                 break;
-            case 115: // auto Challenge Toggle
+            case 153: // Auto Challenge Toggle
                 this.autoChallengeButton.click();
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
-            case 116: // store C15
+            case 215: // store C15
                 this.storedC15 = this.getChallengeCompletions(15);
                 break;
-            case 117: // Max C11
+            case 211: // Max C11
                 await this.maxC11to14WithC10(11);
                 break;
-            case 118: // Max C12
+            case 212: // Max C12
                 await this.maxC11to14WithC10(12);
                 break;
-            case 119: // Max C13
+            case 213: // Max C13
                 await this.maxC11to14WithC10(13);
                 break;
-            case 120: // Max C14
+            case 214: // Max C14
                 await this.maxC11to14WithC10(14);
                 break;
-            case 121: // Click AOAG
+            case 901: // Click AOAG
                 this.AOAG.click();
                 break;
-            case 501: // Special Corruptions 1 - challenge14 - w5x10max
+            case 401: // Corrup challenge14->w5x10max
                 const corruptions501 = { viscosity: 1, drought: 7, deflation: 4, extinction: 11, illiteracy: 0, recession: 14, dilation: 4, hyperchallenge: 2 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions501);
                 break;
-            case 502: // Special Corruptions 2 - w5x10max - p2x1x10
+            case 402: // Corrup w5x10max->p2x1x10
                 const corruptions502 = { viscosity: 2, drought: 15, deflation: 3, extinction: 11, illiteracy: 14, recession: 14, dilation: 5, hyperchallenge: 2 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions502);
                 break;
-            case 503: // Special Corruptions 3 - p2x1x10 - p3x1
+            case 403: // Corrup p2x1x10->p3x1
                 const corruptions503 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions503);
                 break;
-            case 504: // Special Corruptions 4 - p3x1 - beta
+            case 404: // Corrup p3x1->beta
                 const corruptions504 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions504);
                 break;
-            case 505: // Special Corruptions 5 - beta - 1e15-expo
+            case 405: // Corrup beta->1e15-expo
                 const corruptions505 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions505);
                 break;
-            case 506: // Special Corruptions 6 - 1e15-expo - omega
+            case 406: // Corrup 1e15-expo->omega
                 const corruptions506 = { viscosity: 6, drought: 16, deflation: 16, extinction: 13, illiteracy: 16, recession: 16, dilation: 11, hyperchallenge: 10 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions506);
                 break;
-            case 507: // Special Corruptions 7 - omega - singularity
+            case 407: // Corrup omega->sing
                 const corruptions507 = { viscosity: 10, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 14, dilation: 14, hyperchallenge: 13 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions507);
                 break;
-            case 508: // Special Corruptions 8 - singularity - end
+            case 408: // Corrup sing->end
                 const corruptions508 = { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 } as CorruptionLoadout;
                 await this.setCorruptions(corruptions508);
                 break;
@@ -1285,10 +1285,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.performSpecialAction(117); // Max C11
-        await this.performSpecialAction(118); // Max C12
-        await this.performSpecialAction(119); // Max C13
-        await this.performSpecialAction(120); // Max C14
+        await this.performSpecialAction(211); // Max C11
+        await this.performSpecialAction(212); // Max C12
+        await this.performSpecialAction(213); // Max C13
+        await this.performSpecialAction(214); // Max C14
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 

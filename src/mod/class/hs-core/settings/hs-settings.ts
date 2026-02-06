@@ -6,7 +6,7 @@ import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
-import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
+import strategies from "../../../resource/json/hs-settings-strategies.json";
 import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
@@ -185,6 +185,11 @@ export class HSSettings extends HSModule {
     }
 
     async init(): Promise<void> {
+        // Load default strategies if not already loaded
+        if (HSSettings.#strategies.length === 0) {
+            const defaultStrategies = this.#parseDefaultStrategies();
+            HSSettings.#strategies.push(...defaultStrategies);
+        }
         this.#addStrategiesToOptions(HSSettings.#strategies)
         this.isInitialized = true;
     }
@@ -1229,10 +1234,69 @@ export class HSSettings extends HSModule {
 
         if (loaded) {
             const list = Array.isArray(loaded) ? loaded : [loaded];
-            return list.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+            const migrated = list.map(s => this.#migrateStrategyActionIds(s));
+            const processed = migrated.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+            
+            // Save migrated strategies back to storage (only non-default ones)
+            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+            if (storageMod) {
+                const nonDefaultMigrated = migrated.filter(s => s.strategyName !== "default_strategy");
+                if (nonDefaultMigrated.length > 0) {
+                    storageMod.setData(HSGlobal.HSSettings.strategiesKey, nonDefaultMigrated);
+                }
+            }
+            
+            return processed;
         }
 
         return null;
+    }
+
+    #migrateStrategyActionIds(strategy: HSAutosingStrategy): HSAutosingStrategy {
+        const oldToNewActionIds: Record<number, number> = {
+            105: 301, // Ambrosia pre-AOAG loadout
+            106: 302, // Ambrosia post-AOAG Cube loadout
+            107: 303, // Ambrosia Quark loadout
+            112: 304, // Ambrosia Obt loadout
+            113: 305, // Ambrosia Off loadout
+            114: 306, // Ambrosia Ambrosia loadout
+            108: 152, // Ant Sacrifice
+            109: 409, // Load Ant Speed Corruptions -> Corrup Ants
+            110: 400, // Zero corruptions -> Corrup 0*
+            111: 151, // Wait
+            115: 153, // Auto Challenge Toggle
+            116: 115, // Store C15
+            117: 111, // Max C11
+            118: 112, // Max C12
+            119: 113, // Max C13
+            120: 114, // Max C14
+            121: 901, // Click AOAG
+            201: 410, // Set phase corruptions -> Corrup from phase (restore)
+            501: 401, // Corrup challenge14->w5x10max
+            502: 402, // Corrup w5x10max->p2x1x10
+            503: 403, // Corrup p2x1x10->p3x1
+            504: 404, // Corrup p3x1->beta
+            505: 405, // Corrup beta->1e15-expo
+            506: 406, // Corrup 1e15-expo->omega
+            507: 407, // Corrup omega->sing
+            508: 408, // Corrup sing->end
+        };
+
+        const migrateChallenge = (challenge: any) => {
+            if (challenge.challengeNumber && oldToNewActionIds[challenge.challengeNumber]) {
+                challenge.challengeNumber = oldToNewActionIds[challenge.challengeNumber];
+            }
+        };
+
+        // Migrate strategy phases
+        strategy.strategy?.forEach(phase => {
+            phase.strat?.forEach(migrateChallenge);
+        });
+
+        // Migrate AOAG phase
+        strategy.aoagPhase?.strat?.forEach(migrateChallenge);
+
+        return strategy;
     }
 
 
@@ -1321,8 +1385,9 @@ export class HSSettings extends HSModule {
 
     #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();
-        const defaultStrategies = this.#parseDefaultStrategies();
-        HSSettings.#strategies.push(...defaultStrategies)
+        // Strategies are now loaded in init()
+        // const defaultStrategies = await this.#parseDefaultStrategies();
+        // HSSettings.#strategies.push(...defaultStrategies)
 
         try {
             const loadedSettings = this.#parseStoredSettings();
