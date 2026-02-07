@@ -499,31 +499,9 @@ export class HSQOLButtons extends HSModule {
             HSUtils.stopDialogWatcher();
         });
 
-        // Create new container for all buttons
-        const buttonContainer = document.createElement('div');
-        buttonContainer.id = 'hs-button-container';
-
-        Object.assign(buttonContainer.style, {
-            display: 'inline-flex',
-            width: 'auto',
-            maxWidth: '100%',
-            gap: '0',
-            flexWrap: 'nowrap',
-            alignItems: 'stretch',
-        });
-
-        // Style each button to take 25% width
-        [addBtn, addAllBtn, add10Btn, addOneBtn].forEach(btn => {
-            Object.assign(btn.style, {
-                flex: '1',
-                minWidth: '0',
-            });
-        });
-
-        buttonContainer.append(addBtn, addAllBtn, add10Btn, addOneBtn);
-
-        container.innerHTML = '';
-        container.appendChild(buttonContainer);
+        // Insert the new button next to the existing buttons, preserving original layout/styles
+        // (avoid clearing container.innerHTML or forcing flex styles which broke layout)
+        addAllBtn.parentNode?.insertBefore(add10Btn, addOneBtn);
     }
 
     setGQButtonsVisibility(): void {
