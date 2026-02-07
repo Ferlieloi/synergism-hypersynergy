@@ -221,6 +221,18 @@ export class HSSettingActions {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) qolButtonsMod.octUpgradesInitialized = false;
         }
+        ,
+        enableAutomationQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.hideAutomationQuickBar?.();
+            } else {
+                qolButtonsMod.showAutomationQuickBar?.();
+            }
+        }
     }
 
     constructor() { }

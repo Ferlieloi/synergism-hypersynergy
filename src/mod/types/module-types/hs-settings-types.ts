@@ -65,6 +65,7 @@ export interface HSSettingsDefinition {
     ambrosiaQuickBar: QOLButtonsQuickBarSetting;
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
+    enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
 }
 
 export interface HSSettingControlOptions {
@@ -183,4 +184,5 @@ export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> {
 export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
 

@@ -1002,5 +1002,19 @@
             "controlPage": "qol-buttons",
             "controlEnabledId": "hs-setting-qol-hide-maxed-oct-upgrades-btn"
         }
+    },
+    "enableAutomationQuickBar": {
+        "settingName": "enableAutomationQuickBar",
+        "settingDescription": "Automation quick bar",
+        "settingHelpText": "When enabled, shows a compact automation status bar in the header (adapted from the syn UI userscript).",
+        "settingType": "boolean",
+        "enabled": true,
+        "settingAction": "enableAutomationQuickBarAction",
+        "settingControl": {
+            "controlType": "switch",
+            "controlGroup": "quickbar-qol",
+            "controlPage": "qol-buttons",
+            "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
+        }
     }
 }

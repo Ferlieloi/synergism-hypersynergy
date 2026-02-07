@@ -19,3 +19,70 @@
     border: 2px solid green;
     border-right: none;
  }
+
+ /* syn UI quickbar styles - overlay fixed to bottom center */
+ #automationQuickBar {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 4px 6px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 99999;
+    pointer-events: auto;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    flex-wrap: wrap;
+    box-sizing: border-box;
+ }
+
+ #automationQuickBar .left,
+ #automationQuickBar .center,
+ #automationQuickBar .right {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+ }
+
+ #automationQuickBar .center:empty,
+ #automationQuickBar .right:empty {
+    display: none;
+ }
+
+ #automationQuickBar button.autoToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: 0 3px;
+    padding: 0;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+ }
+
+ #automationQuickBar button.autoToggle.enabled {
+    border-color: #006500;
+ }
+
+ #automationQuickBar button.autoToggle.disabled {
+    border-color: #800000;
+ }
+
+ #automationQuickBar button.autoToggle.mixed {
+    border-color: orange;
+ }
+
+ #automationQuickBar button.autoToggle img {
+    height: 18px;
+    width: 18px;
+    display: block;
+ }
