@@ -199,6 +199,7 @@ export class HSQOLButtons extends HSModule {
 
                 const btn = document.createElement('button');
                 btn.className = 'autoToggle ' + (enabled ? 'enabled' : 'disabled');
+                btn.id = 'automationQuickBar-' + t.key.toLowerCase();
 
                 if (t.icon) {
                     const img = document.createElement('img');
@@ -223,33 +224,39 @@ export class HSQOLButtons extends HSModule {
 
                 if (t.key === 'Challenge') {
                     // --- Rune combined group button placed where Rune used to be ---
-                    left.appendChild(this.#createGroupButton(
+                    const runeBtn = this.#createGroupButton(
                         HSQOLButtons.RUNE_SELECTORS,
                         'Runes: Auto/Fragments/Fortify/36/37',
                         'Rune toggles',
                         './Pictures/Simplified/Offering.png',
                         updateUI
-                    ));
+                    );
+                    runeBtn.id = 'automationQuickBar-runes';
+                    left.appendChild(runeBtn);
                 }
             }
 
             // --- Cubes combined group button ---
-            left.appendChild(this.#createGroupButton(
+            const cubeBtn = this.#createGroupButton(
                 HSQOLButtons.CUBE_SELECTORS,
                 'Cubes/Tesseracts/Hypercubes/Platonic',
                 'Cube toggles',
                 './Pictures/Default/TinyWow3.png',
                 updateUI
-            ));
+            );
+            cubeBtn.id = 'automationQuickBar-cubes';
+            left.appendChild(cubeBtn);
 
             // --- Hepteracts combined group button ---
-            left.appendChild(this.#createGroupButton(
+            const hepteractBtn = this.#createGroupButton(
                 HSQOLButtons.HEPTERACT_SELECTORS,
                 'Hepteracts',
                 'Hepteract toggles',
                 './Pictures/Default/TinyWow7.png',
                 updateUI
-            ));
+            );
+            hepteractBtn.id = 'automationQuickBar-hepteracts';
+            left.appendChild(hepteractBtn);
 
             const center = document.createElement('span');
             center.className = 'center';
