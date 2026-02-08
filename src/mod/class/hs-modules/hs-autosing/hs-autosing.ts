@@ -707,7 +707,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
-                await this.performSpecialAction(challenge.challengeNumber);
+                await this.performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 await this.waitForCompletion(
@@ -728,7 +728,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
 
-    private async performSpecialAction(actionId: number): Promise<void> {
+    private async performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
                 this.exitTranscBtn.click();
@@ -747,7 +747,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 break;
             case 106: // Late Cube
                 await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-
                 break;
             case 107: // Quark
                 await this.setAmbrosiaLoadout(this.ambrosia_quark);
@@ -797,34 +796,34 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.AOAG.click();
                 break;
             case 301: // Max C1
-                await this.C1to10UntilNoMoreCompletions(1, 50);
+                await this.C1to10UntilNoMoreCompletions(1, waitTime, maxTime);
                 break;
             case 302: // Max C2
-                await this.C1to10UntilNoMoreCompletions(2, 50);
+                await this.C1to10UntilNoMoreCompletions(2, waitTime, maxTime);
                 break;
             case 303: // Max C3
-                await this.C1to10UntilNoMoreCompletions(3, 50);
+                await this.C1to10UntilNoMoreCompletions(3, waitTime, maxTime);
                 break;
             case 304: // Max C4
-                await this.C1to10UntilNoMoreCompletions(4, 50);
+                await this.C1to10UntilNoMoreCompletions(4, waitTime, maxTime);
                 break;
             case 305: // Max C5
-                await this.C1to10UntilNoMoreCompletions(5, 50);
+                await this.C1to10UntilNoMoreCompletions(5, waitTime, maxTime);
                 break;
             case 306: // Max C6
-                await this.C1to10UntilNoMoreCompletions(6, 100);
+                await this.C1to10UntilNoMoreCompletions(6, waitTime, maxTime);
                 break;
             case 307: // Max C7
-                await this.C1to10UntilNoMoreCompletions(7, 100);
+                await this.C1to10UntilNoMoreCompletions(7, waitTime, maxTime);
                 break;
             case 308: // Max C8
-                await this.C1to10UntilNoMoreCompletions(8, 100);
+                await this.C1to10UntilNoMoreCompletions(8, waitTime, maxTime);
                 break;
             case 309: // Max C9
-                await this.C1to10UntilNoMoreCompletions(9, 100);
+                await this.C1to10UntilNoMoreCompletions(9, waitTime, maxTime);
                 break;
             case 310: // Max C10
-                await this.C1to10UntilNoMoreCompletions(10, 100);
+                await this.C1to10UntilNoMoreCompletions(10, waitTime, maxTime);
                 break;
             case 999: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
@@ -1194,7 +1193,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (waitTime > 0) {
                     await HSUtils.sleep(waitTime);
                 }
-                HSLogger.debug(`Autosing: stop monitoring challenge${challengeIndex}. ${currentCompletions} completions reached`, this.context);
+                HSLogger.debug(`Autosing: challenge${challengeIndex}. ${currentCompletions} completions reached`, this.context);
                 return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
@@ -1228,25 +1227,28 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     /**
      * Enter C1-10 challenge, then leave when no more completions are detected within a given timeframe (maxTime)
      */
-    private async C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, maxTime: number): Promise<void> {
+    private async C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
         // Enter the C1-10 challenge
         await this.waitForCompletion(challengeIndex, 0, 0, 0);
 
-        // Wait for the C1-10 completions to stop increasing
+        const maxPossible = this.getChallengeGoal(challengeIndex);
         let c1to10CurrentCompletions = this.getChallengeCompletions(challengeIndex);
         let timeSinceNoMoreCompletion = performance.now();
+        await HSUtils.sleep(initialWaitTime);
+
+        // Wait for the C1-10 completions to stop increasing
         while (true) {
-            await HSUtils.sleep(10);
             const c1to10CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
             const now = performance.now();
             if (!c1to10CurrentCompletions2.eq(c1to10CurrentCompletions)) {
                 timeSinceNoMoreCompletion = now; // Update timer if completions increased
                 c1to10CurrentCompletions = c1to10CurrentCompletions2;
             }
-            if (now >= timeSinceNoMoreCompletion + maxTime) {
-                HSLogger.debug(`Autosing: challenge${challengeIndex} with ${c1to10CurrentCompletions2} completions, no more completions after waiting ${maxTime}ms`, this.context);
-                return Promise.resolve(); // maxTime reached, exit
+            if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions2.gte(maxPossible)) {
+                HSLogger.debug(`Autosing: challenge${challengeIndex} with ${c1to10CurrentCompletions2} completions: maxed, or no more completions after waiting ${maxTime}ms`, this.context);
+                return Promise.resolve();
             }
+            await HSUtils.sleep(10);
         }
     }
 
@@ -1396,10 +1398,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.performSpecialAction(117); // Max C11
-        await this.performSpecialAction(118); // Max C12
-        await this.performSpecialAction(119); // Max C13
-        await this.performSpecialAction(120); // Max C14
+        await this.performSpecialAction(117, 0, 0); // Max C11
+        await this.performSpecialAction(118, 0, 0); // Max C12
+        await this.performSpecialAction(119, 0, 0); // Max C13
+        await this.performSpecialAction(120, 0, 0); // Max C14
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
