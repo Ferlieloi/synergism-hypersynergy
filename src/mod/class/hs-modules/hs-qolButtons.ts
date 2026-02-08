@@ -506,9 +506,35 @@ export class HSQOLButtons extends HSModule {
             HSUtils.stopDialogWatcher();
         });
 
-        // Insert the new button next to the existing buttons, preserving original layout/styles
-        // (avoid clearing container.innerHTML or forcing flex styles which broke layout)
+        // Insert the new button next to the existing buttons.
         addAllBtn.parentNode?.insertBefore(add10Btn, addOneBtn);
+
+        // Force the container and its direct child buttons to share width evenly.
+        try {
+            container.style.display = 'flex';
+            container.style.width = 'auto';
+            container.style.maxWidth = '480px';
+            container.style.margin = '0 auto';
+            container.style.marginBottom = '3px';
+            container.style.gap = '0';
+
+            const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>('button'));
+            buttons.forEach(b => {
+                b.style.flex = '1 1 25%';
+                b.style.minWidth = '0';
+                b.style.boxSizing = 'border-box';
+                b.style.height = '30px';
+                b.style.padding = '4px 8px';
+                b.style.whiteSpace = 'nowrap';
+                b.style.overflow = 'hidden';
+                b.style.textOverflow = 'ellipsis';
+                b.style.display = 'inline-flex';
+                b.style.alignItems = 'center';
+                b.style.justifyContent = 'center';
+            });
+        } catch (e) {
+            HSLogger.log(`Failed to apply inline layout styles for addCodeBox: ${e}`, this.context);
+        }
     }
 
     setGQButtonsVisibility(): void {

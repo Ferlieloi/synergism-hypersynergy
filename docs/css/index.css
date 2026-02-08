@@ -433,3 +433,39 @@ p.sm {
         width: fill-available;
     }
 }
+
+/* HS QOL addCodeBox button normalization */
+#addCodeBox {
+    display: flex !important;
+    width: 100% !important;
+    gap: 0 !important;
+    align-items: center !important;
+}
+
+/* Ensure direct children buttons evenly share the width (25% each).
+   Use high specificity and !important to override game styles. */
+#addCodeBox>button {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 30px !important;
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    flex-basis: 25% !important;
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: center !important;
+}
+
+#addCodeBox>button img {
+    height: 18px !important;
+    display: inline-flex !important;
+}
