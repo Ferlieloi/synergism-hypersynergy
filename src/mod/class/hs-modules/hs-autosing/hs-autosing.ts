@@ -796,6 +796,36 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 121: // Click AOAG
                 this.AOAG.click();
                 break;
+            case 301: // Max C1
+                await this.C1to10UntilNoMoreCompletions(1, 50);
+                break;
+            case 302: // Max C2
+                await this.C1to10UntilNoMoreCompletions(2, 50);
+                break;
+            case 303: // Max C3
+                await this.C1to10UntilNoMoreCompletions(3, 50);
+                break;
+            case 304: // Max C4
+                await this.C1to10UntilNoMoreCompletions(4, 50);
+                break;
+            case 305: // Max C5
+                await this.C1to10UntilNoMoreCompletions(5, 50);
+                break;
+            case 306: // Max C6
+                await this.C1to10UntilNoMoreCompletions(6, 100);
+                break;
+            case 307: // Max C7
+                await this.C1to10UntilNoMoreCompletions(7, 100);
+                break;
+            case 308: // Max C8
+                await this.C1to10UntilNoMoreCompletions(8, 100);
+                break;
+            case 309: // Max C9
+                await this.C1to10UntilNoMoreCompletions(9, 100);
+                break;
+            case 310: // Max C10
+                await this.C1to10UntilNoMoreCompletions(10, 100);
+                break;
             case 999: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
                 if (restartBtn) restartBtn.click();
@@ -1164,6 +1194,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (waitTime > 0) {
                     await HSUtils.sleep(waitTime);
                 }
+                HSLogger.debug(`Autosing: stop monitoring challenge${challengeIndex}. ${currentCompletions} completions reached`, this.context);
                 return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
@@ -1191,6 +1222,31 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return Promise.resolve(); // Completions stopped, exit
             }
             c11to14CurrentCompletions = c11to14CurrentCompletions2;
+        }
+    }
+
+    /**
+     * Enter C1-10 challenge, then leave when no more completions are detected within a given timeframe (maxTime)
+     */
+    private async C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, maxTime: number): Promise<void> {
+        // Enter the C1-10 challenge
+        await this.waitForCompletion(challengeIndex, 0, 0, 0);
+
+        // Wait for the C1-10 completions to stop increasing
+        let c1to10CurrentCompletions = this.getChallengeCompletions(challengeIndex);
+        let timeSinceNoMoreCompletion = performance.now();
+        while (true) {
+            await HSUtils.sleep(10);
+            const c1to10CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
+            const now = performance.now();
+            if (!c1to10CurrentCompletions2.eq(c1to10CurrentCompletions)) {
+                timeSinceNoMoreCompletion = now; // Update timer if completions increased
+                c1to10CurrentCompletions = c1to10CurrentCompletions2;
+            }
+            if (now >= timeSinceNoMoreCompletion + maxTime) {
+                HSLogger.debug(`Autosing: challenge${challengeIndex} with ${c1to10CurrentCompletions2} completions, no more completions after waiting ${maxTime}ms`, this.context);
+                return Promise.resolve(); // maxTime reached, exit
+            }
         }
     }
 
