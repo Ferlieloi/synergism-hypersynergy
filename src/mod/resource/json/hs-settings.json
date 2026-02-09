@@ -71,7 +71,7 @@
         "settingDescription": "Display timestamps in log",
         "settingHelpText": "Controls whether timestamps are visible or not in the mod's log view",
         "settingType": "boolean",
-        "enabled": true,
+        "enabled": false,
         "settingAction": "logTimestamp",
         "settingControl": {
             "controlType": "switch",
@@ -98,7 +98,7 @@
         "settingDescription": "Reactive mouse hover (when SHIFT is held)",
         "settingHelpText": "When enabled, mouse will emit hover events at current mouse position when SHIFT is held. Setting value is event interval in seconds (0.1 = 100ms).",
         "settingType": "numeric",
-        "enabled": true,
+        "enabled": false,
         "settingValue": 0.2,
         "settingValueMultiplier": 1000,
         "settingAction": "reactiveMouseHover",
@@ -120,7 +120,7 @@
         "settingDescription": "Auto click (when CTRL is held)",
         "settingHelpText": "When enabled, mouse will click automatically at current mouse position when CTRL is held. Setting value is click interval in seconds (0.1 = 100ms)",
         "settingType": "numeric",
-        "enabled": true,
+        "enabled": false,
         "settingValue": 0.15,
         "settingValueMultiplier": 1000,
         "settingAction": "autoClick",
@@ -142,7 +142,7 @@
         "settingDescription": "Auto click ignores certain elements",
         "settingHelpText": "When enabled, auto click will ignore (not click on) certain elements such as some buttons which there should be no need to auto click. This is to prevent accidental clicks.",
         "settingType": "boolean",
-        "enabled": true,
+        "enabled": false,
         "settingControl": {
             "controlType": "switch",
             "controlGroup": "mouse",
@@ -226,6 +226,37 @@
                 {
                     "text": "Loadout 8",
                     "value": "8"
+                },
+                {
+                    "text": "Loadout 9",
+                    "value": "9"
+                },
+                {
+                    "text": "Loadout 10",
+                    "value": "10"
+                },                {
+                    "text": "Loadout 11",
+                    "value": "11"
+                },
+                {
+                    "text": "Loadout 12",
+                    "value": "12"
+                },
+                {
+                    "text": "Loadout 13",
+                    "value": "13"
+                },
+                {
+                    "text": "Loadout 14",
+                    "value": "14"
+                },
+                {
+                    "text": "Loadout 15",
+                    "value": "15"
+                },
+                {
+                    "text": "Loadout 16",
+                    "value": "16"
                 }
             ]
         }
@@ -278,6 +309,36 @@
                 {
                     "text": "Loadout 8",
                     "value": "8"
+                },                {
+                    "text": "Loadout 9",
+                    "value": "9"
+                },
+                {
+                    "text": "Loadout 10",
+                    "value": "10"
+                },                {
+                    "text": "Loadout 11",
+                    "value": "11"
+                },
+                {
+                    "text": "Loadout 12",
+                    "value": "12"
+                },
+                {
+                    "text": "Loadout 13",
+                    "value": "13"
+                },
+                {
+                    "text": "Loadout 14",
+                    "value": "14"
+                },
+                {
+                    "text": "Loadout 15",
+                    "value": "15"
+                },
+                {
+                    "text": "Loadout 16",
+                    "value": "16"
                 }
             ]
         }
@@ -345,6 +406,37 @@
                 {
                     "text": "Loadout 8",
                     "value": "8"
+                },                {
+                    "text": "Loadout 9",
+                    "value": "9"
+                },
+                {
+                    "text": "Loadout 10",
+                    "value": "10"
+                },
+                {
+                    "text": "Loadout 11",
+                    "value": "11"
+                },
+                {
+                    "text": "Loadout 12",
+                    "value": "12"
+                },
+                {
+                    "text": "Loadout 13",
+                    "value": "13"
+                },
+                {
+                    "text": "Loadout 14",
+                    "value": "14"
+                },
+                {
+                    "text": "Loadout 15",
+                    "value": "15"
+                },
+                {
+                    "text": "Loadout 16",
+                    "value": "16"
                 }
             ]
         }
@@ -397,6 +489,37 @@
                 {
                     "text": "Loadout 8",
                     "value": "8"
+                },                {
+                    "text": "Loadout 9",
+                    "value": "9"
+                },
+                {
+                    "text": "Loadout 10",
+                    "value": "10"
+                },
+                {
+                    "text": "Loadout 11",
+                    "value": "11"
+                },
+                {
+                    "text": "Loadout 12",
+                    "value": "12"
+                },
+                {
+                    "text": "Loadout 13",
+                    "value": "13"
+                },
+                {
+                    "text": "Loadout 14",
+                    "value": "14"
+                },
+                {
+                    "text": "Loadout 15",
+                    "value": "15"
+                },
+                {
+                    "text": "Loadout 16",
+                    "value": "16"
                 }
             ]
         }
@@ -462,8 +585,8 @@
         },
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "patch",
-            "controlPage": "patch",
+            "controlGroup": "ui",
+            "controlPage": "ui",
             "controlEnabledId": "hs-setting-patch-shopnames-btn"
         }
     },
@@ -533,7 +656,7 @@
         "settingHelpText": "Controls at what singularity you will auto-sing.",
         "settingType": "numeric",
         "enabled": true,
-        "settingValue": 1,
+        "settingValue": 200,
         "settingControl": {
             "controlId": "hs-setting-auto-sing-number",
             "controlType": "number",
@@ -953,7 +1076,7 @@
         "settingDescription": "Advanced Data Collection",
         "settingHelpText": "When enabled, collects advanced autosing data for debugging purposes.",
         "settingType": "boolean",
-        "enabled": true,
+        "enabled": false,
         "settingControl": {
             "controlType": "switch",
             "controlGroup": "auto-sing-timer-modal",
