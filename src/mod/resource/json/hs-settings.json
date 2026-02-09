@@ -568,8 +568,8 @@
         },
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "patch",
-            "controlPage": "patch",
+            "controlGroup": "debug",
+            "controlPage": "debug",
             "controlEnabledId": "hs-setting-patch-test-btn"
         }
     },
