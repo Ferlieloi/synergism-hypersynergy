@@ -129,6 +129,36 @@ export class HSUI extends HSModule {
             HSLogger.clear();
         })
 
+        // Create and add copy log button next to clear button
+        const logCopyBtn = document.createElement('button');
+        logCopyBtn.id = 'hs-ui-log-copy';
+        logCopyBtn.textContent = 'Copy Log';
+        logCopyBtn.style.cssText = `
+            margin-left: 5px;
+            padding: 2px 8px;
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        `;
+        logCopyBtn.addEventListener('click', async () => {
+            if (self.#loggerElement) {
+                try {
+                    await navigator.clipboard.writeText(self.#loggerElement.value);
+                    HSUI.Notify('Log copied to clipboard!', { notificationType: 'success' });
+                } catch (err) {
+                    HSLogger.error('Failed to copy log to clipboard', self.context);
+                }
+            }
+        });
+
+        // Insert the copy button next to the clear button
+        if (this.#logClearBtn.parentNode) {
+            this.#logClearBtn.parentNode.insertBefore(logCopyBtn, this.#logClearBtn.nextSibling);
+        }
+
         // Bind panel controls
         const tabs = document.querySelectorAll('.hs-panel-tab');
 
