@@ -75,8 +75,8 @@
         "settingAction": "logTimestamp",
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "log",
-            "controlPage": "log",
+            "controlGroup": "debug",
+            "controlPage": "debug",
             "controlEnabledId": "hs-setting-display-timestamp-btn"
         }
     },
