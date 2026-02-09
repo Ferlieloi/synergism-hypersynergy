@@ -34,7 +34,7 @@ export class HSUI extends HSModule {
     #uiPanelCloseBtn?: HTMLDivElement;
     #uiPanelOpenBtn?: HTMLDivElement;
 
-    #loggerElement?: HTMLTextAreaElement;
+    #loggerElement?: HTMLElement;
     #logClearBtn?: HTMLButtonElement;
     #logCopyBtn?: HTMLButtonElement;
 
@@ -103,7 +103,7 @@ export class HSUI extends HSModule {
         this.#uiPanel = await HSElementHooker.HookElement('#hs-panel') as HTMLDivElement;
         this.#uiPanelTitle = await HSElementHooker.HookElement('#hs-panel-version') as HTMLDivElement;
         this.#uiPanelCloseBtn = await HSElementHooker.HookElement('.hs-panel-header-right') as HTMLDivElement;
-        this.#loggerElement = await HSElementHooker.HookElement('#hs-ui-log') as HTMLTextAreaElement;
+        this.#loggerElement = await HSElementHooker.HookElement('#hs-ui-log') as HTMLElement;
         this.#logClearBtn = await HSElementHooker.HookElement('#hs-ui-log-clear') as HTMLButtonElement;
         this.#logCopyBtn = await HSElementHooker.HookElement('#hs-ui-log-copy') as HTMLButtonElement;
         const panelHandle = await HSElementHooker.HookElement('.hs-panel-header') as HTMLDivElement;
@@ -134,7 +134,7 @@ export class HSUI extends HSModule {
         this.#logCopyBtn.addEventListener('click', async () => {
             if (self.#loggerElement) {
                 try {
-                    await navigator.clipboard.writeText(self.#loggerElement.value);
+                    await navigator.clipboard.writeText(self.#loggerElement.textContent || '');
                     HSUI.Notify('Log copied to clipboard!', { notificationType: 'success' });
                 } catch (err) {
                     HSLogger.error('Failed to copy log to clipboard', self.context);
@@ -459,7 +459,7 @@ export class HSUI extends HSModule {
         }
     }
 
-    async getLogElement(): Promise<HTMLTextAreaElement> {
+    async getLogElement(): Promise<HTMLElement> {
         if (this.#loggerElement) {
             return this.#loggerElement;
         } else {
