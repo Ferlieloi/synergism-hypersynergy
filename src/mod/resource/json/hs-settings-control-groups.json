@@ -32,8 +32,8 @@
         "order": 8
     },
     "patch": {
-        "groupName": "Patch settings",
-        "order": 9
+        "groupName": "Old Patch settings",
+        "order": 12
     },
     "gamedata": {
         "groupName": "Game data settings",
@@ -45,7 +45,7 @@
     },
     "debug": {
         "groupName": "Debugging settings",
-        "order": 12
+        "order": 9
     },
     "auto-sing": {
         "groupName": "Auto-Sing settings",
