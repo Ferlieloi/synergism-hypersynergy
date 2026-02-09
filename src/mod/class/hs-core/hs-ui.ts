@@ -134,6 +134,7 @@ export class HSUI extends HSModule {
         logCopyBtn.id = 'hs-ui-log-copy';
         logCopyBtn.className = 'hs-panel-btn';
         logCopyBtn.textContent = 'Copy Log';
+        logCopyBtn.style.marginLeft = '5px';
         logCopyBtn.addEventListener('click', async () => {
             if (self.#loggerElement) {
                 try {
