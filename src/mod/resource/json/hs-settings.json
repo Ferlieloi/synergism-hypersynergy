@@ -551,7 +551,7 @@
         },
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "debug",
+            "controlGroup": "patch",
             "controlPage": "debug",
             "controlEnabledId": "hs-setting-patch-test-btn"
         }
@@ -568,7 +568,7 @@
         },
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "debug",
+            "controlGroup": "patch",
             "controlPage": "debug",
             "controlEnabledId": "hs-setting-patch-ambrosia-view-overflow-btn"
         }
@@ -602,7 +602,7 @@
         },
         "settingControl": {
             "controlType": "switch",
-            "controlGroup": "debug",
+            "controlGroup": "patch",
             "controlPage": "debug",
             "controlEnabledId": "hs-setting-patch-iconsets-btn"
         }
