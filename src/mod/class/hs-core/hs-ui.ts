@@ -36,6 +36,7 @@ export class HSUI extends HSModule {
 
     #loggerElement?: HTMLTextAreaElement;
     #logClearBtn?: HTMLButtonElement;
+    #logCopyBtn?: HTMLButtonElement;
 
     static #modPanelOpen = false;
 
@@ -104,6 +105,7 @@ export class HSUI extends HSModule {
         this.#uiPanelCloseBtn = await HSElementHooker.HookElement('.hs-panel-header-right') as HTMLDivElement;
         this.#loggerElement = await HSElementHooker.HookElement('#hs-ui-log') as HTMLTextAreaElement;
         this.#logClearBtn = await HSElementHooker.HookElement('#hs-ui-log-clear') as HTMLButtonElement;
+        this.#logCopyBtn = await HSElementHooker.HookElement('#hs-ui-log-copy') as HTMLButtonElement;
         const panelHandle = await HSElementHooker.HookElement('.hs-panel-header') as HTMLDivElement;
         const panelResizeHandle = await HSElementHooker.HookElement('.hs-resizer') as HTMLDivElement;
 
@@ -129,13 +131,7 @@ export class HSUI extends HSModule {
             HSLogger.clear();
         })
 
-        // Create and add copy log button next to clear button
-        const logCopyBtn = document.createElement('button');
-        logCopyBtn.id = 'hs-ui-log-copy';
-        logCopyBtn.className = 'hs-panel-btn';
-        logCopyBtn.textContent = 'Copy Log';
-        logCopyBtn.style.marginLeft = '5px';
-        logCopyBtn.addEventListener('click', async () => {
+        this.#logCopyBtn.addEventListener('click', async () => {
             if (self.#loggerElement) {
                 try {
                     await navigator.clipboard.writeText(self.#loggerElement.value);
@@ -145,11 +141,6 @@ export class HSUI extends HSModule {
                 }
             }
         });
-
-        // Insert the copy button next to the clear button
-        if (this.#logClearBtn.parentNode) {
-            this.#logClearBtn.parentNode.insertBefore(logCopyBtn, this.#logClearBtn.nextSibling);
-        }
 
         // Bind panel controls
         const tabs = document.querySelectorAll('.hs-panel-tab');
