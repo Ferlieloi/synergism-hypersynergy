@@ -7,49 +7,53 @@
         "groupName": "Notification settings",
         "order": 2
     },
+    "ui": {
+        "groupName": "UI settings",
+        "order": 3
+    },
     "log": {
         "groupName": "Log settings",
-        "order": 3
+        "order": 4
     },
     "mouse": {
         "groupName": "Mouse settings",
-        "order": 4
+        "order": 5
     },
     "ambrosia": {
         "groupName": "Ambrosia quickbar settings",
-        "order": 5
+        "order": 6
     },
     "ambrosia2": {
         "groupName": "Idle Swapper settings",
-        "order": 6
+        "order": 7
     },
     "ambrosia3": {
         "groupName": "Minibar settings",
-        "order": 7
+        "order": 8
     },
     "patch": {
         "groupName": "Patch settings",
-        "order": 8
+        "order": 9
     },
     "gamedata": {
         "groupName": "Game data settings",
-        "order": 9
+        "order": 10
     },
     "shop": {
         "groupName": "Shop settings",
-        "order": 10
+        "order": 11
     },
     "debug": {
         "groupName": "Debugging settings",
-        "order": 11
+        "order": 12
     },
     "auto-sing": {
         "groupName": "Auto-Sing settings",
-        "order": 12
+        "order": 13
     },
     "auto-sing-strategy-controls": {
         "groupName": "Auto-Sing Strategy settings",
-        "order": 13
+        "order": 14
     },
     "auto-sing-ambrosia": {
         "groupName": "Auto-Sing Ambrosia Loadouts settings",
