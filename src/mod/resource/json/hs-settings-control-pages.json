@@ -27,7 +27,7 @@
         "page": "ambrosia",
         "pageName": "Ambrosia",
         "pageColor": "gold",
-        "order": 5
+        "order": 7
     },
     "patch": {
         "page": "patch",
@@ -39,7 +39,7 @@
         "page": "gamedata",
         "pageName": "Game Data",
         "pageColor": "crimson",
-        "order": 7
+        "order": 5
     },
     "shop": {
         "page": "shop",
@@ -51,13 +51,13 @@
         "page": "debug",
         "pageName": "Debugging",
         "pageColor": "maroon",
-        "order": 9
+        "order": 12
     },
     "auto-sing": {
         "page": "auto-sing",
         "pageName": "Auto-Sing",
         "pageColor": "#00ff7f",
-        "order": 10
+        "order": 9
     },
     "qol-buttons": {
         "page": "qol-buttons",
