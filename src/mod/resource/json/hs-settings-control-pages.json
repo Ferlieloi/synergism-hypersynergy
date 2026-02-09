@@ -1,74 +1,74 @@
 {
-    "hepteract": {
-        "page": "hepteract",
-        "pageName": "Hepteracts",
-        "pageColor": "mediumpurple",
-        "order": 1
-    },
-    "ui": {
-        "page": "ui",
-        "pageName": "UI",
-        "pageColor": "cyan",
-        "order": 2
-    },
-    "log": {
-        "page": "log",
-        "pageName": "Logging",
-        "pageColor": "orange",
-        "order": 3
-    },
-    "input": {
-        "page": "input",
-        "pageName": "Input",
-        "pageColor": "plum",
-        "order": 4
-    },
-    "ambrosia": {
-        "page": "ambrosia",
-        "pageName": "Ambrosia",
-        "pageColor": "gold",
-        "order": 7
-    },
-    "patch": {
-        "page": "patch",
-        "pageName": "Patch",
-        "pageColor": "fuchsia",
-        "order": 6
-    },
-    "gamedata": {
-        "page": "gamedata",
-        "pageName": "Game Data",
-        "pageColor": "crimson",
-        "order": 5
-    },
-    "shop": {
-        "page": "shop",
-        "pageName": "Shop",
-        "pageColor": "#b300b2",
-        "order": 8
-    },
-    "debug": {
-        "page": "debug",
-        "pageName": "Debugging",
-        "pageColor": "maroon",
-        "order": 12
-    },
-    "auto-sing": {
-        "page": "auto-sing",
-        "pageName": "Auto-Sing",
-        "pageColor": "#00ff7f",
-        "order": 9
-    },
-    "qol-buttons": {
-        "page": "qol-buttons",
-        "pageName": "QOL-Buttons",
-        "pageColor": "#c0c0c0",
-        "order": 10
-    },
-    "misc": {
-        "page": "misc",
-        "pageName": "Misc.",
-        "pageColor": "white",
-        "order": 11
-    }
+  "hepteract": {
+    "page": "hepteract",
+    "pageName": "Hepteracts",
+    "pageColor": "mediumpurple",
+    "order": 1
+  },
+  "ui": {
+    "page": "ui",
+    "pageName": "UI",
+    "pageColor": "cyan",
+    "order": 2
+  },
+  "log": {
+    "page": "log",
+    "pageName": "Logging",
+    "pageColor": "orange",
+    "order": 3
+  },
+  "input": {
+    "page": "input",
+    "pageName": "Input",
+    "pageColor": "plum",
+    "order": 4
+  },
+  "gamedata": {
+    "page": "gamedata",
+    "pageName": "Game Data",
+    "pageColor": "crimson",
+    "order": 5
+  },
+  "patch": {
+    "page": "patch",
+    "pageName": "Patch",
+    "pageColor": "fuchsia",
+    "order": 6
+  },
+  "ambrosia": {
+    "page": "ambrosia",
+    "pageName": "Ambrosia",
+    "pageColor": "gold",
+    "order": 7
+  },
+  "shop": {
+    "page": "shop",
+    "pageName": "Shop",
+    "pageColor": "#b300b2",
+    "order": 8
+  },
+  "auto-sing": {
+    "page": "auto-sing",
+    "pageName": "Auto-Sing",
+    "pageColor": "#00ff7f",
+    "order": 9
+  },
+  "qol-buttons": {
+    "page": "qol-buttons",
+    "pageName": "QOL-Buttons",
+    "pageColor": "#c0c0c0",
+    "order": 10
+  },
+  "misc": {
+    "page": "misc",
+    "pageName": "Misc.",
+    "pageColor": "white",
+    "order": 11
+  },
+  "debug": {
+    "page": "debug",
+    "pageName": "Debugging",
+    "pageColor": "maroon",
+    "order": 12
+  }
 }

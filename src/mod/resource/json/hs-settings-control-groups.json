@@ -1,78 +1,78 @@
 {
-    "hepteracts": {
-        "groupName": "Hepteract settings",
-        "order": 1
-    },
-    "notifications": {
-        "groupName": "Notification settings",
-        "order": 2
-    },
-    "ui": {
-        "groupName": "UI settings",
-        "order": 3
-    },
-    "log": {
-        "groupName": "Log settings",
-        "order": 4
-    },
-    "mouse": {
-        "groupName": "Mouse settings",
-        "order": 5
-    },
-    "ambrosia": {
-        "groupName": "Ambrosia quickbar settings",
-        "order": 6
-    },
-    "ambrosia2": {
-        "groupName": "Idle Swapper settings",
-        "order": 7
-    },
-    "ambrosia3": {
-        "groupName": "Minibar settings",
-        "order": 8
-    },
-    "patch": {
-        "groupName": "Old Patch settings",
-        "order": 12
-    },
-    "gamedata": {
-        "groupName": "Game data settings",
-        "order": 10
-    },
-    "shop": {
-        "groupName": "Shop settings",
-        "order": 11
-    },
-    "debug": {
-        "groupName": "Debugging settings",
-        "order": 9
-    },
-    "auto-sing": {
-        "groupName": "Auto-Sing settings",
-        "order": 13
-    },
-    "auto-sing-strategy-controls": {
-        "groupName": "Auto-Sing Strategy settings",
-        "order": 14
-    },
-    "auto-sing-ambrosia": {
-        "groupName": "Auto-Sing Ambrosia Loadouts settings",
-        "order": 15
-    },
-    "auto-sing-timer-modal": {
-        "groupName": "Auto-Sing Advanced settings",
-        "order": 16
-    },
-    "quickbar-qol": {
-        "groupName": "Quickbar QOL settings",
-        "order": 17
-    },
-    "Golden-quarks-qol-settings": {
-        "groupName": "Golden Quarks QOL settings",
-        "order": 18
-    },
-    "Octeracts-qol-settings": {
-        "groupName": "Octeracts QOL settings",
-        "order": 19
-    }
+  "hepteracts": {
+    "groupName": "Hepteract settings",
+    "order": 1
+  },
+  "notifications": {
+    "groupName": "Notification settings",
+    "order": 2
+  },
+  "ui": {
+    "groupName": "UI settings",
+    "order": 3
+  },
+  "log": {
+    "groupName": "Log settings",
+    "order": 4
+  },
+  "mouse": {
+    "groupName": "Mouse settings",
+    "order": 5
+  },
+  "ambrosia": {
+    "groupName": "Ambrosia quickbar settings",
+    "order": 6
+  },
+  "ambrosia2": {
+    "groupName": "Idle Swapper settings",
+    "order": 7
+  },
+  "ambrosia3": {
+    "groupName": "Minibar settings",
+    "order": 8
+  },
+  "patch": {
+    "groupName": "Old Patch settings",
+    "order": 12
+  },
+  "gamedata": {
+    "groupName": "Game data settings",
+    "order": 10
+  },
+  "shop": {
+    "groupName": "Shop settings",
+    "order": 11
+  },
+  "debug": {
+    "groupName": "Debugging settings",
+    "order": 9
+  },
+  "auto-sing": {
+    "groupName": "Auto-Sing settings",
+    "order": 13
+  },
+  "auto-sing-strategy-controls": {
+    "groupName": "Auto-Sing Strategy settings",
+    "order": 14
+  },
+  "auto-sing-ambrosia": {
+    "groupName": "Auto-Sing Ambrosia Loadouts settings",
+    "order": 15
+  },
+  "auto-sing-timer-modal": {
+    "groupName": "Auto-Sing Advanced settings",
+    "order": 16
+  },
+  "quickbar-qol": {
+    "groupName": "Quickbar QOL settings",
+    "order": 17
+  },
+  "Golden-quarks-qol-settings": {
+    "groupName": "Golden Quarks QOL settings",
+    "order": 18
+  },
+  "Octeracts-qol-settings": {
+    "groupName": "Octeracts QOL settings",
+    "order": 19
+  }
 }
