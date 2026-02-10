@@ -94,6 +94,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private timeCodeBtn!: HTMLButtonElement;
     private saveType!: HTMLInputElement;
     private exportBtn!: HTMLButtonElement;
+    private exportBtnClone?: HTMLButtonElement;
 
     private stopAtSingularitysEnd: boolean = false;
     private hasWarnedMissingStageFunc: boolean = false;
@@ -148,6 +149,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
         this.saveType = document.getElementById('saveType') as HTMLInputElement;
         this.exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
+        this.exportBtnClone = this.exportBtn ? (this.exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
+        if (this.exportBtnClone && (window as any).__HS_EXPORT_EXPOSED) {
+            this.exportBtnClone.addEventListener(
+                'click',
+                () => {
+                    const hasExportHook = Object.prototype.hasOwnProperty.call(window, "__HS_exportData")
+                        && typeof (window as any).__HS_exportData !== "undefined";
+                    if (!hasExportHook) return;
+
+                    const exportBackup = (window as any).__HS_exportData;
+                    (window as any).__HS_exportData = undefined;
+                    window.setTimeout(() => {
+                        (window as any).__HS_exportData = exportBackup;
+                    }, 100);
+                },
+                true
+            );
+        }
 
         // Cache elements for corruptions and codes
         this.corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
@@ -209,9 +228,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async enableAutoSing(): Promise<void> {
+        // Prevent starting autosing while inside any singularity challenge
+        if (this.isInAnySingularityChallenge()) {
+            HSUI.Notify("Cannot start Auto-Sing while inside a singularity challenge.", { notificationType: "warning" });
+            return Promise.resolve();
+        }
+
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
         this.stopAtSingularitysEnd = false;
+        this.endStagePromise = undefined;
 
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use this cached value to avoid repeated setting lookups.
@@ -329,6 +355,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.advancedDataCollectionEnabledAtStart = false;
         this.stopAutosing();
         this.saveType.checked = false;
+        this.endStagePromise = undefined;
 
         if (this.timerModal) {
             this.timerModal.hide();
@@ -910,6 +937,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.antiquitiesObserver = undefined;
         const singSetting = HSSettings.getSetting("startAutosing");
         singSetting.disable();
+        // If a final-stage promise is pending, resolve it so callers don't hang.
+        if (this.endStageResolve) {
+            try {
+                this.endStageResolve();
+            } catch (e) {
+                /* ignore */
+            }
+            this.endStageResolve = undefined;
+        }
+        this.endStagePromise = undefined;
         if (this.timerModal) {
             this.timerModal.destroy();
             this.timerModal = undefined!;
@@ -1234,6 +1271,43 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     }
 
+    /**
+     * Returns true if any singularity challenge is currently active.
+     */
+    private isInAnySingularityChallenge(): boolean {
+        const ids = [
+            'noSingularityUpgrades',
+            'oneChallengeCap',
+            'limitedAscensions',
+            'noOcteracts',
+            'noAmbrosiaUpgrades',
+            'limitedTime',
+            'sadisticPrequel',
+            'taxmanLastStand'
+        ];
+
+        for (const id of ids) {
+            const el = document.getElementById(id) as HTMLElement | null;
+            if (!el) continue;
+
+            // Common ways the game marks an active challenge: a 'challengeActive' class
+            // or an aria-pressed/pressed attribute. Check both gracefully.
+            try {
+                if (el.classList && el.classList.contains('challengeActive')) return true;
+            } catch {
+                // ignore
+            }
+
+            const aria = el.getAttribute && el.getAttribute('aria-pressed');
+            if (aria === 'true') return true;
+
+            const pressed = el.getAttribute && el.getAttribute('pressed');
+            if (pressed === 'true') return true;
+        }
+
+        return false;
+    }
+
     private observeAntiquitiesRune(): void {
 
         if (!this.antiquitiesRuneLockedContainer) {
@@ -1282,7 +1356,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
             this.saveType.checked = true;
-            this.exportBtn.click();
+            const exportBtn = this.exportBtnClone ?? this.exportBtn;
+            if (exportBtn) {
+                exportBtn.click();
+            }
             this.ascendBtn.click();
 
             // Stop at singularity's end requested
