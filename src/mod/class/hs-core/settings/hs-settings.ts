@@ -332,7 +332,6 @@ export class HSSettings extends HSModule {
         });
 
         const subTabs = [];
-        let tabCount = 0;
 
         for (const [key, page] of sortedPages) {
             const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
@@ -348,11 +347,6 @@ export class HSSettings extends HSModule {
                 },
                 html: page.pageName
             }));
-
-            tabCount++;
-            if (tabCount === 4) {
-                subTabs.push('<br>');
-            }
         }
 
         let navHTML = HSUIC.Div({
