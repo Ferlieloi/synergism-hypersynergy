@@ -621,7 +621,7 @@
   },
   "editAutosingStrategy": {
     "settingName": "editAutosingStrategy",
-    "settingDescription": "?? Edit",
+    "settingDescription": "\\u270F\\ufe0f Edit",
     "settingHelpText": "Opens a new window where you can edit the selected autosing strategy",
     "settingType": "button",
     "enabled": true,
@@ -636,7 +636,7 @@
   },
   "createAutosingStrategy": {
     "settingName": "createAutosingStrategy",
-    "settingDescription": "? Create",
+    "settingDescription": "\\u2795 Create",
     "settingHelpText": "Opens a new window where you can create your own autosing strategy",
     "settingType": "button",
     "enabled": true,
@@ -651,7 +651,7 @@
   },
   "deleteAutosingStrategy": {
     "settingName": "deleteAutosingStrategy",
-    "settingDescription": "??? Delete",
+    "settingDescription": "\\ud83d\\uddd1\\ufe0f Delete",
     "settingHelpText": "deletes the selected strategy",
     "settingType": "button",
     "enabled": true,
@@ -666,7 +666,7 @@
   },
   "importAutosingStrategy": {
     "settingName": "importAutosingStrategy",
-    "settingDescription": "?? Import",
+    "settingDescription": "\\ud83d\\udce5 Import",
     "settingHelpText": "Opens a Modal where you can paste a strategy that you want to import",
     "settingType": "button",
     "enabled": true,
@@ -681,7 +681,7 @@
   },
   "exportAutosingStrategy": {
     "settingName": "exportAutosingStrategy",
-    "settingDescription": "?? Export",
+    "settingDescription": "\\ud83d\\udce4 Export",
     "settingHelpText": "exports the selected strategy to your clipboard",
     "settingType": "button",
     "enabled": true,
