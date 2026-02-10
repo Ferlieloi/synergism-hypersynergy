@@ -19,7 +19,7 @@ export class HSLogger {
 
     static #staticContext = 'HSLogger';
     static #integratedToUI = false;
-    static #logElement: HTMLTextAreaElement;
+    static #logElement: HTMLElement;
 
     static #lastLogHash = -1;
     static #displayTimestamp: boolean = false;

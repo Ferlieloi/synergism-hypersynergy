@@ -319,6 +319,10 @@
     background-color: #005;
 }
 
+#hs-ui-log-controls .hs-panel-btn + .hs-panel-btn {
+    margin-left: 10px;
+}
+
 .hs-modal {
     width: auto;
     height: auto;
