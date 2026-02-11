@@ -13,7 +13,7 @@ import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionL
 import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
-import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
+import { HSGameState, MainView, ChallengeView } from "../../hs-core/hs-gamestate";
 
 /*
     Class: HSAutosing
@@ -59,6 +59,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private exitReincBtn!: HTMLButtonElement;
     private exitAscBtn!: HTMLButtonElement;
     private ascendBtn!: HTMLButtonElement;
+    private startChallengeBtn!: HTMLButtonElement;
     private elevatorTeleportButton!: HTMLButtonElement;
     private elevatorInput!: HTMLInputElement;
     private autoChallengeButton!: HTMLButtonElement;
@@ -131,6 +132,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exitReincBtn = document.getElementById('reincarnatechallengebtn') as HTMLButtonElement;
         this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
+        this.startChallengeBtn = document.getElementById('startChallenge') as HTMLButtonElement;
         this.autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
@@ -231,6 +233,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSUI.Notify("Cannot start Auto-Sing while inside a singularity challenge.", { notificationType: "warning" });
             return Promise.resolve();
         }
+
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
         this.autosingEnabled = true;
         this.stopAtSingularitysEnd = false;
@@ -707,7 +710,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
             } else if (challenge.challengeNumber >= 100) { // Special actions (100+)
                 HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
-                await this.performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
+                await this.performSpecialAction(challenge.challengeNumber);
             } else {
                 HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, after reaching goal waiting ${challenge.challengeWaitTime}ms inside, max time: ${challenge.challengeMaxTime}`, this.context);
                 await this.waitForCompletion(
@@ -728,7 +731,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
 
-    private async performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
+    private async performSpecialAction(actionId: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
                 this.exitTranscBtn.click();
@@ -747,6 +750,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 break;
             case 106: // Late Cube
                 await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+
                 break;
             case 107: // Quark
                 await this.setAmbrosiaLoadout(this.ambrosia_quark);
@@ -795,35 +799,37 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 121: // Click AOAG
                 this.AOAG.click();
                 break;
-            case 301: // Max C1
-                await this.C1to10UntilNoMoreCompletions(1, waitTime, maxTime);
+            case 501: // Special Corruptions 1 - challenge14 - w5x10max
+                const corruptions501 = { viscosity: 1, drought: 7, deflation: 4, extinction: 11, illiteracy: 0, recession: 14, dilation: 4, hyperchallenge: 2 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions501);
                 break;
-            case 302: // Max C2
-                await this.C1to10UntilNoMoreCompletions(2, waitTime, maxTime);
+            case 502: // Special Corruptions 2 - w5x10max - p2x1x10
+                const corruptions502 = { viscosity: 2, drought: 15, deflation: 3, extinction: 11, illiteracy: 14, recession: 14, dilation: 5, hyperchallenge: 2 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions502);
                 break;
-            case 303: // Max C3
-                await this.C1to10UntilNoMoreCompletions(3, waitTime, maxTime);
+            case 503: // Special Corruptions 3 - p2x1x10 - p3x1
+                const corruptions503 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions503);
                 break;
-            case 304: // Max C4
-                await this.C1to10UntilNoMoreCompletions(4, waitTime, maxTime);
+            case 504: // Special Corruptions 4 - p3x1 - beta
+                const corruptions504 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions504);
                 break;
-            case 305: // Max C5
-                await this.C1to10UntilNoMoreCompletions(5, waitTime, maxTime);
+            case 505: // Special Corruptions 5 - beta - 1e15-expo
+                const corruptions505 = { viscosity: 3, drought: 16, deflation: 1, extinction: 12, illiteracy: 16, recession: 15, dilation: 6, hyperchallenge: 7 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions505);
                 break;
-            case 306: // Max C6
-                await this.C1to10UntilNoMoreCompletions(6, waitTime, maxTime);
+            case 506: // Special Corruptions 6 - 1e15-expo - omega
+                const corruptions506 = { viscosity: 6, drought: 16, deflation: 16, extinction: 13, illiteracy: 16, recession: 16, dilation: 11, hyperchallenge: 10 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions506);
                 break;
-            case 307: // Max C7
-                await this.C1to10UntilNoMoreCompletions(7, waitTime, maxTime);
+            case 507: // Special Corruptions 7 - omega - singularity
+                const corruptions507 = { viscosity: 10, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 14, dilation: 14, hyperchallenge: 13 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions507);
                 break;
-            case 308: // Max C8
-                await this.C1to10UntilNoMoreCompletions(8, waitTime, maxTime);
-                break;
-            case 309: // Max C9
-                await this.C1to10UntilNoMoreCompletions(9, waitTime, maxTime);
-                break;
-            case 310: // Max C10
-                await this.C1to10UntilNoMoreCompletions(10, waitTime, maxTime);
+            case 508: // Special Corruptions 8 - singularity - end
+                const corruptions508 = { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(corruptions508);
                 break;
             case 999: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
@@ -941,7 +947,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.endStageResolve = undefined;
         }
         this.endStagePromise = undefined;
-
         if (this.timerModal) {
             this.timerModal.destroy();
             this.timerModal = undefined!;
@@ -1062,8 +1067,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.getCurrentQuarks(),
             this.getCurrentGoldenQuarks(),
         ]);
-        // Sample C15 before entering/leaving Exalt — it resets during that transition.
-        const c15ScoreBefore = this.getChallengeCompletions(15);
         await this.enterAndLeaveExalt();
 
         this.endStageDone = false;
@@ -1081,7 +1084,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const gqGain = Math.max(0, gqAfter - gqBefore);
         const qGain = Math.max(0, qAfter - qBefore);
         if (this.timerModal && !skipRecord) {
-            this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
+            this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter);
         }
 
         HSLogger.debug("Singularity performed", this.context);
@@ -1132,7 +1135,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
-        // Enter the challenge
+        // Switch to challenges tab
+        document.getElementById('challengetab')?.click();
+
+        // Switch to challenges subtab 1
+        // document.getElementById('toggleChallengesSubTab1')?.click();
+        // await HSUtils.sleep(10);
+
+        
         let attempts = 0;
         const maxAttempts = 5;
         while (this.isInChallenge(challengeIndex) && attempts < maxAttempts) {
@@ -1141,22 +1151,28 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(5);
         }
 
+        console.log('%c[HSAutosing] Checking __HS_toggleChallenges:', 'color: red; font-weight: bold', (window as any).__HS_toggleChallenges);
+        console.log('%c[HSAutosing] Checking window.Ia:', 'color: red; font-weight: bold', (window as any).Ia);
 
-        while (!this.isInChallenge(challengeIndex)) {
-            this.fastDoubleClick(challengeBtn);
+        // Disable auto challenge toggle if set
+        /*if ((window as any).player && (window as any).player.toggles && (window as any).player.toggles[31]) {
+            (window as any).player.toggles[31] = false;
+        }*/
+        while (!(this.isInChallenge(challengeIndex))) {
+            const toggleFunc = (window as any).__HS_toggleChallenges || (window as any).Ia;
+            await toggleFunc(challengeIndex);
             if (this.isInChallenge(challengeIndex)) {
                 break;
             }
             await HSUtils.sleep(5);
         }
-        if (!this.isInChallenge(challengeIndex)) {
+        if (!(this.isInChallenge(challengeIndex))) {
             HSLogger.debug(
                 `Timeout: Failed to enter challenge ${challengeIndex}`,
                 this.context
             );
             return Promise.resolve();
         }
-
         this.coin.click();
 
         const startTime = performance.now();
@@ -1193,7 +1209,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (waitTime > 0) {
                     await HSUtils.sleep(waitTime);
                 }
-                HSLogger.debug(`Autosing: challenge${challengeIndex}. ${currentCompletions} completions reached`, this.context);
                 return Promise.resolve();
             }
             await HSUtils.sleep(sleepInterval);
@@ -1221,34 +1236,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return Promise.resolve(); // Completions stopped, exit
             }
             c11to14CurrentCompletions = c11to14CurrentCompletions2;
-        }
-    }
-
-    /**
-     * Enter C1-10 challenge, then leave when no more completions are detected within a given timeframe (maxTime)
-     */
-    private async C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
-        // Enter the C1-10 challenge
-        await this.waitForCompletion(challengeIndex, 0, 0, 0);
-
-        const maxPossible = this.getChallengeGoal(challengeIndex);
-        let c1to10CurrentCompletions = this.getChallengeCompletions(challengeIndex);
-        let timeSinceNoMoreCompletion = performance.now();
-        await HSUtils.sleep(initialWaitTime);
-
-        // Wait for the C1-10 completions to stop increasing
-        while (true) {
-            const c1to10CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
-            const now = performance.now();
-            if (!c1to10CurrentCompletions2.eq(c1to10CurrentCompletions)) {
-                timeSinceNoMoreCompletion = now; // Update timer if completions increased
-                c1to10CurrentCompletions = c1to10CurrentCompletions2;
-            }
-            if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions2.gte(maxPossible)) {
-                HSLogger.debug(`Autosing: challenge${challengeIndex} with ${c1to10CurrentCompletions2} completions: maxed, or no more completions after waiting ${maxTime}ms`, this.context);
-                return Promise.resolve();
-            }
-            await HSUtils.sleep(10);
         }
     }
 
@@ -1368,13 +1355,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.matchStageToStrategy('final');
         if (this.isAutosingEnabled()) {
             await this.setAmbrosiaLoadout(this.ambrosia_quark);
-
+            this.saveType.checked = true;
             const exportBtn = this.exportBtnClone ?? this.exportBtn;
             if (exportBtn) {
-                this.saveType.checked = true;
                 exportBtn.click();
             }
-
             this.ascendBtn.click();
 
             // Stop at singularity's end requested
@@ -1398,10 +1383,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.performSpecialAction(117, 0, 0); // Max C11
-        await this.performSpecialAction(118, 0, 0); // Max C12
-        await this.performSpecialAction(119, 0, 0); // Max C13
-        await this.performSpecialAction(120, 0, 0); // Max C14
+        await this.performSpecialAction(117); // Max C11
+        await this.performSpecialAction(118); // Max C12
+        await this.performSpecialAction(119); // Max C13
+        await this.performSpecialAction(120); // Max C14
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
