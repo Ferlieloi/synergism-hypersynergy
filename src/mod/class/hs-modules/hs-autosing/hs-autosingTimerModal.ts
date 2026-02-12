@@ -13,6 +13,7 @@ import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autos
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
+import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -29,8 +30,8 @@ interface SingularityBundle {
 interface SparklineDom {
     container: HTMLElement;
     svg: SVGSVGElement;
-    avgLine: SVGLineElement;
     polyline: SVGPolylineElement;
+    ratePolyline?: SVGPolylineElement;
     maxLine: SVGLineElement;
     minLine: SVGLineElement;
     labelMax: HTMLSpanElement;
@@ -40,7 +41,6 @@ interface SparklineDom {
     color: string;
     lastWidth?: number;
     lastPoints?: string;
-    lastAvgY?: number;
     lastMaxY?: number;
     lastMinY?: number;
     lastMarkerX?: number;
@@ -81,8 +81,8 @@ export class HSAutosingTimerModal {
     private prevGoldenQuarksTotal: number = 0;
     private quarksGainsCount: number = 0;
     private goldenQuarksGainsCount: number = 0;
-    private quarksAmounts: number[] = [];
-    private goldenQuarksAmounts: number[] = [];
+    private quarksAmounts: {value: number, time: number}[] = [];
+    private goldenQuarksAmounts: {value: number, time: number}[] = [];
     private c15Count: number = 0;
     private c15Mean: Decimal = new Decimal(0);
     private c15M2: Decimal = new Decimal(0);
@@ -90,7 +90,7 @@ export class HSAutosingTimerModal {
     private logC15Count: number = 0;
     private logC15Mean: number = 0;
     private logC15M2: number = 0;
-    private durationsHistory: number[] = [];
+    private durationsHistory: {value: number, time: number}[] = [];
     private startTime: number = 0;
 
     // Phase tracking
@@ -109,22 +109,19 @@ export class HSAutosingTimerModal {
 
     // Live timer
     private liveTimerInterval: number | null = null;
-    private currentLiveTime: number = 0;
 
     // Advanced data collection
     private singularityBundles: SingularityBundle[] = [];
-    private sessionQuarksGained: number = 0;
-    private sessionGoldenQuarksGained: number = 0;
-    private initialQuarksWallet: number = 0;
-    private initialGoldenQuarksWallet: number = 0;
-    private lastGoldenQuarksWallet: number = 0;
+    private compressedBundles: string[] = [];
+    private currentBatch: SingularityBundle[] = [];
+    private readonly batchSize = 10;
+    private dbName = 'HSAutosingData';
+    private storeName = 'singularityBundles';
 
     // Checksum for O(1) avg calculations
     private cumulativeQuarksGained: number = 0;
     private cumulativeGoldenQuarksGained: number = 0;
     private cumulativeSingularityTime: number = 0;
-    private cumulativeQuarksRate: number = 0;
-    private cumulativeGoldenQuarksRate: number = 0;
 
     // Prefix sums for O(1) windowed averages/variance of singularity durations
     private durationsPrefixSum: number[] = [0];
@@ -238,6 +235,60 @@ export class HSAutosingTimerModal {
         for (let i = 0; i < phases.length; i++) {
             this.cachedGlobalPhaseIndex.set(phases[i] as unknown as string, i);
         }
+    }
+
+    private async openDB(): Promise<IDBDatabase> {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onupgradeneeded = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve((event.target as IDBOpenDBRequest).result);
+            };
+            request.onerror = (event) => {
+                reject(event.target);
+            };
+        });
+    }
+
+    private async storeBundle(compressedBundle: string): Promise<void> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        store.add({ data: compressedBundle, timestamp: Date.now() });
+        return new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    private async loadBundles(): Promise<string[]> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.getAll();
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+                const results = request.result as { data: string }[];
+                resolve(results.map(r => r.data));
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    private async clearBundles(): Promise<void> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        store.clear();
+        return new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        });
     }
 
     private ensureStaticDom(): void {
@@ -389,18 +440,17 @@ export class HSAutosingTimerModal {
             svg.style.display = 'block';
             svg.style.overflow = 'visible';
 
-            const avgLine = document.createElementNS(ns, 'line');
-            avgLine.setAttribute('x1', '0');
-            avgLine.setAttribute('stroke', color);
-            avgLine.setAttribute('stroke-opacity', '0.9');
-            avgLine.setAttribute('stroke-width', '1');
-            avgLine.setAttribute('stroke-dasharray', '4, 2');
-
             const polyline = document.createElementNS(ns, 'polyline');
             polyline.setAttribute('fill', 'none');
             polyline.setAttribute('stroke', color);
             polyline.setAttribute('stroke-width', '1');
-            polyline.setAttribute('stroke-opacity', isTime ? '0.8' : '0.7');
+            polyline.setAttribute('stroke-opacity', isTime ? '0.8' : '0.5');
+            if (!isTime) {
+                polyline.setAttribute('stroke-dasharray', '4, 2');
+            }
+
+            let ratePolyline: SVGPolylineElement | undefined;
+            // Rate polylines disabled due to calculation issues - proper rates shown in UI
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -410,7 +460,6 @@ export class HSAutosingTimerModal {
             minLine.setAttribute('stroke', color);
             minLine.setAttribute('stroke-width', '1');
 
-            svg.appendChild(avgLine);
             svg.appendChild(polyline);
             svg.appendChild(maxLine);
             svg.appendChild(minLine);
@@ -434,7 +483,7 @@ export class HSAutosingTimerModal {
             container.appendChild(svg);
             container.appendChild(labels);
 
-            return { container, svg, avgLine, polyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color };
+            return { container, svg, polyline, ratePolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color };
         };
 
         this.sparklineQuarks = build(this.sparklineContainer1, '#00BCD4', false);
@@ -442,11 +491,12 @@ export class HSAutosingTimerModal {
         this.sparklineTimes = build(this.sparklineContainer3, '#FF8A80', true);
     }
 
-    private updateSparkline(dom: SparklineDom | null, data: number[]): void {
+    private updateSparkline(dom: SparklineDom | null, data: {value: number, time: number}[]): void {
         if (!dom) return;
         // Only show meaningful sparklines when at least 2 points exist.
         if (data.length < 2) {
             dom.polyline.setAttribute('points', '');
+            if (dom.ratePolyline) dom.ratePolyline.setAttribute('points', '');
             dom.labelMax.textContent = '';
             dom.labelAvg.textContent = '';
             dom.labelMin.textContent = '';
@@ -463,20 +513,14 @@ export class HSAutosingTimerModal {
             dom.lastWidth = gw;
         }
 
-        if (widthChanged) {
-            const gwStr = `${gw}`;
-            dom.avgLine.setAttribute('x2', gwStr);
-        }
-        if (widthChanged || dom.lastAvgY !== spark.avgY) {
-            const avgY = `${spark.avgY}`;
-            dom.avgLine.setAttribute('y1', avgY);
-            dom.avgLine.setAttribute('y2', avgY);
-            dom.lastAvgY = spark.avgY;
-        }
-
         if (dom.lastPoints !== spark.points) {
             dom.polyline.setAttribute('points', spark.points);
             dom.lastPoints = spark.points;
+        }
+
+        if (dom.ratePolyline) {
+            // Rate polylines disabled
+            dom.ratePolyline.setAttribute('points', '');
         }
 
         if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== spark.maxY) {
@@ -900,7 +944,7 @@ export class HSAutosingTimerModal {
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use the cached value.
         const isEnabled = this.advancedDataCollectionEnabled;
-        const hasData = this.singularityBundles.length > 0;
+        const hasData = this.compressedBundles.length > 0;
 
         const visible = isEnabled && hasData;
 
@@ -1110,17 +1154,10 @@ export class HSAutosingTimerModal {
         this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.sessionQuarksGained = 0;
-        this.sessionGoldenQuarksGained = 0;
-        this.initialQuarksWallet = initialQuarks;
-        this.initialGoldenQuarksWallet = initialGoldenQuarks;
-        this.lastGoldenQuarksWallet = initialGoldenQuarks;
 
         this.cumulativeQuarksGained = 0;
         this.cumulativeGoldenQuarksGained = 0;
         this.cumulativeSingularityTime = 0;
-        this.cumulativeQuarksRate = 0;
-        this.cumulativeGoldenQuarksRate = 0;
 
         // Reset C15 online stats
         this.c15Count = 0;
@@ -1170,6 +1207,17 @@ export class HSAutosingTimerModal {
 
         // Check advanced-data-collection once at autosing start (cached).
         this.advancedDataCollectionEnabled = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
+        if (this.advancedDataCollectionEnabled) {
+            this.singularityBundles = [];
+            this.compressedBundles = [];
+            this.currentBatch = [];
+            this.clearBundles().catch(console.error);
+        } else {
+            // Hybrid Minimal: no bundles stored
+            this.singularityBundles = [];
+            this.compressedBundles = [];
+            this.currentBatch = [];
+        }
         if (!this.advancedDataCollectionEnabled) {
             // Remove step row entirely to avoid any DOM/CPU work for it.
             this._currentStepName = '';
@@ -1270,27 +1318,21 @@ export class HSAutosingTimerModal {
 
         if (singularityDuration > 0) {
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
-            const qRate = realQuarksGain / singularityDuration;
-            const gqRate = gainedGoldenQuarks / singularityDuration;
 
             this.quarksGainsCount += 1;
-            this.pushSparklineValue(this.quarksAmounts, realQuarksGain);
+            this.pushSparklineValue(this.quarksAmounts, realQuarksGain, now);
 
             this.goldenQuarksGainsCount += 1;
-            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks);
+            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks, now);
 
             // O(1) optimization updates
             this.cumulativeSingularityTime += singularityDuration;
             this.cumulativeQuarksGained += realQuarksGain;
             this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
-
-            // Track sum of rates for O(1) average rate calculation
-            this.cumulativeQuarksRate += qRate;
-            this.cumulativeGoldenQuarksRate += gqRate;
         }
 
         // Track duration sums for O(1) windowed average/variance
-        this.pushSparklineValue(this.durationsHistory, singularityDuration);
+        this.pushSparklineValue(this.durationsHistory, singularityDuration, now);
         const lastDurationSum = this.durationsPrefixSum[this.durationsPrefixSum.length - 1] || 0;
         const lastDurationSumSq = this.durationsPrefixSumSq[this.durationsPrefixSumSq.length - 1] || 0;
         this.durationsPrefixSum.push(lastDurationSum + singularityDuration);
@@ -1314,6 +1356,14 @@ export class HSAutosingTimerModal {
             }
 
             this.singularityBundles.push(bundle);
+            this.currentBatch.push(bundle);
+
+            if (this.currentBatch.length >= this.batchSize) {
+                const compressed = compressToUTF16(JSON.stringify(this.currentBatch));
+                this.compressedBundles.push(compressed);
+                this.storeBundle(compressed).catch(console.error);
+                this.currentBatch = [];
+            }
         }
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
@@ -1342,8 +1392,6 @@ export class HSAutosingTimerModal {
                 // If conversion/logging fails, skip updating online stats but keep the Decimal history
             }
         }
-
-        this.sessionQuarksGained += realQuarksGain;
 
         // New singularity affects general stats + charts.
         this.sparklineVersion++;
@@ -1403,12 +1451,11 @@ export class HSAutosingTimerModal {
 
     private getQuarksPerSecond(isGolden: boolean): number | null {
         const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
-        if (count === 0) return null;
+        if (count === 0 || this.cumulativeSingularityTime <= 0) return null;
 
-        // OPTIMIZATION: Use cached cumulative rates
-        // This preserves the "Arithmetic Mean of Rates" logic [(r1+r2+...rn)/n]
-        const totalRateProxy = isGolden ? this.cumulativeGoldenQuarksRate : this.cumulativeQuarksRate;
-        return totalRateProxy / count;
+        // Calculate overall rate: total gains / total time
+        const totalGains = isGolden ? this.cumulativeGoldenQuarksGained : this.cumulativeQuarksGained;
+        return totalGains / this.cumulativeSingularityTime;
     }
 
     private formatNumber(num: number): string {
@@ -1501,14 +1548,25 @@ export class HSAutosingTimerModal {
     }
 
     private exportDataAsCSV(): void {
-        if (this.singularityBundles.length === 0) {
+        if (!this.advancedDataCollectionEnabled || (this.compressedBundles.length === 0 && this.currentBatch.length === 0)) {
             alert('No data to export');
             return;
         }
 
+        const bundles: SingularityBundle[] = [];
+
+        // Decompress completed batches
+        for (const compressed of this.compressedBundles) {
+            const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
+            bundles.push(...batch);
+        }
+
+        // Add any remaining in current batch
+        bundles.push(...this.currentBatch);
+
         // Collect all unique phase names
         const allPhaseNames = new Set<string>();
-        this.singularityBundles.forEach(bundle => {
+        bundles.forEach(bundle => {
             Object.keys(bundle.phases).forEach(phase => allPhaseNames.add(phase));
         });
         const sortedPhaseNames = Array.from(allPhaseNames).sort();
@@ -1527,7 +1585,7 @@ export class HSAutosingTimerModal {
         ];
 
         // Build CSV rows
-        const rows = this.singularityBundles.map(bundle => {
+        const rows = bundles.map(bundle => {
             const row = [
                 bundle.singularityNumber.toString(),
                 bundle.totalTime.toFixed(3),
@@ -1564,11 +1622,10 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
-    private pushSparklineValue(buffer: number[], value: number): void {
-        buffer.push(value);
-        const max = this.sparklineMaxPoints;
-        if (buffer.length > max * 2) {
-            buffer.splice(0, buffer.length - max);
+    private pushSparklineValue(buffer: {value: number, time: number}[], value: number, time: number): void {
+        buffer.push({value, time});
+        if (buffer.length > this.sparklineMaxPoints) {
+            buffer.shift(); // Remove oldest element
         }
     }
 
@@ -1817,8 +1874,8 @@ export class HSAutosingTimerModal {
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.sessionQuarksGained = 0;
-        this.sessionGoldenQuarksGained = 0;
+        this.compressedBundles = [];
+        this.currentBatch = [];
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
         this._currentStepName = '';
@@ -1869,8 +1926,8 @@ export class HSAutosingTimerModal {
      * Logic to generate SVG path and metadata for singularity charts.
      * Handles 'flat' data (no change) by centering the line and aligning the avgY to it.
      */
-    private generateSparklineMetadata(data: number[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, avgY: number, maxY: number, minY: number, lastX: number, lastY: number } {
-        if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, avgY: height / 2, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
+    private generateSparklineMetadata(data: {value: number, time: number}[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, maxY: number, minY: number, lastX: number, lastY: number } {
+        if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
         const startIdx = Math.max(0, data.length - 50);
         let max = -Infinity;
         let min = Infinity;
@@ -1878,7 +1935,7 @@ export class HSAutosingTimerModal {
         let count = 0;
 
         for (let i = startIdx; i < data.length; i++) {
-            const v = data[i];
+            const v = data[i].value;
             if (v > max) max = v;
             if (v < min) min = v;
             sum += v;
@@ -1887,7 +1944,7 @@ export class HSAutosingTimerModal {
         const avg = count > 0 ? (sum / count) : 0;
 
         // Handle flat data quickly
-        if (count === 0) return { path: '', points: '', max: 0, min: 0, avg: 0, avgY: height / 2, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
+        if (count === 0) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
 
         const formattedMax = this.formatNumber(max);
         const formattedMin = this.formatNumber(min);
@@ -1900,7 +1957,6 @@ export class HSAutosingTimerModal {
                 max: max,
                 min: min,
                 avg: avg,
-                avgY: centerY,
                 maxY: centerY,
                 minY: centerY,
                 lastX: width,
@@ -1917,9 +1973,14 @@ export class HSAutosingTimerModal {
         const ptsArr: string[] = new Array(count);
         let lastX = 0;
         let lastY = height / 2;
+        const minTime = data[startIdx].time;
+        const maxTime = data[startIdx + count - 1].time;
+        const timeRange = maxTime - minTime;
         for (let idx = 0; idx < count; idx++) {
-            const val = data[startIdx + idx];
-            const x = (count === 1) ? width : (idx / (count - 1)) * width;
+            const item = data[startIdx + idx];
+            const val = item.value;
+            const time = item.time;
+            const x = timeRange > 0 ? ((time - minTime) / timeRange) * width : (count === 1 ? width : (idx / (count - 1)) * width);
             const y = height - ((val - displayMin) / displayRange) * height;
             ptsArr[idx] = `${x.toFixed(1)},${y.toFixed(1)}`;
             lastX = x;
@@ -1927,7 +1988,6 @@ export class HSAutosingTimerModal {
         }
 
         const pointsStr = ptsArr.join(' ');
-        const avgY = height - ((avg - displayMin) / displayRange) * height;
         const maxY = height - ((max - displayMin) / displayRange) * height;
         const minY = height - ((min - displayMin) / displayRange) * height;
 
@@ -1937,14 +1997,11 @@ export class HSAutosingTimerModal {
             max: max,
             min: min,
             avg: avg,
-            avgY: avgY,
             maxY: maxY,
             minY: minY,
             lastX: lastX,
             lastY: lastY
         };
     }
-
-
 
 }
