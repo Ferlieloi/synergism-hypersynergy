@@ -13,6 +13,7 @@ import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autos
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
+import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -111,6 +112,11 @@ export class HSAutosingTimerModal {
 
     // Advanced data collection
     private singularityBundles: SingularityBundle[] = [];
+    private compressedBundles: string[] = [];
+    private currentBatch: SingularityBundle[] = [];
+    private readonly batchSize = 10;
+    private dbName = 'HSAutosingData';
+    private storeName = 'singularityBundles';
 
     // Checksum for O(1) avg calculations
     private cumulativeQuarksGained: number = 0;
@@ -229,6 +235,60 @@ export class HSAutosingTimerModal {
         for (let i = 0; i < phases.length; i++) {
             this.cachedGlobalPhaseIndex.set(phases[i] as unknown as string, i);
         }
+    }
+
+    private async openDB(): Promise<IDBDatabase> {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onupgradeneeded = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve((event.target as IDBOpenDBRequest).result);
+            };
+            request.onerror = (event) => {
+                reject(event.target);
+            };
+        });
+    }
+
+    private async storeBundle(compressedBundle: string): Promise<void> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        store.add({ data: compressedBundle, timestamp: Date.now() });
+        return new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    private async loadBundles(): Promise<string[]> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.getAll();
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+                const results = request.result as { data: string }[];
+                resolve(results.map(r => r.data));
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    private async clearBundles(): Promise<void> {
+        const db = await this.openDB();
+        const transaction = db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        store.clear();
+        return new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        });
     }
 
     private ensureStaticDom(): void {
@@ -884,7 +944,7 @@ export class HSAutosingTimerModal {
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use the cached value.
         const isEnabled = this.advancedDataCollectionEnabled;
-        const hasData = this.singularityBundles.length > 0;
+        const hasData = this.compressedBundles.length > 0;
 
         const visible = isEnabled && hasData;
 
@@ -1147,6 +1207,17 @@ export class HSAutosingTimerModal {
 
         // Check advanced-data-collection once at autosing start (cached).
         this.advancedDataCollectionEnabled = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
+        if (this.advancedDataCollectionEnabled) {
+            this.singularityBundles = [];
+            this.compressedBundles = [];
+            this.currentBatch = [];
+            this.clearBundles().catch(console.error);
+        } else {
+            // Hybrid Minimal: no bundles stored
+            this.singularityBundles = [];
+            this.compressedBundles = [];
+            this.currentBatch = [];
+        }
         if (!this.advancedDataCollectionEnabled) {
             // Remove step row entirely to avoid any DOM/CPU work for it.
             this._currentStepName = '';
@@ -1285,6 +1356,14 @@ export class HSAutosingTimerModal {
             }
 
             this.singularityBundles.push(bundle);
+            this.currentBatch.push(bundle);
+
+            if (this.currentBatch.length >= this.batchSize) {
+                const compressed = compressToUTF16(JSON.stringify(this.currentBatch));
+                this.compressedBundles.push(compressed);
+                this.storeBundle(compressed).catch(console.error);
+                this.currentBatch = [];
+            }
         }
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
@@ -1469,14 +1548,25 @@ export class HSAutosingTimerModal {
     }
 
     private exportDataAsCSV(): void {
-        if (this.singularityBundles.length === 0) {
+        if (!this.advancedDataCollectionEnabled || (this.compressedBundles.length === 0 && this.currentBatch.length === 0)) {
             alert('No data to export');
             return;
         }
 
+        const bundles: SingularityBundle[] = [];
+
+        // Decompress completed batches
+        for (const compressed of this.compressedBundles) {
+            const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
+            bundles.push(...batch);
+        }
+
+        // Add any remaining in current batch
+        bundles.push(...this.currentBatch);
+
         // Collect all unique phase names
         const allPhaseNames = new Set<string>();
-        this.singularityBundles.forEach(bundle => {
+        bundles.forEach(bundle => {
             Object.keys(bundle.phases).forEach(phase => allPhaseNames.add(phase));
         });
         const sortedPhaseNames = Array.from(allPhaseNames).sort();
@@ -1495,7 +1585,7 @@ export class HSAutosingTimerModal {
         ];
 
         // Build CSV rows
-        const rows = this.singularityBundles.map(bundle => {
+        const rows = bundles.map(bundle => {
             const row = [
                 bundle.singularityNumber.toString(),
                 bundle.totalTime.toFixed(3),
@@ -1784,6 +1874,8 @@ export class HSAutosingTimerModal {
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
+        this.compressedBundles = [];
+        this.currentBatch = [];
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
         this._currentStepName = '';
@@ -1911,7 +2003,5 @@ export class HSAutosingTimerModal {
             lastY: lastY
         };
     }
-
-
 
 }
