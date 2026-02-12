@@ -66,6 +66,9 @@ export interface HSSettingsDefinition {
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
+
+    // Talismans Settings
+    enableTalismansModule: EnableTalismansModuleSetting;
 }
 
 export interface HSSettingControlOptions {
@@ -185,4 +188,7 @@ export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
+
+// Talismans Settings
+export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
 

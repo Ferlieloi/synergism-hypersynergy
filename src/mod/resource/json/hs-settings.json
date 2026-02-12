@@ -1336,5 +1336,18 @@
       "controlPage": "debug",
       "controlEnabledId": "hs-setting-patch-iconsets-btn"
     }
+  },
+  "enableTalismansModule": {
+    "settingName": "enableTalismansModule",
+    "settingDescription": "Enable the \"Cycle BUY\" button (\"Enhanced BUY ALL\")",
+    "settingHelpText": "When enabled, add an enhanced 'Cycle BUY' button next to the vanilla one that cycles through fragments.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "talismans",
+      "controlPage": "input",
+      "controlEnabledId": "hs-setting-enable-talismans-btn"
+    }
   }
 }

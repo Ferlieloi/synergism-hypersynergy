@@ -15,64 +15,68 @@
     "groupName": "Log settings",
     "order": 4
   },
+  "talismans": {
+    "groupName": "Talisman settings",
+    "order": 5
+  },
   "mouse": {
     "groupName": "Mouse settings",
-    "order": 5
+    "order": 6
   },
   "ambrosia": {
     "groupName": "Ambrosia quickbar settings",
-    "order": 6
+    "order": 7
   },
   "ambrosia2": {
     "groupName": "Idle Swapper settings",
-    "order": 7
+    "order": 8
   },
   "ambrosia3": {
     "groupName": "Minibar settings",
-    "order": 8
+    "order": 9
   },
   "patch": {
     "groupName": "Old Patch settings",
-    "order": 12
+    "order": 13
   },
   "gamedata": {
     "groupName": "Game data settings",
-    "order": 10
+    "order": 11
   },
   "shop": {
     "groupName": "Shop settings",
-    "order": 11
+    "order": 12
   },
   "debug": {
     "groupName": "Debugging settings",
-    "order": 9
+    "order": 10
   },
   "auto-sing": {
     "groupName": "Auto-Sing settings",
-    "order": 13
+    "order": 14
   },
   "auto-sing-strategy-controls": {
     "groupName": "Auto-Sing Strategy settings",
-    "order": 14
+    "order": 15
   },
   "auto-sing-ambrosia": {
     "groupName": "Auto-Sing Ambrosia Loadouts settings",
-    "order": 15
+    "order": 16
   },
   "auto-sing-timer-modal": {
     "groupName": "Auto-Sing Advanced settings",
-    "order": 16
+    "order": 17
   },
   "quickbar-qol": {
     "groupName": "Quickbar QOL settings",
-    "order": 17
+    "order": 18
   },
   "Golden-quarks-qol-settings": {
     "groupName": "Golden Quarks QOL settings",
-    "order": 18
+    "order": 19
   },
   "Octeracts-qol-settings": {
     "groupName": "Octeracts QOL settings",
-    "order": 19
+    "order": 20
   }
 }
