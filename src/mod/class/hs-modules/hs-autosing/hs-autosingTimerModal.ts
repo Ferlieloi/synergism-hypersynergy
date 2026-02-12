@@ -126,7 +126,13 @@ export class HSAutosingTimerModal {
     // Prefix sums for O(1) windowed averages/variance of singularity durations
     private durationsPrefixSum: number[] = [0];
     private durationsPrefixSumSq: number[] = [0];
-    private readonly sparklineMaxPoints: number = 600;
+    private readonly sparklineMaxPoints: number = 250;
+
+    // Cached min/max rates for sparklines
+    private minQuarksRateLabel: number = 0;
+    private maxQuarksRateLabel: number = 0;
+    private minGoldenQuarksRateLabel: number = 0;
+    private maxGoldenQuarksRateLabel: number = 0;
 
     // Latest snapshot for UI display
     private latestQuarksTotal: number = 0;
@@ -444,10 +450,8 @@ export class HSAutosingTimerModal {
             polyline.setAttribute('fill', 'none');
             polyline.setAttribute('stroke', color);
             polyline.setAttribute('stroke-width', '1');
-            polyline.setAttribute('stroke-opacity', isTime ? '0.8' : '0.5');
-            if (!isTime) {
-                polyline.setAttribute('stroke-dasharray', '4, 2');
-            }
+            polyline.setAttribute('stroke-opacity', '0.8');
+            // No dash for any lines now
 
             let ratePolyline: SVGPolylineElement | undefined;
             // Rate polylines disabled due to calculation issues - proper rates shown in UI
@@ -564,9 +568,13 @@ export class HSAutosingTimerModal {
                 dom.lastLabelMin = labelMin;
             }
         } else {
-            const labelMax = `+${this.formatNumber(spark.max)}`;
+            const isQuarks = data === this.quarksAmounts;
+            const minRate = isQuarks ? this.minQuarksRateLabel : this.minGoldenQuarksRateLabel;
+            const maxRate = isQuarks ? this.maxQuarksRateLabel : this.maxGoldenQuarksRateLabel;
+
+            const labelMax = `+${this.formatNumber(maxRate)} /s`;
             const labelAvg = `+${this.formatNumber(spark.avg)} avg`;
-            const labelMin = `+${this.formatNumber(spark.min)}`;
+            const labelMin = `+${this.formatNumber(minRate)} /s`;
             if (dom.lastLabelMax !== labelMax) {
                 dom.labelMax.textContent = labelMax;
                 dom.lastLabelMax = labelMax;
@@ -985,7 +993,7 @@ export class HSAutosingTimerModal {
         if (!this.timerDisplay || this.autoResized) return;
 
         // Hard-coded defaults (adjust as desired)
-        const FIXED_WIDTH = 350; // px
+        const FIXED_WIDTH = 400; // px
         const FIXED_HEIGHT = 650; // px
 
         // Sparkline SVG width: leave space for the label column on the right.
@@ -1000,7 +1008,7 @@ export class HSAutosingTimerModal {
 
         this.computedMaxWidth = appliedWidth;
         this.computedMaxHeight = appliedHeight + 250;
-        // Graph (SVG) width must fit inside the modal next to the label column.
+        // Graph (SVG) width must fit inside the modal
         this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
 
         this.timerDisplay.style.width = 'auto';
@@ -1150,6 +1158,10 @@ export class HSAutosingTimerModal {
         this.durationsHistory = [];
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
+        this.minQuarksRateLabel = 0;
+        this.maxQuarksRateLabel = 0;
+        this.minGoldenQuarksRateLabel = 0;
+        this.maxGoldenQuarksRateLabel = 0;
         this.startTime = performance.now();
         this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
@@ -1316,9 +1328,31 @@ export class HSAutosingTimerModal {
         this.prevQuarksTotal = this.latestQuarksTotal;
         this.latestQuarksTotal = currentQuarks;
 
-        if (singularityDuration > 0) {
-            // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
+        // If shifting, check if the rate being removed is min or max
+        let quarksNeedRecompute = false;
+        let goldenNeedRecompute = false;
 
+        if (singularityDuration > 0) {
+            // Check if buffers were full before adding (will shift if so)
+            const quarksWasFull = this.quarksAmounts.length === this.sparklineMaxPoints;
+            const goldenQuarksWasFull = this.goldenQuarksAmounts.length === this.sparklineMaxPoints;
+
+            if (quarksWasFull && this.quarksAmounts.length >= 2) {
+                const dt = (this.quarksAmounts[1].time - this.quarksAmounts[0].time) / 1000;
+                if (dt > 0) {
+                    const removedRate = (this.quarksAmounts[1].value - this.quarksAmounts[0].value) / dt;
+                    quarksNeedRecompute = removedRate === this.minQuarksRateLabel || removedRate === this.maxQuarksRateLabel;
+                }
+            }
+            if (goldenQuarksWasFull && this.goldenQuarksAmounts.length >= 2) {
+                const dt = (this.goldenQuarksAmounts[1].time - this.goldenQuarksAmounts[0].time) / 1000;
+                if (dt > 0) {
+                    const removedRate = (this.goldenQuarksAmounts[1].value - this.goldenQuarksAmounts[0].value) / dt;
+                    goldenNeedRecompute = removedRate === this.minGoldenQuarksRateLabel || removedRate === this.maxGoldenQuarksRateLabel;
+                }
+            }
+
+            // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
             this.quarksGainsCount += 1;
             this.pushSparklineValue(this.quarksAmounts, realQuarksGain, now);
 
@@ -1330,6 +1364,40 @@ export class HSAutosingTimerModal {
             this.cumulativeQuarksGained += realQuarksGain;
             this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
         }
+
+        // If the removed rate was min or max, recompute fully
+        if (quarksNeedRecompute) {
+            this.minQuarksRateLabel = Infinity;
+            this.maxQuarksRateLabel = -Infinity;
+            for (let i = 1; i < this.quarksAmounts.length; i++) {
+                const dt = (this.quarksAmounts[i].time - this.quarksAmounts[i - 1].time) / 1000;
+                if (dt > 0) {
+                    const rate = (this.quarksAmounts[i].value - this.quarksAmounts[i - 1].value) / dt;
+                    if (rate < this.minQuarksRateLabel) this.minQuarksRateLabel = rate;
+                    if (rate > this.maxQuarksRateLabel) this.maxQuarksRateLabel = rate;
+                }
+            }
+            if (this.minQuarksRateLabel === Infinity) this.minQuarksRateLabel = 0;
+            if (this.maxQuarksRateLabel === -Infinity) this.maxQuarksRateLabel = 0;
+        }
+
+        if (goldenNeedRecompute) {
+            this.minGoldenQuarksRateLabel = Infinity;
+            this.maxGoldenQuarksRateLabel = -Infinity;
+            for (let i = 1; i < this.goldenQuarksAmounts.length; i++) {
+                const dt = (this.goldenQuarksAmounts[i].time - this.goldenQuarksAmounts[i - 1].time) / 1000;
+                if (dt > 0) {
+                    const rate = (this.goldenQuarksAmounts[i].value - this.goldenQuarksAmounts[i - 1].value) / dt;
+                    if (rate < this.minGoldenQuarksRateLabel) this.minGoldenQuarksRateLabel = rate;
+                    if (rate > this.maxGoldenQuarksRateLabel) this.maxGoldenQuarksRateLabel = rate;
+                }
+            }
+            if (this.minGoldenQuarksRateLabel === Infinity) this.minGoldenQuarksRateLabel = 0;
+            if (this.maxGoldenQuarksRateLabel === -Infinity) this.maxGoldenQuarksRateLabel = 0;
+        }
+
+        // Update cached min/max rates for sparklines (incremental)
+        this.updateCachedRates();
 
         // Track duration sums for O(1) windowed average/variance
         this.pushSparklineValue(this.durationsHistory, singularityDuration, now);
@@ -1629,6 +1697,30 @@ export class HSAutosingTimerModal {
         }
     }
 
+    private updateCachedRates(): void {
+        // Incremental update for quarks
+        const lenQ = this.quarksAmounts.length;
+        if (lenQ >= 2) {
+            const dt = (this.quarksAmounts[lenQ - 1].time - this.quarksAmounts[lenQ - 2].time) / 1000;
+            if (dt > 0) {
+                const rate = (this.quarksAmounts[lenQ - 1].value - this.quarksAmounts[lenQ - 2].value) / dt;
+                this.minQuarksRateLabel = Math.min(this.minQuarksRateLabel, rate);
+                this.maxQuarksRateLabel = Math.max(this.maxQuarksRateLabel, rate);
+            }
+        }
+
+        // Incremental update for golden quarks
+        const lenG = this.goldenQuarksAmounts.length;
+        if (lenG >= 2) {
+            const dt = (this.goldenQuarksAmounts[lenG - 1].time - this.goldenQuarksAmounts[lenG - 2].time) / 1000;
+            if (dt > 0) {
+                const rate = (this.goldenQuarksAmounts[lenG - 1].value - this.goldenQuarksAmounts[lenG - 2].value) / dt;
+                this.minGoldenQuarksRateLabel = Math.min(this.minGoldenQuarksRateLabel, rate);
+                this.maxGoldenQuarksRateLabel = Math.max(this.maxGoldenQuarksRateLabel, rate);
+            }
+        }
+    }
+
     // Small utility helpers lifted out of render loops to avoid per-render allocations.
     private setTextEl(el: HTMLElement | null, text: string): void {
         if (!el) return;
@@ -1721,8 +1813,8 @@ export class HSAutosingTimerModal {
             const avgC15 = this.getC15AverageLast(count);
             const sdLogC15 = this.getLogC15Std();
             const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
-            const sdText = sdLogC15 !== null ? ` (σlog ±${sdLogC15.toFixed(3)})` : '';
-            this.setTextEl(this.c15TopSpan, `C15 ${valText}${sdText}`);
+            const sdText = sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '';
+            this.c15TopSpan.innerHTML = `C15 ${valText}<br>${sdText}`;
             this.c15TopSpan.title = '';
         }
     }
