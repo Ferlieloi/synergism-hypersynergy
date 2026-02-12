@@ -108,22 +108,14 @@ export class HSAutosingTimerModal {
 
     // Live timer
     private liveTimerInterval: number | null = null;
-    private currentLiveTime: number = 0;
 
     // Advanced data collection
     private singularityBundles: SingularityBundle[] = [];
-    private sessionQuarksGained: number = 0;
-    private sessionGoldenQuarksGained: number = 0;
-    private initialQuarksWallet: number = 0;
-    private initialGoldenQuarksWallet: number = 0;
-    private lastGoldenQuarksWallet: number = 0;
 
     // Checksum for O(1) avg calculations
     private cumulativeQuarksGained: number = 0;
     private cumulativeGoldenQuarksGained: number = 0;
     private cumulativeSingularityTime: number = 0;
-    private cumulativeQuarksRate: number = 0;
-    private cumulativeGoldenQuarksRate: number = 0;
 
     // Prefix sums for O(1) windowed averages/variance of singularity durations
     private durationsPrefixSum: number[] = [0];
@@ -398,14 +390,7 @@ export class HSAutosingTimerModal {
             }
 
             let ratePolyline: SVGPolylineElement | undefined;
-            if (!isTime) {
-                ratePolyline = document.createElementNS(ns, 'polyline');
-                ratePolyline.setAttribute('fill', 'none');
-                ratePolyline.setAttribute('stroke', color);
-                ratePolyline.setAttribute('stroke-width', '1');
-                ratePolyline.setAttribute('stroke-opacity', '0.8');
-                svg.appendChild(ratePolyline);
-            }
+            // Rate polylines disabled due to calculation issues - proper rates shown in UI
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -474,9 +459,8 @@ export class HSAutosingTimerModal {
         }
 
         if (dom.ratePolyline) {
-            const rateData = data.map((item, i) => ({value: item.value / this.durationsHistory[Math.min(i, this.durationsHistory.length - 1)].value, time: item.time}));
-            const rateSpark = this.generateSparklineMetadata(rateData, gw, 30);
-            dom.ratePolyline.setAttribute('points', rateSpark.points);
+            // Rate polylines disabled
+            dom.ratePolyline.setAttribute('points', '');
         }
 
         if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== spark.maxY) {
@@ -1110,17 +1094,10 @@ export class HSAutosingTimerModal {
         this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.sessionQuarksGained = 0;
-        this.sessionGoldenQuarksGained = 0;
-        this.initialQuarksWallet = initialQuarks;
-        this.initialGoldenQuarksWallet = initialGoldenQuarks;
-        this.lastGoldenQuarksWallet = initialGoldenQuarks;
 
         this.cumulativeQuarksGained = 0;
         this.cumulativeGoldenQuarksGained = 0;
         this.cumulativeSingularityTime = 0;
-        this.cumulativeQuarksRate = 0;
-        this.cumulativeGoldenQuarksRate = 0;
 
         // Reset C15 online stats
         this.c15Count = 0;
@@ -1270,8 +1247,6 @@ export class HSAutosingTimerModal {
 
         if (singularityDuration > 0) {
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
-            const qRate = realQuarksGain / singularityDuration;
-            const gqRate = gainedGoldenQuarks / singularityDuration;
 
             this.quarksGainsCount += 1;
             this.pushSparklineValue(this.quarksAmounts, realQuarksGain, now);
@@ -1283,10 +1258,6 @@ export class HSAutosingTimerModal {
             this.cumulativeSingularityTime += singularityDuration;
             this.cumulativeQuarksGained += realQuarksGain;
             this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
-
-            // Track sum of rates for O(1) average rate calculation
-            this.cumulativeQuarksRate += qRate;
-            this.cumulativeGoldenQuarksRate += gqRate;
         }
 
         // Track duration sums for O(1) windowed average/variance
@@ -1342,8 +1313,6 @@ export class HSAutosingTimerModal {
                 // If conversion/logging fails, skip updating online stats but keep the Decimal history
             }
         }
-
-        this.sessionQuarksGained += realQuarksGain;
 
         // New singularity affects general stats + charts.
         this.sparklineVersion++;
@@ -1403,12 +1372,11 @@ export class HSAutosingTimerModal {
 
     private getQuarksPerSecond(isGolden: boolean): number | null {
         const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
-        if (count === 0) return null;
+        if (count === 0 || this.cumulativeSingularityTime <= 0) return null;
 
-        // OPTIMIZATION: Use cached cumulative rates
-        // This preserves the "Arithmetic Mean of Rates" logic [(r1+r2+...rn)/n]
-        const totalRateProxy = isGolden ? this.cumulativeGoldenQuarksRate : this.cumulativeQuarksRate;
-        return totalRateProxy / count;
+        // Calculate overall rate: total gains / total time
+        const totalGains = isGolden ? this.cumulativeGoldenQuarksGained : this.cumulativeQuarksGained;
+        return totalGains / this.cumulativeSingularityTime;
     }
 
     private formatNumber(num: number): string {
@@ -1566,9 +1534,8 @@ export class HSAutosingTimerModal {
 
     private pushSparklineValue(buffer: {value: number, time: number}[], value: number, time: number): void {
         buffer.push({value, time});
-        const max = this.sparklineMaxPoints;
-        if (buffer.length > max * 2) {
-            buffer.splice(0, buffer.length - max);
+        if (buffer.length > this.sparklineMaxPoints) {
+            buffer.shift(); // Remove oldest element
         }
     }
 
@@ -1817,8 +1784,6 @@ export class HSAutosingTimerModal {
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
-        this.sessionQuarksGained = 0;
-        this.sessionGoldenQuarksGained = 0;
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
         this._currentStepName = '';
