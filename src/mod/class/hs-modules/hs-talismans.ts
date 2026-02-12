@@ -3,14 +3,13 @@ import { ETalismanFragmentIndex } from "../../types/module-types/hs-talismans-ty
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
-import { HSUtils } from "../hs-utils/hs-utils";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 
 /*
     Class: HSTalismans
     IsExplicitHSModule: Yes
     Description: 
-        Hypersynergism module which adds an enhanced "Buy All" button next to the vanilla talisman "Buy All" button that cycles through fragments
+        Hypersynergism module which adds an enhanced "Cycle BUY" button next to the vanilla talisman "Buy All" button that cycles through fragments
     Author: Swiffy
 */
 export class HSTalismans extends HSModule {
@@ -56,7 +55,7 @@ export class HSTalismans extends HSModule {
         this.#buyAllButton = await HSElementHooker.HookElement('#buyTalismanAll') as HTMLButtonElement;
         this.#talismanBuyButtons = await HSElementHooker.HookElements('.fragmentBtn') as HTMLButtonElement[];
 
-        // Create a new enhanced "Buy All" button next to the vanilla one
+        // Create a new enhanced "Cycle BBUY" button next to the vanilla one
         const enhancedBuyAllButton = document.createElement('button');
         enhancedBuyAllButton.id = 'hs-enhanced-buy-talisman-all';
         this.#enhancedButton = enhancedBuyAllButton;
@@ -99,7 +98,7 @@ export class HSTalismans extends HSModule {
             }, self.#indexResetTimeoutTime);
         });
 
-        HSLogger.log("Enhanced Talisman BUY ALL button added next to vanilla button", this.context);
+        HSLogger.log("Fragments 'Cycle BUY' button added next to vanilla button", this.context);
         this.isInitialized = true;
     }
 }
