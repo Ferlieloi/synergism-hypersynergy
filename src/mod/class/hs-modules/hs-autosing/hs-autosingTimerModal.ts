@@ -29,8 +29,8 @@ interface SingularityBundle {
 interface SparklineDom {
     container: HTMLElement;
     svg: SVGSVGElement;
-    avgLine: SVGLineElement;
     polyline: SVGPolylineElement;
+    ratePolyline?: SVGPolylineElement;
     maxLine: SVGLineElement;
     minLine: SVGLineElement;
     labelMax: HTMLSpanElement;
@@ -40,7 +40,6 @@ interface SparklineDom {
     color: string;
     lastWidth?: number;
     lastPoints?: string;
-    lastAvgY?: number;
     lastMaxY?: number;
     lastMinY?: number;
     lastMarkerX?: number;
@@ -81,8 +80,8 @@ export class HSAutosingTimerModal {
     private prevGoldenQuarksTotal: number = 0;
     private quarksGainsCount: number = 0;
     private goldenQuarksGainsCount: number = 0;
-    private quarksAmounts: number[] = [];
-    private goldenQuarksAmounts: number[] = [];
+    private quarksAmounts: {value: number, time: number}[] = [];
+    private goldenQuarksAmounts: {value: number, time: number}[] = [];
     private c15Count: number = 0;
     private c15Mean: Decimal = new Decimal(0);
     private c15M2: Decimal = new Decimal(0);
@@ -90,7 +89,7 @@ export class HSAutosingTimerModal {
     private logC15Count: number = 0;
     private logC15Mean: number = 0;
     private logC15M2: number = 0;
-    private durationsHistory: number[] = [];
+    private durationsHistory: {value: number, time: number}[] = [];
     private startTime: number = 0;
 
     // Phase tracking
@@ -389,18 +388,24 @@ export class HSAutosingTimerModal {
             svg.style.display = 'block';
             svg.style.overflow = 'visible';
 
-            const avgLine = document.createElementNS(ns, 'line');
-            avgLine.setAttribute('x1', '0');
-            avgLine.setAttribute('stroke', color);
-            avgLine.setAttribute('stroke-opacity', '0.9');
-            avgLine.setAttribute('stroke-width', '1');
-            avgLine.setAttribute('stroke-dasharray', '4, 2');
-
             const polyline = document.createElementNS(ns, 'polyline');
             polyline.setAttribute('fill', 'none');
             polyline.setAttribute('stroke', color);
             polyline.setAttribute('stroke-width', '1');
-            polyline.setAttribute('stroke-opacity', isTime ? '0.8' : '0.7');
+            polyline.setAttribute('stroke-opacity', isTime ? '0.8' : '0.5');
+            if (!isTime) {
+                polyline.setAttribute('stroke-dasharray', '4, 2');
+            }
+
+            let ratePolyline: SVGPolylineElement | undefined;
+            if (!isTime) {
+                ratePolyline = document.createElementNS(ns, 'polyline');
+                ratePolyline.setAttribute('fill', 'none');
+                ratePolyline.setAttribute('stroke', color);
+                ratePolyline.setAttribute('stroke-width', '1');
+                ratePolyline.setAttribute('stroke-opacity', '0.8');
+                svg.appendChild(ratePolyline);
+            }
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -410,7 +415,6 @@ export class HSAutosingTimerModal {
             minLine.setAttribute('stroke', color);
             minLine.setAttribute('stroke-width', '1');
 
-            svg.appendChild(avgLine);
             svg.appendChild(polyline);
             svg.appendChild(maxLine);
             svg.appendChild(minLine);
@@ -434,7 +438,7 @@ export class HSAutosingTimerModal {
             container.appendChild(svg);
             container.appendChild(labels);
 
-            return { container, svg, avgLine, polyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color };
+            return { container, svg, polyline, ratePolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color };
         };
 
         this.sparklineQuarks = build(this.sparklineContainer1, '#00BCD4', false);
@@ -442,11 +446,12 @@ export class HSAutosingTimerModal {
         this.sparklineTimes = build(this.sparklineContainer3, '#FF8A80', true);
     }
 
-    private updateSparkline(dom: SparklineDom | null, data: number[]): void {
+    private updateSparkline(dom: SparklineDom | null, data: {value: number, time: number}[]): void {
         if (!dom) return;
         // Only show meaningful sparklines when at least 2 points exist.
         if (data.length < 2) {
             dom.polyline.setAttribute('points', '');
+            if (dom.ratePolyline) dom.ratePolyline.setAttribute('points', '');
             dom.labelMax.textContent = '';
             dom.labelAvg.textContent = '';
             dom.labelMin.textContent = '';
@@ -463,20 +468,15 @@ export class HSAutosingTimerModal {
             dom.lastWidth = gw;
         }
 
-        if (widthChanged) {
-            const gwStr = `${gw}`;
-            dom.avgLine.setAttribute('x2', gwStr);
-        }
-        if (widthChanged || dom.lastAvgY !== spark.avgY) {
-            const avgY = `${spark.avgY}`;
-            dom.avgLine.setAttribute('y1', avgY);
-            dom.avgLine.setAttribute('y2', avgY);
-            dom.lastAvgY = spark.avgY;
-        }
-
         if (dom.lastPoints !== spark.points) {
             dom.polyline.setAttribute('points', spark.points);
             dom.lastPoints = spark.points;
+        }
+
+        if (dom.ratePolyline) {
+            const rateData = data.map((item, i) => ({value: item.value / this.durationsHistory[Math.min(i, this.durationsHistory.length - 1)].value, time: item.time}));
+            const rateSpark = this.generateSparklineMetadata(rateData, gw, 30);
+            dom.ratePolyline.setAttribute('points', rateSpark.points);
         }
 
         if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== spark.maxY) {
@@ -1274,10 +1274,10 @@ export class HSAutosingTimerModal {
             const gqRate = gainedGoldenQuarks / singularityDuration;
 
             this.quarksGainsCount += 1;
-            this.pushSparklineValue(this.quarksAmounts, realQuarksGain);
+            this.pushSparklineValue(this.quarksAmounts, realQuarksGain, now);
 
             this.goldenQuarksGainsCount += 1;
-            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks);
+            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks, now);
 
             // O(1) optimization updates
             this.cumulativeSingularityTime += singularityDuration;
@@ -1290,7 +1290,7 @@ export class HSAutosingTimerModal {
         }
 
         // Track duration sums for O(1) windowed average/variance
-        this.pushSparklineValue(this.durationsHistory, singularityDuration);
+        this.pushSparklineValue(this.durationsHistory, singularityDuration, now);
         const lastDurationSum = this.durationsPrefixSum[this.durationsPrefixSum.length - 1] || 0;
         const lastDurationSumSq = this.durationsPrefixSumSq[this.durationsPrefixSumSq.length - 1] || 0;
         this.durationsPrefixSum.push(lastDurationSum + singularityDuration);
@@ -1564,8 +1564,8 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
-    private pushSparklineValue(buffer: number[], value: number): void {
-        buffer.push(value);
+    private pushSparklineValue(buffer: {value: number, time: number}[], value: number, time: number): void {
+        buffer.push({value, time});
         const max = this.sparklineMaxPoints;
         if (buffer.length > max * 2) {
             buffer.splice(0, buffer.length - max);
@@ -1869,8 +1869,8 @@ export class HSAutosingTimerModal {
      * Logic to generate SVG path and metadata for singularity charts.
      * Handles 'flat' data (no change) by centering the line and aligning the avgY to it.
      */
-    private generateSparklineMetadata(data: number[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, avgY: number, maxY: number, minY: number, lastX: number, lastY: number } {
-        if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, avgY: height / 2, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
+    private generateSparklineMetadata(data: {value: number, time: number}[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, maxY: number, minY: number, lastX: number, lastY: number } {
+        if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
         const startIdx = Math.max(0, data.length - 50);
         let max = -Infinity;
         let min = Infinity;
@@ -1878,7 +1878,7 @@ export class HSAutosingTimerModal {
         let count = 0;
 
         for (let i = startIdx; i < data.length; i++) {
-            const v = data[i];
+            const v = data[i].value;
             if (v > max) max = v;
             if (v < min) min = v;
             sum += v;
@@ -1887,7 +1887,7 @@ export class HSAutosingTimerModal {
         const avg = count > 0 ? (sum / count) : 0;
 
         // Handle flat data quickly
-        if (count === 0) return { path: '', points: '', max: 0, min: 0, avg: 0, avgY: height / 2, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
+        if (count === 0) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
 
         const formattedMax = this.formatNumber(max);
         const formattedMin = this.formatNumber(min);
@@ -1900,7 +1900,6 @@ export class HSAutosingTimerModal {
                 max: max,
                 min: min,
                 avg: avg,
-                avgY: centerY,
                 maxY: centerY,
                 minY: centerY,
                 lastX: width,
@@ -1917,9 +1916,14 @@ export class HSAutosingTimerModal {
         const ptsArr: string[] = new Array(count);
         let lastX = 0;
         let lastY = height / 2;
+        const minTime = data[startIdx].time;
+        const maxTime = data[startIdx + count - 1].time;
+        const timeRange = maxTime - minTime;
         for (let idx = 0; idx < count; idx++) {
-            const val = data[startIdx + idx];
-            const x = (count === 1) ? width : (idx / (count - 1)) * width;
+            const item = data[startIdx + idx];
+            const val = item.value;
+            const time = item.time;
+            const x = timeRange > 0 ? ((time - minTime) / timeRange) * width : (count === 1 ? width : (idx / (count - 1)) * width);
             const y = height - ((val - displayMin) / displayRange) * height;
             ptsArr[idx] = `${x.toFixed(1)},${y.toFixed(1)}`;
             lastX = x;
@@ -1927,7 +1931,6 @@ export class HSAutosingTimerModal {
         }
 
         const pointsStr = ptsArr.join(' ');
-        const avgY = height - ((avg - displayMin) / displayRange) * height;
         const maxY = height - ((max - displayMin) / displayRange) * height;
         const minY = height - ((min - displayMin) / displayRange) * height;
 
@@ -1937,7 +1940,6 @@ export class HSAutosingTimerModal {
             max: max,
             min: min,
             avg: avg,
-            avgY: avgY,
             maxY: maxY,
             minY: minY,
             lastX: lastX,
