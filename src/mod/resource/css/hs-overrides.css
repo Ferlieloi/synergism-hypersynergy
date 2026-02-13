@@ -74,11 +74,13 @@
  }
 
  #automationQuickBar button.autoToggle.disabled {
-    border-color: #800000;
+    border-color: #bb0000;
+    background-color: rgba(255, 0, 0, 0.2);
  }
 
  #automationQuickBar button.autoToggle.mixed {
-    border-color: orange;
+    border-color: #dd8e01;
+    background-color: rgba(220, 140, 0, 0.2);
  }
 
  #automationQuickBar button.autoToggle img {
