@@ -133,7 +133,7 @@ export class HSAutosingTimerModal {
     private latestQuarksTotal: number = 0;
     private latestGoldenQuarksTotal: number = 0;
 
-    // Running totals for performance optimization
+    // Running totals for performance optimization (capped arrays)
     private cumulativeDuration: number = 0;
     private maxDuration: number = 0;
     private minDuration: number = Infinity;
@@ -143,6 +143,17 @@ export class HSAutosingTimerModal {
     private cumulativeGQuarksGains: number = 0;
     private maxGQuarksGains: number = 0;
     private minGQuarksGains: number = Infinity;
+
+    // All-time statistics (across all singularities)
+    private allTimeCumulativeDuration: number = 0;
+    private allTimeMaxDuration: number = 0;
+    private allTimeMinDuration: number = Infinity;
+    private allTimeCumulativeQuarksGains: number = 0;
+    private allTimeMaxQuarksGains: number = 0;
+    private allTimeMinQuarksGains: number = Infinity;
+    private allTimeCumulativeGQuarksGains: number = 0;
+    private allTimeMaxGQuarksGains: number = 0;
+    private allTimeMinGQuarksGains: number = Infinity;
 
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
@@ -1317,14 +1328,23 @@ export class HSAutosingTimerModal {
         this.cumulativeDuration = 0;
         this.maxDuration = 0;
         this.minDuration = Infinity;
+        this.allTimeCumulativeDuration = 0;
+        this.allTimeMaxDuration = 0;
+        this.allTimeMinDuration = Infinity;
         this.quarksAmounts = [];
         this.cumulativeQuarksGains = 0;
         this.maxQuarksGains = 0;
         this.minQuarksGains = Infinity;
+        this.allTimeCumulativeQuarksGains = 0;
+        this.allTimeMaxQuarksGains = 0;
+        this.allTimeMinQuarksGains = Infinity;
         this.goldenQuarksAmounts = [];
         this.cumulativeGQuarksGains = 0;
         this.maxGQuarksGains = 0;
         this.minGQuarksGains = Infinity;
+        this.allTimeCumulativeGQuarksGains = 0;
+        this.allTimeMaxGQuarksGains = 0;
+        this.allTimeMinGQuarksGains = Infinity;
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
         this.startTime = performance.now();
@@ -1494,6 +1514,11 @@ export class HSAutosingTimerModal {
         this.latestQuarksTotal = currentQuarks;
 
         if (singularityDuration > 0) {
+            // Update all-time statistics
+            this.allTimeCumulativeDuration += singularityDuration;
+            this.allTimeMaxDuration = Math.max(this.allTimeMaxDuration, singularityDuration);
+            this.allTimeMinDuration = Math.min(this.allTimeMinDuration, singularityDuration);
+
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
 
             this.quarksGainsCount += 1;
@@ -1501,10 +1526,14 @@ export class HSAutosingTimerModal {
             this.cumulativeQuarksGains += realQuarksGain;
             this.maxQuarksGains = Math.max(this.maxQuarksGains, realQuarksGain);
             this.minQuarksGains = Math.min(this.minQuarksGains, realQuarksGain);
+            // Update all-time
+            this.allTimeCumulativeQuarksGains += realQuarksGain;
+            this.allTimeMaxQuarksGains = Math.max(this.allTimeMaxQuarksGains, realQuarksGain);
+            this.allTimeMinQuarksGains = Math.min(this.allTimeMinQuarksGains, realQuarksGain);
             if (this.quarksAmounts.length > this.sparklineMaxPoints) {
                 const removed = this.quarksAmounts.shift()!;
                 this.cumulativeQuarksGains -= removed.gain;
-                // Recalculate max/min
+                // Recalculate max/min for capped array
                 if (this.quarksAmounts.length > 0) {
                     this.maxQuarksGains = Math.max(...this.quarksAmounts.map(q => q.gain));
                     this.minQuarksGains = Math.min(...this.quarksAmounts.map(q => q.gain));
@@ -1519,10 +1548,14 @@ export class HSAutosingTimerModal {
             this.cumulativeGQuarksGains += gainedGoldenQuarks;
             this.maxGQuarksGains = Math.max(this.maxGQuarksGains, gainedGoldenQuarks);
             this.minGQuarksGains = Math.min(this.minGQuarksGains, gainedGoldenQuarks);
+            // Update all-time
+            this.allTimeCumulativeGQuarksGains += gainedGoldenQuarks;
+            this.allTimeMaxGQuarksGains = Math.max(this.allTimeMaxGQuarksGains, gainedGoldenQuarks);
+            this.allTimeMinGQuarksGains = Math.min(this.allTimeMinGQuarksGains, gainedGoldenQuarks);
             if (this.goldenQuarksAmounts.length > this.sparklineMaxPoints) {
                 const removed = this.goldenQuarksAmounts.shift()!;
                 this.cumulativeGQuarksGains -= removed.gain;
-                // Recalculate max/min
+                // Recalculate max/min for capped array
                 if (this.goldenQuarksAmounts.length > 0) {
                     this.maxGQuarksGains = Math.max(...this.goldenQuarksAmounts.map(g => g.gain));
                     this.minGQuarksGains = Math.min(...this.goldenQuarksAmounts.map(g => g.gain));
@@ -1937,10 +1970,10 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.avgAllCountSpan, count.toString());
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
-        // Total, Max, Min Times
-        const totalTime = this.cumulativeDuration;
-        const maxTime = this.durationsHistory.length > 0 ? this.maxDuration : null;
-        const minTime = this.durationsHistory.length > 0 ? this.minDuration : null;
+        // Total, Max, Min Times (all-time)
+        const totalTime = this.allTimeCumulativeDuration;
+        const maxTime = this.singularityCount > 0 ? this.allTimeMaxDuration : null;
+        const minTime = this.singularityCount > 0 ? this.allTimeMinDuration : null;
         this.setTextEl(this.totalTimeSpan, totalTime > 0 ? `${totalTime.toFixed(2)}s` : '-');
         this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
         this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
@@ -1955,18 +1988,18 @@ export class HSAutosingTimerModal {
             this.c15TopSpan.title = '';
         }
 
-        // Quarks Gains
-        const totalQuarksGains = this.cumulativeQuarksGains;
-        const maxQuarksGains = this.quarksAmounts.length > 0 ? this.maxQuarksGains : null;
-        const minQuarksGains = this.quarksAmounts.length > 0 ? this.minQuarksGains : null;
+        // Quarks Gains (all-time)
+        const totalQuarksGains = this.allTimeCumulativeQuarksGains;
+        const maxQuarksGains = this.singularityCount > 0 ? this.allTimeMaxQuarksGains : null;
+        const minQuarksGains = this.singularityCount > 0 ? this.allTimeMinQuarksGains : null;
         this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? this.formatNumber(totalQuarksGains) : '-');
         this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? this.formatNumber(maxQuarksGains) : '-');
         this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? this.formatNumber(minQuarksGains) : '-');
 
-        // Golden Quarks Gains
-        const totalGQuarksGains = this.cumulativeGQuarksGains;
-        const maxGQuarksGains = this.goldenQuarksAmounts.length > 0 ? this.maxGQuarksGains : null;
-        const minGQuarksGains = this.goldenQuarksAmounts.length > 0 ? this.minGQuarksGains : null;
+        // Golden Quarks Gains (all-time)
+        const totalGQuarksGains = this.allTimeCumulativeGQuarksGains;
+        const maxGQuarksGains = this.singularityCount > 0 ? this.allTimeMaxGQuarksGains : null;
+        const minGQuarksGains = this.singularityCount > 0 ? this.allTimeMinGQuarksGains : null;
         this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? this.formatNumber(totalGQuarksGains) : '-');
         this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? this.formatNumber(maxGQuarksGains) : '-');
         this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? this.formatNumber(minGQuarksGains) : '-');
@@ -2109,10 +2142,16 @@ export class HSAutosingTimerModal {
         this.cumulativeQuarksGains = 0;
         this.maxQuarksGains = 0;
         this.minQuarksGains = Infinity;
+        this.allTimeCumulativeQuarksGains = 0;
+        this.allTimeMaxQuarksGains = 0;
+        this.allTimeMinQuarksGains = Infinity;
         this.goldenQuarksAmounts = [];
         this.cumulativeGQuarksGains = 0;
         this.maxGQuarksGains = 0;
         this.minGQuarksGains = Infinity;
+        this.allTimeCumulativeGQuarksGains = 0;
+        this.allTimeMaxGQuarksGains = 0;
+        this.allTimeMinGQuarksGains = Infinity;
         this.c15Count = 0;
         this.c15Mean = new Decimal(0);
         this.c15M2 = new Decimal(0);
@@ -2123,6 +2162,9 @@ export class HSAutosingTimerModal {
         this.cumulativeDuration = 0;
         this.maxDuration = 0;
         this.minDuration = Infinity;
+        this.allTimeCumulativeDuration = 0;
+        this.allTimeMaxDuration = 0;
+        this.allTimeMinDuration = Infinity;
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
         this.startTime = 0;
