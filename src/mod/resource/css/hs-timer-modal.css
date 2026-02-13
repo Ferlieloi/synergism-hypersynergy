@@ -1,0 +1,462 @@
+/* ===== HSAUTOSING TIMER MODAL STYLES ===== */
+
+/* ===== CSS CUSTOM PROPERTIES ===== */
+/* Color scheme variables for consistent theming across timer components */
+#hs-autosing-timer-display {
+    --timer-text-primary: #ffffff;     /* Main text color */
+    --timer-text-secondary: #999999;   /* Secondary/muted text */
+    --timer-text-muted: #666666;       /* Very muted text for less important info */
+    --timer-text-accent: #FF8A80;      /* Accent color for highlights */
+    --timer-color-progress: #00E676;   /* Green for progress indicators */
+    --timer-color-phase: #B33A3A;      /* Red for phase indicators */
+    --timer-color-quarks: #00BCD4;     /* Cyan for quark values */
+    --timer-color-gquarks: #F1FA8C;    /* Yellow for golden quark values */
+    --timer-bg-hover: rgba(255, 255, 255, 0.4);  /* Hover background */
+    --timer-border-color: #333333;     /* Border colors */
+    --timer-section-bg: #18171c;       /* Section background */
+}
+
+/* ===== BASE TIMER DISPLAY ===== */
+
+/* Main timer modal container */
+#hs-autosing-timer-display {
+    position: fixed;
+    top: 10px;
+    left: 50px;
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--timer-text-primary);
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+    z-index: 10000;
+    min-width: 300px;
+    width: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    overflow: visible;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== TIMER HEADER ===== */
+
+.hs-timer-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 4px 12px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    border-radius: 8px 8px 0 0;
+}
+
+.hs-timer-title {
+    font-weight: bold;
+    font-size: 13px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== CONTROL BUTTONS ===== */
+
+.hs-timer-ctrl-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: var(--timer-text-primary);
+    width: 35px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.hs-timer-ctrl-btn:hover {
+    background: var(--timer-bg-hover);
+}
+
+.hs-timer-ctrl-btn-secondary {
+    width: 30px;
+    font-size: 16px;
+    margin-right: 0;
+}
+
+#hs-timer-ctrl-chart-toggle {
+    margin-right: 8px;
+}
+
+/* ===== TIMER CONTENT ===== */
+
+.hs-timer-content {
+    padding: 6px 10px 0px 10px;
+    overflow: visible;
+}
+
+.hs-timer-section {
+    margin-bottom: 0px !important;
+}
+
+/* ===== SECTION HEADERS ===== */
+
+.hs-section-header {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.hs-c15-top {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: normal;
+    font-size: 12px;
+    line-height: 1.1;
+    text-align: right;
+}
+
+/* ===== INFO LINES ===== */
+
+.hs-info-line {
+    font-size: 15px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+}
+
+.hs-info-line-phase {
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+}
+
+.hs-info-line-detailed {
+    font-size: 10px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    line-height: 1.1;
+    opacity: 0.7;
+}
+
+/* ===== TIMER LABELS ===== */
+
+.hs-timer-label {
+    color: var(--timer-text-primary);
+}
+
+.hs-info-line-detailed .hs-timer-label {
+    color: var(--timer-text-secondary) !important;
+}
+
+.hs-times-grid .hs-timer-label {
+    text-align: right;
+}
+
+.hs-detailed-value {
+    color: var(--timer-text-secondary) !important;
+    font-weight: normal !important;
+    font-size: 11px;
+}
+
+/* ===== SPARKLINE STYLES ===== */
+
+.hs-sparkline-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 30px;
+    margin-left: 2px;
+    margin-top: 0;
+    font-size: 9px;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.hs-sparkline-row {
+    display: flex;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.hs-sparkline-muted {
+    color: #777;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+/* ===== TIMER CONTROLS ===== */
+
+.hs-timer-controls {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== VALUE COLORS ===== */
+
+#hs-sing-target {
+    color: var(--timer-text-primary);
+    font-weight: normal;
+    margin-left: 8px;
+}
+
+#hs-progress-val {
+    color: var(--timer-color-progress);
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-phase-name-val {
+    color: var(--timer-color-phase);
+    font-weight: bold;
+    margin-left: 6px;
+}
+
+#hs-phase-timer-val {
+    color: var(--timer-text-accent);
+    margin-left: 4px;
+}
+
+#hs-step-name-val {
+    margin-left: 6px;
+}
+
+#hs-step-timer-val {
+    margin-left: 4px;
+    color: var(--timer-text-accent);
+}
+
+/* ===== AVERAGE VALUES ===== */
+
+#hs-live-timer-val,
+#hs-avg-1,
+#hs-avg-10,
+#hs-avg-50,
+#hs-avg-all {
+    color: var(--timer-text-accent);
+    font-weight: bold;
+}
+
+#hs-avg-all-count {
+    color: var(--timer-text-primary);
+    font-weight: bold;
+}
+
+/* ===== QUARKS VALUES ===== */
+
+#hs-quarks-total,
+#hs-quarks-rate-val {
+    color: var(--timer-color-quarks);
+    font-weight: bold;
+}
+
+#hs-quarks-prev,
+#hs-quarks-rate-val-hr,
+#hs-gquarks-prev,
+#hs-gquarks-rate-val-hr {
+    color: var(--timer-text-muted);
+    font-size: 11px;
+}
+
+#hs-gquarks-total,
+#hs-gquarks-rate-val {
+    color: var(--timer-color-gquarks);
+    font-weight: bold;
+}
+
+/* ===== FOOTER STYLES ===== */
+
+.hs-footer-loadouts {
+    white-space: pre-wrap;
+    margin-top: 2px;
+}
+
+.hs-footer-info {
+    border-bottom: none;
+    opacity: 0.7;
+    padding-top: 0;
+}
+
+/* ===== EXPORT BUTTON ===== */
+
+.hs-export-btn {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border: none;
+    color: var(--timer-text-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 10px;
+    transition: filter 0.2s, box-shadow 0.2s;
+    display: block;
+}
+
+.hs-export-btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 2px 10px rgba(56, 239, 125, 0.3);
+}
+
+.hs-export-btn:active {
+    filter: brightness(0.9);
+}
+
+/* ===== RESIZE HANDLE ===== */
+
+.hs-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
+}
+
+/* ===== AVERAGE SD STYLE ===== */
+
+.hs-avg-sd {
+    color: var(--timer-text-muted);
+    font-size: 11px;
+}
+
+/* ===== PHASE STATISTICS GRID ===== */
+
+/* ===== PHASE STATISTICS GRID ===== */
+.hs-stats-grid {
+    display: grid;
+    grid-template-columns: max-content max-content max-content max-content max-content;
+    gap: 4px 2px;
+    font-size: 11px;
+    align-items: center;
+    justify-items: end;
+    margin-top: 8px;
+}
+
+/* ===== PHASE STATS HEADERS ===== */
+
+.hs-phase-header {
+    color: #888;
+    font-size: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--timer-border-color);
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    justify-self: stretch;
+    align-self: stretch;
+}
+
+.hs-phase-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--timer-border-color);
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: flex-start;
+    justify-self: stretch;
+}
+
+/* ===== PHASE STATS CELLS ===== */
+
+.hs-phase-empty {
+    color: #666;
+    font-style: italic;
+    font-size: 12px;
+    grid-column: span 5;
+    justify-self: start;
+}
+
+.hs-phase-name {
+    color: var(--timer-color-phase);
+    font-size: 12px;
+    padding: 2px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid #222;
+    text-align: left;
+    justify-self: start;
+}
+
+.hs-phase-count {
+    color: #888;
+    font-size: 10px;
+    margin-right: 2px;
+}
+
+.hs-phase-loops {
+    color: #888;
+    font-size: 11px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
+}
+
+.hs-phase-avg,
+.hs-phase-last {
+    color: var(--timer-text-accent);
+    font-size: 12px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
+}
+
+.hs-phase-sd {
+    color: #888;
+    font-size: 10px;
+    padding: 2px 4px;
+    text-align: right;
+    border-bottom: 1px solid #222;
+}
+
+.hs-stats-row {
+    color: #bcb9b9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== STATS COLOR VARIANTS ===== */
+
+.hs-stats-loops {
+    text-align: center;
+    color: #888 !important;
+}
+
+.hs-stats-avg {
+    text-align: center;
+    color: #eee !important;
+}
+
+.hs-stats-sd {
+    text-align: center;
+    color: #555 !important;
+    font-size: 10px;
+}
+
+.hs-stats-last {
+    text-align: center;
+    color: var(--timer-color-quarks) !important;
+}

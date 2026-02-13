@@ -1,0 +1,28 @@
+/* ===== ANIMATIONS ===== */
+
+/* Rainbow color rotation animation for special text effects */
+@keyframes hs-color_rotate {
+    0% { color: #ff5e00; }
+    25% { color: #e5ff00; }
+    50% { color: #00ffc8; }
+    75% { color: #9500ff; }
+    100% { color: #ff5e00; }
+}
+
+/* Apply rainbow text animation */
+.hs-rainbow-text {
+    font-weight: bold;
+    animation: hs-color_rotate 6s linear infinite;
+}
+
+/* Background position animation for gradient text effects */
+@keyframes hs-animtext-1 {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* WebKit prefix for compatibility */
+@-webkit-keyframes hs-animtext-1 {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
