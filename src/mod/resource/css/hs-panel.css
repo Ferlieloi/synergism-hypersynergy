@@ -1447,7 +1447,7 @@ a.hs-link {
 }
 
 /* Value Colors */
-#hs-sing-val {
+#hs-sing-target {
     color: var(--timer-text-primary);
     font-weight: normal;
     margin-left: 8px;
@@ -1561,6 +1561,12 @@ a.hs-link {
     height: 12px;
     cursor: nwse-resize;
     background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
+}
+
+/* Average SD Style */
+.hs-avg-sd {
+    color: var(--timer-text-muted);
+    font-size: 11px;
 }
 
 /* ===== HSAUTOSING TIMER MODAL STYLES ===== */
@@ -1762,8 +1768,7 @@ a.hs-link {
 }
 
 /* Value Colors */
-#hs-sing-val {
-    color: var(--timer-text-primary);
+#hs-sing-target {
     font-weight: normal;
     margin-left: 8px;
 }
@@ -2060,7 +2065,7 @@ a.hs-link {
 /* Grid Definitions */
 .hs-times-grid {
     display: grid;
-    grid-template-columns: min-content max-content auto auto;
+    grid-template-columns: min-content auto min-content auto;
     column-gap: 5px;
     row-gap: 3px;
     align-items: center;
@@ -2082,7 +2087,7 @@ a.hs-link {
 
 .hs-section-grid {
     display: grid;
-    grid-template-columns: min-content auto auto auto;
+    grid-template-columns: min-content auto min-content auto;
     gap: 2px;
 }
 

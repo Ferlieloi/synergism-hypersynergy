@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         HyperSynergism Loader
+// @name         HyperSynergism Bridge Loader
 // @namespace    https://github.com/Ferlieloi
 // @version      1.0
 // @description  Evergreen bridge to official Hypersynergism mod
@@ -14,4 +14,4 @@
 
 // Production Evergreen Bridge.
 // Install once - auto-updates.
-// Loads the newest version of hypersynergism.
+// Loads the full "true" loader (hypersynergism.user.js), which handles game patching and mod loading.
