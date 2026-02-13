@@ -133,6 +133,17 @@ export class HSAutosingTimerModal {
     private latestQuarksTotal: number = 0;
     private latestGoldenQuarksTotal: number = 0;
 
+    // Running totals for performance optimization
+    private cumulativeDuration: number = 0;
+    private maxDuration: number = 0;
+    private minDuration: number = Infinity;
+    private cumulativeQuarksGains: number = 0;
+    private maxQuarksGains: number = 0;
+    private minQuarksGains: number = Infinity;
+    private cumulativeGQuarksGains: number = 0;
+    private maxGQuarksGains: number = 0;
+    private minGQuarksGains: number = Infinity;
+
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
     private singHighest: number = 0;
@@ -1303,6 +1314,17 @@ export class HSAutosingTimerModal {
         this.quarksGainsCount = 0;
         this.goldenQuarksGainsCount = 0;
         this.durationsHistory = [];
+        this.cumulativeDuration = 0;
+        this.maxDuration = 0;
+        this.minDuration = Infinity;
+        this.quarksAmounts = [];
+        this.cumulativeQuarksGains = 0;
+        this.maxQuarksGains = 0;
+        this.minQuarksGains = Infinity;
+        this.goldenQuarksAmounts = [];
+        this.cumulativeGQuarksGains = 0;
+        this.maxGQuarksGains = 0;
+        this.minGQuarksGains = Infinity;
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
         this.startTime = performance.now();
@@ -1476,9 +1498,39 @@ export class HSAutosingTimerModal {
 
             this.quarksGainsCount += 1;
             this.quarksAmounts.push({gain: realQuarksGain, timestamp: now, duration: singularityDuration});
+            this.cumulativeQuarksGains += realQuarksGain;
+            this.maxQuarksGains = Math.max(this.maxQuarksGains, realQuarksGain);
+            this.minQuarksGains = Math.min(this.minQuarksGains, realQuarksGain);
+            if (this.quarksAmounts.length > this.sparklineMaxPoints) {
+                const removed = this.quarksAmounts.shift()!;
+                this.cumulativeQuarksGains -= removed.gain;
+                // Recalculate max/min
+                if (this.quarksAmounts.length > 0) {
+                    this.maxQuarksGains = Math.max(...this.quarksAmounts.map(q => q.gain));
+                    this.minQuarksGains = Math.min(...this.quarksAmounts.map(q => q.gain));
+                } else {
+                    this.maxQuarksGains = 0;
+                    this.minQuarksGains = Infinity;
+                }
+            }
 
             this.goldenQuarksGainsCount += 1;
             this.goldenQuarksAmounts.push({gain: gainedGoldenQuarks, timestamp: now, duration: singularityDuration});
+            this.cumulativeGQuarksGains += gainedGoldenQuarks;
+            this.maxGQuarksGains = Math.max(this.maxGQuarksGains, gainedGoldenQuarks);
+            this.minGQuarksGains = Math.min(this.minGQuarksGains, gainedGoldenQuarks);
+            if (this.goldenQuarksAmounts.length > this.sparklineMaxPoints) {
+                const removed = this.goldenQuarksAmounts.shift()!;
+                this.cumulativeGQuarksGains -= removed.gain;
+                // Recalculate max/min
+                if (this.goldenQuarksAmounts.length > 0) {
+                    this.maxGQuarksGains = Math.max(...this.goldenQuarksAmounts.map(g => g.gain));
+                    this.minGQuarksGains = Math.min(...this.goldenQuarksAmounts.map(g => g.gain));
+                } else {
+                    this.maxGQuarksGains = 0;
+                    this.minGQuarksGains = Infinity;
+                }
+            }
 
             // O(1) optimization updates
             this.cumulativeSingularityTime += singularityDuration;
@@ -1487,7 +1539,7 @@ export class HSAutosingTimerModal {
         }
 
         // Track duration sums for O(1) windowed average/variance
-        this.pushSparklineValue(this.durationsHistory, singularityDuration, now);
+        this.pushDurationValue(singularityDuration, now);
         const lastDurationSum = this.durationsPrefixSum[this.durationsPrefixSum.length - 1] || 0;
         const lastDurationSumSq = this.durationsPrefixSumSq[this.durationsPrefixSumSq.length - 1] || 0;
         this.durationsPrefixSum.push(lastDurationSum + singularityDuration);
@@ -1779,10 +1831,22 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
-    private pushSparklineValue(buffer: {value: number, timestamp: number}[], value: number, timestamp: number): void {
-        buffer.push({value, timestamp});
-        if (buffer.length > this.sparklineMaxPoints) {
-            buffer.shift(); // Remove oldest element
+    private pushDurationValue(value: number, timestamp: number): void {
+        this.durationsHistory.push({value, timestamp});
+        this.cumulativeDuration += value;
+        this.maxDuration = Math.max(this.maxDuration, value);
+        this.minDuration = Math.min(this.minDuration, value);
+        if (this.durationsHistory.length > this.sparklineMaxPoints) {
+            const removed = this.durationsHistory.shift()!;
+            this.cumulativeDuration -= removed.value;
+            // Recalculate max/min since removed might have been the max/min
+            if (this.durationsHistory.length > 0) {
+                this.maxDuration = Math.max(...this.durationsHistory.map(d => d.value));
+                this.minDuration = Math.min(...this.durationsHistory.map(d => d.value));
+            } else {
+                this.maxDuration = 0;
+                this.minDuration = Infinity;
+            }
         }
     }
 
@@ -1874,12 +1938,12 @@ export class HSAutosingTimerModal {
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
         // Total, Max, Min Times
-        const totalTime = this.durationsHistory.reduce((sum, d) => sum + d.value, 0);
-        const maxTime = this.durationsHistory.length > 0 ? Math.max(...this.durationsHistory.map(d => d.value)) : null;
-        const minTime = this.durationsHistory.length > 0 ? Math.min(...this.durationsHistory.map(d => d.value)) : null;
+        const totalTime = this.cumulativeDuration;
+        const maxTime = this.durationsHistory.length > 0 ? this.maxDuration : null;
+        const minTime = this.durationsHistory.length > 0 ? this.minDuration : null;
         this.setTextEl(this.totalTimeSpan, totalTime > 0 ? `${totalTime.toFixed(2)}s` : '-');
-        this.setTextEl(this.maxTimeSpan, maxTime !== null ? `${maxTime.toFixed(2)}s` : '-');
-        this.setTextEl(this.minTimeSpan, minTime !== null ? `${minTime.toFixed(2)}s` : '-');
+        this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
+        this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
 
         // C15 display: show average and std of log(C15) (inline)
         if (this.c15TopSpan) {
@@ -1892,20 +1956,20 @@ export class HSAutosingTimerModal {
         }
 
         // Quarks Gains
-        const totalQuarksGains = this.quarksAmounts.reduce((sum, q) => sum + q.gain, 0);
-        const maxQuarksGains = this.quarksAmounts.length > 0 ? Math.max(...this.quarksAmounts.map(q => q.gain)) : null;
-        const minQuarksGains = this.quarksAmounts.length > 0 ? Math.min(...this.quarksAmounts.map(q => q.gain)) : null;
+        const totalQuarksGains = this.cumulativeQuarksGains;
+        const maxQuarksGains = this.quarksAmounts.length > 0 ? this.maxQuarksGains : null;
+        const minQuarksGains = this.quarksAmounts.length > 0 ? this.minQuarksGains : null;
         this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? this.formatNumber(totalQuarksGains) : '-');
-        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null ? this.formatNumber(maxQuarksGains) : '-');
-        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null ? this.formatNumber(minQuarksGains) : '-');
+        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? this.formatNumber(maxQuarksGains) : '-');
+        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? this.formatNumber(minQuarksGains) : '-');
 
         // Golden Quarks Gains
-        const totalGQuarksGains = this.goldenQuarksAmounts.reduce((sum, g) => sum + g.gain, 0);
-        const maxGQuarksGains = this.goldenQuarksAmounts.length > 0 ? Math.max(...this.goldenQuarksAmounts.map(g => g.gain)) : null;
-        const minGQuarksGains = this.goldenQuarksAmounts.length > 0 ? Math.min(...this.goldenQuarksAmounts.map(g => g.gain)) : null;
+        const totalGQuarksGains = this.cumulativeGQuarksGains;
+        const maxGQuarksGains = this.goldenQuarksAmounts.length > 0 ? this.maxGQuarksGains : null;
+        const minGQuarksGains = this.goldenQuarksAmounts.length > 0 ? this.minGQuarksGains : null;
         this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? this.formatNumber(totalGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null ? this.formatNumber(maxGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null ? this.formatNumber(minGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? this.formatNumber(maxGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? this.formatNumber(minGQuarksGains) : '-');
     }
 
     private renderPhaseStatistics(): void {
@@ -2042,7 +2106,13 @@ export class HSAutosingTimerModal {
         this.quarksGainsCount = 0;
         this.goldenQuarksGainsCount = 0;
         this.quarksAmounts = [];
+        this.cumulativeQuarksGains = 0;
+        this.maxQuarksGains = 0;
+        this.minQuarksGains = Infinity;
         this.goldenQuarksAmounts = [];
+        this.cumulativeGQuarksGains = 0;
+        this.maxGQuarksGains = 0;
+        this.minGQuarksGains = Infinity;
         this.c15Count = 0;
         this.c15Mean = new Decimal(0);
         this.c15M2 = new Decimal(0);
@@ -2050,6 +2120,9 @@ export class HSAutosingTimerModal {
         this.logC15Mean = 0;
         this.logC15M2 = 0;
         this.durationsHistory = [];
+        this.cumulativeDuration = 0;
+        this.maxDuration = 0;
+        this.minDuration = Infinity;
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
         this.startTime = 0;
