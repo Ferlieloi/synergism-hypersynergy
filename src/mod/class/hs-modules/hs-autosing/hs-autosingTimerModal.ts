@@ -922,17 +922,32 @@ export class HSAutosingTimerModal {
 
             <div class="hs-timer-section">
                 <div class="hs-section-header">TIMES</div>
-                <div class="hs-times-grid">
-                    <span class="hs-timer-label">Last 1:</span> <span id="hs-avg-1">-</span>
-                     <span id="hs-avg-10-lbl" class="hs-timer-label">Last 10:</span> <span id="hs-avg-10">-</span>
-                     <span id="hs-avg-50-lbl" class="hs-timer-label">Last 50:</span> <span id="hs-avg-50">-</span>
-                    <span id="hs-avg-all-lbl" class="hs-timer-label">All <span id="hs-avg-all-count">0</span>:</span> <span id="hs-avg-all">-</span>
-                </div>
-                <div class="hs-times-stats">
-                    <div class="hs-info-line"><span class="hs-timer-label">Total Time:</span> <span id="hs-total-time">-</span></div>
-                    <div class="hs-info-line"><span class="hs-timer-label">Max Time:</span> <span id="hs-max-time">-</span></div>
-                    <div class="hs-info-line"><span class="hs-timer-label">Min Time:</span> <span id="hs-min-time">-</span></div>
-                </div>
+                <table class="hs-times-table">
+                    <tr>
+                        <td><span class="hs-timer-label">Last 1:</span></td>
+                        <td><span id="hs-avg-1">-</span></td>
+                        <td><span class="hs-timer-label">Total Time:</span></td>
+                        <td><span id="hs-total-time">-</span></td>
+                    </tr>
+                    <tr>
+                        <td><span id="hs-avg-10-lbl" class="hs-timer-label">Last 10:</span></td>
+                        <td><span id="hs-avg-10">-</span></td>
+                        <td><span class="hs-timer-label">Max Time:</span></td>
+                        <td><span id="hs-max-time">-</span></td>
+                    </tr>
+                    <tr>
+                        <td><span id="hs-avg-50-lbl" class="hs-timer-label">Last 50:</span></td>
+                        <td><span id="hs-avg-50">-</span></td>
+                        <td><span class="hs-timer-label">Min Time:</span></td>
+                        <td><span id="hs-min-time">-</span></td>
+                    </tr>
+                    <tr>
+                        <td><span id="hs-avg-all-lbl" class="hs-timer-label">All <span id="hs-avg-all-count">0</span>:</span></td>
+                        <td><span id="hs-avg-all">-</span></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
                 <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
             </div>
 
@@ -940,19 +955,25 @@ export class HSAutosingTimerModal {
 
             <div class="hs-timer-section">
                 <div class="hs-section-header">QUARKS</div>
-                <div class="hs-info-line">
-                    <span class="hs-timer-label">Total:</span>
-                    <span id="hs-quarks-total">0</span>
-                    <span id="hs-quarks-prev"> (⇦0)</span>
+                <div class="hs-quarks-container">
+                    <div>
+                        <div class="hs-info-line">
+                            <span class="hs-timer-label">Total:</span>
+                            <span id="hs-quarks-total">0</span>
+                            <span id="hs-quarks-prev"> (⇦0)</span>
+                        </div>
+                        <div id="hs-quarks-rate-row" class="hs-info-line">
+                            <span class="hs-timer-label">Rate:</span>
+                            <span id="hs-quarks-rate-val">0/s</span>
+                            <span id="hs-quarks-rate-val-hr"> (0/hr)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-quarks-total-gains">-</span></div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-quarks-max-gains">-</span></div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-quarks-min-gains">-</span></div>
+                    </div>
                 </div>
-                <div id="hs-quarks-rate-row" class="hs-info-line">
-                    <span class="hs-timer-label">Rate:</span>
-                    <span id="hs-quarks-rate-val">0/s</span>
-                    <span id="hs-quarks-rate-val-hr"> (0/hr)</span>
-                </div>
-                <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-quarks-total-gains">-</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-quarks-max-gains">-</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-quarks-min-gains">-</span></div>
                 <div id="hs-sparkline-container-1" class="hs-sparkline-row"></div>
             </div>
 
@@ -960,19 +981,25 @@ export class HSAutosingTimerModal {
 
             <div class="hs-timer-section">
                 <div class="hs-section-header">GOLDEN QUARKS</div>
-                <div class="hs-info-line">
-                    <span class="hs-timer-label">Total:</span>
-                    <span id="hs-gquarks-total">0</span>
-                    <span id="hs-gquarks-prev"> (⇦0)</span>
+                <div class="hs-gquarks-container">
+                    <div>
+                        <div class="hs-info-line">
+                            <span class="hs-timer-label">Total:</span>
+                            <span id="hs-gquarks-total">0</span>
+                            <span id="hs-gquarks-prev"> (⇦0)</span>
+                        </div>
+                        <div id="hs-gquarks-rate-row" class="hs-info-line">
+                            <span class="hs-timer-label">Rate:</span>
+                            <span id="hs-gquarks-rate-val">0/s</span>
+                            <span id="hs-gquarks-rate-val-hr"> (0/hr)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-gquarks-total-gains">-</span></div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-gquarks-max-gains">-</span></div>
+                        <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-gquarks-min-gains">-</span></div>
+                    </div>
                 </div>
-                <div id="hs-gquarks-rate-row" class="hs-info-line">
-                    <span class="hs-timer-label">Rate:</span>
-                    <span id="hs-gquarks-rate-val">0/s</span>
-                    <span id="hs-gquarks-rate-val-hr"> (0/hr)</span>
-                </div>
-                <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-gquarks-total-gains">-</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-gquarks-max-gains">-</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-gquarks-min-gains">-</span></div>
                 <div id="hs-sparkline-container-2" class="hs-sparkline-row"></div>
             </div>
 
