@@ -127,7 +127,7 @@ export class HSAutosingTimerModal {
     // Prefix sums for O(1) windowed averages/variance of singularity durations
     private durationsPrefixSum: number[] = [0];
     private durationsPrefixSumSq: number[] = [0];
-    private readonly sparklineMaxPoints: number = 600;
+    private readonly sparklineMaxPoints: number = 50;
 
     // Latest snapshot for UI display
     private latestQuarksTotal: number = 0;
@@ -448,14 +448,12 @@ export class HSAutosingTimerModal {
             polyline.setAttribute('stroke-opacity', '0.8');
 
             let ratePolyline: SVGPolylineElement | null = null;
-            if (!isTime) {
-                ratePolyline = document.createElementNS(ns, 'polyline');
-                ratePolyline.setAttribute('fill', 'none');
-                ratePolyline.setAttribute('stroke', color);
-                ratePolyline.setAttribute('stroke-width', '1');
-                ratePolyline.setAttribute('stroke-opacity', '0.5');
-                ratePolyline.setAttribute('stroke-dasharray', '2,2');
-            }
+            ratePolyline = document.createElementNS(ns, 'polyline');
+            ratePolyline.setAttribute('fill', 'none');
+            ratePolyline.setAttribute('stroke', color);
+            ratePolyline.setAttribute('stroke-width', '1');
+            ratePolyline.setAttribute('stroke-opacity', '0.5');
+            ratePolyline.setAttribute('stroke-dasharray', '2,2');
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -538,7 +536,17 @@ export class HSAutosingTimerModal {
                 dom.lastPoints = points;
             }
 
-            if (dom.ratePolyline) dom.ratePolyline.setAttribute('points', '');
+            const pointsSecond: string[] = [];
+            for (let i = 0; i < data.length; i++) {
+                const x = (i / (data.length - 1)) * gw;
+                const y = 30 - ((data[i].value - min) / (max - min || 1)) * 30;
+                pointsSecond.push(`${x},${y}`);
+            }
+            const pointsSecondStr = pointsSecond.join(' ');
+            if (dom.ratePolyline && dom.lastPointsSecond !== pointsSecondStr) {
+                dom.ratePolyline.setAttribute('points', pointsSecondStr);
+                dom.lastPointsSecond = pointsSecondStr;
+            }
 
             const markerX = Math.max(0, gw - 4);
             const maxY = 30 - ((max - min) / (max - min || 1)) * 30;
