@@ -78,8 +78,6 @@ export class HSAutosingTimerModal {
     private singularityCount: number = 0;
     private lastSingularityTimestamp: number = 0;
     private lastSingularityDuration: number | null = null;
-    private prevQuarksTotal: number = 0;
-    private prevGoldenQuarksTotal: number = 0;
     private quarksGainsCount: number = 0;
     private goldenQuarksGainsCount: number = 0;
     private quarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
@@ -103,7 +101,6 @@ export class HSAutosingTimerModal {
     private _currentStepMaxTime: number | null = null;
     private phaseHistory: Map<string, { count: number, totalTime: number, sumSq: number, lastTime: number, repeats: number }> = new Map();
     private currentSingularityPhases: Map<string, number> = new Map();
-    private currentSingularityNumber: number = 0;
 
     // Merge Logic State
     private lastRecordedPhaseName: string | null = null;
@@ -186,6 +183,7 @@ export class HSAutosingTimerModal {
     private singHighestSpan: HTMLElement | null = null;
     private progressValSpan: HTMLElement | null = null;
     private c15TopSpan: HTMLElement | null = null;
+    private c15SigmaSpan: HTMLElement | null = null;
 
     private cachedStrategyOrder: string[] = [];
     private cachedStrategyOrderIndex: Map<string, number> = new Map();
@@ -193,11 +191,9 @@ export class HSAutosingTimerModal {
 
     // Cached nodes for general stats updates
     private quarksTotalSpan: HTMLElement | null = null;
-    private quarksPrevSpan: HTMLElement | null = null;
     private quarksRateValSpan: HTMLElement | null = null;
     private quarksRateHrSpan: HTMLElement | null = null;
     private gquarksTotalSpan: HTMLElement | null = null;
-    private gquarksPrevSpan: HTMLElement | null = null;
     private gquarksRateValSpan: HTMLElement | null = null;
     private gquarksRateHrSpan: HTMLElement | null = null;
 
@@ -697,7 +693,7 @@ export class HSAutosingTimerModal {
             }
 
             const labelMax = `${this.formatNumberWithSign(maxY)} /s`;
-            const labelAvg = `${this.formatNumberWithSign(totalGain)} total`;
+            const labelAvg = `${this.formatNumberWithSign(totalGain / totalTime)} /s`;
             const labelMin = `${this.formatNumberWithSign(minY)} /s`;
             if (dom.lastLabelMax !== labelMax) {
                 dom.labelMax.textContent = labelMax;
@@ -932,9 +928,13 @@ export class HSAutosingTimerModal {
         this.dynamicContent = document.createElement('div');
         this.dynamicContent.innerHTML = `
             <div class="hs-timer-section">
-                <div class="hs-section-header">FARMING <span id="hs-sing-val">#0 / #0</span><span id="hs-c15-top" class="hs-c15-top"></span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Completed:</span> <span id="hs-progress-val">0</span></div>
-                <div class="hs-info-line"><span class="hs-timer-label">Phase:</span> <span id="hs-phase-name-val">&nbsp;</span> <span id="hs-phase-timer-val"></span></div>
+                <div class="hs-farming-grid">
+                    <div class="hs-section-header-title">FARMING <span id="hs-sing-val">#0 / #0</span></div>
+                    <div class="hs-value-cell hs-detailed-value"><span id="hs-c15-top" class="hs-c15-top"></span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Completed:</span> <span id="hs-progress-val">0</span></div>
+                    <div class="hs-value-cell hs-detailed-value"><span id="hs-c15-sigma"></span></div>
+                </div>
+                <div class="hs-info-line-phase"><span class="hs-timer-label">Phase:</span> <span id="hs-phase-name-val">&nbsp;</span> <span id="hs-phase-timer-val"></span></div>
                 <div id="hs-step-container" class="hs-info-line-detailed">
                     <span class="hs-timer-label">Step:</span> <span id="hs-step-name-val" class="hs-detailed-value">&nbsp;</span> <span id="hs-step-timer-val" class="hs-detailed-value"></span>
                 </div>
@@ -943,58 +943,43 @@ export class HSAutosingTimerModal {
             <hr class="hs-timer-hr">
 
             <div class="hs-timer-section">
-                <div class="hs-section-header">TIMES</div>
-                <table class="hs-times-table">
-                    <tr>
-                        <td><span class="hs-timer-label">Last 1:</span></td>
-                        <td><span id="hs-avg-1">-</span></td>
-                        <td><span class="hs-timer-label">Total Time:</span></td>
-                        <td><span id="hs-total-time">-</span></td>
-                    </tr>
-                    <tr>
-                        <td><span id="hs-avg-10-lbl" class="hs-timer-label">Last 10:</span></td>
-                        <td><span id="hs-avg-10">-</span></td>
-                        <td><span class="hs-timer-label">Max Time:</span></td>
-                        <td><span id="hs-max-time">-</span></td>
-                    </tr>
-                    <tr>
-                        <td><span id="hs-avg-50-lbl" class="hs-timer-label">Last 50:</span></td>
-                        <td><span id="hs-avg-50">-</span></td>
-                        <td><span class="hs-timer-label">Min Time:</span></td>
-                        <td><span id="hs-min-time">-</span></td>
-                    </tr>
-                    <tr>
-                        <td><span id="hs-avg-all-lbl" class="hs-timer-label">All <span id="hs-avg-all-count">0</span>:</span></td>
-                        <td><span id="hs-avg-all">-</span></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                </table>
+                <div class="hs-times-grid">
+                    <div class="hs-section-header-title hs-section-header-title-full">TIMES</div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Last 1:</span></div>
+                    <div class="hs-value-cell"><span id="hs-avg-1">-</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Total:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-total-time" class="hs-detailed-value">-</span></div>
+                    <div class="hs-label-cell"><span id="hs-avg-10-lbl" class="hs-timer-label">Last 10:</span></div>
+                    <div class="hs-value-cell"><span id="hs-avg-10">-</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-max-time" class="hs-detailed-value">-</span></div>
+                    <div class="hs-label-cell"><span id="hs-avg-50-lbl" class="hs-timer-label">Last 50:</span></div>
+                    <div class="hs-value-cell"><span id="hs-avg-50">-</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-min-time" class="hs-detailed-value">-</span></div>
+                    <div class="hs-label-cell"><span id="hs-avg-all-lbl" class="hs-timer-label">All <span id="hs-avg-all-count">0</span>:</span></div>
+                    <div class="hs-value-cell"><span id="hs-avg-all">-</span></div>
+                    <div></div>
+                    <div></div>
+                </div>
                 <div id="hs-sparkline-container-3" class="hs-sparkline-row"></div>
             </div>
 
             <hr class="hs-timer-hr">
 
             <div class="hs-timer-section">
-                <div class="hs-section-header">QUARKS</div>
-                <div class="hs-quarks-container">
-                    <div>
-                        <div class="hs-info-line">
-                            <span class="hs-timer-label">Total:</span>
-                            <span id="hs-quarks-total">0</span>
-                            <span id="hs-quarks-prev"> (⇦0)</span>
-                        </div>
-                        <div id="hs-quarks-rate-row" class="hs-info-line">
-                            <span class="hs-timer-label">Rate:</span>
-                            <span id="hs-quarks-rate-val">0/s</span>
-                            <span id="hs-quarks-rate-val-hr"> (0/hr)</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-quarks-total-gains">-</span></div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-quarks-max-gains">-</span></div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-quarks-min-gains">-</span></div>
-                    </div>
+                <div class="hs-section-grid">
+                    <div class="hs-section-header-title-span2">QUARKS</div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Current:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span class="hs-detailed-value" id="hs-quarks-total">0</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Rate:</span></div>
+                    <div class="hs-value-cell"><span id="hs-quarks-rate-val" class="hs-quarks-rate-color">0/s</span> <span id="hs-quarks-rate-val-hr"> (0/hr)</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-quarks-max-gains" class="hs-detailed-value">-</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Gained:</span></div>
+                    <div class="hs-value-cell"><span id="hs-quarks-total-gains" class="hs-quarks-rate-color">-</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-quarks-min-gains" class="hs-detailed-value">-</span></div>
                 </div>
                 <div id="hs-sparkline-container-1" class="hs-sparkline-row"></div>
             </div>
@@ -1002,25 +987,18 @@ export class HSAutosingTimerModal {
             <hr class="hs-timer-hr">
 
             <div class="hs-timer-section">
-                <div class="hs-section-header">GOLDEN QUARKS</div>
-                <div class="hs-gquarks-container">
-                    <div>
-                        <div class="hs-info-line">
-                            <span class="hs-timer-label">Total:</span>
-                            <span id="hs-gquarks-total">0</span>
-                            <span id="hs-gquarks-prev"> (⇦0)</span>
-                        </div>
-                        <div id="hs-gquarks-rate-row" class="hs-info-line">
-                            <span class="hs-timer-label">Rate:</span>
-                            <span id="hs-gquarks-rate-val">0/s</span>
-                            <span id="hs-gquarks-rate-val-hr"> (0/hr)</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Total Gains:</span> <span id="hs-gquarks-total-gains">-</span></div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Max Gains:</span> <span id="hs-gquarks-max-gains">-</span></div>
-                        <div class="hs-info-line"><span class="hs-timer-label">Min Gains:</span> <span id="hs-gquarks-min-gains">-</span></div>
-                    </div>
+                <div class="hs-section-grid">
+                    <div class="hs-section-header-title-span2">GOLDEN QUARKS</div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Current:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span class="hs-detailed-value" id="hs-gquarks-total">0</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Rate:</span></div>
+                    <div class="hs-value-cell"><span id="hs-gquarks-rate-val" class="hs-gquarks-rate-color">0/s</span> <span id="hs-gquarks-rate-val-hr"> (0/hr)</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-gquarks-max-gains" class="hs-detailed-value">-</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Gained:</span></div>
+                    <div class="hs-value-cell"><span id="hs-gquarks-total-gains" class="hs-gquarks-rate-color">-</span></div>
+                    <div class="hs-label-cell hs-detailed-cell"><span class="hs-timer-label hs-detailed-value">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-cell"><span id="hs-gquarks-min-gains" class="hs-detailed-value">-</span></div>
                 </div>
                 <div id="hs-sparkline-container-2" class="hs-sparkline-row"></div>
             </div>
@@ -1066,11 +1044,9 @@ export class HSAutosingTimerModal {
 
         // Cache frequently updated nodes (avoid repeated getElementById during renders)
         this.quarksTotalSpan = document.getElementById('hs-quarks-total');
-        this.quarksPrevSpan = document.getElementById('hs-quarks-prev');
         this.quarksRateValSpan = document.getElementById('hs-quarks-rate-val');
         this.quarksRateHrSpan = document.getElementById('hs-quarks-rate-val-hr');
         this.gquarksTotalSpan = document.getElementById('hs-gquarks-total');
-        this.gquarksPrevSpan = document.getElementById('hs-gquarks-prev');
         this.gquarksRateValSpan = document.getElementById('hs-gquarks-rate-val');
         this.gquarksRateHrSpan = document.getElementById('hs-gquarks-rate-val-hr');
 
@@ -1081,6 +1057,7 @@ export class HSAutosingTimerModal {
         this.avgAllCountSpan = document.getElementById('hs-avg-all-count');
 
         this.c15TopSpan = document.getElementById('hs-c15-top');
+        this.c15SigmaSpan = document.getElementById('hs-c15-sigma');
 
         this.avg10LabelSpan = document.getElementById('hs-avg-10-lbl');
         this.avg50LabelSpan = document.getElementById('hs-avg-50-lbl');
@@ -1168,7 +1145,7 @@ export class HSAutosingTimerModal {
         // Sparkline SVG width: leave space for the label column on the right.
         // (Sparkline row is flex: [svg][labels])
         const FIXED_GRAPH_WIDTH = 400; // px
-        const LABELS_ESTIMATE = 92; // px; right-side label column width
+        const LABELS_ESTIMATE = 110; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
 
         // Respect viewport so the modal doesn't go off-screen by default.
         // NOTE: do not force a minimum larger than the fixed width.
@@ -1320,8 +1297,6 @@ export class HSAutosingTimerModal {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
         this.lastSingularityDuration = null;
-        this.prevQuarksTotal = initialQuarks;
-        this.prevGoldenQuarksTotal = initialGoldenQuarks;
         this.quarksGainsCount = 0;
         this.goldenQuarksGainsCount = 0;
         this.durationsHistory = [];
@@ -1505,12 +1480,11 @@ export class HSAutosingTimerModal {
         this.lastSingularityDuration = singularityDuration;
         this.singularityCount += 1;
 
-        this.prevGoldenQuarksTotal = this.latestGoldenQuarksTotal;
         this.latestGoldenQuarksTotal = currentGoldenQuarks;
 
         // Handle quarks exactly like golden quarks: use passed totals/gains.
         const realQuarksGain = gainedQuarks;
-        this.prevQuarksTotal = this.latestQuarksTotal;
+
         this.latestQuarksTotal = currentQuarks;
 
         if (singularityDuration > 0) {
@@ -1520,7 +1494,6 @@ export class HSAutosingTimerModal {
             this.allTimeMinDuration = Math.min(this.allTimeMinDuration, singularityDuration);
 
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
-
             this.quarksGainsCount += 1;
             this.quarksAmounts.push({gain: realQuarksGain, timestamp: now, duration: singularityDuration});
             this.cumulativeQuarksGains += realQuarksGain;
@@ -1690,10 +1663,10 @@ export class HSAutosingTimerModal {
     }
 
     private getQuarksPerSecond(isGolden: boolean): number | null {
-        const amounts = isGolden ? this.goldenQuarksAmounts : this.quarksAmounts;
-        if (amounts.length === 0) return null;
-        const last = amounts[amounts.length - 1];
-        return last.gain / last.duration;
+        const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
+        if (count === 0 || this.cumulativeSingularityTime <= 0) return null;
+        const total = isGolden ? this.cumulativeGoldenQuarksGained : this.cumulativeQuarksGained;
+        return total / this.cumulativeSingularityTime;
     }
 
     private formatNumber(num: number): string {
@@ -1719,6 +1692,21 @@ export class HSAutosingTimerModal {
             } catch (e2) {
                 return String(d);
             }
+        }
+    }
+
+    private formatTime(seconds: number): string {
+        const totalSeconds = Math.floor(seconds);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours}h${minutes.toString().padStart(2, '0')}m${secs.toString().padStart(2, '0')}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m${secs.toString().padStart(2, '0')}s`;
+        } else {
+            return `${secs}s`;
         }
     }
 
@@ -1910,10 +1898,8 @@ export class HSAutosingTimerModal {
     private renderGeneralStats(): void {
         const count = this.getSingularityCount();
         const currentQuarks = this.latestQuarksTotal;
-        const previousQuarks = this.prevQuarksTotal;
 
         const currentGoldenQuarks = this.latestGoldenQuarksTotal;
-        const previousGoldenQuarks = this.prevGoldenQuarksTotal;
 
         // 1. Singularity & Progress
         const target = this.getSingularityTarget();
@@ -1930,7 +1916,6 @@ export class HSAutosingTimerModal {
 
         // 2. Quarks
         this.setTextEl(this.quarksTotalSpan, this.formatNumber(currentQuarks));
-        this.setTextEl(this.quarksPrevSpan, `(⇦${this.formatNumber(previousQuarks)})`);
 
         const quarksPerSec = this.getQuarksPerSecond(false);
         if (quarksPerSec !== null) {
@@ -1943,7 +1928,6 @@ export class HSAutosingTimerModal {
 
         // 3. Golden Quarks
         this.setTextEl(this.gquarksTotalSpan, this.formatNumber(currentGoldenQuarks));
-        this.setTextEl(this.gquarksPrevSpan, `(⇦${this.formatNumber(previousGoldenQuarks)})`);
 
         const goldenQuarksPerSec = this.getQuarksPerSecond(true);
         if (goldenQuarksPerSec !== null) {
@@ -1974,17 +1958,18 @@ export class HSAutosingTimerModal {
         const totalTime = this.allTimeCumulativeDuration;
         const maxTime = this.singularityCount > 0 ? this.allTimeMaxDuration : null;
         const minTime = this.singularityCount > 0 ? this.allTimeMinDuration : null;
-        this.setTextEl(this.totalTimeSpan, totalTime > 0 ? `${totalTime.toFixed(2)}s` : '-');
+        this.setTextEl(this.totalTimeSpan, totalTime > 0 ? this.formatTime(totalTime) : '-');
         this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
         this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
 
         // C15 display: show average and std of log(C15) (inline)
-        if (this.c15TopSpan) {
+        if (this.c15TopSpan && this.c15SigmaSpan) {
             const avgC15 = this.getC15AverageLast(count);
             const sdLogC15 = this.getLogC15Std();
             const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
-            const sdText = sdLogC15 !== null ? ` (σlog ±${sdLogC15.toFixed(3)})` : '';
-            this.setTextEl(this.c15TopSpan, `C15 ${valText}${sdText}`);
+            const sdText = sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '';
+            this.setTextEl(this.c15TopSpan, `C15 ${valText}`);
+            this.setTextEl(this.c15SigmaSpan, sdText);
             this.c15TopSpan.title = '';
         }
 
@@ -2037,7 +2022,7 @@ export class HSAutosingTimerModal {
             const avg = data.totalTime / data.count;
             const last = data.lastTime;
             const sd = this.getPhaseStandardDeviation(phaseName);
-            const sdStr = sd !== null ? `±${sd.toFixed(2)}s` : '-';
+            const sdStr = sd !== null ? `±${sd.toFixed(2)}s` : '±0.00s';
             const avgLoops = 1 + (data.repeats / data.count);
             const count = data.count;
 
@@ -2096,6 +2081,31 @@ export class HSAutosingTimerModal {
             if (this.sparklineContainer1) this.sparklineContainer1.style.display = 'flex';
             if (this.sparklineContainer2) this.sparklineContainer2.style.display = 'flex';
             if (this.sparklineContainer3) this.sparklineContainer3.style.display = 'flex';
+
+            // Show detailed cells
+            const detailedCells = this.timerDisplay?.querySelectorAll('.hs-detailed-cell');
+            detailedCells?.forEach(cell => {
+                (cell as HTMLElement).style.visibility = 'visible';
+            });
+
+            // Show all rows when detailed data is on
+            const avg10Label = this.timerDisplay?.querySelector('#hs-avg-10-lbl')?.parentElement;
+            const avg10Value = this.timerDisplay?.querySelector('#hs-avg-10')?.parentElement;
+            const avg50Label = this.timerDisplay?.querySelector('#hs-avg-50-lbl')?.parentElement;
+            const avg50Value = this.timerDisplay?.querySelector('#hs-avg-50')?.parentElement;
+            const maxLabel = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement?.previousElementSibling;
+            const maxValue = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement;
+            const minLabel = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement?.previousElementSibling;
+            const minValue = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement;
+
+            if (avg10Label) (avg10Label as HTMLElement).style.display = '';
+            if (avg10Value) (avg10Value as HTMLElement).style.display = '';
+            if (avg50Label) (avg50Label as HTMLElement).style.display = '';
+            if (avg50Value) (avg50Value as HTMLElement).style.display = '';
+            if (maxLabel) (maxLabel as HTMLElement).style.display = '';
+            if (maxValue) (maxValue as HTMLElement).style.display = '';
+            if (minLabel) (minLabel as HTMLElement).style.display = '';
+            if (minValue) (minValue as HTMLElement).style.display = '';
         } else {
             if (this.stepContainer) this.stepContainer.style.display = 'none';
             if (this.footerSection) this.footerSection.style.display = 'none';
@@ -2110,6 +2120,31 @@ export class HSAutosingTimerModal {
             if (this.sparklineContainer1) this.sparklineContainer1.style.display = 'none';
             if (this.sparklineContainer2) this.sparklineContainer2.style.display = 'none';
             if (this.sparklineContainer3) this.sparklineContainer3.style.display = 'none';
+
+            // Hide detailed cells
+            const detailedCells = this.timerDisplay?.querySelectorAll('.hs-detailed-cell');
+            detailedCells?.forEach(cell => {
+                (cell as HTMLElement).style.visibility = 'hidden';
+            });
+
+            // Hide specific rows completely when detailed data is off
+            const avg10Label = this.timerDisplay?.querySelector('#hs-avg-10-lbl')?.parentElement;
+            const avg10Value = this.timerDisplay?.querySelector('#hs-avg-10')?.parentElement;
+            const avg50Label = this.timerDisplay?.querySelector('#hs-avg-50-lbl')?.parentElement;
+            const avg50Value = this.timerDisplay?.querySelector('#hs-avg-50')?.parentElement;
+            const maxLabel = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement?.previousElementSibling;
+            const maxValue = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement;
+            const minLabel = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement?.previousElementSibling;
+            const minValue = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement;
+
+            if (avg10Label) (avg10Label as HTMLElement).style.display = 'none';
+            if (avg10Value) (avg10Value as HTMLElement).style.display = 'none';
+            if (avg50Label) (avg50Label as HTMLElement).style.display = 'none';
+            if (avg50Value) (avg50Value as HTMLElement).style.display = 'none';
+            if (maxLabel) (maxLabel as HTMLElement).style.display = 'none';
+            if (maxValue) (maxValue as HTMLElement).style.display = 'none';
+            if (minLabel) (minLabel as HTMLElement).style.display = 'none';
+            if (minValue) (minValue as HTMLElement).style.display = 'none';
         }
     }
 
@@ -2134,8 +2169,6 @@ export class HSAutosingTimerModal {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
         this.lastSingularityDuration = null;
-        this.prevQuarksTotal = 0;
-        this.prevGoldenQuarksTotal = 0;
         this.quarksGainsCount = 0;
         this.goldenQuarksGainsCount = 0;
         this.quarksAmounts = [];

@@ -400,7 +400,7 @@
 .hs-timer-hr {
     border: none;
     border-top: 1px solid #444;
-    margin: 2px 0 4px 0;
+    margin: 4px 0;
 }
 
 .hs-modal-img {
@@ -1340,6 +1340,7 @@ a.hs-link {
     text-transform: uppercase;
     display: flex;
     align-items: center;
+    position: relative;
 }
 
 .hs-c15-top {
@@ -1365,6 +1366,15 @@ a.hs-link {
     line-height: 1.2;
 }
 
+.hs-info-line-phase {
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+}
+
 #hs-autosing-timer-display .hs-info-line-detailed {
     font-size: 10px;
     margin-bottom: 4px;
@@ -1382,20 +1392,12 @@ a.hs-link {
     color: #999999 !important;
 }
 
-#hs-autosing-timer-display .hs-times-grid {
-    display: grid;
-    grid-template-columns: max-content max-content;
-    column-gap: 5px;
-    row-gap: 3px;
-    align-items: center;
-}
-
 #hs-autosing-timer-display .hs-times-grid .hs-timer-label {
     text-align: right;
 }
 
 #hs-autosing-timer-display .hs-detailed-value {
-    color: #cccccc !important;
+    color: #999999 !important;
     font-weight: normal !important;
     font-size: 11px;
 }
@@ -1469,7 +1471,6 @@ a.hs-link {
 #hs-autosing-timer-display #hs-quarks-rate-val {
     color: #00BCD4;
     font-weight: bold;
-    margin-left: 6px;
 }
 
 #hs-autosing-timer-display #hs-quarks-prev,
@@ -1478,14 +1479,12 @@ a.hs-link {
 #hs-autosing-timer-display #hs-gquarks-rate-val-hr {
     color: #666;
     font-size: 11px;
-    margin-left: 4px;
 }
 
 #hs-autosing-timer-display #hs-gquarks-total,
 #hs-autosing-timer-display #hs-gquarks-rate-val {
     color: #F1FA8C;
     font-weight: bold;
-    margin-left: 6px;
 }
 
 #hs-autosing-timer-display .hs-footer-loadouts {
@@ -1502,6 +1501,7 @@ a.hs-link {
 #hs-autosing-timer-display .hs-sparkline-row {
     display: flex;
     align-items: center;
+    margin-top: 4px;
 }
 
 #hs-autosing-timer-display .hs-sparkline-muted {
@@ -1738,4 +1738,87 @@ a.hs-link {
 .hs-stats-last {
     text-align: center;
     color: #00bcd4 !important;
+}
+
+/* General label/value alignments */
+.hs-label-cell {
+    text-align: right;
+}
+
+.hs-value-cell {
+    text-align: left;
+}
+
+.hs-quarks-rate-color {
+    color: #00BCD4;
+    font-weight: bold;
+}
+
+.hs-gquarks-rate-color {
+    color: #F1FA8C;
+    font-weight: bold;
+}
+
+.hs-current-display {
+    display: flex;
+    align-items: center;
+}
+
+.hs-section-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 1;
+}
+
+.hs-section-header-title-span2 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 2;
+}
+
+.hs-section-header-title-full {
+    grid-column: 1 / -1;
+}
+
+.hs-section-header-title-single {
+    grid-column: span 1;
+}
+
+.hs-times-grid {
+    display: grid;
+    grid-template-columns: min-content max-content auto auto;
+    column-gap: 5px;
+    row-gap: 3px;
+    align-items: center;
+}
+
+.hs-farming-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 2px;
+}
+
+.hs-farming-grid .hs-label-cell {
+    text-align: left;
+}
+
+.hs-farming-grid .hs-value-cell {
+    text-align: right;
+}
+
+.hs-section-grid {
+    display: grid;
+    grid-template-columns: min-content max-content auto auto;
+    gap: 2px;
 }
