@@ -31,7 +31,7 @@ interface SparklineDom {
     container: HTMLElement;
     svg: SVGSVGElement;
     polyline: SVGPolylineElement;
-    ratePolyline?: SVGPolylineElement;
+    ratePolyline: SVGPolylineElement | null;
     maxLine: SVGLineElement;
     minLine: SVGLineElement;
     labelMax: HTMLSpanElement;
@@ -39,14 +39,15 @@ interface SparklineDom {
     labelMin: HTMLSpanElement;
     isTime: boolean;
     color: string;
-    lastWidth?: number;
-    lastPoints?: string;
-    lastMaxY?: number;
-    lastMinY?: number;
-    lastMarkerX?: number;
-    lastLabelMax?: string;
-    lastLabelAvg?: string;
-    lastLabelMin?: string;
+    lastWidth: number;
+    lastPoints: string;
+    lastPointsSecond: string;
+    lastMaxY: number;
+    lastMinY: number;
+    lastMarkerX: number;
+    lastLabelMax: string;
+    lastLabelAvg: string;
+    lastLabelMin: string;
 }
 
 interface PhaseRowDom {
@@ -81,8 +82,8 @@ export class HSAutosingTimerModal {
     private prevGoldenQuarksTotal: number = 0;
     private quarksGainsCount: number = 0;
     private goldenQuarksGainsCount: number = 0;
-    private quarksAmounts: {value: number, time: number}[] = [];
-    private goldenQuarksAmounts: {value: number, time: number}[] = [];
+    private quarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
+    private goldenQuarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
     private c15Count: number = 0;
     private c15Mean: Decimal = new Decimal(0);
     private c15M2: Decimal = new Decimal(0);
@@ -90,7 +91,7 @@ export class HSAutosingTimerModal {
     private logC15Count: number = 0;
     private logC15Mean: number = 0;
     private logC15M2: number = 0;
-    private durationsHistory: {value: number, time: number}[] = [];
+    private durationsHistory: {value: number, timestamp: number}[] = [];
     private startTime: number = 0;
 
     // Phase tracking
@@ -126,13 +127,7 @@ export class HSAutosingTimerModal {
     // Prefix sums for O(1) windowed averages/variance of singularity durations
     private durationsPrefixSum: number[] = [0];
     private durationsPrefixSumSq: number[] = [0];
-    private readonly sparklineMaxPoints: number = 250;
-
-    // Cached min/max rates for sparklines
-    private minQuarksRateLabel: number = 0;
-    private maxQuarksRateLabel: number = 0;
-    private minGoldenQuarksRateLabel: number = 0;
-    private maxGoldenQuarksRateLabel: number = 0;
+    private readonly sparklineMaxPoints: number = 600;
 
     // Latest snapshot for UI display
     private latestQuarksTotal: number = 0;
@@ -451,10 +446,16 @@ export class HSAutosingTimerModal {
             polyline.setAttribute('stroke', color);
             polyline.setAttribute('stroke-width', '1');
             polyline.setAttribute('stroke-opacity', '0.8');
-            // No dash for any lines now
 
-            let ratePolyline: SVGPolylineElement | undefined;
-            // Rate polylines disabled due to calculation issues - proper rates shown in UI
+            let ratePolyline: SVGPolylineElement | null = null;
+            if (!isTime) {
+                ratePolyline = document.createElementNS(ns, 'polyline');
+                ratePolyline.setAttribute('fill', 'none');
+                ratePolyline.setAttribute('stroke', color);
+                ratePolyline.setAttribute('stroke-width', '1');
+                ratePolyline.setAttribute('stroke-opacity', '0.5');
+                ratePolyline.setAttribute('stroke-dasharray', '2,2');
+            }
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -465,6 +466,7 @@ export class HSAutosingTimerModal {
             minLine.setAttribute('stroke-width', '1');
 
             svg.appendChild(polyline);
+            if (ratePolyline) svg.appendChild(ratePolyline);
             svg.appendChild(maxLine);
             svg.appendChild(minLine);
 
@@ -487,7 +489,7 @@ export class HSAutosingTimerModal {
             container.appendChild(svg);
             container.appendChild(labels);
 
-            return { container, svg, polyline, ratePolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color };
+            return { container, svg, polyline, ratePolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color, lastWidth: 0, lastPoints: '', lastPointsSecond: '', lastMarkerX: 0, lastMaxY: 0, lastMinY: 0, lastLabelMax: '', lastLabelAvg: '', lastLabelMin: '' };
         };
 
         this.sparklineQuarks = build(this.sparklineContainer1, '#00BCD4', false);
@@ -495,7 +497,7 @@ export class HSAutosingTimerModal {
         this.sparklineTimes = build(this.sparklineContainer3, '#FF8A80', true);
     }
 
-    private updateSparkline(dom: SparklineDom | null, data: {value: number, time: number}[]): void {
+    private updateSparkline(dom: SparklineDom | null, data: any[]): void {
         if (!dom) return;
         // Only show meaningful sparklines when at least 2 points exist.
         if (data.length < 2) {
@@ -508,8 +510,10 @@ export class HSAutosingTimerModal {
         }
 
         const gw = this.computedGraphWidth || 230;
-        const spark = this.generateSparklineMetadata(data, gw, 30);
-        const markerX = Math.max(0, gw - 4);
+        const times = data.map(d => d.timestamp);
+        const minTime = Math.min(...times);
+        const maxTime = Math.max(...times);
+        const timeRange = maxTime - minTime || 1;
 
         const widthChanged = dom.lastWidth !== gw;
         if (widthChanged) {
@@ -517,44 +521,56 @@ export class HSAutosingTimerModal {
             dom.lastWidth = gw;
         }
 
-        if (dom.lastPoints !== spark.points) {
-            dom.polyline.setAttribute('points', spark.points);
-            dom.lastPoints = spark.points;
-        }
-
-        if (dom.ratePolyline) {
-            // Rate polylines disabled
-            dom.ratePolyline.setAttribute('points', '');
-        }
-
-        if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== spark.maxY) {
-            const gwStr = `${gw}`;
-            const markerXStr = `${markerX}`;
-            const maxY = `${spark.maxY}`;
-            dom.maxLine.setAttribute('x1', markerXStr);
-            dom.maxLine.setAttribute('x2', gwStr);
-            dom.maxLine.setAttribute('y1', maxY);
-            dom.maxLine.setAttribute('y2', maxY);
-            dom.lastMarkerX = markerX;
-            dom.lastMaxY = spark.maxY;
-        }
-
-        if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== spark.minY) {
-            const gwStr = `${gw}`;
-            const markerXStr = `${markerX}`;
-            const minY = `${spark.minY}`;
-            dom.minLine.setAttribute('x1', markerXStr);
-            dom.minLine.setAttribute('x2', gwStr);
-            dom.minLine.setAttribute('y1', minY);
-            dom.minLine.setAttribute('y2', minY);
-            dom.lastMarkerX = markerX;
-            dom.lastMinY = spark.minY;
-        }
-
         if (dom.isTime) {
-            const labelMax = `${spark.max.toFixed(2)}s`;
-            const labelAvg = `${spark.avg.toFixed(2)}s avg`;
-            const labelMin = `${spark.min.toFixed(2)}s`;
+            // For times, use standard logic but with time-based x
+            const values = data.map(d => d.value);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+            const points = data.map(d => {
+                const x = ((d.timestamp - minTime) / timeRange) * gw;
+                const y = 30 - ((d.value - min) / (max - min || 1)) * 30;
+                return `${x},${y}`;
+            }).join(' ');
+
+            if (dom.lastPoints !== points) {
+                dom.polyline.setAttribute('points', points);
+                dom.lastPoints = points;
+            }
+
+            if (dom.ratePolyline) dom.ratePolyline.setAttribute('points', '');
+
+            const markerX = Math.max(0, gw - 4);
+            const maxY = 30 - ((max - min) / (max - min || 1)) * 30;
+            const minY = 30 - ((min - min) / (max - min || 1)) * 30;
+
+            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxY) {
+                const gwStr = `${gw}`;
+                const markerXStr = `${markerX}`;
+                const maxYStr = `${maxY}`;
+                dom.maxLine.setAttribute('x1', markerXStr);
+                dom.maxLine.setAttribute('x2', gwStr);
+                dom.maxLine.setAttribute('y1', maxYStr);
+                dom.maxLine.setAttribute('y2', maxYStr);
+                dom.lastMarkerX = markerX;
+                dom.lastMaxY = maxY;
+            }
+
+            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== minY) {
+                const gwStr = `${gw}`;
+                const markerXStr = `${markerX}`;
+                const minYStr = `${minY}`;
+                dom.minLine.setAttribute('x1', markerXStr);
+                dom.minLine.setAttribute('x2', gwStr);
+                dom.minLine.setAttribute('y1', minYStr);
+                dom.minLine.setAttribute('y2', minYStr);
+                dom.lastMarkerX = markerX;
+                dom.lastMinY = minY;
+            }
+
+            const labelMax = `${max.toFixed(2)}s`;
+            const labelAvg = `${avg.toFixed(2)}s avg`;
+            const labelMin = `${min.toFixed(2)}s`;
             if (dom.lastLabelMax !== labelMax) {
                 dom.labelMax.textContent = labelMax;
                 dom.lastLabelMax = labelMax;
@@ -568,13 +584,81 @@ export class HSAutosingTimerModal {
                 dom.lastLabelMin = labelMin;
             }
         } else {
-            const isQuarks = data === this.quarksAmounts;
-            const minRate = isQuarks ? this.minQuarksRateLabel : this.minGoldenQuarksRateLabel;
-            const maxRate = isQuarks ? this.maxQuarksRateLabel : this.maxGoldenQuarksRateLabel;
+            // For quarks/golden
+            let totalGain = 0;
+            let totalTime = 0;
+            let minY = Infinity;
+            let maxY = -Infinity;
+            for (let i = 0; i < data.length; i++) {
+                const d = data[i];
+                totalGain += d.gain;
+                totalTime += d.duration;
+                const individualRate = d.gain / d.duration;
+                minY = Math.min(minY, individualRate);
+                maxY = Math.max(maxY, individualRate);
+            }
+            const yRange = maxY - minY || 1;
+            const pointsMain: string[] = [];
+            const pointsSecond: string[] = [];
+            totalGain = 0;
+            totalTime = 0;
+            for (let i = 0; i < data.length; i++) {
+                const d = data[i];
+                totalGain += d.gain;
+                totalTime += d.duration;
+                const runningAvg = totalGain / totalTime;
+                const x = ((d.timestamp - minTime) / timeRange) * gw;
+                const yMain = 30 - ((runningAvg - minY) / yRange) * 30;
+                pointsMain.push(`${x},${yMain}`);
+                const individualRate = d.gain / d.duration;
+                const ySecond = 30 - ((individualRate - minY) / yRange) * 30;
+                pointsSecond.push(`${x},${ySecond}`);
+            }
 
-            const labelMax = `+${this.formatNumber(maxRate)} /s`;
-            const labelAvg = `+${this.formatNumber(spark.avg)} avg`;
-            const labelMin = `+${this.formatNumber(minRate)} /s`;
+            const pointsMainStr = pointsMain.join(' ');
+            const pointsSecondStr = pointsSecond.join(' ');
+
+            if (dom.lastPoints !== pointsMainStr) {
+                dom.polyline.setAttribute('points', pointsMainStr);
+                dom.lastPoints = pointsMainStr;
+            }
+
+            if (dom.ratePolyline && dom.lastPointsSecond !== pointsSecondStr) {
+                dom.ratePolyline.setAttribute('points', pointsSecondStr);
+                dom.lastPointsSecond = pointsSecondStr;
+            }
+
+            const markerX = Math.max(0, gw - 4);
+            const maxYPos = 30 - ((maxY - minY) / yRange) * 30;
+            const minYPos = 30 - ((minY - minY) / yRange) * 30;
+
+            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxYPos) {
+                const gwStr = `${gw}`;
+                const markerXStr = `${markerX}`;
+                const maxYStr = `${maxYPos}`;
+                dom.maxLine.setAttribute('x1', markerXStr);
+                dom.maxLine.setAttribute('x2', gwStr);
+                dom.maxLine.setAttribute('y1', maxYStr);
+                dom.maxLine.setAttribute('y2', maxYStr);
+                dom.lastMarkerX = markerX;
+                dom.lastMaxY = maxYPos;
+            }
+
+            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== minYPos) {
+                const gwStr = `${gw}`;
+                const markerXStr = `${markerX}`;
+                const minYStr = `${minYPos}`;
+                dom.minLine.setAttribute('x1', markerXStr);
+                dom.minLine.setAttribute('x2', gwStr);
+                dom.minLine.setAttribute('y1', minYStr);
+                dom.minLine.setAttribute('y2', minYStr);
+                dom.lastMarkerX = markerX;
+                dom.lastMinY = minYPos;
+            }
+
+            const labelMax = `${this.formatNumberWithSign(maxY)} /s`;
+            const labelAvg = `${this.formatNumberWithSign(totalGain)} total`;
+            const labelMin = `${this.formatNumberWithSign(minY)} /s`;
             if (dom.lastLabelMax !== labelMax) {
                 dom.labelMax.textContent = labelMax;
                 dom.lastLabelMax = labelMax;
@@ -954,19 +1038,16 @@ export class HSAutosingTimerModal {
         const isEnabled = this.advancedDataCollectionEnabled;
         const hasData = this.compressedBundles.length > 0;
 
-        const visible = isEnabled && hasData;
+        const visible = isEnabled;
 
         this.exportButton.style.display = visible ? 'block' : 'none';
 
         if (visible) {
-            this.exportButton.disabled = false;
-            this.exportButton.style.opacity = '1';
-            this.exportButton.textContent =
-                `📊 Export Data (${this.singularityBundles.length} singularities)`;
-        } else if (isEnabled && !hasData) {
-            // Optional: show but disabled? Or just hide. 
-            // Previous code hid it if no data. Keeping that.
-            this.exportButton.style.display = 'none';
+            this.exportButton.disabled = !hasData;
+            this.exportButton.style.opacity = hasData ? '1' : '0.5';
+            this.exportButton.textContent = hasData
+                ? `📊 Export Data (${this.singularityBundles.length} singularities)`
+                : '📊 No Data to Export';
         }
     }
 
@@ -1158,10 +1239,6 @@ export class HSAutosingTimerModal {
         this.durationsHistory = [];
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
-        this.minQuarksRateLabel = 0;
-        this.maxQuarksRateLabel = 0;
-        this.minGoldenQuarksRateLabel = 0;
-        this.maxGoldenQuarksRateLabel = 0;
         this.startTime = performance.now();
         this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
@@ -1328,76 +1405,20 @@ export class HSAutosingTimerModal {
         this.prevQuarksTotal = this.latestQuarksTotal;
         this.latestQuarksTotal = currentQuarks;
 
-        // If shifting, check if the rate being removed is min or max
-        let quarksNeedRecompute = false;
-        let goldenNeedRecompute = false;
-
         if (singularityDuration > 0) {
-            // Check if buffers were full before adding (will shift if so)
-            const quarksWasFull = this.quarksAmounts.length === this.sparklineMaxPoints;
-            const goldenQuarksWasFull = this.goldenQuarksAmounts.length === this.sparklineMaxPoints;
-
-            if (quarksWasFull && this.quarksAmounts.length >= 2) {
-                const dt = (this.quarksAmounts[1].time - this.quarksAmounts[0].time) / 1000;
-                if (dt > 0) {
-                    const removedRate = (this.quarksAmounts[1].value - this.quarksAmounts[0].value) / dt;
-                    quarksNeedRecompute = removedRate === this.minQuarksRateLabel || removedRate === this.maxQuarksRateLabel;
-                }
-            }
-            if (goldenQuarksWasFull && this.goldenQuarksAmounts.length >= 2) {
-                const dt = (this.goldenQuarksAmounts[1].time - this.goldenQuarksAmounts[0].time) / 1000;
-                if (dt > 0) {
-                    const removedRate = (this.goldenQuarksAmounts[1].value - this.goldenQuarksAmounts[0].value) / dt;
-                    goldenNeedRecompute = removedRate === this.minGoldenQuarksRateLabel || removedRate === this.maxGoldenQuarksRateLabel;
-                }
-            }
-
             // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
+
             this.quarksGainsCount += 1;
-            this.pushSparklineValue(this.quarksAmounts, realQuarksGain, now);
+            this.quarksAmounts.push({gain: realQuarksGain, timestamp: now, duration: singularityDuration});
 
             this.goldenQuarksGainsCount += 1;
-            this.pushSparklineValue(this.goldenQuarksAmounts, gainedGoldenQuarks, now);
+            this.goldenQuarksAmounts.push({gain: gainedGoldenQuarks, timestamp: now, duration: singularityDuration});
 
             // O(1) optimization updates
             this.cumulativeSingularityTime += singularityDuration;
             this.cumulativeQuarksGained += realQuarksGain;
             this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
         }
-
-        // If the removed rate was min or max, recompute fully
-        if (quarksNeedRecompute) {
-            this.minQuarksRateLabel = Infinity;
-            this.maxQuarksRateLabel = -Infinity;
-            for (let i = 1; i < this.quarksAmounts.length; i++) {
-                const dt = (this.quarksAmounts[i].time - this.quarksAmounts[i - 1].time) / 1000;
-                if (dt > 0) {
-                    const rate = (this.quarksAmounts[i].value - this.quarksAmounts[i - 1].value) / dt;
-                    if (rate < this.minQuarksRateLabel) this.minQuarksRateLabel = rate;
-                    if (rate > this.maxQuarksRateLabel) this.maxQuarksRateLabel = rate;
-                }
-            }
-            if (this.minQuarksRateLabel === Infinity) this.minQuarksRateLabel = 0;
-            if (this.maxQuarksRateLabel === -Infinity) this.maxQuarksRateLabel = 0;
-        }
-
-        if (goldenNeedRecompute) {
-            this.minGoldenQuarksRateLabel = Infinity;
-            this.maxGoldenQuarksRateLabel = -Infinity;
-            for (let i = 1; i < this.goldenQuarksAmounts.length; i++) {
-                const dt = (this.goldenQuarksAmounts[i].time - this.goldenQuarksAmounts[i - 1].time) / 1000;
-                if (dt > 0) {
-                    const rate = (this.goldenQuarksAmounts[i].value - this.goldenQuarksAmounts[i - 1].value) / dt;
-                    if (rate < this.minGoldenQuarksRateLabel) this.minGoldenQuarksRateLabel = rate;
-                    if (rate > this.maxGoldenQuarksRateLabel) this.maxGoldenQuarksRateLabel = rate;
-                }
-            }
-            if (this.minGoldenQuarksRateLabel === Infinity) this.minGoldenQuarksRateLabel = 0;
-            if (this.maxGoldenQuarksRateLabel === -Infinity) this.maxGoldenQuarksRateLabel = 0;
-        }
-
-        // Update cached min/max rates for sparklines (incremental)
-        this.updateCachedRates();
 
         // Track duration sums for O(1) windowed average/variance
         this.pushSparklineValue(this.durationsHistory, singularityDuration, now);
@@ -1518,16 +1539,18 @@ export class HSAutosingTimerModal {
     }
 
     private getQuarksPerSecond(isGolden: boolean): number | null {
-        const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
-        if (count === 0 || this.cumulativeSingularityTime <= 0) return null;
-
-        // Calculate overall rate: total gains / total time
-        const totalGains = isGolden ? this.cumulativeGoldenQuarksGained : this.cumulativeQuarksGained;
-        return totalGains / this.cumulativeSingularityTime;
+        const amounts = isGolden ? this.goldenQuarksAmounts : this.quarksAmounts;
+        if (amounts.length === 0) return null;
+        const last = amounts[amounts.length - 1];
+        return last.gain / last.duration;
     }
 
     private formatNumber(num: number): string {
         return Number(num).toExponential(2).replace('+', '');
+    }
+
+    private formatNumberWithSign(num: number): string {
+        return Number(num).toExponential(2);
     }
 
     private formatDecimal(d: Decimal | null | undefined): string {
@@ -1690,34 +1713,10 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
-    private pushSparklineValue(buffer: {value: number, time: number}[], value: number, time: number): void {
-        buffer.push({value, time});
+    private pushSparklineValue(buffer: {value: number, timestamp: number}[], value: number, timestamp: number): void {
+        buffer.push({value, timestamp});
         if (buffer.length > this.sparklineMaxPoints) {
             buffer.shift(); // Remove oldest element
-        }
-    }
-
-    private updateCachedRates(): void {
-        // Incremental update for quarks
-        const lenQ = this.quarksAmounts.length;
-        if (lenQ >= 2) {
-            const dt = (this.quarksAmounts[lenQ - 1].time - this.quarksAmounts[lenQ - 2].time) / 1000;
-            if (dt > 0) {
-                const rate = (this.quarksAmounts[lenQ - 1].value - this.quarksAmounts[lenQ - 2].value) / dt;
-                this.minQuarksRateLabel = Math.min(this.minQuarksRateLabel, rate);
-                this.maxQuarksRateLabel = Math.max(this.maxQuarksRateLabel, rate);
-            }
-        }
-
-        // Incremental update for golden quarks
-        const lenG = this.goldenQuarksAmounts.length;
-        if (lenG >= 2) {
-            const dt = (this.goldenQuarksAmounts[lenG - 1].time - this.goldenQuarksAmounts[lenG - 2].time) / 1000;
-            if (dt > 0) {
-                const rate = (this.goldenQuarksAmounts[lenG - 1].value - this.goldenQuarksAmounts[lenG - 2].value) / dt;
-                this.minGoldenQuarksRateLabel = Math.min(this.minGoldenQuarksRateLabel, rate);
-                this.maxGoldenQuarksRateLabel = Math.max(this.maxGoldenQuarksRateLabel, rate);
-            }
         }
     }
 
@@ -1813,8 +1812,8 @@ export class HSAutosingTimerModal {
             const avgC15 = this.getC15AverageLast(count);
             const sdLogC15 = this.getLogC15Std();
             const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
-            const sdText = sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '';
-            this.c15TopSpan.innerHTML = `C15 ${valText}<br>${sdText}`;
+            const sdText = sdLogC15 !== null ? ` (σlog ±${sdLogC15.toFixed(3)})` : '';
+            this.setTextEl(this.c15TopSpan, `C15 ${valText}${sdText}`);
             this.c15TopSpan.title = '';
         }
     }
