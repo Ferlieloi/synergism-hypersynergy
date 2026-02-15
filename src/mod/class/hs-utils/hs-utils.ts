@@ -233,7 +233,38 @@ export class HSUtils {
 
         // if the number is in e-notation, we can just parse it normally
         if (str.toLowerCase().includes('e')) {
-            return str.replace(/,/g, '');
+            const cleaned = str.replace(/[^0-9eE+.,-]/g, '');
+            const lower = cleaned.toLowerCase();
+            const eIndex = lower.lastIndexOf('e');
+
+            if (eIndex > 0) {
+                let mantissa = cleaned.slice(0, eIndex);
+                const exponent = lower.slice(eIndex);
+
+                const lastComma = mantissa.lastIndexOf(',');
+                const lastDot = mantissa.lastIndexOf('.');
+
+                if (lastComma !== -1 && lastDot !== -1) {
+                    const decimalSeparator = lastComma > lastDot ? ',' : '.';
+                    const thousandsSeparator = decimalSeparator === ',' ? '.' : ',';
+
+                    mantissa = mantissa.replace(new RegExp(`\\${thousandsSeparator}`, 'g'), '');
+                    if (decimalSeparator === ',') {
+                        mantissa = mantissa.replace(',', '.');
+                    }
+                } else if (lastComma !== -1) {
+                    const parts = mantissa.split(',');
+                    if (parts.length === 2 && parts[1].length <= 2) {
+                        mantissa = `${parts[0]}.${parts[1]}`;
+                    } else {
+                        mantissa = mantissa.replace(/,/g, '');
+                    }
+                }
+
+                return `${mantissa}${exponent}`;
+            }
+
+            return cleaned.replace(/,/g, '');
         }
 
         // Remove all non-numeric characters except for . and -
