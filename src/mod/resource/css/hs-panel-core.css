@@ -1,4 +1,7 @@
-.hs-panel-body::-webkit-scrollbar,
+/* ===== HYPERSYNERGISM PANEL CORE STYLES ===== */
+
+/* ===== SCROLLBAR STYLES ===== */
+/* Custom scrollbar styling for panel elements */
 .hs-panel-body::-webkit-scrollbar,
 #hs-ui-log::-webkit-scrollbar,
 .hs-timer-content::-webkit-scrollbar {
@@ -7,14 +10,12 @@
 }
 
 .hs-panel-body::-webkit-scrollbar-track,
-.hs-panel-body::-webkit-scrollbar-track,
 #hs-ui-log::-webkit-scrollbar-track,
 .hs-timer-content::-webkit-scrollbar-track {
     background: #1c1b22;
     border-radius: 3px;
 }
 
-.hs-panel-body::-webkit-scrollbar-thumb,
 .hs-panel-body::-webkit-scrollbar-thumb,
 #hs-ui-log::-webkit-scrollbar-thumb,
 .hs-timer-content::-webkit-scrollbar-thumb {
@@ -23,14 +24,13 @@
 }
 
 .hs-panel-body::-webkit-scrollbar-corner,
-.hs-panel-body::-webkit-scrollbar-corner,
 #hs-ui-log::-webkit-scrollbar-corner,
 .hs-timer-content::-webkit-scrollbar-corner {
     background: #1c1b22;
 }
 
+/* Firefox scrollbar support */
 @supports not selector(::-webkit-scrollbar) {
-
     .hs-panel-body::-webkit-scrollbar,
     #hs-ui-log::-webkit-scrollbar,
     .hs-timer-content::-webkit-scrollbar {
@@ -38,7 +38,9 @@
     }
 }
 
+/* ===== PANEL BOX MODEL & LAYOUT ===== */
 
+/* Base box-sizing for all panel elements */
 #hs-panel,
 .hs-panel-header,
 .hs-panel-header-left,
@@ -49,9 +51,12 @@
     box-sizing: border-box;
 }
 
+/* Panel visibility control */
 .hs-panel-closed {
     display: none;
 }
+
+/* ===== MAIN PANEL CONTAINER ===== */
 
 #hs-panel {
     width: 500px;
@@ -65,10 +70,12 @@
     border: 1px solid white;
     border-radius: 3px;
 
+    /* Cross-browser box shadow */
     -webkit-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
     -moz-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
     box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
 
+    /* Font stack for consistency */
     font-family: -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
@@ -82,6 +89,8 @@
 
     opacity: 0.92;
 }
+
+/* ===== PANEL HEADER ===== */
 
 .hs-panel-header {
     width: 100%;
@@ -114,6 +123,8 @@
     background-color: maroon;
     cursor: pointer;
 }
+
+/* ===== PANEL TABS ===== */
 
 .hs-panel-tabs {
     width: 100%;
@@ -148,6 +159,7 @@
     cursor: pointer;
 }
 
+/* Individual tab color schemes */
 #hs-panel-tab-1 {
     border-top: 1px solid orange;
     border-left: 1px solid orange;
@@ -198,6 +210,8 @@
     background-color: royalblue;
 }
 
+/* ===== PANEL BODY ===== */
+
 .hs-panel-body {
     width: 100%;
     height: calc(100% - 45px - 40px);
@@ -215,6 +229,8 @@
 .hs-panel-body-open-block {
     display: block;
 }
+
+/* ===== LOG PANEL ===== */
 
 #hs-log-panel {
     flex-direction: column;
@@ -269,7 +285,7 @@
     display: none;
 }
 
-
+/* ===== LOG CONTROLS ===== */
 
 #hs-ui-log-controls {
     width: 100%;
@@ -283,6 +299,8 @@
     align-items: center;
     align-content: space-between;
 }
+
+/* ===== PANEL CONTROL BUTTON ===== */
 
 #hs-panel-control {
     position: absolute;
@@ -301,6 +319,8 @@
     cursor: pointer;
     transform: scale(1.05);
 }
+
+/* ===== PANEL BUTTONS ===== */
 
 .hs-panel-btn {
     border: 2px solid white;
@@ -323,6 +343,8 @@
     margin-left: 10px;
 }
 
+/* ===== MODAL BASE STYLES ===== */
+
 .hs-modal {
     width: auto;
     height: auto;
@@ -336,10 +358,12 @@
     border: 1px solid white;
     border-radius: 3px;
 
+    /* Cross-browser box shadow */
     -webkit-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
     -moz-box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
     box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.75);
 
+    /* Font stack for consistency */
     font-family: -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
@@ -400,7 +424,7 @@
 .hs-timer-hr {
     border: none;
     border-top: 1px solid #444;
-    margin: 2px 0 4px 0;
+    margin: 4px 0;
 }
 
 .hs-modal-img {
@@ -408,6 +432,8 @@
     width: 100%;
     max-width: 40vw;
 }
+
+/* ===== SETTINGS PANEL ===== */
 
 #hs-settings-panel {
     padding: 10px;
@@ -427,8 +453,6 @@
     box-sizing: border-box;
     padding-left: 10px;
 }
-
-
 
 .hs-panel-setting-block-text-wrapper {
     grid-column: 1 / span 2;
@@ -513,6 +537,8 @@
     background-position: center;
 }
 
+/* ===== NOTIFICATIONS ===== */
+
 .hs-notification {
     position: fixed;
     width: 300px;
@@ -538,6 +564,8 @@
     box-sizing: border-box;
 }
 
+/* ===== INFO TEXT STYLES ===== */
+
 .hs-panel-info-h1 {
     font-size: 16pt;
     margin-left: 5px;
@@ -552,6 +580,8 @@
     font-size: 11pt;
     margin-left: 15px;
 }
+
+/* ===== SUBTABS ===== */
 
 .hs-panel-subtabs {
     width: 100%;
@@ -596,6 +626,8 @@
     display: block;
 }
 
+/* ===== RESIZERS ===== */
+
 .hs-resizer {
     position: absolute;
     bottom: 2px;
@@ -608,6 +640,8 @@
     background-repeat: no-repeat;
     background-size: 5px 5px;
 }
+
+/* ===== LINK STYLES ===== */
 
 a.hs-link:visited {
     color: #ff3d00;
@@ -623,10 +657,12 @@ a.hs-link {
     text-decoration: none;
 }
 
+/* ===== SPECIAL EFFECTS ===== */
+
 .hs-rainbowBorder {
     border: 2px solid;
     --angle: 0deg;
-    border-image: conic-gradient(from var(--angle), #ff5e00, #ff9a00, #ffcd00, #e5ff00, #a5ff00, #00ffc8, #00c8ff, #00a5ff, #9500ff, #ff00e1, #ff0095, #ff5e00) 1;
+    border-image: conic-gradient(from var(--angle), #ff5e00, #ff9a00, #ffcd00, #e5ff00, #a5ff00, #00ffc8, #00c8ff, #00a5ff, #9500ff, #00e1ff, #0095ff, #ff5e00) 1;
     animation: hue-rotate 6s linear infinite;
 }
 
@@ -644,7 +680,8 @@ a.hs-link {
     animation: hs-animtext-1 3.5s ease-in-out infinite alternate;
 }
 
-/* Strategy Modal Styles */
+/* ===== STRATEGY MODAL ===== */
+
 .hs-strategy-modal-container {
     display: flex;
     flex-direction: column;
@@ -814,7 +851,8 @@ a.hs-link {
     font-style: italic;
 }
 
-/* Phase Modal Styles */
+/* ===== PHASE MODAL ===== */
+
 .hs-phase-modal-container {
     display: flex;
     flex-direction: column;
@@ -907,7 +945,8 @@ a.hs-link {
     background-color: #060;
 }
 
-/* Corruption Modal Styles */
+/* ===== CORRUPTION MODAL ===== */
+
 .hs-corruption-modal-container {
     display: flex;
     flex-direction: column;
@@ -1001,7 +1040,8 @@ a.hs-link {
     background-color: #060;
 }
 
-/* Challenges Modal Styles */
+/* ===== CHALLENGES MODAL ===== */
+
 .hs-challenges-modal-container {
     display: flex;
     flex-direction: column;
@@ -1221,6 +1261,8 @@ a.hs-link {
     font-style: italic;
 }
 
+/* ===== SHARED SCROLLBARS ===== */
+/* Scrollbar styling for modal containers */
 .hs-strategy-phase-list::-webkit-scrollbar,
 .hs-corruption-grid::-webkit-scrollbar,
 .hs-challenges-list-container::-webkit-scrollbar {
@@ -1249,493 +1291,4 @@ a.hs-link {
     border-left: 3px solid #c33;
     color: #900;
     font-size: 0.9em;
-}
-
-#hs-autosing-timer-display {
-    position: fixed;
-    top: 10px;
-    left: 50px;
-    background: rgba(0, 0, 0, 0.9);
-    color: #fff;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 13px;
-    z-index: 10000;
-    min-width: 300px;
-    width: auto;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    overflow: visible;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-}
-
-.hs-timer-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 4px 12px;
-    cursor: move;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-    border-radius: 8px 8px 0 0;
-}
-
-.hs-timer-title {
-    font-weight: bold;
-    font-size: 13px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Timer control buttons - base class for all buttons in hs-timer-controls */
-#hs-autosing-timer-display .hs-timer-ctrl-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    width: 35px;
-    height: 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 0;
-    margin-right: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-#hs-autosing-timer-display .hs-timer-ctrl-btn:hover {
-    background: rgba(255, 255, 255, 0.4);
-}
-
-/* Secondary variant for smaller icon buttons (chart toggle, minimize) */
-#hs-autosing-timer-display .hs-timer-ctrl-btn-secondary {
-    width: 30px;
-    font-size: 16px;
-    margin-right: 0;
-}
-
-#hs-autosing-timer-display #hs-timer-ctrl-chart-toggle {
-    margin-right: 8px;
-}
-
-
-.hs-timer-content {
-    padding: 6px 10px 0px 10px;
-    overflow: visible;
-}
-
-.hs-timer-section {
-    margin-bottom: 0px !important;
-    /*padding-bottom: 4px !important;*/
-}
-
-#hs-autosing-timer-display .hs-section-header {
-    font-size: 15px;
-    font-weight: bold;
-    color: #888;
-    margin-bottom: 5px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-}
-
-.hs-c15-top {
-    margin-left: auto;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: normal;
-    font-size: 12px;
-    line-height: 1.1;
-    text-align: right;
-}
-
-/* Phase stats section header replaces first column header */
-#hs-phase-stats-section .hs-section-header {
-    margin-bottom: 0;
-}
-
-#hs-autosing-timer-display .hs-info-line {
-    font-size: 15px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    line-height: 1.2;
-}
-
-#hs-autosing-timer-display .hs-info-line-detailed {
-    font-size: 10px;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    line-height: 1.1;
-    opacity: 0.7;
-}
-
-#hs-autosing-timer-display .hs-timer-label {
-    color: #ffffff;
-}
-
-#hs-autosing-timer-display .hs-info-line-detailed .hs-timer-label {
-    color: #999999 !important;
-}
-
-#hs-autosing-timer-display .hs-times-grid {
-    display: grid;
-    grid-template-columns: max-content max-content;
-    column-gap: 5px;
-    row-gap: 3px;
-    align-items: center;
-}
-
-#hs-autosing-timer-display .hs-times-grid .hs-timer-label {
-    text-align: right;
-}
-
-#hs-autosing-timer-display .hs-detailed-value {
-    color: #cccccc !important;
-    font-weight: normal !important;
-    font-size: 11px;
-}
-
-#hs-autosing-timer-display .hs-sparkline-labels {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 30px;
-    margin-left: 2px;
-    margin-top: 0;
-    font-size: 9px;
-    line-height: 1;
-    white-space: nowrap;
-    text-align: left;
-}
-
-/* Additional styles previously provided inline in the timer modal */
-#hs-autosing-timer-display .hs-timer-controls {
-    display: flex;
-    align-items: center;
-}
-
-#hs-autosing-timer-display #hs-sing-val {
-    color: #ffffff;
-    font-weight: normal;
-    margin-left: 8px;
-}
-
-#hs-autosing-timer-display #hs-progress-val {
-    color: #00E676;
-    font-weight: bold;
-    margin-left: 6px;
-}
-
-#hs-autosing-timer-display #hs-phase-name-val {
-    color: #B33A3A;
-    font-weight: bold;
-    margin-left: 6px;
-}
-
-#hs-autosing-timer-display #hs-phase-timer-val {
-    color: #FF8A80;
-    margin-left: 4px;
-}
-
-#hs-autosing-timer-display #hs-step-name-val {
-    margin-left: 6px;
-}
-
-#hs-autosing-timer-display #hs-step-timer-val {
-    margin-left: 4px;
-    color: #FF8A80;
-}
-
-#hs-autosing-timer-display #hs-live-timer-val,
-#hs-autosing-timer-display #hs-avg-1,
-#hs-autosing-timer-display #hs-avg-10,
-#hs-autosing-timer-display #hs-avg-50,
-#hs-autosing-timer-display #hs-avg-all {
-    color: #FF8A80;
-    font-weight: bold;
-}
-
-#hs-autosing-timer-display #hs-avg-all-count {
-    color: #ffffff;
-    font-weight: bold;
-}
-
-#hs-autosing-timer-display #hs-quarks-total,
-#hs-autosing-timer-display #hs-quarks-rate-val {
-    color: #00BCD4;
-    font-weight: bold;
-    margin-left: 6px;
-}
-
-#hs-autosing-timer-display #hs-quarks-prev,
-#hs-autosing-timer-display #hs-quarks-rate-val-hr,
-#hs-autosing-timer-display #hs-gquarks-prev,
-#hs-autosing-timer-display #hs-gquarks-rate-val-hr {
-    color: #666;
-    font-size: 11px;
-    margin-left: 4px;
-}
-
-#hs-autosing-timer-display #hs-gquarks-total,
-#hs-autosing-timer-display #hs-gquarks-rate-val {
-    color: #F1FA8C;
-    font-weight: bold;
-    margin-left: 6px;
-}
-
-#hs-autosing-timer-display .hs-footer-loadouts {
-    white-space: pre-wrap;
-    margin-top: 2px;
-}
-
-#hs-autosing-timer-display .hs-footer-info {
-    border-bottom: none;
-    opacity: 0.7;
-    padding-top: 0;
-}
-
-#hs-autosing-timer-display .hs-sparkline-row {
-    display: flex;
-    align-items: center;
-}
-
-#hs-autosing-timer-display .hs-sparkline-muted {
-    color: #777;
-    font-size: 9px;
-    font-weight: bold;
-}
-
-#hs-autosing-timer-display .hs-export-btn {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    border: none;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    width: 100%;
-    margin-top: 10px;
-    transition: filter 0.2s, box-shadow 0.2s;
-    display: block;
-}
-
-.hs-export-btn:hover {
-    filter: brightness(1.1);
-    box-shadow: 0 2px 10px rgba(56, 239, 125, 0.3);
-}
-
-.hs-export-btn:active {
-    filter: brightness(0.9);
-}
-
-@keyframes hs-color_rotate {
-    0% {
-        color: #ff5e00;
-    }
-
-    25% {
-        color: #e5ff00;
-    }
-
-    50% {
-        color: #00ffc8;
-    }
-
-    75% {
-        color: #9500ff;
-    }
-
-    100% {
-        color: #ff5e00;
-    }
-}
-
-.hs-rainbow-text {
-    font-weight: bold;
-    animation: hs-color_rotate 6s linear infinite;
-}
-
-.hs-resize-handle {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
-}
-
-@keyframes hs-animtext-1 {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 100% 50%;
-    }
-}
-
-@-webkit-keyframes hs-animtext-1 {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 100% 50%;
-    }
-}
-
-/* Strategy buttons inline layout - using class for maintainability */
-.hs-inline-button {
-    display: inline-block;
-    width: auto;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    vertical-align: top;
-}
-
-.hs-inline-button button {
-    min-width: 120px;
-    padding: 8px 16px;
-}
-
-/* --- Phase Statistics Grid --- */
-#hs-autosing-timer-display .hs-stats-grid {
-    display: grid;
-    grid-template-columns: max-content max-content max-content max-content max-content;
-    gap: 4px 2px;
-    font-size: 11px;
-    align-items: center;
-    justify-items: end;
-    margin-top: 8px;
-}
-
-/* Timer: singularity header structure */
-#hs-autosing-timer-display #hs-sing-target {
-    color: #bcb9b9;
-    font-weight: bold;
-}
-
-#hs-autosing-timer-display #hs-sing-highest {
-    color: #bcb9b9;
-}
-
-/* Timer: averages (sigma) */
-#hs-autosing-timer-display .hs-avg-sd {
-    color: #888;
-    font-size: 10px;
-}
-
-/* Timer: phase statistics header + cells */
-#hs-autosing-timer-display .hs-phase-header {
-    color: #888;
-    font-size: 10px;
-    font-weight: bold;
-    border-bottom: 1px solid #333;
-    padding-bottom: 4px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    justify-self: stretch;
-    align-self: stretch;
-}
-
-/* Phase stats section title acting as first column header */
-#hs-autosing-timer-display .hs-phase-header-title {
-    font-size: 15px;
-    font-weight: bold;
-    color: #888;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    border-bottom: 1px solid #333;
-    padding-bottom: 4px;
-    display: flex;
-    justify-content: flex-start;
-    justify-self: stretch;
-}
-
-#hs-autosing-timer-display .hs-phase-empty {
-    color: #666;
-    font-style: italic;
-    font-size: 12px;
-    grid-column: span 5;
-    justify-self: start;
-}
-
-#hs-autosing-timer-display .hs-phase-name {
-    color: #B33A3A;
-    font-size: 12px;
-    padding: 2px 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-bottom: 1px solid #222;
-    text-align: left;
-    justify-self: start;
-}
-
-#hs-autosing-timer-display .hs-phase-count {
-    color: #888;
-    font-size: 10px;
-    margin-right: 2px;
-}
-
-#hs-autosing-timer-display .hs-phase-loops {
-    color: #888;
-    font-size: 11px;
-    padding: 2px 4px;
-    text-align: right;
-    border-bottom: 1px solid #222;
-}
-
-#hs-autosing-timer-display .hs-phase-avg,
-#hs-autosing-timer-display .hs-phase-last {
-    color: #FF8A80;
-    font-size: 12px;
-    padding: 2px 4px;
-    text-align: right;
-    border-bottom: 1px solid #222;
-}
-
-#hs-autosing-timer-display .hs-phase-sd {
-    color: #888;
-    font-size: 10px;
-    padding: 2px 4px;
-    text-align: right;
-    border-bottom: 1px solid #222;
-}
-
-#hs-autosing-timer-display .hs-stats-row {
-    color: #bcb9b9;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-
-.hs-stats-loops {
-    text-align: center;
-    color: #888 !important;
-}
-
-.hs-stats-avg {
-    text-align: center;
-    color: #eee !important;
-}
-
-.hs-stats-sd {
-    text-align: center;
-    color: #555 !important;
-    font-size: 10px;
-}
-
-.hs-stats-last {
-    text-align: center;
-    color: #00bcd4 !important;
 }

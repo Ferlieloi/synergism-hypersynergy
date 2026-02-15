@@ -5,7 +5,11 @@ import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 import { HSUIC } from "./hs-ui-components";
-import panelCSS from "inline:../../resource/css/hs-panel.css";
+import panelCoreCSS from "inline:../../resource/css/hs-panel-core.css";
+import timerModalCSS from "inline:../../resource/css/hs-timer-modal.css";
+import gridsCSS from "inline:../../resource/css/hs-grids.css";
+import animationsCSS from "inline:../../resource/css/hs-animations.css";
+import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
 import { HSModuleOptions } from "../../types/hs-types";
 
@@ -80,7 +84,7 @@ export class HSUI extends HSModule {
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
-        this.#staticPanelCss = panelCSS;
+        this.#staticPanelCss = panelCoreCSS + timerModalCSS + gridsCSS + animationsCSS + utilitiesCSS;
         this.#staticPanelHtml = panelHTML;
     }
 
