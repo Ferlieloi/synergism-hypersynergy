@@ -14,6 +14,7 @@ import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
+import { HSAutosingGameSettingsFixer } from './hs-autosing-gameSettingsFixer';
 
 /*
     Class: HSAutosing
@@ -83,6 +84,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private endStageResolve?: () => void;
     private stageFunc!: (arg0: number) => any;
     private gamestate!: HSGameState;
+    private autosingGameSettingsFixer?: HSAutosingGameSettingsFixer;
 
     // Cached DOM Elements
     private corrCurrent: Record<string, HTMLElement | null> = {};
@@ -342,6 +344,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.timerModal) {
             this.timerModal.show();
         }
+
+        // Check and set the expected settings everywhere in the vanilla game
+        if (!this.autosingGameSettingsFixer) {
+            this.autosingGameSettingsFixer = new HSAutosingGameSettingsFixer({ moduleName: 'HSAutosingGameSettingsFixer', context: this.context });
+        }
+        await this.autosingGameSettingsFixer.init();
 
         this.performAutosingLogic();
         return Promise.resolve();
