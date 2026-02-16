@@ -100,7 +100,7 @@ export interface HSSettingControl {
     controlPage: keyof HSSettingControlPage;
     controlEnabledId?: string;
     controlOptions?: HSSettingControlOptions;
-    selectOptions?: HSUICSelectOption[]
+    selectOptions?: HSUICSelectOption[];
 }
 
 export interface HSSettingControlPage {

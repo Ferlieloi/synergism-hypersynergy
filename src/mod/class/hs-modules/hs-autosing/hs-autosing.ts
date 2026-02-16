@@ -240,7 +240,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use this cached value to avoid repeated setting lookups.
-        this.advancedDataCollectionEnabledAtStart = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
+        // [SHEW] Always treat advancedDataCollection as disabled for now...
+        // this.advancedDataCollectionEnabledAtStart = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
+        this.advancedDataCollectionEnabledAtStart = false;
 
         HSUtils.startDialogWatcher();
         const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar');
@@ -562,26 +564,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return currentCompletions;
     }
 
-    private getStepLabelAndMaxTime(challenge: any): { label: string; maxTime: number | null } {
-        let label = "";
-        let maxTime: number | null = null;
-
-        if (challenge.challengeNumber === LOADOUT_ACTION_VALUE) {
-            label = challenge.loadoutName ? `Load Corruption Loadout: ${challenge.loadoutName}` : "Load Corruption Loadout";
-        } else if (challenge.challengeNumber === 201) {
-            label = "Load Phase Corruptions";
-        } else if (challenge.challengeNumber === IF_JUMP_VALUE) {
-            label = "Jump Logic";
-        } else if (challenge.challengeNumber >= 100) {
-            label = SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? `Action ${challenge.challengeNumber}`;
-        } else {
-            label = `Wait for C${challenge.challengeNumber} x${challenge.challengeCompletions || 0}`;
-            if (challenge.challengeMaxTime) maxTime = challenge.challengeMaxTime;
-        }
-
-        return { label, maxTime };
-    }
-
     private getLoadoutByName(name?: string | null): CorruptionLoadout | null {
         if (!name) return null;
         if (this.loadoutByName.size > 0) {
@@ -654,13 +636,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
 
             const challenge = phaseConfig.strat[i];
-
-            // Report current step to modal
-            if (this.timerModal && this.advancedDataCollectionEnabledAtStart) {
-                const { label, maxTime } = this.getStepLabelAndMaxTime(challenge);
-                this.timerModal.setCurrentStep(label, maxTime);
-            }
-
 
             if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
                 await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
