@@ -303,7 +303,7 @@
 /* ===== PANEL CONTROL BUTTON ===== */
 
 #hs-panel-control {
-    position: absolute;
+    position: fixed;
     z-index: 12000;
     top: 10px;
     left: 10px;
@@ -318,6 +318,46 @@
 #hs-panel-control:hover {
     cursor: pointer;
     transform: scale(1.05);
+}
+
+/* ===== QUICK ACCESS MENU ===== */
+#hs-quick-access-menu {
+    position: fixed;
+    top: 45px;
+    left: 10px;
+    background: rgba(28, 27, 34, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 4px 0;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    box-shadow: 2px 4px 12px 0px rgba(0, 0, 0, 0.4);
+    z-index: 999999;
+    min-width: 180px;
+}
+
+#hs-quick-access-menu button {
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    padding: 8px 12px 8px 8px;
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    transition: background 0.15s;
+    white-space: nowrap;
+    text-align: left;
+    width: 100%;
+}
+
+#hs-quick-access-menu button:hover {
+    background: rgba(76, 175, 80, 0.25);
+}
+
+#hs-quick-access-menu button[data-type="heater"]:hover {
+    background: rgba(255, 152, 0, 0.25);
 }
 
 /* ===== PANEL BUTTONS ===== */
