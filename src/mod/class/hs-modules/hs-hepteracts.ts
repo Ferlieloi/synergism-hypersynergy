@@ -503,17 +503,14 @@ export class HSHepteracts extends HSModule {
                         if(typeof value === 'string') {
                             const split = value.split('/');
     
-                                    try {
-                                        // The progress text is formatted as "current / max".
-                                        // We want the current owned count (left side) for ratios,
-                                        // not the max value (right side).
-                                        if(split && split[0]) {
-                                            return parseFloat(HSUtils.unfuckNumericString(split[0]));
-                                        }
-                                    } catch (e) {
-                                        HSLogger.warn(`Parsing failed for ${split}`, self.context);
-                                        return '';
-                                    }
+                            try {
+                                if(split && split[1]) {
+                                    return parseFloat(HSUtils.unfuckNumericString(split[1]));
+                                }
+                            } catch (e) {
+                                HSLogger.warn(`Parsing failed for ${split}`, self.context);
+                                return '';
+                            }
                         }
                         return '';
                     }
