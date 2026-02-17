@@ -240,45 +240,11 @@ export class HSUI extends HSModule {
         // Create the menu container
         const quickMenu = document.createElement('div');
         quickMenu.id = 'hs-quick-access-menu';
-        quickMenu.style.cssText = `
-            position: absolute;
-            top: 45px;
-            left: 10px;
-            background: rgba(28, 27, 34, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            padding: 4px 0;
-            display: none;
-            flex-direction: column;
-            gap: 0;
-            box-shadow: 2px 4px 12px 0px rgba(0, 0, 0, 0.4);
-            z-index: 999999;
-            min-width: 180px;
-        `;
+        quickMenu.style.display = 'none';
 
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
         autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center;">▶</span>Start Auto-Sing';
-        autoSingBtn.style.cssText = `
-            background: transparent;
-            border: none;
-            color: #e0e0e0;
-            padding: 8px 12px 8px 8px;
-            border-radius: 0;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 400;
-            transition: background 0.15s;
-            white-space: nowrap;
-            text-align: left;
-            width: 100%;
-        `;
-        autoSingBtn.addEventListener('mouseenter', () => {
-            autoSingBtn.style.background = 'rgba(76, 175, 80, 0.25)';
-        });
-        autoSingBtn.addEventListener('mouseleave', () => {
-            autoSingBtn.style.background = 'transparent';
-        });
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
             if (autoSingToggle) {
@@ -290,26 +256,7 @@ export class HSUI extends HSModule {
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
         heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center;">🔥</span>Amb Heater Export';
-        heaterBtn.style.cssText = `
-            background: transparent;
-            border: none;
-            color: #e0e0e0;
-            padding: 8px 12px 8px 8px;
-            border-radius: 0;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 400;
-            transition: background 0.15s;
-            white-space: nowrap;
-            text-align: left;
-            width: 100%;
-        `;
-        heaterBtn.addEventListener('mouseenter', () => {
-            heaterBtn.style.background = 'rgba(255, 152, 0, 0.25)';
-        });
-        heaterBtn.addEventListener('mouseleave', () => {
-            heaterBtn.style.background = 'transparent';
-        });
+        heaterBtn.setAttribute('data-type', 'heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
             if (heaterExportBtn) {

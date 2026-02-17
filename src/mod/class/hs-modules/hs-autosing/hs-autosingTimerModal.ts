@@ -96,9 +96,6 @@ export class HSAutosingTimerModal {
     private currentSingularityStart: number = 0;
     private currentPhaseStart: number = 0;
     private _currentPhaseName: string = ''; // Backing field for setter
-    private _currentStepName: string = '';  // Tracking current execution step
-    private _currentStepStart: number = 0;
-    private _currentStepMaxTime: number | null = null;
     private phaseHistory: Map<string, { count: number, totalTime: number, sumSq: number, lastTime: number, repeats: number }> = new Map();
     private currentSingularityPhases: Map<string, number> = new Map();
 
@@ -173,10 +170,7 @@ export class HSAutosingTimerModal {
     // Cached Spans & Containers for Ticker
     private liveTimerSpan: HTMLElement | null = null;
     private phaseTimerSpan: HTMLElement | null = null;
-    private stepTimerSpan: HTMLElement | null = null;
-    private stepContainer: HTMLElement | null = null;
     private phaseNameSpan: HTMLElement | null = null;
-    private stepNameSpan: HTMLElement | null = null;
     private footerSection: HTMLElement | null = null;
     private singValSpan: HTMLElement | null = null;
     private singTargetSpan: HTMLElement | null = null;
@@ -336,22 +330,6 @@ export class HSAutosingTimerModal {
         if (enabled === this.advancedDataCollectionEnabled) return;
 
         this.advancedDataCollectionEnabled = enabled;
-
-        // If advanced data collection gets disabled, clear any current step info.
-        if (!enabled) {
-            this._currentStepName = '';
-            this._currentStepMaxTime = null;
-            if (this.stepNameSpan) this.stepNameSpan.textContent = '\u00A0';
-            if (this.stepTimerSpan) this.stepTimerSpan.textContent = '';
-        }
-
-        this.updateStepVisibility();
-    }
-
-    private updateStepVisibility(): void {
-        if (!this.stepContainer) return;
-        const visible = this.showDetailedData && this.advancedDataCollectionEnabled;
-        this.stepContainer.style.display = visible ? 'block' : 'none';
     }
 
     private initSingularityHeaderDom(): void {
@@ -722,25 +700,6 @@ export class HSAutosingTimerModal {
         this.updateTimers();
     }
 
-    public setCurrentStep(name: string, maxTime: number | null = null) {
-        // This row is only shown/updated when advanced data collection is enabled.
-        // Avoid doing any work when it's disabled.
-        if (!this.advancedDataCollectionEnabled) {
-            return;
-        }
-        if (this._currentStepName === name && this._currentStepMaxTime === maxTime) {
-            return;
-        }
-        this._currentStepName = name;
-        this._currentStepStart = performance.now();
-        this._currentStepMaxTime = maxTime;
-
-        if (this.stepNameSpan) {
-            this.stepNameSpan.textContent = name || '\u00A0';
-        }
-        this.updateTimers();
-    }
-
     private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
         if (opts.general) this.renderGeneralPending = true;
         if (opts.phases) this.renderPhasesPending = true;
@@ -935,9 +894,6 @@ export class HSAutosingTimerModal {
                     <div class="hs-value-cell hs-detailed-value"><span id="hs-c15-sigma"></span></div>
                 </div>
                 <div class="hs-info-line-phase"><span class="hs-timer-label">Phase:</span> <span id="hs-phase-name-val">&nbsp;</span> <span id="hs-phase-timer-val"></span></div>
-                <div id="hs-step-container" class="hs-info-line-detailed">
-                    <span class="hs-timer-label">Step:</span> <span id="hs-step-name-val" class="hs-detailed-value">&nbsp;</span> <span id="hs-step-timer-val" class="hs-detailed-value"></span>
-                </div>
             </div>
 
             <hr class="hs-timer-hr">
@@ -1034,10 +990,7 @@ export class HSAutosingTimerModal {
         // AFTER appending to body, find and cache elements
         this.liveTimerSpan = document.getElementById('hs-live-timer-val');
         this.phaseTimerSpan = document.getElementById('hs-phase-timer-val');
-        this.stepTimerSpan = document.getElementById('hs-step-timer-val');
-        this.stepContainer = document.getElementById('hs-step-container');
         this.phaseNameSpan = document.getElementById('hs-phase-name-val');
-        this.stepNameSpan = document.getElementById('hs-step-name-val');
         this.footerSection = document.getElementById('hs-footer-section');
         this.singValSpan = document.getElementById('hs-sing-val');
         this.progressValSpan = document.getElementById('hs-progress-val');
@@ -1390,18 +1343,6 @@ export class HSAutosingTimerModal {
             this.compressedBundles = [];
             this.currentBatch = [];
         }
-        if (!this.advancedDataCollectionEnabled) {
-            // Remove step row entirely to avoid any DOM/CPU work for it.
-            this._currentStepName = '';
-            this._currentStepMaxTime = null;
-            if (this.stepNameSpan) this.stepNameSpan.textContent = '\u00A0';
-            if (this.stepTimerSpan) this.stepTimerSpan.textContent = '';
-            if (this.stepContainer && this.stepContainer.parentNode) {
-                this.stepContainer.parentNode.removeChild(this.stepContainer);
-                this.stepContainer = null;
-            }
-        }
-        this.updateStepVisibility();
 
         // Reset render versions so next render is a full refresh
         this.phaseHistoryVersion = 0;
@@ -2068,7 +2009,6 @@ export class HSAutosingTimerModal {
             this.updateSparkline(this.sparklineGoldenQuarks, this.goldenQuarksAmounts);
             this.updateSparkline(this.sparklineTimes, this.durationsHistory);
 
-            if (this.stepContainer) this.stepContainer.style.display = 'block';
             if (this.footerSection) this.footerSection.style.display = 'block';
 
             // Detailed-only: Phase stats + extended averages
@@ -2107,7 +2047,6 @@ export class HSAutosingTimerModal {
             if (minLabel) (minLabel as HTMLElement).style.display = '';
             if (minValue) (minValue as HTMLElement).style.display = '';
         } else {
-            if (this.stepContainer) this.stepContainer.style.display = 'none';
             if (this.footerSection) this.footerSection.style.display = 'none';
 
             // Detailed-only: Phase stats + extended averages
@@ -2207,8 +2146,6 @@ export class HSAutosingTimerModal {
         this.currentBatch = [];
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
-        this._currentStepName = '';
-        this._currentStepMaxTime = null;
         this.stopLiveTimer();
         this.phaseHistoryVersion++;
         this.sparklineVersion++;
@@ -2231,24 +2168,6 @@ export class HSAutosingTimerModal {
         // Keep placeholders cleared so no stale values remain.
         if (this.liveTimerSpan) this.liveTimerSpan.textContent = '';
         if (this.phaseTimerSpan) this.phaseTimerSpan.textContent = '';
-
-        if (this.showDetailedData && this.advancedDataCollectionEnabled) {
-            const stepTime = this._currentStepName ? (performance.now() - this._currentStepStart) / 1000 : 0;
-            if (this.stepTimerSpan) {
-                let stepTimerDisplay = '';
-                if (this._currentStepName) {
-                    stepTimerDisplay = `(${stepTime.toFixed(2)}s`;
-                    if (this._currentStepMaxTime && this._currentStepMaxTime < 999999) {
-                        stepTimerDisplay += ` / ${(this._currentStepMaxTime / 1000).toFixed(2)}s`;
-                    }
-                    stepTimerDisplay += `)`;
-                }
-                this.stepTimerSpan.textContent = stepTimerDisplay;
-            }
-        } else {
-            // Ensure no stale step timer is displayed when advanced mode is off.
-            if (this.stepTimerSpan) this.stepTimerSpan.textContent = '';
-        }
     }
 
     /**

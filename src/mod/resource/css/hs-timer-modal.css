@@ -232,15 +232,6 @@
     margin-left: 4px;
 }
 
-#hs-step-name-val {
-    margin-left: 6px;
-}
-
-#hs-step-timer-val {
-    margin-left: 4px;
-    color: var(--timer-text-accent);
-}
-
 /* ===== AVERAGE VALUES ===== */
 
 #hs-live-timer-val,

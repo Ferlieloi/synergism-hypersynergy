@@ -1191,6 +1191,7 @@
     }
   },
   "advancedDataCollection": {
+    "hidden": true,
     "settingName": "advancedDataCollection",
     "settingDescription": "Advanced Data Collection",
     "settingHelpText": "When enabled, collects advanced autosing data for debugging purposes.",

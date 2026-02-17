@@ -360,6 +360,10 @@ export class HSSettings extends HSModule {
 
         for (const [key, settingObj] of sortedSettings) {
             const setting = settingObj.getDefinition();
+            // Skip rendering if 'hidden': true is set on the setting
+            if ((setting as any).hidden === true) {
+                continue;
+            }
             const controls = setting.settingControl;
             const settingBlockId = setting.settingBlockId || undefined;
 
@@ -418,7 +422,7 @@ export class HSSettings extends HSModule {
                     ]
 
                     if (controls.controlEnabledId) {
-                        components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn hs-panel-settings-block-btn-standalone', id: controls.controlEnabledId, text: "" }))
+                        components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn hs-panel-settings-block-btn-standalone', id: controls.controlEnabledId, text: "" }));
                     }
                 } else if (controls.controlType === "button") {
                     components = [
