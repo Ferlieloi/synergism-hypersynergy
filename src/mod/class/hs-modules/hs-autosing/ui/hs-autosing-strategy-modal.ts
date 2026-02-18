@@ -4,6 +4,7 @@ import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
+import { HSLogger } from '../../../hs-core/hs-logger';
 
 export class HSAutosingStrategyModal {
     static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number, parentModalId?: string): Promise<void> {
@@ -166,12 +167,16 @@ export class HSAutosingStrategyModal {
                     try {
                         if (isEditMode) {
                             HSSettings.saveStrategiesToStorage(strategyDraft, existingStrategy!.strategyName);
+                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });
                         } else {
                             HSSettings.saveStrategiesToStorage(strategyDraft);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created`, {
+                            HSSettings.updateStrategyDropdown();
+                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
+                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
                                 notificationType: "success"
                             });
                         }

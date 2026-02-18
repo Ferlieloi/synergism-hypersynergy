@@ -936,8 +936,13 @@ export class HSSettings extends HSModule {
         }
 
         HSSettings.saveStrategiesToStorage(undefined, strategyName);
-
-        HSUI.Notify(`Strategy "${strategyName}" deleted`, {
+        // After deletion, select the first default strategy and update the setting
+        const firstDefault = defaultNames[0];
+        if (firstDefault) {
+            HSSettings.selectAutosingStrategyByName(firstDefault);
+        }
+        HSLogger.log(`[HSAutosing] Strategy "${strategyName}" deleted. Selected strategy defaulted to ${firstDefault ? '"Default: ' + firstDefault + '"' : 'none'}.`, this.name ?? 'HSSettings');
+        HSUI.Notify(`Strategy "${strategyName}" deleted. Selected strategy defaulted to ${firstDefault ? '"Default: ' + firstDefault + '"' : 'none'}.`, {
             notificationType: "success"
         });
     }
@@ -983,6 +988,21 @@ export class HSSettings extends HSModule {
                 notificationType: "error"
             });
             HSLogger.log(`Export failed: ${error}`, 'HSAutosing');
+        }
+    }
+
+    /**
+     * Selects the given strategy in the dropdown and updates the autosingStrategy setting.
+     */
+    static selectAutosingStrategyByName(strategyName: string) {
+        const setting = HSSettings.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+        if (control?.selectOptions) {
+            const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
+            if (selectEl) {
+                selectEl.value = strategyName;
+            }
+            setting.setValue(strategyName);
         }
     }
 
@@ -1087,11 +1107,10 @@ export class HSSettings extends HSModule {
                 // Save the strategy
                 try {
                     HSSettings.saveStrategiesToStorage(parsedStrategy);
-
-                    // Update dropdown after import
                     HSSettings.updateStrategyDropdown();
-
-                    HSUI.Notify(`Strategy "${strategyName}" imported successfully`, {
+                    HSSettings.selectAutosingStrategyByName(strategyName);
+                    HSLogger.log(`[HSAutosing] Strategy "${strategyName}" imported and selected.`, this.name ?? 'HSSettings');
+                    HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
                         notificationType: "success"
                     });
 
