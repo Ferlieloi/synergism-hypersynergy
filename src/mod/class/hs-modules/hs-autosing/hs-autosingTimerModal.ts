@@ -982,7 +982,7 @@ export class HSAutosingTimerModal {
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section">
                 <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version: v</span> <span id="hs-footer-version" class="hs-detailed-value"></span></div>
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy: </span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy: </span> <span id="hs-footer-strategy" class="hs-detailed-value"></span></div>
                 <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order: </span> <span id="hs-footer-loadouts" class="hs-detailed-value"></span></div>
             </div>
         `;

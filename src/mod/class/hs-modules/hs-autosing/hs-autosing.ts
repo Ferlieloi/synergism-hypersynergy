@@ -295,7 +295,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         );
 
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found", { notificationType: "warning" });
+            HSUI.Notify("Selected strategy not found - Autosing stopped", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
@@ -303,17 +303,18 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         // Lazy-load the selected strategy: check if it's a default (manifest) or user strategy
         const defaultNames = HSSettings.getDefaultStrategyNames();
         let strategy: HSAutosingStrategy | null = null;
-        if (defaultNames.includes(selectedOption.text)) {
+        const selectedRawName = selectedOption.value.toString();
+        if (defaultNames.includes(selectedRawName)) {
             // Load from file only when needed
-            strategy = await HSSettings.loadDefaultStrategyByName(selectedOption.text);
+            strategy = await HSSettings.loadDefaultStrategyByName(selectedRawName);
         } else {
             // User strategy: already in memory
             const strategies = HSSettings.getStrategies();
-            strategy = strategies.find(s => s.strategyName === selectedOption.text) || null;
+            strategy = strategies.find(s => s.strategyName === selectedRawName) || null;
         }
 
         if (!strategy) {
-            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedOption.text}" not found or failed to load.`, this.context);
+            HSLogger.debug(`Autosing: Stopping - Strategy "${HSSettings.getStrategyDisplayName(selectedRawName)}" not found or failed to load.`, this.context);
             HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();

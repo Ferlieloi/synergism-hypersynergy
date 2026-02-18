@@ -104,6 +104,7 @@ export class HSAutosingStrategyModal {
                             class="hs-strategy-name-input"
                             placeholder="Enter strategy name..."
                             value="${strategyDraft.strategyName}"
+                            ${isEditMode ? 'disabled style="background:#000;color:#888;cursor:not-allowed;"' : ''}
                         />
                     </div>
 
@@ -166,16 +167,16 @@ export class HSAutosingStrategyModal {
                     strategyDraft.strategyName = nameInput?.value || "Unnamed Strategy";
                     try {
                         if (isEditMode) {
-                            HSSettings.saveStrategiesToStorage(strategyDraft, existingStrategy!.strategyName);
-                            HSAutosingStrategyModal.updateStrategyDropdown();
-                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
+                            HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
+                            HSAutosingStrategyModal.updateStrategyDropdownList();
+                            HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });
                         } else {
-                            HSSettings.saveStrategiesToStorage(strategyDraft);
-                            HSAutosingStrategyModal.updateStrategyDropdown();
+                            HSSettings.saveStrategyToStorage(strategyDraft);
+                            HSAutosingStrategyModal.updateStrategyDropdownList();
                             HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
@@ -239,7 +240,7 @@ export class HSAutosingStrategyModal {
      * Updates the autosing strategy dropdown options and selection after create/import/delete.
      * Handles both manifest and user strategies.
      */
-    static updateStrategyDropdown() {
+    static updateStrategyDropdownList() {
         const setting = HSSettings.getSetting("autosingStrategy");
         const control = setting.getDefinition().settingControl;
         if (!control?.selectOptions) return;
@@ -251,13 +252,13 @@ export class HSAutosingStrategyModal {
         const defaultNames = HSSettings.getDefaultStrategyNames();
         const manifestSet = new Set(defaultNames);
         for (const name of defaultNames) {
-            control.selectOptions.push({ text: `Default: ${name}`, value: name });
+            control.selectOptions.push({ text: HSSettings.getStrategyDisplayName(name), value: name });
         }
 
         // Add user strategies after (from localStorage)
         const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
         for (const s of userStrategies) {
-            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
+            control.selectOptions.push({ text: HSSettings.getStrategyDisplayName(s.strategyName), value: s.strategyName });
         }
         // Update the actual HTML select element to match the new options
         const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;

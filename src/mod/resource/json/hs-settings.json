@@ -602,7 +602,7 @@
     "settingHelpText": "This is the strategy that the autosinger will follow",
     "settingType": "selectstring",
     "enabled": true,
-    "settingValue": "default_strategy",
+    "settingValue": "1.TAS_v3.2",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy",
       "controlType": "select",
