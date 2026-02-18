@@ -919,10 +919,15 @@ export class HSSettings extends HSModule {
         const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
         if (!selectedOption) return;
 
-        const strategyName = selectedOption.text;
+        const strategyName = selectedOption.value.toString();
 
-        if (strategyName == "default_strategy") {
-            HSUI.Notify("cannot delete default strategy")
+        // Block deletion if undeletable (manifest strategy)
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const manifestSet = new Set(defaultNames);
+        if (manifestSet.has(strategyName)) {
+            HSUI.Notify("You cannot delete default strategies.", {
+                notificationType: "warning"
+            });
             return;
         }
 
@@ -954,7 +959,7 @@ export class HSSettings extends HSModule {
         const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
         if (!selectedOption) return;
 
-        const strategyName = selectedOption.text;
+        const strategyName = selectedOption.value.toString();
 
         const strategies = HSSettings.getStrategies();
         const strategy = strategies.find(s => s.strategyName === strategyName);
@@ -1084,7 +1089,7 @@ export class HSSettings extends HSModule {
                     HSSettings.saveStrategiesToStorage(parsedStrategy);
 
                     // Update dropdown after import
-                    HSSettings.populateStrategyDropdown();
+                    HSSettings.updateStrategyDropdown();
 
                     HSUI.Notify(`Strategy "${strategyName}" imported successfully`, {
                         notificationType: "success"
@@ -1128,7 +1133,7 @@ export class HSSettings extends HSModule {
         if (!selectedOption) return;
 
         const strategies = HSSettings.getStrategies();
-        const strategy = strategies.find(s => s.strategyName === selectedOption.text);
+        const strategy = strategies.find(s => s.strategyName === selectedOption.value.toString());
 
         if (!strategy) {
             HSUI.Notify("Cannot edit selected strategy", {
@@ -1282,17 +1287,38 @@ export class HSSettings extends HSModule {
         const control = setting.getDefinition().settingControl;
         if (!control?.selectOptions) return;
 
-        // Clear existing options
+        // Full rebuild: clear existing options
         control.selectOptions.length = 0;
 
-        // Add default strategies from folder
+        // Add manifest strategies (default, undeletable)
         const defaultNames = HSSettings.getDefaultStrategyNames();
+        const manifestSet = new Set(defaultNames);
         for (const name of defaultNames) {
-            control.selectOptions.push({ text: name, value: name });
+            control.selectOptions.push({ text: `Default: ${name}`, value: name });
         }
 
+        // Add user strategies (from localStorage)
+        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
+        for (const s of userStrategies) {
+            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
+        }
+    }
+
+    // Updates the dropdown when the user create, import or delete a strategy
+    static async updateStrategyDropdown() {
+        const setting = this.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        // Only update user strategies, preserve manifest options
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const manifestSet = new Set(defaultNames);
+
+        // Remove all user strategy options
+        control.selectOptions = control.selectOptions.filter(opt => manifestSet.has(opt.value as string));
+
         // Add user-imported/created strategies (from localStorage)
-        const userStrategies = HSSettings.getStrategies().filter(s => !defaultNames.includes(s.strategyName));
+        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
         for (const s of userStrategies) {
             control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
         }
