@@ -255,7 +255,6 @@ export class HSAutosingTimerModal {
     constructor() {
         this.createTimerDisplay();
         this.setupDragAndResize();
-        // New approach: always re-initialize and sync with phases
         this.cachedGlobalPhaseIndex = new Map();
         phases.forEach((phase, i) => {
             this.cachedGlobalPhaseIndex.set(phase as unknown as string, i);

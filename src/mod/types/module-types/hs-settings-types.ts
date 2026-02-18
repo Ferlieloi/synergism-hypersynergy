@@ -55,11 +55,16 @@ export interface HSSettingsDefinition {
     autosingObtLoadout: AutosingObtLoadout;
     autosingOffLoadout: AutosingOffLoadout;
     autosingAmbrosiaLoadout: AutosingAmbrosiaLoadout;
-
     autosingStrategy: AutosingStrategy;
     autosingSelectStrategy: AutosingSelectStrategy;
 
-    advancedDataCollection: AutosingAdvancedDataCollection;
+    // Advanced AutoSing Settings
+    advancedDataCollection: AutosingAdvancedDataCollection; // disabled for now...
+    autosing3to6DCubeOpeningPercent: Autosing3to6DCubeOpeningPercent;
+    autosingTessBuildingAutoBuyPercent: AutosingTessBuildingAutoBuyPercent;
+    autosingAutoChallTimerStart: AutosingAutoChallTimerStart;
+    autosingAutoChallTimerExit: AutosingAutoChallTimerExit;
+    autosingAutoChallTimerEnter: AutosingAutoChallTimerEnter;
 
     // QOL Buttons Settings
     ambrosiaQuickBar: QOLButtonsQuickBarSetting;
@@ -177,11 +182,16 @@ export interface AutosingQuarkLoadout extends HSSettingBase<string> { }
 export interface AutosingAmbrosiaLoadout extends HSSettingBase<string> { }
 export interface AutosingObtLoadout extends HSSettingBase<string> { }
 export interface AutosingOffLoadout extends HSSettingBase<string> { }
-
 export interface AutosingStrategy extends HSSettingBase<string> { }
 export interface AutosingSelectStrategy extends HSSettingBase<string> { }
 
+// Advanced AutoSing Settings
 export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> { }
+export interface Autosing3to6DCubeOpeningPercent extends HSSettingBase<number> { }
+export interface AutosingTessBuildingAutoBuyPercent extends HSSettingBase<number> { }
+export interface AutosingAutoChallTimerStart extends HSSettingBase<number> { }
+export interface AutosingAutoChallTimerExit extends HSSettingBase<number> { }
+export interface AutosingAutoChallTimerEnter extends HSSettingBase<number> { }
 
 // QOL Buttons Settings
 export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
