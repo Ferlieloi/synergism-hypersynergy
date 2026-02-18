@@ -6,7 +6,8 @@ import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
-import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
+// Import manifest.json as an ES module (requires resolveJsonModule in tsconfig)
+import manifest from '../../../resource/json/strategies/manifest.json';
 import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
@@ -176,6 +177,9 @@ export class HSSettings extends HSModule {
                 }
             }
 
+            // Populate the strategy dropdown at mod start (fire and forget)
+            HSSettings.populateStrategyDropdown();
+
             HSSettings.saveSettingsToStorage();
             HSSettings.#settingsParsed = true;
         } catch (e) {
@@ -185,7 +189,7 @@ export class HSSettings extends HSModule {
     }
 
     async init(): Promise<void> {
-        this.#addStrategiesToOptions(HSSettings.#strategies)
+        // the selected strategy is now loaded dynamically and the dropdown is populated via populateStrategyDropdown
         this.isInitialized = true;
     }
 
@@ -835,6 +839,9 @@ export class HSSettings extends HSModule {
             );
             this.#removeStrategyFromOptions(strategyName);
 
+            // Update dropdown after deletion
+            HSSettings.populateStrategyDropdown();
+
             HSLogger.debug(`<green>Strategy removed</green>`, this.#staticContext);
             return;
         }
@@ -878,7 +885,8 @@ export class HSSettings extends HSModule {
                 updatedStrategies.filter(s => s.strategyName !== "default_strategy")
             );
 
-            this.#addStrategyToOptions(normalizedStrategy);
+            // Update dropdown after create/update
+            HSSettings.populateStrategyDropdown();
 
             if (!saved) {
                 HSLogger.warn(
@@ -1075,6 +1083,9 @@ export class HSSettings extends HSModule {
                 try {
                     HSSettings.saveStrategiesToStorage(parsedStrategy);
 
+                    // Update dropdown after import
+                    HSSettings.populateStrategyDropdown();
+
                     HSUI.Notify(`Strategy "${strategyName}" imported successfully`, {
                         notificationType: "success"
                     });
@@ -1155,18 +1166,24 @@ export class HSSettings extends HSModule {
         }, 250);
     }
 
-    // Parses the default strategies read from strategies.json
-    #parseDefaultStrategies(): HSAutosingStrategy[] {
-        const defaultStrategies = JSON.parse(strategies) as HSAutosingStrategy[];
-        const normalized = defaultStrategies
-            .filter(Boolean)
-            .map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
+    // Parses the default strategies names from the manifest file in the strategies folder
+    static getDefaultStrategyNames(): string[] {
+        // Remove .json extension for display and lookup
+        const manifestArr: string[] = Array.isArray(manifest) ? manifest : JSON.parse(manifest);
+        return manifestArr.map((filename: string) => filename.replace(/\.json$/, ""));
+    }
 
-        for (const strategy of normalized) {
-            HSSettings.validateStrategy(strategy);
+    // Loads a strategy JSON from the strategies folder by name using the manifest
+    static async loadDefaultStrategyByName(name: string): Promise<HSAutosingStrategy | null> {
+        try {
+            // Dynamic import using the name
+            // @ts-ignore
+            const data = await import(`../../../resource/json/strategies/${name}.json`);
+            return data.default || data;
+        } catch (e) {
+            HSLogger.error(`Failed to load strategy '${name}': ${e}`);
+            return null;
         }
-
-        return normalized as HSAutosingStrategy[];
     }
 
     // Parses the default settings read from settings.json
@@ -1259,15 +1276,25 @@ export class HSSettings extends HSModule {
         }
     }
 
-    #addStrategiesToOptions(strategies: HSAutosingStrategy[]) {
-        for (const strategy of strategies) {
-            if (strategy.strategyName === undefined) {
-                throw new Error('Strategy name is missing. Cannot add strategy to options.');
-            }
+    // Populates the dropdown with default strategies (from folder) and user strategies
+    static async populateStrategyDropdown() {
+        const setting = this.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        // Clear existing options
+        control.selectOptions.length = 0;
+
+        // Add default strategies from folder
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        for (const name of defaultNames) {
+            control.selectOptions.push({ text: name, value: name });
         }
 
-        for (const strategy of strategies) {
-            HSSettings.#addStrategyToOptions(strategy);
+        // Add user-imported/created strategies (from localStorage)
+        const userStrategies = HSSettings.getStrategies().filter(s => !defaultNames.includes(s.strategyName));
+        for (const s of userStrategies) {
+            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
         }
     }
 
@@ -1294,39 +1321,8 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static #addStrategyToOptions(strategy: HSAutosingStrategy) {
-        const setting = this.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-
-        if (!control?.selectOptions) return;
-
-        const nextValue =
-            control.selectOptions.length > 0
-                ? Math.max(...control.selectOptions.map(o => Number(o.value))) + 1
-                : 1;
-
-        control.selectOptions.push({
-            text: strategy.strategyName,
-            value: nextValue
-        });
-
-        // Update DOM if already rendered
-        const selectEl = document.querySelector(
-            `#${control.controlId}`
-        ) as HTMLSelectElement | null;
-
-        if (selectEl) {
-            const option = document.createElement("option");
-            option.value = String(nextValue);
-            option.textContent = strategy.strategyName;
-            selectEl.appendChild(option);
-        }
-    }
-
     #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();
-        const defaultStrategies = this.#parseDefaultStrategies();
-        HSSettings.#strategies.push(...defaultStrategies)
 
         try {
             const loadedSettings = this.#parseStoredSettings();

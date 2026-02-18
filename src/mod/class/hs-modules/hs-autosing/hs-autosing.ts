@@ -300,17 +300,26 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return Promise.resolve();
         }
 
-        const strategies = HSSettings.getStrategies();
-        this.strategy = strategies.find(
-            s => s.strategyName === selectedOption.text
-        );
+        // Lazy-load the selected strategy: check if it's a default (manifest) or user strategy
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        let strategy: HSAutosingStrategy | null = null;
+        if (defaultNames.includes(selectedOption.text)) {
+            // Load from file only when needed
+            strategy = await HSSettings.loadDefaultStrategyByName(selectedOption.text);
+        } else {
+            // User strategy: already in memory
+            const strategies = HSSettings.getStrategies();
+            strategy = strategies.find(s => s.strategyName === selectedOption.text) || null;
+        }
 
-        if (!this.strategy) {
-            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedOption.text}" not found.`, this.context);
-            HSUI.Notify("Could not find strategy", { notificationType: "warning" });
+        if (!strategy) {
+            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedOption.text}" not found or failed to load.`, this.context);
+            HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
+
+        this.strategy = strategy;
 
         this.rebuildStrategyPhaseCaches();
         this.buildLoadoutCache();
