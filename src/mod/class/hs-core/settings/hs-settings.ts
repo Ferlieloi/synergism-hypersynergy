@@ -177,8 +177,6 @@ export class HSSettings extends HSModule {
                 }
             }
 
-            // Populate the strategy dropdown at mod start (fire and forget)
-            HSSettings.populateStrategyDropdown();
 
             HSSettings.saveSettingsToStorage();
             HSSettings.#settingsParsed = true;
@@ -837,10 +835,7 @@ export class HSSettings extends HSModule {
                 HSGlobal.HSSettings.strategiesKey,
                 updatedStrategies
             );
-            this.#removeStrategyFromOptions(strategyName);
 
-            // Update dropdown after deletion
-            HSSettings.populateStrategyDropdown();
 
             HSLogger.debug(`<green>Strategy removed</green>`, this.#staticContext);
             return;
@@ -867,9 +862,8 @@ export class HSSettings extends HSModule {
                 updatedStrategies = strategies.filter(
                     s => s.strategyName !== strategyName
                 );
-                this.#removeStrategyFromOptions(strategyName);
 
-                // Also remove from memory
+                // Remove from memory
                 HSSettings.#strategies = HSSettings.#strategies.filter(
                     s => s.strategyName !== strategyName
                 );
@@ -885,8 +879,6 @@ export class HSSettings extends HSModule {
                 updatedStrategies.filter(s => s.strategyName !== "default_strategy")
             );
 
-            // Update dropdown after create/update
-            HSSettings.populateStrategyDropdown();
 
             if (!saved) {
                 HSLogger.warn(
@@ -1107,7 +1099,6 @@ export class HSSettings extends HSModule {
                 // Save the strategy
                 try {
                     HSSettings.saveStrategiesToStorage(parsedStrategy);
-                    HSSettings.updateStrategyDropdown();
                     HSSettings.selectAutosingStrategyByName(strategyName);
                     HSLogger.log(`[HSAutosing] Strategy "${strategyName}" imported and selected.`, this.name ?? 'HSSettings');
                     HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
@@ -1300,71 +1291,6 @@ export class HSSettings extends HSModule {
         }
     }
 
-    // Populates the dropdown with default strategies (from folder) and user strategies
-    static async populateStrategyDropdown() {
-        const setting = this.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        // Full rebuild: clear existing options
-        control.selectOptions.length = 0;
-
-        // Add manifest strategies (default, undeletable)
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const manifestSet = new Set(defaultNames);
-        for (const name of defaultNames) {
-            control.selectOptions.push({ text: `Default: ${name}`, value: name });
-        }
-
-        // Add user strategies (from localStorage)
-        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
-        for (const s of userStrategies) {
-            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
-        }
-    }
-
-    // Updates the dropdown when the user create, import or delete a strategy
-    static async updateStrategyDropdown() {
-        const setting = this.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        // Only update user strategies, preserve manifest options
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const manifestSet = new Set(defaultNames);
-
-        // Remove all user strategy options
-        control.selectOptions = control.selectOptions.filter(opt => manifestSet.has(opt.value as string));
-
-        // Add user-imported/created strategies (from localStorage)
-        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
-        for (const s of userStrategies) {
-            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
-        }
-    }
-
-    static #removeStrategyFromOptions(strategyName: string) {
-        const setting = this.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-
-        if (!control?.selectOptions) return;
-        const optionIndex = control.selectOptions.findIndex(o => o.text === strategyName);
-
-        if (optionIndex !== -1) {
-            const optionValue = control.selectOptions[optionIndex].value;
-            control.selectOptions.splice(optionIndex, 1);
-            const selectEl = document.querySelector(
-                `#${control.controlId}`
-            ) as HTMLSelectElement | null;
-
-            if (selectEl) {
-                const optionToRem = selectEl.querySelector(`option[value="${optionValue}"]`);
-                if (optionToRem) {
-                    optionToRem.remove();
-                }
-            }
-        }
-    }
 
     #resolveSettings(): HSSettingsDefinition {
         const defaultSettings = this.#parseDefaultSettings();

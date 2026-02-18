@@ -167,13 +167,15 @@ export class HSAutosingStrategyModal {
                     try {
                         if (isEditMode) {
                             HSSettings.saveStrategiesToStorage(strategyDraft, existingStrategy!.strategyName);
+                            HSAutosingStrategyModal.updateStrategyDropdown();
+                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });
                         } else {
                             HSSettings.saveStrategiesToStorage(strategyDraft);
-                            HSSettings.updateStrategyDropdown();
+                            HSAutosingStrategyModal.updateStrategyDropdown();
                             HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
@@ -231,5 +233,46 @@ export class HSAutosingStrategyModal {
                 }
             });
         }, 0);
+    }
+
+    /**
+     * Updates the autosing strategy dropdown options and selection after create/import/delete.
+     * Handles both manifest and user strategies.
+     */
+    static updateStrategyDropdown() {
+        const setting = HSSettings.getSetting("autosingStrategy");
+        const control = setting.getDefinition().settingControl;
+        if (!control?.selectOptions) return;
+
+        // Full rebuild: clear existing options
+        control.selectOptions.length = 0;
+
+        // Add manifest strategies first (default, undeletable)
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const manifestSet = new Set(defaultNames);
+        for (const name of defaultNames) {
+            control.selectOptions.push({ text: `Default: ${name}`, value: name });
+        }
+
+        // Add user strategies after (from localStorage)
+        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
+        for (const s of userStrategies) {
+            control.selectOptions.push({ text: s.strategyName, value: s.strategyName });
+        }
+        // Update the actual HTML select element to match the new options
+        const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
+        if (selectEl) {
+            // Remove all options
+            while (selectEl.options.length > 0) {
+                selectEl.remove(0);
+            }
+            // Add all options from control.selectOptions
+            for (const opt of control.selectOptions) {
+                const option = document.createElement('option');
+                option.text = opt.text;
+                option.value = String(opt.value);
+                selectEl.add(option);
+            }
+        }
     }
 }

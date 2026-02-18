@@ -222,6 +222,7 @@ if(!window.__HS_EXPOSED){
             }
             customElements.define = origDefine;
             log('customElements.define restored');
+            
             patchedScriptInjected = true;
             log('Game script injected');
 
