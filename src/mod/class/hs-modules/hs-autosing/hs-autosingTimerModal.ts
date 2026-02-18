@@ -255,9 +255,11 @@ export class HSAutosingTimerModal {
     constructor() {
         this.createTimerDisplay();
         this.setupDragAndResize();
-        for (let i = 0; i < phases.length; i++) {
-            this.cachedGlobalPhaseIndex.set(phases[i] as unknown as string, i);
-        }
+        // New approach: always re-initialize and sync with phases
+        this.cachedGlobalPhaseIndex = new Map();
+        phases.forEach((phase, i) => {
+            this.cachedGlobalPhaseIndex.set(phase as unknown as string, i);
+        });
     }
 
     private async openDB(): Promise<IDBDatabase> {
@@ -599,33 +601,45 @@ export class HSAutosingTimerModal {
             }
         } else {
             // For quarks/golden
-            let totalGain = 0;
-            let totalTime = 0;
+            let last50TotalGain = 0;
+            let last50TotalTime = 0;
+            let sessionTotalGain = 0;
+            let sessionTotalTime = 0;
             let minY = Infinity;
             let maxY = -Infinity;
+            const runningAverages: number[] = [];
+            const individualRates: number[] = [];
+            // First pass: calculate running averages and individual rates
             for (let i = 0; i < data.length; i++) {
                 const d = data[i];
-                totalGain += d.gain;
-                totalTime += d.duration;
+                // For session running average (solid line)
+                sessionTotalGain += d.gain;
+                sessionTotalTime += d.duration;
+                const runningAvg = sessionTotalGain / sessionTotalTime;
+                runningAverages.push(runningAvg);
+                // For last 50 average (label)
+                if (i >= data.length - 50) {
+                    last50TotalGain += d.gain;
+                    last50TotalTime += d.duration;
+                }
                 const individualRate = d.gain / d.duration;
-                minY = Math.min(minY, individualRate);
-                maxY = Math.max(maxY, individualRate);
+                individualRates.push(individualRate);
+            }
+            // Find min/max across both running averages and individual rates
+            for (let i = 0; i < data.length; i++) {
+                minY = Math.min(minY, runningAverages[i], individualRates[i]);
+                maxY = Math.max(maxY, runningAverages[i], individualRates[i]);
             }
             const yRange = maxY - minY || 1;
             const pointsMain: string[] = [];
             const pointsSecond: string[] = [];
-            totalGain = 0;
-            totalTime = 0;
+            // Second pass: build points for polylines
             for (let i = 0; i < data.length; i++) {
                 const d = data[i];
-                totalGain += d.gain;
-                totalTime += d.duration;
-                const runningAvg = totalGain / totalTime;
                 const x = ((d.timestamp - minTime) / timeRange) * gw;
-                const yMain = 30 - ((runningAvg - minY) / yRange) * 30;
+                const yMain = 30 - ((runningAverages[i] - minY) / yRange) * 30;
                 pointsMain.push(`${x},${yMain}`);
-                const individualRate = d.gain / d.duration;
-                const ySecond = 30 - ((individualRate - minY) / yRange) * 30;
+                const ySecond = 30 - ((individualRates[i] - minY) / yRange) * 30;
                 pointsSecond.push(`${x},${ySecond}`);
             }
 
@@ -671,7 +685,7 @@ export class HSAutosingTimerModal {
             }
 
             const labelMax = `${this.formatNumberWithSign(maxY)} /s`;
-            const labelAvg = `${this.formatNumberWithSign(totalGain / totalTime)} /s`;
+            const labelAvg = `${this.formatNumberWithSign(last50TotalGain / last50TotalTime)} /s`;
             const labelMin = `${this.formatNumberWithSign(minY)} /s`;
             if (dom.lastLabelMax !== labelMax) {
                 dom.labelMax.textContent = labelMax;
