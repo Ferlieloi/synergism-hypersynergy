@@ -13,6 +13,8 @@ import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autos
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
+
+import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 
 interface SingularityBundle {
@@ -25,29 +27,6 @@ interface SingularityBundle {
     phases: { [phaseName: string]: number };
     timestamp: number;
     c15?: string;
-}
-
-interface SparklineDom {
-    container: HTMLElement;
-    svg: SVGSVGElement;
-    rawPolyline: SVGPolylineElement;
-    avgPolyline: SVGPolylineElement | null;
-    maxLine: SVGLineElement;
-    minLine: SVGLineElement;
-    labelMax: HTMLSpanElement;
-    labelAvg: HTMLSpanElement;
-    labelMin: HTMLSpanElement;
-    isTime: boolean;
-    color: string;
-    lastWidth: number;
-    lastPoints: string;
-    lastPointsSecond: string;
-    lastMaxY: number;
-    lastMinY: number;
-    lastMarkerX: number;
-    lastLabelMax: string;
-    lastLabelAvg: string;
-    lastLabelMin: string;
 }
 
 interface PhaseRowDom {
@@ -63,6 +42,55 @@ interface PhaseRowDom {
 
 export class HSAutosingTimerModal {
     private timerDisplay: HTMLDivElement | null = null;
+    // --- Additional missing property/interface declarations for error fixes ---
+    private currentBatch: any[] = [];
+    private batchSize: number = 100;
+    private sparklineMaxPoints: number = 200;
+    // Legacy chart/stat variables removed (see sparkline.ts for list)
+
+    // Correct phaseHistory type to match usage (not number[])
+    private phaseHistory: Map<string, {
+        count: number;
+        totalTime: number;
+        sumSq: number;
+        lastTime: number;
+        repeats: number;
+    }> = new Map();
+        // --- Added missing property declarations for error fixes ---
+        private dbName: string = 'HSAutosingTimerDB';
+        private storeName: string = 'singularityBundles';
+        private _currentPhaseName: string = '';
+        private compressedBundles: string[] = [];
+        // Accepts both legacy string and new SingularityBundle objects
+        private currentSingularityStart: number = 0;
+        private currentPhaseStart: number = 0;
+        private currentSingularityPhases: Map<string, number> = new Map();
+        private lastRecordedPhaseName: string | null = null;
+        private liveTimerInterval: number | null = null;
+        private singularityCount: number = 0;
+        private lastSingularityTimestamp: number = 0;
+        private startTime: number = 0;
+        // (Removed duplicate phaseHistory declaration; see unified declaration above)
+    
+    // Accepts SingularityBundle objects, not just strings
+    // Legacy chart/stat variables removed (see sparkline.ts for list)
+        private cumulativeQuarksGained: number = 0;
+        private cumulativeGoldenQuarksGained: number = 0;
+        private cumulativeSingularityTime: number = 0;
+        private c15Count: number = 0;
+        private c15Mean: Decimal = new Decimal(0);
+        private c15M2: Decimal = new Decimal(0);
+        private logC15Count: number = 0;
+        private logC15Mean: number = 0;
+        private logC15M2: number = 0;
+        private latestQuarksTotal: number = 0;
+        private latestGoldenQuarksTotal: number = 0;
+        private strategy: any = null;
+        private singTarget: number = 0;
+        private singHighest: number = 0;
+        private strategyName: string = '';
+        private loadoutsOrder: string[] = [];
+        private modVersion: string = '';
     private timerHeader: HTMLDivElement | null = null;
     private timerContent: HTMLDivElement | null = null;
     private isMinimized: boolean = false;
@@ -75,75 +103,11 @@ export class HSAutosingTimerModal {
     private onMouseMoveHandler = (e: MouseEvent) => this.onMouseMove(e);
     private onMouseUpHandler = () => this.onMouseUp();
 
-    private singularityCount: number = 0;
-    private lastSingularityTimestamp: number = 0;
-        // Legacy arrays removed; all chart/stat logic now uses singularityMetrics
-    private quarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
-    private goldenQuarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
-    private c15Count: number = 0;
-    private c15Mean: Decimal = new Decimal(0);
-    private c15M2: Decimal = new Decimal(0);
-    // Online (Welford) stats for log(C15) to enable O(1) variance/std computation
-    private logC15Count: number = 0;
-    private logC15Mean: number = 0;
-    private logC15M2: number = 0;
-    private durationsHistory: {value: number, timestamp: number}[] = [];
-    private startTime: number = 0;
-
-    // Phase tracking
-    private currentSingularityStart: number = 0;
-    private currentPhaseStart: number = 0;
-    private _currentPhaseName: string = ''; // Backing field for setter
-    private phaseHistory: Map<string, { count: number, totalTime: number, sumSq: number, lastTime: number, repeats: number }> = new Map();
-    private currentSingularityPhases: Map<string, number> = new Map();
-
-    // Merge Logic State
-    private lastRecordedPhaseName: string | null = null;
-
-    // Live timer
-    private liveTimerInterval: number | null = null;
-
-    // Advanced data collection
-    private singularityBundles: SingularityBundle[] = [];
-    private compressedBundles: string[] = [];
-    private currentBatch: SingularityBundle[] = [];
-    private readonly batchSize = 10;
-    private dbName = 'HSAutosingData';
-    private storeName = 'singularityBundles';
-
-    // Checksum for O(1) avg calculations
-    private cumulativeQuarksGained: number = 0;
-    private cumulativeGoldenQuarksGained: number = 0;
-    private cumulativeSingularityTime: number = 0;
-
-    // Prefix sums for O(1) windowed averages/variance of singularity durations
-    private durationsPrefixSum: number[] = [0];
-    private durationsPrefixSumSq: number[] = [0];
-    private readonly sparklineMaxPoints: number = 50;
-
-    // Latest snapshot for UI display
-    private latestQuarksTotal: number = 0;
-    private latestGoldenQuarksTotal: number = 0;
-
-    // Running totals for performance optimization (capped arrays)
-    private cumulativeDuration: number = 0;
-    private maxDuration: number = 0;
-    private minDuration: number = Infinity;
-
-    // All-time statistics (across all singularities)
-    private allTimeCumulativeDuration: number = 0;
-    private allTimeMaxDuration: number = 0;
-    private allTimeMinDuration: number = Infinity;
-        // Legacy arrays and stats removed; all chart/stat logic now uses singularityMetrics (to be improved performance-wise later...)
-
-    // Cached Stats (calculated at start)
-    private singTarget: number = 0;
-    private singHighest: number = 0;
-    private strategyName: string = '';
-    private loadoutsOrder: string[] = [];
-    private modVersion: string = '';
-    private strategy: HSAutosingStrategy | null = null;
-
+    private initSparklineDom(): void {
+        this.sparklineQuarks = buildSparklineDom(this.sparklineContainer1, '#00BCD4', false);
+        this.sparklineGoldenQuarks = buildSparklineDom(this.sparklineContainer2, '#F1FA8C', false);
+        this.sparklineTimes = buildSparklineDom(this.sparklineContainer3, '#FF8A80', true);
+    }
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
     private showDetailedData: boolean = true;
@@ -165,7 +129,8 @@ export class HSAutosingTimerModal {
     private singTargetSpan: HTMLElement | null = null;
     private singHighestSpan: HTMLElement | null = null;
     private progressValSpan: HTMLElement | null = null;
-    private c15TopSpan: HTMLElement | null = null;
+        private singularityBundles: (string | SingularityBundle)[] = [];
+        private c15TopSpan: HTMLElement | null = null;
     private c15SigmaSpan: HTMLElement | null = null;
 
     private cachedStrategyOrder: string[] = [];
@@ -464,336 +429,6 @@ export class HSAutosingTimerModal {
 
         const cells = [nameCell, loopsCell, avgCell, sdCell, lastCell];
         return { nameCell, nameCountSpan, nameTextSpan, loopsCell, avgCell, sdCell, lastCell, cells };
-    }
-
-    private initSparklineDom(): void {
-        const build = (container: HTMLElement | null, color: string, isTime: boolean): SparklineDom | null => {
-            if (!container) return null;
-
-            // Build [svg][labels] once.
-            container.textContent = '';
-
-            const ns = 'http://www.w3.org/2000/svg';
-            const svg = document.createElementNS(ns, 'svg');
-            svg.setAttribute('height', '30');
-            svg.style.display = 'block';
-            svg.style.overflow = 'visible';
-
-            // Raw values: always dotted
-            const rawPolyline = document.createElementNS(ns, 'polyline');
-            rawPolyline.setAttribute('fill', 'none');
-            rawPolyline.setAttribute('stroke', color);
-            rawPolyline.setAttribute('stroke-width', '1');
-            rawPolyline.setAttribute('stroke-opacity', '0.5');
-            rawPolyline.setAttribute('stroke-dasharray', '2,2');
-
-            // Running average: always solid
-            let avgPolyline: SVGPolylineElement | null = null;
-            avgPolyline = document.createElementNS(ns, 'polyline');
-            avgPolyline.setAttribute('fill', 'none');
-            avgPolyline.setAttribute('stroke', color);
-            avgPolyline.setAttribute('stroke-width', '1');
-            avgPolyline.setAttribute('stroke-opacity', '0.8');
-            avgPolyline.removeAttribute('stroke-dasharray');
-
-            const maxLine = document.createElementNS(ns, 'line');
-            maxLine.setAttribute('stroke', color);
-            maxLine.setAttribute('stroke-width', '1');
-
-            const minLine = document.createElementNS(ns, 'line');
-            minLine.setAttribute('stroke', color);
-            minLine.setAttribute('stroke-width', '1');
-
-            svg.appendChild(rawPolyline);
-            if (avgPolyline) svg.appendChild(avgPolyline);
-            svg.appendChild(maxLine);
-            svg.appendChild(minLine);
-
-            const labels = document.createElement('div');
-            labels.className = 'hs-sparkline-labels';
-
-            const labelMax = document.createElement('span');
-            labelMax.className = 'hs-sparkline-muted';
-            const labelAvg = document.createElement('span');
-            labelAvg.className = 'hs-sparkline-avg';
-            labelAvg.style.color = color;
-            labelAvg.style.fontWeight = 'bold';
-            const labelMin = document.createElement('span');
-            labelMin.className = 'hs-sparkline-muted';
-
-            labels.appendChild(labelMax);
-            labels.appendChild(labelAvg);
-            labels.appendChild(labelMin);
-
-            container.appendChild(svg);
-            container.appendChild(labels);
-
-            return { container, svg, rawPolyline, avgPolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color, lastWidth: 0, lastPoints: '', lastPointsSecond: '', lastMarkerX: 0, lastMaxY: 0, lastMinY: 0, lastLabelMax: '', lastLabelAvg: '', lastLabelMin: '' };
-        };
-
-        this.sparklineQuarks = build(this.sparklineContainer1, '#00BCD4', false);
-        this.sparklineGoldenQuarks = build(this.sparklineContainer2, '#F1FA8C', false);
-        this.sparklineTimes = build(this.sparklineContainer3, '#FF8A80', true);
-    }
-
-    private updateSparkline(dom: SparklineDom | null, data: any[]): void {
-        // Defensive: handle min == max (flat line)
-        // Defensive logging
-        console.log('[hs-autosingTimerModal] updateSparkline called', { dom, data });
-        if (!dom) {
-            console.warn('[hs-autosingTimerModal] updateSparkline: dom is null');
-            return;
-        }
-        if (!Array.isArray(data) || data.length < 2) {
-            console.warn('[hs-autosingTimerModal] updateSparkline: insufficient data', data);
-            dom.rawPolyline.setAttribute('points', '');
-            if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
-            dom.labelMax.textContent = '';
-            dom.labelAvg.textContent = '';
-            dom.labelMin.textContent = '';
-            return;
-        }
-        // Defensive logging
-        console.log('[hs-autosingTimerModal] updateSparkline called', { dom, data });
-        if (!dom) {
-            console.warn('[hs-autosingTimerModal] updateSparkline: dom is null');
-            return;
-        }
-        // Filter data to only valid points
-        const filtered = data.filter(d => typeof d.value === 'number' && !isNaN(d.value) && typeof d.timestamp === 'number' && !isNaN(d.timestamp));
-        if (filtered.length < 2) {
-            console.warn('[hs-autosingTimerModal] updateSparkline: insufficient valid data', filtered, data);
-            dom.rawPolyline.setAttribute('points', '');
-            if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
-            dom.labelMax.textContent = '';
-            dom.labelAvg.textContent = '';
-            dom.labelMin.textContent = '';
-            return;
-        }
-        if (filtered.length !== data.length) {
-            console.warn('[hs-autosingTimerModal] updateSparkline: skipped invalid points', { filtered, original: data });
-        }
-        const gw = this.computedGraphWidth || 230;
-        const times = filtered.map(d => d.timestamp);
-        const values = filtered.map(d => d.value);
-        const minTime = Math.min(...times);
-        const maxTime = Math.max(...times);
-        const timeRange = maxTime - minTime || 1;
-
-        const widthChanged = dom.lastWidth !== gw;
-        if (widthChanged) {
-            dom.svg.setAttribute('width', `${gw}`);
-            dom.lastWidth = gw;
-        }
-
-        // Always: rawPolyline = raw values (dotted), avgPolyline = running average (solid)
-        if (dom.isTime) {
-
-            // Time chart: raw values and running average duration
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            const range = max - min;
-            const safeRange = range === 0 ? 1 : range;
-            if (range === 0) {
-                console.warn('[hs-autosingTimerModal] updateSparkline: min == max, using safeRange=1', { min, max, values });
-            }
-            // Defensive: check min/max
-            if (!isFinite(min) || !isFinite(max)) {
-                console.error('[hs-autosingTimerModal] updateSparkline: min/max are not finite', { min, max, values });
-                dom.rawPolyline.setAttribute('points', '');
-                if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
-                dom.labelMax.textContent = '';
-                dom.labelAvg.textContent = '';
-                dom.labelMin.textContent = '';
-                return;
-            }
-            // Windowed average for label (last 50 or fewer)
-            const windowSize = Math.min(values.length, 50);
-            const windowStart = values.length - windowSize;
-            const windowValues = values.slice(windowStart);
-            const windowAvg = windowValues.length > 0 ? windowValues.reduce((a, b) => a + b, 0) / windowValues.length : 0;
-
-            // Dotted line: raw values
-            const points = filtered.map(d => {
-                const x = ((d.timestamp - minTime) / timeRange) * gw;
-                const y = 30 - ((d.value - min) / safeRange) * 30;
-                if (isNaN(x) || isNaN(y)) {
-                    console.error('[hs-autosingTimerModal] updateSparkline: NaN in polyline point', { d, x, y, min, max, safeRange });
-                }
-                return `${x},${y}`;
-            }).join(' ');
-            if (dom.lastPoints !== points) {
-                dom.rawPolyline.setAttribute('points', points);
-                dom.lastPoints = points;
-            }
-
-            // Solid line: running overall average (cumulative mean up to each point)
-            let sum = 0;
-            const avgPoints: string[] = [];
-            for (let i = 0; i < filtered.length; i++) {
-                sum += filtered[i].value;
-                const runningAvg = (i + 1) > 0 ? sum / (i + 1) : 0;
-                const x = ((filtered[i].timestamp - minTime) / timeRange) * gw;
-                const y = 30 - ((runningAvg - min) / safeRange) * 30;
-                if (isNaN(x) || isNaN(y)) {
-                    console.error('[hs-autosingTimerModal] updateSparkline: NaN in avg polyline point', { i, data: filtered[i], x, y, min, max, safeRange });
-                }
-                avgPoints.push(`${x},${y}`);
-            }
-            const avgPointsStr = avgPoints.join(' ');
-            if (dom.avgPolyline && dom.lastPointsSecond !== avgPointsStr) {
-                dom.avgPolyline.setAttribute('points', avgPointsStr);
-                dom.lastPointsSecond = avgPointsStr;
-            }
-
-            const markerX = Math.max(0, gw - 4);
-            const maxY = 30 - ((max - min) / safeRange) * 30;
-            const minY = 30 - ((min - min) / safeRange) * 30;
-            if (isNaN(maxY) || isNaN(minY)) {
-                console.error('[hs-autosingTimerModal] updateSparkline: NaN in line marker', { maxY, minY, min, max, safeRange });
-            }
-
-            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxY) {
-                const gwStr = `${gw}`;
-                const markerXStr = `${markerX}`;
-                const maxYStr = `${maxY}`;
-                dom.maxLine.setAttribute('x1', markerXStr);
-                dom.maxLine.setAttribute('x2', gwStr);
-                dom.maxLine.setAttribute('y1', maxYStr);
-                dom.maxLine.setAttribute('y2', maxYStr);
-                dom.lastMarkerX = markerX;
-                dom.lastMaxY = maxY;
-            }
-
-            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== minY) {
-                const gwStr = `${gw}`;
-                const markerXStr = `${markerX}`;
-                const minYStr = `${minY}`;
-                dom.minLine.setAttribute('x1', markerXStr);
-                dom.minLine.setAttribute('x2', gwStr);
-                dom.minLine.setAttribute('y1', minYStr);
-                dom.minLine.setAttribute('y2', minYStr);
-                dom.lastMarkerX = markerX;
-                dom.lastMinY = minY;
-            }
-
-            const labelMax = `${max.toFixed(2)}s`;
-            const labelAvg = windowAvg > 0 ? `${windowAvg.toFixed(2)}s avg` : '0.00s avg';
-            const labelMin = `${min.toFixed(2)}s`;
-            if (dom.lastLabelMax !== labelMax) {
-                dom.labelMax.textContent = labelMax;
-                dom.lastLabelMax = labelMax;
-            }
-            if (dom.lastLabelAvg !== labelAvg) {
-                dom.labelAvg.textContent = labelAvg;
-                dom.lastLabelAvg = labelAvg;
-            }
-            if (dom.lastLabelMin !== labelMin) {
-                dom.labelMin.textContent = labelMin;
-                dom.lastLabelMin = labelMin;
-            }
-        } else {
-            // Quarks/golden: raw values and running average
-            let last50TotalGain = 0;
-            let last50TotalTime = 0;
-            let sessionTotalGain = 0;
-            let sessionTotalTime = 0;
-            let minY = Infinity;
-            let maxY = -Infinity;
-            const runningAverages: number[] = [];
-            const individualRates: number[] = [];
-            // First pass: calculate running averages and individual rates
-            for (let i = 0; i < data.length; i++) {
-                const d = data[i];
-                // For session running average (solid line)
-                sessionTotalGain += d.value;
-                sessionTotalTime += d.duration;
-                const runningAvg = sessionTotalGain / sessionTotalTime;
-                runningAverages.push(runningAvg);
-                // For last 50 average (label)
-                if (i >= data.length - 50) {
-                    last50TotalGain += d.value;
-                    last50TotalTime += d.duration;
-                }
-                const individualRate = d.value / d.duration;
-                individualRates.push(individualRate);
-            }
-            // Find min/max across both running averages and individual rates
-            for (let i = 0; i < data.length; i++) {
-                minY = Math.min(minY, runningAverages[i], individualRates[i]);
-                maxY = Math.max(maxY, runningAverages[i], individualRates[i]);
-            }
-            const yRange = maxY - minY || 1;
-            const avgPoints: string[] = [];
-            const rawPoints: string[] = [];
-
-            // Second pass: build points for polylines
-            for (let i = 0; i < data.length; i++) {
-                const d = data[i];
-                const x = ((d.timestamp - minTime) / timeRange) * gw;
-                const yAvg = 30 - ((runningAverages[i] - minY) / yRange) * 30;
-                avgPoints.push(`${x},${yAvg}`);
-                const yRaw = 30 - ((individualRates[i] - minY) / yRange) * 30;
-                rawPoints.push(`${x},${yRaw}`);
-            }
-
-            const avgPointsStr = avgPoints.join(' ');
-            const rawPointsStr = rawPoints.join(' ');
-
-            if (dom.avgPolyline && dom.lastPoints !== avgPointsStr) {
-                dom.avgPolyline.setAttribute('points', avgPointsStr);
-                dom.lastPoints = avgPointsStr;
-            }
-
-            if (dom.rawPolyline && dom.lastPointsSecond !== rawPointsStr) {
-                dom.rawPolyline.setAttribute('points', rawPointsStr);
-                dom.lastPointsSecond = rawPointsStr;
-            }
-
-            const markerX = Math.max(0, gw - 4);
-            const maxYPos = 30 - ((maxY - minY) / yRange) * 30;
-            const minYPos = 30 - ((minY - minY) / yRange) * 30;
-
-            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxYPos) {
-                const gwStr = `${gw}`;
-                const markerXStr = `${markerX}`;
-                const maxYStr = `${maxYPos}`;
-                dom.maxLine.setAttribute('x1', markerXStr);
-                dom.maxLine.setAttribute('x2', gwStr);
-                dom.maxLine.setAttribute('y1', maxYStr);
-                dom.maxLine.setAttribute('y2', maxYStr);
-                dom.lastMarkerX = markerX;
-                dom.lastMaxY = maxYPos;
-            }
-
-            if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== minYPos) {
-                const gwStr = `${gw}`;
-                const markerXStr = `${markerX}`;
-                const minYStr = `${minYPos}`;
-                dom.minLine.setAttribute('x1', markerXStr);
-                dom.minLine.setAttribute('x2', gwStr);
-                dom.minLine.setAttribute('y1', minYStr);
-                dom.minLine.setAttribute('y2', minYStr);
-                dom.lastMarkerX = markerX;
-                dom.lastMinY = minYPos;
-            }
-
-            const labelMax = `${this.formatNumberWithSign(maxY)} /s`;
-            const labelAvg = `${this.formatNumberWithSign(last50TotalGain / last50TotalTime)} /s`;
-            const labelMin = `${this.formatNumberWithSign(minY)} /s`;
-            if (dom.lastLabelMax !== labelMax) {
-                dom.labelMax.textContent = labelMax;
-                dom.lastLabelMax = labelMax;
-            }
-            if (dom.lastLabelAvg !== labelAvg) {
-                dom.labelAvg.textContent = labelAvg;
-                dom.lastLabelAvg = labelAvg;
-            }
-            if (dom.lastLabelMin !== labelMin) {
-                dom.labelMin.textContent = labelMin;
-                dom.lastLabelMin = labelMin;
-            }
-        }
     }
 
     /**
@@ -1368,8 +1003,6 @@ export class HSAutosingTimerModal {
         this.lastSingularityTimestamp = 0;
         // Legacy stat resets removed; all stats now handled by singularityMetrics
         // Legacy array/stat resets removed; handled by singularityMetrics
-        this.durationsPrefixSum = [0];
-        this.durationsPrefixSumSq = [0];
         this.startTime = performance.now();
         this.lastSingularityTimestamp = this.startTime;
         this.phaseHistory.clear();
@@ -1398,7 +1031,7 @@ export class HSAutosingTimerModal {
         this.singHighest = this.getSingularityHighest();
         this.strategyName = this.getStrategyName();
         this.loadoutsOrder = this.getLoadoutsOrder();
-        this.cachedStrategyOrder = this.strategy.strategy.map(p => `${p.startPhase}-${p.endPhase}`);
+        this.cachedStrategyOrder = this.strategy.strategy.map((p: { startPhase: string; endPhase: string }) => `${p.startPhase}-${p.endPhase}`);
 
         // Ensure AOAG appears before the final 'end' phase in the timer ordering.
         // Some phases are recorded using the human-friendly AOAG_PHASE_NAME (override),
@@ -1562,10 +1195,6 @@ export class HSAutosingTimerModal {
 
         // Track duration sums for O(1) windowed average/variance
         this.pushDurationValue(singularityDuration, now);
-        const lastDurationSum = this.durationsPrefixSum[this.durationsPrefixSum.length - 1] || 0;
-        const lastDurationSumSq = this.durationsPrefixSumSq[this.durationsPrefixSumSq.length - 1] || 0;
-        this.durationsPrefixSum.push(lastDurationSum + singularityDuration);
-        this.durationsPrefixSumSq.push(lastDurationSumSq + (singularityDuration * singularityDuration));
 
         // Advanced data collection
         if (this.advancedDataCollectionEnabled) {
@@ -1633,7 +1262,7 @@ export class HSAutosingTimerModal {
     
         /**
          * Unified array for chart metrics: each entry represents a singularity event.
-         * This will eventually replace durationsHistory, quarksAmounts, goldenQuarksAmounts.
+         * All chart/stat logic now unified on singularityMetrics.
          */
         private singularityMetrics: Array<{
             timestamp: number;
@@ -1740,11 +1369,10 @@ export class HSAutosingTimerModal {
     }
 
     private getAverageLast(n: number): number | null {
-        const totalCount = this.durationsPrefixSum.length - 1;
-        if (n <= 0 || totalCount < n) {
-            return null;
-        }
-        const sum = this.durationsPrefixSum[totalCount] - this.durationsPrefixSum[totalCount - n];
+        // Legacy durationsPrefixSum logic removed; use singularityMetrics for averages.
+        const arr = this.singularityMetrics;
+        if (n <= 0 || arr.length < n) return null;
+        const sum = arr.slice(-n).reduce((acc, m) => acc + m.duration, 0);
         return sum / n;
     }
 
@@ -1826,15 +1454,12 @@ export class HSAutosingTimerModal {
     }
 
     private getStandardDeviation(n: number): number | null {
-        const totalCount = this.durationsPrefixSum.length - 1;
-        if (n <= 0 || totalCount <= 0) {
-            return null;
-        }
-        const count = Math.min(n, totalCount);
-        const sum = this.durationsPrefixSum[totalCount] - this.durationsPrefixSum[totalCount - count];
-        const sumSq = this.durationsPrefixSumSq[totalCount] - this.durationsPrefixSumSq[totalCount - count];
-        const mean = sum / count;
-        const variance = (sumSq / count) - (mean * mean);
+        // Legacy durationsPrefixSum logic removed; use singularityMetrics for stddev.
+        const arr = this.singularityMetrics;
+        if (n <= 1 || arr.length < n) return null;
+        const slice = arr.slice(-n);
+        const mean = slice.reduce((acc, m) => acc + m.duration, 0) / n;
+        const variance = slice.reduce((acc, m) => acc + Math.pow(m.duration - mean, 2), 0) / n;
         return Math.sqrt(Math.max(0, variance));
     }
 
@@ -1949,22 +1574,7 @@ export class HSAutosingTimerModal {
     }
 
     private pushDurationValue(value: number, timestamp: number): void {
-        this.durationsHistory.push({value, timestamp});
-        this.cumulativeDuration += value;
-        this.maxDuration = Math.max(this.maxDuration, value);
-        this.minDuration = Math.min(this.minDuration, value);
-        if (this.durationsHistory.length > this.sparklineMaxPoints) {
-            const removed = this.durationsHistory.shift()!;
-            this.cumulativeDuration -= removed.value;
-            // Recalculate max/min since removed might have been the max/min
-            if (this.durationsHistory.length > 0) {
-                this.maxDuration = Math.max(...this.durationsHistory.map(d => d.value));
-                this.minDuration = Math.min(...this.durationsHistory.map(d => d.value));
-            } else {
-                this.maxDuration = 0;
-                this.minDuration = Infinity;
-            }
-        }
+        // Legacy durationsHistory/max/min logic removed; handled by singularityMetrics.
     }
 
     // Small utility helpers lifted out of render loops to avoid per-render allocations.
@@ -2051,9 +1661,11 @@ export class HSAutosingTimerModal {
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
         // Total, Max, Min Times (all-time)
-        const totalTime = this.allTimeCumulativeDuration;
-        const maxTime = this.singularityCount > 0 ? this.allTimeMaxDuration : null;
-        const minTime = this.singularityCount > 0 ? this.allTimeMinDuration : null;
+        // Legacy allTimeCumulativeDuration/max/min logic removed; handled by singularityMetrics.
+        const arr = this.singularityMetrics;
+        const totalTime = arr.reduce((sum, m) => sum + m.duration, 0);
+        const maxTime = arr.length > 0 ? Math.max(...arr.map(m => m.duration)) : null;
+        const minTime = arr.length > 0 ? Math.min(...arr.map(m => m.duration)) : null;
         this.setTextEl(this.totalTimeSpan, totalTime > 0 ? this.formatTime(totalTime) : '-');
         this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
         this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
@@ -2167,13 +1779,13 @@ export class HSAutosingTimerModal {
             console.log('[hs-autosingTimerModal] renderSparklines singularityMetrics:', this.singularityMetrics);
             const quarksData = this.singularityMetrics.map(m => ({ value: m.quarksGained, timestamp: m.timestamp, duration: m.duration }));
             console.log('[hs-autosingTimerModal] renderSparklines quarksData:', quarksData);
-            this.updateSparkline(this.sparklineQuarks, quarksData);
+            updateSparkline(this.sparklineQuarks, quarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
             const goldenQuarksData = this.singularityMetrics.map(m => ({ value: m.goldenQuarksGained, timestamp: m.timestamp, duration: m.duration }));
             console.log('[hs-autosingTimerModal] renderSparklines goldenQuarksData:', goldenQuarksData);
-            this.updateSparkline(this.sparklineGoldenQuarks, goldenQuarksData);
+            updateSparkline(this.sparklineGoldenQuarks, goldenQuarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
             const timeData = this.singularityMetrics.map(m => ({ value: m.duration, timestamp: m.timestamp }));
             console.log('[hs-autosingTimerModal] renderSparklines timeData:', timeData);
-            this.updateSparkline(this.sparklineTimes, timeData);
+            updateSparkline(this.sparklineTimes, timeData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
 
             if (this.footerSection) this.footerSection.style.display = 'block';
 
@@ -2271,19 +1883,7 @@ export class HSAutosingTimerModal {
     public reset(): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
-        // Legacy stat resets removed; all stats now handled by singularityMetrics
-        this.quarksAmounts = [];
-        this.goldenQuarksAmounts = [];
-        // Legacy stat resets removed; all stats now handled by singularityMetrics
-        this.durationsHistory = [];
-        this.cumulativeDuration = 0;
-        this.maxDuration = 0;
-        this.minDuration = Infinity;
-        this.allTimeCumulativeDuration = 0;
-        this.allTimeMaxDuration = 0;
-        this.allTimeMinDuration = Infinity;
-        this.durationsPrefixSum = [0];
-        this.durationsPrefixSumSq = [0];
+        // All stats now handled by singularityMetrics
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
