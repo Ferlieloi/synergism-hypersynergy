@@ -27,8 +27,31 @@ export function updateSparkline(
         console.warn('[sparkline] updateSparkline: dom is null');
         return;
     }
-    // Slice for chart display
-    const chartData = Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data;
+    // Slice for chart display (only the datapoints to show on the chart)
+    // Map data to correct value property for each chart type
+    let chartData: any[] = Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data;
+    if (dom && dom.isTime) {
+        // For time chart, value = duration, runningAvg = runningAvgDuration
+        chartData = chartData.map(m => ({
+            ...m,
+            value: m.duration,
+            runningAvg: m.runningAvgDuration
+        }));
+    } else if (dom && dom.container && dom.container.id === 'hs-sparkline-quarks-container') {
+        // For quarks chart, value = quarksGained, runningAvg = runningAvgQuarksPerSecond
+        chartData = chartData.map(m => ({
+            ...m,
+            value: m.quarksGained,
+            runningAvg: m.runningAvgQuarksPerSecond
+        }));
+    } else if (dom && dom.container && dom.container.id === 'hs-sparkline-goldenquarks-container') {
+        // For golden quarks chart, value = goldenQuarksGained, runningAvg = runningAvgGoldenQuarksPerSecond
+        chartData = chartData.map(m => ({
+            ...m,
+            value: m.goldenQuarksGained,
+            runningAvg: m.runningAvgGoldenQuarksPerSecond
+        }));
+    }
     if (!Array.isArray(chartData) || chartData.length < 2) {
         console.warn('[sparkline] updateSparkline: insufficient data', chartData);
         dom.rawPolyline.setAttribute('points', '');
@@ -106,16 +129,15 @@ export function updateSparkline(
             dom.lastPoints = points;
         }
 
-        // Solid line: running overall average (cumulative mean up to each point)
-        let sum = 0;
+        // Solid line: use stored runningAvgDuration for each metric
         const avgPoints: string[] = [];
         for (let i = 0; i < filtered.length; i++) {
-            sum += filtered[i].value;
-            const runningAvg = (i + 1) > 0 ? sum / (i + 1) : 0;
-            const x = ((filtered[i].timestamp - minTime) / timeRange) * gw;
+            const metric = filtered[i];
+            const runningAvg = typeof metric.runningAvg === 'number' ? metric.runningAvg : 0;
+            const x = ((metric.timestamp - minTime) / timeRange) * gw;
             const y = 30 - ((runningAvg - min) / safeRange) * 30;
             if (isNaN(x) || isNaN(y)) {
-                console.error('[sparkline] updateSparkline: NaN in avg polyline point', { i, data: filtered[i], x, y, min, max, safeRange });
+                console.error('[sparkline] updateSparkline: NaN in avg polyline point', { i, metric, x, y, min, max, safeRange });
             }
             avgPoints.push(`${x},${y}`);
         }
@@ -172,63 +194,45 @@ export function updateSparkline(
             dom.lastLabelMin = labelMin;
         }
     } else {
-        // Quarks/golden: raw values and running average
-        // Slice for chart display
-        const chartData = Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data;
-        // Sums for label average calculation (last maxPoints entries)
+        // Quarks/golden: raw values and running average (use mapped value/runningAvg)
         let avgLabelGainSum = 0;
         let avgLabelTimeSum = 0;
-        // Sums for running average (entire session)
-        let sessionTotalGain = 0;
-        let sessionTotalTime = 0;
+        const avgPoints: string[] = [];
+        const rawPoints: string[] = [];
+        const labelAvgCount = Math.min(chartData.length, maxPoints);
+        // Compute minY/maxY for scaling
         let minY = Infinity;
         let maxY = -Infinity;
-        const runningAverages: number[] = [];
-        const individualRates: number[] = [];
-        // First pass: calculate running averages and individual rates
-        const labelAvgCount = Math.min(chartData.length, maxPoints);
         for (let i = 0; i < chartData.length; i++) {
             const d = chartData[i];
-            // For session running average (solid line)
-            sessionTotalGain += d.value;
-            sessionTotalTime += d.duration;
-            const runningAvg = sessionTotalGain / sessionTotalTime;
-            runningAverages.push(runningAvg);
             // For label average (last maxPoints entries)
             if (i >= chartData.length - labelAvgCount) {
                 avgLabelGainSum += d.value;
                 avgLabelTimeSum += d.duration;
             }
             const individualRate = d.value / d.duration;
-            individualRates.push(individualRate);
-        }
-        // Find min/max across both running averages and individual rates
-        for (let i = 0; i < chartData.length; i++) {
-            minY = Math.min(minY, runningAverages[i], individualRates[i]);
-            maxY = Math.max(maxY, runningAverages[i], individualRates[i]);
+            const runningAvg = typeof d.runningAvg === 'number' ? d.runningAvg : 0;
+            minY = Math.min(minY, runningAvg, individualRate);
+            maxY = Math.max(maxY, runningAvg, individualRate);
         }
         const yRange = maxY - minY || 1;
-        const avgPoints: string[] = [];
-        const rawPoints: string[] = [];
-
-        // Second pass: build points for polylines
+        // Build polylines
         for (let i = 0; i < chartData.length; i++) {
             const d = chartData[i];
+            const individualRate = d.value / d.duration;
+            const runningAvg = typeof d.runningAvg === 'number' ? d.runningAvg : 0;
             const x = ((d.timestamp - minTime) / timeRange) * gw;
-            const yAvg = 30 - ((runningAverages[i] - minY) / yRange) * 30;
+            const yAvg = 30 - ((runningAvg - minY) / yRange) * 30;
+            const yRaw = 30 - ((individualRate - minY) / yRange) * 30;
             avgPoints.push(`${x},${yAvg}`);
-            const yRaw = 30 - ((individualRates[i] - minY) / yRange) * 30;
             rawPoints.push(`${x},${yRaw}`);
         }
-
         const avgPointsStr = avgPoints.join(' ');
         const rawPointsStr = rawPoints.join(' ');
-
         if (dom.avgPolyline && dom.lastPoints !== avgPointsStr) {
             dom.avgPolyline.setAttribute('points', avgPointsStr);
             dom.lastPoints = avgPointsStr;
         }
-
         if (dom.rawPolyline && dom.lastPointsSecond !== rawPointsStr) {
             dom.rawPolyline.setAttribute('points', rawPointsStr);
             dom.lastPointsSecond = rawPointsStr;
