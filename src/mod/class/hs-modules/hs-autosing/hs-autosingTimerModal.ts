@@ -166,6 +166,8 @@ export class HSAutosingTimerModal {
     private finishStopBtn!: HTMLButtonElement;
     private chartToggleBtn: HTMLButtonElement | null = null;
     private minimizeBtn!: HTMLButtonElement;
+    private pauseBtn!: HTMLButtonElement;
+    private isPaused: boolean = false;
 
     // Cached Spans & Containers for Ticker
     private liveTimerSpan: HTMLElement | null = null;
@@ -780,6 +782,13 @@ export class HSAutosingTimerModal {
         return this._currentPhaseName;
     }
 
+    /**
+     * Returns true if autosing is currently paused.
+     */
+    public getIsPaused(): boolean {
+        return this.isPaused;
+    }
+
     private createTimerDisplay(): void {
         this.timerDisplay = document.createElement('div');
         this.timerDisplay.id = 'hs-autosing-timer-display';
@@ -797,6 +806,17 @@ export class HSAutosingTimerModal {
         title.textContent = '⏱️ Autosing';
         title.className = 'hs-timer-title';
 
+        // PAUSE BUTTON
+        this.pauseBtn = document.createElement('button');
+        this.pauseBtn.id = 'hs-timer-ctrl-pause';
+        this.pauseBtn.textContent = '⏸️';
+        this.pauseBtn.title = "Pause Autosing";
+        this.pauseBtn.className = 'hs-timer-ctrl-btn';
+        this.pauseBtn.onclick = () => {
+            this.isPaused = !this.isPaused;
+            this.pauseBtn.textContent = this.isPaused ? '▶️' : '⏸️';
+            this.pauseBtn.title = this.isPaused ? 'Resume Autosing' : 'Pause Autosing';
+        };
         this.stopButton = document.createElement('button');
         this.stopButton.id = 'hs-timer-ctrl-stop';
         this.stopButton.textContent = '🔴';
@@ -885,12 +905,14 @@ export class HSAutosingTimerModal {
 
         const controls = document.createElement('div');
         controls.className = 'hs-timer-controls';
+        controls.appendChild(this.pauseBtn);
         controls.appendChild(this.restartButton);
         controls.appendChild(this.stopButton);
         controls.appendChild(this.finishStopBtn);
         controls.appendChild(this.chartToggleBtn);
         controls.appendChild(this.minimizeBtn);
         this.timerHeader.appendChild(controls);
+
 
         /* ---------- CONTENT ---------- */
         this.timerContent = document.createElement('div');

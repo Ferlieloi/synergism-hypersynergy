@@ -644,7 +644,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
                 return;
             }
-
+            // PAUSE LOGIC: Block actions inside phase loop
+            if (this.timerModal && this.timerModal.getIsPaused()) {
+                HSUI.Notify('Autosing is paused.');
+                while (this.timerModal.getIsPaused() && this.isAutosingEnabled()) {
+                    await HSUtils.sleep(500);
+                }
+                HSUI.Notify('Autosing resumed.');
+            }
             const challenge = phaseConfig.strat[i];
 
             if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
