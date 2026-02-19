@@ -77,9 +77,7 @@ export class HSAutosingTimerModal {
 
     private singularityCount: number = 0;
     private lastSingularityTimestamp: number = 0;
-    private lastSingularityDuration: number | null = null;
-    private quarksGainsCount: number = 0;
-    private goldenQuarksGainsCount: number = 0;
+        // Legacy arrays removed; all chart/stat logic now uses singularityMetrics
     private quarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
     private goldenQuarksAmounts: {gain: number, timestamp: number, duration: number}[] = [];
     private c15Count: number = 0;
@@ -131,23 +129,12 @@ export class HSAutosingTimerModal {
     private cumulativeDuration: number = 0;
     private maxDuration: number = 0;
     private minDuration: number = Infinity;
-    private cumulativeQuarksGains: number = 0;
-    private maxQuarksGains: number = 0;
-    private minQuarksGains: number = Infinity;
-    private cumulativeGQuarksGains: number = 0;
-    private maxGQuarksGains: number = 0;
-    private minGQuarksGains: number = Infinity;
 
     // All-time statistics (across all singularities)
     private allTimeCumulativeDuration: number = 0;
     private allTimeMaxDuration: number = 0;
     private allTimeMinDuration: number = Infinity;
-    private allTimeCumulativeQuarksGains: number = 0;
-    private allTimeMaxQuarksGains: number = 0;
-    private allTimeMinQuarksGains: number = Infinity;
-    private allTimeCumulativeGQuarksGains: number = 0;
-    private allTimeMaxGQuarksGains: number = 0;
-    private allTimeMinGQuarksGains: number = Infinity;
+        // Legacy arrays and stats removed; all chart/stat logic now uses singularityMetrics (to be improved performance-wise later...)
 
     // Cached Stats (calculated at start)
     private singTarget: number = 0;
@@ -1232,7 +1219,6 @@ export class HSAutosingTimerModal {
         const LABELS_ESTIMATE = 110; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
 
         // Respect viewport so the modal doesn't go off-screen by default.
-        // NOTE: do not force a minimum larger than the fixed width.
         const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 40));
         const appliedHeight = Math.max(240, Math.min(FIXED_HEIGHT, window.innerHeight - 40));
 
@@ -1380,30 +1366,8 @@ export class HSAutosingTimerModal {
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
-        this.lastSingularityDuration = null;
-        this.quarksGainsCount = 0;
-        this.goldenQuarksGainsCount = 0;
-        this.durationsHistory = [];
-        this.cumulativeDuration = 0;
-        this.maxDuration = 0;
-        this.minDuration = Infinity;
-        this.allTimeCumulativeDuration = 0;
-        this.allTimeMaxDuration = 0;
-        this.allTimeMinDuration = Infinity;
-        this.quarksAmounts = [];
-        this.cumulativeQuarksGains = 0;
-        this.maxQuarksGains = 0;
-        this.minQuarksGains = Infinity;
-        this.allTimeCumulativeQuarksGains = 0;
-        this.allTimeMaxQuarksGains = 0;
-        this.allTimeMinQuarksGains = Infinity;
-        this.goldenQuarksAmounts = [];
-        this.cumulativeGQuarksGains = 0;
-        this.maxGQuarksGains = 0;
-        this.minGQuarksGains = Infinity;
-        this.allTimeCumulativeGQuarksGains = 0;
-        this.allTimeMaxGQuarksGains = 0;
-        this.allTimeMinGQuarksGains = Infinity;
+        // Legacy stat resets removed; all stats now handled by singularityMetrics
+        // Legacy array/stat resets removed; handled by singularityMetrics
         this.durationsPrefixSum = [0];
         this.durationsPrefixSumSq = [0];
         this.startTime = performance.now();
@@ -1569,7 +1533,7 @@ export class HSAutosingTimerModal {
         const now = performance.now();
         const singularityDuration = (now - this.lastSingularityTimestamp) / 1000;
         this.lastSingularityTimestamp = now;
-        this.lastSingularityDuration = singularityDuration;
+        // Duration is now tracked in singularityMetrics
         this.singularityCount += 1;
 
         this.latestGoldenQuarksTotal = currentGoldenQuarks;
@@ -1593,60 +1557,7 @@ export class HSAutosingTimerModal {
     console.log('[hs-autosingTimerModal] addSingularityMetric AFTER', this.singularityMetrics);
 
         if (singularityDuration > 0) {
-            // Update all-time statistics
-            this.allTimeCumulativeDuration += singularityDuration;
-            this.allTimeMaxDuration = Math.max(this.allTimeMaxDuration, singularityDuration);
-            this.allTimeMinDuration = Math.min(this.allTimeMinDuration, singularityDuration);
-
-            // Use wallet delta (realQuarksGain) to keep rates consistent with what the player sees.
-            this.quarksGainsCount += 1;
-            this.quarksAmounts.push({gain: realQuarksGain, timestamp: now, duration: singularityDuration});
-            this.cumulativeQuarksGains += realQuarksGain;
-            this.maxQuarksGains = Math.max(this.maxQuarksGains, realQuarksGain);
-            this.minQuarksGains = Math.min(this.minQuarksGains, realQuarksGain);
-            // Update all-time
-            this.allTimeCumulativeQuarksGains += realQuarksGain;
-            this.allTimeMaxQuarksGains = Math.max(this.allTimeMaxQuarksGains, realQuarksGain);
-            this.allTimeMinQuarksGains = Math.min(this.allTimeMinQuarksGains, realQuarksGain);
-            if (this.quarksAmounts.length > this.sparklineMaxPoints) {
-                const removed = this.quarksAmounts.shift()!;
-                this.cumulativeQuarksGains -= removed.gain;
-                // Recalculate max/min for capped array
-                if (this.quarksAmounts.length > 0) {
-                    this.maxQuarksGains = Math.max(...this.quarksAmounts.map(q => q.gain));
-                    this.minQuarksGains = Math.min(...this.quarksAmounts.map(q => q.gain));
-                } else {
-                    this.maxQuarksGains = 0;
-                    this.minQuarksGains = Infinity;
-                }
-            }
-
-            this.goldenQuarksGainsCount += 1;
-            this.goldenQuarksAmounts.push({gain: gainedGoldenQuarks, timestamp: now, duration: singularityDuration});
-            this.cumulativeGQuarksGains += gainedGoldenQuarks;
-            this.maxGQuarksGains = Math.max(this.maxGQuarksGains, gainedGoldenQuarks);
-            this.minGQuarksGains = Math.min(this.minGQuarksGains, gainedGoldenQuarks);
-            // Update all-time
-            this.allTimeCumulativeGQuarksGains += gainedGoldenQuarks;
-            this.allTimeMaxGQuarksGains = Math.max(this.allTimeMaxGQuarksGains, gainedGoldenQuarks);
-            this.allTimeMinGQuarksGains = Math.min(this.allTimeMinGQuarksGains, gainedGoldenQuarks);
-            if (this.goldenQuarksAmounts.length > this.sparklineMaxPoints) {
-                const removed = this.goldenQuarksAmounts.shift()!;
-                this.cumulativeGQuarksGains -= removed.gain;
-                // Recalculate max/min for capped array
-                if (this.goldenQuarksAmounts.length > 0) {
-                    this.maxGQuarksGains = Math.max(...this.goldenQuarksAmounts.map(g => g.gain));
-                    this.minGQuarksGains = Math.min(...this.goldenQuarksAmounts.map(g => g.gain));
-                } else {
-                    this.maxGQuarksGains = 0;
-                    this.minGQuarksGains = Infinity;
-                }
-            }
-
-            // O(1) optimization updates
-            this.cumulativeSingularityTime += singularityDuration;
-            this.cumulativeQuarksGained += realQuarksGain;
-            this.cumulativeGoldenQuarksGained += gainedGoldenQuarks;
+            // All chart/stat logic now handled by singularityMetrics
         }
 
         // Track duration sums for O(1) windowed average/variance
@@ -1823,7 +1734,9 @@ export class HSAutosingTimerModal {
     }
 
     private getLastDuration(): number | null {
-        return this.lastSingularityDuration;
+        // Return the duration of the last entry in singularityMetrics
+        if (this.singularityMetrics.length === 0) return null;
+        return this.singularityMetrics[this.singularityMetrics.length - 1].duration;
     }
 
     private getAverageLast(n: number): number | null {
@@ -1836,10 +1749,20 @@ export class HSAutosingTimerModal {
     }
 
     private getQuarksPerSecond(isGolden: boolean): number | null {
-        const count = isGolden ? this.goldenQuarksGainsCount : this.quarksGainsCount;
-        if (count === 0 || this.cumulativeSingularityTime <= 0) return null;
-        const total = isGolden ? this.cumulativeGoldenQuarksGained : this.cumulativeQuarksGained;
-        return total / this.cumulativeSingularityTime;
+        // Use singularityMetrics for rate calculation
+        const arr = this.singularityMetrics;
+        if (arr.length === 0) return null;
+        let total = 0, totalTime = 0;
+        for (const m of arr) {
+            if (isGolden) {
+                total += m.goldenQuarksGained;
+            } else {
+                total += m.quarksGained;
+            }
+            totalTime += m.duration;
+        }
+        if (totalTime <= 0) return null;
+        return total / totalTime;
     }
 
     private formatNumber(num: number): string {
@@ -2147,17 +2070,19 @@ export class HSAutosingTimerModal {
         }
 
         // Quarks Gains (all-time)
-        const totalQuarksGains = this.allTimeCumulativeQuarksGains;
-        const maxQuarksGains = this.singularityCount > 0 ? this.allTimeMaxQuarksGains : null;
-        const minQuarksGains = this.singularityCount > 0 ? this.allTimeMinQuarksGains : null;
+        // Quarks Gains (all-time, from singularityMetrics)
+        const metrics = this.singularityMetrics;
+        const totalQuarksGains = metrics.reduce((sum, m) => sum + m.quarksGained, 0);
+        const maxQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.quarksGained)) : null;
+        const minQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.quarksGained)) : null;
         this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? this.formatNumber(totalQuarksGains) : '-');
         this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? this.formatNumber(maxQuarksGains) : '-');
         this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? this.formatNumber(minQuarksGains) : '-');
 
-        // Golden Quarks Gains (all-time)
-        const totalGQuarksGains = this.allTimeCumulativeGQuarksGains;
-        const maxGQuarksGains = this.singularityCount > 0 ? this.allTimeMaxGQuarksGains : null;
-        const minGQuarksGains = this.singularityCount > 0 ? this.allTimeMinGQuarksGains : null;
+        // Golden Quarks Gains (all-time, from singularityMetrics)
+        const totalGQuarksGains = metrics.reduce((sum, m) => sum + m.goldenQuarksGained, 0);
+        const maxGQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.goldenQuarksGained)) : null;
+        const minGQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.goldenQuarksGained)) : null;
         this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? this.formatNumber(totalGQuarksGains) : '-');
         this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? this.formatNumber(maxGQuarksGains) : '-');
         this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? this.formatNumber(minGQuarksGains) : '-');
@@ -2346,29 +2271,10 @@ export class HSAutosingTimerModal {
     public reset(): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
-        this.lastSingularityDuration = null;
-        this.quarksGainsCount = 0;
-        this.goldenQuarksGainsCount = 0;
+        // Legacy stat resets removed; all stats now handled by singularityMetrics
         this.quarksAmounts = [];
-        this.cumulativeQuarksGains = 0;
-        this.maxQuarksGains = 0;
-        this.minQuarksGains = Infinity;
-        this.allTimeCumulativeQuarksGains = 0;
-        this.allTimeMaxQuarksGains = 0;
-        this.allTimeMinQuarksGains = Infinity;
         this.goldenQuarksAmounts = [];
-        this.cumulativeGQuarksGains = 0;
-        this.maxGQuarksGains = 0;
-        this.minGQuarksGains = Infinity;
-        this.allTimeCumulativeGQuarksGains = 0;
-        this.allTimeMaxGQuarksGains = 0;
-        this.allTimeMinGQuarksGains = Infinity;
-        this.c15Count = 0;
-        this.c15Mean = new Decimal(0);
-        this.c15M2 = new Decimal(0);
-        this.logC15Count = 0;
-        this.logC15Mean = 0;
-        this.logC15M2 = 0;
+        // Legacy stat resets removed; all stats now handled by singularityMetrics
         this.durationsHistory = [];
         this.cumulativeDuration = 0;
         this.maxDuration = 0;
