@@ -1174,8 +1174,8 @@ export class HSAutosingTimerModal {
         // Handle quarks exactly like golden quarks: use passed totals/gains.
         const realQuarksGain = gainedQuarks;
         this.latestQuarksTotal = currentQuarks;
-                // Log before and after adding metric
-                console.log('[hs-autosingTimerModal] addSingularityMetric BEffFORE', this.singularityMetrics);        
+        // Log before and after adding metric
+        console.log('[hs-autosingTimerModal] addSingularityMetric BEffFORE', this.singularityMetrics);        
         // Add to unified metrics array for charts
         this.addSingularityMetric(
 
@@ -1187,7 +1187,7 @@ export class HSAutosingTimerModal {
             new Map(this.currentSingularityPhases),
             c15Score
         );
-    console.log('[hs-autosingTimerModal] addSingularityMetric AFTER', this.singularityMetrics);
+        console.log('[hs-autosingTimerModal] addSingularityMetric AFTER', this.singularityMetrics);
 
         if (singularityDuration > 0) {
             // All chart/stat logic now handled by singularityMetrics
@@ -1260,73 +1260,73 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, sparklines: true, exportBtn: true });
     }
     
-        /**
-         * Unified array for chart metrics: each entry represents a singularity event.
-         * All chart/stat logic now unified on singularityMetrics.
-         */
-        private singularityMetrics: Array<{
-            timestamp: number;
-            duration: number;
-            quarksGained: number;
-            goldenQuarksGained: number;
-            totalQuarks: number;
-            totalGoldenQuarks: number;
-            phases: Record<string, number>;
-            c15?: string;
-        }> = [];
-    
-        /**
-         * Add a new entry to singularityMetrics after each singularity is recorded.
-         * This is a parallel structure to the old arrays, for refactor safety.
-         */
-        private addSingularityMetric(
-            singularityDuration: number,
-            realQuarksGain: number,
-            gainedGoldenQuarks: number,
-            currentQuarks: number,
-            currentGoldenQuarks: number,
-            phases: Map<string, number>,
-            c15Score?: Decimal
-        ): void {
-            // Validate all arguments
-            const validity = {
-                singularityDuration: typeof singularityDuration === 'number' && !isNaN(singularityDuration),
-                realQuarksGain: typeof realQuarksGain === 'number' && !isNaN(realQuarksGain),
-                gainedGoldenQuarks: typeof gainedGoldenQuarks === 'number' && !isNaN(gainedGoldenQuarks),
-                currentQuarks: typeof currentQuarks === 'number' && !isNaN(currentQuarks),
-                currentGoldenQuarks: typeof currentGoldenQuarks === 'number' && !isNaN(currentGoldenQuarks),
-                phases: phases instanceof Map,
-                c15Score: c15Score === undefined || typeof c15Score === 'object'
-            };
-            console.log('[hs-autosingTimerModal] addSingularityMetric argument validity', validity);
-            if (!validity.singularityDuration || !validity.realQuarksGain || !validity.gainedGoldenQuarks || !validity.currentQuarks || !validity.currentGoldenQuarks) {
-                console.error('[hs-autosingTimerModal] addSingularityMetric: Invalid metric arguments', {
-                    singularityDuration,
-                    realQuarksGain,
-                    gainedGoldenQuarks,
-                    currentQuarks,
-                    currentGoldenQuarks,
-                    phases,
-                    c15Score
-                });
-            }
-            const metric = {
-                timestamp: performance.now(),
-                duration: singularityDuration,
-                quarksGained: realQuarksGain,
-                goldenQuarksGained: gainedGoldenQuarks,
-                totalQuarks: currentQuarks,
-                totalGoldenQuarks: currentGoldenQuarks,
-                phases: Object.fromEntries(phases),
-                c15: c15Score ? c15Score.toString() : undefined
-            };
-            console.log('[hs-autosingTimerModal] addSingularityMetric PUSH', metric);
-            this.singularityMetrics.push(metric);
-            // Optionally: prune to max points for charting
-            if (this.singularityMetrics.length > this.sparklineMaxPoints) {
-                this.singularityMetrics.shift();
-            }
+    /**
+     * Unified array for chart metrics: each entry represents a singularity event.
+     * All chart/stat logic now unified on singularityMetrics.
+     */
+    private singularityMetrics: Array<{
+        timestamp: number;
+        duration: number;
+        quarksGained: number;
+        goldenQuarksGained: number;
+        totalQuarks: number;
+        totalGoldenQuarks: number;
+        phases: Record<string, number>;
+        c15?: string;
+    }> = [];
+
+    /**
+     * Add a new entry to singularityMetrics after each singularity is recorded.
+     * This is a parallel structure to the old arrays, for refactor safety.
+     */
+    private addSingularityMetric(
+        singularityDuration: number,
+        realQuarksGain: number,
+        gainedGoldenQuarks: number,
+        currentQuarks: number,
+        currentGoldenQuarks: number,
+        phases: Map<string, number>,
+        c15Score?: Decimal
+    ): void {
+        // Validate all arguments
+        const validity = {
+            singularityDuration: typeof singularityDuration === 'number' && !isNaN(singularityDuration),
+            realQuarksGain: typeof realQuarksGain === 'number' && !isNaN(realQuarksGain),
+            gainedGoldenQuarks: typeof gainedGoldenQuarks === 'number' && !isNaN(gainedGoldenQuarks),
+            currentQuarks: typeof currentQuarks === 'number' && !isNaN(currentQuarks),
+            currentGoldenQuarks: typeof currentGoldenQuarks === 'number' && !isNaN(currentGoldenQuarks),
+            phases: phases instanceof Map,
+            c15Score: c15Score === undefined || typeof c15Score === 'object'
+        };
+        console.log('[hs-autosingTimerModal] addSingularityMetric argument validity', validity);
+        if (!validity.singularityDuration || !validity.realQuarksGain || !validity.gainedGoldenQuarks || !validity.currentQuarks || !validity.currentGoldenQuarks) {
+            console.error('[hs-autosingTimerModal] addSingularityMetric: Invalid metric arguments', {
+                singularityDuration,
+                realQuarksGain,
+                gainedGoldenQuarks,
+                currentQuarks,
+                currentGoldenQuarks,
+                phases,
+                c15Score
+            });
         }
+        const metric = {
+            timestamp: performance.now(),
+            duration: singularityDuration,
+            quarksGained: realQuarksGain,
+            goldenQuarksGained: gainedGoldenQuarks,
+            totalQuarks: currentQuarks,
+            totalGoldenQuarks: currentGoldenQuarks,
+            phases: Object.fromEntries(phases),
+            c15: c15Score ? c15Score.toString() : undefined
+        };
+        console.log('[hs-autosingTimerModal] addSingularityMetric PUSH', metric);
+        this.singularityMetrics.push(metric);
+        // Optionally: prune to max points for charting
+        if (this.singularityMetrics.length > this.sparklineMaxPoints) {
+            this.singularityMetrics.shift();
+        }
+    }
 
     private getSingularityCount(): number {
         return this.singularityCount;
@@ -1681,7 +1681,6 @@ export class HSAutosingTimerModal {
             this.c15TopSpan.title = '';
         }
 
-        // Quarks Gains (all-time)
         // Quarks Gains (all-time, from singularityMetrics)
         const metrics = this.singularityMetrics;
         const totalQuarksGains = metrics.reduce((sum, m) => sum + m.quarksGained, 0);
@@ -1913,87 +1912,5 @@ export class HSAutosingTimerModal {
         // Keep placeholders cleared so no stale values remain.
         if (this.liveTimerSpan) this.liveTimerSpan.textContent = '';
         if (this.phaseTimerSpan) this.phaseTimerSpan.textContent = '';
-    }
-
-    /**
-     * Logic to generate SVG path and metadata for singularity charts.
-     * Handles 'flat' data (no change) by centering the line and aligning the avgY to it.
-     */
-    private generateSparklineMetadata(data: {value: number, time: number}[], width: number, height: number): { path: string, points: string, max: number, min: number, avg: number, maxY: number, minY: number, lastX: number, lastY: number } {
-        if (data.length < 1) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
-        const startIdx = Math.max(0, data.length - 50);
-        let max = -Infinity;
-        let min = Infinity;
-        let sum = 0;
-        let count = 0;
-
-        for (let i = startIdx; i < data.length; i++) {
-            const v = data[i].value;
-            if (v > max) max = v;
-            if (v < min) min = v;
-            sum += v;
-            count++;
-        }
-        const avg = count > 0 ? (sum / count) : 0;
-
-        // Handle flat data quickly
-        if (count === 0) return { path: '', points: '', max: 0, min: 0, avg: 0, maxY: 0, minY: height, lastX: 0, lastY: height / 2 };
-
-        const formattedMax = this.formatNumber(max);
-        const formattedMin = this.formatNumber(min);
-        if (formattedMax === formattedMin || count === 1) {
-            const centerY = height / 2;
-            const pts = `0,${centerY.toFixed(1)} ${width},${centerY.toFixed(1)}`;
-            return {
-                path: `M 0,${centerY.toFixed(1)} L ${width},${centerY.toFixed(1)}`,
-                points: pts,
-                max: max,
-                min: min,
-                avg: avg,
-                maxY: centerY,
-                minY: centerY,
-                lastX: width,
-                lastY: centerY
-            };
-        }
-
-        const range = max - min;
-        const padding = range * 0.1;
-        const displayMin = min - padding;
-        const displayRange = range + 2 * padding;
-
-        // Build points string without intermediate object allocations
-        const ptsArr: string[] = new Array(count);
-        let lastX = 0;
-        let lastY = height / 2;
-        const minTime = data[startIdx].time;
-        const maxTime = data[startIdx + count - 1].time;
-        const timeRange = maxTime - minTime;
-        for (let idx = 0; idx < count; idx++) {
-            const item = data[startIdx + idx];
-            const val = item.value;
-            const time = item.time;
-            const x = timeRange > 0 ? ((time - minTime) / timeRange) * width : (count === 1 ? width : (idx / (count - 1)) * width);
-            const y = height - ((val - displayMin) / displayRange) * height;
-            ptsArr[idx] = `${x.toFixed(1)},${y.toFixed(1)}`;
-            lastX = x;
-            lastY = y;
-        }
-
-        const pointsStr = ptsArr.join(' ');
-        const maxY = height - ((max - displayMin) / displayRange) * height;
-        const minY = height - ((min - displayMin) / displayRange) * height;
-
-        return {
-            path: `M ${pointsStr.replace(/ /g, ' L ')}`,
-            points: pointsStr,
-            max: max,
-            min: min,
-            avg: avg,
-            maxY: maxY,
-            minY: minY,
-            lastX: lastX,
-            lastY: lastY
-        };
     }
 }
