@@ -19,11 +19,11 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
-import { createPhaseStatsHeader, createPhaseRowDom, updatePhaseRowDom, createPhaseEmptyNode, PhaseRowDom } from "./hs-phaseStats";
+import { createPhaseStatsHeader, createPhaseRowDom, updatePhaseRowDom, createPhaseEmptyNode, PhaseRowDom } from "./hs-autosingPhaseStats";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
-
+import { HSAutosingDB } from './hs-autosingDB';
 import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 
@@ -43,6 +43,7 @@ interface SingularityBundle {
 
 export class HSAutosingTimerModal {
     private timerDisplay: HTMLDivElement | null = null;
+    private db: HSAutosingDB;
     // --- Additional missing property/interface declarations for error fixes ---
     private currentBatch: any[] = [];
     private batchSize: number = 10;
@@ -210,6 +211,7 @@ export class HSAutosingTimerModal {
     private computedGraphWidth: number | null = null; // px
 
     constructor() {
+        this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles');
         this.createTimerDisplay();
         this.setupDragAndResize();
         this.cachedGlobalPhaseIndex = new Map();
@@ -240,59 +242,7 @@ export class HSAutosingTimerModal {
         return Math.sqrt(Math.max(0, variance));
     }
 
-    private async openDB(): Promise<IDBDatabase> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, 1);
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            request.onsuccess = (event) => {
-                resolve((event.target as IDBOpenDBRequest).result);
-            };
-            request.onerror = (event) => {
-                reject(event.target);
-            };
-        });
-    }
-
-    private async storeBundle(compressedBundle: string): Promise<void> {
-        const db = await this.openDB();
-        const transaction = db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        store.add({ data: compressedBundle, timestamp: Date.now() });
-        return new Promise((resolve, reject) => {
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        });
-    }
-
-    private async loadBundles(): Promise<string[]> {
-        const db = await this.openDB();
-        const transaction = db.transaction([this.storeName], 'readonly');
-        const store = transaction.objectStore(this.storeName);
-        const request = store.getAll();
-        return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
-                const results = request.result as { data: string }[];
-                resolve(results.map(r => r.data));
-            };
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    private async clearBundles(): Promise<void> {
-        const db = await this.openDB();
-        const transaction = db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        store.clear();
-        return new Promise((resolve, reject) => {
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        });
-    }
+    // Database methods now handled by HSAutosingDB
 
     private ensureStaticDom(): void {
         if (this.staticDomInitialized) return;
@@ -1007,7 +957,7 @@ export class HSAutosingTimerModal {
             this.singularityBundles = [];
             this.compressedBundles = [];
             this.currentBatch = [];
-            this.clearBundles().catch(console.error);
+            this.db.clearBundles().catch(console.error);
         } else {
             // Hybrid Minimal: no bundles stored
             this.singularityBundles = [];
@@ -1162,7 +1112,7 @@ export class HSAutosingTimerModal {
             if (this.currentBatch.length >= this.batchSize) {
                 const compressed = compressToUTF16(JSON.stringify(this.currentBatch));
                 this.compressedBundles.push(compressed);
-                this.storeBundle(compressed).catch(console.error);
+                this.db.storeBundle(compressed).catch(console.error);
                 this.currentBatch = [];
             }
         }
