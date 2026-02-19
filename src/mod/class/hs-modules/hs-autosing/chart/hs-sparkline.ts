@@ -1,17 +1,25 @@
-// Legacy chart/stat variables removed from hs-autosingTimerModal.ts for future reference:
-// durationsHistory: Array<{ value: number; timestamp: number }>
-// cumulativeDuration: number
-// maxDuration: number
-// minDuration: number
-// allTimeCumulativeDuration: number
-// allTimeMaxDuration: number
-// allTimeMinDuration: number
-// quarksAmounts: any[]
-// goldenQuarksAmounts: any[]
-// durationsPrefixSum: number[]
-// durationsPrefixSumSq: number[]
-// Modularized updateSparkline logic from hs-autosingTimerModal.ts
-export function updateSparkline(dom: SparklineDom | null, data: any[], computedGraphWidth: number | null, formatNumberWithSign: (n: number) => string): void {
+/**
+ * Update sparkline chart display.
+ *
+ * Interface:
+ *   - Modal passes the full metrics array and maxPoints.
+ *   - Chart module slices internally for chart display and label stats.
+ *   - For chart display: chartData = data.slice(-maxPoints)
+ *   - For label/windowed stats: windowSize = min(chartData.length, maxPoints)
+ *
+ * @param dom SparklineDom instance
+ * @param data Full metrics array (not sliced)
+ * @param computedGraphWidth SVG width
+ * @param formatNumberWithSign Number formatting function
+ * @param maxPoints Maximum points to display in chart (window for display and label stats)
+ */
+export function updateSparkline(
+    dom: SparklineDom | null,
+    data: any[],
+    computedGraphWidth: number | null,
+    formatNumberWithSign: (n: number) => string,
+    maxPoints: number
+): void {
     // Defensive: handle min == max (flat line)
     // Defensive logging
     console.log('[sparkline] updateSparkline called', { dom, data });
@@ -19,8 +27,10 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         console.warn('[sparkline] updateSparkline: dom is null');
         return;
     }
-    if (!Array.isArray(data) || data.length < 2) {
-        console.warn('[sparkline] updateSparkline: insufficient data', data);
+    // Slice for chart display
+    const chartData = Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data;
+    if (!Array.isArray(chartData) || chartData.length < 2) {
+        console.warn('[sparkline] updateSparkline: insufficient data', chartData);
         dom.rawPolyline.setAttribute('points', '');
         if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
         dom.labelMax.textContent = '';
@@ -29,10 +39,10 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         return;
     }
     // Defensive logging
-    // Filter data to only valid points
-    const filtered = data.filter(d => typeof d.value === 'number' && !isNaN(d.value) && typeof d.timestamp === 'number' && !isNaN(d.timestamp));
+    // Filter chartData to only valid points
+    const filtered = chartData.filter(d => typeof d.value === 'number' && !isNaN(d.value) && typeof d.timestamp === 'number' && !isNaN(d.timestamp));
     if (filtered.length < 2) {
-        console.warn('[sparkline] updateSparkline: insufficient valid data', filtered, data);
+        console.warn('[sparkline] updateSparkline: insufficient valid data', filtered, chartData);
         dom.rawPolyline.setAttribute('points', '');
         if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
         dom.labelMax.textContent = '';
@@ -40,8 +50,8 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         dom.labelMin.textContent = '';
         return;
     }
-    if (filtered.length !== data.length) {
-        console.warn('[sparkline] updateSparkline: skipped invalid points', { filtered, original: data });
+    if (filtered.length !== chartData.length) {
+        console.warn('[sparkline] updateSparkline: skipped invalid points', { filtered, original: chartData });
     }
     const gw = computedGraphWidth || 230;
     const times = filtered.map(d => d.timestamp);
@@ -76,9 +86,9 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
             dom.labelMin.textContent = '';
             return;
         }
-        // Windowed average for label (last 50 or fewer)
-        const windowSize = Math.min(values.length, 50);
-        const windowStart = values.length - windowSize;
+        // Windowed average for label (last maxPoints or fewer)
+        const windowSize = Math.min(filtered.length, maxPoints);
+        const windowStart = filtered.length - windowSize;
         const windowValues = values.slice(windowStart);
         const windowAvg = windowValues.length > 0 ? windowValues.reduce((a, b) => a + b, 0) / windowValues.length : 0;
 
@@ -163,8 +173,12 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         }
     } else {
         // Quarks/golden: raw values and running average
-        let last50TotalGain = 0;
-        let last50TotalTime = 0;
+        // Slice for chart display
+        const chartData = Array.isArray(data) && maxPoints > 0 ? data.slice(-maxPoints) : data;
+        // Sums for label average calculation (last maxPoints entries)
+        let avgLabelGainSum = 0;
+        let avgLabelTimeSum = 0;
+        // Sums for running average (entire session)
         let sessionTotalGain = 0;
         let sessionTotalTime = 0;
         let minY = Infinity;
@@ -172,23 +186,24 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         const runningAverages: number[] = [];
         const individualRates: number[] = [];
         // First pass: calculate running averages and individual rates
-        for (let i = 0; i < data.length; i++) {
-            const d = data[i];
+        const labelAvgCount = Math.min(chartData.length, maxPoints);
+        for (let i = 0; i < chartData.length; i++) {
+            const d = chartData[i];
             // For session running average (solid line)
             sessionTotalGain += d.value;
             sessionTotalTime += d.duration;
             const runningAvg = sessionTotalGain / sessionTotalTime;
             runningAverages.push(runningAvg);
-            // For last 50 average (label)
-            if (i >= data.length - 50) {
-                last50TotalGain += d.value;
-                last50TotalTime += d.duration;
+            // For label average (last maxPoints entries)
+            if (i >= chartData.length - labelAvgCount) {
+                avgLabelGainSum += d.value;
+                avgLabelTimeSum += d.duration;
             }
             const individualRate = d.value / d.duration;
             individualRates.push(individualRate);
         }
         // Find min/max across both running averages and individual rates
-        for (let i = 0; i < data.length; i++) {
+        for (let i = 0; i < chartData.length; i++) {
             minY = Math.min(minY, runningAverages[i], individualRates[i]);
             maxY = Math.max(maxY, runningAverages[i], individualRates[i]);
         }
@@ -197,8 +212,8 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         const rawPoints: string[] = [];
 
         // Second pass: build points for polylines
-        for (let i = 0; i < data.length; i++) {
-            const d = data[i];
+        for (let i = 0; i < chartData.length; i++) {
+            const d = chartData[i];
             const x = ((d.timestamp - minTime) / timeRange) * gw;
             const yAvg = 30 - ((runningAverages[i] - minY) / yRange) * 30;
             avgPoints.push(`${x},${yAvg}`);
@@ -247,8 +262,9 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
             dom.lastMinY = minYPos;
         }
 
+        // Chart label values: max, avg (last maxPoints), min
         const labelMax = `${formatNumberWithSign(maxY)} /s`;
-        const labelAvg = `${formatNumberWithSign(last50TotalGain / last50TotalTime)} /s`;
+        const labelAvg = `${formatNumberWithSign(avgLabelGainSum / avgLabelTimeSum)} /s`;
         const labelMin = `${formatNumberWithSign(minY)} /s`;
         if (dom.lastLabelMax !== labelMax) {
             dom.labelMax.textContent = labelMax;
@@ -264,8 +280,14 @@ export function updateSparkline(dom: SparklineDom | null, data: any[], computedG
         }
     }
 }
-// Sparkline chart logic extracted from hs-autosingTimerModal.ts
-// All chart rendering and DOM logic for sparklines is now modularized here.
+/**
+ * Sparkline chart logic extracted from hs-autosingTimerModal.ts
+ * All chart rendering and DOM logic for sparklines is now modularized here.
+ *
+ * New interface: updateSparkline(dom, data, computedGraphWidth, formatNumberWithSign, maxPoints)
+ * - Modal passes full metrics array and maxPoints
+ * - Chart slices internally for display and label stats
+ */
 
 export interface SparklineDom {
     container: HTMLElement;

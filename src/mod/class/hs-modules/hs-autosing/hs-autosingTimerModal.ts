@@ -45,7 +45,7 @@ export class HSAutosingTimerModal {
     private timerDisplay: HTMLDivElement | null = null;
     // --- Additional missing property/interface declarations for error fixes ---
     private currentBatch: any[] = [];
-    private batchSize: number = 100;
+    private batchSize: number = 10;
     private sparklineMaxPoints: number = 200;
     // Legacy chart/stat variables removed (see sparkline.ts for list)
 
@@ -73,8 +73,8 @@ export class HSAutosingTimerModal {
         private startTime: number = 0;
         // (Removed duplicate phaseHistory declaration; see unified declaration above)
     
-    // Accepts SingularityBundle objects, not just strings
-    // Legacy chart/stat variables removed (see sparkline.ts for list)
+        // Accepts SingularityBundle objects, not just strings
+        // Legacy chart/stat variables removed (see sparkline.ts for list)
         private cumulativeQuarksGained: number = 0;
         private cumulativeGoldenQuarksGained: number = 0;
         private cumulativeSingularityTime: number = 0;
@@ -238,26 +238,6 @@ export class HSAutosingTimerModal {
         const mean = slice.reduce((acc, m) => acc + m.duration, 0) / n;
         const variance = slice.reduce((acc, m) => acc + Math.pow(m.duration - mean, 2), 0) / n;
         return Math.sqrt(Math.max(0, variance));
-    }
-
-    /**
-     * Get average quarks gained for last n singularities from unified metrics array.
-     */
-    private getUnifiedQuarksAvgLast(n: number): number | null {
-        const arr = this.singularityMetrics;
-        if (n <= 0 || arr.length < n) return null;
-        const sum = arr.slice(-n).reduce((acc, m) => acc + m.quarksGained, 0);
-        return sum / n;
-    }
-
-    /**
-     * Get average golden quarks gained for last n singularities from unified metrics array.
-     */
-    private getUnifiedGoldenQuarksAvgLast(n: number): number | null {
-        const arr = this.singularityMetrics;
-        if (n <= 0 || arr.length < n) return null;
-        const sum = arr.slice(-n).reduce((acc, m) => acc + m.goldenQuarksGained, 0);
-        return sum / n;
     }
 
     private async openDB(): Promise<IDBDatabase> {
@@ -1714,6 +1694,12 @@ export class HSAutosingTimerModal {
     }
 
     private renderSparklines(): void {
+        /**
+         * Sparkline chart interface update:
+         * - Modal passes full metrics array and sparklineMaxPoints to chart module.
+         * - Chart module slices internally for display and label stats.
+         * - See hs-sparkline.ts for details.
+         */
         this.ensureStaticDom();
 
         if (this.showDetailedData) {
@@ -1726,13 +1712,13 @@ export class HSAutosingTimerModal {
             console.log('[hs-autosingTimerModal] renderSparklines singularityMetrics:', this.singularityMetrics);
             const quarksData = this.singularityMetrics.map(m => ({ value: m.quarksGained, timestamp: m.timestamp, duration: m.duration }));
             console.log('[hs-autosingTimerModal] renderSparklines quarksData:', quarksData);
-            updateSparkline(this.sparklineQuarks, quarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
+            updateSparkline(this.sparklineQuarks, quarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
             const goldenQuarksData = this.singularityMetrics.map(m => ({ value: m.goldenQuarksGained, timestamp: m.timestamp, duration: m.duration }));
             console.log('[hs-autosingTimerModal] renderSparklines goldenQuarksData:', goldenQuarksData);
-            updateSparkline(this.sparklineGoldenQuarks, goldenQuarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
+            updateSparkline(this.sparklineGoldenQuarks, goldenQuarksData, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
             const timeData = this.singularityMetrics.map(m => ({ value: m.duration, timestamp: m.timestamp }));
             console.log('[hs-autosingTimerModal] renderSparklines timeData:', timeData);
-            updateSparkline(this.sparklineTimes, timeData, this.computedGraphWidth, this.formatNumberWithSign.bind(this));
+            updateSparkline(this.sparklineTimes, timeData, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
 
             if (this.footerSection) this.footerSection.style.display = 'block';
 
