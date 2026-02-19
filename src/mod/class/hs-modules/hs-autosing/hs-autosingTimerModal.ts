@@ -2,14 +2,24 @@
     Class: HSAutosingTimerModule
     IsExplicitHSModule: No
     Description: 
-        Class that implements a modal for the autosing timer and for tracking (golden)quark gain.
-        Updated with manual phase setter and phase merging logic.
-    Author: XxmolkxX
+        Implements the modal for the autosing timer and (golden)quark gain tracking.
+        Modularized: Phase statistics DOM and logic are now handled by the external hs-phaseStats module for maintainability and reusability.
+        This class is responsible for:
+        - Orchestrating modal UI, state, and event handling
+        - Caching all DOM nodes and computed values for performance
+        - Batching DOM updates and stat calculations to minimize layout thrashing
+        - Passing phase data to the modular phase stats helpers for rendering
+        - Managing version tracking to avoid unnecessary re-renders
+        
+        The phase stats module (hs-phaseStats.ts) provides stateless, reusable DOM helpers for phase stat rows, headers, and updates. All caching and update logic remains in this class for maximum performance.
+        
+        Author: XxmolkxX
 */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
+import { createPhaseStatsHeader, createPhaseRowDom, updatePhaseRowDom, createPhaseEmptyNode, PhaseRowDom } from "./hs-phaseStats";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
@@ -29,16 +39,7 @@ interface SingularityBundle {
     c15?: string;
 }
 
-interface PhaseRowDom {
-    nameCell: HTMLDivElement;
-    nameCountSpan: HTMLSpanElement;
-    nameTextSpan: HTMLSpanElement;
-    loopsCell: HTMLDivElement;
-    avgCell: HTMLDivElement;
-    sdCell: HTMLDivElement;
-    lastCell: HTMLDivElement;
-    cells: HTMLDivElement[];
-}
+// PhaseRowDom now imported from phaseStats.ts
 
 export class HSAutosingTimerModal {
     private timerDisplay: HTMLDivElement | null = null;
@@ -187,6 +188,8 @@ export class HSAutosingTimerModal {
     private resizeHandleElem: HTMLElement | null = null;
 
     // Render batching / change tracking
+    // These flags and version numbers ensure that expensive DOM updates only happen when needed.
+    // This is critical for performance, especially with large or frequently updated tables.
     private renderPending: boolean = false;
     private renderGeneralPending: boolean = false;
     private renderPhasesPending: boolean = false;
@@ -380,25 +383,8 @@ export class HSAutosingTimerModal {
 
     private initPhaseStatsDom(): void {
         if (!this.phaseStatsContainer) return;
-
-        this.phaseHeaderNodes = [];
-        this.phaseEmptyNode = document.createElement('div');
-        this.phaseEmptyNode.className = 'hs-phase-empty';
-        this.phaseEmptyNode.textContent = 'No data yet...';
-
-        const mkHeader = (label: string, isTitle = false) => {
-            const div = document.createElement('div');
-            div.className = isTitle ? 'hs-phase-header-title' : 'hs-phase-header';
-            div.textContent = label;
-            return div;
-        };
-
-        this.phaseHeaderNodes.push(mkHeader('PHASE STATISTICS', true));
-        this.phaseHeaderNodes.push(mkHeader('Loops'));
-        this.phaseHeaderNodes.push(mkHeader('Avg'));
-        this.phaseHeaderNodes.push(mkHeader('SD'));
-        this.phaseHeaderNodes.push(mkHeader('Last'));
-
+        this.phaseHeaderNodes = createPhaseStatsHeader();
+        this.phaseEmptyNode = createPhaseEmptyNode();
         // Render initial empty grid
         const frag = document.createDocumentFragment();
         this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
@@ -406,30 +392,7 @@ export class HSAutosingTimerModal {
         this.phaseStatsContainer.replaceChildren(frag);
     }
 
-    private createPhaseRowDom(phaseName: string): PhaseRowDom {
-        const mkCell = (className: string) => {
-            const div = document.createElement('div');
-            div.className = className;
-            return div;
-        };
-
-        const nameCell = mkCell('hs-phase-name');
-        const nameCountSpan = document.createElement('span');
-        nameCountSpan.className = 'hs-phase-count';
-        const nameTextSpan = document.createElement('span');
-        nameTextSpan.className = 'hs-phase-text';
-        nameTextSpan.textContent = phaseName;
-        nameCell.appendChild(nameCountSpan);
-        nameCell.appendChild(nameTextSpan);
-
-        const loopsCell = mkCell('hs-phase-loops');
-        const avgCell = mkCell('hs-phase-avg');
-        const sdCell = mkCell('hs-phase-sd');
-        const lastCell = mkCell('hs-phase-last');
-
-        const cells = [nameCell, loopsCell, avgCell, sdCell, lastCell];
-        return { nameCell, nameCountSpan, nameTextSpan, loopsCell, avgCell, sdCell, lastCell, cells };
-    }
+    // createPhaseRowDom now imported from phaseStats.ts
 
     /**
      * Public setter to update the current phase name displayed on the timer.
@@ -1702,66 +1665,51 @@ export class HSAutosingTimerModal {
     private renderPhaseStatistics(): void {
         const phaseContainer = this.phaseStatsContainer;
         if (!phaseContainer) return;
-
         this.ensureStaticDom();
-
         const sortedPhases = Array.from(this.phaseHistory.entries())
             .sort((a, b) => {
                 const idxA = this.cachedStrategyOrderIndex.get(a[0]);
                 const idxB = this.cachedStrategyOrderIndex.get(b[0]);
-
-                // If both are in the strategy, respect strategy order
                 if (idxA !== undefined && idxB !== undefined) return idxA - idxB;
-
-                // If one is in strategy, it comes first
                 if (idxA !== undefined) return -1;
                 if (idxB !== undefined) return 1;
-
-                // Fallback: Use global phases list for predictable ordering
                 const globalIdxA = this.cachedGlobalPhaseIndex.get(a[0]) ?? 999;
                 const globalIdxB = this.cachedGlobalPhaseIndex.get(b[0]) ?? 999;
                 return globalIdxA - globalIdxB;
             });
-
-        const orderedRows: PhaseRowDom[] = [];
-
+        const orderedRows: ReturnType<typeof createPhaseRowDom>[] = [];
         for (const [phaseName, data] of sortedPhases) {
             if (data.count <= 0) continue;
-
-            const avg = data.totalTime / data.count;
-            const last = data.lastTime;
-            const sd = this.getPhaseStandardDeviation(phaseName);
-            const sdStr = sd !== null ? `±${sd.toFixed(2)}s` : '±0.00s';
-            const avgLoops = 1 + (data.repeats / data.count);
-            const count = data.count;
-
             let row = this.phaseRowMap.get(phaseName);
             if (!row) {
-                row = this.createPhaseRowDom(phaseName);
+                row = createPhaseRowDom();
                 this.phaseRowMap.set(phaseName, row);
             }
-
-            row.nameCountSpan.textContent = `x${count} `;
-            row.nameTextSpan.textContent = phaseName;
-            row.loopsCell.textContent = `x${avgLoops.toFixed(2)}`;
-            row.avgCell.textContent = `${avg.toFixed(2)}s`;
-            row.sdCell.textContent = sdStr;
-            row.lastCell.textContent = `${last.toFixed(2)}s`;
-
+            updatePhaseRowDom(row, {
+                loopCount: 1 + (data.repeats / data.count),
+                avg: data.totalTime / data.count,
+                sd: this.getPhaseStandardDeviation(phaseName) ?? 0,
+                last: data.lastTime
+            });
+            // Set phase name and count
+            // Set phase name and count if available (for legacy PhaseRowDom shape)
+            if ((row as any).nameTextSpan) (row as any).nameTextSpan.textContent = phaseName;
+            if ((row as any).nameCountSpan) (row as any).nameCountSpan.textContent = `x${data.count} `;
             orderedRows.push(row);
         }
-
         const frag = document.createDocumentFragment();
         this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
-
         if (orderedRows.length === 0) {
             if (this.phaseEmptyNode) frag.appendChild(this.phaseEmptyNode);
         } else {
             for (const row of orderedRows) {
-                row.cells.forEach(cell => frag.appendChild(cell));
+                if ('cells' in row && Array.isArray(row.cells)) {
+                    row.cells.forEach(cell => frag.appendChild(cell));
+                } else if ('row' in row && row.row instanceof HTMLElement) {
+                    frag.appendChild(row.row);
+                }
             }
         }
-
         phaseContainer.replaceChildren(frag);
     }
 
