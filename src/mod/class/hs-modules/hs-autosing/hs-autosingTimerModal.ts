@@ -30,8 +30,8 @@ interface SingularityBundle {
 interface SparklineDom {
     container: HTMLElement;
     svg: SVGSVGElement;
-    polyline: SVGPolylineElement;
-    ratePolyline: SVGPolylineElement | null;
+    rawPolyline: SVGPolylineElement;
+    avgPolyline: SVGPolylineElement | null;
     maxLine: SVGLineElement;
     minLine: SVGLineElement;
     labelMax: HTMLSpanElement;
@@ -450,19 +450,22 @@ export class HSAutosingTimerModal {
             svg.style.display = 'block';
             svg.style.overflow = 'visible';
 
-            const polyline = document.createElementNS(ns, 'polyline');
-            polyline.setAttribute('fill', 'none');
-            polyline.setAttribute('stroke', color);
-            polyline.setAttribute('stroke-width', '1');
-            polyline.setAttribute('stroke-opacity', '0.8');
+            // Raw values: always dotted
+            const rawPolyline = document.createElementNS(ns, 'polyline');
+            rawPolyline.setAttribute('fill', 'none');
+            rawPolyline.setAttribute('stroke', color);
+            rawPolyline.setAttribute('stroke-width', '1');
+            rawPolyline.setAttribute('stroke-opacity', '0.5');
+            rawPolyline.setAttribute('stroke-dasharray', '2,2');
 
-            let ratePolyline: SVGPolylineElement | null = null;
-            ratePolyline = document.createElementNS(ns, 'polyline');
-            ratePolyline.setAttribute('fill', 'none');
-            ratePolyline.setAttribute('stroke', color);
-            ratePolyline.setAttribute('stroke-width', '1');
-            ratePolyline.setAttribute('stroke-opacity', '0.5');
-            ratePolyline.setAttribute('stroke-dasharray', '2,2');
+            // Running average: always solid
+            let avgPolyline: SVGPolylineElement | null = null;
+            avgPolyline = document.createElementNS(ns, 'polyline');
+            avgPolyline.setAttribute('fill', 'none');
+            avgPolyline.setAttribute('stroke', color);
+            avgPolyline.setAttribute('stroke-width', '1');
+            avgPolyline.setAttribute('stroke-opacity', '0.8');
+            avgPolyline.removeAttribute('stroke-dasharray');
 
             const maxLine = document.createElementNS(ns, 'line');
             maxLine.setAttribute('stroke', color);
@@ -472,8 +475,8 @@ export class HSAutosingTimerModal {
             minLine.setAttribute('stroke', color);
             minLine.setAttribute('stroke-width', '1');
 
-            svg.appendChild(polyline);
-            if (ratePolyline) svg.appendChild(ratePolyline);
+            svg.appendChild(rawPolyline);
+            if (avgPolyline) svg.appendChild(avgPolyline);
             svg.appendChild(maxLine);
             svg.appendChild(minLine);
 
@@ -496,7 +499,7 @@ export class HSAutosingTimerModal {
             container.appendChild(svg);
             container.appendChild(labels);
 
-            return { container, svg, polyline, ratePolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color, lastWidth: 0, lastPoints: '', lastPointsSecond: '', lastMarkerX: 0, lastMaxY: 0, lastMinY: 0, lastLabelMax: '', lastLabelAvg: '', lastLabelMin: '' };
+            return { container, svg, rawPolyline, avgPolyline, maxLine, minLine, labelMax, labelAvg, labelMin, isTime, color, lastWidth: 0, lastPoints: '', lastPointsSecond: '', lastMarkerX: 0, lastMaxY: 0, lastMinY: 0, lastLabelMax: '', lastLabelAvg: '', lastLabelMin: '' };
         };
 
         this.sparklineQuarks = build(this.sparklineContainer1, '#00BCD4', false);
@@ -508,8 +511,8 @@ export class HSAutosingTimerModal {
         if (!dom) return;
         // Only show meaningful sparklines when at least 2 points exist.
         if (data.length < 2) {
-            dom.polyline.setAttribute('points', '');
-            if (dom.ratePolyline) dom.ratePolyline.setAttribute('points', '');
+            dom.rawPolyline.setAttribute('points', '');
+            if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
             dom.labelMax.textContent = '';
             dom.labelAvg.textContent = '';
             dom.labelMin.textContent = '';
@@ -528,33 +531,39 @@ export class HSAutosingTimerModal {
             dom.lastWidth = gw;
         }
 
+        // Always: rawPolyline = raw values (dotted), avgPolyline = running average (solid)
         if (dom.isTime) {
-            // For times, use standard logic but with time-based x
+            // Time chart: raw values and running overall average
             const values = data.map(d => d.value);
             const min = Math.min(...values);
             const max = Math.max(...values);
             const avg = values.reduce((a, b) => a + b, 0) / values.length;
+
+            // Dotted line: raw values
             const points = data.map(d => {
                 const x = ((d.timestamp - minTime) / timeRange) * gw;
                 const y = 30 - ((d.value - min) / (max - min || 1)) * 30;
                 return `${x},${y}`;
             }).join(' ');
-
             if (dom.lastPoints !== points) {
-                dom.polyline.setAttribute('points', points);
+                dom.rawPolyline.setAttribute('points', points);
                 dom.lastPoints = points;
             }
 
-            const pointsSecond: string[] = [];
+            // Solid line: running overall average (cumulative mean up to each point)
+            let sum = 0;
+            const avgPoints: string[] = [];
             for (let i = 0; i < data.length; i++) {
-                const x = (i / (data.length - 1)) * gw;
-                const y = 30 - ((data[i].value - min) / (max - min || 1)) * 30;
-                pointsSecond.push(`${x},${y}`);
+                sum += data[i].value;
+                const runningAvg = sum / (i + 1);
+                const x = ((data[i].timestamp - minTime) / timeRange) * gw;
+                const y = 30 - ((runningAvg - min) / (max - min || 1)) * 30;
+                avgPoints.push(`${x},${y}`);
             }
-            const pointsSecondStr = pointsSecond.join(' ');
-            if (dom.ratePolyline && dom.lastPointsSecond !== pointsSecondStr) {
-                dom.ratePolyline.setAttribute('points', pointsSecondStr);
-                dom.lastPointsSecond = pointsSecondStr;
+            const avgPointsStr = avgPoints.join(' ');
+            if (dom.avgPolyline && dom.lastPointsSecond !== avgPointsStr) {
+                dom.avgPolyline.setAttribute('points', avgPointsStr);
+                dom.lastPointsSecond = avgPointsStr;
             }
 
             const markerX = Math.max(0, gw - 4);
@@ -601,7 +610,7 @@ export class HSAutosingTimerModal {
                 dom.lastLabelMin = labelMin;
             }
         } else {
-            // For quarks/golden
+            // Quarks/golden: raw values and running average
             let last50TotalGain = 0;
             let last50TotalTime = 0;
             let sessionTotalGain = 0;
@@ -632,29 +641,29 @@ export class HSAutosingTimerModal {
                 maxY = Math.max(maxY, runningAverages[i], individualRates[i]);
             }
             const yRange = maxY - minY || 1;
-            const pointsMain: string[] = [];
-            const pointsSecond: string[] = [];
+            const avgPoints: string[] = [];
+            const rawPoints: string[] = [];
             // Second pass: build points for polylines
             for (let i = 0; i < data.length; i++) {
                 const d = data[i];
                 const x = ((d.timestamp - minTime) / timeRange) * gw;
-                const yMain = 30 - ((runningAverages[i] - minY) / yRange) * 30;
-                pointsMain.push(`${x},${yMain}`);
-                const ySecond = 30 - ((individualRates[i] - minY) / yRange) * 30;
-                pointsSecond.push(`${x},${ySecond}`);
+                const yAvg = 30 - ((runningAverages[i] - minY) / yRange) * 30;
+                avgPoints.push(`${x},${yAvg}`);
+                const yRaw = 30 - ((individualRates[i] - minY) / yRange) * 30;
+                rawPoints.push(`${x},${yRaw}`);
             }
 
-            const pointsMainStr = pointsMain.join(' ');
-            const pointsSecondStr = pointsSecond.join(' ');
+            const avgPointsStr = avgPoints.join(' ');
+            const rawPointsStr = rawPoints.join(' ');
 
-            if (dom.lastPoints !== pointsMainStr) {
-                dom.polyline.setAttribute('points', pointsMainStr);
-                dom.lastPoints = pointsMainStr;
+            if (dom.avgPolyline && dom.lastPoints !== avgPointsStr) {
+                dom.avgPolyline.setAttribute('points', avgPointsStr);
+                dom.lastPoints = avgPointsStr;
             }
 
-            if (dom.ratePolyline && dom.lastPointsSecond !== pointsSecondStr) {
-                dom.ratePolyline.setAttribute('points', pointsSecondStr);
-                dom.lastPointsSecond = pointsSecondStr;
+            if (dom.rawPolyline && dom.lastPointsSecond !== rawPointsStr) {
+                dom.rawPolyline.setAttribute('points', rawPointsStr);
+                dom.lastPointsSecond = rawPointsStr;
             }
 
             const markerX = Math.max(0, gw - 4);
