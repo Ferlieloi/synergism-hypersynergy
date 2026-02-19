@@ -878,16 +878,6 @@ export class HSAutosingTimerModal {
             this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
             this.detailsVisibilityVersion++;
 
-            if (this.showDetailedData) {
-                // Showing detailed data: enable auto-sizing
-                this.timerDisplay!.style.width = 'auto';
-                this.timerDisplay!.style.height = 'auto';
-            } else {
-                // Hiding detailed data: lock current width to prevent shrinking
-                const currentWidth = this.timerDisplay!.offsetWidth;
-                this.timerDisplay!.style.width = `${currentWidth}px`;
-            }
-
             // Sparklines render also handles detailed-only visibility toggles.
             this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
