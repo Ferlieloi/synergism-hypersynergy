@@ -30,6 +30,7 @@ import {
 } from "./hs-autosingStatsUtils";
 import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
+import { HSAutosingExportManager } from './hs-autosingExportManager';
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -102,6 +103,7 @@ export class HSAutosingTimerModal {
     }
     private exportButton: HTMLButtonElement | null = null;
     private dynamicContent: HTMLDivElement | null = null;
+    private exportManager: HSAutosingExportManager | null = null;
     private showDetailedData: boolean = true;
     private advancedDataCollectionEnabled: boolean = false;
     private stopButton!: HTMLButtonElement;
@@ -300,7 +302,7 @@ export class HSAutosingTimerModal {
         if (this.phaseNameSpan) {
             this.phaseNameSpan.textContent = name || '\u00A0';
         }
-        this.updateTimers();
+        this.updateDisplay();
     }
 
     private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
@@ -660,8 +662,21 @@ export class HSAutosingTimerModal {
         this.exportButton.id = 'hs-export-data-btn';
         this.exportButton.className = 'hs-export-btn';
         this.exportButton.style.display = 'none';
-        this.exportButton.onclick = () => this.exportDataAsCSV();
+        this.exportButton.onclick = () => {
+            if (this.exportManager) {
+                this.exportManager.exportDataAsCSV(compressToUTF16, decompressFromUTF16);
+            }
+        };
         this.timerContent.appendChild(this.exportButton);
+
+        // Initialize export manager after exportButton is created
+        this.exportManager = new HSAutosingExportManager({
+            db: this.db,
+            getCompressedBundles: () => this.compressedBundles,
+            exportButton: this.exportButton,
+            getAdvancedDataCollectionEnabled: () => this.advancedDataCollectionEnabled,
+            getSingularityBundlesCount: () => this.singularityBundles.length
+        });
 
         // Build stable DOM for sections that will be updated frequently.
         this.ensureStaticDom();
@@ -671,23 +686,8 @@ export class HSAutosingTimerModal {
      * Updates the export button state and text based on data availability and settings.
      */
     private updateExportButton(): void {
-        if (!this.exportButton) return;
-
-        // Advanced data collection is checked once at autosing start.
-        // While autosing is running, we use the cached value.
-        const isEnabled = this.advancedDataCollectionEnabled;
-        const hasData = this.compressedBundles.length > 0;
-
-        const visible = isEnabled;
-
-        this.exportButton.style.display = visible ? 'block' : 'none';
-
-        if (visible) {
-            this.exportButton.disabled = !hasData;
-            this.exportButton.style.opacity = hasData ? '1' : '0.5';
-            this.exportButton.textContent = hasData
-                ? `📊 Export Data (${this.singularityBundles.length} singularities)`
-                : '📊 No Data to Export';
+        if (this.exportManager) {
+            this.exportManager.updateExportButton();
         }
     }
 
@@ -888,7 +888,7 @@ export class HSAutosingTimerModal {
         this._currentPhaseName = '';
 
         // Perform a single UI refresh so labels reflect the reset state.
-        this.updateTimers();
+        this.updateDisplay();
     }
 
     /**
@@ -1172,8 +1172,7 @@ export class HSAutosingTimerModal {
     }> = [];
 
     /**
-     * Add a new entry to singularityMetrics after each singularity is recorded.
-     * This is a parallel structure to the old arrays, for refactor safety.
+     * Adds a new entry to singularityMetrics for unified chart/stat logic.
      */
     private addSingularityMetric(
         singularityDuration: number,
@@ -1325,50 +1324,6 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Formats a number in exponential notation (2 decimals).
-     */
-
-    private getPhaseAverage(phase: string): number | null {
-        const phaseData = this.phaseHistory.get(phase);
-        if (!phaseData || phaseData.count === 0) {
-            return null;
-        }
-        return phaseData.totalTime / phaseData.count;
-    }
-
-    private getPhaseStandardDeviation(phase: string): number | null {
-        const phaseData = this.phaseHistory.get(phase);
-        if (!phaseData || phaseData.count <= 1) {
-            return null;
-        }
-        const count = phaseData.count;
-        const mean = phaseData.totalTime / count;
-        const variance = (phaseData.sumSq / count) - (mean * mean);
-        return Math.sqrt(Math.max(0, variance));
-    }
-
-    private getStandardDeviation(n: number): number | null {
-        // Legacy durationsPrefixSum logic removed; use singularityMetrics for stddev.
-        const arr = this.singularityMetrics;
-        if (n <= 1 || arr.length < n) return null;
-        const slice = arr.slice(-n);
-        const mean = slice.reduce((acc, m) => acc + m.duration, 0) / n;
-        const variance = slice.reduce((acc, m) => acc + Math.pow(m.duration - mean, 2), 0) / n;
-        return Math.sqrt(Math.max(0, variance));
-    }
-
-    private getC15AverageLast(n: number): Decimal | null {
-        if (n <= 0 || this.c15Count === 0) return null;
-        return this.c15Mean;
-    }
-
-    private getC15StdLast(n: number): Decimal | null {
-        if (n <= 0 || this.c15Count <= 1) return null;
-        const variance = this.c15M2.div(this.c15Count);
-        return variance.pow(0.5);
-    }
-
-    /**
      * Return population variance of ln(C15) using incremental Welford stats.
      * O(1) time.
      */
@@ -1392,77 +1347,9 @@ export class HSAutosingTimerModal {
         return this.logC15Count === 0 ? null : this.logC15Mean;
     }
 
-    private exportDataAsCSV(): void {
-        // Flush any remaining batch before export
-        if (!this.advancedDataCollectionEnabled) {
-            alert('No data to export');
-            return;
-        }
+    // Export logic moved to HSAutosingExportManager
 
-        // Ensure all in-memory data is flushed before export
-        this.db.flushBatch(compressToUTF16).then(() => {
-            // You may want to reload compressedBundles from DB here if needed
-            // Decompress completed batches
-            const localBundles: SingularityBundle[] = [];
-            for (const compressed of this.compressedBundles) {
-                const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
-                localBundles.push(...batch);
-            }
 
-            // Collect all unique phase names
-            const allPhaseNames = new Set<string>();
-            localBundles.forEach((bundle: SingularityBundle) => {
-                Object.keys(bundle.phases).forEach((phase: string) => allPhaseNames.add(phase));
-            });
-            const sortedPhaseNames = Array.from(allPhaseNames).sort();
-
-            // Build CSV header
-            const headers = [
-                'Singularity Number',
-                'Total Time (s)',
-                'C15',
-                'Quarks Gained',
-                'Golden Quarks Gained',
-                'Timestamp',
-                ...sortedPhaseNames.map((phase: string) => `Phase: ${phase} (s)`)
-            ];
-
-            // Build CSV rows
-            const rows = localBundles.map((bundle: SingularityBundle) => {
-                const row = [
-                    bundle.singularityNumber.toString(),
-                    bundle.totalTime.toFixed(3),
-                    bundle.c15 ?? '',
-                    bundle.quarksGained.toExponential(6),
-                    bundle.goldenQuarksGained.toExponential(6),
-                    new Date(bundle.timestamp).toISOString(),
-                    ...sortedPhaseNames.map((phase: string) => (bundle.phases[phase] || '').toString())
-                ];
-                return row.join(',');
-            });
-
-            // Combine into CSV
-            const csv = [headers.join(','), ...rows].join('\n');
-
-            // Create download
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `autosing_data_${timestamp}.csv`);
-            link.style.visibility = 'hidden';
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-
-        // Collect all unique phase names
-        const allPhaseNames = new Set<string>();
-        // (Removed unreachable legacy code referencing 'bundles')
-    }
 
     private updateDisplay(): void {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
@@ -1653,10 +1540,11 @@ export class HSAutosingTimerModal {
         updateSparkline(this.sparklineGoldenQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         updateSparkline(this.sparklineTimes, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         // Update averages using unified metrics
-        this.setAvgEl(this.avg1Span, this.getAverageLast(1), this.getStandardDeviation(1));
-        this.setAvgEl(this.avg10Span, this.getAverageLast(10), this.getStandardDeviation(10));
-        this.setAvgEl(this.avg50Span, this.getAverageLast(50), this.getStandardDeviation(50));
-        this.setAvgEl(this.avgAllSpan, this.getAverageLast(this.singularityMetrics.length), this.getStandardDeviation(this.singularityMetrics.length));
+        // Use stateless helpers for averages and stddevs
+        this.setAvgEl(this.avg1Span, getAverageLast(this.singularityMetrics, 1), getStandardDeviation(this.singularityMetrics, 1));
+        this.setAvgEl(this.avg10Span, getAverageLast(this.singularityMetrics, 10), getStandardDeviation(this.singularityMetrics, 10));
+        this.setAvgEl(this.avg50Span, getAverageLast(this.singularityMetrics, 50), getStandardDeviation(this.singularityMetrics, 50));
+        this.setAvgEl(this.avgAllSpan, getAverageLast(this.singularityMetrics, this.singularityMetrics.length), getStandardDeviation(this.singularityMetrics, this.singularityMetrics.length));
         if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = String(this.singularityMetrics.length);
     }
 
@@ -1700,14 +1588,5 @@ export class HSAutosingTimerModal {
         if (this.timerDisplay && this.timerDisplay.parentNode) {
             this.timerDisplay.parentNode.removeChild(this.timerDisplay);
         }
-    }
-
-    private updateTimers(): void {
-        if (!this.dynamicContent || this.isMinimized) return;
-
-        // Live timers removed: do not update per-tick values for 'current' or phase timers.
-        // Keep placeholders cleared so no stale values remain.
-        if (this.liveTimerSpan) this.liveTimerSpan.textContent = '';
-        if (this.phaseTimerSpan) this.phaseTimerSpan.textContent = '';
     }
 }
