@@ -20,9 +20,6 @@ export function updateSparkline(
     formatNumberWithSign: (n: number) => string,
     maxPoints: number
 ): void {
-    // Defensive: handle min == max (flat line)
-    // Defensive logging
-    console.log('[sparkline] updateSparkline called', { dom, data });
     if (!dom) {
         console.warn('[sparkline] updateSparkline: dom is null');
         return;
@@ -61,7 +58,6 @@ export function updateSparkline(
         dom.labelMin.textContent = '';
         return;
     }
-    // Defensive logging
     // Filter chartData to only valid points
     const filtered = chartData.filter(d => typeof d.value === 'number' && !isNaN(d.value) && typeof d.timestamp === 'number' && !isNaN(d.timestamp));
     if (filtered.length < 2) {
@@ -74,7 +70,7 @@ export function updateSparkline(
         return;
     }
     if (filtered.length !== chartData.length) {
-        console.warn('[sparkline] updateSparkline: skipped invalid points', { filtered, original: chartData });
+        console.warn('[sparkline] updateSparkline: invalid points detected', { filtered, original: chartData });
     }
     const gw = computedGraphWidth || 230;
     const times = filtered.map(d => d.timestamp);
@@ -91,23 +87,16 @@ export function updateSparkline(
 
     // Always: rawPolyline = raw values (dotted), avgPolyline = running average (solid)
     if (dom.isTime) {
-        // Time chart: raw values and running average duration
-        const min = Math.min(...values);
-        const max = Math.max(...values);
+        // Time chart: raw values and running average duration lines
+        // Collect both raw values and runningAvg values for min/max
+        const runningAvgs = filtered.map(d => typeof d.runningAvg === 'number' ? d.runningAvg : 0);
+        const allYValues = values.concat(runningAvgs);
+        const min = Math.min(...allYValues);
+        const max = Math.max(...allYValues);
         const range = max - min;
         const safeRange = range === 0 ? 1 : range;
         if (range === 0) {
-            console.warn('[sparkline] updateSparkline: min == max, using safeRange=1', { min, max, values });
-        }
-        // Defensive: check min/max
-        if (!isFinite(min) || !isFinite(max)) {
-            console.error('[sparkline] updateSparkline: min/max are not finite', { min, max, values });
-            dom.rawPolyline.setAttribute('points', '');
-            if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
-            dom.labelMax.textContent = '';
-            dom.labelAvg.textContent = '';
-            dom.labelMin.textContent = '';
-            return;
+            console.warn('[sparkline] updateSparkline: min == max, using safeRange=1', { min, max, allYValues });
         }
         // Windowed average for label (last maxPoints or fewer)
         const windowSize = Math.min(filtered.length, maxPoints);
@@ -150,9 +139,6 @@ export function updateSparkline(
         const markerX = Math.max(0, gw - 4);
         const maxY = 30 - ((max - min) / safeRange) * 30;
         const minY = 30 - ((min - min) / safeRange) * 30;
-        if (isNaN(maxY) || isNaN(minY)) {
-            console.error('[sparkline] updateSparkline: NaN in line marker', { maxY, minY, min, max, safeRange });
-        }
 
         if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxY) {
             const gwStr = `${gw}`;
@@ -284,6 +270,7 @@ export function updateSparkline(
         }
     }
 }
+
 /**
  * Sparkline chart logic extracted from hs-autosingTimerModal.ts
  * All chart rendering and DOM logic for sparklines is now modularized here.
@@ -292,7 +279,6 @@ export function updateSparkline(
  * - Modal passes full metrics array and maxPoints
  * - Chart slices internally for display and label stats
  */
-
 export interface SparklineDom {
     container: HTMLElement;
     svg: SVGSVGElement;
