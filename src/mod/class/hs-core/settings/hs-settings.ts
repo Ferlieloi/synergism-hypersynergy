@@ -35,11 +35,10 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 */
 export class HSSettings extends HSModule {
     /**
-     * Returns the display name for a strategy, adding 'Default: ' prefix if it's a default strategy.
+     * Returns the display name for a strategy. No prefix is added; visual marking is handled in the dropdown.
      */
     static getStrategyDisplayName(name: string): string {
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        return defaultNames.includes(name) ? `Default: ${name}` : name;
+        return name;
     }
     static #staticContext = '';
 

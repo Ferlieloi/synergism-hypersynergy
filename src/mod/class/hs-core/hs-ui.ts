@@ -3,6 +3,7 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
+import { HSSettings } from "./settings/hs-settings";
 import { HSModule } from "./module/hs-module";
 import { HSUIC } from "./hs-ui-components";
 import panelCoreCSS from "inline:../../resource/css/hs-panel-core.css";
@@ -245,6 +246,7 @@ export class HSUI extends HSModule {
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
         autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center;">▶</span>Start Auto-Sing';
+        autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
             if (autoSingToggle) {
@@ -256,7 +258,7 @@ export class HSUI extends HSModule {
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
         heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center;">🔥</span>Amb Heater Export';
-        heaterBtn.setAttribute('data-type', 'heater');
+        heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
             if (heaterExportBtn) {
@@ -265,8 +267,25 @@ export class HSUI extends HSModule {
             }
         });
 
+        // Create Ambrosia Idle Swap toggle button
+        const idleSwapBtn = document.createElement('button');
+        idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
+        // The label and color are updated by ambrosiaIdleSwapAction directly
+        idleSwapBtn.addEventListener('click', async () => {
+            const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
+            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
+            if (idleSwapToggle) {
+                idleSwapToggle.click();
+                HSUI.Notify(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, {
+                    position: 'top',
+                    notificationType: 'default'
+                });
+            }
+        });
+
         quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterBtn);
+        quickMenu.appendChild(idleSwapBtn);
         document.body.appendChild(quickMenu);
 
         // Show/hide menu on hover

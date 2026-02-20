@@ -251,28 +251,52 @@ export class HSAutosingStrategyModal {
         // Add manifest strategies first (default, undeletable)
         const defaultNames = HSSettings.getDefaultStrategyNames();
         const manifestSet = new Set(defaultNames);
+        const defaultStrategiesOptions = [];
         for (const name of defaultNames) {
-            control.selectOptions.push({ text: HSSettings.getStrategyDisplayName(name), value: name });
+            defaultStrategiesOptions.push({ text: HSSettings.getStrategyDisplayName(name), value: name, isDefault: true });
         }
 
         // Add user strategies after (from localStorage)
         const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
+        const userStrategiesOptions = [];
         for (const s of userStrategies) {
-            control.selectOptions.push({ text: HSSettings.getStrategyDisplayName(s.strategyName), value: s.strategyName });
+            userStrategiesOptions.push({ text: HSSettings.getStrategyDisplayName(s.strategyName), value: s.strategyName, isDefault: false });
         }
-        // Update the actual HTML select element to match the new options
+
+        // Store in selectOptions for programmatic access
+        control.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
+
+        // Update the actual HTML select element to match the new options, using optgroups
         const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
         if (selectEl) {
             // Remove all options
             while (selectEl.options.length > 0) {
                 selectEl.remove(0);
             }
-            // Add all options from control.selectOptions
-            for (const opt of control.selectOptions) {
-                const option = document.createElement('option');
-                option.text = opt.text;
-                option.value = String(opt.value);
-                selectEl.add(option);
+            // Create optgroups
+            if (defaultStrategiesOptions.length > 0) {
+                const optgroupDefault = document.createElement('optgroup');
+                optgroupDefault.label = 'Default Strategies';
+                for (const opt of defaultStrategiesOptions) {
+                    const option = document.createElement('option');
+                    option.text = opt.text;
+                    option.value = String(opt.value);
+                    option.setAttribute('data-default', 'true');
+                    optgroupDefault.appendChild(option);
+                }
+                selectEl.appendChild(optgroupDefault);
+            }
+            if (userStrategiesOptions.length > 0) {
+                const optgroupUser = document.createElement('optgroup');
+                optgroupUser.label = 'User Strategies';
+                for (const opt of userStrategiesOptions) {
+                    const option = document.createElement('option');
+                    option.text = opt.text;
+                    option.value = String(opt.value);
+                    option.setAttribute('data-default', 'false');
+                    optgroupUser.appendChild(option);
+                }
+                selectEl.appendChild(optgroupUser);
             }
         }
     }
