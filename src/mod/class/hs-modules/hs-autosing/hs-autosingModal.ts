@@ -2,19 +2,22 @@
  * HSAutosingTimerModal
  * Modal for autosing timer and quark/golden quark gain tracking.
  * Handles UI orchestration, DOM caching, batching updates, and chart/stat rendering.
- * Uses modular helpers for phase stats and chart rendering.
- * Stores unified metrics with running averages for time, quarks, and golden quarks.
+ * Integrates modular helpers for phase stats, charting, and export.
+ * Maintains unified metrics with running averages for time, quarks, and golden quarks.
+ *
  * Author: XxmolkxX
  */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
-import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
-import { createPhaseStatsHeader, createPhaseRowDom, updatePhaseRowDom, createPhaseEmptyNode, PhaseRowDom } from "./hs-autosingPhaseStats";
 import { HSGlobal } from "../../hs-core/hs-global";
+import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosing } from "./hs-autosing";
-import Decimal from "break_infinity.js";
 import { HSAutosingDB } from './hs-autosingDB';
+import { HSAutosingExportManager } from './hs-autosingExportManager';
+import { createPhaseStatsHeader, createPhaseRowDom, updatePhaseRowDom, createPhaseEmptyNode, PhaseRowDom } from "./hs-autosingPhaseStats";
+import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
+import Decimal from "break_infinity.js";
 import { formatNumber, formatNumberWithSign, formatDecimal, formatTime } from "./hs-autosingFormatUtils";
 import {
     getAverageLast,
@@ -28,9 +31,7 @@ import {
     getLogC15Std,
     getLogC15Mean
 } from "./hs-autosingStatsUtils";
-import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
-import { HSAutosingExportManager } from './hs-autosingExportManager';
 
 interface SingularityBundle {
     singularityNumber: number;
@@ -42,111 +43,52 @@ interface SingularityBundle {
     c15?: string;
 }
 
-// PhaseRowDom now imported from phaseStats.ts
+// =============================
+// Class Properties and Fields
+// =============================
 
 export class HSAutosingTimerModal {
-    private footerVersionSpan: HTMLElement | null = null;
-    private footerStrategySpan: HTMLElement | null = null;
-    private footerLoadoutsSpan: HTMLElement | null = null;
+    // --- DOM Elements & UI State ---
     private timerDisplay: HTMLDivElement | null = null;
-    private db: HSAutosingDB;
-    private sparklineMaxPoints: number = 50;
-    private phaseHistory: Map<string, {
-        count: number;
-        totalTime: number;
-        sumSq: number;
-        lastTime: number;
-        repeats: number;
-    }> = new Map();
-    private _currentPhaseName: string = '';
-    private compressedBundles: string[] = [];
-    // Accepts both legacy string and new SingularityBundle objects
-    private currentSingularityStart: number = 0;
-    private currentPhaseStart: number = 0;
-    private currentSingularityPhases: Map<string, number> = new Map();
-    private lastRecordedPhaseName: string | null = null;
-    private liveTimerInterval: number | null = null;
-    private singularityCount: number = 0;
-    private lastSingularityTimestamp: number = 0;
-    private startTime: number = 0;
-
-    private c15Count: number = 0;
-    private c15Mean: Decimal = new Decimal(0);
-    private c15M2: Decimal = new Decimal(0);
-    private logC15Count: number = 0;
-    private logC15Mean: number = 0;
-    private logC15M2: number = 0;
-    private latestQuarksTotal: number = 0;
-    private latestGoldenQuarksTotal: number = 0;
-    private strategy: any = null;
-    private singTarget: number = 0;
-    private singHighest: number = 0;
-    private strategyName: string = '';
-    private loadoutsOrder: string[] = [];
-    private modVersion: string = '';
     private timerHeader: HTMLDivElement | null = null;
     private timerContent: HTMLDivElement | null = null;
+    private dynamicContent: HTMLDivElement | null = null;
+    private exportButton: HTMLButtonElement | null = null;
+    private chartToggleBtn: HTMLButtonElement | null = null;
+    private minimizeBtn!: HTMLButtonElement;
+    private pauseBtn!: HTMLButtonElement;
+    private stopButton!: HTMLButtonElement;
+    private restartButton!: HTMLButtonElement;
+    private finishStopBtn!: HTMLButtonElement;
     private isMinimized: boolean = false;
+    private isPaused: boolean = false;
     private isDragging: boolean = false;
     private isResizing: boolean = false;
     private dragOffset = { x: 0, y: 0 };
     private resizeStart = { width: 0, height: 0, x: 0, y: 0 };
     private dragBounds = { width: 0, height: 0, maxX: 0, maxY: 0 };
+    private staticDomInitialized: boolean = false;
 
-    private onMouseMoveHandler = (e: MouseEvent) => this.onMouseMove(e);
-    private onMouseUpHandler = () => this.onMouseUp();
-
-    private initSparklineDom(): void {
-        this.sparklineQuarks = buildSparklineDom(this.sparklineQuarksContainer, '#00BCD4', false);
-        this.sparklineGoldenQuarks = buildSparklineDom(this.sparklineGoldenQuarksContainer, '#F1FA8C', false);
-        this.sparklineTimes = buildSparklineDom(this.sparklineTimeContainer, '#FF8A80', true);
-    }
-    private exportButton: HTMLButtonElement | null = null;
-    private dynamicContent: HTMLDivElement | null = null;
-    private exportManager: HSAutosingExportManager | null = null;
-    private showDetailedData: boolean = true;
-    private advancedDataCollectionEnabled: boolean = false;
-    private stopButton!: HTMLButtonElement;
-    private restartButton!: HTMLButtonElement;
-    private finishStopBtn!: HTMLButtonElement;
-    private chartToggleBtn: HTMLButtonElement | null = null;
-    private minimizeBtn!: HTMLButtonElement;
-    private pauseBtn!: HTMLButtonElement;
-    private isPaused: boolean = false;
-
-    // Cached Spans & Containers for Ticker
-    private liveTimerSpan: HTMLElement | null = null;
-    private phaseTimerSpan: HTMLElement | null = null;
+    // --- Cached DOM Nodes ---
     private phaseNameSpan: HTMLElement | null = null;
     private footerSection: HTMLElement | null = null;
     private singValSpan: HTMLElement | null = null;
     private singTargetSpan: HTMLElement | null = null;
     private singHighestSpan: HTMLElement | null = null;
     private progressValSpan: HTMLElement | null = null;
-    private singularityBundles: (string | SingularityBundle)[] = [];
     private c15TopSpan: HTMLElement | null = null;
     private c15SigmaSpan: HTMLElement | null = null;
-
-    private cachedStrategyOrder: string[] = [];
-    private cachedStrategyOrderIndex: Map<string, number> = new Map();
-    private cachedGlobalPhaseIndex: Map<string, number> = new Map();
-
-    // Cached nodes for general stats updates
     private quarksTotalSpan: HTMLElement | null = null;
     private quarksRateValSpan: HTMLElement | null = null;
     private quarksRateHrSpan: HTMLElement | null = null;
     private gquarksTotalSpan: HTMLElement | null = null;
     private gquarksRateValSpan: HTMLElement | null = null;
     private gquarksRateHrSpan: HTMLElement | null = null;
-
     private avg1Span: HTMLElement | null = null;
     private avg10Span: HTMLElement | null = null;
     private avg50Span: HTMLElement | null = null;
     private avgAllSpan: HTMLElement | null = null;
     private avgAllCountSpan: HTMLElement | null = null;
-    private avg10LabelSpan: HTMLElement | null = null;
-    private avg50LabelSpan: HTMLElement | null = null;
-
     private totalTimeSpan: HTMLElement | null = null;
     private maxTimeSpan: HTMLElement | null = null;
     private minTimeSpan: HTMLElement | null = null;
@@ -156,27 +98,71 @@ export class HSAutosingTimerModal {
     private gquarksTotalGainsSpan: HTMLElement | null = null;
     private gquarksMaxGainsSpan: HTMLElement | null = null;
     private gquarksMinGainsSpan: HTMLElement | null = null;
-
-    // Built-once DOM helpers
-    private staticDomInitialized: boolean = false;
-    private avgSpanParts: Map<HTMLElement, { main: HTMLSpanElement; sd: HTMLSpanElement }> = new Map();
-
-    private phaseHeaderNodes: HTMLDivElement[] = [];
-    // Removed unused: phaseEmptyNode, phaseRowMap
-
-    private sparklineQuarks: SparklineDom | null = null;
-    private sparklineGoldenQuarks: SparklineDom | null = null;
-    private sparklineTimes: SparklineDom | null = null;
-
-    // Cached nodes for phase stats & sparklines
     private phaseStatsContainer: HTMLElement | null = null;
-    // Removed unused: phaseStatsWrapper
     private sparklineQuarksContainer: HTMLElement | null = null;
     private sparklineGoldenQuarksContainer: HTMLElement | null = null;
     private sparklineTimeContainer: HTMLElement | null = null;
-    // Removed unused: footerVersionSpan, footerStrategySpan, footerLoadoutsSpan, resizeHandleElem
+    private phaseHeaderNodes: HTMLDivElement[] = [];
+    private avgSpanParts: Map<HTMLElement, { main: HTMLSpanElement; sd: HTMLSpanElement }> = new Map();
 
-    // Render batching / change tracking
+    // --- Data & State ---
+    private db: HSAutosingDB;
+    private exportManager: HSAutosingExportManager | null = null;
+    private showDetailedData: boolean = true;
+    private advancedDataCollectionEnabled: boolean = false;
+    private strategy: any = null;
+    private strategyName: string = '';
+    private loadoutsOrder: string[] = [];
+    private modVersion: string = '';
+    private singTarget: number = 0;
+    private singHighest: number = 0;
+    private singularityCount: number = 0;
+    private lastSingularityTimestamp: number = 0;
+    private startTime: number = 0;
+    private _currentPhaseName: string = '';
+    private currentSingularityStart: number = 0;
+    private currentPhaseStart: number = 0;
+    private currentSingularityPhases: Map<string, number> = new Map();
+    private lastRecordedPhaseName: string | null = null;
+    private liveTimerInterval: number | null = null;
+    private compressedBundles: string[] = [];
+    private singularityBundles: (string | SingularityBundle)[] = [];
+
+    // --- Charting & Stats ---
+    private sparklineMaxPoints: number = 50;
+    private phaseHistory: Map<string, {
+        count: number;
+        totalTime: number;
+        sumSq: number;
+        lastTime: number;
+        repeats: number;
+    }> = new Map();
+    private c15Count: number = 0;
+    private c15Mean: Decimal = new Decimal(0);
+    private c15M2: Decimal = new Decimal(0);
+    private logC15Count: number = 0;
+    private logC15Mean: number = 0;
+    private logC15M2: number = 0;
+    private latestQuarksTotal: number = 0;
+    private latestGoldenQuarksTotal: number = 0;
+    private sparklineQuarks: SparklineDom | null = null;
+    private sparklineGoldenQuarks: SparklineDom | null = null;
+    private sparklineTimes: SparklineDom | null = null;
+    // --- Footer DOM Spans (for version/strategy/loadouts info) ---
+    private footerVersionSpan: HTMLElement | null = null;
+    private footerStrategySpan: HTMLElement | null = null;
+    private footerLoadoutsSpan: HTMLElement | null = null;
+
+    // --- Mouse Event Handlers (for drag/resize) ---
+    private onMouseMoveHandler = (e: MouseEvent) => this.onMouseMove(e);
+    private onMouseUpHandler = () => this.onMouseUp();
+
+    // --- Cached/Computed Data ---
+    private cachedStrategyOrder: string[] = [];
+    private cachedStrategyOrderIndex: Map<string, number> = new Map();
+    private cachedGlobalPhaseIndex: Map<string, number> = new Map();
+
+    // --- Render Batching & Change Tracking ---
     // These flags and version numbers ensure that expensive DOM updates only happen when needed.
     // This is critical for performance, especially with large or frequently updated tables.
     private renderPending: boolean = false;
@@ -184,20 +170,43 @@ export class HSAutosingTimerModal {
     private renderPhasesPending: boolean = false;
     private renderSparklinesPending: boolean = false;
     private renderExportPending: boolean = false;
-
-    private phaseHistoryVersion: number = 0;
     private lastRenderedPhaseHistoryVersion: number = -1;
-    private sparklineVersion: number = 0;
     private lastRenderedSparklineVersion: number = -1;
-    private detailsVisibilityVersion: number = 0;
     private lastRenderedDetailsVisibilityVersion: number = -1;
+    private phaseHistoryVersion: number = 0;
+    private sparklineVersion: number = 0;
+    private detailsVisibilityVersion: number = 0;
 
-    // Auto-resize / graph sizing
+    // --- Sizing & Layout ---
     private autoResized: boolean = false;
     private computedMaxWidth: number | null = null; // px
     private computedMaxHeight: number | null = null; // px
     private computedGraphWidth: number | null = null; // px
 
+    /**
+     * Unified array for chart metrics: each entry represents a singularity event.
+     * All chart/stat logic now unified on singularityMetrics.
+     */
+    private singularityMetrics: Array<{
+        timestamp: number;
+        duration: number;
+        quarksGained: number;
+        goldenQuarksGained: number;
+        phases: Record<string, number>;
+        c15?: string;
+        runningAvgDuration: number;
+        runningAvgQuarksPerSecond: number;
+        runningAvgGoldenQuarksPerSecond: number;
+    }> = [];
+
+
+    // =============================
+    // Constructor and Initialization
+    // =============================
+
+    /**
+     * Construct the timer modal and initialize core state and DOM.
+     */
     constructor() {
         this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles', 10);
         this.createTimerDisplay();
@@ -209,182 +218,8 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Get average duration of last n singularities from unified metrics array.
-     */
-    // Removed unused: getUnifiedAverageLast, getUnifiedStdLast
-
-    // Database methods now handled by HSAutosingDB
-
-    private ensureStaticDom(): void {
-        if (this.staticDomInitialized) return;
-        this.staticDomInitialized = true;
-
-        this.initSingularityHeaderDom();
-        this.initAverageDom();
-        this.initPhaseStatsDom();
-        this.initSparklineDom();
-    }
-
-    private syncAdvancedDataCollectionEnabled(): void {
-        const setting = HSSettings.getSetting('advancedDataCollection');
-        const enabled = !!setting && setting.isEnabled();
-        if (enabled === this.advancedDataCollectionEnabled) return;
-
-        this.advancedDataCollectionEnabled = enabled;
-    }
-
-    private initSingularityHeaderDom(): void {
-        if (!this.singValSpan) return;
-
-        // Build the structure once: [S{target}] / [S{highest}]
-        this.singValSpan.textContent = '';
-
-        const target = document.createElement('span');
-        target.id = 'hs-sing-target';
-
-        const sep = document.createElement('span');
-        sep.textContent = ' / ';
-        sep.className = 'hs-sing-sep';
-
-        const highest = document.createElement('span');
-        highest.id = 'hs-sing-highest';
-
-        this.singValSpan.appendChild(target);
-        this.singValSpan.appendChild(sep);
-        this.singValSpan.appendChild(highest);
-
-        this.singTargetSpan = target;
-        this.singHighestSpan = highest;
-    }
-
-    private ensureAvgSpanStructure(el: HTMLElement | null): { main: HTMLSpanElement; sd: HTMLSpanElement } | null {
-        if (!el) return null;
-        const cached = this.avgSpanParts.get(el);
-        if (cached) return cached;
-
-        el.textContent = '';
-        const main = document.createElement('span');
-        main.className = 'hs-avg-main';
-        const sd = document.createElement('span');
-        sd.className = 'hs-avg-sd';
-        el.appendChild(main);
-        el.appendChild(sd);
-
-        const parts = { main, sd };
-        this.avgSpanParts.set(el, parts);
-        return parts;
-    }
-
-    private initAverageDom(): void {
-        // avg1 does not show sigma, keep as textContent
-        this.ensureAvgSpanStructure(this.avg10Span);
-        this.ensureAvgSpanStructure(this.avg50Span);
-        this.ensureAvgSpanStructure(this.avgAllSpan);
-    }
-
-    private initPhaseStatsDom(): void {
-        if (!this.phaseStatsContainer) return;
-        this.phaseHeaderNodes = createPhaseStatsHeader();
-        // Render initial empty grid
-        const frag = document.createDocumentFragment();
-        this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
-        this.phaseStatsContainer.replaceChildren(frag);
-    }
-
-    // createPhaseRowDom now imported from phaseStats.ts
-
-    /**
-     * Public setter to update the current phase name displayed on the timer.
-     * Call this at the START of a phase so the user sees what is happening.
-     */
-    public setCurrentPhase(name: string) {
-        this._currentPhaseName = name;
-        if (this.phaseNameSpan) {
-            this.phaseNameSpan.textContent = name || '\u00A0';
-        }
-        this.updateDisplay();
-    }
-
-    private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
-        if (opts.general) this.renderGeneralPending = true;
-        if (opts.phases) this.renderPhasesPending = true;
-        if (opts.sparklines) this.renderSparklinesPending = true;
-        if (opts.exportBtn) this.renderExportPending = true;
-
-        if (this.renderPending) return;
-        this.renderPending = true;
-
-        window.requestAnimationFrame(() => {
-            this.renderPending = false;
-            this.flushRender();
-        });
-    }
-
-    private flushRender(): void {
-        if (!this.timerContent || !this.timerDisplay) {
-            this.renderGeneralPending = false;
-            this.renderPhasesPending = false;
-            this.renderSparklinesPending = false;
-            this.renderExportPending = false;
-            return;
-        }
-        if (this.timerDisplay.style.display === 'none' || this.isMinimized) {
-            // UI is hidden; skip DOM work. Next explicit show/unminimize will request a full render.
-            this.renderGeneralPending = false;
-            this.renderPhasesPending = false;
-            this.renderSparklinesPending = false;
-            this.renderExportPending = false;
-            return;
-        }
-
-        if (this.renderGeneralPending) {
-            this.renderGeneralStats();
-        }
-        if (this.renderPhasesPending) {
-            // Avoid rebuilding the phase table if nothing changed.
-            if (this.phaseHistoryVersion !== this.lastRenderedPhaseHistoryVersion) {
-                this.renderPhaseStatistics();
-                this.lastRenderedPhaseHistoryVersion = this.phaseHistoryVersion;
-            }
-        }
-        if (this.renderSparklinesPending) {
-            const needsSparklineRender =
-                this.sparklineVersion !== this.lastRenderedSparklineVersion ||
-                this.detailsVisibilityVersion !== this.lastRenderedDetailsVisibilityVersion;
-
-            if (needsSparklineRender) {
-                this.renderSparklines();
-                this.lastRenderedSparklineVersion = this.sparklineVersion;
-                this.lastRenderedDetailsVisibilityVersion = this.detailsVisibilityVersion;
-            }
-        }
-        if (this.renderExportPending) {
-            this.updateExportButton();
-        }
-
-        this.renderGeneralPending = false;
-        this.renderPhasesPending = false;
-        this.renderSparklinesPending = false;
-        this.renderExportPending = false;
-    }
-
-    /**
-     * Returns the name of the current phase.
-     */
-    public getCurrentPhase(): string {
-        return this._currentPhaseName;
-    }
-
-    /**
-     * Returns true if autosing is currently paused.
-     */
-    public getIsPaused(): boolean {
-        return this.isPaused;
-    }
-
-    /**
-     * Creates and initializes the timer modal display, including header, content, and controls.
-     * Caches DOM nodes for performance.
+     * Create and initialize the timer modal display, including header, content, and controls.
+     * Cache DOM nodes for performance.
      */
     private createTimerDisplay(): void {
         this.timerDisplay = document.createElement('div');
@@ -395,7 +230,8 @@ export class HSAutosingTimerModal {
         // Note: supported in modern browsers.
         this.timerDisplay.style.contain = 'layout paint';
 
-        /* ---------- HEADER ---------- */
+
+        // ----- HEADER -----
         this.timerHeader = document.createElement('div');
         this.timerHeader.className = 'hs-timer-header';
 
@@ -403,7 +239,7 @@ export class HSAutosingTimerModal {
         title.textContent = '⏱️ Autosing';
         title.className = 'hs-timer-title';
 
-        // PAUSE BUTTON
+        // Pause button
         this.pauseBtn = document.createElement('button');
         this.pauseBtn.id = 'hs-timer-ctrl-pause';
         this.pauseBtn.textContent = '⏸️';
@@ -414,6 +250,23 @@ export class HSAutosingTimerModal {
             this.pauseBtn.textContent = this.isPaused ? '▶️' : '⏸️';
             this.pauseBtn.title = this.isPaused ? 'Resume Autosing' : 'Pause Autosing';
         };
+        // Restart button
+        this.restartButton = document.createElement('button');
+        this.restartButton.id = 'hs-timer-ctrl-restart';
+        this.restartButton.textContent = '🔄';
+        this.restartButton.title = "Restart Singularity from the beginning";
+        this.restartButton.className = 'hs-timer-ctrl-btn';
+        this.restartButton.onclick = async () => {
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+            if (autosingMod) {
+                // Stop autosing, wait a bit, then Re-enable autosing (simulates starting from beginning)
+                autosingMod.stopAutosing();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const toggle = document.getElementById('hs-setting-auto-sing-enabled');
+                if (toggle) toggle.click();
+            }
+        };
+        // Stop BUTTON
         this.stopButton = document.createElement('button');
         this.stopButton.id = 'hs-timer-ctrl-stop';
         this.stopButton.textContent = '🔴';
@@ -423,25 +276,7 @@ export class HSAutosingTimerModal {
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
         };
-
-        this.restartButton = document.createElement('button');
-        this.restartButton.id = 'hs-timer-ctrl-restart';
-        this.restartButton.textContent = '🔄';
-        this.restartButton.title = "Restart Singularity from the beginning";
-        this.restartButton.className = 'hs-timer-ctrl-btn';
-        this.restartButton.onclick = async () => {
-            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
-            if (autosingMod) {
-                // Stop autosing
-                autosingMod.stopAutosing();
-                // Wait a bit for cleanup
-                await new Promise(resolve => setTimeout(resolve, 500));
-                // Re-enable autosing (simulates starting from beginning)
-                const toggle = document.getElementById('hs-setting-auto-sing-enabled');
-                if (toggle) toggle.click();
-            }
-        };
-
+        // Finish & Stop BUTTON
         this.finishStopBtn = document.createElement('button');
         this.finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
         this.finishStopBtn.textContent = '🟠';
@@ -455,7 +290,7 @@ export class HSAutosingTimerModal {
                 this.finishStopBtn.style.backgroundColor = newState ? '#ff9800' : '';
             }
         };
-
+        // Detailed data toggle button
         this.chartToggleBtn = document.createElement('button');
         this.chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.chartToggleBtn.textContent = '📊';
@@ -463,23 +298,19 @@ export class HSAutosingTimerModal {
         this.chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
-            this.chartToggleBtn!.textContent = '📊'; // Revert to chart icon after toggle
+            this.chartToggleBtn!.textContent = '📊';
             this.detailsVisibilityVersion++;
-
-            // Sparklines render also handles detailed-only visibility toggles.
             this.requestRender({ sparklines: true, phases: this.showDetailedData });
         };
-
         this.chartToggleBtn.onmouseenter = () => {
             if (this.showDetailedData) {
                 this.chartToggleBtn!.textContent = '✖️';
             }
         };
-
         this.chartToggleBtn.onmouseleave = () => {
             this.chartToggleBtn!.textContent = '📊';
         };
-
+        // Minimize button
         this.minimizeBtn = document.createElement('button');
         this.minimizeBtn.id = 'hs-timer-ctrl-minimize';
         this.minimizeBtn.textContent = '−';
@@ -501,11 +332,10 @@ export class HSAutosingTimerModal {
         this.timerHeader.appendChild(controls);
 
 
-        /* ---------- CONTENT ---------- */
+        // ----- CONTENT -----
         this.timerContent = document.createElement('div');
         this.timerContent.className = 'hs-timer-content';
 
-        // Dynamic area (updated every tick)
         this.dynamicContent = document.createElement('div');
         this.dynamicContent.innerHTML = `
             <div class="hs-timer-section">
@@ -597,26 +427,23 @@ export class HSAutosingTimerModal {
         `;
         this.timerContent.appendChild(this.dynamicContent);
 
-        /* ---------- RESIZE HANDLE ---------- */
+        // ----- RESIZE HANDLE -----
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'hs-resize-handle';
         resizeHandle.onmousedown = (e) => this.startResize(e);
 
-        /* ---------- ASSEMBLE ---------- */
+        // ----- ASSEMBLE -----
         this.timerDisplay.appendChild(this.timerHeader);
         this.timerDisplay.appendChild(this.timerContent);
         this.timerDisplay.appendChild(resizeHandle);
         document.body.appendChild(this.timerDisplay);
 
-        // AFTER appending to body, find and cache elements
-        this.liveTimerSpan = document.getElementById('hs-live-timer-val');
-        this.phaseTimerSpan = document.getElementById('hs-phase-timer-val');
-        this.phaseNameSpan = document.getElementById('hs-phase-name-val');
-        this.footerSection = document.getElementById('hs-footer-section');
-        this.singValSpan = document.getElementById('hs-sing-val');
-        this.progressValSpan = document.getElementById('hs-progress-val');
-
         // Cache frequently updated nodes (avoid repeated getElementById during renders)
+        this.singValSpan = document.getElementById('hs-sing-val');
+        this.phaseNameSpan = document.getElementById('hs-phase-name-val');
+        this.progressValSpan = document.getElementById('hs-progress-val');
+        this.footerSection = document.getElementById('hs-footer-section');
+
         this.quarksTotalSpan = document.getElementById('hs-quarks-total');
         this.quarksRateValSpan = document.getElementById('hs-quarks-rate-val');
         this.quarksRateHrSpan = document.getElementById('hs-quarks-rate-val-hr');
@@ -632,9 +459,6 @@ export class HSAutosingTimerModal {
 
         this.c15TopSpan = document.getElementById('hs-c15-top');
         this.c15SigmaSpan = document.getElementById('hs-c15-sigma');
-
-        this.avg10LabelSpan = document.getElementById('hs-avg-10-lbl');
-        this.avg50LabelSpan = document.getElementById('hs-avg-50-lbl');
 
         this.totalTimeSpan = document.getElementById('hs-total-time');
         this.maxTimeSpan = document.getElementById('hs-max-time');
@@ -652,7 +476,6 @@ export class HSAutosingTimerModal {
         this.sparklineGoldenQuarksContainer = document.getElementById('hs-sparkline-goldenquarks-container');
         this.sparklineTimeContainer = document.getElementById('hs-sparkline-time-container');
 
-        // Cache footer value spans
         this.footerVersionSpan = document.getElementById('hs-footer-version');
         this.footerStrategySpan = document.getElementById('hs-footer-strategy');
         this.footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
@@ -683,14 +506,142 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Updates the export button state and text based on data availability and settings.
+     * Ensure static DOM substructure for header, averages, phase stats, and sparklines is built once.
      */
-    private updateExportButton(): void {
-        if (this.exportManager) {
-            this.exportManager.updateExportButton();
-        }
+    private ensureStaticDom(): void {
+        if (this.staticDomInitialized) return;
+        this.staticDomInitialized = true;
+        this.initSingularityHeaderDom();
+        this.initAverageDom();
+        this.initPhaseStatsDom();
+        this.initSparklineDom();
     }
 
+    /**
+     * Initialize the DOM for the Singularity header (target/highest display).
+     */
+    private initSingularityHeaderDom(): void {
+        if (!this.singValSpan) return;
+        this.singValSpan.textContent = '';
+        const target = document.createElement('span');
+        target.id = 'hs-sing-target';
+        const sep = document.createElement('span');
+        sep.textContent = ' / ';
+        sep.className = 'hs-sing-sep';
+        const highest = document.createElement('span');
+        highest.id = 'hs-sing-highest';
+        this.singValSpan.appendChild(target);
+        this.singValSpan.appendChild(sep);
+        this.singValSpan.appendChild(highest);
+        this.singTargetSpan = target;
+        this.singHighestSpan = highest;
+    }
+
+    /**
+     * Initialize the DOM for average time displays (avg10, avg50, avgAll).
+     */
+    private initAverageDom(): void {
+        // avg1 does not show sigma, keep as textContent
+        this.ensureAvgSpanStructure(this.avg10Span);
+        this.ensureAvgSpanStructure(this.avg50Span);
+        this.ensureAvgSpanStructure(this.avgAllSpan);
+    }
+
+    /**
+     * Initialize the DOM for phase stats grid header.
+     */
+    private initPhaseStatsDom(): void {
+        if (!this.phaseStatsContainer) return;
+        this.phaseHeaderNodes = createPhaseStatsHeader();
+        // Render initial empty grid
+        const frag = document.createDocumentFragment();
+        this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
+        this.phaseStatsContainer.replaceChildren(frag);
+    }
+
+    /**
+     * Initialize the DOM for sparklines (quarks, golden quarks, times).
+     */
+    private initSparklineDom(): void {
+        this.sparklineQuarks = buildSparklineDom(this.sparklineQuarksContainer, '#00BCD4', false);
+        this.sparklineGoldenQuarks = buildSparklineDom(this.sparklineGoldenQuarksContainer, '#F1FA8C', false);
+        this.sparklineTimes = buildSparklineDom(this.sparklineTimeContainer, '#FF8A80', true);
+    }
+
+    /**
+     * Ensure the average span structure (main/sd) exists for a given element.
+     * Returns the created or cached structure.
+     */
+    private ensureAvgSpanStructure(el: HTMLElement | null): { main: HTMLSpanElement; sd: HTMLSpanElement } | null {
+        if (!el) return null;
+        const cached = this.avgSpanParts.get(el);
+        if (cached) return cached;
+        el.textContent = '';
+        const main = document.createElement('span');
+        main.className = 'hs-avg-main';
+        const sd = document.createElement('span');
+        sd.className = 'hs-avg-sd';
+        el.appendChild(main);
+        el.appendChild(sd);
+        const parts = { main, sd };
+        this.avgSpanParts.set(el, parts);
+        return parts;
+    }
+
+    /**
+     * Sync the advanced data collection enabled state from settings.
+     */
+    private syncAdvancedDataCollectionEnabled(): void {
+        const setting = HSSettings.getSetting('advancedDataCollection');
+        const enabled = !!setting && setting.isEnabled();
+        if (enabled === this.advancedDataCollectionEnabled) return;
+        this.advancedDataCollectionEnabled = enabled;
+    }
+
+
+    // =============================
+    // Modal Controls (Drag/Resize/Minimize)
+    // =============================
+
+    /**
+     * Compute and apply auto width and height for the modal and chart containers.
+     */
+    private computeAndApplyAutoWidth(): void {
+        if (!this.timerDisplay || this.autoResized) return;
+
+        // Hard-coded defaults (adjust as desired)
+        const FIXED_WIDTH = 400; // px
+        const FIXED_HEIGHT = 650; // px
+
+        // Sparkline SVG width: leave space for the label column on the right.
+        const FIXED_GRAPH_WIDTH = 400; // px
+        const LABELS_ESTIMATE = 110; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
+
+        // Respect viewport so the modal doesn't go off-screen by default.
+        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 40));
+        const appliedHeight = Math.max(240, Math.min(FIXED_HEIGHT, window.innerHeight - 40));
+
+        this.computedMaxWidth = appliedWidth;
+        this.computedMaxHeight = appliedHeight + 250;
+        // Graph (SVG) width must fit inside the modal
+        this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
+
+        this.timerDisplay.style.width = 'auto';
+        this.timerDisplay.style.height = 'auto';
+
+        // Sparkline containers also use auto width to allow modal to auto-resize
+        if (this.sparklineQuarksContainer) {
+            this.sparklineQuarksContainer.style.width = 'auto';
+        }
+        if (this.sparklineGoldenQuarksContainer) {
+            this.sparklineGoldenQuarksContainer.style.width = 'auto';
+        }
+        if (this.sparklineTimeContainer) {
+            this.sparklineTimeContainer.style.width = 'auto';
+        }
+
+        this.autoResized = true;
+    }
 
     /**
      * Sets up drag and resize handlers for the modal.
@@ -707,51 +658,6 @@ export class HSAutosingTimerModal {
 
         window.addEventListener('mousemove', this.onMouseMoveHandler);
         window.addEventListener('mouseup', this.onMouseUpHandler);
-    }
-
-    /**
-     * Apply a fixed modal size on first open (no text measuring).
-     * Also sets a fixed graph SVG width so the right-side labels remain visible.
-     */
-    /**
-     * Computes and applies auto width and height for the modal and chart containers.
-     */
-    private computeAndApplyAutoWidth(): void {
-        if (!this.timerDisplay || this.autoResized) return;
-
-        // Hard-coded defaults (adjust as desired)
-        const FIXED_WIDTH = 400; // px
-        const FIXED_HEIGHT = 650; // px
-
-        // Sparkline SVG width: leave space for the label column on the right.
-        // (Sparkline row is flex: [svg][labels])
-        const FIXED_GRAPH_WIDTH = 400; // px
-        const LABELS_ESTIMATE = 110; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
-
-        // Respect viewport so the modal doesn't go off-screen by default.
-        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 40));
-        const appliedHeight = Math.max(240, Math.min(FIXED_HEIGHT, window.innerHeight - 40));
-
-        this.computedMaxWidth = appliedWidth;
-        this.computedMaxHeight = appliedHeight + 250;
-        // Graph (SVG) width must fit inside the modal
-        this.computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
-
-        this.timerDisplay.style.width = 'auto';
-        this.timerDisplay.style.height = 'auto';
-
-        // Sparkline containers also use auto width to allow modal to auto-size
-        if (this.sparklineQuarksContainer) {
-            this.sparklineQuarksContainer.style.width = 'auto';
-        }
-        if (this.sparklineGoldenQuarksContainer) {
-            this.sparklineGoldenQuarksContainer.style.width = 'auto';
-        }
-        if (this.sparklineTimeContainer) {
-            this.sparklineTimeContainer.style.width = 'auto';
-        }
-
-        this.autoResized = true;
     }
 
     /**
@@ -857,10 +763,8 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'none';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'none';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'none';
-            // Removed unused: resizeHandleElem
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
-            // Restore auto-sizing - recalculate dimensions for new content
             this.timerDisplay.style.minWidth = '';
             this.timerDisplay.style.width = 'auto';
             this.timerDisplay.style.height = 'auto';
@@ -868,11 +772,15 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'block';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'block';
-            // Removed unused: resizeHandleElem
             if (this.minimizeBtn) this.minimizeBtn.textContent = '−';
             this.updateDisplay();
         }
     }
+
+
+    // =============================
+    // Session/Timer Management
+    // =============================
 
     /**
      * Starts the live timer for a new singularity.
@@ -1044,7 +952,6 @@ export class HSAutosingTimerModal {
         }
     }
 
-
     /**
      * Records the completion of a singularity, updating metrics and stats.
      * Stores running averages for duration, quarks, and golden quarks.
@@ -1081,7 +988,7 @@ export class HSAutosingTimerModal {
         const realQuarksGain = gainedQuarks;
         this.latestQuarksTotal = currentQuarks;
         // Log before and after adding metric
-        console.log('[hs-autosingTimerModal] addSingularityMetric BEffFORE', this.singularityMetrics);        
+        console.log('[hs-autosingTimerModal] addSingularityMetric BEFORE', this.singularityMetrics);        
         // Add to unified metrics array for charts
         this.addSingularityMetric(
 
@@ -1094,13 +1001,6 @@ export class HSAutosingTimerModal {
             c15Score
         );
         console.log('[hs-autosingTimerModal] addSingularityMetric AFTER', this.singularityMetrics);
-
-        if (singularityDuration > 0) {
-            // All chart/stat logic now handled by singularityMetrics
-        }
-
-        // Track duration sums for O(1) windowed average/variance
-        this.pushDurationValue(singularityDuration, now);
 
         // Advanced data collection
         if (this.advancedDataCollectionEnabled) {
@@ -1154,22 +1054,11 @@ export class HSAutosingTimerModal {
 
         this.requestRender({ general: true, sparklines: true, exportBtn: true });
     }
-    
-    /**
-     * Unified array for chart metrics: each entry represents a singularity event.
-     * All chart/stat logic now unified on singularityMetrics.
-     */
-    private singularityMetrics: Array<{
-        timestamp: number;
-        duration: number;
-        quarksGained: number;
-        goldenQuarksGained: number;
-        phases: Record<string, number>;
-        c15?: string;
-        runningAvgDuration: number;
-        runningAvgQuarksPerSecond: number;
-        runningAvgGoldenQuarksPerSecond: number;
-    }> = [];
+
+
+    // =============================
+    // Data/Stat Management
+    // =============================
 
     /**
      * Adds a new entry to singularityMetrics for unified chart/stat logic.
@@ -1238,6 +1127,25 @@ export class HSAutosingTimerModal {
         if (this.singularityMetrics.length > this.sparklineMaxPoints) {
             this.singularityMetrics.shift();
         }
+    }
+
+
+    // =============================
+    // State Accessors
+    // =============================
+
+    /**
+     * Returns the name of the current phase.
+     */
+    public getCurrentPhase(): string {
+        return this._currentPhaseName;
+    }
+
+    /**
+     * Returns true if autosing is currently paused.
+     */
+    public getIsPaused(): boolean {
+        return this.isPaused;
     }
 
     private getSingularityCount(): number {
@@ -1347,16 +1255,76 @@ export class HSAutosingTimerModal {
         return this.logC15Count === 0 ? null : this.logC15Mean;
     }
 
-    // Export logic moved to HSAutosingExportManager
 
+    // =============================
+    // Render Methods
+    // =============================
 
+    private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
+        if (opts.general) this.renderGeneralPending = true;
+        if (opts.phases) this.renderPhasesPending = true;
+        if (opts.sparklines) this.renderSparklinesPending = true;
+        if (opts.exportBtn) this.renderExportPending = true;
+
+        if (this.renderPending) return;
+        this.renderPending = true;
+
+        window.requestAnimationFrame(() => {
+            this.renderPending = false;
+            this.flushRender();
+        });
+    }
+
+    private flushRender(): void {
+        if (!this.timerContent || !this.timerDisplay) {
+            this.renderGeneralPending = false;
+            this.renderPhasesPending = false;
+            this.renderSparklinesPending = false;
+            this.renderExportPending = false;
+            return;
+        }
+        if (this.timerDisplay.style.display === 'none' || this.isMinimized) {
+            // UI is hidden; skip DOM work. Next explicit show/unminimize will request a full render.
+            this.renderGeneralPending = false;
+            this.renderPhasesPending = false;
+            this.renderSparklinesPending = false;
+            this.renderExportPending = false;
+            return;
+        }
+
+        if (this.renderGeneralPending) {
+            this.renderGeneralStats();
+        }
+        if (this.renderPhasesPending) {
+            // Avoid rebuilding the phase table if nothing changed.
+            if (this.phaseHistoryVersion !== this.lastRenderedPhaseHistoryVersion) {
+                this.renderPhaseStatistics();
+                this.lastRenderedPhaseHistoryVersion = this.phaseHistoryVersion;
+            }
+        }
+        if (this.renderSparklinesPending) {
+            const needsSparklineRender =
+                this.sparklineVersion !== this.lastRenderedSparklineVersion ||
+                this.detailsVisibilityVersion !== this.lastRenderedDetailsVisibilityVersion;
+
+            if (needsSparklineRender) {
+                this.renderSparklines();
+                this.lastRenderedSparklineVersion = this.sparklineVersion;
+                this.lastRenderedDetailsVisibilityVersion = this.detailsVisibilityVersion;
+            }
+        }
+        if (this.renderExportPending) {
+            this.updateExportButton();
+        }
+
+        this.renderGeneralPending = false;
+        this.renderPhasesPending = false;
+        this.renderSparklinesPending = false;
+        this.renderExportPending = false;
+    }
 
     private updateDisplay(): void {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
-    }
-
-    private pushDurationValue(value: number, timestamp: number): void {
-        // Legacy durationsHistory/max/min logic removed; handled by singularityMetrics.
     }
 
     // Small utility helpers lifted out of render loops to avoid per-render allocations.
@@ -1548,6 +1516,29 @@ export class HSAutosingTimerModal {
         if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = String(this.singularityMetrics.length);
     }
 
+    private updateExportButton(): void {
+        if (this.exportManager) {
+            this.exportManager.updateExportButton();
+        }
+    }
+
+
+    // =============================
+    // Public Interface
+    // =============================
+
+    /**
+     * Public setter to update the current phase name displayed on the timer.
+     * Call this at the START of a phase so the user sees what is happening.
+     */
+    public setCurrentPhase(name: string) {
+        this._currentPhaseName = name;
+        if (this.phaseNameSpan) {
+            this.phaseNameSpan.textContent = name || '\u00A0';
+        }
+        this.updateDisplay();
+    }
+
     public show(): void {
         if (this.timerDisplay) {
             // On first open, compute and apply an appropriate width so that
@@ -1589,4 +1580,5 @@ export class HSAutosingTimerModal {
             this.timerDisplay.parentNode.removeChild(this.timerDisplay);
         }
     }
+
 }
