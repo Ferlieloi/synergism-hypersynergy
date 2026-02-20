@@ -648,14 +648,12 @@ export class HSAutosingTimerModal {
      */
     private setupDragAndResize(): void {
         if (!this.timerHeader || !this.timerDisplay) return;
-
         // Dragging
         this.timerHeader.onmousedown = (e) => {
             if (e.target === this.timerHeader || (e.target as HTMLElement).tagName === 'SPAN') {
                 this.startDrag(e);
             }
         };
-
         window.addEventListener('mousemove', this.onMouseMoveHandler);
         window.addEventListener('mouseup', this.onMouseUpHandler);
     }
@@ -783,8 +781,8 @@ export class HSAutosingTimerModal {
     // =============================
 
     /**
-     * Starts the live timer for a new singularity.
-     * Resets phase tracking and updates UI.
+     * Start the live timer for a new singularity.
+     * Reset phase tracking and update UI.
      */
     private startLiveTimer(): void {
         this.stopLiveTimer();
@@ -800,7 +798,7 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Stops the live timer interval.
+     * Stop the live timer interval.
      */
     private stopLiveTimer(): void {
         if (this.liveTimerInterval !== null) {
@@ -810,25 +808,22 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Starts autosing session with given strategy and initial quark values.
-     * Resets stats, phase history, and metrics.
+     * Start autosing session with given strategy and initial (g)quark values.
+     * Reset phase history and metrics.
      */
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
-        this.singularityCount = 0;
-        this.lastSingularityTimestamp = 0;
-        // Legacy stat resets removed; all stats now handled by singularityMetrics
-        // Legacy array/stat resets removed; handled by singularityMetrics
         this.startTime = performance.now();
         this.lastSingularityTimestamp = this.startTime;
+
+        // Reset metrics and phase history
+        this.singularityCount = 0;
+        this.lastSingularityTimestamp = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
 
-        // Reset C15 online stats
         this.c15Count = 0;
         this.c15Mean = new Decimal(0);
         this.c15M2 = new Decimal(0);
-
-        // Reset log(C15) online stats
         this.logC15Count = 0;
         this.logC15Mean = 0;
         this.logC15M2 = 0;
@@ -848,7 +843,6 @@ export class HSAutosingTimerModal {
         // Some phases are recorded using the human-friendly AOAG_PHASE_NAME (override),
         // so include that name in the cached order directly just before the phase that ends with 'end'.
         const AOAG_NAME = 'AOAG Unlocked Phase';
-
         const finalIdx = this.cachedStrategyOrder.findIndex(s => s.endsWith('-end'));
         if (finalIdx >= 0) {
             // Insert AOAG just before the final end-phase marker
@@ -876,7 +870,7 @@ export class HSAutosingTimerModal {
             this.compressedBundles = [];
             this.db.clearBundles().catch(console.error);
         } else {
-            // Hybrid Minimal: no bundles stored
+            // Hybrid Minimal: no bundles stored in db
             this.singularityBundles = [];
             this.compressedBundles = [];
         }
@@ -957,26 +951,6 @@ export class HSAutosingTimerModal {
      * Stores running averages for duration, quarks, and golden quarks.
      */
     public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number, c15Score?: Decimal): void {
-        console.log('[hs-autosingTimerModal] recordSingularity called', {
-            gainedGoldenQuarks,
-            currentGoldenQuarks,
-            gainedQuarks,
-            currentQuarks,
-            c15Score,
-            lastSingularityTimestamp: this.lastSingularityTimestamp,
-            singularityCount: this.singularityCount,
-            advancedDataCollectionEnabled: this.advancedDataCollectionEnabled
-        });
-        // Log argument validity
-        const argValidity = {
-            gainedGoldenQuarks: typeof gainedGoldenQuarks === 'number' && !isNaN(gainedGoldenQuarks),
-            currentGoldenQuarks: typeof currentGoldenQuarks === 'number' && !isNaN(currentGoldenQuarks),
-            gainedQuarks: typeof gainedQuarks === 'number' && !isNaN(gainedQuarks),
-            currentQuarks: typeof currentQuarks === 'number' && !isNaN(currentQuarks),
-            c15Score: c15Score !== undefined
-        };
-        console.log('[hs-autosingTimerModal] recordSingularity argument validity', argValidity);
-
         const now = performance.now();
         const singularityDuration = (now - this.lastSingularityTimestamp) / 1000;
         this.lastSingularityTimestamp = now;
@@ -986,12 +960,10 @@ export class HSAutosingTimerModal {
 
         // Handle quarks exactly like golden quarks: use passed totals/gains.
         const realQuarksGain = gainedQuarks;
-        this.latestQuarksTotal = currentQuarks;
-        // Log before and after adding metric
-        console.log('[hs-autosingTimerModal] addSingularityMetric BEFORE', this.singularityMetrics);        
+        this.latestQuarksTotal = currentQuarks;     
+
         // Add to unified metrics array for charts
         this.addSingularityMetric(
-
             singularityDuration,
             realQuarksGain,
             gainedGoldenQuarks,
@@ -1000,24 +972,6 @@ export class HSAutosingTimerModal {
             new Map(this.currentSingularityPhases),
             c15Score
         );
-        console.log('[hs-autosingTimerModal] addSingularityMetric AFTER', this.singularityMetrics);
-
-        // Advanced data collection
-        if (this.advancedDataCollectionEnabled) {
-            const bundle: SingularityBundle = {
-                singularityNumber: this.singularityCount,
-                totalTime: singularityDuration,
-                quarksGained: realQuarksGain,
-                goldenQuarksGained: gainedGoldenQuarks,
-                phases: Object.fromEntries(this.currentSingularityPhases),
-                timestamp: Date.now()
-            };
-            if (c15Score !== undefined) {
-                bundle.c15 = c15Score.toString();
-            }
-            this.singularityBundles.push(bundle);
-            this.db.addBundle(bundle, compressToUTF16).catch(console.error);
-        }
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
@@ -1046,6 +1000,23 @@ export class HSAutosingTimerModal {
             }
         }
 
+        // Advanced data collection
+        if (this.advancedDataCollectionEnabled) {
+            const bundle: SingularityBundle = {
+                singularityNumber: this.singularityCount,
+                totalTime: singularityDuration,
+                quarksGained: realQuarksGain,
+                goldenQuarksGained: gainedGoldenQuarks,
+                phases: Object.fromEntries(this.currentSingularityPhases),
+                timestamp: Date.now()
+            };
+            if (c15Score !== undefined) {
+                bundle.c15 = c15Score.toString();
+            }
+            this.singularityBundles.push(bundle);
+            this.db.addBundle(bundle, compressToUTF16).catch(console.error);
+        }
+
         // New singularity affects general stats + charts.
         this.sparklineVersion++;
 
@@ -1072,28 +1043,6 @@ export class HSAutosingTimerModal {
         phases: Map<string, number>,
         c15Score?: Decimal
     ): void {
-        // Validate all arguments
-        const validity = {
-            singularityDuration: typeof singularityDuration === 'number' && !isNaN(singularityDuration),
-            realQuarksGain: typeof realQuarksGain === 'number' && !isNaN(realQuarksGain),
-            gainedGoldenQuarks: typeof gainedGoldenQuarks === 'number' && !isNaN(gainedGoldenQuarks),
-            currentQuarks: typeof currentQuarks === 'number' && !isNaN(currentQuarks),
-            currentGoldenQuarks: typeof currentGoldenQuarks === 'number' && !isNaN(currentGoldenQuarks),
-            phases: phases instanceof Map,
-            c15Score: c15Score === undefined || typeof c15Score === 'object'
-        };
-        console.log('[hs-autosingTimerModal] addSingularityMetric argument validity', validity);
-        if (!validity.singularityDuration || !validity.realQuarksGain || !validity.gainedGoldenQuarks || !validity.currentQuarks || !validity.currentGoldenQuarks) {
-            console.error('[hs-autosingTimerModal] addSingularityMetric: Invalid metric arguments', {
-                singularityDuration,
-                realQuarksGain,
-                gainedGoldenQuarks,
-                currentQuarks,
-                currentGoldenQuarks,
-                phases,
-                c15Score
-            });
-        }
         // Compute running averages up to this point (including this entry)
         let runningAvgDuration = singularityDuration;
         let runningAvgQuarksPerSecond = singularityDuration > 0 ? realQuarksGain / singularityDuration : 0;
@@ -1121,7 +1070,6 @@ export class HSAutosingTimerModal {
             runningAvgQuarksPerSecond,
             runningAvgGoldenQuarksPerSecond
         };
-        console.log('[hs-autosingTimerModal] addSingularityMetric PUSH', metric);
         this.singularityMetrics.push(metric);
         // Optionally: prune to max points for charting
         if (this.singularityMetrics.length > this.sparklineMaxPoints) {
@@ -1135,29 +1083,47 @@ export class HSAutosingTimerModal {
     // =============================
 
     /**
-     * Returns the name of the current phase.
+     * Return the name of the current phase.
      */
     public getCurrentPhase(): string {
         return this._currentPhaseName;
     }
 
     /**
-     * Returns true if autosing is currently paused.
+     * Public setter to update the current phase name displayed on the timer.
+     * Call this at the START of a phase so the user sees what is happening.
+     */
+    public setCurrentPhase(name: string) {
+        this._currentPhaseName = name;
+        if (this.phaseNameSpan) {
+            this.phaseNameSpan.textContent = name || '\u00A0';
+        }
+        this.updateDisplay();
+    }
+
+    /**
+     * Return true if autosing is currently paused.
      */
     public getIsPaused(): boolean {
         return this.isPaused;
     }
 
+    /**
+     * Return the number of completed singularities in the current session.
+     */
     private getSingularityCount(): number {
         return this.singularityCount;
     }
 
+    /**
+     * Return the target singularity number from settings.
+     */
     private getSingularityTarget(): number {
         return Number(HSSettings.getSetting('singularityNumber').getValue()) || 0;
     }
 
     /**
-     * Returns the highest singularity count from game data.
+     * Return the highest singularity count from game data.
      */
     private getSingularityHighest(): number {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
@@ -1166,7 +1132,7 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Returns the name of the current autosing strategy.
+     * Return the name of the current autosing strategy from settings.
      */
     private getStrategyName(): string {
         const setting = HSSettings.getSetting('autosingStrategy');
@@ -1178,7 +1144,7 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Returns the order of ambrosia loadouts for the session.
+     * Return the order of ambrosia loadouts for the session from settings.
      */
     private getLoadoutsOrder(): string[] {
         return [
@@ -1192,7 +1158,7 @@ export class HSAutosingTimerModal {
     }
 
     /**
-     * Returns the duration of the last singularity.
+     * Return the duration (in seconds) of the last completed singularity.
      */
     private getLastDuration(): number | null {
         // Return the duration of the last entry in singularityMetrics
@@ -1200,66 +1166,15 @@ export class HSAutosingTimerModal {
         return this.singularityMetrics[this.singularityMetrics.length - 1].duration;
     }
 
-    /**
-     * Returns the average duration of the last n singularities.
-     */
-    private getAverageLast(n: number): number | null {
-        // Legacy durationsPrefixSum logic removed; use singularityMetrics for averages.
-        const arr = this.singularityMetrics;
-        if (n <= 0 || arr.length < n) return null;
-        const sum = arr.slice(-n).reduce((acc, m) => acc + m.duration, 0);
-        return sum / n;
-    }
-
-    /**
-     * Returns the average quarks (or golden quarks) per second for all recorded singularities.
-     */
-    private getQuarksPerSecond(isGolden: boolean): number | null {
-        // Use singularityMetrics for rate calculation
-        const arr = this.singularityMetrics;
-        if (arr.length === 0) return null;
-        let total = 0, totalTime = 0;
-        for (const m of arr) {
-            if (isGolden) {
-                total += m.goldenQuarksGained;
-            } else {
-                total += m.quarksGained;
-            }
-            totalTime += m.duration;
-        }
-        if (totalTime <= 0) return null;
-        return total / totalTime;
-    }
-
-    /**
-     * Return population variance of ln(C15) using incremental Welford stats.
-     * O(1) time.
-     */
-    public getLogC15Variance(): number | null {
-        if (this.logC15Count === 0) return null;
-        return this.logC15M2 / this.logC15Count;
-    }
-
-    /**
-     * Return population standard deviation of ln(C15).
-     */
-    public getLogC15Std(): number | null {
-        const v = this.getLogC15Variance();
-        return v === null ? null : Math.sqrt(v);
-    }
-
-    /**
-     * Return mean of ln(C15).
-     */
-    public getLogC15Mean(): number | null {
-        return this.logC15Count === 0 ? null : this.logC15Mean;
-    }
-
-
+    
     // =============================
     // Render Methods
     // =============================
 
+    /**
+     * Request a render update for specific modal sections. Sets pending flags
+     * and schedules a render via requestAnimationFrame.
+     */
     private requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
         if (opts.general) this.renderGeneralPending = true;
         if (opts.phases) this.renderPhasesPending = true;
@@ -1275,6 +1190,9 @@ export class HSAutosingTimerModal {
         });
     }
 
+    /**
+     * Execute pending render updates for modal sections. Only runs if modal is visible and DOM is ready.
+     */
     private flushRender(): void {
         if (!this.timerContent || !this.timerDisplay) {
             this.renderGeneralPending = false;
@@ -1323,16 +1241,25 @@ export class HSAutosingTimerModal {
         this.renderExportPending = false;
     }
 
+    /**
+     * Trigger a full modal display update, requesting renders for all main sections.
+     */
     private updateDisplay(): void {
         this.requestRender({ general: true, phases: this.showDetailedData, sparklines: true, exportBtn: true });
     }
 
-    // Small utility helpers lifted out of render loops to avoid per-render allocations.
+    /**
+     * Set the text content of an element if it differs from the current value.
+     */
     private setTextEl(el: HTMLElement | null, text: string): void {
         if (!el) return;
         if (el.textContent !== text) el.textContent = text;
     }
 
+    /**
+     * Set the average and standard deviation display for a span element, 
+     * using stateless helpers for formatting.
+     */
     private setAvgEl(el: HTMLElement | null, val: number | null, sd: number | null): void {
         if (!el) return;
         const parts = this.ensureAvgSpanStructure(el);
@@ -1350,33 +1277,29 @@ export class HSAutosingTimerModal {
         if (parts.sd.textContent !== sdText) parts.sd.textContent = sdText;
     }
 
-
+    /**
+     * Render general statistics in the modal footer and main stats area,
+     * including quarks, golden quarks, averages, and C15 metrics.
+     */
     private renderGeneralStats(): void {
-        // Update footer values
+        // --- Footer ---
         this.setTextEl(this.footerVersionSpan, this.modVersion);
         this.setTextEl(this.footerStrategySpan, this.strategyName);
         this.setTextEl(this.footerLoadoutsSpan, this.loadoutsOrder.join(', '));
+
+        // --- Progress ---
         const count = this.getSingularityCount();
-        const currentQuarks = this.latestQuarksTotal;
-
-        const currentGoldenQuarks = this.latestGoldenQuarksTotal;
-
-        // 1. Singularity & Progress
         const target = this.getSingularityTarget();
-        if (target !== this.singTarget) {
-            this.singTarget = target;
-        }
+        if (target !== this.singTarget) this.singTarget = target;
         const highest = this.getSingularityHighest();
-        if (highest !== this.singHighest) {
-            this.singHighest = highest;
-        }
+        if (highest !== this.singHighest) this.singHighest = highest;
         this.setTextEl(this.singTargetSpan, `S${this.singTarget}`);
         this.setTextEl(this.singHighestSpan, `S${this.singHighest}`);
         this.setTextEl(this.progressValSpan, count.toString());
 
-        // 2. Quarks
+        // --- Quarks ---
+        const currentQuarks = this.latestQuarksTotal;
         this.setTextEl(this.quarksTotalSpan, formatNumber(currentQuarks));
-
         const quarksPerSec = getQuarksPerSecond(this.singularityMetrics, false);
         if (quarksPerSec !== null) {
             this.setTextEl(this.quarksRateValSpan, `${formatNumber(quarksPerSec)}/s`);
@@ -1386,9 +1309,9 @@ export class HSAutosingTimerModal {
             this.setTextEl(this.quarksRateHrSpan, `(0/hr)`);
         }
 
-        // 3. Golden Quarks
+        // --- Golden Quarks ---
+        const currentGoldenQuarks = this.latestGoldenQuarksTotal;
         this.setTextEl(this.gquarksTotalSpan, formatNumber(currentGoldenQuarks));
-
         const goldenQuarksPerSec = getQuarksPerSecond(this.singularityMetrics, true);
         if (goldenQuarksPerSec !== null) {
             this.setTextEl(this.gquarksRateValSpan, `${formatNumber(goldenQuarksPerSec)}/s`);
@@ -1398,24 +1321,21 @@ export class HSAutosingTimerModal {
             this.setTextEl(this.gquarksRateHrSpan, `(0/hr)`);
         }
 
-        // 4. Averages
+        // --- Averages ---
         const avg1 = this.getLastDuration();
         const avg10 = getAverageLast(this.singularityMetrics, 10);
         const avg50 = getAverageLast(this.singularityMetrics, 50);
         const avgAll = getAverageLast(this.singularityMetrics, count);
-
         const sd10 = getStandardDeviation(this.singularityMetrics, 10);
         const sd50 = getStandardDeviation(this.singularityMetrics, 50);
         const sdAll = getStandardDeviation(this.singularityMetrics, count);
-
         this.setTextEl(this.avg1Span, avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
         this.setAvgEl(this.avg10Span, avg10, sd10);
         this.setAvgEl(this.avg50Span, avg50, sd50);
         this.setTextEl(this.avgAllCountSpan, count.toString());
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
-        // Total, Max, Min Times (all-time)
-        // Legacy allTimeCumulativeDuration/max/min logic removed; handled by singularityMetrics.
+        // --- Times (all-time) ---
         const arr = this.singularityMetrics;
         const totalTime = arr.reduce((sum, m) => sum + m.duration, 0);
         const maxTime = arr.length > 0 ? Math.max(...arr.map(m => m.duration)) : null;
@@ -1424,7 +1344,7 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
         this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
 
-        // C15 display: show average and std of log(C15) (inline)
+        // --- C15 ---
         if (this.c15TopSpan && this.c15SigmaSpan) {
             const avgC15 = getC15AverageLast(this.c15Count, this.c15Mean, count);
             const sdLogC15 = getLogC15Std(this.logC15Count, this.logC15M2);
@@ -1435,7 +1355,7 @@ export class HSAutosingTimerModal {
             this.c15TopSpan.title = '';
         }
 
-        // Quarks Gains (all-time, from singularityMetrics)
+        // --- Quarks Gains (all-time) ---
         const metrics = this.singularityMetrics;
         const totalQuarksGains = metrics.reduce((sum, m) => sum + m.quarksGained, 0);
         const maxQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.quarksGained)) : null;
@@ -1444,7 +1364,7 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? formatNumber(maxQuarksGains) : '-');
         this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-');
 
-        // Golden Quarks Gains (all-time, from singularityMetrics)
+        // --- Golden Quarks Gains (all-time) ---
         const totalGQuarksGains = metrics.reduce((sum, m) => sum + m.goldenQuarksGained, 0);
         const maxGQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.goldenQuarksGained)) : null;
         const minGQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.goldenQuarksGained)) : null;
@@ -1453,6 +1373,9 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? formatNumber(minGQuarksGains) : '-');
     }
 
+    /**
+     * Render the phase statistics table, sorting and displaying phase data using stateless helpers.
+     */
     private renderPhaseStatistics(): void {
         const phaseContainer = this.phaseStatsContainer;
         if (!phaseContainer) return;
@@ -1494,21 +1417,15 @@ export class HSAutosingTimerModal {
         phaseContainer.replaceChildren(frag);
     }
 
+    /**
+     * Render sparkline charts for quarks, golden quarks, and times,
+     * and updates average/stat displays using stateless helpers.
+     */
     private renderSparklines(): void {
-        /**
-         * Sparkline chart interface update:
-         * - Modal passes full metrics array and sparklineMaxPoints to chart module.
-         * - Chart module slices internally for display and label stats.
-         * - See hs-sparkline.ts for details.
-         */
         this.ensureStaticDom();
-
-        // Use unified metrics array for all charts
         updateSparkline(this.sparklineQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         updateSparkline(this.sparklineGoldenQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         updateSparkline(this.sparklineTimes, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
-        // Update averages using unified metrics
-        // Use stateless helpers for averages and stddevs
         this.setAvgEl(this.avg1Span, getAverageLast(this.singularityMetrics, 1), getStandardDeviation(this.singularityMetrics, 1));
         this.setAvgEl(this.avg10Span, getAverageLast(this.singularityMetrics, 10), getStandardDeviation(this.singularityMetrics, 10));
         this.setAvgEl(this.avg50Span, getAverageLast(this.singularityMetrics, 50), getStandardDeviation(this.singularityMetrics, 50));
@@ -1516,6 +1433,9 @@ export class HSAutosingTimerModal {
         if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = String(this.singularityMetrics.length);
     }
 
+    /**
+     * Update the export button state using the export manager, if present.
+     */
     private updateExportButton(): void {
         if (this.exportManager) {
             this.exportManager.updateExportButton();
@@ -1524,21 +1444,12 @@ export class HSAutosingTimerModal {
 
 
     // =============================
-    // Public Interface
+    // Misc Modal Stuff
     // =============================
 
     /**
-     * Public setter to update the current phase name displayed on the timer.
-     * Call this at the START of a phase so the user sees what is happening.
+     * Show the modal. Computes and applies width on first open, then displays the modal.
      */
-    public setCurrentPhase(name: string) {
-        this._currentPhaseName = name;
-        if (this.phaseNameSpan) {
-            this.phaseNameSpan.textContent = name || '\u00A0';
-        }
-        this.updateDisplay();
-    }
-
     public show(): void {
         if (this.timerDisplay) {
             // On first open, compute and apply an appropriate width so that
@@ -1549,6 +1460,9 @@ export class HSAutosingTimerModal {
         }
     }
 
+    /**
+     * Hide the modal and stop the live timer.
+     */
     public hide(): void {
         if (this.timerDisplay) {
             this.timerDisplay.style.display = 'none';
@@ -1556,6 +1470,9 @@ export class HSAutosingTimerModal {
         this.stopLiveTimer();
     }
 
+    /**
+     * Reset all modal state, stats, and phase history. Stops timer and triggers a full render.
+     */
     public reset(): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
@@ -1572,6 +1489,9 @@ export class HSAutosingTimerModal {
         this.requestRender({ general: true, phases: true, sparklines: true, exportBtn: true });
     }
 
+    /**
+     * Destroy the modal, remove event listeners, and clean up DOM elements.
+     */
     public destroy(): void {
         this.stopLiveTimer();
         window.removeEventListener('mousemove', this.onMouseMoveHandler);
