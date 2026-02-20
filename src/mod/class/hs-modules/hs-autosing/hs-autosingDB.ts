@@ -6,15 +6,47 @@ export class HSAutosingDB {
     private dbName: string;
     private storeName: string;
     private db: IDBDatabase | null = null;
+    private batchSize: number;
+    private currentBatch: any[] = [];
 
     /**
      * Create a new HSAutosingDB instance.
      * @param dbName Name of the IndexedDB database.
      * @param storeName Name of the object store.
+     * @param batchSize Number of bundles per batch (default 10)
      */
-    constructor(dbName: string, storeName: string) {
+    constructor(dbName: string, storeName: string, batchSize: number = 10) {
         this.dbName = dbName;
         this.storeName = storeName;
+        this.batchSize = batchSize;
+    }
+
+    /**
+     * Adds a bundle to the current batch and stores if batch is full.
+     * @param bundle The singularity bundle to add.
+     * @param compressFn Function to compress the batch (e.g., compressToUTF16)
+     * @returns Promise that resolves when the batch is flushed (if needed)
+     */
+    public async addBundle(bundle: any, compressFn: (input: string) => string): Promise<void> {
+        this.currentBatch.push(bundle);
+        if (this.currentBatch.length >= this.batchSize) {
+            const compressed = compressFn(JSON.stringify(this.currentBatch));
+            await this.storeBundle(compressed);
+            this.currentBatch = [];
+        }
+    }
+
+    /**
+     * Flushes any remaining bundles in the current batch.
+     * @param compressFn Function to compress the batch (e.g., compressToUTF16)
+     * @returns Promise that resolves when the batch is flushed
+     */
+    public async flushBatch(compressFn: (input: string) => string): Promise<void> {
+        if (this.currentBatch.length > 0) {
+            const compressed = compressFn(JSON.stringify(this.currentBatch));
+            await this.storeBundle(compressed);
+            this.currentBatch = [];
+        }
     }
 
     /**

@@ -49,8 +49,6 @@ export class HSAutosingTimerModal {
     private footerLoadoutsSpan: HTMLElement | null = null;
     private timerDisplay: HTMLDivElement | null = null;
     private db: HSAutosingDB;
-    private currentBatch: any[] = [];
-    private batchSize: number = 10;
     private sparklineMaxPoints: number = 50;
     private phaseHistory: Map<string, {
         count: number;
@@ -199,7 +197,7 @@ export class HSAutosingTimerModal {
     private computedGraphWidth: number | null = null; // px
 
     constructor() {
-        this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles');
+        this.db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles', 10);
         this.createTimerDisplay();
         this.setupDragAndResize();
         this.cachedGlobalPhaseIndex = new Map();
@@ -968,13 +966,11 @@ export class HSAutosingTimerModal {
         if (this.advancedDataCollectionEnabled) {
             this.singularityBundles = [];
             this.compressedBundles = [];
-            this.currentBatch = [];
             this.db.clearBundles().catch(console.error);
         } else {
             // Hybrid Minimal: no bundles stored
             this.singularityBundles = [];
             this.compressedBundles = [];
-            this.currentBatch = [];
         }
 
         // Reset render versions so next render is a full refresh
@@ -1116,20 +1112,11 @@ export class HSAutosingTimerModal {
                 phases: Object.fromEntries(this.currentSingularityPhases),
                 timestamp: Date.now()
             };
-
             if (c15Score !== undefined) {
                 bundle.c15 = c15Score.toString();
             }
-
             this.singularityBundles.push(bundle);
-            this.currentBatch.push(bundle);
-
-            if (this.currentBatch.length >= this.batchSize) {
-                const compressed = compressToUTF16(JSON.stringify(this.currentBatch));
-                this.compressedBundles.push(compressed);
-                this.db.storeBundle(compressed).catch(console.error);
-                this.currentBatch = [];
-            }
+            this.db.addBundle(bundle, compressToUTF16).catch(console.error);
         }
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
@@ -1406,70 +1393,75 @@ export class HSAutosingTimerModal {
     }
 
     private exportDataAsCSV(): void {
-        if (!this.advancedDataCollectionEnabled || (this.compressedBundles.length === 0 && this.currentBatch.length === 0)) {
+        // Flush any remaining batch before export
+        if (!this.advancedDataCollectionEnabled) {
             alert('No data to export');
             return;
         }
 
-        const bundles: SingularityBundle[] = [];
+        // Ensure all in-memory data is flushed before export
+        this.db.flushBatch(compressToUTF16).then(() => {
+            // You may want to reload compressedBundles from DB here if needed
+            // Decompress completed batches
+            const localBundles: SingularityBundle[] = [];
+            for (const compressed of this.compressedBundles) {
+                const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
+                localBundles.push(...batch);
+            }
 
-        // Decompress completed batches
-        for (const compressed of this.compressedBundles) {
-            const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
-            bundles.push(...batch);
-        }
+            // Collect all unique phase names
+            const allPhaseNames = new Set<string>();
+            localBundles.forEach((bundle: SingularityBundle) => {
+                Object.keys(bundle.phases).forEach((phase: string) => allPhaseNames.add(phase));
+            });
+            const sortedPhaseNames = Array.from(allPhaseNames).sort();
 
-        // Add any remaining in current batch
-        bundles.push(...this.currentBatch);
+            // Build CSV header
+            const headers = [
+                'Singularity Number',
+                'Total Time (s)',
+                'C15',
+                'Quarks Gained',
+                'Golden Quarks Gained',
+                'Timestamp',
+                ...sortedPhaseNames.map((phase: string) => `Phase: ${phase} (s)`)
+            ];
+
+            // Build CSV rows
+            const rows = localBundles.map((bundle: SingularityBundle) => {
+                const row = [
+                    bundle.singularityNumber.toString(),
+                    bundle.totalTime.toFixed(3),
+                    bundle.c15 ?? '',
+                    bundle.quarksGained.toExponential(6),
+                    bundle.goldenQuarksGained.toExponential(6),
+                    new Date(bundle.timestamp).toISOString(),
+                    ...sortedPhaseNames.map((phase: string) => (bundle.phases[phase] || '').toString())
+                ];
+                return row.join(',');
+            });
+
+            // Combine into CSV
+            const csv = [headers.join(','), ...rows].join('\n');
+
+            // Create download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `autosing_data_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
 
         // Collect all unique phase names
         const allPhaseNames = new Set<string>();
-        bundles.forEach(bundle => {
-            Object.keys(bundle.phases).forEach(phase => allPhaseNames.add(phase));
-        });
-        const sortedPhaseNames = Array.from(allPhaseNames).sort();
-
-        // Build CSV header
-        const headers = [
-            'Singularity Number',
-            'Total Time (s)',
-            'C15',
-            'Quarks Gained',
-            'Golden Quarks Gained',
-            'Timestamp',
-            ...sortedPhaseNames.map(phase => `Phase: ${phase} (s)`)
-        ];
-
-        // Build CSV rows
-        const rows = bundles.map(bundle => {
-            const row = [
-                bundle.singularityNumber.toString(),
-                bundle.totalTime.toFixed(3),
-                bundle.c15 ?? '',
-                bundle.quarksGained.toExponential(6),
-                bundle.goldenQuarksGained.toExponential(6),
-                new Date(bundle.timestamp).toISOString(),
-                ...sortedPhaseNames.map(phase => (bundle.phases[phase] || '').toString())
-            ];
-            return row.join(',');
-        });
-
-        // Combine into CSV
-        const csv = [headers.join(','), ...rows].join('\n');
-
-        // Create download
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `autosing_data_${timestamp}.csv`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // (Removed unreachable legacy code referencing 'bundles')
     }
 
     private updateDisplay(): void {
@@ -1693,7 +1685,6 @@ export class HSAutosingTimerModal {
         this.phaseHistory.clear();
         this.singularityBundles = [];
         this.compressedBundles = [];
-        this.currentBatch = [];
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
         this.stopLiveTimer();
