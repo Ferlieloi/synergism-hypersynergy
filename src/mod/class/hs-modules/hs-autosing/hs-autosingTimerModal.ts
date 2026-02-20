@@ -15,6 +15,19 @@ import { HSGlobal } from "../../hs-core/hs-global";
 import { HSAutosing } from "./hs-autosing";
 import Decimal from "break_infinity.js";
 import { HSAutosingDB } from './hs-autosingDB';
+import { formatNumber, formatNumberWithSign, formatDecimal, formatTime } from "./hs-autosingFormatUtils";
+import {
+    getAverageLast,
+    getStandardDeviation,
+    getQuarksPerSecond,
+    getPhaseAverage,
+    getPhaseStandardDeviation,
+    getC15AverageLast,
+    getC15StdLast,
+    getLogC15Variance,
+    getLogC15Std,
+    getLogC15Mean
+} from "./hs-autosingStatsUtils";
 import { SparklineDom, buildSparklineDom, updateSparkline } from './chart/hs-sparkline';
 import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 
@@ -31,6 +44,9 @@ interface SingularityBundle {
 // PhaseRowDom now imported from phaseStats.ts
 
 export class HSAutosingTimerModal {
+    private footerVersionSpan: HTMLElement | null = null;
+    private footerStrategySpan: HTMLElement | null = null;
+    private footerLoadoutsSpan: HTMLElement | null = null;
     private timerDisplay: HTMLDivElement | null = null;
     private db: HSAutosingDB;
     private currentBatch: any[] = [];
@@ -146,8 +162,7 @@ export class HSAutosingTimerModal {
     private avgSpanParts: Map<HTMLElement, { main: HTMLSpanElement; sd: HTMLSpanElement }> = new Map();
 
     private phaseHeaderNodes: HTMLDivElement[] = [];
-    private phaseEmptyNode: HTMLDivElement | null = null;
-    private phaseRowMap: Map<string, PhaseRowDom> = new Map();
+    // Removed unused: phaseEmptyNode, phaseRowMap
 
     private sparklineQuarks: SparklineDom | null = null;
     private sparklineGoldenQuarks: SparklineDom | null = null;
@@ -155,14 +170,11 @@ export class HSAutosingTimerModal {
 
     // Cached nodes for phase stats & sparklines
     private phaseStatsContainer: HTMLElement | null = null;
-    private phaseStatsWrapper: HTMLElement | null = null;
+    // Removed unused: phaseStatsWrapper
     private sparklineQuarksContainer: HTMLElement | null = null;
     private sparklineGoldenQuarksContainer: HTMLElement | null = null;
     private sparklineTimeContainer: HTMLElement | null = null;
-    private footerVersionSpan: HTMLElement | null = null;
-    private footerStrategySpan: HTMLElement | null = null;
-    private footerLoadoutsSpan: HTMLElement | null = null;
-    private resizeHandleElem: HTMLElement | null = null;
+    // Removed unused: footerVersionSpan, footerStrategySpan, footerLoadoutsSpan, resizeHandleElem
 
     // Render batching / change tracking
     // These flags and version numbers ensure that expensive DOM updates only happen when needed.
@@ -199,26 +211,7 @@ export class HSAutosingTimerModal {
     /**
      * Get average duration of last n singularities from unified metrics array.
      */
-    private getUnifiedAverageLast(n: number): number | null {
-        // Returns the unified metrics array for chart/stat calculations.
-        const arr = this.singularityMetrics;
-        if (n <= 0 || arr.length < n) return null;
-        const sum = arr.slice(-n).reduce((acc, m) => acc + m.duration, 0);
-        return sum / n;
-    }
-
-    /**
-     * Get standard deviation of duration for last n singularities from unified metrics array.
-     */
-    private getUnifiedStdLast(n: number): number | null {
-        // Returns the unified metrics array for chart/stat calculations.
-        const arr = this.singularityMetrics;
-        if (n <= 1 || arr.length < n) return null;
-        const slice = arr.slice(-n);
-        const mean = slice.reduce((acc, m) => acc + m.duration, 0) / n;
-        const variance = slice.reduce((acc, m) => acc + Math.pow(m.duration - mean, 2), 0) / n;
-        return Math.sqrt(Math.max(0, variance));
-    }
+    // Removed unused: getUnifiedAverageLast, getUnifiedStdLast
 
     // Database methods now handled by HSAutosingDB
 
@@ -292,11 +285,9 @@ export class HSAutosingTimerModal {
     private initPhaseStatsDom(): void {
         if (!this.phaseStatsContainer) return;
         this.phaseHeaderNodes = createPhaseStatsHeader();
-        this.phaseEmptyNode = createPhaseEmptyNode();
         // Render initial empty grid
         const frag = document.createDocumentFragment();
         this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
-        frag.appendChild(this.phaseEmptyNode);
         this.phaseStatsContainer.replaceChildren(frag);
     }
 
@@ -610,7 +601,6 @@ export class HSAutosingTimerModal {
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'hs-resize-handle';
         resizeHandle.onmousedown = (e) => this.startResize(e);
-        this.resizeHandleElem = resizeHandle;
 
         /* ---------- ASSEMBLE ---------- */
         this.timerDisplay.appendChild(this.timerHeader);
@@ -657,12 +647,12 @@ export class HSAutosingTimerModal {
         this.gquarksMinGainsSpan = document.getElementById('hs-gquarks-min-gains');
 
         this.phaseStatsContainer = document.getElementById('hs-phase-stats-container');
-        this.phaseStatsWrapper = document.getElementById('hs-phase-stats-wrapper');
 
         this.sparklineQuarksContainer = document.getElementById('hs-sparkline-quarks-container');
         this.sparklineGoldenQuarksContainer = document.getElementById('hs-sparkline-goldenquarks-container');
         this.sparklineTimeContainer = document.getElementById('hs-sparkline-time-container');
 
+        // Cache footer value spans
         this.footerVersionSpan = document.getElementById('hs-footer-version');
         this.footerStrategySpan = document.getElementById('hs-footer-strategy');
         this.footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
@@ -869,7 +859,7 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'none';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'none';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'none';
-            if (this.resizeHandleElem) this.resizeHandleElem.style.display = 'none';
+            // Removed unused: resizeHandleElem
             if (this.minimizeBtn) this.minimizeBtn.textContent = '+';
         } else {
             // Restore auto-sizing - recalculate dimensions for new content
@@ -880,7 +870,7 @@ export class HSAutosingTimerModal {
             if (this.stopButton) this.stopButton.style.display = 'block';
             if (this.finishStopBtn) this.finishStopBtn.style.display = 'block';
             if (this.chartToggleBtn) this.chartToggleBtn.style.display = 'block';
-            if (this.resizeHandleElem) this.resizeHandleElem.style.display = '';
+            // Removed unused: resizeHandleElem
             if (this.minimizeBtn) this.minimizeBtn.textContent = '−';
             this.updateDisplay();
         }
@@ -1350,52 +1340,6 @@ export class HSAutosingTimerModal {
     /**
      * Formats a number in exponential notation (2 decimals).
      */
-    private formatNumber(num: number): string {
-        return Number(num).toExponential(2).replace('+', '');
-    }
-
-    /**
-     * Formats a number in exponential notation with sign.
-     */
-    private formatNumberWithSign(num: number): string {
-        return Number(num).toExponential(2);
-    }
-
-    /**
-     * Formats a Decimal value in exponential notation (2 decimals).
-     */
-    private formatDecimal(d: Decimal | null | undefined): string {
-        if (d === null || d === undefined) return '-';
-        try {
-            let s = (d as Decimal).toExponential(2);
-            // Normalize to lowercase 'e' and remove explicit plus signs in exponent
-            s = s.replace(/E/g, 'e').replace(/\+/g, '');
-            return s;
-        } catch (e) {
-            try {
-                let s2 = new Decimal(d as any).toExponential(2);
-                s2 = s2.replace(/E/g, 'e').replace(/\+/g, '');
-                return s2;
-            } catch (e2) {
-                return String(d);
-            }
-        }
-    }
-
-    private formatTime(seconds: number): string {
-        const totalSeconds = Math.floor(seconds);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const secs = totalSeconds % 60;
-
-        if (hours > 0) {
-            return `${hours}h${minutes.toString().padStart(2, '0')}m${secs.toString().padStart(2, '0')}s`;
-        } else if (minutes > 0) {
-            return `${minutes}m${secs.toString().padStart(2, '0')}s`;
-        } else {
-            return `${secs}s`;
-        }
-    }
 
     private getPhaseAverage(phase: string): number | null {
         const phaseData = this.phaseHistory.get(phase);
@@ -1561,6 +1505,10 @@ export class HSAutosingTimerModal {
 
 
     private renderGeneralStats(): void {
+        // Update footer values
+        this.setTextEl(this.footerVersionSpan, this.modVersion);
+        this.setTextEl(this.footerStrategySpan, this.strategyName);
+        this.setTextEl(this.footerLoadoutsSpan, this.loadoutsOrder.join(', '));
         const count = this.getSingularityCount();
         const currentQuarks = this.latestQuarksTotal;
 
@@ -1580,24 +1528,24 @@ export class HSAutosingTimerModal {
         this.setTextEl(this.progressValSpan, count.toString());
 
         // 2. Quarks
-        this.setTextEl(this.quarksTotalSpan, this.formatNumber(currentQuarks));
+        this.setTextEl(this.quarksTotalSpan, formatNumber(currentQuarks));
 
-        const quarksPerSec = this.getQuarksPerSecond(false);
+        const quarksPerSec = getQuarksPerSecond(this.singularityMetrics, false);
         if (quarksPerSec !== null) {
-            this.setTextEl(this.quarksRateValSpan, `${this.formatNumber(quarksPerSec)}/s`);
-            this.setTextEl(this.quarksRateHrSpan, `(${this.formatNumber(quarksPerSec * 3600)}/hr)`);
+            this.setTextEl(this.quarksRateValSpan, `${formatNumber(quarksPerSec)}/s`);
+            this.setTextEl(this.quarksRateHrSpan, `(${formatNumber(quarksPerSec * 3600)}/hr)`);
         } else {
             this.setTextEl(this.quarksRateValSpan, `0/s`);
             this.setTextEl(this.quarksRateHrSpan, `(0/hr)`);
         }
 
         // 3. Golden Quarks
-        this.setTextEl(this.gquarksTotalSpan, this.formatNumber(currentGoldenQuarks));
+        this.setTextEl(this.gquarksTotalSpan, formatNumber(currentGoldenQuarks));
 
-        const goldenQuarksPerSec = this.getQuarksPerSecond(true);
+        const goldenQuarksPerSec = getQuarksPerSecond(this.singularityMetrics, true);
         if (goldenQuarksPerSec !== null) {
-            this.setTextEl(this.gquarksRateValSpan, `${this.formatNumber(goldenQuarksPerSec)}/s`);
-            this.setTextEl(this.gquarksRateHrSpan, `(${this.formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
+            this.setTextEl(this.gquarksRateValSpan, `${formatNumber(goldenQuarksPerSec)}/s`);
+            this.setTextEl(this.gquarksRateHrSpan, `(${formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
         } else {
             this.setTextEl(this.gquarksRateValSpan, `0/s`);
             this.setTextEl(this.gquarksRateHrSpan, `(0/hr)`);
@@ -1605,13 +1553,13 @@ export class HSAutosingTimerModal {
 
         // 4. Averages
         const avg1 = this.getLastDuration();
-        const avg10 = this.getAverageLast(10);
-        const avg50 = this.getAverageLast(50);
-        const avgAll = this.getAverageLast(count);
+        const avg10 = getAverageLast(this.singularityMetrics, 10);
+        const avg50 = getAverageLast(this.singularityMetrics, 50);
+        const avgAll = getAverageLast(this.singularityMetrics, count);
 
-        const sd10 = this.getStandardDeviation(10);
-        const sd50 = this.getStandardDeviation(50);
-        const sdAll = this.getStandardDeviation(count);
+        const sd10 = getStandardDeviation(this.singularityMetrics, 10);
+        const sd50 = getStandardDeviation(this.singularityMetrics, 50);
+        const sdAll = getStandardDeviation(this.singularityMetrics, count);
 
         this.setTextEl(this.avg1Span, avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
         this.setAvgEl(this.avg10Span, avg10, sd10);
@@ -1625,15 +1573,15 @@ export class HSAutosingTimerModal {
         const totalTime = arr.reduce((sum, m) => sum + m.duration, 0);
         const maxTime = arr.length > 0 ? Math.max(...arr.map(m => m.duration)) : null;
         const minTime = arr.length > 0 ? Math.min(...arr.map(m => m.duration)) : null;
-        this.setTextEl(this.totalTimeSpan, totalTime > 0 ? this.formatTime(totalTime) : '-');
+        this.setTextEl(this.totalTimeSpan, totalTime > 0 ? formatTime(totalTime) : '-');
         this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
         this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
 
         // C15 display: show average and std of log(C15) (inline)
         if (this.c15TopSpan && this.c15SigmaSpan) {
-            const avgC15 = this.getC15AverageLast(count);
-            const sdLogC15 = this.getLogC15Std();
-            const valText = avgC15 ? this.formatDecimal(avgC15) : '-';
+            const avgC15 = getC15AverageLast(this.c15Count, this.c15Mean, count);
+            const sdLogC15 = getLogC15Std(this.logC15Count, this.logC15M2);
+            const valText = avgC15 ? formatDecimal(avgC15) : '-';
             const sdText = sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '';
             this.setTextEl(this.c15TopSpan, `C15 ${valText}`);
             this.setTextEl(this.c15SigmaSpan, sdText);
@@ -1645,17 +1593,17 @@ export class HSAutosingTimerModal {
         const totalQuarksGains = metrics.reduce((sum, m) => sum + m.quarksGained, 0);
         const maxQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.quarksGained)) : null;
         const minQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.quarksGained)) : null;
-        this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? this.formatNumber(totalQuarksGains) : '-');
-        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? this.formatNumber(maxQuarksGains) : '-');
-        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? this.formatNumber(minQuarksGains) : '-');
+        this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? formatNumber(totalQuarksGains) : '-');
+        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? formatNumber(maxQuarksGains) : '-');
+        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-');
 
         // Golden Quarks Gains (all-time, from singularityMetrics)
         const totalGQuarksGains = metrics.reduce((sum, m) => sum + m.goldenQuarksGained, 0);
         const maxGQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.goldenQuarksGained)) : null;
         const minGQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.goldenQuarksGained)) : null;
-        this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? this.formatNumber(totalGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? this.formatNumber(maxGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? this.formatNumber(minGQuarksGains) : '-');
+        this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? formatNumber(totalGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? formatNumber(maxGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? formatNumber(minGQuarksGains) : '-');
     }
 
     private renderPhaseStatistics(): void {
@@ -1676,34 +1624,24 @@ export class HSAutosingTimerModal {
         const orderedRows: ReturnType<typeof createPhaseRowDom>[] = [];
         for (const [phaseName, data] of sortedPhases) {
             if (data.count <= 0) continue;
-            let row = this.phaseRowMap.get(phaseName);
-            if (!row) {
-                row = createPhaseRowDom();
-                this.phaseRowMap.set(phaseName, row);
-            }
+            let row = createPhaseRowDom();
             updatePhaseRowDom(row, {
                 loopCount: 1 + (data.repeats / data.count),
-                avg: data.totalTime / data.count,
-                sd: this.getPhaseStandardDeviation(phaseName) ?? 0,
+                avg: getPhaseAverage(this.phaseHistory, phaseName) ?? 0,
+                sd: getPhaseStandardDeviation(this.phaseHistory, phaseName) ?? 0,
                 last: data.lastTime
             });
-            // Set phase name and count
-            // Set phase name and count if available (for legacy PhaseRowDom shape)
             if ((row as any).nameTextSpan) (row as any).nameTextSpan.textContent = phaseName;
             if ((row as any).nameCountSpan) (row as any).nameCountSpan.textContent = `x${data.count} `;
             orderedRows.push(row);
         }
         const frag = document.createDocumentFragment();
         this.phaseHeaderNodes.forEach(n => frag.appendChild(n));
-        if (orderedRows.length === 0) {
-            if (this.phaseEmptyNode) frag.appendChild(this.phaseEmptyNode);
-        } else {
-            for (const row of orderedRows) {
-                if ('cells' in row && Array.isArray(row.cells)) {
-                    row.cells.forEach(cell => frag.appendChild(cell));
-                } else if ('row' in row && row.row instanceof HTMLElement) {
-                    frag.appendChild(row.row);
-                }
+        for (const row of orderedRows) {
+            if ('cells' in row && Array.isArray(row.cells)) {
+                row.cells.forEach(cell => frag.appendChild(cell));
+            } else if ('row' in row && row.row instanceof HTMLElement) {
+                frag.appendChild(row.row);
             }
         }
         phaseContainer.replaceChildren(frag);
@@ -1718,93 +1656,16 @@ export class HSAutosingTimerModal {
          */
         this.ensureStaticDom();
 
-        if (this.showDetailedData) {
-            this.setTextEl(this.footerVersionSpan, this.modVersion);
-            this.setTextEl(this.footerStrategySpan, this.strategyName);
-            this.setTextEl(this.footerLoadoutsSpan, this.loadoutsOrder.join(', '));
-
-            // Use unified metrics array for all charts
-            // Logging for chart rendering
-            console.log('[hs-autosingTimerModal] renderSparklines singularityMetrics:', this.singularityMetrics);
-            console.log('[hs-autosingTimerModal] renderSparklines singularityMetrics:', this.singularityMetrics);
-            updateSparkline(this.sparklineQuarks, this.singularityMetrics, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
-            updateSparkline(this.sparklineGoldenQuarks, this.singularityMetrics, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
-            updateSparkline(this.sparklineTimes, this.singularityMetrics, this.computedGraphWidth, this.formatNumberWithSign.bind(this), this.sparklineMaxPoints);
-
-            if (this.footerSection) this.footerSection.style.display = 'block';
-
-            // Detailed-only: Phase stats + extended averages
-            if (this.phaseStatsWrapper) this.phaseStatsWrapper.style.display = 'block';
-            if (this.avg10LabelSpan) this.avg10LabelSpan.style.display = '';
-            if (this.avg10Span) this.avg10Span.style.display = '';
-            if (this.avg50LabelSpan) this.avg50LabelSpan.style.display = '';
-            if (this.avg50Span) this.avg50Span.style.display = '';
-
-            if (this.sparklineQuarksContainer) this.sparklineQuarksContainer.style.display = 'flex';
-            if (this.sparklineGoldenQuarksContainer) this.sparklineGoldenQuarksContainer.style.display = 'flex';
-            if (this.sparklineTimeContainer) this.sparklineTimeContainer.style.display = 'flex';
-
-            // Show detailed cells
-            const detailedCells = this.timerDisplay?.querySelectorAll('.hs-detailed-cell');
-            detailedCells?.forEach(cell => {
-                (cell as HTMLElement).style.visibility = 'visible';
-            });
-
-            // Show all rows when detailed data is on
-            const avg10Label = this.timerDisplay?.querySelector('#hs-avg-10-lbl')?.parentElement;
-            const avg10Value = this.timerDisplay?.querySelector('#hs-avg-10')?.parentElement;
-            const avg50Label = this.timerDisplay?.querySelector('#hs-avg-50-lbl')?.parentElement;
-            const avg50Value = this.timerDisplay?.querySelector('#hs-avg-50')?.parentElement;
-            const maxLabel = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement?.previousElementSibling;
-            const maxValue = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement;
-            const minLabel = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement?.previousElementSibling;
-            const minValue = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement;
-
-            if (avg10Label) (avg10Label as HTMLElement).style.display = '';
-            if (avg10Value) (avg10Value as HTMLElement).style.display = '';
-            if (avg50Label) (avg50Label as HTMLElement).style.display = '';
-            if (avg50Value) (avg50Value as HTMLElement).style.display = '';
-            if (maxLabel) (maxLabel as HTMLElement).style.display = '';
-            if (maxValue) (maxValue as HTMLElement).style.display = '';
-            if (minLabel) (minLabel as HTMLElement).style.display = '';
-            if (minValue) (minValue as HTMLElement).style.display = '';
-        } else {
-            if (this.footerSection) this.footerSection.style.display = 'none';
-
-            // Detailed-only: Phase stats + extended averages
-            if (this.phaseStatsWrapper) this.phaseStatsWrapper.style.display = 'block';
-            if (this.avg10LabelSpan) this.avg10LabelSpan.style.display = '';
-            if (this.avg10Span) this.avg10Span.style.display = '';
-            if (this.avg50LabelSpan) this.avg50LabelSpan.style.display = '';
-            if (this.avg50Span) this.avg50Span.style.display = '';
-            if (this.avgAllSpan) this.avgAllSpan.style.display = '';
-            if (this.avgAllCountSpan) this.avgAllCountSpan.style.display = '';
-            // Update averages using unified metrics
-            this.setAvgEl(this.avg1Span, this.getUnifiedAverageLast(1), this.getUnifiedStdLast(1));
-            this.setAvgEl(this.avg10Span, this.getUnifiedAverageLast(10), this.getUnifiedStdLast(10));
-            this.setAvgEl(this.avg50Span, this.getUnifiedAverageLast(50), this.getUnifiedStdLast(50));
-            this.setAvgEl(this.avgAllSpan, this.getUnifiedAverageLast(this.singularityMetrics.length), this.getUnifiedStdLast(this.singularityMetrics.length));
-            if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = String(this.singularityMetrics.length);
-
-            // Hide specific rows completely when detailed data is off
-            const avg10Label = this.timerDisplay?.querySelector('#hs-avg-10-lbl')?.parentElement;
-            const avg10Value = this.timerDisplay?.querySelector('#hs-avg-10')?.parentElement;
-            const avg50Label = this.timerDisplay?.querySelector('#hs-avg-50-lbl')?.parentElement;
-            const avg50Value = this.timerDisplay?.querySelector('#hs-avg-50')?.parentElement;
-            const maxLabel = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement?.previousElementSibling;
-            const maxValue = this.timerDisplay?.querySelector('#hs-max-time')?.parentElement;
-            const minLabel = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement?.previousElementSibling;
-            const minValue = this.timerDisplay?.querySelector('#hs-min-time')?.parentElement;
-
-            if (avg10Label) (avg10Label as HTMLElement).style.display = 'none';
-            if (avg10Value) (avg10Value as HTMLElement).style.display = 'none';
-            if (avg50Label) (avg50Label as HTMLElement).style.display = 'none';
-            if (avg50Value) (avg50Value as HTMLElement).style.display = 'none';
-            if (maxLabel) (maxLabel as HTMLElement).style.display = 'none';
-            if (maxValue) (maxValue as HTMLElement).style.display = 'none';
-            if (minLabel) (minLabel as HTMLElement).style.display = 'none';
-            if (minValue) (minValue as HTMLElement).style.display = 'none';
-        }
+        // Use unified metrics array for all charts
+        updateSparkline(this.sparklineQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
+        updateSparkline(this.sparklineGoldenQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
+        updateSparkline(this.sparklineTimes, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
+        // Update averages using unified metrics
+        this.setAvgEl(this.avg1Span, this.getAverageLast(1), this.getStandardDeviation(1));
+        this.setAvgEl(this.avg10Span, this.getAverageLast(10), this.getStandardDeviation(10));
+        this.setAvgEl(this.avg50Span, this.getAverageLast(50), this.getStandardDeviation(50));
+        this.setAvgEl(this.avgAllSpan, this.getAverageLast(this.singularityMetrics.length), this.getStandardDeviation(this.singularityMetrics.length));
+        if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = String(this.singularityMetrics.length);
     }
 
     public show(): void {
