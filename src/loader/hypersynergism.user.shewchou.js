@@ -427,7 +427,7 @@ window.__HS_BACKDOOR__ = {
         log('Loading mod');
 
         const s = document.createElement('script');
-        s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@7e58033/release/mod/hypersynergism_release.js?${Date.now()}`;
+        s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
 
         s.onload = () => {
             log('Mod script loaded');
