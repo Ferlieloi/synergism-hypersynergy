@@ -967,8 +967,6 @@ export class HSAutosingTimerModal {
             singularityDuration,
             realQuarksGain,
             gainedGoldenQuarks,
-            currentQuarks,
-            currentGoldenQuarks,
             new Map(this.currentSingularityPhases),
             c15Score
         );
@@ -1038,8 +1036,6 @@ export class HSAutosingTimerModal {
         singularityDuration: number,
         realQuarksGain: number,
         gainedGoldenQuarks: number,
-        currentQuarks: number,
-        currentGoldenQuarks: number,
         phases: Map<string, number>,
         c15Score?: Decimal
     ): void {
