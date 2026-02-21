@@ -405,6 +405,7 @@ window.__HS_BACKDOOR__ = {
         }
         const exportBtn = document.getElementById('exportgame');
         if (exportBtn) {
+            log('exposing export button');
             exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         }
         const start = performance.now();
