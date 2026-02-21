@@ -294,13 +294,14 @@ export class HSAutosingTimerModal {
         this.chartToggleBtn = document.createElement('button');
         this.chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.chartToggleBtn.textContent = '📊';
-        this.chartToggleBtn.title = "Toggle Detailed Data Visibility";
+        this.chartToggleBtn.title = "Toggle Detailed Data Visibilityyy";
         this.chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
             this.chartToggleBtn!.textContent = '📊';
             this.detailsVisibilityVersion++;
-            this.requestRender({ sparklines: true, phases: this.showDetailedData });
+            // Always request both phases and sparklines to re-render, regardless of new state
+            this.requestRender({ sparklines: true, phases: true });
         };
         this.chartToggleBtn.onmouseenter = () => {
             if (this.showDetailedData) {
@@ -610,16 +611,16 @@ export class HSAutosingTimerModal {
         if (!this.timerDisplay || this.autoResized) return;
 
         // Hard-coded defaults (adjust as desired)
-        const FIXED_WIDTH = 400; // px
-        const FIXED_HEIGHT = 650; // px
+        const FIXED_WIDTH = 350; // px
+        const FIXED_HEIGHT = 560; // px
 
         // Sparkline SVG width: leave space for the label column on the right.
-        const FIXED_GRAPH_WIDTH = 400; // px
-        const LABELS_ESTIMATE = 110; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
+        const FIXED_GRAPH_WIDTH = 286; // px
+        const LABELS_ESTIMATE = 55; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
 
         // Respect viewport so the modal doesn't go off-screen by default.
-        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 40));
-        const appliedHeight = Math.max(240, Math.min(FIXED_HEIGHT, window.innerHeight - 40));
+        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 20));
+        const appliedHeight = Math.max(400, Math.min(FIXED_HEIGHT, window.innerHeight - 6));
 
         this.computedMaxWidth = appliedWidth;
         this.computedMaxHeight = appliedHeight + 250;
@@ -738,7 +739,7 @@ export class HSAutosingTimerModal {
 
         // Clamp width to computed max if present (locks max width)
         const maxW = this.computedMaxWidth || Infinity;
-        const finalWidth = Math.min(newWidth, maxW);
+        const finalWidth = Math.min(newWidth, maxW + 20);
 
         this.timerDisplay.style.width = `${finalWidth}px`;
         this.timerDisplay.style.height = `${newHeight}px`;
@@ -1376,6 +1377,14 @@ export class HSAutosingTimerModal {
         const phaseContainer = this.phaseStatsContainer;
         if (!phaseContainer) return;
         this.ensureStaticDom();
+        // Only render phase statistics if detailed data is enabled
+        if (!this.showDetailedData) {
+            phaseContainer.replaceChildren();
+            (phaseContainer as HTMLElement).style.display = 'none';
+            return;
+        }
+        (phaseContainer as HTMLElement).style.display = '';
+        // Only render phase statistics if detailed data is enabled
         const sortedPhases = Array.from(this.phaseHistory.entries())
             .sort((a, b) => {
                 const idxA = this.cachedStrategyOrderIndex.get(a[0]);
@@ -1419,6 +1428,32 @@ export class HSAutosingTimerModal {
      */
     private renderSparklines(): void {
         this.ensureStaticDom();
+        // Only render sparklines if detailed data is enabled
+        if (!this.showDetailedData) {
+            // Clear sparkline containers and stat labels, and hide containers
+            if (this.sparklineQuarksContainer) {
+                this.sparklineQuarksContainer.innerHTML = '';
+                (this.sparklineQuarksContainer as HTMLElement).style.display = 'none';
+            }
+            if (this.sparklineGoldenQuarksContainer) {
+                this.sparklineGoldenQuarksContainer.innerHTML = '';
+                (this.sparklineGoldenQuarksContainer as HTMLElement).style.display = 'none';
+            }
+            if (this.sparklineTimeContainer) {
+                this.sparklineTimeContainer.innerHTML = '';
+                (this.sparklineTimeContainer as HTMLElement).style.display = 'none';
+            }
+            if (this.avg1Span) this.avg1Span.textContent = '-';
+            if (this.avg10Span) this.avg10Span.textContent = '-';
+            if (this.avg50Span) this.avg50Span.textContent = '-';
+            if (this.avgAllSpan) this.avgAllSpan.textContent = '-';
+            if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = '0';
+            return;
+        }
+        // Show containers if detailed data is enabled
+        if (this.sparklineQuarksContainer) (this.sparklineQuarksContainer as HTMLElement).style.display = '';
+        if (this.sparklineGoldenQuarksContainer) (this.sparklineGoldenQuarksContainer as HTMLElement).style.display = '';
+        if (this.sparklineTimeContainer) (this.sparklineTimeContainer as HTMLElement).style.display = '';
         updateSparkline(this.sparklineQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         updateSparkline(this.sparklineGoldenQuarks, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);
         updateSparkline(this.sparklineTimes, this.singularityMetrics, this.computedGraphWidth, formatNumberWithSign, this.sparklineMaxPoints);

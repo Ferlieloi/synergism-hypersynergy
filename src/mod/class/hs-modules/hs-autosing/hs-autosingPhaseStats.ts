@@ -102,10 +102,14 @@ export function updatePhaseRowDom(
 ) {
     if (typeof stats.phaseName === 'string') dom.nameTextSpan.textContent = stats.phaseName;
     if (typeof stats.count === 'number') dom.nameCountSpan.textContent = `x${stats.count} `;
-    dom.loopsCell.textContent = stats.loopCount.toLocaleString();
-    dom.avgCell.textContent = stats.avg.toFixed(2);
-    dom.sdCell.textContent = stats.sd.toFixed(2);
-    dom.lastCell.textContent = stats.last.toFixed(2);
+    // Loops: always show 2 decimals, prefix 'x'
+    dom.loopsCell.textContent = 'x' + stats.loopCount.toFixed(2);
+    // Avg: value with 2 decimals, suffix 's'
+    dom.avgCell.textContent = stats.avg.toFixed(2) + 's';
+    // SD: prefix with ± (U+00B1), 2 decimals
+    dom.sdCell.textContent = '\u00B1' + stats.sd.toFixed(2);
+    // Last: value with 2 decimals, suffix 's'
+    dom.lastCell.textContent = stats.last.toFixed(2) + 's';
 }
 
 /**
