@@ -423,7 +423,7 @@ window.__HS_BACKDOOR__ = {
         injectModScript();
     }
 
-    function injectModScript() {
+    function injectModScript() { 
         log('Loading mod');
 
         const s = document.createElement('script');
