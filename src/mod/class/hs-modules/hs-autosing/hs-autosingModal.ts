@@ -1384,7 +1384,6 @@ export class HSAutosingTimerModal {
             return;
         }
         (phaseContainer as HTMLElement).style.display = '';
-        // Only render phase statistics if detailed data is enabled
         const sortedPhases = Array.from(this.phaseHistory.entries())
             .sort((a, b) => {
                 const idxA = this.cachedStrategyOrderIndex.get(a[0]);
@@ -1443,11 +1442,8 @@ export class HSAutosingTimerModal {
                 this.sparklineTimeContainer.innerHTML = '';
                 (this.sparklineTimeContainer as HTMLElement).style.display = 'none';
             }
-            if (this.avg1Span) this.avg1Span.textContent = '-';
             if (this.avg10Span) this.avg10Span.textContent = '-';
             if (this.avg50Span) this.avg50Span.textContent = '-';
-            if (this.avgAllSpan) this.avgAllSpan.textContent = '-';
-            if (this.avgAllCountSpan) this.avgAllCountSpan.textContent = '0';
             return;
         }
         // Show containers if detailed data is enabled
