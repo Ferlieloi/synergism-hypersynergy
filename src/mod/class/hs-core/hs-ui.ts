@@ -3,14 +3,16 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
+import { HSSettings } from "./settings/hs-settings";
 import { HSModule } from "./module/hs-module";
 import { HSUIC } from "./hs-ui-components";
 import panelCoreCSS from "inline:../../resource/css/hs-panel-core.css";
-import timerModalCSS from "inline:../../resource/css/hs-timer-modal.css";
+import timerModalCSS from "inline:../../resource/css/hs-autosingTimerModal.css";
 import gridsCSS from "inline:../../resource/css/hs-grids.css";
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
+import { HSAutosingStrategyModal } from "../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSModuleOptions } from "../../types/hs-types";
 
 /*
@@ -232,6 +234,20 @@ export class HSUI extends HSModule {
 
         this.uiReady = true;
         this.isInitialized = true;
+        
+        // Ensure autosingStrategy dropdown optgroups are rendered after panel injection
+        setTimeout(() => {
+            try {
+                // Only update if the dropdown exists in DOM
+                const dropdown = document.getElementById('autosingStrategy');
+                if (dropdown) {
+                    // Call the update function to rebuild optgroups
+                    HSAutosingStrategyModal.updateStrategyDropdownList();
+                }
+            } catch (e) {
+                console.error('Failed to update autosingStrategy dropdown:', e);
+            }
+        }, 0);
     }
 
     #createQuickAccessMenu() {
@@ -245,6 +261,7 @@ export class HSUI extends HSModule {
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
         autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center;">▶</span>Start Auto-Sing';
+        autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
             if (autoSingToggle) {
@@ -256,7 +273,7 @@ export class HSUI extends HSModule {
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
         heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center;">🔥</span>Amb Heater Export';
-        heaterBtn.setAttribute('data-type', 'heater');
+        heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
             if (heaterExportBtn) {
@@ -265,8 +282,25 @@ export class HSUI extends HSModule {
             }
         });
 
+        // Create Ambrosia Idle Swap toggle button
+        const idleSwapBtn = document.createElement('button');
+        idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
+        // The label and color are updated by ambrosiaIdleSwapAction directly
+        idleSwapBtn.addEventListener('click', async () => {
+            const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
+            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
+            if (idleSwapToggle) {
+                idleSwapToggle.click();
+                HSUI.Notify(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, {
+                    position: 'top',
+                    notificationType: 'default'
+                });
+            }
+        });
+
         quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterBtn);
+        quickMenu.appendChild(idleSwapBtn);
         document.body.appendChild(quickMenu);
 
         // Show/hide menu on hover
@@ -734,6 +768,7 @@ export class HSUI extends HSModule {
 
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
+        HSLogger.log(`[Notify] ${text}`);
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,

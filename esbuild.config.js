@@ -38,6 +38,13 @@ function copyLoaderFiles() {
 
 // Build function with environment-specific options
 async function build(env) {
+    // Always generate the strategy manifest before building
+    try {
+        require('child_process').execSync('node scripts/generate-strategy-manifest.js', { stdio: 'inherit' });
+    } catch (err) {
+        console.error('Failed to generate strategy manifest:', err);
+        process.exit(1);
+    }
     try {
         const options = {
             ...baseOptions,

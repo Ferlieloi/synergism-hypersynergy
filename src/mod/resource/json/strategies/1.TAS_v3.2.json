@@ -1,0 +1,1290 @@
+{
+  "strategyName": "TAS_v3.2",
+  "strategy": [
+    {
+      "startPhase": "start",
+      "endPhase": "challenge14",
+      "corruptions": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      },
+      "corruptionLoadoutName": "Loadout start-challenge14",
+      "strat": [
+        {
+          "challengeWaitBefore": 5,
+          "comment": "==> Obt ldt",
+          "challengeNumber": 112,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 200,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 200,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 150,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 200,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 400,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "e30c0aa1-5651-4fb4-96e1-7e8bae256119",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 2
+          }
+        },
+        {
+          "challengeNumber": 105,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 11,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 300007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "ce7e3a8b-8569-42ce-bd42-9a706b5b35c7",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 12
+          }
+        },
+        {
+          "challengeNumber": 12,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "429d61b0-58ec-4879-ae98-5e40e56c0faa",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 16
+          }
+        },
+        {
+          "challengeNumber": 13,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 14,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "a648166c-1c53-4921-915b-c16f61c78db7",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 23
+          }
+        },
+        {
+          "comment": "==> 1st C15",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 300,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 9999907
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> 10ms Wait to avoid wrong phase read",
+          "challengeNumber": 111,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 0
+        }
+      ]
+    },
+    {
+      "startPhase": "challenge14",
+      "endPhase": "singularity",
+      "corruptions": {
+        "viscosity": 1,
+        "drought": 7,
+        "deflation": 4,
+        "extinction": 11,
+        "illiteracy": 0,
+        "recession": 14,
+        "dilation": 3,
+        "hyperchallenge": 0
+      },
+      "corruptionLoadoutName": "Loadout challenge14-w5x10max",
+      "strat": [
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 200,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 100,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "10c2fb27-4f74-4fef-9c9f-31a6280f0512",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 0
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout w5x10max-p2x1x10"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 100,
+          "challengeMaxTime": 400077777
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "88c2fb27-58ec-4fb4-915b-5e40e56c0faa",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 12
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout beta-1e15-expo"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 400077777
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "161d36b3-19ca-477f-9896-78e8b89baacd",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 24
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 350,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout 1e15-expo-omega"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "70aa378d-f038-4547-8c68-1cacf431343d",
+            "ifJumpMode": "challenges",
+            "ifJumpChallenge": 15,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1000000000000000,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 24
+          }
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 300077777
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "4e660243-8fb1-444b-9553-56e61fe97b91",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 38
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 100,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout omega-singularity"
+        },
+        {
+          "challengeWaitBefore": 60,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 300077777
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "ec104602-247f-426a-83e0-d4809924143a",
+            "ifJumpMode": "challenges",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 999,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 49
+          },
+          "comment": "Loop until AOAG unlocked"
+        }
+      ]
+    },
+    {
+      "startPhase": "singularity",
+      "endPhase": "end",
+      "corruptions": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 14,
+        "hyperchallenge": 16
+      },
+      "corruptionLoadoutName": "Loadout beginning post-AOAG",
+      "strat": [
+        {
+          "comment": "=> Post-AOAG ldt",
+          "challengeNumber": 106,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 100,
+          "challengeMaxTime": 99999
+        },
+        {
+          "comment": "==> 1st c15",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 2nd c15",
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 60
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 306,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 3rd c15",
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 305,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
+        },
+        {
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 4th c15",
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 305,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 309,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 308,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 307,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> Auto-Chall ON",
+          "challengeNumber": 115,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=>DO YOU WANT ANTS??",
+          "challengeNumber": 109,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Off ldt",
+          "challengeNumber": 113,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 20,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 115,
+          "comment": "=> Auto-Chall ON",
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "comment": "=> 1st Ant-sac",
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 650,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 750,
+          "comment": "=> 2nd Ant-sac",
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 750,
+          "comment": "=> Auto-Chall OFF",
+          "challengeNumber": 115,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> 3rd Ant-sac",
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> Auto-Chall ON",
+          "challengeNumber": 115,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 1000,
+          "comment": "=> Auto-Chall OFF",
+          "challengeNumber": 115,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> 4th Ant-sac",
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> Auto-Chall ON",
+          "challengeNumber": 115,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 1000,
+          "comment": "==> Post-AOAG ldt",
+          "challengeNumber": 106,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> Last C15 push",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 305,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 309,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 308,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 307,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 310,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 50
+        }
+      ]
+    }
+  ],
+  "aoagPhase": {
+    "startPhase": "ascension",
+    "endPhase": "ascension",
+    "corruptions": {
+      "viscosity": 0,
+      "drought": 0,
+      "deflation": 0,
+      "extinction": 0,
+      "illiteracy": 0,
+      "recession": 0,
+      "dilation": 0,
+      "hyperchallenge": 0
+    },
+    "corruptionLoadoutName": "Loadout AOAG Unlocked Phase",
+    "strat": [
+      {
+        "challengeNumber": 103,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 111,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeMaxTime": 0,
+        "challengeWaitBefore": 100
+      },
+      {
+        "challengeNumber": 108,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 111,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 1,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 121,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      }
+    ],
+    "phaseId": "aoag"
+  },
+  "corruptionLoadouts": [
+    {
+      "name": "Loadout start-challenge14",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      }
+    },
+    {
+      "name": "Loadout challenge14-w5x10max",
+      "loadout": {
+        "viscosity": 1,
+        "drought": 7,
+        "deflation": 4,
+        "extinction": 11,
+        "illiteracy": 0,
+        "recession": 14,
+        "dilation": 4,
+        "hyperchallenge": 2
+      }
+    },
+    {
+      "name": "Loadout w5x10max-p2x1x10",
+      "loadout": {
+        "viscosity": 2,
+        "drought": 15,
+        "deflation": 3,
+        "extinction": 11,
+        "illiteracy": 14,
+        "recession": 14,
+        "dilation": 5,
+        "hyperchallenge": 5
+      }
+    },
+    {
+      "name": "Loadout beta-1e15-expo",
+      "loadout": {
+        "viscosity": 3,
+        "drought": 16,
+        "deflation": 1,
+        "extinction": 11,
+        "illiteracy": 16,
+        "recession": 15,
+        "dilation": 5,
+        "hyperchallenge": 6
+      }
+    },
+    {
+      "name": "Loadout 1e15-expo-omega",
+      "loadout": {
+        "viscosity": 6,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 13,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 11,
+        "hyperchallenge": 10
+      }
+    },
+    {
+      "name": "Loadout omega-singularity",
+      "loadout": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 13,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 4,
+        "hyperchallenge": 5
+      }
+    },
+    {
+      "name": "Loadout beginning post-AOAG",
+      "loadout": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 14,
+        "hyperchallenge": 16
+      }
+    },
+    {
+      "name": "Loadout singularity-end",
+      "loadout": {
+        "viscosity": 16,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 16,
+        "hyperchallenge": 16
+      }
+    },
+    {
+      "name": "Loadout AOAG Unlocked Phase",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      }
+    }
+  ]
+}

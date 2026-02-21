@@ -222,6 +222,7 @@ if(!window.__HS_EXPOSED){
             }
             customElements.define = origDefine;
             log('customElements.define restored');
+            
             patchedScriptInjected = true;
             log('Game script injected');
 
@@ -375,7 +376,28 @@ window.__HS_BACKDOOR__ = {
 
     async function loadModAfterExposure() {
         log('Checking for function exposure...');
+        log('Checking for function exposure...');
         const ok = await exposeViaUI();
+        if (!ok) {
+            log('exposeViaUI failed, checking for settings tab directly...');
+            const settingsTab = document.getElementById('settingstab');
+            if (settingsTab) {
+                log('Settings tab already present, injecting mod immediately.');
+                injectModScript();
+                return;
+            }
+            log('Settings tab not found, setting up MutationObserver fallback.');
+            const observer = new MutationObserver((mutations, obs) => {
+                const settingsTab = document.getElementById('settingstab');
+                if (settingsTab) {
+                    log('Settings tab detected by MutationObserver, injecting mod...');
+                    obs.disconnect();
+                    injectModScript();
+                }
+            });
+            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+            return;
+        }
         if (!ok) {
             log('exposeViaUI failed, checking for settings tab directly...');
             const settingsTab = document.getElementById('settingstab');
@@ -401,7 +423,8 @@ window.__HS_BACKDOOR__ = {
         injectModScript();
     }
 
-    function injectModScript() {        log('Loading mod');
+    function injectModScript() {
+        log('Loading mod');
 
         const s = document.createElement('script');
         s.src = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;

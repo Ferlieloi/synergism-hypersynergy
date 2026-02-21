@@ -153,10 +153,12 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+            let newState: boolean | undefined;
 
             if (ambrosiaMod) {
                 if (params.disable && params.disable === true) {
                     await ambrosiaMod.disableIdleSwap();
+                    newState = false;
                 } else {
                     // Auto-enable GDS if not already enabled
                     const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
@@ -164,6 +166,22 @@ export class HSSettingActions {
                         HSSettings.getSetting('useGameData')?.enable();
                     }
                     await ambrosiaMod.enableIdleSwap();
+                    newState = true;
+                }
+                // Directly update UI elements
+                // Update settings panel toggle button (if present)
+                const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn');
+                if (idleSwapToggle) {
+                    idleSwapToggle.innerText = newState ? '✓' : '✗';
+                    idleSwapToggle.classList.toggle('hs-disabled', !newState);
+                }
+                // Update quick menu button (if present)
+                const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]');
+                if (quickMenuBtn) {
+                    const stateHtml = newState
+                        ? '<span style="color: #4caf50; font-weight: bold;">ON</span>'
+                        : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
+                    quickMenuBtn.innerHTML = `<img src="https://synergism.cc/Pictures/Default/Blueberries.png" alt="Blueberries" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">Ambrosia Swapper [${stateHtml}]`;
                 }
             }
         },

@@ -10,7 +10,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE } from "../../../types/module-types/hs-autosing-types";
-import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
+import { HSAutosingTimerModal } from "./hs-autosingModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
@@ -295,22 +295,32 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         );
 
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found", { notificationType: "warning" });
+            HSUI.Notify("Selected strategy not found - Autosing stopped", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
 
-        const strategies = HSSettings.getStrategies();
-        this.strategy = strategies.find(
-            s => s.strategyName === selectedOption.text
-        );
+        // Lazy-load the selected strategy: check if it's a default (manifest) or user strategy
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        let strategy: HSAutosingStrategy | null = null;
+        const selectedRawName = selectedOption.value.toString();
+        if (defaultNames.includes(selectedRawName)) {
+            // Load from file only when needed
+            strategy = await HSSettings.loadDefaultStrategyByName(selectedRawName);
+        } else {
+            // User strategy: already in memory
+            const strategies = HSSettings.getStrategies();
+            strategy = strategies.find(s => s.strategyName === selectedRawName) || null;
+        }
 
-        if (!this.strategy) {
-            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedOption.text}" not found.`, this.context);
-            HSUI.Notify("Could not find strategy", { notificationType: "warning" });
+        if (!strategy) {
+            HSLogger.debug(`Autosing: Stopping - Strategy "${HSSettings.getStrategyDisplayName(selectedRawName)}" not found or failed to load.`, this.context);
+            HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
+
+        this.strategy = strategy;
 
         this.rebuildStrategyPhaseCaches();
         this.buildLoadoutCache();
@@ -634,7 +644,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 }
                 return;
             }
-
+            // PAUSE LOGIC: Block actions inside phase loop
+            if (this.timerModal && this.timerModal.getIsPaused()) {
+                HSUI.Notify('Autosing is paused.');
+                while (this.timerModal.getIsPaused() && this.isAutosingEnabled()) {
+                    await HSUtils.sleep(500);
+                }
+                HSUI.Notify('Autosing resumed.');
+            }
             const challenge = phaseConfig.strat[i];
 
             if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {

@@ -602,7 +602,7 @@
     "settingHelpText": "This is the strategy that the autosinger will follow",
     "settingType": "selectstring",
     "enabled": true,
-    "settingValue": "default_strategy",
+    "settingValue": "1.TAS_v3.2",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy",
       "controlType": "select",
@@ -1349,6 +1349,101 @@
       "controlGroup": "talismans",
       "controlPage": "input",
       "controlEnabledId": "hs-setting-enable-talismans-btn"
+    }
+  },
+  "autosing3to6DCubeOpeningPercent": {
+    "settingName": "autosing3to6DCubeOpeningPercent",
+    "settingDescription": "3-6D Cube opening percentage",
+    "settingHelpText": "Percentage (1-100) for auto-opening 3-6D cubes.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 80,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-3-6d-cube-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingTessBuildingAutoBuyPercent": {
+    "settingName": "autosingTessBuildingAutoBuyPercent",
+    "settingDescription": "Tesseract building auto-buy percentage",
+    "settingHelpText": "Percentage (1-100) for auto-buying tesseract buildings.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 50,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-tesseract-auto-buy-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingAutoChallTimerStart": {
+    "settingName": "autosingAutoChallTimerStart",
+    "settingDescription": "Auto-challenge start timers",
+    "settingHelpText": "Timer (positive decimal) for auto-starting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-start-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
+    }
+  },
+  "autosingAutoChallTimerExit": {
+    "settingName": "autosingAutoChallTimerExit",
+    "settingDescription": "Auto-challenge exit timers",
+    "settingHelpText": "Timer (positive decimal) for auto-exiting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.2,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-exit-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
+    }
+  },
+  "autosingAutoChallTimerEnter": {
+    "settingName": "autosingAutoChallTimerEnter",
+    "settingDescription": "Auto-challenge enter timers",
+    "settingHelpText": "Timer (positive decimal) for auto-entering challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.1,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-enter-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
     }
   }
 }

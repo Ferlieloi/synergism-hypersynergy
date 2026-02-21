@@ -63,13 +63,13 @@
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: var(--timer-text-primary);
-    width: 35px;
+    width: 30px;
     height: 20px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
     padding: 0;
-    margin-right: 10px;
+    margin-right: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,10 +84,6 @@
     width: 30px;
     font-size: 16px;
     margin-right: 0;
-}
-
-#hs-timer-ctrl-chart-toggle {
-    margin-right: 8px;
 }
 
 /* ===== TIMER CONTENT ===== */
@@ -205,6 +201,7 @@
 .hs-timer-controls {
     display: flex;
     align-items: center;
+    gap: 5px;
 }
 
 /* ===== VALUE COLORS ===== */
