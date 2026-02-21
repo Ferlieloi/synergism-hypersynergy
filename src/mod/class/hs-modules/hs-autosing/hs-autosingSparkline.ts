@@ -61,7 +61,6 @@ export function updateSparkline(
 
     // If not enough data, clear chart and labels
     if (!Array.isArray(chartData) || chartData.length < 2) {
-        console.warn('[sparkline] updateSparkline: insufficient data', chartData);
         dom.rawPolyline.setAttribute('points', '');
         if (dom.avgPolyline) dom.avgPolyline.setAttribute('points', '');
         dom.labelMax.textContent = '';

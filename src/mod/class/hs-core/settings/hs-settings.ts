@@ -171,7 +171,6 @@ export class HSSettings extends HSModule {
             }
             HSSettings.saveSettingsToStorage();
             HSSettings.#settingsParsed = true;
-            HSAutosingStrategyModal.updateStrategyDropdownList();
         } catch (e) {
             HSLogger.error(`Error parsing mod settings ${e}`, this.context);
             HSSettings.#settingsParsed = false;
@@ -179,7 +178,6 @@ export class HSSettings extends HSModule {
     }
 
     async init(): Promise<void> {
-        // the selected strategy is now loaded dynamically and the dropdown is populated via populateStrategyDropdown
         this.isInitialized = true;
     }
 
@@ -472,6 +470,14 @@ export class HSSettings extends HSModule {
                             components.push(HSUIC.Input({ class: 'hs-panel-setting-block-num-input', id: controls.controlId, type: convertedType }));
                         } else if (convertedType === HSInputType.SELECT) {
                             if (controls.selectOptions) {
+                                // Use merged strategy options for autosingStrategy
+                                // There's probably a better place for this...
+                                if (controls.controlId === 'hs-setting-auto-sing-strategy') {
+                                    const { defaultStrategiesOptions, userStrategiesOptions } = HSAutosingStrategyModal.getMergedStrategyOptions();
+                                    controls.selectOptions.length = 0;
+                                    controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
+                                    HSLogger.log(`[HSSettingsUI] Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`);
+                                }
                                 components.push(HSUIC.Select(
                                     { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType },
                                     controls.selectOptions

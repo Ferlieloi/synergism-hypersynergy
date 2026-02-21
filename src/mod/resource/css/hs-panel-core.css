@@ -1308,8 +1308,7 @@ a.hs-link {
 /* Mark visually the default strategies in dropdown list */
 select option[data-default="true"] {
     font-weight: bold;
-    color: #f7c948; /* gold/yellow */
-    background-color: #222;
+    color: #888; 
 }
 
 /* ===== SHARED SCROLLBARS ===== */

@@ -12,6 +12,7 @@ import gridsCSS from "inline:../../resource/css/hs-grids.css";
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
+import { HSAutosingStrategyModal } from "../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSModuleOptions } from "../../types/hs-types";
 
 /*
@@ -233,6 +234,20 @@ export class HSUI extends HSModule {
 
         this.uiReady = true;
         this.isInitialized = true;
+        
+        // Ensure autosingStrategy dropdown optgroups are rendered after panel injection
+        setTimeout(() => {
+            try {
+                // Only update if the dropdown exists in DOM
+                const dropdown = document.getElementById('autosingStrategy');
+                if (dropdown) {
+                    // Call the update function to rebuild optgroups
+                    HSAutosingStrategyModal.updateStrategyDropdownList();
+                }
+            } catch (e) {
+                console.error('Failed to update autosingStrategy dropdown:', e);
+            }
+        }, 0);
     }
 
     #createQuickAccessMenu() {
