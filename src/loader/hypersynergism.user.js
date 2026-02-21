@@ -392,11 +392,11 @@ window.__HS_BACKDOOR__ = {
 
     async function exposeViaUI() {
         await clickWhenAvailable('settingstab');
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 5));
+        await new Promise(r => setTimeout(r, 50));
         await clickWhenAvailable('kMisc');
-        await new Promise(r => setTimeout(r, 5));
+        await new Promise(r => setTimeout(r, 50));
         // Auto-check export checkbox and click export, mirroring in-mod behavior
         const saveType = document.getElementById('saveType');
         if (saveType && 'checked' in saveType) {
