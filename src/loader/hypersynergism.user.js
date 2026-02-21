@@ -217,7 +217,7 @@
 
                 let expose;
                 if (innerMatch) {
-                    const domFn   = innerMatch[1];
+                    const domFn = innerMatch[1];
                     const i18nObj = innerMatch[2];
                     const stageFn = innerMatch[3];
                     expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
@@ -392,10 +392,21 @@ window.__HS_BACKDOOR__ = {
 
     async function exposeViaUI() {
         await clickWhenAvailable('settingstab');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 50));
         await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 5));
         await clickWhenAvailable('kMisc');
+        await new Promise(r => setTimeout(r, 5));
+        // Auto-check export checkbox and click export, mirroring in-mod behavior
+        const saveType = document.getElementById('saveType');
+        if (saveType && 'checked' in saveType) {
+            saveType.checked = true;
+            saveType.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const exportBtn = document.getElementById('exportgame');
+        if (exportBtn) {
+            exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {
