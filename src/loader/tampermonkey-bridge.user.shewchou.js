@@ -5,7 +5,7 @@
 // @description  Evergreen bridge to official Hypersynergism mod
 // @author       Ferlieloi
 // @match        https://synergism.cc/*
-// @require      https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.js
+// @require      https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.shewchou.js
 // @grant        none
 // @run-at       document-start
 // @updateURL    https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/tampermonkey-bridge.user.shewchou.js
