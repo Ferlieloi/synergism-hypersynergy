@@ -155,39 +155,85 @@
             let code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
-            // Patch for function exposures in RL
-            const rlMatch = code.match(/RL\s*=\s*async\s*\(e=!0\)\s*=>\s*{/);
-            if (rlMatch) {
-                const insertAt = rlMatch.index + rlMatch[0].length;
-                const expose = `
-if(!window.__HS_EXPORT_EXPOSED){
-    window.__HS_exportData=Np;
-    window.__HS_EXPORT_EXPOSED=true;
-}`;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-            }
+            // ============================================================
+            // EXPORT + STAGE PATCHES v3.4
+            // ============================================================
+            // Strategy: scan for function HEADER patterns, then verify the
+            // unique anchor string appears shortly after the opening '{'.
+            // This avoids brace-counting bugs caused by {/} inside string
+            // literals and template expressions in minified code.
+            // ============================================================
 
-            // Patch for other function exposures in g6
-            const g6Pattern = /g6=\(\)=>{/;
-            const g6Match = code.match(g6Pattern);
+            // Helper: scan all occurrences of headerRegex, return the index
+            // right after the '{' of the FIRST match where anchorStr appears
+            // within `windowSize` chars of that '{'.
+            const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
+                const re = new RegExp(headerRegex.source, 'g');
+                let m;
+                while ((m = re.exec(src)) !== null) {
+                    const bodyStart = m.index + m[0].length; // char after '{'
+                    const slice = src.slice(bodyStart, bodyStart + windowSize);
+                    if (slice.includes(anchorStr)) return { bodyStart, match: m };
+                }
+                return null;
+            };
 
-            if (g6Match) {
-                const insertAt = g6Match.index + g6Match[0].length;
-                const expose = `
-if(!window.__HS_EXPOSED){
-    window.DOMCacheGetOrSet=c;
-    window.__HS_synergismStage=Sy;
-    window.__HS_loadStatistics=Qe;
-    window.__HS_loadMiscellaneousStats=g6;
-    window.__HS_i18next=s;
-    window.__HS_EXPOSED=true;
-    console.log('[HS] ✅ Functions exposed');
-}`;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log('Patched bundle successfully');
+            // ── EXPORT PATCH ─────────────────────────────────────────────
+            // exportSynergism is an async function containing "Synergysave2"
+            const exportResult = findFunctionBodyContaining(
+                code,
+                /=async\s*\([^)]*\)\s*=>\s*\{/,
+                '"Synergysave2"'
+            );
+
+            if (exportResult) {
+                const exportTailRegex = /await\s+([a-zA-Z_$][\w$]*)\s*\(\s*[a-zA-Z_$][\w$]*\s*,\s*[a-zA-Z_$][\w$]*\s*\(\s*\)\s*\)/;
+                const tailMatch = code.slice(exportResult.bodyStart, exportResult.bodyStart + 1500).match(exportTailRegex);
+                const exportFn = tailMatch ? tailMatch[1] : null;
+
+                const expose = exportFn
+                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');}\n`
+                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');}\n`;
+
+                const { bodyStart: exportBodyStart } = exportResult;
+                code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
+                log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
             } else {
-                warn('Could not patch bundle');
+                warn('Could not patch exportSynergism — header not found');
             }
+
+            // ── STAGE PATCH ──────────────────────────────────────────────
+            // loadMiscellaneousStats is a simple () => { } containing "gameStageStatistic"
+            const stageResult = findFunctionBodyContaining(
+                code,
+                /[a-zA-Z_$][\w$]*\s*=\s*\(\s*\)\s*=>\s*\{/,
+                '"gameStageStatistic"'
+            );
+
+            if (stageResult) {
+                const bodySlice = code.slice(stageResult.bodyStart, stageResult.bodyStart + 2500);
+                const stageInnerRegex = /([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\("statistics\.gameStage"\s*,\s*\{\s*stage\s*:\s*([a-zA-Z_$][\w$]*)\(/;
+                const innerMatch = bodySlice.match(stageInnerRegex);
+
+                let expose;
+                if (innerMatch) {
+                    const domFn   = innerMatch[1];
+                    const i18nObj = innerMatch[2];
+                    const stageFn = innerMatch[3];
+                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
+                    log(`Patched loadMiscellaneousStats (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                } else {
+                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u26a0\ufe0f Stage fn found but inner names unknown');}\n`;
+                    warn('Could not extract fn names from loadMiscellaneousStats body');
+                }
+
+                const { bodyStart: stageBodyStart } = stageResult;
+                code = code.slice(0, stageBodyStart) + expose + code.slice(stageBodyStart);
+            } else {
+                warn('Could not patch loadMiscellaneousStats — header not found');
+            }
+
+            log('v3.4 [2026-02-21] patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
