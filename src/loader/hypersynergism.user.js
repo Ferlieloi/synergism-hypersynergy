@@ -405,9 +405,10 @@ window.__HS_BACKDOOR__ = {
         }
         const exportBtn = document.getElementById('exportgame');
         if (exportBtn) {
-            log('exposing export button');
             exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            console.log('[HS] Export button clicked to trigger exposure');
         }
+        console.log('test');
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {
