@@ -1,0 +1,1245 @@
+{
+  "strategyName": "BTMco. Quark Factory",
+  "strategy": [
+    {
+      "startPhase": "start",
+      "endPhase": "challenge14",
+      "corruptions": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      },
+      "corruptionLoadoutName": "Loadout start-challenge14",
+      "strat": [
+        {
+          "challengeWaitBefore": 5,
+          "comment": "==> Obt ldt",
+          "challengeNumber": 112,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 150,
+          "challengeWaitBefore": 100,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 150,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 150,
+          "challengeWaitBefore": 100,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 400,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "e30c0aa1-5651-4fb4-96e1-7e8bae256119",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 2
+          }
+        },
+        {
+          "challengeNumber": 105,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 11,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 20,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 42,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 25,
+          "challengeWaitTime": 25,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 2000
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "ce7e3a8b-8569-42ce-bd42-9a706b5b35c7",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 12
+          }
+        },
+        {
+          "challengeNumber": 12,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 50,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 25,
+          "challengeWaitTime": 25,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 2000
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "429d61b0-58ec-4879-ae98-5e40e56c0faa",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 16
+          }
+        },
+        {
+          "challengeNumber": 13,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 15,
+          "challengeWaitTime": 25,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 1000
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "C14"
+        },
+        {
+          "challengeNumber": 14,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 20,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 25,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 10,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 25,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 2000
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "a648166c-1c53-4921-915b-c16f61c78db7",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 26
+          }
+        },
+        {
+          "comment": "==> 1st C15",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout challenge14-w5x10max"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 9999907
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 12,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 70,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 110,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 90,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 300
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 40,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 300
+        },
+        {
+          "challengeNumber": 14,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 15,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 600
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 5,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout 1e15-expo-omega"
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 300
+        },
+        {
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 90,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 90,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 300
+        }
+      ]
+    },
+    {
+      "startPhase": "challenge14",
+      "endPhase": "singularity",
+      "corruptions": {
+        "viscosity": 1,
+        "drought": 7,
+        "deflation": 4,
+        "extinction": 11,
+        "illiteracy": 0,
+        "recession": 14,
+        "dilation": 3,
+        "hyperchallenge": 0
+      },
+      "corruptionLoadoutName": "Loadout 1e15-expo-omega",
+      "strat": [
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 1000000
+        },
+        {
+          "challengeNumber": 8,
+          "challengeCompletions": 90,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 600
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 90,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 300
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 20,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "768f5edc-1e97-46ae-836d-e6eed2f0bbd3",
+            "ifJumpMode": "stored_c15",
+            "ifJumpChallenge": 15,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 0,
+            "ifJumpMultiplier": 1,
+            "ifJumpIndex": 0
+          }
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 600
+        }
+      ]
+    },
+    {
+      "startPhase": "singularity",
+      "endPhase": "end",
+      "corruptions": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 14,
+        "hyperchallenge": 16
+      },
+      "corruptionLoadoutName": "Loadout beginning post-AOAG",
+      "strat": [
+        {
+          "challengeNumber": 106,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 120,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "comment": "==> 1st c15",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 140,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 70,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 30,
+          "challengeMaxTime": 0,
+          "comment": "==> start of 2nd c15"
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 350
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 70,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 30,
+          "challengeMaxTime": 0,
+          "comment": "==> start of 3rd c15"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 30,
+          "challengeMaxTime": 0,
+          "comment": "==> start of 4th c15"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 9,
+          "challengeCompletions": 140,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 8,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 1000,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 200
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "b92e497d-1d9c-4fed-a9ef-3e2643e3e836",
+            "ifJumpMode": "challenges",
+            "ifJumpChallenge": 15,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1e+115,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 20
+          }
+        },
+        {
+          "challengeNumber": 109,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "comment": "=>DO YOU WANT ANTS??"
+        },
+        {
+          "challengeNumber": 11,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 500
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 1,
+          "challengeCompletions": 9001,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700,
+          "comment": "0"
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 800
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0,
+          "comment": "=> 1st Ant-sac"
+        },
+        {
+          "challengeNumber": 2,
+          "challengeCompletions": 9001,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 3,
+          "challengeCompletions": 9001,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 101,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "comment": "0"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0,
+          "comment": "=> 2nd Ant-sac"
+        },
+        {
+          "challengeNumber": 4,
+          "challengeCompletions": 9001,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 9001,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 8,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 9,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 100,
+          "challengeMaxTime": 0,
+          "comment": "=> 3rd Ant-sac"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 600,
+          "challengeMaxTime": 0,
+          "comment": "=> 4th Ant-sac"
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 800,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout singularity-end"
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "=> Last C15 push",
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 5,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 1,
+          "challengeCompletions": 1000,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 9,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 8,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 7,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 5,
+          "challengeCompletions": 1000,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 50,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 30,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 108,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 8,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 400
+        },
+        {
+          "challengeNumber": 10,
+          "challengeCompletions": 150,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 700
+        },
+        {
+          "challengeNumber": 107,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        }
+      ]
+    }
+  ],
+  "aoagPhase": {
+    "startPhase": "ascension",
+    "endPhase": "ascension",
+    "corruptions": {
+      "viscosity": 0,
+      "drought": 0,
+      "deflation": 0,
+      "extinction": 0,
+      "illiteracy": 0,
+      "recession": 0,
+      "dilation": 0,
+      "hyperchallenge": 0
+    },
+    "corruptionLoadoutName": "Loadout AOAG Unlocked Phase",
+    "strat": [
+      {
+        "challengeNumber": 103,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 111,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 20,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 108,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 111,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 1,
+        "challengeMaxTime": 0
+      },
+      {
+        "challengeNumber": 121,
+        "challengeCompletions": 0,
+        "challengeWaitTime": 0,
+        "challengeWaitBefore": 0,
+        "challengeMaxTime": 0
+      }
+    ],
+    "phaseId": "aoag"
+  },
+  "corruptionLoadouts": [
+    {
+      "name": "Loadout start-challenge14",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      }
+    },
+    {
+      "name": "Loadout challenge14-w5x10max",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 16,
+        "deflation": 4,
+        "extinction": 12,
+        "illiteracy": 0,
+        "recession": 12,
+        "dilation": 4,
+        "hyperchallenge": 2
+      }
+    },
+    {
+      "name": "Loadout w5x10max-p2x1x10",
+      "loadout": {
+        "viscosity": 3,
+        "drought": 16,
+        "deflation": 4,
+        "extinction": 12,
+        "illiteracy": 16,
+        "recession": 14,
+        "dilation": 6,
+        "hyperchallenge": 7
+      }
+    },
+    {
+      "name": "Loadout beta-1e15-expo",
+      "loadout": {
+        "viscosity": 3,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 15,
+        "dilation": 6,
+        "hyperchallenge": 6
+      }
+    },
+    {
+      "name": "Loadout 1e15-expo-omega",
+      "loadout": {
+        "viscosity": 7,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 15,
+        "dilation": 15,
+        "hyperchallenge": 15
+      }
+    },
+    {
+      "name": "Loadout omega-singularity",
+      "loadout": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 15,
+        "dilation": 15,
+        "hyperchallenge": 15
+      }
+    },
+    {
+      "name": "Loadout beginning post-AOAG",
+      "loadout": {
+        "viscosity": 10,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 15,
+        "hyperchallenge": 15
+      }
+    },
+    {
+      "name": "Loadout singularity-end",
+      "loadout": {
+        "viscosity": 16,
+        "drought": 16,
+        "deflation": 16,
+        "extinction": 16,
+        "illiteracy": 16,
+        "recession": 16,
+        "dilation": 16,
+        "hyperchallenge": 16
+      }
+    },
+    {
+      "name": "Loadout AOAG Unlocked Phase",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 0,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      }
+    },
+    {
+      "name": "C14",
+      "loadout": {
+        "viscosity": 0,
+        "drought": 0,
+        "deflation": 0,
+        "extinction": 0,
+        "illiteracy": 16,
+        "recession": 0,
+        "dilation": 0,
+        "hyperchallenge": 0
+      }
+    }
+  ]
+}

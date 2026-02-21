@@ -787,6 +787,7 @@ export class HSAutosingTimerModal {
     private startLiveTimer(): void {
         this.stopLiveTimer();
         this.currentSingularityStart = performance.now();
+        this.lastSingularityTimestamp = this.currentSingularityStart;
         this.currentPhaseStart = this.currentSingularityStart;
         this.currentSingularityPhases.clear();
 
@@ -817,7 +818,6 @@ export class HSAutosingTimerModal {
 
         // Reset metrics and phase history
         this.singularityCount = 0;
-        this.lastSingularityTimestamp = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
 
