@@ -16,7 +16,7 @@
     window.HS_LOADER_INITIALIZED = true;
 
     const startTime = performance.now();
-    const log = (...a) => console.log(`%c[HS-DEeeeeeV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const log = (...a) => console.log(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
     const debug = (...a) => console.debug(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
 
@@ -31,15 +31,9 @@
     let allowCustomElements = false; // LOCK definitions by default
 
     // CRITICAL FIX: Override customElements.define to BLOCK the original script
-    // If the original script runs, it will try to define elements. We IGNORE it.
-    // This effectively causes the original script to crash (safely) or fail to register,
-    // leaving the registry clean for our patched script.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Log once per unique name to avoid spam, but BLOCK IT.
-            // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
-            // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
             if (!customElements.get(name)) {
                 debug(`[HS] Blocked original script from defining ${name} (Lock active)`);
             }
@@ -95,6 +89,7 @@
                 }
             }
         };
+
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
@@ -324,15 +319,13 @@
 window.__HS_BACKDOOR__ = {
     get exposed() {
         return {
-            synergismStage: typeof window.__HS_synergismStage,
             DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
-            loadStatistics: typeof window.__HS_loadStatistics,
-            loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
+            synergismStage: typeof window.__HS_synergismStage,
+            exportData: typeof window.__HS_exportData,
         };
     }
 };
-`;
+        `;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
     }
@@ -397,15 +390,24 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function exposeViaUI() {
-        log('Attempting to expose functions via UI navigation...');
         await clickWhenAvailable('settingstab');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 50));
         await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 5));
         await clickWhenAvailable('kMisc');
-        log('Functions exposed via UI navigation.');
+        await new Promise(r => setTimeout(r, 5));
+        // Auto-check export checkbox and click export, mirroring in-mod behavior
+        const saveType = document.getElementById('saveType');
+        if (saveType && 'checked' in saveType) {
+            saveType.checked = true;
+            saveType.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const exportBtn = document.getElementById('exportgame');
+        if (exportBtn) {
+            exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }
         const start = performance.now();
-        const MAX = 1000;
+        const MAX = 15000;
         return new Promise(resolve => {
             (function waitExpose() {
                 if (window.__HS_EXPOSED) {
@@ -428,34 +430,11 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
-        log('Checking for function exposure...');
         const ok = await exposeViaUI();
-        if (!ok) {
-            log('exposeViaUI failed, checking for settings tab directly...');
-            const settingsTab = document.getElementById('settingstab');
-            if (settingsTab) {
-                log('Settings tab already present, injecting mod immediately.');
-                injectModScript();
-                return;
-            }
-            log('Settings tab not found, setting up MutationObserver fallback.');
-            const observer = new MutationObserver((mutations, obs) => {
-                const settingsTab = document.getElementById('settingstab');
-                if (settingsTab) {
-                    log('Settings tab detected by MutationObserver, injecting mod...');
-                    obs.disconnect();
-                    injectModScript();
-                }
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-            return;
-        }
+        if (!ok) return;
 
         await returnToBuildingsTab();
-        injectModScript();
-    }
 
-    function injectModScript() {
         log('Loading mod from LOCAL DEV SERVER');
 
         const s = document.createElement('script');

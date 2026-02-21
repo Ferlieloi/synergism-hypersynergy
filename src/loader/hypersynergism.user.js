@@ -268,7 +268,6 @@
             }
             customElements.define = origDefine;
             log('customElements.define restored');
-            
             patchedScriptInjected = true;
             log('Game script injected');
 
@@ -398,7 +397,7 @@ window.__HS_BACKDOOR__ = {
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
         const start = performance.now();
-        const MAX = 1000;
+        const MAX = 15000;
         return new Promise(resolve => {
             (function waitExpose() {
                 if (window.__HS_EXPOSED) {
@@ -421,55 +420,11 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
-        log('Checking for function exposure...');
-        log('Checking for function exposure...');
         const ok = await exposeViaUI();
-        if (!ok) {
-            log('exposeViaUI failed, checking for settings tab directly...');
-            const settingsTab = document.getElementById('settingstab');
-            if (settingsTab) {
-                log('Settings tab already present, injecting mod immediately.');
-                injectModScript();
-                return;
-            }
-            log('Settings tab not found, setting up MutationObserver fallback.');
-            const observer = new MutationObserver((mutations, obs) => {
-                const settingsTab = document.getElementById('settingstab');
-                if (settingsTab) {
-                    log('Settings tab detected by MutationObserver, injecting mod...');
-                    obs.disconnect();
-                    injectModScript();
-                }
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-            return;
-        }
-        if (!ok) {
-            log('exposeViaUI failed, checking for settings tab directly...');
-            const settingsTab = document.getElementById('settingstab');
-            if (settingsTab) {
-                log('Settings tab already present, injecting mod immediately.');
-                injectModScript();
-                return;
-            }
-            log('Settings tab not found, setting up MutationObserver fallback.');
-            const observer = new MutationObserver((mutations, obs) => {
-                const settingsTab = document.getElementById('settingstab');
-                if (settingsTab) {
-                    log('Settings tab detected by MutationObserver, injecting mod...');
-                    obs.disconnect();
-                    injectModScript();
-                }
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-            return;
-        }
+        if (!ok) return;
 
         await returnToBuildingsTab();
-        injectModScript();
-    }
 
-    function injectModScript() {
         log('Loading mod');
 
         const s = document.createElement('script');
