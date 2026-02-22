@@ -182,18 +182,16 @@
             // exportSynergism is an async function containing "Synergysave2"
             const exportResult = findFunctionBodyContaining(
                 code,
-                /=async\s*\([^)]*\)\s*=>\s*\{/,
+                /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
                 '"Synergysave2"'
             );
 
             if (exportResult) {
-                const exportTailRegex = /await\s+([a-zA-Z_$][\w$]*)\s*\(\s*[a-zA-Z_$][\w$]*\s*,\s*[a-zA-Z_$][\w$]*\s*\(\s*\)\s*\)/;
-                const tailMatch = code.slice(exportResult.bodyStart, exportResult.bodyStart + 1500).match(exportTailRegex);
-                const exportFn = tailMatch ? tailMatch[1] : null;
+                const exportFn = exportResult.match[1];
 
                 const expose = exportFn
-                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');}\n`
-                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');}\n`;
+                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
+                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
 
                 const { bodyStart: exportBodyStart } = exportResult;
                 code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
@@ -244,7 +242,7 @@
                 warn('Could not patch stage — "gameStageStatistic" not found in bundle');
             }
 
-            log('v3.4 [2026-02-22] patch complete — injecting bundle');
+            log('v3.4 [2026-02-22]c patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -407,11 +405,16 @@ window.__HS_BACKDOOR__ = {
         await clickWhenAvailable('switchSettingSubTab4');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
+
+        window.__HS_SILENT_EXPORT = true;
+        await clickWhenAvailable('exportgame');
+        window.__HS_SILENT_EXPORT = false;
+
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {
             (function waitExpose() {
-                if (window.__HS_EXPOSED) {
+                if (window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED) {
                     resolve(true);
                     return;
                 }
