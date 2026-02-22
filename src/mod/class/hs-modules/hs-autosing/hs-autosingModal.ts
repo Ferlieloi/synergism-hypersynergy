@@ -69,6 +69,26 @@ export class HSAutosingTimerModal {
     private dragBounds = { width: 0, height: 0, maxX: 0, maxY: 0 };
     private staticDomInitialized: boolean = false;
 
+    // --- All-Time Statistical Summary ---
+    private allTimeStats = {
+        count: 0,
+        totalDuration: 0,
+        meanDuration: 0,
+        sumSqDuration: 0,
+        minDuration: Infinity,
+        maxDuration: 0,
+        totalQuarks: 0,
+        minQuarks: Infinity,
+        maxQuarks: 0,
+        meanQuarks: 0,
+        sumSqQuarks: 0,
+        totalGoldenQuarks: 0,
+        minGoldenQuarks: Infinity,
+        maxGoldenQuarks: 0,
+        meanGoldenQuarks: 0,
+        sumSqGoldenQuarks: 0
+    };
+
     // --- Cached DOM Nodes ---
     private phaseNameSpan: HTMLElement | null = null;
     private footerSection: HTMLElement | null = null;
@@ -294,7 +314,7 @@ export class HSAutosingTimerModal {
         this.chartToggleBtn = document.createElement('button');
         this.chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
         this.chartToggleBtn.textContent = '📊';
-        this.chartToggleBtn.title = "Toggle Detailed Data Visibilityyy";
+        this.chartToggleBtn.title = "Toggle Detailed Data Visibility";
         this.chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.chartToggleBtn.onclick = () => {
             this.showDetailedData = !this.showDetailedData;
@@ -972,6 +992,32 @@ export class HSAutosingTimerModal {
             c15Score
         );
 
+        // --- Update all-time statistical summary (Welford's algorithm)
+        const stats = this.allTimeStats;
+        stats.count++;
+        // Duration
+        const deltaDuration = singularityDuration - stats.meanDuration;
+        stats.meanDuration += deltaDuration / stats.count;
+        stats.sumSqDuration += deltaDuration * (singularityDuration - stats.meanDuration);
+        stats.totalDuration += singularityDuration;
+        // Quarks
+        const deltaQuarks = realQuarksGain - stats.meanQuarks;
+        stats.meanQuarks += deltaQuarks / stats.count;
+        stats.sumSqQuarks += deltaQuarks * (realQuarksGain - stats.meanQuarks);
+        stats.totalQuarks += realQuarksGain;
+        // Golden Quarks
+        const deltaGoldenQuarks = gainedGoldenQuarks - stats.meanGoldenQuarks;
+        stats.meanGoldenQuarks += deltaGoldenQuarks / stats.count;
+        stats.sumSqGoldenQuarks += deltaGoldenQuarks * (gainedGoldenQuarks - stats.meanGoldenQuarks);
+        stats.totalGoldenQuarks += gainedGoldenQuarks;
+        // Min and Max
+        stats.minDuration = Math.min(stats.minDuration, singularityDuration);
+        stats.maxDuration = Math.max(stats.maxDuration, singularityDuration);     
+        stats.minQuarks = Math.min(stats.minQuarks, realQuarksGain);
+        stats.maxQuarks = Math.max(stats.maxQuarks, realQuarksGain);           
+        stats.minGoldenQuarks = Math.min(stats.minGoldenQuarks, gainedGoldenQuarks);
+        stats.maxGoldenQuarks = Math.max(stats.maxGoldenQuarks, gainedGoldenQuarks);
+
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
             // Update C15 online stats (Decimal Welford)
@@ -1163,6 +1209,26 @@ export class HSAutosingTimerModal {
         return this.singularityMetrics[this.singularityMetrics.length - 1].duration;
     }
 
+    // --- All-Time Stats Helpers ---
+    private getAllTimeAvgDuration(): number | null {
+        return this.allTimeStats.count ? this.allTimeStats.totalDuration / this.allTimeStats.count : null;
+    }
+    private getAllTimeStdDuration(): number | null {
+        return this.allTimeStats.count > 1 ? Math.sqrt(this.allTimeStats.sumSqDuration / this.allTimeStats.count) : null;
+    }
+    private getAllTimeAvgQuarks(): number | null {
+        return this.allTimeStats.count ? this.allTimeStats.totalQuarks / this.allTimeStats.count : null;
+    }
+    private getAllTimeStdQuarks(): number | null {
+        return this.allTimeStats.count > 1 ? Math.sqrt(this.allTimeStats.sumSqQuarks / this.allTimeStats.count) : null;
+    }
+    private getAllTimeAvgGoldenQuarks(): number | null {
+        return this.allTimeStats.count ? this.allTimeStats.totalGoldenQuarks / this.allTimeStats.count : null;
+    }
+    private getAllTimeStdGoldenQuarks(): number | null {
+        return this.allTimeStats.count > 1 ? Math.sqrt(this.allTimeStats.sumSqGoldenQuarks / this.allTimeStats.count) : null;
+    }
+
     
     // =============================
     // Render Methods
@@ -1297,49 +1363,48 @@ export class HSAutosingTimerModal {
         // --- Quarks ---
         const currentQuarks = this.latestQuarksTotal;
         this.setTextEl(this.quarksTotalSpan, formatNumber(currentQuarks));
-        const quarksPerSec = getQuarksPerSecond(this.singularityMetrics, false);
-        if (quarksPerSec !== null) {
-            this.setTextEl(this.quarksRateValSpan, `${formatNumber(quarksPerSec)}/s`);
-            this.setTextEl(this.quarksRateHrSpan, `(${formatNumber(quarksPerSec * 3600)}/hr)`);
-        } else {
-            this.setTextEl(this.quarksRateValSpan, `0/s`);
-            this.setTextEl(this.quarksRateHrSpan, `(0/hr)`);
+        // --- All-time Quarks Rate ---
+        const allTimeQuarks = this.allTimeStats.totalQuarks;
+        const allTimeDuration = this.allTimeStats.totalDuration;
+        let allTimeQuarksPerSec = 0;
+        if (allTimeDuration > 0) {
+            allTimeQuarksPerSec = allTimeQuarks / allTimeDuration;
         }
+        this.setTextEl(this.quarksRateValSpan, `${formatNumber(allTimeQuarksPerSec)}/s`);
+        this.setTextEl(this.quarksRateHrSpan, `(${formatNumber(allTimeQuarksPerSec * 3600)}/hr)`);
 
-        // --- Golden Quarks ---
+        // --- All-time Golden Quarks Rate ---
         const currentGoldenQuarks = this.latestGoldenQuarksTotal;
         this.setTextEl(this.gquarksTotalSpan, formatNumber(currentGoldenQuarks));
-        const goldenQuarksPerSec = getQuarksPerSecond(this.singularityMetrics, true);
-        if (goldenQuarksPerSec !== null) {
-            this.setTextEl(this.gquarksRateValSpan, `${formatNumber(goldenQuarksPerSec)}/s`);
-            this.setTextEl(this.gquarksRateHrSpan, `(${formatNumber(goldenQuarksPerSec * 3600)}/hr)`);
-        } else {
-            this.setTextEl(this.gquarksRateValSpan, `0/s`);
-            this.setTextEl(this.gquarksRateHrSpan, `(0/hr)`);
+        const allTimeGoldenQuarks = this.allTimeStats.totalGoldenQuarks;
+        let allTimeGoldenQuarksPerSec = 0;
+        if (allTimeDuration > 0) {
+            allTimeGoldenQuarksPerSec = allTimeGoldenQuarks / allTimeDuration;
         }
+        this.setTextEl(this.gquarksRateValSpan, `${formatNumber(allTimeGoldenQuarksPerSec)}/s`);
+        this.setTextEl(this.gquarksRateHrSpan, `(${formatNumber(allTimeGoldenQuarksPerSec * 3600)}/hr)`);
 
         // --- Averages ---
         const avg1 = this.getLastDuration();
         const avg10 = getAverageLast(this.singularityMetrics, 10);
         const avg50 = getAverageLast(this.singularityMetrics, 50);
-        const avgAll = getAverageLast(this.singularityMetrics, count);
+        const avgAll = this.getAllTimeAvgDuration();
         const sd10 = getStandardDeviation(this.singularityMetrics, 10);
         const sd50 = getStandardDeviation(this.singularityMetrics, 50);
-        const sdAll = getStandardDeviation(this.singularityMetrics, count);
+        const sdAll = this.getAllTimeStdDuration();
         this.setTextEl(this.avg1Span, avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
         this.setAvgEl(this.avg10Span, avg10, sd10);
         this.setAvgEl(this.avg50Span, avg50, sd50);
-        this.setTextEl(this.avgAllCountSpan, count.toString());
+        this.setTextEl(this.avgAllCountSpan, this.allTimeStats.count.toString());
         this.setAvgEl(this.avgAllSpan, avgAll, sdAll);
 
         // --- Times (all-time) ---
-        const arr = this.singularityMetrics;
-        const totalTime = arr.reduce((sum, m) => sum + m.duration, 0);
-        const maxTime = arr.length > 0 ? Math.max(...arr.map(m => m.duration)) : null;
-        const minTime = arr.length > 0 ? Math.min(...arr.map(m => m.duration)) : null;
+        const totalTime = this.allTimeStats.totalDuration;
+        const maxTime = this.allTimeStats.maxDuration;
+        const minTime = this.allTimeStats.minDuration;
         this.setTextEl(this.totalTimeSpan, totalTime > 0 ? formatTime(totalTime) : '-');
-        this.setTextEl(this.maxTimeSpan, maxTime !== null && maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
-        this.setTextEl(this.minTimeSpan, minTime !== null && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
+        this.setTextEl(this.maxTimeSpan, maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-');
+        this.setTextEl(this.minTimeSpan, minTime !== 0 && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-');
 
         // --- C15 ---
         if (this.c15TopSpan && this.c15SigmaSpan) {
@@ -1353,21 +1418,20 @@ export class HSAutosingTimerModal {
         }
 
         // --- Quarks Gains (all-time) ---
-        const metrics = this.singularityMetrics;
-        const totalQuarksGains = metrics.reduce((sum, m) => sum + m.quarksGained, 0);
-        const maxQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.quarksGained)) : null;
-        const minQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.quarksGained)) : null;
+        const totalQuarksGains = this.allTimeStats.totalQuarks;
+        const maxQuarksGains = this.allTimeStats.maxQuarks;
+        const minQuarksGains = this.allTimeStats.minQuarks;
         this.setTextEl(this.quarksTotalGainsSpan, totalQuarksGains > 0 ? formatNumber(totalQuarksGains) : '-');
-        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== null && maxQuarksGains !== 0 ? formatNumber(maxQuarksGains) : '-');
-        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== null && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-');
+        this.setTextEl(this.quarksMaxGainsSpan, maxQuarksGains !== 0 ? formatNumber(maxQuarksGains) : '-');
+        this.setTextEl(this.quarksMinGainsSpan, minQuarksGains !== 0 && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-');
 
         // --- Golden Quarks Gains (all-time) ---
-        const totalGQuarksGains = metrics.reduce((sum, m) => sum + m.goldenQuarksGained, 0);
-        const maxGQuarksGains = metrics.length > 0 ? Math.max(...metrics.map(m => m.goldenQuarksGained)) : null;
-        const minGQuarksGains = metrics.length > 0 ? Math.min(...metrics.map(m => m.goldenQuarksGained)) : null;
+        const totalGQuarksGains = this.allTimeStats.totalGoldenQuarks;
+        const maxGQuarksGains = this.allTimeStats.maxGoldenQuarks;
+        const minGQuarksGains = this.allTimeStats.minGoldenQuarks;
         this.setTextEl(this.gquarksTotalGainsSpan, totalGQuarksGains > 0 ? formatNumber(totalGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== null && maxGQuarksGains !== 0 ? formatNumber(maxGQuarksGains) : '-');
-        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== null && minGQuarksGains !== Infinity ? formatNumber(minGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMaxGainsSpan, maxGQuarksGains !== 0 ? formatNumber(maxGQuarksGains) : '-');
+        this.setTextEl(this.gquarksMinGainsSpan, minGQuarksGains !== 0 && minGQuarksGains !== Infinity ? formatNumber(minGQuarksGains) : '-');
     }
 
     /**
@@ -1503,11 +1567,28 @@ export class HSAutosingTimerModal {
     public reset(): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
-        // All stats now handled by singularityMetrics
         this.startTime = 0;
         this.phaseHistory.clear();
         this.singularityBundles = [];
         this.compressedBundles = [];
+        this.allTimeStats = {
+            count: 0,
+            totalDuration: 0,
+            meanDuration: 0,
+            sumSqDuration: 0,
+            minDuration: Infinity,
+            maxDuration: 0,
+            totalQuarks: 0,
+            minQuarks: Infinity,
+            maxQuarks: 0,
+            meanQuarks: 0,
+            sumSqQuarks: 0,
+            totalGoldenQuarks: 0,
+            minGoldenQuarks: Infinity,
+            maxGoldenQuarks: 0,
+            meanGoldenQuarks: 0,
+            sumSqGoldenQuarks: 0
+        };
         this.lastRecordedPhaseName = null;
         this._currentPhaseName = '';
         this.stopLiveTimer();
