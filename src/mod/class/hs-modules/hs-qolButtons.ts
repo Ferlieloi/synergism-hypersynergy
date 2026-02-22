@@ -712,6 +712,15 @@ export class HSQOLButtons extends HSModule {
         distributeBtn.style.padding = '5px 15px';
         distributeBtn.style.cursor = 'pointer';
 
+        const statusLabel = document.createElement('div');
+        statusLabel.style.marginTop = '6px';
+        statusLabel.style.fontSize = '12px';
+        statusLabel.style.color = '#aaa';
+        statusLabel.style.minHeight = '16px';
+        statusLabel.style.textAlign = 'center';
+
+        const setStatus = (text: string) => { statusLabel.textContent = text; };
+
         const promptInput = document.querySelector('#prompt_text') as HTMLInputElement;
         const okPrompt = document.querySelector('#ok_prompt') as HTMLButtonElement;
         const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
@@ -763,9 +772,19 @@ export class HSQOLButtons extends HSModule {
 
             if (!promptInput || !okPrompt || !okAlert) return;
 
+            distributeBtn.disabled = true;
+            distributeBtn.style.opacity = '0.6';
+            distributeBtn.style.cursor = 'not-allowed';
+
+            const ids = Object.keys(ratios);
+            let current = 0;
+
             for (const id in ratios) {
+                current++;
                 const amountToSpend = Math.floor(totalGQ * (ratios[id] / totalRatio));
-                if (amountToSpend <= 0) continue;
+                setStatus(`Buying ${current}/${ids.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
+
+                if (amountToSpend <= 0) { setStatus(`Skipped ${current}/${ids.length} (0 GQ)`); continue; }
 
                 const btn = document.getElementById(id) as HTMLButtonElement;
                 if (!btn) continue;
@@ -792,8 +811,15 @@ export class HSQOLButtons extends HSModule {
                 // Force a macrotask yield so the browser can paint between purchases
                 await new Promise(r => setTimeout(r, 0));
             }
+
+            distributeBtn.disabled = false;
+            distributeBtn.style.opacity = '';
+            distributeBtn.style.cursor = 'pointer';
+            setStatus('Done!');
+            setTimeout(() => setStatus(''), 3000);
         });
         distributor.appendChild(distributeBtn);
+        distributor.appendChild(statusLabel);
 
         container.parentNode?.insertBefore(distributor, container.nextSibling);
     }
