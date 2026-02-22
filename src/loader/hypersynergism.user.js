@@ -182,18 +182,16 @@
             // exportSynergism is an async function containing "Synergysave2"
             const exportResult = findFunctionBodyContaining(
                 code,
-                /=async\s*\([^)]*\)\s*=>\s*\{/,
+                /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
                 '"Synergysave2"'
             );
 
             if (exportResult) {
-                const exportTailRegex = /await\s+([a-zA-Z_$][\w$]*)\s*\(\s*[a-zA-Z_$][\w$]*\s*,\s*[a-zA-Z_$][\w$]*\s*\(\s*\)\s*\)/;
-                const tailMatch = code.slice(exportResult.bodyStart, exportResult.bodyStart + 1500).match(exportTailRegex);
-                const exportFn = tailMatch ? tailMatch[1] : null;
+                const exportFn = exportResult.match[1];
 
                 const expose = exportFn
-                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');}\n`
-                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');}\n`;
+                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
+                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
 
                 const { bodyStart: exportBodyStart } = exportResult;
                 code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
@@ -203,37 +201,48 @@
             }
 
             // ── STAGE PATCH ──────────────────────────────────────────────
-            // loadMiscellaneousStats is a simple () => { } containing "gameStageStatistic"
-            const stageResult = findFunctionBodyContaining(
-                code,
-                /[a-zA-Z_$][\w$]*\s*=\s*\(\s*\)\s*=>\s*\{/,
-                '"gameStageStatistic"'
-            );
+            // Step 1: locate the anchor string with indexOf (guaranteed match if
+            // the string exists, regardless of surrounding whitespace/formatting).
+            // Step 2: extract each variable name with small, independent patterns
+            // instead of one monolithic regex that fails if any part changes.
+            // Step 3: find the enclosing no-arg arrow function and inject at its
+            // ENTRY — so ANY call to loadMiscellaneousStats exposes the vars,
+            // not just the specific code path that reaches the innerHTML line.
+            const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
 
-            if (stageResult) {
-                const bodySlice = code.slice(stageResult.bodyStart, stageResult.bodyStart + 2500);
-                const stageInnerRegex = /([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\("statistics\.gameStage"\s*,\s*\{\s*stage\s*:\s*([a-zA-Z_$][\w$]*)\(/;
-                const innerMatch = bodySlice.match(stageInnerRegex);
+            if (stageAnchorIdx !== -1) {
+                const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
+                const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
+                const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
+                const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
 
-                let expose;
-                if (innerMatch) {
-                    const domFn   = innerMatch[1];
-                    const i18nObj = innerMatch[2];
-                    const stageFn = innerMatch[3];
-                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
-                    log(`Patched loadMiscellaneousStats (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                if (domFn && i18nObj && stageFn) {
+                    const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
+
+                    // Walk back up to 4000 chars, find the LAST no-arg arrow fn before anchor.
+                    // loadMiscellaneousStats is always ()=>{ in minified output.
+                    const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
+                    const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
+                    let am, lastBodyStart = -1;
+                    while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
+
+                    if (lastBodyStart !== -1) {
+                        const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
+                        code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+                        log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    } else {
+                        // Fallback: inject right before the anchor line
+                        code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
+                        log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    }
                 } else {
-                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u26a0\ufe0f Stage fn found but inner names unknown');}\n`;
-                    warn('Could not extract fn names from loadMiscellaneousStats body');
+                    warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
                 }
-
-                const { bodyStart: stageBodyStart } = stageResult;
-                code = code.slice(0, stageBodyStart) + expose + code.slice(stageBodyStart);
             } else {
-                warn('Could not patch loadMiscellaneousStats — header not found');
+                warn('Could not patch stage — "gameStageStatistic" not found in bundle');
             }
 
-            log('v3.4 [2026-02-21] patch complete — injecting bundle');
+            log('v3.4 [2026-02-22]c patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -396,11 +405,16 @@ window.__HS_BACKDOOR__ = {
         await clickWhenAvailable('switchSettingSubTab4');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
+
+        window.__HS_SILENT_EXPORT = true;
+        await clickWhenAvailable('exportgame');
+        window.__HS_SILENT_EXPORT = false;
+
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {
             (function waitExpose() {
-                if (window.__HS_EXPOSED) {
+                if (window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED) {
                     resolve(true);
                     return;
                 }
@@ -420,6 +434,9 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
+        if (window.__HS_MOD_LOADED) return;
+        window.__HS_MOD_LOADED = true;
+
         const ok = await exposeViaUI();
         if (!ok) return;
 

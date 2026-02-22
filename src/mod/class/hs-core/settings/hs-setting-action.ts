@@ -231,15 +231,31 @@ export class HSSettingActions {
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (qolButtonsMod) qolButtonsMod.gqUpgradesInitialized = false;
+            if (qolButtonsMod) {
+                qolButtonsMod.setGQButtonsVisibility();
+            }
         },
 
         hideMaxedOctUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (qolButtonsMod) qolButtonsMod.octUpgradesInitialized = false;
-        }
-        ,
+            if (qolButtonsMod) {
+                qolButtonsMod.setOctButtonsVisibility();
+            }
+        },
+
+        enableGQDistributorAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (qolButtonsMod) {
+                if (params.disable && params.disable === true) {
+                    qolButtonsMod.hideGQDistributor();
+                } else {
+                    qolButtonsMod.showGQDistributor();
+                }
+            }
+        },
+
         enableAutomationQuickBarAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
