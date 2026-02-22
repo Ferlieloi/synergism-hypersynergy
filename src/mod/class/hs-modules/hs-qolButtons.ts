@@ -10,6 +10,9 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
+import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
+import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
+import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 
 
 /*
@@ -70,8 +73,6 @@ export class HSQOLButtons extends HSModule {
     #offeringPotionObserver: MutationObserver;
     #obtainiumPotionObserver: MutationObserver;
 
-    octUpgradesInitialized: boolean = false;
-    gqUpgradesInitialized: boolean = false;
 
     /** Resolve a syn UI element by selector, falling back to window globals for cube upgrade toggles. */
     private resolveAutomationQuickBarElement(sel: string): HTMLElement | null {
@@ -153,6 +154,13 @@ export class HSQOLButtons extends HSModule {
                 }, 20);
             }
         });
+
+        // Apply visibility on load in case the user is already on the relevant tab
+        setTimeout(() => {
+            this.setGQButtonsVisibility();
+            this.setOctButtonsVisibility();
+        }, 50);
+
         this.#injectAdd10Button();
 
         // Register and apply syn UI setting (show automation status bar)
@@ -538,11 +546,6 @@ export class HSQOLButtons extends HSModule {
     }
 
     setGQButtonsVisibility(): void {
-        if (this.gqUpgradesInitialized) {
-            return;
-        }
-
-        this.gqUpgradesInitialized = true;
         const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
 
         if (hideMaxedGQUpgradesSetting.getValue()) {
@@ -553,11 +556,6 @@ export class HSQOLButtons extends HSModule {
     }
 
     setOctButtonsVisibility(): void {
-        if (this.octUpgradesInitialized) {
-            return;
-        }
-
-        this.octUpgradesInitialized = true;
         const hideMaxedOctUpgradesSetting = HSSettings.getSetting('hideMaxedOctUpgrades') as HSSetting<boolean>;
 
         if (hideMaxedOctUpgradesSetting.getValue()) {
@@ -575,108 +573,6 @@ export class HSQOLButtons extends HSModule {
         buttons.forEach(button => button.style.display = '');
     }
 
-    async #disableButtons(containerId: string, selector: string): Promise<void> {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        const buttons = Array.from(
-            container.querySelectorAll<HTMLElement>(selector)
-        );
-
-        for (const button of buttons) {
-            this.hoverElement(button);
-
-            // Give modal time to appear & populate
-            await HSUtils.sleep(5);
-
-            const modal = document.getElementById('modal') as HTMLDivElement | null;
-            if (!modal) {
-                this.unhoverElement(button);
-                continue;
-            }
-
-            const levelSpan = this.findLevelSpan(modal);
-
-            if (!levelSpan) {
-                this.unhoverElement(button);
-                continue;
-            }
-
-            const text = levelSpan.textContent ?? '';
-
-            const match = text.match(/level\s+([\d,]+)(?:\s*\/\s*([\d,]+))?/i);
-            if (!match) {
-                this.unhoverElement(button);
-                continue;
-            }
-
-            const current = this.parseNumber(match[1]);
-            const max = match[2] ? this.parseNumber(match[2]) : null;
-
-            // Infinite upgrade → don't hide
-            if (max === null) {
-                this.unhoverElement(button);
-                continue;
-            }
-
-            // Maxed upgrade → hide
-            if (current === max) {
-                console.log('Hiding maxed upgrade:', button.id);
-                button.style.display = 'none';
-            }
-
-            this.unhoverElement(button);
-            await HSUtils.sleep(1);
-        }
-    }
-
-    parseNumber(value: string): number {
-        return Number(value.replace(/,/g, ''));
-    }
-
-    hoverElement(el: HTMLElement) {
-        const rect = el.getBoundingClientRect();
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-
-        const events = [
-            new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y }),
-            new PointerEvent('pointerenter', { bubbles: true, clientX: x, clientY: y }),
-            new MouseEvent('mouseenter', { bubbles: true, clientX: x, clientY: y }),
-            new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }),
-            new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y })
-        ];
-
-        events.forEach(e => el.dispatchEvent(e));
-    }
-
-    findLevelSpan(modal: HTMLElement): HTMLSpanElement | null {
-        const spans = Array.from(modal.querySelectorAll<HTMLSpanElement>('span'));
-        for (const span of spans) {
-            const text = span.textContent?.trim();
-            if (!text) continue;
-            const hasLevelNumbers = /(\d{1,3}(?:,\d{3})*)(?:\s*\/\s*(\d{1,3}(?:,\d{3})*))/.test(text)
-                || /\blevel\s+\d{1,3}(?:,\d{3})*/i.test(text);
-
-            if (!hasLevelNumbers) continue;
-            if (text.length > 100) continue;
-            return span;
-        }
-        return null;
-    }
-
-    unhoverElement(el: HTMLElement) {
-        const rect = el.getBoundingClientRect();
-        const x = rect.left - 10;
-        const y = rect.top - 10;
-
-        el.dispatchEvent(new MouseEvent('mouseout', {
-            bubbles: true,
-            clientX: x,
-            clientY: y
-        }));
-    }
-
     #enableOctButtons(): void {
         this.#enableButtons('singularityOcteracts', '.octeractUpgrade');
     }
@@ -686,10 +582,226 @@ export class HSQOLButtons extends HSModule {
     }
 
     #disableOctButtons(): void {
-        this.#disableButtons('singularityOcteracts', '.octeractUpgrade');
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+        const gameData = gameDataAPI.getGameData();
+        if (!gameData) return;
+
+        const container = document.getElementById('singularityOcteracts');
+        if (!container) return;
+
+        const buttons = Array.from(
+            container.querySelectorAll<HTMLElement>('.octeractUpgrade')
+        );
+
+        for (const button of buttons) {
+            const upgradeKey = button.id as OcteractUpgradeKey;
+            const maxLevel = octeractUpgradeMaxLevels[upgradeKey]?.maxLevel;
+            const currentLevel = gameData.octUpgrades[upgradeKey]?.level ?? 0;
+
+            if (maxLevel !== undefined && maxLevel !== -1 && currentLevel >= maxLevel) {
+                button.style.display = 'none';
+            } else {
+                button.style.display = '';
+            }
+        }
     }
 
     #disableGQButtons(): void {
-        this.#disableButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+        const gameData = gameDataAPI.getGameData();
+        if (!gameData) return;
+
+        const container = document.getElementById('actualSingularityUpgradeContainer');
+        if (!container) return;
+
+        const buttons = Array.from(
+            container.querySelectorAll<HTMLElement>('.singularityUpgrade')
+        );
+
+        for (const button of buttons) {
+            const upgradeKey = button.id as GoldenQuarkUpgradeKey;
+            const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey]?.maxLevel;
+            const currentLevel = gameData.goldenQuarkUpgrades[upgradeKey]?.level ?? 0;
+
+            if (maxLevel !== undefined && maxLevel !== -1 && currentLevel >= maxLevel) {
+                button.style.display = 'none';
+            } else {
+                button.style.display = '';
+            }
+        }
+    }
+
+    showGQDistributor(): void {
+        if (document.getElementById('hs-gq-distributor')) {
+            document.getElementById('hs-gq-distributor')!.style.display = '';
+            return;
+        }
+
+        const container = document.getElementById('goldenQuarksDisplay');
+        if (!container) return;
+
+        const distributor = document.createElement('div');
+        distributor.id = 'hs-gq-distributor';
+        distributor.style.display = 'flex';
+        distributor.style.flexDirection = 'column';
+        distributor.style.alignItems = 'center';
+        distributor.style.marginTop = '10px';
+        distributor.style.padding = '10px';
+        distributor.style.border = '1px solid #ccc';
+        distributor.style.borderRadius = '5px';
+        distributor.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+
+        const title = document.createElement('h3');
+        title.textContent = 'GQ Distributor';
+        title.style.margin = '0 0 10px 0';
+        distributor.appendChild(title);
+
+        const inputsContainer = document.createElement('div');
+        inputsContainer.style.display = 'flex';
+        inputsContainer.style.flexWrap = 'wrap';
+        inputsContainer.style.justifyContent = 'center';
+        inputsContainer.style.gap = '10px';
+        distributor.appendChild(inputsContainer);
+
+        const infiniteUpgrades: { id: string, src: string }[] = [];
+        const upgradeButtons = document.querySelectorAll<HTMLButtonElement>('#actualSingularityUpgradeContainer .singularityUpgrade');
+
+        upgradeButtons.forEach(btn => {
+            const upgradeKey = btn.id as GoldenQuarkUpgradeKey;
+            const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey]?.maxLevel;
+            if (maxLevel === -1) {
+                const img = btn.querySelector('img');
+                if (img) {
+                    infiniteUpgrades.push({ id: btn.id, src: img.src });
+                }
+            }
+        });
+
+        const inputs: { [key: string]: HTMLInputElement } = {};
+
+        infiniteUpgrades.forEach(upgrade => {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.alignItems = 'center';
+
+            const img = document.createElement('img');
+            img.src = upgrade.src;
+            img.style.width = '32px';
+            img.style.height = '32px';
+            img.style.marginBottom = '5px';
+            wrapper.appendChild(img);
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.value = '0';
+            input.style.width = '60px';
+            input.style.textAlign = 'center';
+            inputs[upgrade.id] = input;
+            wrapper.appendChild(input);
+
+            inputsContainer.appendChild(wrapper);
+        });
+
+        const distributeBtn = document.createElement('button');
+        distributeBtn.textContent = 'Distribute';
+        distributeBtn.style.marginTop = '10px';
+        distributeBtn.style.padding = '5px 15px';
+        distributeBtn.style.cursor = 'pointer';
+
+        const promptInput = document.querySelector('#prompt_text') as HTMLInputElement;
+        const okPrompt = document.querySelector('#ok_prompt') as HTMLButtonElement;
+        const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
+        const alertWrapper = document.getElementById('alertWrapper') as HTMLElement | null;
+        const promptWrapper = document.getElementById('promptWrapper') as HTMLElement | null;
+
+        // Resolves as soon as the element's display becomes 'block', or after timeoutMs.
+        const waitForVisible = (el: HTMLElement | null, timeoutMs: number): Promise<void> =>
+            new Promise(resolve => {
+                if (!el) { resolve(); return; }
+                if (el.style.display === 'block') { resolve(); return; }
+
+                let done = false;
+                const finish = () => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    observer.disconnect();
+                    resolve();
+                };
+
+                const observer = new MutationObserver(() => {
+                    if (el.style.display === 'block') finish();
+                });
+                observer.observe(el, { attributes: true, attributeFilter: ['style'] });
+
+                const timer = setTimeout(finish, timeoutMs);
+            });
+
+        distributeBtn.addEventListener('click', async () => {
+            const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+            if (!gameDataAPI) return;
+            const gameData = gameDataAPI.getGameData();
+            if (!gameData) return;
+
+            const totalGQ = gameData.goldenQuarks;
+            let totalRatio = 0;
+            const ratios: { [key: string]: number } = {};
+
+            for (const id in inputs) {
+                const val = parseFloat(inputs[id].value) || 0;
+                if (val > 0) {
+                    ratios[id] = val;
+                    totalRatio += val;
+                }
+            }
+
+            if (totalRatio === 0) return;
+
+            if (!promptInput || !okPrompt || !okAlert) return;
+
+            for (const id in ratios) {
+                const amountToSpend = Math.floor(totalGQ * (ratios[id] / totalRatio));
+                if (amountToSpend <= 0) continue;
+
+                const btn = document.getElementById(id) as HTMLButtonElement;
+                if (!btn) continue;
+
+                // Shift-click opens the game's "how many?" prompt
+                btn.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
+
+                // Wait until the prompt is actually visible before interacting with it
+                await waitForVisible(promptWrapper, 5000);
+
+                promptInput.value = amountToSpend.toString();
+                promptInput.dispatchEvent(new Event('input', { bubbles: true }));
+                okPrompt.click();
+
+                // Wait until the confirmation alert has actually appeared before dismissing
+                await waitForVisible(alertWrapper, 5000);
+                okAlert.click();
+
+                // Dismiss any hover tooltip the programmatic click may have triggered
+                btn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                btn.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+                btn.blur();
+
+                // Force a macrotask yield so the browser can paint between purchases
+                await new Promise(r => setTimeout(r, 0));
+            }
+        });
+        distributor.appendChild(distributeBtn);
+
+        container.parentNode?.insertBefore(distributor, container.nextSibling);
+    }
+
+    hideGQDistributor(): void {
+        const distributor = document.getElementById('hs-gq-distributor');
+        if (distributor) {
+            distributor.style.display = 'none';
+        }
     }
 }

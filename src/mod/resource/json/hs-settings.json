@@ -1246,6 +1246,20 @@
       "controlEnabledId": "hs-setting-qol-hide-maxed-gq-upgrades-btn"
     }
   },
+  "enableGQDistributor": {
+    "settingName": "enableGQDistributor",
+    "settingDescription": "Enable GQ Distributor",
+    "settingHelpText": "When enabled, adds a GQ Distributor to the GQ page to distribute Golden Quarks among infinite upgrades.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableGQDistributorAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
+    }
+  },
   "hideMaxedOctUpgrades": {
     "settingName": "hideMaxedOctUpgrades",
     "settingDescription": "Hide maxed Octeract upgrades",
