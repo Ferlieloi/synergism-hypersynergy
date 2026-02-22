@@ -203,34 +203,26 @@
             }
 
             // ── STAGE PATCH ──────────────────────────────────────────────
-            // loadMiscellaneousStats is a simple () => { } containing "gameStageStatistic"
-            const stageResult = findFunctionBodyContaining(
-                code,
-                /[a-zA-Z_$][\w$]*\s*=\s*\(\s*\)\s*=>\s*\{/,
-                '"gameStageStatistic"'
-            );
+            // Instead of matching a loose function header, search for the
+            // exact innerHTML assignment directly in the bundle. This is
+            // unique and unambiguous regardless of wrapping function structure,
+            // fixing the race condition caused by hooking the wrong function.
+            const stageInnerRegex = /([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\("statistics\.gameStage"\s*,\s*\{\s*stage\s*:\s*([a-zA-Z_$][\w$]*)\(/;
+            const stageInnerMatch = code.match(stageInnerRegex);
 
-            if (stageResult) {
-                const bodySlice = code.slice(stageResult.bodyStart, stageResult.bodyStart + 2500);
-                const stageInnerRegex = /([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\("statistics\.gameStage"\s*,\s*\{\s*stage\s*:\s*([a-zA-Z_$][\w$]*)\(/;
-                const innerMatch = bodySlice.match(stageInnerRegex);
+            if (stageInnerMatch) {
+                const domFn = stageInnerMatch[1];
+                const i18nObj = stageInnerMatch[2];
+                const stageFn = stageInnerMatch[3];
+                const expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
 
-                let expose;
-                if (innerMatch) {
-                    const domFn = innerMatch[1];
-                    const i18nObj = innerMatch[2];
-                    const stageFn = innerMatch[3];
-                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
-                    log(`Patched loadMiscellaneousStats (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-                } else {
-                    expose = `\nif(!window.__HS_STAGE_EXPOSED){window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u26a0\ufe0f Stage fn found but inner names unknown');}\n`;
-                    warn('Could not extract fn names from loadMiscellaneousStats body');
-                }
-
-                const { bodyStart: stageBodyStart } = stageResult;
-                code = code.slice(0, stageBodyStart) + expose + code.slice(stageBodyStart);
+                // Inject right before the assignment — fires exactly when the DOM is updated,
+                // no matter which function (or wrapper) ends up calling it.
+                const injectPos = stageInnerMatch.index;
+                code = code.slice(0, injectPos) + expose + code.slice(injectPos);
+                log(`Patched loadMiscellaneousStats via direct injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
             } else {
-                warn('Could not patch loadMiscellaneousStats — header not found');
+                warn('Could not patch loadMiscellaneousStats — innerHTML assignment not found');
             }
 
             log('v3.4 [2026-02-21] patch complete — injecting bundle');
@@ -394,21 +386,8 @@ window.__HS_BACKDOOR__ = {
         await clickWhenAvailable('settingstab');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
-        await new Promise(r => setTimeout(r, 50));
-        // Auto-check export checkbox and click export, mirroring in-mod behavior
-        const saveType = document.getElementById('saveType');
-        if (saveType && 'checked' in saveType) {
-            saveType.checked = true;
-            saveType.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        const exportBtn = document.getElementById('exportgame');
-        if (exportBtn) {
-            exportBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            console.log('[HS] Export button clicked to trigger exposure');
-        }
-        console.log('test');
         const start = performance.now();
         const MAX = 15000;
         return new Promise(resolve => {

@@ -49,6 +49,14 @@ async function build(env) {
         if (env === 'dev') {
             // Copy loader files for dev server
             copyLoaderFiles();
+            // Watch src/loader for changes and re-copy immediately
+            const srcLoaderDir = path.join(__dirname, 'src', 'loader');
+            fs.watch(srcLoaderDir, (eventType, filename) => {
+                if (filename && filename.endsWith('.js')) {
+                    copyLoaderFiles();
+                }
+            });
+            console.log('Watching src/loader/ for changes...');
             // For watch mode
             const ctx = await esbuild.context(options);
             await ctx.watch();
