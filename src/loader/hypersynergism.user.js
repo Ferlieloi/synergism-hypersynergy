@@ -203,29 +203,48 @@
             }
 
             // ── STAGE PATCH ──────────────────────────────────────────────
-            // Instead of matching a loose function header, search for the
-            // exact innerHTML assignment directly in the bundle. This is
-            // unique and unambiguous regardless of wrapping function structure,
-            // fixing the race condition caused by hooking the wrong function.
-            const stageInnerRegex = /([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\("statistics\.gameStage"\s*,\s*\{\s*stage\s*:\s*([a-zA-Z_$][\w$]*)\(/;
-            const stageInnerMatch = code.match(stageInnerRegex);
+            // Step 1: locate the anchor string with indexOf (guaranteed match if
+            // the string exists, regardless of surrounding whitespace/formatting).
+            // Step 2: extract each variable name with small, independent patterns
+            // instead of one monolithic regex that fails if any part changes.
+            // Step 3: find the enclosing no-arg arrow function and inject at its
+            // ENTRY — so ANY call to loadMiscellaneousStats exposes the vars,
+            // not just the specific code path that reaches the innerHTML line.
+            const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
 
-            if (stageInnerMatch) {
-                const domFn = stageInnerMatch[1];
-                const i18nObj = stageInnerMatch[2];
-                const stageFn = stageInnerMatch[3];
-                const expose = `\nif(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage internals exposed');}\n`;
+            if (stageAnchorIdx !== -1) {
+                const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
+                const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
+                const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
+                const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
 
-                // Inject right before the assignment — fires exactly when the DOM is updated,
-                // no matter which function (or wrapper) ends up calling it.
-                const injectPos = stageInnerMatch.index;
-                code = code.slice(0, injectPos) + expose + code.slice(injectPos);
-                log(`Patched loadMiscellaneousStats via direct injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                if (domFn && i18nObj && stageFn) {
+                    const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
+
+                    // Walk back up to 4000 chars, find the LAST no-arg arrow fn before anchor.
+                    // loadMiscellaneousStats is always ()=>{ in minified output.
+                    const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
+                    const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
+                    let am, lastBodyStart = -1;
+                    while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
+
+                    if (lastBodyStart !== -1) {
+                        const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
+                        code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+                        log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    } else {
+                        // Fallback: inject right before the anchor line
+                        code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
+                        log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    }
+                } else {
+                    warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+                }
             } else {
-                warn('Could not patch loadMiscellaneousStats — innerHTML assignment not found');
+                warn('Could not patch stage — "gameStageStatistic" not found in bundle');
             }
 
-            log('v3.4 [2026-02-21] patch complete — injecting bundle');
+            log('v3.4 [2026-02-22] patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -412,6 +431,9 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
+        if (window.__HS_MOD_LOADED) return;
+        window.__HS_MOD_LOADED = true;
+
         const ok = await exposeViaUI();
         if (!ok) return;
 

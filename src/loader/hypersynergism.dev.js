@@ -429,6 +429,9 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
+        if (window.__HS_MOD_LOADED) return;
+        window.__HS_MOD_LOADED = true;
+
         const ok = await exposeViaUI();
         if (!ok) return;
 
