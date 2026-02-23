@@ -240,7 +240,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use this cached value to avoid repeated setting lookups.
-        // [SHEW] Always treat advancedDataCollection as disabled for now...
+        // [SHEWCHOU] Always treat advancedDataCollection as disabled for now...
         // this.advancedDataCollectionEnabledAtStart = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
         this.advancedDataCollectionEnabledAtStart = false;
 

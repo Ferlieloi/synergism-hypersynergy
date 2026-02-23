@@ -24,7 +24,6 @@ import { phases } from "../../../types/module-types/hs-autosing-types";
  * Includes phase name, count, and a cells array for easy batch updates/caching.
  */
 export interface PhaseRowDom {
-    row: HTMLDivElement;
     nameCell: HTMLDivElement;
     nameCountSpan: HTMLSpanElement;
     nameTextSpan: HTMLSpanElement;
@@ -33,17 +32,19 @@ export interface PhaseRowDom {
     sdCell: HTMLDivElement;
     lastCell: HTMLDivElement;
     cells: HTMLDivElement[];
+    rowIndex: number;
 }
 
 /**
  * Creates the header DOM nodes for the phase stats table.
  * @returns Array of header divs (title and column headers)
  */
+/*
 export function createPhaseStatsHeader(): HTMLDivElement[] {
     function mkHeader(text: string, isTitle = false): HTMLDivElement {
         const div = document.createElement('div');
         div.textContent = text;
-        div.className = isTitle ? 'hs-phase-header-title' : 'hs-phase-header';
+        div.className = isTitle ? 'hs-phase-stats-header-title' : 'hs-phase-stats-header';
         return div;
     }
     return [
@@ -54,18 +55,19 @@ export function createPhaseStatsHeader(): HTMLDivElement[] {
         mkHeader('Last')
     ];
 }
+*/
 
 /**
- * Creates a new DOM row for a phase's statistics, including phase name and count.
- * @returns PhaseRowDom object containing the row, all cells, and spans for caching.
+ * Creates 5 cell divs for a phase row, with a data-row-index for identification.
+ * @param phaseName
+ * @param count
+ * @param rowIndex
  */
-export function createPhaseRowDom(phaseName = '', count = 0): PhaseRowDom {
-    const row = document.createElement('div');
-    row.className = 'hs-phase-row';
-
-    // Name cell with count and text
+export function createPhaseRowDom(phaseName = '', count = 0, rowIndex = 0): PhaseRowDom {
+    // Name cell
     const nameCell = document.createElement('div');
     nameCell.className = 'hs-phase-name';
+    nameCell.dataset.rowIndex = rowIndex.toString();
     const nameCountSpan = document.createElement('span');
     nameCountSpan.className = 'hs-phase-count';
     nameCountSpan.textContent = count ? `x${count} ` : '';
@@ -78,17 +80,22 @@ export function createPhaseRowDom(phaseName = '', count = 0): PhaseRowDom {
     // Stat cells
     const loopsCell = document.createElement('div');
     loopsCell.className = 'hs-phase-loops';
+    loopsCell.dataset.rowIndex = rowIndex.toString();
+
     const avgCell = document.createElement('div');
     avgCell.className = 'hs-phase-avg';
+    avgCell.dataset.rowIndex = rowIndex.toString();
+
     const sdCell = document.createElement('div');
     sdCell.className = 'hs-phase-sd';
+    sdCell.dataset.rowIndex = rowIndex.toString();
+
     const lastCell = document.createElement('div');
     lastCell.className = 'hs-phase-last';
+    lastCell.dataset.rowIndex = rowIndex.toString();
 
-    // Order: name, loops, avg, sd, last
     const cells = [nameCell, loopsCell, avgCell, sdCell, lastCell];
-    row.append(...cells);
-    return { row, nameCell, nameCountSpan, nameTextSpan, loopsCell, avgCell, sdCell, lastCell, cells };
+    return { nameCell, nameCountSpan, nameTextSpan, loopsCell, avgCell, sdCell, lastCell, cells, rowIndex };
 }
 
 /**
@@ -113,29 +120,21 @@ export function updatePhaseRowDom(
 }
 
 /**
- * Creates a placeholder node for when there are no phase stats to display.
- * @returns A div with empty state text
- */
-export function createPhaseEmptyNode(): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'hs-phase-empty';
-    div.textContent = 'No data yet...';
-    return div;
-}
-
-/**
  * Utility to compute phase statistics from a phaseHistory map.
- * @param phaseHistory Map of phase name to { values: number[] }
+ * @param phaseHistory Map of phase name to { count, totalTime, sumSq, lastTime, repeats }
  * @param phase The phase name to compute stats for
  * @returns Object with loopCount, avg, sd, last values
  */
-export function getPhaseStats(phaseHistory: Map<string, { values: number[] }>, phase: string) {
+export function getPhaseStats(
+    phaseHistory: Map<string, { count: number; totalTime: number; sumSq: number; lastTime: number; repeats: number }>,
+    phase: string
+) {
     const entry = phaseHistory.get(phase);
-    if (!entry || !entry.values.length) return { loopCount: 0, avg: 0, sd: 0, last: 0 };
-    const arr = entry.values;
-    const loopCount = arr.length;
-    const avg = arr.reduce((a, b) => a + b, 0) / loopCount;
-    const sd = Math.sqrt(arr.reduce((a, b) => a + (b - avg) ** 2, 0) / loopCount);
-    const last = arr[arr.length - 1];
+    if (!entry || entry.count === 0) return { loopCount: 0, avg: 0, sd: 0, last: 0 };
+    const loopCount = entry.count;
+    const avg = entry.totalTime / loopCount;
+    // Population standard deviation
+    const sd = loopCount > 1 ? Math.sqrt(entry.sumSq / loopCount) : 0;
+    const last = entry.lastTime;
     return { loopCount, avg, sd, last };
 }

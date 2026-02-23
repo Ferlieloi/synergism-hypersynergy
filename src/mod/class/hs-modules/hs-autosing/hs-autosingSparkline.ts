@@ -1,3 +1,5 @@
+import { HSLogger } from "../../hs-core/hs-logger";
+
 /**
  * Updates the sparkline chart display for the given DOM and data.
  *
