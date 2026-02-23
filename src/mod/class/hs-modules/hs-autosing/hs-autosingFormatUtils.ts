@@ -39,7 +39,7 @@ export function formatDecimal(d: Decimal | null | undefined): string {
 /**
  * Formats a number of seconds as a human-readable time string.
  */
-export function formatTime(seconds: number): string {
+export function formatTotalTime(seconds: number): string {
     const totalSeconds = Math.floor(seconds);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);

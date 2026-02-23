@@ -223,7 +223,7 @@ export function updateSparkline(
 }
 
 /**
- * Sparkline chart logic extracted from hs-autosingTimerModal.ts.
+ * Sparkline chart logic extracted from hs-autosingModal.ts.
  *
  * All chart rendering and DOM logic for sparklines is now modularized here for maintainability and reuse.
  *

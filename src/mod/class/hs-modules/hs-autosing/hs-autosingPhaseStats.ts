@@ -3,10 +3,10 @@
  * Phase statistics logic for the Autosing modal.
  *
  * This module provides all DOM creation, update, and calculation logic for displaying
- * phase statistics in the autosing timer modal. It is fully decoupled from the modal class
+ * phase statistics in the autosing modal. It is fully decoupled from the modal class
  * and can be reused for any phase-based stat table.
  *
- * Extracted from hs-autosingTimerModal.ts (2026-02-19) as part of modularization.
+ * Extracted from hs-autosingModal.ts (2026-02-19) as part of modularization.
  *
  * Exports:
  * - PhaseRowDom: Interface for a phase row's DOM structure

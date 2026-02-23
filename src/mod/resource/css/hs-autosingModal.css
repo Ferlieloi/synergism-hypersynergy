@@ -163,7 +163,7 @@
     text-align: right;
 }
 
-.hs-detailed-value {
+.hs-secondary-data-style {
     color: var(--timer-text-secondary) !important;
     font-weight: normal !important;
     font-size: 11px;
@@ -212,7 +212,7 @@
     margin-left: 8px;
 }
 
-#hs-progress-val {
+#hs-completed-sing-amount {
     color: var(--timer-color-progress);
     font-weight: bold;
     margin-left: 6px;
@@ -448,3 +448,113 @@
     text-align: center;
     color: var(--timer-color-quarks) !important;
 }
+
+
+/* ===== GRID LAYOUTS ===== */
+
+/* ===== CELL ALIGNMENT UTILITIES ===== */
+
+/* General cell alignment classes for grid layouts */
+.hs-label-cell {
+    text-align: right;
+}
+
+.hs-value-cell {
+    text-align: left;
+}
+
+/* ===== COLOR CLASSES ===== */
+
+/* Quarks rate color styling */
+.hs-quarks-rate-color {
+    color: var(--timer-color-quarks);
+    font-weight: bold;
+}
+
+/* Golden quarks rate color styling */
+.hs-gquarks-rate-color {
+    color: var(--timer-color-gquarks);
+    font-weight: bold;
+}
+
+/* ===== DISPLAY UTILITIES ===== */
+
+/* Flex display for current value displays */
+.hs-current-display {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== SECTION HEADER VARIANTS ===== */
+
+/* Base section header styling */
+.hs-section-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 1;
+}
+
+/* Section header spanning 2 grid columns */
+.hs-section-header-title-span2 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 2;
+}
+
+/* Full-width section header */
+.hs-section-header-title-full {
+    grid-column: 1 / -1;
+}
+
+/* Single column section header */
+.hs-section-header-title-single {
+    grid-column: span 1;
+}
+
+/* ===== GRID DEFINITIONS ===== */
+
+/* Farming section grid layout */
+#hs-farming-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 2px;
+}
+#hs-farming-grid .hs-label-cell {
+    text-align: left;
+}
+#hs-farming-grid .hs-value-cell {
+    text-align: right;
+}
+
+/* Timer display grid layout */
+.hs-times-grid {
+    display: grid;
+    grid-template-columns: min-content auto min-content auto;
+    column-gap: 5px;
+    row-gap: 3px;
+    align-items: center;
+}
+
+/* General section grid layout */
+.hs-section-grid {
+    display: grid;
+    grid-template-columns: min-content auto min-content auto;
+    gap: 2px;
+}
+
+.hs-hidden { display: none !important; }
+.hs-grid-4col { grid-template-columns: min-content auto min-content auto !important; }
+.hs-grid-2col-min-auto { grid-template-columns: min-content auto !important; }
+.hs-grid-2col-auto-auto { grid-template-columns: auto auto !important; }
+.hs-grid-1col { grid-template-columns: auto !important; }

@@ -10,7 +10,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE } from "../../../types/module-types/hs-autosing-types";
-import { HSAutosingTimerModal } from "./hs-autosingModal";
+import { HSAutosingModal } from "./hs-autosingModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
@@ -71,7 +71,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_ambrosia!: HTMLButtonElement;
     private antSacrifice!: HTMLButtonElement;
     private coin!: HTMLButtonElement;
-    private timerModal!: HSAutosingTimerModal;
+    private autosingModal!: HSAutosingModal;
     private prevActionTime: number = 0;
     private AOAG!: HTMLButtonElement;
     private endStageDone: boolean = false;
@@ -181,8 +181,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.corrNext[name] = document.getElementById(`corrNext${name}`);
         });
 
-        if (!this.timerModal) {
-            this.timerModal = new HSAutosingTimerModal();
+        if (!this.autosingModal) {
+            this.autosingModal = new HSAutosingModal();
         }
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
@@ -349,12 +349,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
 
-        if (!this.timerModal) {
-            this.timerModal = new HSAutosingTimerModal();
+        if (!this.autosingModal) {
+            this.autosingModal = new HSAutosingModal();
         }
 
-        if (this.timerModal) {
-            this.timerModal.show();
+        if (this.autosingModal) {
+            this.autosingModal.show();
         }
 
         // Check and set the expected settings everywhere in the vanilla game
@@ -374,8 +374,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.saveType.checked = false;
         this.endStagePromise = undefined;
 
-        if (this.timerModal) {
-            this.timerModal.hide();
+        if (this.autosingModal) {
+            this.autosingModal.hide();
         }
         HSLogger.log(`Autosing disabled`, this.context);
         this.unsubscribeGameDataChanges();
@@ -387,10 +387,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.useAddAndTimeCodes();
 
         try {
-            if (this.timerModal) {
+            if (this.autosingModal) {
                 const q = await this.getCurrentQuarks();
                 const gq = await this.getCurrentGoldenQuarks();
-                this.timerModal.start(this.strategy!, q, gq);
+                this.autosingModal.start(this.strategy!, q, gq);
             }
             // The first singularity triggered by autosing startup is used
             // to reach the target state but should not be counted in the
@@ -483,8 +483,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stageEnd = phaseConfig.endPhase;
 
             HSLogger.debug(`Executing final phase: ${stageStart}-${stageEnd}`, this.context);
-            if (this.timerModal) {
-                this.timerModal.setCurrentPhase(`${stageStart}-${stageEnd}`);
+            if (this.autosingModal) {
+                this.autosingModal.setCurrentPhase(`${stageStart}-${stageEnd}`);
             }
 
             await this.executePhase(phaseConfig);
@@ -526,9 +526,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
-        if (this.timerModal) {
-            this.timerModal.setCurrentPhase(phaseConfig.startPhase + '-' + phaseConfig.endPhase);
-        }
         await this.executePhase(phaseConfig);
         return;
     }
@@ -619,8 +616,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     ): Promise<void> {
         const phaseLabel = options?.phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
-        if (this.timerModal) {
-            this.timerModal.setCurrentPhase(phaseLabel);
+        if (this.autosingModal) {
+            this.autosingModal.setCurrentPhase(phaseLabel);
         }
         if (!options?.skipInitialCorruptions) {
             const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
@@ -634,10 +631,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end") && !options?.ignoreObserverActivated)) {
-                // If observerActivated stops execution, record the current phase before exiting
-                if (this.timerModal) {
+                // If observerActivated stops execution (AOAG unlocked), record the current phase before exiting
+                if (this.autosingModal) {
                     try {
-                        this.timerModal.recordPhase(phaseLabel);
+                        this.autosingModal.recordPhase(phaseLabel);
                     } catch (e) {
                         HSLogger.debug(`Error recording phase on early exit: ${e}`, this.context);
                     }
@@ -645,9 +642,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return;
             }
             // PAUSE LOGIC: Block actions inside phase loop
-            if (this.timerModal && this.timerModal.getIsPaused()) {
+            if (this.autosingModal && this.autosingModal.getIsPaused()) {
                 HSUI.Notify('Autosing is paused.');
-                while (this.timerModal.getIsPaused() && this.isAutosingEnabled()) {
+                while (this.autosingModal.getIsPaused() && this.isAutosingEnabled()) {
                     await HSUtils.sleep(500);
                 }
                 HSUI.Notify('Autosing resumed.');
@@ -722,8 +719,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (phaseConfig.endPhase == "end") {
             this.endStageDone = true;
         }
-        if (this.timerModal) {
-            this.timerModal.recordPhase(phaseLabel);
+        if (this.autosingModal) {
+            this.autosingModal.recordPhase(phaseLabel);
         }
     }
 
@@ -942,9 +939,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         this.endStagePromise = undefined;
 
-        if (this.timerModal) {
-            this.timerModal.destroy();
-            this.timerModal = undefined!;
+        if (this.autosingModal) {
+            this.autosingModal.destroy();
+            this.autosingModal = undefined!;
         }
         HSUtils.stopDialogWatcher();
     }
@@ -1080,8 +1077,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         const gqGain = Math.max(0, gqAfter - gqBefore);
         const qGain = Math.max(0, qAfter - qBefore);
-        if (this.timerModal && !skipRecord) {
-            this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
+        if (this.autosingModal && !skipRecord) {
+            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
         }
 
         HSLogger.debug("Singularity performed", this.context);
