@@ -547,21 +547,6 @@
       ]
     }
   },
-  "ambrosiaMinibars": {
-    "settingName": "ambrosiaMinibars",
-    "settingDescription": "Ambrosia minibars",
-    "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
-    "settingType": "boolean",
-    "enabled": true,
-    "usesGameData": true,
-    "settingAction": "ambrosiaMinibarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ambrosia3",
-      "controlPage": "ambrosia",
-      "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
-    }
-  },
   "startAutosing": {
     "settingName": "startAutosing",
     "settingDescription": "Start/Stop Auto-Sing",
@@ -1204,20 +1189,35 @@
       "controlEnabledId": "hs-setting-auto-sing-advanced-data"
     }
   },
-  "ambrosiaQuickBar": {
-    "settingName": "ambrosiaQuickBar",
-    "settingDescription": "Ambrosia quick bar",
-    "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "ambrosiaQuickBarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
-    }
-  },
+    "ambrosiaQuickBar": {
+      "settingName": "ambrosiaQuickBar",
+      "settingDescription": "Ambrosia quick bar",
+      "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
+      "settingType": "boolean",
+      "enabled": true,
+      "settingAction": "ambrosiaQuickBarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
+      }
+    },
+    "ambrosiaMinibars": {
+      "settingName": "ambrosiaMinibars",
+      "settingDescription": "Ambrosia minibars",
+      "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
+      "settingType": "boolean",
+      "enabled": true,
+      "usesGameData": true,
+      "settingAction": "ambrosiaMinibarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
+      }
+    },
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",

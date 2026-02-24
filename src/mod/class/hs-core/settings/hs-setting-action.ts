@@ -261,10 +261,24 @@ export class HSSettingActions {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (!qolButtonsMod) return;
 
+            // Remove or inject the quickbar section based on setting
+            const quickbarSectionId = 'automation';
+            const quickbarManager = (window as any).HSQuickbarManager ? (window as any).HSQuickbarManager.getInstance() : undefined;
+            // Fallback to import if not on window
+            const HSQuickbarManagerImport = quickbarManager || (await import('../../hs-modules/hs-quickbarManager')).HSQuickbarManager.getInstance();
+
             if (params.disable && params.disable === true) {
-                qolButtonsMod.hideAutomationQuickBar?.();
+                HSQuickbarManagerImport.removeSection(quickbarSectionId);
             } else {
-                qolButtonsMod.showAutomationQuickBar?.();
+                HSQuickbarManagerImport.registerSection(quickbarSectionId, () => qolButtonsMod.getAutomationQuickbarSection());
+                HSQuickbarManagerImport.injectSection(quickbarSectionId);
+                // Ensure quickbar is populated after injection
+                HSQuickbarManagerImport.whenSectionInjected(quickbarSectionId).then(() => {
+                    qolButtonsMod.automationQuickBarContainer = HSQuickbarManagerImport.getSection(quickbarSectionId);
+                    if (typeof qolButtonsMod.setupAutomationQuickbarWrapper === "function") {
+                        qolButtonsMod.setupAutomationQuickbarWrapper();
+                    }
+                });
             }
         }
     }

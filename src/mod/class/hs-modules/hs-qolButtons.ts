@@ -1,3 +1,4 @@
+
 import { HSModuleOptions } from "../../types/hs-types";
 import { SINGULARITY_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
@@ -143,6 +144,13 @@ export class HSQOLButtons extends HSModule {
         this.isInitialized = true;
         const gameState = HSModuleManager.getModule('HSGameState') as HSGameState;
 
+        // Register a placeholder quickbar section immediately for instant injection
+        HSLogger.debug('[HSQOLButtons]: Registering placeholder quickbar section for instant injection', this.context);
+        const placeholder = document.createElement('div');
+        placeholder.id = 'automationQuickBar';
+        placeholder.textContent = 'Loading Automation Quickbar...';
+        HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => placeholder);
+
         gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
             if (currentView.getId() === SINGULARITY_VIEW.SHOP) {
                 setTimeout(() => {
@@ -182,8 +190,12 @@ export class HSQOLButtons extends HSModule {
             HSLogger.log(`Register syn UI setting failed: ${e}`, this.context);
         }
 
-        // Register quickbar section with the manager
+        // Replace the placeholder with the real quickbar section as soon as possible
+        HSLogger.debug('[HSQOLButtons]: Replacing placeholder with real quickbar section', this.context);
+        HSQuickbarManager.getInstance().removeSection(this.#quickbarSectionId);
         HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => this.getAutomationQuickbarSection());
+        HSQuickbarManager.getInstance().injectSection(this.#quickbarSectionId); // Only update Automation section
+
         // Synchronize with quickbar injection using promise-based API
         HSQuickbarManager.getInstance().whenSectionInjected(this.#quickbarSectionId).then(() => {
             this.automationQuickBarContainer = HSQuickbarManager.getInstance().getSection(this.#quickbarSectionId) as HTMLDivElement;
@@ -813,4 +825,10 @@ export class HSQOLButtons extends HSModule {
             distributor.style.display = 'none';
         }
     }
+
+    /** Public wrapper to call the private setup method for Automation Quickbar. */
+    public setupAutomationQuickbarWrapper(): void {
+        this.#setupAutomationQuickbar();
+    }
+
 }

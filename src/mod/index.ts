@@ -142,5 +142,5 @@ declare global {
     await hypersynergism.init();
 
     // Ensure all quickbar sections are injected after all modules are initialized
-    HSQuickbarManager.getInstance().injectAll();
+    // HSQuickbarManager.getInstance().injectAll();
 })();

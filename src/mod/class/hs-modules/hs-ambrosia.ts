@@ -137,22 +137,32 @@ export class HSAmbrosia extends HSModule
         HSLogger.log(`Initializing HSAmbrosia module`, this.context);
         HSLogger.debug('[HSAmbrosia]: init() called', this.context);
 
-        this.#ambrosiaGrid = await HSElementHooker.HookElement('#blueberryUpgradeContainer');
+        // 1. Register a placeholder quickbar section immediately for instant injection
+        HSLogger.debug('[HSAmbrosia]: Registering placeholder quickbar section for instant injection', this.context);
+        const placeholder = document.createElement('div');
+        placeholder.id = HSGlobal.HSAmbrosia.quickBarId;
+        placeholder.textContent = 'Loading Ambrosia Quickbar...';
+        HSQuickbarManager.getInstance().registerSection('ambrosia', () => placeholder);
+
+        // 2. Begin hooking all required DOM elements in parallel
+        const [ambrosiaGrid, loadOutsSlots, loadOutContainer, pageHeader] = await Promise.all([
+            HSElementHooker.HookElement('#blueberryUpgradeContainer'),
+            HSElementHooker.HookElements('.blueberryLoadoutSlot'),
+            HSElementHooker.HookElement('#bbLoadoutContainer'),
+            HSElementHooker.HookElement('header')
+        ]);
+        this.#ambrosiaGrid = ambrosiaGrid;
         HSLogger.debug('[HSAmbrosia]: #ambrosiaGrid hooked', this.context);
-        this.#loadOutsSlots = await HSElementHooker.HookElements('.blueberryLoadoutSlot');
+        this.#loadOutsSlots = loadOutsSlots;
         HSLogger.debug(`[HSAmbrosia]: #loadOutsSlots hooked, count=${this.#loadOutsSlots.length}`, this.context);
-        this.#loadOutContainer = await HSElementHooker.HookElement('#bbLoadoutContainer');
+        this.#loadOutContainer = loadOutContainer;
         HSLogger.debug(`[HSAmbrosia]: #loadOutContainer hooked: ${!!this.#loadOutContainer}`, this.context);
+        this.#pageHeader = pageHeader;
         this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
 
-        this.loadState();
-        await this.#injectImportFromClipboardButton();
-
-        // Setup drag/drop and slot event listeners on the original loadout container (for in-game UI)
-        this.#setupLoadoutContainerEvents();
-
-        // Register quickbar section with the manager
-        HSLogger.debug('[HSAmbrosia]: Registering quickbar section with HSQuickbarManager', this.context);
+        // 3. Replace the placeholder with the real quickbar section as soon as possible
+        HSLogger.debug('[HSAmbrosia]: Replacing placeholder with real quickbar section', this.context);
+        HSQuickbarManager.getInstance().removeSection('ambrosia');
         HSQuickbarManager.getInstance().registerSection('ambrosia', () => {
             HSLogger.debug('[HSAmbrosia]: getQuickbarSection factory called', this.context);
             try {
@@ -164,7 +174,12 @@ export class HSAmbrosia extends HSModule
                 throw e;
             }
         });
-        // Use promise-based section injection for event binding and icon refresh
+        HSQuickbarManager.getInstance().injectSection('ambrosia'); // Only update Ambrosia section
+
+        // 4. Continue with normal setup
+        this.loadState();
+        await this.#injectImportFromClipboardButton();
+        this.#setupLoadoutContainerEvents();
         HSQuickbarManager.getInstance().whenSectionInjected('ambrosia').then(async () => {
             HSLogger.debug('[HSAmbrosia]: whenSectionInjected promise resolved', this.context);
             const quickbar = HSQuickbarManager.getInstance().getSection('ambrosia');
@@ -181,7 +196,6 @@ export class HSAmbrosia extends HSModule
         });
 
         // Minibars still go in the header
-        this.#pageHeader = await HSElementHooker.HookElement('header');
         if (this.#pageHeader) {
             await this.#createPersistentMinibars();
         }
