@@ -11,6 +11,7 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSelectStringSetting, HSSetting } from "../hs-core/settings/hs-setting";
+import { QOLButtonsQuickBarSetting, AmbrosiaMinibarsSetting } from "../../types/module-types/hs-settings-types";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSStorage } from "../hs-core/hs-storage";
 import { HSUI } from "../hs-core/hs-ui";
@@ -137,14 +138,7 @@ export class HSAmbrosia extends HSModule
         HSLogger.log(`Initializing HSAmbrosia module`, this.context);
         HSLogger.debug('[HSAmbrosia]: init() called', this.context);
 
-        // 1. Register a placeholder quickbar section immediately for instant injection
-        HSLogger.debug('[HSAmbrosia]: Registering placeholder quickbar section for instant injection', this.context);
-        const placeholder = document.createElement('div');
-        placeholder.id = HSGlobal.HSAmbrosia.quickBarId;
-        placeholder.textContent = 'Loading Ambrosia Quickbar...';
-        HSQuickbarManager.getInstance().registerSection('ambrosia', () => placeholder);
-
-        // 2. Begin hooking all required DOM elements in parallel
+        // 1. Begin hooking all required DOM elements in parallel
         const [ambrosiaGrid, loadOutsSlots, loadOutContainer, pageHeader] = await Promise.all([
             HSElementHooker.HookElement('#blueberryUpgradeContainer'),
             HSElementHooker.HookElements('.blueberryLoadoutSlot'),
@@ -160,21 +154,45 @@ export class HSAmbrosia extends HSModule
         this.#pageHeader = pageHeader;
         this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
 
-        // 3. Replace the placeholder with the real quickbar section as soon as possible
-        HSLogger.debug('[HSAmbrosia]: Replacing placeholder with real quickbar section', this.context);
+        // 2. Ensure group wrapper exists and is last child of #quickbarsRow
+        if (this.#pageHeader) {
+            const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
+            let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
+            if (!groupWrapper) {
+                groupWrapper = document.createElement('div');
+                groupWrapper.id = 'hs-ambrosia-group-wrapper';
+                groupWrapper.style.display = 'flex';
+                groupWrapper.style.flexDirection = 'column';
+                quickbarsRow.appendChild(groupWrapper);
+            } else {
+                // Move to last child if not already
+                if (quickbarsRow.lastChild !== groupWrapper) {
+                    quickbarsRow.appendChild(groupWrapper);
+                }
+            }
+        }
+
+        // 3. Register Ambrosia section factory to return group wrapper
         HSQuickbarManager.getInstance().removeSection('ambrosia');
         HSQuickbarManager.getInstance().registerSection('ambrosia', () => {
-            HSLogger.debug('[HSAmbrosia]: getQuickbarSection factory called', this.context);
-            try {
-                const section = this.getQuickbarSection();
-                HSLogger.debug('[HSAmbrosia]: getQuickbarSection factory returned section', this.context);
-                return section;
-            } catch (e) {
-                HSLogger.error(`[HSAmbrosia]: getQuickbarSection factory failed: ${e instanceof Error ? e.message : e}`, this.context, true);
-                throw e;
+            HSLogger.debug('[HSAmbrosia]: Ambrosia section factory called', this.context);
+            if (!this.#pageHeader) return document.createElement('div');
+            const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
+            let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
+            if (!groupWrapper) {
+                groupWrapper = document.createElement('div');
+                groupWrapper.id = 'hs-ambrosia-group-wrapper';
+                groupWrapper.style.display = 'flex';
+                groupWrapper.style.flexDirection = 'column';
+                quickbarsRow.appendChild(groupWrapper);
             }
+            // Always ensure it's last child
+            if (quickbarsRow.lastChild !== groupWrapper) {
+                quickbarsRow.appendChild(groupWrapper);
+            }
+            return groupWrapper;
         });
-        HSQuickbarManager.getInstance().injectSection('ambrosia'); // Only update Ambrosia section
+        HSQuickbarManager.getInstance().injectSection('ambrosia');
 
         // 4. Continue with normal setup
         this.loadState();
@@ -182,23 +200,45 @@ export class HSAmbrosia extends HSModule
         this.#setupLoadoutContainerEvents();
         HSQuickbarManager.getInstance().whenSectionInjected('ambrosia').then(async () => {
             HSLogger.debug('[HSAmbrosia]: whenSectionInjected promise resolved', this.context);
-            const quickbar = HSQuickbarManager.getInstance().getSection('ambrosia');
-            HSLogger.debug(`[HSAmbrosia]: whenSectionInjected: quickbar section present: ${!!quickbar}`, this.context);
-            if (!quickbar) {
-                HSLogger.error('[HSAmbrosia]: whenSectionInjected: quickbar section missing after injection!', this.context, true);
+            const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+            HSLogger.debug(`[HSAmbrosia]: whenSectionInjected: group wrapper present: ${!!groupWrapper}`, this.context);
+            if (!groupWrapper) {
+                HSLogger.error('[HSAmbrosia]: whenSectionInjected: group wrapper missing after injection!', this.context, true);
+                return;
             }
-            this.#setupQuickbarSectionEvents();
-            await this.#refreshQuickbarIcons();
-            if (this.#currentLoadout) {
-                await this.#updateCurrentLoadout(this.#currentLoadout);
-            }
-            HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
-        });
-
-        // Minibars still go in the header
-        if (this.#pageHeader) {
+            // Hybrid: Always create quickbar/minibar, then hide/remove based on settings
+            HSLogger.debug('[HSAmbrosia]: Creating persistent quickbar/minibar containers after wrapper injection', this.context);
+            await this.#createPersistentQuickbarContainer();
             await this.#createPersistentMinibars();
-        }
+            // Hide/remove based on settings
+            const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar') as HSSetting<boolean>;
+            const minibarSetting = HSSettings.getSetting('ambrosiaMinibars') as HSSetting<boolean>;
+            const quickbar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+            const minibar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
+            if (quickbar) {
+                if (quickbarSetting && !quickbarSetting.isEnabled()) {
+                    quickbar.style.display = 'none';
+                    HSLogger.debug('[HSAmbrosia]: quickbar hidden due to settings', this.context);
+                } else {
+                    quickbar.style.display = '';
+                    this.#setupQuickbarSectionEvents();
+                    await this.#refreshQuickbarIcons();
+                    if (this.#currentLoadout) {
+                        await this.#updateCurrentLoadout(this.#currentLoadout);
+                    }
+                    HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
+                }
+            }
+            if (minibar) {
+                if (minibarSetting && !minibarSetting.isEnabled()) {
+                    minibar.style.display = 'none';
+                    HSLogger.debug('[HSAmbrosia]: minibar hidden due to settings', this.context);
+                } else {
+                    minibar.style.display = 'block';
+                    HSLogger.debug('[HSAmbrosia]: minibar shown due to settings', this.context);
+                }
+            }
+        });
 
         this.isInitialized = true;
     }
@@ -349,36 +389,34 @@ export class HSAmbrosia extends HSModule
     }
 
     async disableBerryMinibars() {
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
+        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for minibars', this.context);
+            return; 
         }
-
-        const barWrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-
+        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
         if (barWrapper) {
             barWrapper.style.display = 'none';
             HSUI.removeInjectedStyle(this.#minibarCSSId);
         } else {
             HSLogger.warn('Could not find bar wrapper element', this.context);
         }
-
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
     }
 
     async enableBerryMinibars() {
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
+        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for minibars', this.context);
+            return;
         }
-
-        if (!this.#pageHeader) return;
-
-        const barWrapper = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-
+        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
         if (barWrapper) {
             barWrapper.style.display = 'block';
             HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
-
             this.subscribeGameDataChanges();
             this.#berryMinibarsEnabled = true;
         } else {
@@ -390,8 +428,23 @@ export class HSAmbrosia extends HSModule
         if (!this.#pageHeader) return;
 
         // Check if already exists
-        if (this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
-            HSLogger.debug('Minibar wrapper already exists', this.context);
+        const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
+        let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
+        if (!groupWrapper) {
+            groupWrapper = document.createElement('div');
+            groupWrapper.id = 'hs-ambrosia-group-wrapper';
+            groupWrapper.style.display = 'flex';
+            groupWrapper.style.flexDirection = 'column';
+            quickbarsRow.appendChild(groupWrapper);
+        }
+        // Move to last child if not already
+        if (quickbarsRow.lastChild !== groupWrapper) {
+            quickbarsRow.appendChild(groupWrapper);
+        }
+
+        // Check if minibarWrapper already exists
+        if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
+            HSLogger.debug('Minibar wrapper already exists in group wrapper', this.context);
             return;
         }
 
@@ -416,18 +469,18 @@ export class HSAmbrosia extends HSModule
         redBarProgressText.id = HSGlobal.HSAmbrosia.redBarProgressTextId;
 
         // Wrapper for both
-        const barWrapper = document.createElement('div') as HTMLDivElement;
-        barWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
-        barWrapper.style.display = 'none';
-        barWrapper.appendChild(blueBarClone);
-        barWrapper.appendChild(redBarClone);
+        const minibarWrapper = document.createElement('div') as HTMLDivElement;
+        minibarWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
+        minibarWrapper.style.display = 'none';
+        minibarWrapper.appendChild(blueBarClone);
+        minibarWrapper.appendChild(redBarClone);
 
-        // Find reference element (quickbar wrapper or navbar)
-        const quickbarWrapper = this.#pageHeader.querySelector('#hs-ambrosia-quickbar-wrapper');
-        const referenceElement = quickbarWrapper || this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
-
-        // Insert bars
-        this.#pageHeader.insertBefore(barWrapper, referenceElement);
+        // Append minibarWrapper as first child of groupWrapper
+        if (groupWrapper.firstChild) {
+            groupWrapper.insertBefore(minibarWrapper, groupWrapper.firstChild);
+        } else {
+            groupWrapper.appendChild(minibarWrapper);
+        }
 
         this.#blueProgressMinibarElement = blueBarProgress;
         this.#redProgressMinibarElement = redBarProgress;
@@ -442,35 +495,30 @@ export class HSAmbrosia extends HSModule
             loadoutStateSetting.setValue(`<green>${slotEnum}</green>`);
         }
 
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
+        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for quickbar', this.context);
+            return;
         }
-
-        const quickBar = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-
+        const quickBar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
         if (quickBar) {
             quickBar.querySelectorAll('.blueberryLoadoutSlot').forEach((slot) => {
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
-
             const activeSlot = quickBar.querySelector(`[data-original-id="${slotEnum}"]`) as HTMLElement;
-
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
             }
         } else {
             HSLogger.warn(`Could not find quick bar element`, this.context);
         }
-
         const originalQuickBar = document.querySelector('#bbLoadoutContainer');
-
         if (originalQuickBar) {
             originalQuickBar.querySelectorAll('.blueberryLoadoutSlot').forEach((slot) => {
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
-
             const activeSlot = originalQuickBar.querySelector(`[id="${slotEnum}"]`) as HTMLElement;
-
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
             }
@@ -482,14 +530,27 @@ export class HSAmbrosia extends HSModule
         const self = this;
 
         // Check if already exists
-        const quickbar = this.#pageHeader.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`);
-        if (quickbar) {
-            HSLogger.debug('Quickbar wrapper already exists', this.context);
+        const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
+        let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
+        if (!groupWrapper) {
+            groupWrapper = document.createElement('div');
+            groupWrapper.id = 'hs-ambrosia-group-wrapper';
+            groupWrapper.style.display = 'flex';
+            groupWrapper.style.flexDirection = 'column';
+            quickbarsRow.appendChild(groupWrapper);
+        }
+        // Move to last child if not already
+        if (quickbarsRow.lastChild !== groupWrapper) {
+            quickbarsRow.appendChild(groupWrapper);
+        }
+
+        // Check if quickbar already exists
+        if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`)) {
+            HSLogger.debug('Quickbar already exists in group wrapper', this.context);
             return;
         }
-        if (this.#loadOutContainer) {
-            const referenceElement = this.#pageHeader.querySelector('nav.navbar') as HTMLElement;
 
+        if (this.#loadOutContainer) {
             const clone = this.#loadOutContainer.cloneNode(true) as HTMLElement;
             clone.id = HSGlobal.HSAmbrosia.quickBarId;
             clone.style.display = 'none';
@@ -513,7 +574,16 @@ export class HSAmbrosia extends HSModule
             if (cloneSettingButton) {
                 cloneSettingButton.remove();
             }
-            this.#pageHeader.insertBefore(clone, referenceElement);
+            // Append quickbar as second child of groupWrapper
+            if (groupWrapper.childNodes.length > 0) {
+                if (groupWrapper.childNodes.length === 1) {
+                    groupWrapper.appendChild(clone);
+                } else {
+                    groupWrapper.insertBefore(clone, groupWrapper.childNodes[1]);
+                }
+            } else {
+                groupWrapper.appendChild(clone);
+            }
             HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
 
             await this.#refreshQuickbarIcons();
@@ -525,20 +595,17 @@ export class HSAmbrosia extends HSModule
     }
 
     async showQuickBar() {
-        // Ensure quickbar section is injected before manipulating DOM
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for quickbar', this.context);
+            return;
         }
-
-        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-
+        const wrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
         if (wrapper) {
             wrapper.style.display = '';
             HSUI.injectStyle(this.#quickbarCSS, this.#quickbarCSSId);
-
             await this.#refreshQuickbarIcons();
-
             if (this.#currentLoadout) {
                 await this.#updateCurrentLoadout(this.#currentLoadout);
             }
@@ -548,15 +615,20 @@ export class HSAmbrosia extends HSModule
     }
 
     async hideQuickBar() {
-        if (!this.#pageHeader) {
-            this.#pageHeader = await HSElementHooker.HookElement('header');
+        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for quickbar', this.context);
+            return;
         }
-
-        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-
+        const wrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
         if (wrapper) {
             wrapper.style.display = 'none';
             HSUI.removeInjectedStyle(this.#quickbarCSSId);
+        }
+        if (barWrapper) {
+            barWrapper.style.display = 'block'; // Ensure minibars remain visible
         }
     }
 

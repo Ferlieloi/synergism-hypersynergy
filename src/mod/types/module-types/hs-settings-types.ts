@@ -36,6 +36,7 @@ export interface HSSettingsDefinition {
     ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
     ambrosiaIdleSwapNormalLoadout: AmbrosiaIdleSwapNormalLoadoutSetting;
     ambrosiaIdleSwap100Loadout: AmbrosiaIdleSwap100LoadoutSetting;
+    ambrosiaMinibars: AmbrosiaMinibarsSetting;
 
     // Patch Settings
     patch_ambrosiaViewOverflow: PATCH_ambrosiaViewOverflow;
@@ -76,6 +77,8 @@ export interface HSSettingsDefinition {
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
 }
+
+export interface AmbrosiaMinibarsSetting extends HSSettingBase<boolean> { }
 
 export interface HSSettingControlOptions {
     min?: number;

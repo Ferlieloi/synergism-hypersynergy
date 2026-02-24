@@ -494,7 +494,7 @@ export const HSGlobal: IHSGlobal = class {
         redBarId: 'hs-red-progress-bar',
         redBarProgressId: 'hs-red-progress',
         redBarProgressTextId: 'hs-red-progress-text',
-        barWrapperId: 'hs-minibar-wrapper',
+        barWrapperId: 'hs-minibars-wrapper',
     }
 
     // HSGameState
