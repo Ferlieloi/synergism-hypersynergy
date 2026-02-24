@@ -13,6 +13,7 @@ import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
+import { HSQuickbarManager } from "./hs-quickbarManager";
 
 
 /*
@@ -26,7 +27,7 @@ import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-type
 export class HSQOLButtons extends HSModule {
     static SYN_UI_SETTING_KEY: keyof HSSettingsDefinition = 'enableAutomationQuickBar';
 
-    // Shared selector arrays for cube & hepteract groups
+    // Shared selector arrays for cube & hepteract & rune groups
     private static readonly CUBE_SELECTORS = [
         '#openCubes',
         '#openTesseracts',
@@ -63,7 +64,10 @@ export class HSQOLButtons extends HSModule {
         { key: 'Anthill', DOM: '#toggleAutoSacrificeAnt', innerHTMLwhenON: 'Auto Sacrifice: ON', icon: 'AntSacrifice.png' }
     ];
 
-    // syn UI container (header bar)
+    // quickbar section ID
+    #quickbarSectionId = 'automation';
+
+    // quickbar container
     automationQuickBarContainer: HTMLDivElement | null = null;
     automationQuickBarObservers: string[] = [];
 
@@ -177,45 +181,47 @@ export class HSQOLButtons extends HSModule {
         } catch (e) {
             HSLogger.log(`Register syn UI setting failed: ${e}`, this.context);
         }
+
+        // Register quickbar section with the manager
+        HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => this.getAutomationQuickbarSection());
+        // Synchronize with quickbar injection using promise-based API
+        HSQuickbarManager.getInstance().whenSectionInjected(this.#quickbarSectionId).then(() => {
+            this.automationQuickBarContainer = HSQuickbarManager.getInstance().getSection(this.#quickbarSectionId) as HTMLDivElement;
+            this.#setupAutomationQuickbar();
+        });
     }
 
-    /** Inject a compact syn UI bar into the header showing automation toggles. */
-    injectAutomationQuickBar(): void {
-        if (this.automationQuickBarContainer) return;
-
-        // Create an overlay container fixed to the viewport bottom.
+    /** Returns a prepared Automation quickbar DOM node for the quickbarsRow. */
+    public getAutomationQuickbarSection(): HTMLElement {
         const container = document.createElement('div');
         container.id = 'automationQuickBar';
-        document.body.appendChild(container);
-        this.automationQuickBarContainer = container as HTMLDivElement;
+        container.className = 'hs-automation-quickbar';
+        return container;
+    }
 
+    /** Setup event binding and UI logic for the injected Automation quickbar section. */
+    #setupAutomationQuickbar(): void {
+        if (!this.automationQuickBarContainer) return;
         const updateUI = () => {
             if (!this.automationQuickBarContainer) return;
-
             const left = document.createElement('span');
             left.className = 'left';
-
             // --- Individual toggle buttons (Challenge → Rune → Research → Ants) ---
             for (const t of HSQOLButtons.SYN_UI_TOGGLES) {
                 const el = document.querySelector(t.DOM) as HTMLElement | null;
                 const enabled = el
                     ? (t.innerHTMLwhenON ? (el.innerHTML === t.innerHTMLwhenON) : this.isElementOn(el))
                     : false;
-
-                // ManualResearch is hidden when already enabled
                 if (t.key === 'ManualResearch' && enabled) continue;
-
                 const btn = document.createElement('button');
                 btn.className = 'autoToggle ' + (enabled ? 'enabled' : 'disabled');
                 btn.id = 'automationQuickBar-' + t.key.toLowerCase();
-
                 if (t.icon) {
                     const img = document.createElement('img');
                     img.src = './Pictures/Simplified/' + t.icon;
                     img.loading = 'lazy';
                     btn.appendChild(img);
                 }
-
                 btn.title = t.key;
                 btn.setAttribute('aria-label', t.key);
                 btn.addEventListener('click', () => {
@@ -227,9 +233,7 @@ export class HSQOLButtons extends HSModule {
                     }
                     updateUI();
                 });
-
                 left.appendChild(btn);
-
                 if (t.key === 'Challenge') {
                     // --- Rune combined group button placed where Rune used to be ---
                     const runeBtn = this.#createGroupButton(
@@ -243,7 +247,6 @@ export class HSQOLButtons extends HSModule {
                     left.appendChild(runeBtn);
                 }
             }
-
             // --- Cubes combined group button ---
             const cubeBtn = this.#createGroupButton(
                 HSQOLButtons.CUBE_SELECTORS,
@@ -254,7 +257,6 @@ export class HSQOLButtons extends HSModule {
             );
             cubeBtn.id = 'automationQuickBar-cubes';
             left.appendChild(cubeBtn);
-
             // --- Hepteracts combined group button ---
             const hepteractBtn = this.#createGroupButton(
                 HSQOLButtons.HEPTERACT_SELECTORS,
@@ -265,21 +267,17 @@ export class HSQOLButtons extends HSModule {
             );
             hepteractBtn.id = 'automationQuickBar-hepteracts';
             left.appendChild(hepteractBtn);
-
             const center = document.createElement('span');
             center.className = 'center';
             const right = document.createElement('span');
             right.className = 'right';
-
             this.automationQuickBarContainer.innerHTML = '';
             this.automationQuickBarContainer.appendChild(left);
             this.automationQuickBarContainer.appendChild(center);
             this.automationQuickBarContainer.appendChild(right);
         };
-
         // Register MutationObserver watchers for all tracked elements
         this.#registerAutomationQuickBarWatchers(updateUI);
-
         setTimeout(updateUI, 10);
     }
 
@@ -377,27 +375,12 @@ export class HSQOLButtons extends HSModule {
 
     // Public API for settings action
     showAutomationQuickBar(): void {
-        if (!this.automationQuickBarContainer) {
-            this.injectAutomationQuickBar();
-        } else {
-            // Already present; ensure visible
-            this.automationQuickBarContainer.style.display = '';
-        }
+        // No-op: quickbar is now managed by HSQuickbarManager
     }
 
+    // Deprecated: hideAutomationQuickBar is now managed by HSQuickbarManager
     hideAutomationQuickBar(): void {
-        // Disconnect observers
-        for (const id of this.automationQuickBarObservers) {
-            try { HSElementHooker.stopWatching(id); } catch (e) { HSLogger.log(`Error stopping automationQuickBar watcher ${id}: ${e}`, this.context); }
-        }
-        this.automationQuickBarObservers = [];
-
-        // Remove container
-        if (this.automationQuickBarContainer && this.automationQuickBarContainer.parentNode) {
-            this.automationQuickBarContainer.parentNode.removeChild(this.automationQuickBarContainer);
-        }
-        this.automationQuickBarContainer = null;
-
+        // No-op: quickbar is now managed by HSQuickbarManager
     }
 
     observe() {

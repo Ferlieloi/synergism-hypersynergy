@@ -6,6 +6,10 @@
  * Maintains unified metrics with running averages for time, quarks, and golden quarks.
  *
  * Author: XxmolkxX
+ *
+ * IMPORTANT: All logic that depends on the Ambrosia quickbar DOM (including loadout mapping)
+ * MUST be run only after HSQuickbarManager.whenSectionInjected('ambrosia') resolves.
+ * This ensures the DOM is present and avoids race conditions.
  */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
@@ -848,8 +852,22 @@ export class HSAutosingModal {
      * Start autosing session with given strategy and initial (g)quark values.
      * Reset phase history and metrics.
      */
+    /**
+     * Start autosing session with given strategy and initial (g)quark values.
+     * Reset phase history and metrics.
+     *
+     * Defensive: Ensures Ambrosia quickbar DOM is present before proceeding.
+     */
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
+        // Defensive check: Ensure Ambrosia quickbar DOM is present
+        const quickbar = document.getElementById(HSGlobal.HSAmbrosia.quickBarId);
+        if (!quickbar) {
+            console.error('[Autosing] Ambrosia quickbar DOM not found! Autosing mapping aborted. This should never happen if whenSectionInjected was awaited.', this);
+            return; 
+        }
+
         // Reset metrics and phase history
+        HSLogger.log('[Autosing] start() called: resetting metrics and phase history');
         this.singularityCount = 0;
         this.phaseHistory.clear();
         this.phaseRowMap.clear();
@@ -872,7 +890,9 @@ export class HSAutosingModal {
         this.singHighest = this.getSingularityHighest();
         this.strategyName = this.getStrategyName();
         this.loadoutsOrder = this.getLoadoutsOrder();
+        HSLogger.log(`[Autosing] start() loadoutsOrder: ${JSON.stringify(this.loadoutsOrder)}`);
         this.cachedStrategyOrder = this.strategy.strategy.map((p: { startPhase: string; endPhase: string }) => `${p.startPhase}-${p.endPhase}`);
+        HSLogger.log(`[Autosing] start() cachedStrategyOrder: ${JSON.stringify(this.cachedStrategyOrder)}`);
 
         // Set static stats DOM fields once
         this.setTextEl(this.singTargetSpan, `S${this.singTarget}`);
@@ -891,13 +911,16 @@ export class HSAutosingModal {
             // But avoid duplicating if already present
             if (!this.cachedStrategyOrder.includes(AOAG_NAME)) {
                 this.cachedStrategyOrder.splice(finalIdx, 0, AOAG_NAME);
+                HSLogger.log(`[Autosing] AOAG inserted at index ${finalIdx} in cachedStrategyOrder`);
             }
         } else {
             // No explicit end phase found; append AOAG at the end if not present
             if (!this.cachedStrategyOrder.includes(AOAG_NAME)) {
                 this.cachedStrategyOrder.push(AOAG_NAME);
+                HSLogger.log('[Autosing] AOAG appended to cachedStrategyOrder');
             }
         }
+        HSLogger.log(`[Autosing] start() final cachedStrategyOrder: ${JSON.stringify(this.cachedStrategyOrder)}`);
 
         this.cachedStrategyOrderIndex.clear();
         for (let i = 0; i < this.cachedStrategyOrder.length; i++) {

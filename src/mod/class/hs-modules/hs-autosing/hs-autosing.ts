@@ -388,6 +388,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         try {
             if (this.autosingModal) {
+                // --- Synchronize with Ambrosia quickbar injection ---
+                const { HSQuickbarManager } = await import("../hs-quickbarManager");
+                await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
                 const q = await this.getCurrentQuarks();
                 const gq = await this.getCurrentGoldenQuarks();
                 this.autosingModal.start(this.strategy!, q, gq);
