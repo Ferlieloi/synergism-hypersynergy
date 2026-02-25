@@ -658,30 +658,11 @@ export class HSQOLButtons extends HSModule {
         title.style.margin = '0 0 10px 0';
         distributor.appendChild(title);
 
-        const inputsContainer = document.createElement('div');
-        inputsContainer.style.display = 'flex';
-        inputsContainer.style.flexWrap = 'wrap';
-        inputsContainer.style.justifyContent = 'center';
-        inputsContainer.style.gap = '10px';
-        distributor.appendChild(inputsContainer);
-
-        const infiniteUpgrades: { id: string, src: string }[] = [];
-        const upgradeButtons = document.querySelectorAll<HTMLButtonElement>('#actualSingularityUpgradeContainer .singularityUpgrade');
-
-        upgradeButtons.forEach(btn => {
-            const upgradeKey = btn.id as GoldenQuarkUpgradeKey;
-            const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey]?.maxLevel;
-            if (maxLevel === -1) {
-                const img = btn.querySelector('img');
-                if (img) {
-                    infiniteUpgrades.push({ id: btn.id, src: img.src });
-                }
-            }
+            // ...existing code...
         });
 
-        const inputs: { [key: string]: HTMLInputElement } = {};
-
-        infiniteUpgrades.forEach(upgrade => {
+        // Refactored: use main loop index
+        infiniteUpgrades.forEach((upgrade, idx) => {
             const wrapper = document.createElement('div');
             wrapper.style.display = 'flex';
             wrapper.style.flexDirection = 'column';
@@ -703,8 +684,56 @@ export class HSQOLButtons extends HSModule {
             inputs[upgrade.id] = input;
             wrapper.appendChild(input);
 
+            // Save ratio to setting when input changes
+            if (idx < 8) {
+                input.addEventListener('input', () => {
+                    const settingKey = `gqDistributorRatio${idx + 1}` as keyof HSSettingsDefinition;
+                    const setting = HSSettings.getSetting(settingKey);
+                    if (setting) {
+                        const val = parseFloat(input.value) || 0;
+                        setting.setValue(val);
+                    }
+                });
+            }
+
             inputsContainer.appendChild(wrapper);
         });
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.value = '0';
+            input.style.width = '60px';
+            input.style.textAlign = 'center';
+            inputs[upgrade.id] = input;
+            wrapper.appendChild(input);
+
+            input.addEventListener('input', () => {
+                const settingKey = `gqDistributorRatio${idx + 1}` as keyof HSSettingsDefinition;
+                const setting = HSSettings.getSetting(settingKey);
+                if (setting) {
+                    const val = parseFloat(input.value) || 0;
+                    setting.setValue(val);
+                }
+            });
+
+            inputsContainer.appendChild(wrapper);
+        });
+
+        // Load saved ratios from settings
+        const upgradeIds = Object.keys(inputs);
+        for (let i = 0; i < 8; i++) {
+            const settingKey = `gqDistributorRatio${i + 1}` as keyof HSSettingsDefinition;
+            const inputKey = upgradeIds[i];
+            if (inputKey && inputs[inputKey]) {
+                const setting = HSSettings.getSetting(settingKey);
+                if (setting) {
+                    const ratio = setting.getValue();
+                    if (typeof ratio === 'number') {
+                        inputs[inputKey].value = ratio.toString();
+                    }
+                }
+            }
+        }
 
         const distributeBtn = document.createElement('button');
         distributeBtn.textContent = 'Distribute';
@@ -765,6 +794,19 @@ export class HSQOLButtons extends HSModule {
                 if (val > 0) {
                     ratios[id] = val;
                     totalRatio += val;
+                }
+            }
+
+            // Save ratios to settings 
+            for (let i = 0; i < 8; i++) {
+                const settingKey = `gqDistributorRatio${i + 1}` as keyof HSSettingsDefinition;
+                const inputKey = upgradeIds[i];
+                if (inputKey && inputs[inputKey]) {
+                    const setting = HSSettings.getSetting(settingKey);
+                    if (setting) {
+                        const val = parseFloat(inputs[inputKey].value) || 0;
+                        setting.setValue(val);
+                    }
                 }
             }
 
