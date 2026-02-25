@@ -76,6 +76,15 @@ export interface HSSettingsDefinition {
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
+    // GQ Distributor Ratio Settings
+    gqDistributorRatio1: GQDistributorRatio1Setting;
+    gqDistributorRatio2: GQDistributorRatio2Setting;
+    gqDistributorRatio3: GQDistributorRatio3Setting;
+    gqDistributorRatio4: GQDistributorRatio4Setting;
+    gqDistributorRatio5: GQDistributorRatio5Setting;
+    gqDistributorRatio6: GQDistributorRatio6Setting;
+    gqDistributorRatio7: GQDistributorRatio7Setting;
+    gqDistributorRatio8: GQDistributorRatio8Setting;
 }
 
 export interface AmbrosiaMinibarsSetting extends HSSettingBase<boolean> { }
@@ -206,4 +215,14 @@ export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
+
+// GQ Distributor Ratio Settings
+export interface GQDistributorRatio1Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio2Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio3Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio4Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio5Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio6Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio7Setting extends HSSettingBase<number> { }
+export interface GQDistributorRatio8Setting extends HSSettingBase<number> { }
 

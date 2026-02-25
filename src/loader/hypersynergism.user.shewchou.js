@@ -155,39 +155,94 @@
             let code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
-            // Patch for function exposures in RL
-            const rlMatch = code.match(/RL\s*=\s*async\s*\(e=!0\)\s*=>\s*{/);
-            if (rlMatch) {
-                const insertAt = rlMatch.index + rlMatch[0].length;
-                const expose = `
-if(!window.__HS_EXPORT_EXPOSED){
-    window.__HS_exportData=Np;
-    window.__HS_EXPORT_EXPOSED=true;
-}`;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-            }
+            // ============================================================
+            // EXPORT + STAGE PATCHES v3.4
+            // ============================================================
+            // Strategy: scan for function HEADER patterns, then verify the
+            // unique anchor string appears shortly after the opening '{'.
+            // This avoids brace-counting bugs caused by {/} inside string
+            // literals and template expressions in minified code.
+            // ============================================================
 
-            // Patch for other function exposures in g6
-            const g6Pattern = /g6=\(\)=>{/;
-            const g6Match = code.match(g6Pattern);
+            // Helper: scan all occurrences of headerRegex, return the index
+            // right after the '{' of the FIRST match where anchorStr appears
+            // within `windowSize` chars of that '{'.
+            const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
+                const re = new RegExp(headerRegex.source, 'g');
+                let m;
+                while ((m = re.exec(src)) !== null) {
+                    const bodyStart = m.index + m[0].length; // char after '{'
+                    const slice = src.slice(bodyStart, bodyStart + windowSize);
+                    if (slice.includes(anchorStr)) return { bodyStart, match: m };
+                }
+                return null;
+            };
 
-            if (g6Match) {
-                const insertAt = g6Match.index + g6Match[0].length;
-                const expose = `
-if(!window.__HS_EXPOSED){
-    window.DOMCacheGetOrSet=c;
-    window.__HS_synergismStage=Sy;
-    window.__HS_loadStatistics=Qe;
-    window.__HS_loadMiscellaneousStats=g6;
-    window.__HS_i18next=s;
-    window.__HS_EXPOSED=true;
-    console.log('[HS] ✅ Functions exposed');
-}`;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log('Patched bundle successfully');
+            // ── EXPORT PATCH ─────────────────────────────────────────────
+            // exportSynergism is an async function containing "Synergysave2"
+            const exportResult = findFunctionBodyContaining(
+                code,
+                /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
+                '"Synergysave2"'
+            );
+
+            if (exportResult) {
+                const exportFn = exportResult.match[1];
+
+                const expose = exportFn
+                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
+                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
+
+                const { bodyStart: exportBodyStart } = exportResult;
+                code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
+                log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
             } else {
-                warn('Could not patch bundle');
+                warn('Could not patch exportSynergism — header not found');
             }
+
+            // ── STAGE PATCH ──────────────────────────────────────────────
+            // Step 1: locate the anchor string with indexOf (guaranteed match if
+            // the string exists, regardless of surrounding whitespace/formatting).
+            // Step 2: extract each variable name with small, independent patterns
+            // instead of one monolithic regex that fails if any part changes.
+            // Step 3: find the enclosing no-arg arrow function and inject at its
+            // ENTRY — so ANY call to loadMiscellaneousStats exposes the vars,
+            // not just the specific code path that reaches the innerHTML line.
+            const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
+
+            if (stageAnchorIdx !== -1) {
+                const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
+                const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
+                const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
+                const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
+
+                if (domFn && i18nObj && stageFn) {
+                    const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
+
+                    // Walk back up to 4000 chars, find the LAST no-arg arrow fn before anchor.
+                    // loadMiscellaneousStats is always ()=>{ in minified output.
+                    const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
+                    const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
+                    let am, lastBodyStart = -1;
+                    while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
+
+                    if (lastBodyStart !== -1) {
+                        const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
+                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+                        log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    } else {
+                        // Fallback: inject right before the anchor line
+                        code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
+                        log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                    }
+                } else {
+                    warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+                }
+            } else {
+                warn('Could not patch stage — "gameStageStatistic" not found in bundle');
+            }
+
+            log('v3.4 [2026-02-22]c patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -222,7 +277,6 @@ if(!window.__HS_EXPOSED){
             }
             customElements.define = origDefine;
             log('customElements.define restored');
-            
             patchedScriptInjected = true;
             log('Game script injected');
 
@@ -351,11 +405,16 @@ window.__HS_BACKDOOR__ = {
         await clickWhenAvailable('switchSettingSubTab4');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
+
+        window.__HS_SILENT_EXPORT = true;
+        await clickWhenAvailable('exportgame');
+        window.__HS_SILENT_EXPORT = false;
+
         const start = performance.now();
-        const MAX = 1000;
+        const MAX = 15000;
         return new Promise(resolve => {
             (function waitExpose() {
-                if (window.__HS_EXPOSED) {
+                if (window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED) {
                     resolve(true);
                     return;
                 }
@@ -375,55 +434,14 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
-        log('Checking for function exposure...');
-        log('Checking for function exposure...');
+        if (window.__HS_MOD_LOADED) return;
+        window.__HS_MOD_LOADED = true;
+
         const ok = await exposeViaUI();
-        if (!ok) {
-            log('exposeViaUI failed, checking for settings tab directly...');
-            const settingsTab = document.getElementById('settingstab');
-            if (settingsTab) {
-                log('Settings tab already present, injecting mod immediately.');
-                injectModScript();
-                return;
-            }
-            log('Settings tab not found, setting up MutationObserver fallback.');
-            const observer = new MutationObserver((mutations, obs) => {
-                const settingsTab = document.getElementById('settingstab');
-                if (settingsTab) {
-                    log('Settings tab detected by MutationObserver, injecting mod...');
-                    obs.disconnect();
-                    injectModScript();
-                }
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-            return;
-        }
-        if (!ok) {
-            log('exposeViaUI failed, checking for settings tab directly...');
-            const settingsTab = document.getElementById('settingstab');
-            if (settingsTab) {
-                log('Settings tab already present, injecting mod immediately.');
-                injectModScript();
-                return;
-            }
-            log('Settings tab not found, setting up MutationObserver fallback.');
-            const observer = new MutationObserver((mutations, obs) => {
-                const settingsTab = document.getElementById('settingstab');
-                if (settingsTab) {
-                    log('Settings tab detected by MutationObserver, injecting mod...');
-                    obs.disconnect();
-                    injectModScript();
-                }
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-            return;
-        }
+        if (!ok) return;
 
         await returnToBuildingsTab();
-        injectModScript();
-    }
 
-    function injectModScript() { 
         log('Loading mod');
 
         const s = document.createElement('script');

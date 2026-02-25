@@ -31,9 +31,15 @@
     let allowCustomElements = false; // LOCK definitions by default
 
     // CRITICAL FIX: Override customElements.define to BLOCK the original script
+    // If the original script runs, it will try to define elements. We IGNORE it.
+    // This effectively causes the original script to crash (safely) or fail to register,
+    // leaving the registry clean for our patched script.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
+            // Log once per unique name to avoid spam, but BLOCK IT.
+            // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
+            // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
             if (!customElements.get(name)) {
                 debug(`[HS] Blocked original script from defining ${name} (Lock active)`);
             }
@@ -89,7 +95,6 @@
                 }
             }
         };
-
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
@@ -175,7 +180,6 @@
 
             // ── EXPORT PATCH ─────────────────────────────────────────────
             // exportSynergism is an async function containing "Synergysave2"
-            // Header pattern: identifier = async ( e=!0 ) => {
             const exportResult = findFunctionBodyContaining(
                 code,
                 /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
@@ -189,8 +193,8 @@
                     ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
                     : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
 
-                const { bodyStart } = exportResult;
-                code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
+                const { bodyStart: exportBodyStart } = exportResult;
+                code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
                 log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
             } else {
                 warn('Could not patch exportSynergism — header not found');
@@ -273,7 +277,6 @@
             }
             customElements.define = origDefine;
             log('customElements.define restored');
-
             patchedScriptInjected = true;
             log('Game script injected');
 

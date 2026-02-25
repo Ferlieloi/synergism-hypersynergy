@@ -1260,6 +1260,126 @@
       "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
     }
   },
+  "gqDistributorRatio1": {
+    "settingName": "gqDistributorRatio1",
+    "settingDescription": "GQ Distributor Ratio 1",
+    "settingHelpText": "Ratio for GQ distributor input 1.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-1",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio2": {
+    "settingName": "gqDistributorRatio2",
+    "settingDescription": "GQ Distributor Ratio 2",
+    "settingHelpText": "Ratio for GQ distributor input 2.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-2",
+      "controlType": "number",
+    "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio3": {
+    "settingName": "gqDistributorRatio3",
+    "settingDescription": "GQ Distributor Ratio 3",
+    "settingHelpText": "Ratio for GQ distributor input 3.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-3",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio4": {
+    "settingName": "gqDistributorRatio4",
+    "settingDescription": "GQ Distributor Ratio 4",
+    "settingHelpText": "Ratio for GQ distributor input 4.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-4",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio5": {
+    "settingName": "gqDistributorRatio5",
+    "settingDescription": "GQ Distributor Ratio 5",
+    "settingHelpText": "Ratio for GQ distributor input 5.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-5",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio6": {
+    "settingName": "gqDistributorRatio6",
+    "settingDescription": "GQ Distributor Ratio 6",
+    "settingHelpText": "Ratio for GQ distributor input 6.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-6",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio7": {
+    "settingName": "gqDistributorRatio7",
+    "settingDescription": "GQ Distributor Ratio 7",
+    "settingHelpText": "Ratio for GQ distributor input 7.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-7",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio8": {
+    "settingName": "gqDistributorRatio8",
+    "settingDescription": "GQ Distributor Ratio 8",
+    "settingHelpText": "Ratio for GQ distributor input 8.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-8",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
   "hideMaxedOctUpgrades": {
     "settingName": "hideMaxedOctUpgrades",
     "settingDescription": "Hide maxed Octeract upgrades",
