@@ -1,5 +1,4 @@
-// hs-quickbarManager.ts
-// HSQuickbarManager: Central manager for quickbar sections in hs-autosing
+import { HSLogger } from "../hs-core/hs-logger";
 
 type QuickbarSectionFactory = () => HTMLElement;
 
@@ -10,7 +9,6 @@ export class HSQuickbarManager {
     private injected = false;
     private sectionInjectedCallbacks: Map<string, (() => void)[]> = new Map();
     private sectionOrder: string[] = [];
-
     // Hard-coded desired order for quickbars (left-to-right)
     private static readonly QUICKBAR_ORDER: string[] = [
         'automation', // left-most
@@ -22,7 +20,9 @@ export class HSQuickbarManager {
     private sectionInjectedPromises: Map<string, Promise<void>> = new Map();
     private sectionInjectedResolvers: Map<string, () => void> = new Map();
 
+
     private constructor() {}
+
 
     public static getInstance(): HSQuickbarManager {
         if (!HSQuickbarManager.instance) {
@@ -68,7 +68,7 @@ export class HSQuickbarManager {
      */
     public registerSection(id: string, factory: QuickbarSectionFactory): void {
         // Diagnostic log
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: registerSection(${id}) called`);
+        HSLogger.debug(`[HSQuickbarManager]: registerSection(${id}) called`);
         this.sectionFactories.set(id, factory);
         if (!this.sectionOrder.includes(id)) {
             this.sectionOrder.push(id);
@@ -88,7 +88,7 @@ export class HSQuickbarManager {
      * If no parent is provided, uses ensureQuickbarsRow().
      */
     public injectSection(id: string, parent?: HTMLElement): void {
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: injectSection(${id}) called`);
+        HSLogger.debug(`[HSQuickbarManager]: injectSection(${id}) called`);
         const row = parent || HSQuickbarManager.ensureQuickbarsRow();
         if (!row) return;
 
@@ -109,7 +109,7 @@ export class HSQuickbarManager {
         // Create the new element
         const factory = this.sectionFactories.get(id);
         if (!factory) return;
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: injecting section ${id}`);
+        HSLogger.debug(`[HSQuickbarManager]: injecting section ${id}`);
         const el = factory();
 
         // Find the next quickbar element in order (if any)
@@ -169,10 +169,10 @@ export class HSQuickbarManager {
      * If already injected, calls immediately.
      */
     public onSectionInjected(id: string, callback: () => void): void {
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: onSectionInjected(${id}) called`);
+        HSLogger.debug(`[HSQuickbarManager]: onSectionInjected(${id}) called`);
         if (this.sectionElements.has(id)) {
             // Already injected, call immediately
-            if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: section ${id} already injected, calling callback immediately`);
+            HSLogger.debug(`[HSQuickbarManager]: section ${id} already injected, calling callback immediately`);
             callback();
             return;
         }
@@ -193,7 +193,7 @@ export class HSQuickbarManager {
      * Get the DOM element for a registered section (after injection)
      */
     public getSection(id: string): HTMLElement | undefined {
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: getSection(${id}) called`);
+        HSLogger.debug(`[HSQuickbarManager]: getSection(${id}) called`);
         return this.sectionElements.get(id);
     }
 
@@ -201,6 +201,7 @@ export class HSQuickbarManager {
      * Remove a section by ID
      */
     public removeSection(id: string): void {
+        HSLogger.debug(`[HSQuickbarManager]: removeSection(${id}) called`);
         this.sectionFactories.delete(id);
         this.sectionOrder = this.sectionOrder.filter(x => x !== id);
         const el = this.sectionElements.get(id);
@@ -210,52 +211,4 @@ export class HSQuickbarManager {
         this.sectionElements.delete(id);
         this.injected = false;
     }
-
-
-    /**
-     * Inject all registered quickbar sections into the quickbar row in order.
-     * If no parent is provided, uses ensureQuickbarsRow().
-     * Calls any registered section injected callbacks after injection.
-     */
-    /*
-    public injectAll(parent?: HTMLElement): void {
-        if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: injectAll called`);
-        const row = parent || HSQuickbarManager.ensureQuickbarsRow();
-        if (!row) return;
-        // Remove previous injected elements
-        for (const el of this.sectionElements.values()) {
-            if (el.parentElement === row) {
-                row.removeChild(el);
-            }
-        }
-        this.sectionElements.clear();
-        // Update sectionOrder to match QUICKBAR_ORDER, only including registered sections
-        this.sectionOrder = HSQuickbarManager.QUICKBAR_ORDER.filter(id => this.sectionFactories.has(id));
-
-        // Inject in hard-coded order
-        for (const id of this.sectionOrder) {
-            const factory = this.sectionFactories.get(id);
-            if (!factory) continue;
-            if ((window as any).HSLogger) (window as any).HSLogger.debug(`[HSQuickbarManager]: injecting section ${id}`);
-            const el = factory();
-            row.appendChild(el);
-            this.sectionElements.set(id, el);
-            // Call section injected callbacks if any
-            const callbacks = this.sectionInjectedCallbacks.get(id);
-            if (callbacks) {
-                for (const cb of callbacks) {
-                    try { cb(); } catch (e) { } // ignore callback errors
-                }
-            }
-            // --- Promise-based: resolve the injection promise ---
-            const resolver = this.sectionInjectedResolvers.get(id);
-            if (resolver) {
-                resolver();
-                // Remove resolver after use to avoid memory leaks
-                this.sectionInjectedResolvers.delete(id);
-            }
-        }
-        this.injected = true;
-    }
-    */
 }

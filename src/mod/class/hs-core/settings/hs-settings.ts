@@ -860,15 +860,9 @@ export class HSSettings extends HSModule {
         );
 
         if (!saved) {
-            HSLogger.warn(
-                `Could not save Strategy to localStorage`,
-                this.#staticContext
-            );
+            HSLogger.warn(`Could not save Strategy to localStorage`, this.#staticContext);
         } else {
-            HSLogger.debug(
-                `<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`,
-                this.#staticContext
-            );
+            HSLogger.debug(`<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`, this.#staticContext);
         }
     }
 

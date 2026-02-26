@@ -11,7 +11,8 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
-
+import { HSUI } from "../hs-ui";
+import { HSQuickbarManager } from '../../hs-modules/hs-quickbarManager';
 /*
     Class: HSSettingActions
     IsExplicitHSModule: No
@@ -148,7 +149,7 @@ export class HSSettingActions {
                 }
             }
         },
-
+                
         ambrosiaIdleSwapAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
@@ -157,7 +158,7 @@ export class HSSettingActions {
 
             if (ambrosiaMod) {
                 if (params.disable && params.disable === true) {
-                    await ambrosiaMod.disableIdleSwap();
+                    ambrosiaMod.disableIdleSwap();
                     newState = false;
                 } else {
                     // Auto-enable GDS if not already enabled
@@ -169,13 +170,13 @@ export class HSSettingActions {
                     newState = true;
                 }
                 // Directly update UI elements
-                // Update settings panel toggle button (if present)
-                const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn');
+                // Update settings panel toggle button
+                /* const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn');
                 if (idleSwapToggle) {
-                    idleSwapToggle.innerText = newState ? '✓' : '✗';
                     idleSwapToggle.classList.toggle('hs-disabled', !newState);
-                }
-                // Update quick menu button (if present)
+                    HSSettings.getSetting('ambrosiaIdleSwap').getValue();
+                } */
+                // Update quick menu button 
                 const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]');
                 if (quickMenuBtn) {
                     const stateHtml = newState
@@ -183,6 +184,11 @@ export class HSSettingActions {
                         : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
                     quickMenuBtn.innerHTML = `<img src="https://synergism.cc/Pictures/Default/Blueberries.png" alt="Blueberries" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">Ambrosia Swapper [${stateHtml}]`;
                 }
+
+                HSUI.Notify(`Ambrosia AFK Swapper toggled ${newState ? 'ON' : 'OFF'}.`, {
+                    position: 'top',
+                    notificationType: 'default'
+                });
             }
         },
 
@@ -263,9 +269,10 @@ export class HSSettingActions {
 
             // Remove or inject the quickbar section based on setting
             const quickbarSectionId = 'automation';
-            const quickbarManager = (window as any).HSQuickbarManager ? (window as any).HSQuickbarManager.getInstance() : undefined;
+            // const quickbarManager = (window as any).HSQuickbarManager ? (window as any).HSQuickbarManager.getInstance() : undefined;
+            const quickbarManager = HSQuickbarManager.getInstance();
             // Fallback to import if not on window
-            const HSQuickbarManagerImport = quickbarManager || (await import('../../hs-modules/hs-quickbarManager')).HSQuickbarManager.getInstance();
+            const HSQuickbarManagerImport = HSQuickbarManager.getInstance();
 
             if (params.disable && params.disable === true) {
                 HSQuickbarManagerImport.removeSection(quickbarSectionId);
@@ -274,9 +281,12 @@ export class HSSettingActions {
                 HSQuickbarManagerImport.injectSection(quickbarSectionId);
                 // Ensure quickbar is populated after injection
                 HSQuickbarManagerImport.whenSectionInjected(quickbarSectionId).then(() => {
-                    qolButtonsMod.automationQuickBarContainer = HSQuickbarManagerImport.getSection(quickbarSectionId);
-                    if (typeof qolButtonsMod.setupAutomationQuickbarWrapper === "function") {
+                    const section = HSQuickbarManagerImport.getSection(quickbarSectionId) as HTMLDivElement;
+                    if (section) {
+                        qolButtonsMod.automationQuickBarContainer = section;
                         qolButtonsMod.setupAutomationQuickbarWrapper();
+                    } else {
+                        HSLogger.warn(`Quickbar section '${quickbarSectionId}' not found during automation quickbar setup.`, context);
                     }
                 });
             }

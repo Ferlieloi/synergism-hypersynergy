@@ -135,6 +135,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         await this.ensureGreenButtons();
         await this.ensureChallengeAutoStates();
         await this.ensureNumberInputFields();
+        HSLogger.log('[HSAutosing] User Settings Fixer - Completed', this.context);
     }
 
     /**
@@ -143,7 +144,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
      */
     private getRequirementsFromSettings(): Array<{ selector: string, expected: number }> {
         if (!HSSettings || typeof HSSettings.getSetting !== 'function') {
-            HSLogger.log('[HSAutosing][ERROR] HSSettings is not initialized!', this.context);
+            HSLogger.error('[HSAutosing] HSSettings is not initialized!', this.context);
             return [];
         }
         try {
@@ -152,11 +153,6 @@ export class HSAutosingGameSettingsFixer extends HSModule {
             const autoChallStartTimer = Number(HSSettings.getSetting('autosingAutoChallTimerStart').getValue());
             const autoChallExitTimer = Number(HSSettings.getSetting('autosingAutoChallTimerExit').getValue());
             const autoChallEnterTimer = Number(HSSettings.getSetting('autosingAutoChallTimerEnter').getValue());
-
-            HSLogger.log(
-                `[HSAutosing][TRACE] getRequirementsFromSettings values: autoCubeOpeningPercent=${autoCubeOpeningPercent}, tessAutoBuyPercent=${tessAutoBuyPercent}, autoChallStartTimer=${autoChallStartTimer}, autoChallExitTimer=${autoChallExitTimer}, autoChallEnterTimer=${autoChallEnterTimer}`,
-                this.context
-            );
 
             const reqs = [
                 { selector: '#cubeOpensInput.autoOpensInput', expected: autoCubeOpeningPercent },
@@ -171,7 +167,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
 
             return reqs;
         } catch (err) {
-            HSLogger.log(`[HSAutosing][ERROR] getRequirementsFromSettings: failed to read HSSettings: ${err}`, this.context);
+            HSLogger.warn(`[HSAutosing] getRequirementsFromSettings: failed to read HSSettings: ${err}`, this.context);
             return [];
         }
     }
@@ -184,7 +180,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         for (const req of HSAutosingGameSettingsFixer.TOGGLE_REQUIREMENTS) {
             const el = document.querySelector(req.selector) as HTMLElement | null;
             if (!el) {
-                HSLogger.log(`[HSAutosing][WARN] ensureAllTogglesOn: Element not found for selector: ${req.selector}`, this.context);
+                HSLogger.warn(`[HSAutosing] ensureAllTogglesOn: Element not found for selector: ${req.selector}`, this.context);
                 continue;
             }
             const text = (el.textContent || '').trim();
@@ -194,12 +190,12 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                     await new Promise(res => setTimeout(res, 50));
                     const newText = (el.textContent || '').trim();
                     if (newText !== req.expected) {
-                        HSLogger.log(`[HSAutosing][ERROR] ensureAllTogglesOn: Failed to set ${req.selector} to '${req.expected}' after click. Current text: '${newText}'`, this.context);
+                        HSLogger.debug(`[HSAutosing] ensureAllTogglesOn: Failed to set ${req.selector} to '${req.expected}' after click. Current text: '${newText}'`, this.context);
                     } else {
-                        HSLogger.log(`[HSAutosing][INFO] ensureAllTogglesOn: Successfully set ${req.selector} to '${req.expected}'`, this.context);
+                        HSLogger.debug(`[HSAutosing] ensureAllTogglesOn: Successfully set ${req.selector} to '${req.expected}'`, this.context);
                     }
                 } catch (e) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensureAllTogglesOn: Failed to click ${req.selector}: ${e}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureAllTogglesOn: Failed to click ${req.selector}: ${e}`, this.context);
                 }
             }
         }
@@ -213,7 +209,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         for (const sel of HSAutosingGameSettingsFixer.PERCENT_SUFFIX_ELEMENTS) {
             const el = document.querySelector(sel) as HTMLElement | null;
             if (!el) {
-                HSLogger.log(`[HSAutosing][WARN] ensurePercentSuffixElements: Element not found for selector: ${sel}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensurePercentSuffixElements: Element not found for selector: ${sel}`, this.context);
                 continue;
             }
             const text = (el.textContent || '').trim();
@@ -223,16 +219,16 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                     await new Promise(res => setTimeout(res, 50));
                     const newText = (el.textContent || '').trim();
                     if (!newText.endsWith('%')) {
-                        HSLogger.log(`[HSAutosing][ERROR] ensurePercentSuffixElements: Failed to set ${sel} to text ending with '%' after click. Current text: '${newText}'`, this.context);
+                        HSLogger.debug(`[HSAutosing] ensurePercentSuffixElements: Failed to set ${sel} to text ending with '%' after click. Current text: '${newText}'`, this.context);
                     } else {
-                        HSLogger.log(`[HSAutosing][INFO] ensurePercentSuffixElements: Successfully set ${sel} to text ending with '%'`, this.context);
+                        HSLogger.debug(`[HSAutosing] ensurePercentSuffixElements: Successfully set ${sel} to text ending with '%'`, this.context);
                     }
                 } catch (e) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensurePercentSuffixElements: Failed to click ${sel}: ${e}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensurePercentSuffixElements: Failed to click ${sel}: ${e}`, this.context);
                 }
             }
         }
-        HSLogger.log('[HSAutosing][DEBUG] ensurePercentSuffixElements: finished', this.context);
+        HSLogger.debug('[HSAutosing] ensurePercentSuffixElements: finished', this.context);
     }
 
     /**
@@ -240,13 +236,13 @@ export class HSAutosingGameSettingsFixer extends HSModule {
      * If not, set the value.
      */
     private async ensureNumberInputFields(): Promise<void> {
-        HSLogger.log('[HSAutosing][DEBUG] ensureNumberInputFields: start', this.context);
+        HSLogger.debug('[HSAutosing] ensureNumberInputFields: start', this.context);
         const settingsReqs = this.getRequirementsFromSettings();
-        HSLogger.log(`[HSAutosing][TRACE] ensureNumberInputFields: got ${settingsReqs.length} requirements from settings`, this.context);
+        HSLogger.debug(`[HSAutosing] ensureNumberInputFields: got ${settingsReqs.length} requirements from settings`, this.context);
 
         const requirements = [...settingsReqs];
         requirements.push(...HSAutosingGameSettingsFixer.UPDATE_ON_BLUR_REQUIREMENTS);
-        HSLogger.log(`[HSAutosing][TRACE] ensureNumberInputFields: total requirements after push = ${requirements.length}`, this.context);
+        HSLogger.debug(`[HSAutosing] ensureNumberInputFields: total requirements after push = ${requirements.length}`, this.context);
 
         const matches = (current: string, expected: any): boolean => {
             if (typeof expected === 'number') {
@@ -257,27 +253,27 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         };
         
         for (const req of requirements) {
-            HSLogger.log(`[HSAutosing][DEBUG] ensureNumberInputFields: processing selector='${req.selector}' expected='${req.expected}'`, this.context);
+            HSLogger.debug(`[HSAutosing] ensureNumberInputFields: processing selector='${req.selector}' expected='${req.expected}'`, this.context);
             const expectedStr = String(req.expected);
             let success = false;
 
             for (let attempt = 1; attempt <= 3; attempt++) {
-                HSLogger.log(`[HSAutosing][TRACE] ensureNumberInputFields: attempt ${attempt} for ${req.selector}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: attempt ${attempt} for ${req.selector}`, this.context);
                 const el = document.querySelector(req.selector) as HTMLInputElement | null;
                 if (!el) {
-                    HSLogger.log(`[HSAutosing][WARN] ensureNumberInputFields: Number input field not found for selector: ${req.selector}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureNumberInputFields: Number input field not found for selector: ${req.selector}`, this.context);
                     break;
                 }
 
-                HSLogger.log(`[HSAutosing][TRACE] ensureNumberInputFields: current value='${el.value}'`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: current value='${el.value}'`, this.context);
                 // If already correct, skip
                 if (matches(el.value, req.expected)) {
-                    HSLogger.log(`[HSAutosing][INFO] ensureNumberInputFields: ${req.selector} already matches expected value '${expectedStr}'`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureNumberInputFields: ${req.selector} already matches expected value '${expectedStr}'`, this.context);
                     success = true;
                     break;
                 }
 
-                HSLogger.log(`[HSAutosing][DEBUG] ensureNumberInputFields: setting ${req.selector} -> '${expectedStr}' (focus, set, dispatch, blur)`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: setting ${req.selector} -> '${expectedStr}' (focus, set, dispatch, blur)`, this.context);
                 try {
                     el.focus();
                     el.value = expectedStr;
@@ -285,7 +281,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                     el.dispatchEvent(new Event('change', { bubbles: true }));
                     el.blur();
                 } catch (e) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensureNumberInputFields: interaction error for ${req.selector}: ${e}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureNumberInputFields: interaction error for ${req.selector}: ${e}`, this.context);
                 }
 
                 await new Promise(res => setTimeout(res, 50));
@@ -293,21 +289,21 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                 // re-query in case the element was replaced
                 const updatedEl = document.querySelector(req.selector) as HTMLInputElement | null;
                 if (!updatedEl) {
-                    HSLogger.log(`[HSAutosing][WARN] ensureNumberInputFields: element disappeared after interaction for ${req.selector}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureNumberInputFields: element disappeared after interaction for ${req.selector}`, this.context);
                     break;
                 }
 
-                HSLogger.log(`[HSAutosing][TRACE] ensureNumberInputFields: after wait current='${updatedEl.value}' expected='${expectedStr}'`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: after wait current='${updatedEl.value}' expected='${expectedStr}'`, this.context);
                 if (matches(updatedEl.value, req.expected)) {
-                    HSLogger.log(`[HSAutosing][INFO] ensureNumberInputFields: confirmed ${req.selector}='${expectedStr}' (attempt ${attempt})`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureNumberInputFields: confirmed ${req.selector}='${expectedStr}' (attempt ${attempt})`, this.context);
                     success = true;
                     break;
                 }
-                HSLogger.log(`[HSAutosing][WARN] ensureNumberInputFields: attempt ${attempt} failed for ${req.selector}. current='${updatedEl.value}' expected='${expectedStr}'`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: attempt ${attempt} failed for ${req.selector}. current='${updatedEl.value}' expected='${expectedStr}'`, this.context);
             }
 
             if (!success) {
-                HSLogger.log(`[HSAutosing][ERROR] ensureNumberInputFields: Failed to set value for ${req.selector} after 3 attempts. expected='${expectedStr}'`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureNumberInputFields: Failed to set value for ${req.selector} after 3 attempts. expected='${expectedStr}'`, this.context);
             }
         }
     }
@@ -320,7 +316,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         for (const sel of HSAutosingGameSettingsFixer.GREEN_BUTTONS) {
             const el = document.querySelector(sel) as HTMLElement | null;
             if (!el) {
-                HSLogger.log(`[HSAutosing][WARN] ensureGreenButtons: Element not found for selector: ${sel}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureGreenButtons: Element not found for selector: ${sel}`, this.context);
                 continue;
             }
             if (el.style.backgroundColor !== 'green') {
@@ -328,13 +324,13 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                     el.click();
                     setTimeout(() => {
                         if (el.style.backgroundColor !== 'green') {
-                            HSLogger.log(`[HSAutosing][ERROR] ensureGreenButtons: Failed to set background-color of ${sel} to green after click. current='${el.style.backgroundColor}'`, this.context);
+                            HSLogger.debug(`[HSAutosing] ensureGreenButtons: Failed to set background-color of ${sel} to green after click. current='${el.style.backgroundColor}'`, this.context);
                         } else {
-                            HSLogger.log(`[HSAutosing][INFO] ensureGreenButtons: Successfully set background-color of ${sel} to green`, this.context);
+                            HSLogger.debug(`[HSAutosing] ensureGreenButtons: Successfully set background-color of ${sel} to green`, this.context);
                         }
                     }, 50);
                 } catch (e) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensureGreenButtons: Failed to click ${sel}: ${e}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureGreenButtons: Failed to click ${sel}: ${e}`, this.context);
                 }
             }
         }
@@ -355,39 +351,39 @@ export class HSAutosingGameSettingsFixer extends HSModule {
             const challengeEl = document.querySelector(challengeSel) as HTMLElement | null;
             const toggleEl = document.querySelector(toggleSel) as HTMLElement | null;
             if (!challengeEl) {
-                HSLogger.log(`[HSAutosing][WARN] ensureChallengeAutoStates: Challenge element not found: ${challengeSel}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Challenge element not found: ${challengeSel}`, this.context);
                 continue;
             }
             if (!toggleEl) {
-                HSLogger.log(`[HSAutosing][WARN] ensureChallengeAutoStates: Toggle element not found: ${toggleSel}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Toggle element not found: ${toggleSel}`, this.context);
                 continue;
             }
             try {
                 challengeEl.click();
             } catch (e) {
-                HSLogger.log(`[HSAutosing][ERROR] ensureChallengeAutoStates: Failed to click ${challengeSel}: ${e}`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Failed to click ${challengeSel}: ${e}`, this.context);
                 continue;
             }
             // Wait briefly for UI update
             await new Promise(res => setTimeout(res, 50));
             const toggleText = (toggleEl.textContent || '').trim();
             if (!toggleText.startsWith(expectedPrefix)) {
-                HSLogger.log(`[HSAutosing][WARN] ensureChallengeAutoStates: Toggle text for ${toggleSel} does not start with expected prefix '${expectedPrefix}'. Current: '${toggleText}'`, this.context);
+                HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Toggle text for ${toggleSel} does not start with expected prefix '${expectedPrefix}'. Current: '${toggleText}'`, this.context);
                 continue;
             }
             if (toggleText !== expectedFull) {
                 try {
                     toggleEl.click();
                 } catch (e) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensureChallengeAutoStates: Failed to click ${toggleSel}: ${e}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Failed to click ${toggleSel}: ${e}`, this.context);
                     continue;
                 }
                 await new Promise(res => setTimeout(res, 50));
                 const newToggleText = (toggleEl.textContent || '').trim();
                 if (newToggleText !== expectedFull) {
-                    HSLogger.log(`[HSAutosing][ERROR] ensureChallengeAutoStates: Failed to set ${toggleSel} to '${expectedFull}' after click. Current text: '${newToggleText}'`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Failed to set ${toggleSel} to '${expectedFull}' after click. Current text: '${newToggleText}'`, this.context);
                 } else {
-                    HSLogger.log(`[HSAutosing][INFO] ensureChallengeAutoStates: Successfully set ${toggleSel} to '${expectedFull}' for challenge ${i}`, this.context);
+                    HSLogger.debug(`[HSAutosing] ensureChallengeAutoStates: Successfully set ${toggleSel} to '${expectedFull}' for challenge ${i}`, this.context);
                 }
             }
         }

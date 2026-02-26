@@ -290,10 +290,7 @@ export class HSUI extends HSModule {
             const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
             if (idleSwapToggle) {
                 idleSwapToggle.click();
-                HSUI.Notify(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, {
-                    position: 'top',
-                    notificationType: 'default'
-                });
+                HSLogger.log(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, this.context);
             }
         });
 
