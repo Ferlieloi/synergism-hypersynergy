@@ -491,7 +491,6 @@ export class HSAmbrosia extends HSModule
 
     async #updateCurrentLoadout(slotEnum: AMBROSIA_LOADOUT_SLOT) {
         this.#currentLoadout = slotEnum;
-        console.log('[AMBROSIA] Updating current loadout to', slotEnum);
         const loadoutStateSetting = HSSettings.getSetting('autoLoadoutState') as HSSetting<string>;
 
         if (loadoutStateSetting && !HSUtils.removeColorTags(loadoutStateSetting.getValue()).startsWith('Loadout')) {
@@ -501,12 +500,10 @@ export class HSAmbrosia extends HSModule
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
         const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
         if (!groupWrapper) {
-            HSLogger.warn('[AMBROSIA] Could not find group wrapper for quickbar', this.context);
+            HSLogger.warn('[HSAmbrosia] Could not find group wrapper for quickbar', this.context);
             return;
         }
-        console.log('[AMBROSIA] groupWrapper:', groupWrapper);
         const quickBar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-        console.log('[AMBROSIA] quickBar:', quickBar);
         // Normalize slotEnum to get the loadout number
         let slotNum = '';
         const match = slotEnum.match(/(\d+)$/);
@@ -517,37 +514,34 @@ export class HSAmbrosia extends HSModule
         const quickbarId = `hs-ambrosia-quickbar-blueberryLoadout${slotNum}`;
         if (quickBar) {
             const slots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
-            console.log('[AMBROSIA] quickBar slots:', slots);
             slots.forEach((slot) => {
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
             const activeSlot = Array.from(slots).find(slot => slot.id === quickbarId);
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
-                console.log('[AMBROSIA] Added active class to:', activeSlot.id);
+                HSLogger.debug('[HSAmbrosia] Added active class to:' + activeSlot.id, this.context);
             } else {
-                console.warn('[AMBROSIA] No activeSlot found in quickBar for slotEnum:', slotEnum, 'quickbarId:', quickbarId);
+                HSLogger.warn('[HSAmbrosia] No activeSlot found in quickBar for slotEnum:' + slotEnum + ' quickbarId:' + quickbarId, this.context);
             }
         } else {
-            HSLogger.warn(`[AMBROSIA] Could not find quick bar element`, this.context);
+            HSLogger.warn('[HSAmbrosia] Could not find quick bar element', this.context);
         }
         const originalQuickBar = document.querySelector('#bbLoadoutContainer');
-        console.log('[AMBROSIA] originalQuickBar:', originalQuickBar);
         if (originalQuickBar) {
             const slots = originalQuickBar.querySelectorAll('.blueberryLoadoutSlot');
-            console.log('[AMBROSIA] originalQuickBar slots:', slots);
             slots.forEach((slot) => {
                 slot.classList.remove('hs-ambrosia-active-slot');
             });
             const activeSlot = Array.from(slots).find(slot => slot.id === originalId);
             if (activeSlot) {
                 activeSlot.classList.add('hs-ambrosia-active-slot');
-                console.log('[AMBROSIA] Added active class to:', activeSlot.id);
+                HSLogger.debug('[HSAmbrosia] Added active class to:' + activeSlot.id, this.context);
             } else {
-                console.warn('[AMBROSIA] No activeSlot found in originalQuickBar for slotEnum:', slotEnum, 'originalId:', originalId);
+                HSLogger.warn('[HSAmbrosia] No activeSlot found in originalQuickBar for slotEnum:' + slotEnum + ' originalId:' + originalId, this.context);
             }
         }
-        console.log('[AMBROSIA] updateCurrentLoadout complete for', slotEnum);
+        HSLogger.debug('[HSAmbrosia] updateCurrentLoadout complete for' + slotEnum, this.context);
     }
 
     async #createPersistentQuickbarContainer() {
@@ -1220,8 +1214,6 @@ export class HSAmbrosia extends HSModule
                             this.#debugElement.appendChild(newDebugElement.firstChild);
                         }
                     }
-                    //console.log(`BLUE - Value: ${ blueAmbrosiaBarValue }, Max: ${ blueAmbrosiaBarMax }, Percent: ${ blueAmbrosiaPercent } `);
-                    //console.log(`RED - Value: ${ redAmbrosiaBarValue }, Max: ${ redAmbrosiaBarMax }, Percent: ${ redAmbrosiaPercent } `);
                 }
             }
 
@@ -1412,7 +1404,7 @@ export class HSAmbrosia extends HSModule
                 // Use dynamic slot element
                 const loadoutBtn = loadOutsSlots[i] as HTMLButtonElement;
                 if (!loadoutBtn) {
-                    console.warn(`Loadout slot element for index ${i} not found`);
+                    HSLogger.warn(`[HSAmbrosia] Loadout slot element for index ${i} not found`, this.context);
                     continue;
                 }
                 const blob = new Blob([loadoutData], { type: 'application/json' });
@@ -1441,7 +1433,6 @@ export class HSAmbrosia extends HSModule
                         ? err
                         : 'Unknown error';
 
-            console.error('Quick Import error:', err);
             HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
 
             HSUI.Notify('Quick Import failed', {
