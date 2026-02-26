@@ -1,4 +1,3 @@
-
 /**
  * Phase statistics logic for the Autosing modal.
  *
@@ -27,7 +26,7 @@ export interface PhaseRowDom {
     nameCell: HTMLDivElement;
     nameCountSpan: HTMLSpanElement;
     nameTextSpan: HTMLSpanElement;
-    loopsCell: HTMLDivElement;
+    innerLoopsCell: HTMLDivElement;
     avgCell: HTMLDivElement;
     sdCell: HTMLDivElement;
     lastCell: HTMLDivElement;
@@ -78,9 +77,9 @@ export function createPhaseRowDom(phaseName = '', count = 0, rowIndex = 0): Phas
     nameCell.appendChild(nameTextSpan);
 
     // Stat cells
-    const loopsCell = document.createElement('div');
-    loopsCell.className = 'hs-phase-loops';
-    loopsCell.dataset.rowIndex = rowIndex.toString();
+    const innerLoopsCell = document.createElement('div');
+    innerLoopsCell.className = 'hs-phase-loops';
+    innerLoopsCell.dataset.rowIndex = rowIndex.toString();
 
     const avgCell = document.createElement('div');
     avgCell.className = 'hs-phase-avg';
@@ -94,8 +93,8 @@ export function createPhaseRowDom(phaseName = '', count = 0, rowIndex = 0): Phas
     lastCell.className = 'hs-phase-last';
     lastCell.dataset.rowIndex = rowIndex.toString();
 
-    const cells = [nameCell, loopsCell, avgCell, sdCell, lastCell];
-    return { nameCell, nameCountSpan, nameTextSpan, loopsCell, avgCell, sdCell, lastCell, cells, rowIndex };
+    const cells = [nameCell, innerLoopsCell, avgCell, sdCell, lastCell];
+    return { nameCell, nameCountSpan, nameTextSpan, innerLoopsCell, avgCell, sdCell, lastCell, cells, rowIndex };
 }
 
 /**
@@ -105,12 +104,12 @@ export function createPhaseRowDom(phaseName = '', count = 0, rowIndex = 0): Phas
  */
 export function updatePhaseRowDom(
     dom: PhaseRowDom,
-    stats: { loopCount: number; avg: number; sd: number; last: number; phaseName?: string; count?: number }
+    stats: { count?: number; phaseName?: string; innerLoopCount: number; avg: number; sd: number; last: number }
 ) {
     if (typeof stats.phaseName === 'string') dom.nameTextSpan.textContent = stats.phaseName;
     if (typeof stats.count === 'number') dom.nameCountSpan.textContent = `x${stats.count} `;
     // Loops: always show 2 decimals, prefix 'x'
-    dom.loopsCell.textContent = 'x' + stats.loopCount.toFixed(2);
+    dom.innerLoopsCell.textContent = 'x' + stats.innerLoopCount.toFixed(2);
     // Avg: value with 2 decimals, suffix 's'
     dom.avgCell.textContent = stats.avg.toFixed(2) + 's';
     // SD: prefix with ± (U+00B1), 2 decimals
@@ -123,18 +122,18 @@ export function updatePhaseRowDom(
  * Utility to compute phase statistics from a phaseHistory map.
  * @param phaseHistory Map of phase name to { count, totalTime, sumSq, lastTime, repeats }
  * @param phase The phase name to compute stats for
- * @returns Object with loopCount, avg, sd, last values
+ * @returns Object with innerLoopCount, avg, sd, last values
  */
 export function getPhaseStats(
-    phaseHistory: Map<string, { count: number; totalTime: number; sumSq: number; lastTime: number; repeats: number }>,
+    phaseHistory: Map<string, { count: number; totalTime: number; sumSq: number; lastTime: number; innerLoopCount: number }>,
     phase: string
 ) {
     const entry = phaseHistory.get(phase);
-    if (!entry || entry.count === 0) return { loopCount: 0, avg: 0, sd: 0, last: 0 };
-    const loopCount = entry.count;
-    const avg = entry.totalTime / loopCount;
+    if (!entry || entry.count === 0) return { innerLoopCount: 0, avg: 0, sd: 0, last: 0 };
+    const innerLoopCount = entry.innerLoopCount;
+    const avg = entry.totalTime / innerLoopCount;
     // Population standard deviation
-    const sd = loopCount > 1 ? Math.sqrt(entry.sumSq / loopCount) : 0;
+    const sd = innerLoopCount > 1 ? Math.sqrt(entry.sumSq / innerLoopCount) : 0;
     const last = entry.lastTime;
-    return { loopCount, avg, sd, last };
+    return { innerLoopCount, avg, sd, last };
 }

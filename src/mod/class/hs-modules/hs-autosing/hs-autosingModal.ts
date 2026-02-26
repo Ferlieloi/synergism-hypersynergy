@@ -19,7 +19,7 @@ import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autos
 import { HSAutosing } from "./hs-autosing";
 import { HSAutosingDB } from './hs-autosingDB';
 import { HSAutosingExportManager } from './hs-autosingExportManager';
-import { createPhaseRowDom, updatePhaseRowDom, getPhaseStats, PhaseRowDom } from "./hs-autosingPhaseStats";
+import { createPhaseRowDom, updatePhaseRowDom, PhaseRowDom } from "./hs-autosingPhaseStats";
 import { SparklineDom, buildSparklineDom, updateSparkline } from './hs-autosingSparkline';
 import Decimal from "break_infinity.js";
 import { formatNumber, formatNumberWithSign, formatDecimal, formatTotalTime } from "./hs-autosingFormatUtils";
@@ -210,10 +210,8 @@ export class HSAutosingModal {
     private renderExportPending: boolean = false;
     private lastRenderedPhaseHistoryVersion: number = -1;
     private lastRenderedSparklineVersion: number = -1;
-    private lastRenderedDetailsVisibilityVersion: number = -1;
     private phaseHistoryVersion: number = 0;
     private sparklineVersion: number = 0;
-    private detailsVisibilityVersion: number = 0;
 
     // --- Sizing & Layout ---
     private autoResized: boolean = false;
@@ -556,35 +554,6 @@ export class HSAutosingModal {
     }
 
     /**
-     * (Re)build the DOM structure for detailed data sections that can be toggled on/off,
-     *  ensuring a stable structure for efficient updates.
-     */
-    private rebuildDetailedDataDom(): void {
-        /*
-        // Times section (Averages/Total/Min/Max)
-        this.ensureAvgSpanStructure(this.avg10Span);
-        this.ensureAvgSpanStructure(this.avg50Span);
-
-        // Phase stats header
-        if (!this.phaseStatsContainer) return;
-        this.phaseStatsContainer.innerHTML = `
-            <div class="hs-phase-stats-header-title">PHASE STATISTICS</div>
-            <div class="hs-phase-stats-header">Loops</div>
-            <div class="hs-phase-stats-header">Avg</div>
-            <div class="hs-phase-stats-header">SD</div>
-            <div class="hs-phase-stats-header">Last</div>
-        `;
-        */ 
-        
-        // Sparklines
-        this.phaseRowMap.clear();
-        this.sparklineQuarks = buildSparklineDom(this.sparklineQuarksContainer, '#00BCD4', false);
-        this.sparklineGoldenQuarks = buildSparklineDom(this.sparklineGoldenQuarksContainer, '#F1FA8C', false);
-        this.sparklineTimes = buildSparklineDom(this.sparklineTimeContainer, '#FF8A80', true);
-    }
-
-
-    /**
      * Ensure the average span structure (main/sd) exists for a given element.
      * Returns the created or cached structure.
      */
@@ -780,8 +749,14 @@ export class HSAutosingModal {
 
         if (!this.isMinimized) {
             this.timerDisplay.classList.remove('hs-minimized');
-            this.requestRenderAll();
-        }
+            this.rebuildDetailedDataDom();
+        } else {
+            this.deleteDetailedDataDom();          
+        } 
+
+        this.sparklineVersion++;
+        this.phaseHistoryVersion++;
+        this.requestRenderAll();
     }
 
     /**
@@ -806,13 +781,58 @@ export class HSAutosingModal {
         if (visible) {
             this.rebuildDetailedDataDom();
         } else {
-            if (this.sparklineTimeContainer) { this.sparklineTimeContainer.innerHTML = ''; }
-            if (this.sparklineQuarksContainer) { this.sparklineQuarksContainer.innerHTML = ''; }
-            if (this.sparklineGoldenQuarksContainer) { this.sparklineGoldenQuarksContainer.innerHTML = ''; }            
+            this.deleteDetailedDataDom();          
         }
         
-        this.detailsVisibilityVersion++;
+        this.sparklineVersion++;
+        this.phaseHistoryVersion++;
         this.requestRenderAll();
+    }
+
+    /**
+     * (Re)build the DOM structure for detailed data sections that can be toggled on/off,
+     *  ensuring a stable structure for efficient updates.
+     */
+    private rebuildDetailedDataDom(): void {
+        /*
+        // Times section (Averages/Total/Min/Max)
+        this.ensureAvgSpanStructure(this.avg10Span);
+        this.ensureAvgSpanStructure(this.avg50Span);
+
+        // Phase stats header
+        if (!this.phaseStatsContainer) return;
+        this.phaseStatsContainer.innerHTML = `
+            <div class="hs-phase-stats-header-title">PHASE STATISTICS</div>
+            <div class="hs-phase-stats-header">Loops</div>
+            <div class="hs-phase-stats-header">Avg</div>
+            <div class="hs-phase-stats-header">SD</div>
+            <div class="hs-phase-stats-header">Last</div>
+        `;
+        */ 
+        
+        // Sparklines
+        this.sparklineQuarks = buildSparklineDom(this.sparklineQuarksContainer, '#00BCD4', false);
+        this.sparklineGoldenQuarks = buildSparklineDom(this.sparklineGoldenQuarksContainer, '#F1FA8C', false);
+        this.sparklineTimes = buildSparklineDom(this.sparklineTimeContainer, '#FF8A80', true);
+    }
+
+    /**
+     *  Delete the DOM structure for detailed data sections that can be toggled on/off,
+     *  ensuring a stable structure for efficient updates.
+     */
+    private deleteDetailedDataDom(): void {
+        // Delete all phase rows (except the 5 column headers)
+        if (this.phaseStatsContainer) {
+            while (this.phaseStatsContainer.children.length > 5) {
+                this.phaseStatsContainer.removeChild(this.phaseStatsContainer.lastElementChild!);
+            }
+        }
+        this.phaseRowMap.clear();               
+
+        // Clear sparkline containers
+        if (this.sparklineTimeContainer) { this.sparklineTimeContainer.innerHTML = ''; }
+        if (this.sparklineQuarksContainer) { this.sparklineQuarksContainer.innerHTML = ''; }
+        if (this.sparklineGoldenQuarksContainer) { this.sparklineGoldenQuarksContainer.innerHTML = ''; }  
     }
 
     // =============================
@@ -833,8 +853,8 @@ export class HSAutosingModal {
         this.lastRecordedPhaseName = null;
         this.currentPhaseName = '';
 
-        // this.phaseHistoryVersion++;
-        // this.sparklineVersion++;
+        this.phaseHistoryVersion++;
+        this.sparklineVersion++;
         this.requestRenderAll();
     }
 
@@ -851,12 +871,6 @@ export class HSAutosingModal {
     /**
      * Start autosing session with given strategy and initial (g)quark values.
      * Reset phase history and metrics.
-     */
-    /**
-     * Start autosing session with given strategy and initial (g)quark values.
-     * Reset phase history and metrics.
-     *
-     * Defensive: Ensures Ambrosia quickbar DOM is present before proceeding.
      */
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
         // Defensive check: Ensure Ambrosia quickbar DOM is present
@@ -944,8 +958,6 @@ export class HSAutosingModal {
         this.lastRenderedPhaseHistoryVersion = -1;
         this.sparklineVersion = 0;
         this.lastRenderedSparklineVersion = -1;
-        this.detailsVisibilityVersion = 0;
-        this.lastRenderedDetailsVisibilityVersion = -1;
 
         this.requestRenderAll();
 
@@ -1278,6 +1290,9 @@ export class HSAutosingModal {
      * Request a full render update for all modal sections.
      */
     private requestRenderAll(): void {
+        // We reset the versions here to ensure that the next render will update all sections
+        this.lastRenderedPhaseHistoryVersion = -1;
+        this.lastRenderedSparklineVersion = -1;        
         this.requestRender({ general: true, phases: true, sparklines: true, exportBtn: true });
     }
 
@@ -1325,13 +1340,10 @@ export class HSAutosingModal {
         }
 
         if (this.renderSparklinesPending) {
-            if (this.sparklineVersion !== this.lastRenderedSparklineVersion ||
-                this.detailsVisibilityVersion !== this.lastRenderedDetailsVisibilityVersion) {
+            if (this.sparklineVersion !== this.lastRenderedSparklineVersion) {
                 this.renderSparklines();
             }
         }
-        this.lastRenderedDetailsVisibilityVersion = this.detailsVisibilityVersion;
-
 
         if (this.renderExportPending) {
             this.updateExportButton();
@@ -1414,7 +1426,6 @@ export class HSAutosingModal {
      * Render detailed statistics (fields only visible when detailed data visibility is ON)
      */
     private renderDetailedStats(): void {
-        this.lastRenderedDetailsVisibilityVersion = this.detailsVisibilityVersion;
         if (this.isMinimized || !this.showDetailedData) { return; }
         
         this.renderSummaryStats();
@@ -1469,10 +1480,6 @@ export class HSAutosingModal {
 
         // Only render phase statistics if detailed data is enabled
         if (!this.showDetailedData) {
-            // Hide all rows except the header
-            while (this.phaseStatsContainer.children.length > 5) {
-                this.phaseStatsContainer.removeChild(this.phaseStatsContainer.lastElementChild!);
-            }
             return;
         }
 
@@ -1492,9 +1499,9 @@ export class HSAutosingModal {
         // --- Placeholder logic ---
         if (sortedPhases.length === 0) {
             // Remove all rows except header
-            while (this.phaseStatsContainer.children.length > 5) {
-                this.phaseStatsContainer.removeChild(this.phaseStatsContainer.lastElementChild!);
-            }
+            // while (this.phaseStatsContainer.children.length > 5) {
+            //     this.phaseStatsContainer.removeChild(this.phaseStatsContainer.lastElementChild!);
+            // }
             // Add placeholder if not present
             if (!this.phaseStatsContainer.querySelector('.hs-phase-empty')) {
                 const emptyNode = document.createElement('div');
@@ -1513,16 +1520,16 @@ export class HSAutosingModal {
         // We'll keep a cache of the current DOM order for performance
         // Only update/insert rows as needed; do not remove rows except when hiding all
         let domChildIdx = 5; // skip header (first 5 children)
-        let rowIdx = 1; // 0 is for headers
+        let rowIdx = 1; // 0 would be for headers (but not used...)
         for (const [phaseName, phaseData] of sortedPhases) {
             let rowDom = this.phaseRowMap.get(phaseName);
             const stats = {
-                loopCount: phaseData.count,
+                count: phaseData.count,
+                phaseName,
+                innerLoopCount: phaseData.repeats + 1, // repeats counts how many times we've repeated the same (inner) phase, so add 1 for total loops
                 avg: phaseData.totalTime / (phaseData.count || 1),
                 sd: phaseData.count > 1 ? Math.sqrt(phaseData.sumSq / phaseData.count) : 0,
-                last: phaseData.lastTime,
-                phaseName,
-                count: phaseData.count
+                last: phaseData.lastTime
             };
             if (!rowDom) {
                 // Create and cache new row
@@ -1537,17 +1544,16 @@ export class HSAutosingModal {
                 // Update stats 
                 updatePhaseRowDom(rowDom, stats);
                 // Move cells if not already in correct position
-                for (let i = 0; i < rowDom.cells.length; i++) {
+                /* for (let i = 0; i < rowDom.cells.length; i++) {
                     const cell = rowDom.cells[i];
                     if (this.phaseStatsContainer!.children[domChildIdx + i] !== cell) {
                         this.phaseStatsContainer!.insertBefore(cell, this.phaseStatsContainer!.children[domChildIdx + i] || null);
                     }
-                }
+                } */
             }
             domChildIdx += 5;
             rowIdx++;
         }
-        // Note: We do not remove rows for phases no longer present, except when hiding all (handled above)
     }
 
     /**
@@ -1631,7 +1637,6 @@ export class HSAutosingModal {
         this.lastRecordedPhaseName = null;
         this.currentPhaseName = '';
         this.clearSingularityInterval();
-        this.detailsVisibilityVersion++;
         this.phaseHistoryVersion++;
         this.sparklineVersion++;
         this.requestRenderAll();
