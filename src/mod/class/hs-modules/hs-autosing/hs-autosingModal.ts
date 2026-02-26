@@ -968,43 +968,31 @@ export class HSAutosingModal {
         const phaseDuration = (now - this.currentPhaseStart) / 1000;
 
         // MERGE LOGIC: Check if we are repeating the same phase
-        if (phase === this.lastRecordedPhaseName) {
-            // 1. Update Global History (extend the last entry)
-            if (this.phaseHistory.has(phase)) {
-                const phaseData = this.phaseHistory.get(phase)!;
-                if (phaseData.phaseCount > 0) {
-                    // Add the new duration chunk to the existing chunk
-                    const prev = phaseData.lastTime;
-                    const next = prev + phaseDuration;
-
-                    // Update stats
-                    phaseData.totalTime += phaseDuration;
-                    phaseData.sumSq += (next * next) - (prev * prev);
-                    phaseData.lastTime = next; // Update lastTime to reflect total merged time
-                    phaseData.innerLoopCount++; // Increment the number of loops
-                }
-            }
-
-            // 2. Update Current Singularity Tracking
+        let phaseData = this.phaseHistory.get(phase);
+        if (phase === this.lastRecordedPhaseName && phaseData && phaseData.phaseCount > 0) {
+            // Add the new duration chunk to the existing chunk
+            const prev = phaseData.lastTime;
+            const next = prev + phaseDuration;
+            // Update stats directly
+            phaseData.totalTime += phaseDuration;
+            phaseData.sumSq += (next * next) - (prev * prev);
+            phaseData.lastTime = next;
+            phaseData.innerLoopCount++;
+            // Update Current Singularity Tracking
             const currentVal = this.currentSingularityPhases.get(phase) || 0;
             this.currentSingularityPhases.set(phase, currentVal + phaseDuration);
-
         } else {
             // STANDARD LOGIC: New Phase
-            if (!this.phaseHistory.has(phase)) {
-                this.phaseHistory.set(phase, { phaseCount: 0, totalTime: 0, sumSq: 0, lastTime: 0, innerLoopCount: 0 });
+            if (!phaseData) {
+                phaseData = { phaseCount: 0, totalTime: 0, sumSq: 0, lastTime: 0, innerLoopCount: 0 };
+                this.phaseHistory.set(phase, phaseData);
             }
-
-            const phaseData = this.phaseHistory.get(phase)!;
             phaseData.phaseCount += 1;
-            phaseData.totalTime += phaseDuration; // Accumulate duration
+            phaseData.totalTime += phaseDuration;
             phaseData.sumSq += phaseDuration * phaseDuration;
             phaseData.lastTime = phaseDuration;
-            phaseData.innerLoopCount = 1; // Start at 1 for a new phase
-
-            // Store phase time for current singularity
+            phaseData.innerLoopCount = 1;
             this.currentSingularityPhases.set(phase, phaseDuration);
-
             this.lastRecordedPhaseName = phase;
         }
 
@@ -1512,11 +1500,18 @@ export class HSAutosingModal {
         // We'll keep a cache of the current DOM order for performance
         // Only update/insert rows as needed; do not remove rows except when hiding all
         let domChildIdx = 5; // skip header (first 5 children)
-        let rowIdx = 1; // 0 would be for headers (but not used...) 
+        let rowIdx = 1;
+        // Cache stats for all phases to avoid recalculation
+        const phaseStatsCache: Record<string, { avg: number; sd: number }> = {};
+        for (const [phaseName, phaseData] of sortedPhases) {
+            phaseStatsCache[phaseName] = {
+                avg: getPhaseAverage(this.phaseHistory, phaseName) ?? 0,
+                sd: getPhaseStandardDeviation(this.phaseHistory, phaseName) ?? 0
+            };
+        }
         for (const [phaseName, phaseData] of sortedPhases) {
             let rowDom = this.phaseRowMap.get(phaseName);
-            const avg = phaseData.totalTime / (phaseData.phaseCount || 1);
-            const sd = getPhaseStandardDeviation(this.phaseHistory, phaseName) ?? 0;
+            const { avg, sd } = phaseStatsCache[phaseName];
             const stats = {
                 phaseCount: phaseData.phaseCount,
                 phaseName,
@@ -1535,7 +1530,7 @@ export class HSAutosingModal {
                     this.phaseStatsContainer!.insertBefore(cell, this.phaseStatsContainer!.children[domChildIdx + i] || null);
                 });
             } else {
-                // Update stats 
+                // Update stats only, do not recreate row
                 updatePhaseRowDom(rowDom, stats);
             }
             domChildIdx += 5;
@@ -1636,6 +1631,15 @@ export class HSAutosingModal {
         this.clearSingularityInterval();
         window.removeEventListener('mousemove', this.onMouseMoveHandler);
         window.removeEventListener('mouseup', this.onMouseUpHandler);
+        // Remove drag/resize handlers from timerHeader
+        if (this.timerHeader) {
+            this.timerHeader.onmousedown = null;
+        }
+        // Remove resize handle event
+        const resizeHandle = this.timerDisplay?.querySelector('.hs-resize-handle');
+        if (resizeHandle) {
+            resizeHandle.removeEventListener('mousedown', this.startResize as any);
+        }
         if (this.timerDisplay && this.timerDisplay.parentNode) {
             this.timerDisplay.parentNode.removeChild(this.timerDisplay);
         }
