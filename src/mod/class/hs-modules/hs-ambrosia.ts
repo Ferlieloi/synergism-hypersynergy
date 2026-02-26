@@ -153,7 +153,24 @@ export class HSAmbrosia extends HSModule
         this.#pageHeader = pageHeader;
         this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
 
-        // 2. Ensure group wrapper exists and is last child of #quickbarsRow
+        // 2. Setup drag/drop for ambrosia icons and loadout slots, and ensure the Ambrosia section is registered in the quickbar manager
+        for (const [id, icon] of HSGlobal.HSAmbrosia.ambrosiaLoadoutIcons.entries()) {
+            const amrosiaGridElement = document.querySelector(`#${icon.draggableIconId}`) as HTMLElement;
+            if (amrosiaGridElement) {
+                amrosiaGridElement.draggable = true;
+                amrosiaGridElement.dataset.hsid = id;
+                amrosiaGridElement.addEventListener("dragstart", (e) => {
+                    if (!e.dataTransfer) return;
+                    const id = (e.currentTarget as HTMLElement)?.dataset.hsid;
+                    if (!id) return;
+                    HSLogger.log(`Drag start ${id}`, this.context);
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("hs-amb-drag", id);
+                });
+            }
+        }
+
+        // 3. Ensure group wrapper exists and is last child of #quickbarsRow
         if (this.#pageHeader) {
             const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
             let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
@@ -171,7 +188,7 @@ export class HSAmbrosia extends HSModule
             }
         }
 
-        // 3. Register Ambrosia section factory to return group wrapper
+        // 4. Register Ambrosia section factory to return group wrapper
         HSQuickbarManager.getInstance().removeSection('ambrosia');
         HSQuickbarManager.getInstance().registerSection('ambrosia', () => {
             HSLogger.debug('[HSAmbrosia]: Ambrosia section factory called', this.context);
@@ -193,7 +210,7 @@ export class HSAmbrosia extends HSModule
         });
         HSQuickbarManager.getInstance().injectSection('ambrosia');
 
-        // 4. Continue with normal setup
+        // 5. Continue with normal setup
         this.loadState();
         await this.#injectImportFromClipboardButton();
         this.#setupLoadoutContainerEvents();
@@ -329,7 +346,13 @@ export class HSAmbrosia extends HSModule
                 e.stopPropagation();
                 const iconEnum = this.#getIconEnumById(e.dataTransfer.getData('hs-amb-drag'));
                 const slotElement = e.target as HTMLButtonElement;
-                const slotElementId = slotElement.id;
+
+console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', iconEnum);
+
+                // Use dataset.originalId if present, else fallback to id
+                const slotElementId = slotElement.dataset.originalId || slotElement.id;
                 if (!iconEnum) {
                     HSLogger.warn(`Invalid icon ID: ${iconEnum}`, this.context);
                     return;

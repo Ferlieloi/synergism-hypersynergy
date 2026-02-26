@@ -470,31 +470,7 @@ export class HSSettings extends HSModule {
                         if (convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
                             components.push(HSUIC.Input({ class: 'hs-panel-setting-block-num-input', id: controls.controlId, type: convertedType }));
                         } else if (convertedType === HSInputType.SELECT) {
-                            // Dynamically build ambrosia loadout options for relevant controls
-                            const ambrosiaLoadoutControlIds = [
-                                'hs-setting-auto-sing-early-cube-loadout-value',
-                                'hs-setting-auto-sing-late-cube-loadout-value',
-                                'hs-setting-auto-sing-quark-loadout-value',
-                                'hs-setting-auto-sing-obt-loadout-value',
-                                'hs-setting-auto-sing-off-loadout-value',
-                                'hs-setting-auto-sing-ambrosia-loadout-value',
-                                'hs-setting-idle-swap-normal-loadout-value',
-                                'hs-setting-idle-swap-100-loadout-value',
-                                'hs-setting-add-loadout-value',
-                                'hs-setting-time-loadout-value',
-                            ];
-                            if (ambrosiaLoadoutControlIds.includes(controls.controlId)) {
-                                // Try to get player data from GDS
-                                const playerData = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.getGameData();
-                                // Only count non-empty loadouts
-                                const count = Object.keys(playerData?.blueberryLoadouts ?? {}).filter(
-                                    k => playerData?.blueberryLoadouts?.[k] && Object.keys(playerData.blueberryLoadouts[k]!).length > 0
-                                ).length || 8;
-                                controls.selectOptions = [{ text: "None", value: "" }];
-                                for (let i = 1; i <= count; i++) {
-                                    controls.selectOptions.push({ text: `Loadout ${i}`, value: `${i}` });
-                                }
-                            } else if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
+                            if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
                                 const { defaultStrategiesOptions, userStrategiesOptions } = HSAutosingStrategyModal.getMergedStrategyOptions();
                                 controls.selectOptions.length = 0;
                                 controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
