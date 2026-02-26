@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         HyperSynergism Dev Loader
+// @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.4-dev
-// @description  Load Hypersynergism mod from local dev server
+// @version      3.4
+// @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
@@ -16,9 +16,9 @@
     window.HS_LOADER_INITIALIZED = true;
 
     const startTime = performance.now();
-    const log = (...a) => console.log(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
-    const warn = (...a) => console.warn(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
-    const debug = (...a) => console.debug(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+    const log = (...a) => console.log(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const warn = (...a) => console.warn(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
+    const debug = (...a) => console.debug(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
 
     const originalFetch = window.fetch.bind(window);
 
@@ -156,7 +156,7 @@
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
             // ============================================================
-            // EXPORT + STAGE PATCHES v3.4-dev [2026-02-21]
+            // EXPORT + STAGE PATCHES v3.4
             // ============================================================
             // Strategy: scan for function HEADER patterns, then verify the
             // unique anchor string appears shortly after the opening '{'.
@@ -228,7 +228,7 @@
 
                     if (lastBodyStart !== -1) {
                         const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
-                        code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
                         log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
                     } else {
                         // Fallback: inject right before the anchor line
@@ -242,7 +242,7 @@
                 warn('Could not patch stage — "gameStageStatistic" not found in bundle');
             }
 
-            log('v3.4-dev [2026-02-22]c patch complete — injecting bundle');
+            log('v3.4 [2026-02-22]c patch complete — injecting bundle');
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -442,14 +442,13 @@ window.__HS_BACKDOOR__ = {
 
         await returnToBuildingsTab();
 
-        log('Loading mod from LOCAL DEV SERVER');
+        log('Loading mod');
 
         const s = document.createElement('script');
-        // Load from local dev server instead of CDN
-        s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+        s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
 
         s.onload = () => {
-            log('✅ Mod script loaded from dev server');
+            log('Mod script loaded');
             try {
                 window.hypersynergism.init();
             } catch (e) {
@@ -457,10 +456,10 @@ window.__HS_BACKDOOR__ = {
             }
         };
 
-        s.onerror = () => warn('❌ Mod failed to load from dev server - is it running?');
+        s.onerror = () => warn('Mod failed to load');
         (document.head || document.documentElement).appendChild(s);
     }
 
-    log('DEV LOADER Initialized - will load from http://127.0.0.1:8080');
+    log('Initialized');
 
 })();
