@@ -43,21 +43,22 @@ export function getQuarksPerSecond(metrics: Array<{ duration: number, quarksGain
 /**
  * Returns the average for a phase from phaseHistory.
  */
-export function getPhaseAverage(phaseHistory: Map<string, { count: number, totalTime: number }>, phase: string): number | null {
+export function getPhaseAverage(phaseHistory: Map<string, { phaseCount: number, totalTime: number }>, phase: string): number | null {
     const phaseData = phaseHistory.get(phase);
-    if (!phaseData || phaseData.count === 0) return null;
-    return phaseData.totalTime / phaseData.count;
+    if (!phaseData || phaseData.phaseCount === 0) return null;
+    return phaseData.totalTime / phaseData.phaseCount;
 }
 
 /**
  * Returns the standard deviation for a phase from phaseHistory.
  */
-export function getPhaseStandardDeviation(phaseHistory: Map<string, { count: number, totalTime: number, sumSq: number }>, phase: string): number | null {
+export function getPhaseStandardDeviation(phaseHistory: Map<string, { phaseCount: number, totalTime: number, sumSq: number }>, phase: string): number | null {
     const phaseData = phaseHistory.get(phase);
-    if (!phaseData || phaseData.count <= 1) return null;
-    const count = phaseData.count;
-    const mean = phaseData.totalTime / count;
-    const variance = (phaseData.sumSq / count) - (mean * mean);
+    if (!phaseData || phaseData.phaseCount <= 1) return null;
+    const phaseCount = phaseData.phaseCount;
+    const mean = phaseData.totalTime / phaseCount;
+    // Sample variance: (sumOfSquares - n*mean^2)/(n-1)
+    const variance = (phaseData.sumSq - phaseCount * mean * mean) / (phaseCount - 1);
     return Math.sqrt(Math.max(0, variance));
 }
 

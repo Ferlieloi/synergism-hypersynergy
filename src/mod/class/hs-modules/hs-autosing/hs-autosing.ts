@@ -1398,19 +1398,32 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.performSpecialAction(117, 0, 0); // Max C11
-        await this.performSpecialAction(118, 0, 0); // Max C12
-        await this.performSpecialAction(119, 0, 0); // Max C13
-        await this.performSpecialAction(120, 0, 0); // Max C14
+        // Max C11-14
+        await this.waitForCompletion(11, 0, 7777, 0);
+        await this.waitForCompletion(10, 72, 2000, 0);
+        await this.waitForCompletion(12, 0, 7777, 0);
+        await this.waitForCompletion(10, 72, 2000, 0);
+        await this.waitForCompletion(13, 0, 7777, 0);
+        await this.waitForCompletion(10, 72, 2000, 0);
+        await this.waitForCompletion(14, 0, 7777, 0);
+        await this.waitForCompletion(10, 72, 2000, 0);
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
-        await this.waitForCompletion(15, 0, 7777, 0);
+        await this.waitForCompletion(15, 0, 7777, 0);   // C15 with auto-chall for 3s
         this.autoChallengeButton.click();
         await HSUtils.sleep(3000);
 
         this.exitAscBtn.click();
-        this.ambrosia_ambrosia.click();
+        await HSUtils.sleep(3000);                      // 3s with auto-chall without ascension challenge
+
+        await this.waitForCompletion(15, 0, 7777, 0);   // C15 with auto-chall for 3s
+        this.autoChallengeButton.click();
+        await HSUtils.sleep(3000);
+
+        this.exitAscBtn.click();
+        this.ambrosia_ambrosia.click();                 // Idle on Ambrosia loadout
+        this.exportBtn.click();                         // Export save file (doesn't work ?)
 
         return Promise.resolve();
     }

@@ -6,10 +6,6 @@
  * Maintains unified metrics with running averages for time, quarks, and golden quarks.
  *
  * Author: XxmolkxX
- *
- * IMPORTANT: All logic that depends on the Ambrosia quickbar DOM (including loadout mapping)
- * MUST be run only after HSQuickbarManager.whenSectionInjected('ambrosia') resolves.
- * This ensures the DOM is present and avoids race conditions.
  */
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
@@ -169,11 +165,11 @@ export class HSAutosingModal {
     // --- Charting & Stats ---
     private sparklineMaxPoints: number = 50;
     private phaseHistory: Map<string, {
-        count: number;
+        phaseCount: number;
         totalTime: number;
         sumSq: number;
         lastTime: number;
-        repeats: number;
+        innerLoopCount: number;
     }> = new Map();
     private c15Count: number = 0;
     private c15Mean: Decimal = new Decimal(0);
@@ -973,11 +969,10 @@ export class HSAutosingModal {
 
         // MERGE LOGIC: Check if we are repeating the same phase
         if (phase === this.lastRecordedPhaseName) {
-
             // 1. Update Global History (extend the last entry)
             if (this.phaseHistory.has(phase)) {
                 const phaseData = this.phaseHistory.get(phase)!;
-                if (phaseData.count > 0) {
+                if (phaseData.phaseCount > 0) {
                     // Add the new duration chunk to the existing chunk
                     const prev = phaseData.lastTime;
                     const next = prev + phaseDuration;
@@ -986,7 +981,7 @@ export class HSAutosingModal {
                     phaseData.totalTime += phaseDuration;
                     phaseData.sumSq += (next * next) - (prev * prev);
                     phaseData.lastTime = next; // Update lastTime to reflect total merged time
-                    phaseData.repeats++; // Increment repeat count for this sequence
+                    phaseData.innerLoopCount++; // Increment the number of loops
                 }
             }
 
@@ -997,14 +992,15 @@ export class HSAutosingModal {
         } else {
             // STANDARD LOGIC: New Phase
             if (!this.phaseHistory.has(phase)) {
-                this.phaseHistory.set(phase, { count: 0, totalTime: 0, sumSq: 0, lastTime: 0, repeats: 0 });
+                this.phaseHistory.set(phase, { phaseCount: 0, totalTime: 0, sumSq: 0, lastTime: 0, innerLoopCount: 0 });
             }
 
             const phaseData = this.phaseHistory.get(phase)!;
-            phaseData.count += 1;
+            phaseData.phaseCount += 1;
             phaseData.totalTime += phaseDuration; // Accumulate duration
             phaseData.sumSq += phaseDuration * phaseDuration;
             phaseData.lastTime = phaseDuration;
+            phaseData.innerLoopCount = 1; // Start at 1 for a new phase
 
             // Store phase time for current singularity
             this.currentSingularityPhases.set(phase, phaseDuration);
@@ -1498,10 +1494,6 @@ export class HSAutosingModal {
 
         // --- Placeholder logic ---
         if (sortedPhases.length === 0) {
-            // Remove all rows except header
-            // while (this.phaseStatsContainer.children.length > 5) {
-            //     this.phaseStatsContainer.removeChild(this.phaseStatsContainer.lastElementChild!);
-            // }
             // Add placeholder if not present
             if (!this.phaseStatsContainer.querySelector('.hs-phase-empty')) {
                 const emptyNode = document.createElement('div');
@@ -1523,17 +1515,19 @@ export class HSAutosingModal {
         let rowIdx = 1; // 0 would be for headers (but not used...)
         for (const [phaseName, phaseData] of sortedPhases) {
             let rowDom = this.phaseRowMap.get(phaseName);
+            const avg = phaseData.totalTime / (phaseData.phaseCount || 1);
+            const sd = getPhaseStandardDeviation(this.phaseHistory, phaseName) ?? 0;
             const stats = {
-                count: phaseData.count,
+                phaseCount: phaseData.phaseCount,
                 phaseName,
-                innerLoopCount: phaseData.repeats + 1, // repeats counts how many times we've repeated the same (inner) phase, so add 1 for total loops
-                avg: phaseData.totalTime / (phaseData.count || 1),
-                sd: phaseData.count > 1 ? Math.sqrt(phaseData.sumSq / phaseData.count) : 0,
+                innerLoopCount: phaseData.innerLoopCount,
+                avg,
+                sd,
                 last: phaseData.lastTime
             };
             if (!rowDom) {
                 // Create and cache new row
-                rowDom = createPhaseRowDom(phaseName, phaseData.count, rowIdx);
+                rowDom = createPhaseRowDom(phaseName, phaseData.phaseCount, rowIdx);
                 updatePhaseRowDom(rowDom, stats);
                 this.phaseRowMap.set(phaseName, rowDom);
                 // Insert at correct position
@@ -1543,13 +1537,6 @@ export class HSAutosingModal {
             } else {
                 // Update stats 
                 updatePhaseRowDom(rowDom, stats);
-                // Move cells if not already in correct position
-                /* for (let i = 0; i < rowDom.cells.length; i++) {
-                    const cell = rowDom.cells[i];
-                    if (this.phaseStatsContainer!.children[domChildIdx + i] !== cell) {
-                        this.phaseStatsContainer!.insertBefore(cell, this.phaseStatsContainer!.children[domChildIdx + i] || null);
-                    }
-                } */
             }
             domChildIdx += 5;
             rowIdx++;
