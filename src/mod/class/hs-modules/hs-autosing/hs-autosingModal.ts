@@ -1512,7 +1512,7 @@ export class HSAutosingModal {
         // We'll keep a cache of the current DOM order for performance
         // Only update/insert rows as needed; do not remove rows except when hiding all
         let domChildIdx = 5; // skip header (first 5 children)
-        let rowIdx = 1; // 0 would be for headers (but not used...)
+        let rowIdx = 1; // 0 would be for headers (but not used...) 
         for (const [phaseName, phaseData] of sortedPhases) {
             let rowDom = this.phaseRowMap.get(phaseName);
             const avg = phaseData.totalTime / (phaseData.phaseCount || 1);
