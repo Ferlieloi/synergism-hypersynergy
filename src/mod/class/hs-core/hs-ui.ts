@@ -241,7 +241,7 @@ export class HSUI extends HSModule {
                 const dropdown = document.getElementById('autosingStrategy');
                 if (dropdown) {
                     // Call the update function to rebuild optgroups
-                    HSAutosingStrategyModal.updateStrategyDropdownList();
+                    HSSettings.updateStrategyDropdownList();
                 }
             } catch (e) {
                 console.error('Failed to update autosingStrategy dropdown:', e);

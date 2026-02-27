@@ -702,7 +702,7 @@ export class HSGameData extends HSModule {
 
         if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
             // There's probably a better place to put this...
-            HSAutosingStrategyModal.updateStrategyDropdownList();
+            HSSettings.updateStrategyDropdownList();
             this.#performInitialLoadoutMatch();
             this.#hasPerformedInitialLoadoutMatch = true;
         }

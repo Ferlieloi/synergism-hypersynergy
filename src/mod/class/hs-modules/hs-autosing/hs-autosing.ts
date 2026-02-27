@@ -314,7 +314,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (!strategy) {
-            HSLogger.debug(`Autosing: Stopping - Strategy "${HSSettings.getStrategyDisplayName(selectedRawName)}" not found or failed to load.`, this.context);
+            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedRawName}" not found or failed to load.`, this.context);
             HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();

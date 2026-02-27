@@ -169,7 +169,6 @@ export class HSAutosingStrategyModal {
                     try {
                         if (isEditMode) {
                             HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
-                            HSAutosingStrategyModal.updateStrategyDropdownList();
                             HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
@@ -177,7 +176,6 @@ export class HSAutosingStrategyModal {
                             });
                         } else {
                             HSSettings.saveStrategyToStorage(strategyDraft);
-                            HSAutosingStrategyModal.updateStrategyDropdownList();
                             HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
                             HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
@@ -235,102 +233,5 @@ export class HSAutosingStrategyModal {
                 }
             });
         }, 0);
-    }
-
-    /**
-     * Updates the autosing strategy dropdown options and selection after create/import/delete.
-     * Handles both manifest and user strategies.
-     */
-    static updateStrategyDropdownList() {
-        const setting = HSSettings.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        // Use merged options from getMergedStrategyOptions
-        const { defaultStrategiesOptions, userStrategiesOptions } = HSAutosingStrategyModal.getMergedStrategyOptions();
-        control.selectOptions.length = 0;
-        control.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-
-        // Retrieve saved strategy from localStorage
-        let savedStrategy = undefined;
-        const storageMod = HSModuleManager.getModule("HSStorage") as any;
-        if (storageMod && typeof storageMod.getData === "function") {
-            let settingsData = storageMod.getData(HSGlobal.HSSettings.storageKey);
-            if (settingsData) {
-                const parsed = typeof settingsData === "string" ? JSON.parse(settingsData) : settingsData;
-                if (parsed && parsed.autosingStrategy && parsed.autosingStrategy.settingValue) {
-                    savedStrategy = parsed.autosingStrategy.settingValue;
-                }
-            }
-        }
-
-        // Update the actual HTML select element to match the new options, using optgroups
-        const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
-        if (selectEl) {
-            // Remove all options
-            while (selectEl.options.length > 0) {
-                selectEl.remove(0);
-            }
-            // Create optgroups
-            if (defaultStrategiesOptions.length > 0) {
-                const optgroupDefault = document.createElement('optgroup');
-                optgroupDefault.label = 'Default Strategies';
-                for (const opt of defaultStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'true');
-                    optgroupDefault.appendChild(option);
-                }
-                selectEl.appendChild(optgroupDefault);
-            }
-            if (userStrategiesOptions.length > 0) {
-                const optgroupUser = document.createElement('optgroup');
-                optgroupUser.label = 'User Strategies';
-                for (const opt of userStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'false');
-                    optgroupUser.appendChild(option);
-                }
-                selectEl.appendChild(optgroupUser);
-            }
-
-            // Select the saved strategy if available, else default to first option
-            let toSelect = savedStrategy;
-            if (!toSelect || !Array.from(selectEl.options).some(opt => opt.value === toSelect)) {
-                // Default to first available option
-                if (selectEl.options.length > 0) {
-                    toSelect = selectEl.options[0].value;
-                }
-            }
-            if (toSelect) {
-                selectEl.value = toSelect;
-                setting.setValue(toSelect);
-            }
-            HSLogger.log(`[HSAutosing] Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${toSelect}`);
-        }
-    }
-
-    /**
-     * Loads and returns the merged list of default and user strategies.
-     * Returns: { defaultStrategiesOptions, userStrategiesOptions }
-     */
-    static getMergedStrategyOptions() {
-        // Add manifest strategies first (default, undeletable)
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const manifestSet = new Set(defaultNames);
-        const defaultStrategiesOptions = [];
-        for (const name of defaultNames) {
-            defaultStrategiesOptions.push({ text: HSSettings.getStrategyDisplayName(name), value: name, isDefault: true });
-        }
-        // Add user strategies after (from localStorage)
-        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
-        const userStrategiesOptions = [];
-        for (const s of userStrategies) {
-            userStrategiesOptions.push({ text: HSSettings.getStrategyDisplayName(s.strategyName), value: s.strategyName, isDefault: false });
-        }
-        return { defaultStrategiesOptions, userStrategiesOptions };
     }
 }
