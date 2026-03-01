@@ -229,6 +229,11 @@ export class HSSettingActions {
             await HSSettings.exportSelectedStrategy();
         },
 
+        migrateIdsAndExportAutosingStrategy: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            await HSSettings.exportSelectedStrategy(true);
+        },
+
         importAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             await HSSettings.importStrategy();

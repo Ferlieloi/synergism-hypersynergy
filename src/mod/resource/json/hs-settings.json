@@ -671,6 +671,21 @@
       "controlPage": "auto-sing"
     }
   },
+  "migrateIdsAndExportAutosingStrategy": {
+    "settingName": "migrateIdsAndExportAutosingStrategy",
+    "settingDescription": "Migrate&Export",
+    "settingHelpText": "Migrates the special action IDs of the selected strategy",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "migrateIdsAndExportAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-migrator-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
   "autosingEarlyCubeLoadout": {
     "settingName": "autosingEarlyCubeLoadout",
     "settingDescription": "Pre-AOAG Cube Loadout",

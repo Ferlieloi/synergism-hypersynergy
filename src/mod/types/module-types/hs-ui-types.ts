@@ -101,6 +101,8 @@ export interface HSNotifyOptions {
     displayDuration: number;
     hideDuration: number;
     notificationType: HSNotifyType;
+    width: number;
+    height: number;
 }
 
 export interface HSUICModalOptions extends HSUICOptions {

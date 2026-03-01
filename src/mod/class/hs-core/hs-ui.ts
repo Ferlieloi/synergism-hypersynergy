@@ -762,7 +762,6 @@ export class HSUI extends HSModule {
         }
     }
 
-
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
         HSLogger.log(`[Notify] ${text}`);
         const options: HSNotifyOptions = {
@@ -770,8 +769,10 @@ export class HSUI extends HSModule {
             popDuration: notifyOptions?.popDuration ?? 400,
             displayDuration: notifyOptions?.displayDuration ?? 4000,
             hideDuration: notifyOptions?.hideDuration ?? 2300,
-            notificationType: notifyOptions?.notificationType ?? "default"
-        }
+            notificationType: notifyOptions?.notificationType ?? "default",
+            width: notifyOptions?.width ?? 300,
+            height: notifyOptions?.height ?? 50
+        };
 
         let notificationDiv: HTMLDivElement | null = document.createElement('div');
         let notificationText: HTMLDivElement | null = document.createElement('div');
@@ -779,27 +780,24 @@ export class HSUI extends HSModule {
         notificationDiv.className = HSGlobal.HSUI.notifyClassName;
         notificationText.className = HSGlobal.HSUI.notifyTextClassName;
 
-        const width = 300;
-        const height = 50;
-
         const bgColor = {
             'default': '#192a56',
             'warning': '#cd6133',
             'error': '#b33939',
             'success': '#009432',
-        }
+        };
 
         const positions = {
-            'topLeft': { top: `-${height}px`, left: `15px` },
-            'top': { top: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
-            'topRight': { top: `-${height}px`, right: `15px` },
-            'right': { top: `calc(50vh - ${height / 2}px)`, right: `-${width}px` },
-            'bottomRight': { bottom: `-${height}px`, right: `15px` },
-            'bottom': { bottom: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
-            'bottomLeft': { bottom: `-${height}px`, left: `15px` },
-            'left': { top: `calc(50vh - ${height / 2}px)`, left: `-${width}px` },
-        }
-
+            'topLeft': { top: `-${options.height}px`, left: `15px` },
+            'top': { top: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
+            'topRight': { top: `-${options.height}px`, right: `15px` },
+            'right': { top: `calc(50vh - ${options.height / 2}px)`, right: `-${options.width}px` },
+            'bottomRight': { bottom: `-${options.height}px`, right: `15px` },
+            'bottom': { bottom: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
+            'bottomLeft': { bottom: `-${options.height}px`, left: `15px` },
+            'left': { top: `calc(50vh - ${options.height / 2}px)`, left: `-${options.width}px` },
+        };
+    
         const transitions = {
             'topLeft': { top: `15px` },
             'top': { top: `15px` },
@@ -809,12 +807,14 @@ export class HSUI extends HSModule {
             'bottom': { bottom: `15px` },
             'bottomLeft': { bottom: `15px` },
             'left': { left: `15px` },
-        }
+        };
 
         notificationDiv.style = HSUtils.objectToCSS({
             ...positions[options.position],
             opacity: '1',
-            backgroundColor: bgColor[options.notificationType]
+            backgroundColor: bgColor[options.notificationType],
+            width: `${options.width}px`,
+            height: `${options.height}px`
         });
 
         notificationText.innerText = text;
