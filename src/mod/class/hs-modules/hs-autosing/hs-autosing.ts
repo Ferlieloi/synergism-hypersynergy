@@ -258,8 +258,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.subscribeGameDataChanges();
         new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
-        })
-
+        });
 
         this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!this.gameDataAPI) {
@@ -276,15 +275,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (gameData.highestSingularityCount < 40) {
-            confirm(`AutoSing is an end-game QoL feature. \n\nIt is made for S256+ (yes, THAT much!). It is not available until you unlock EXALT2, and, even after that, it is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`);
+            confirm(`AutoSing is an end-game QoL feature. \n\nS256+ is expected (yes, THAT much!). It is not available until you unlock EXALT2, and, even after that, it is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`);
             this.stopAutosing();
             return Promise.resolve();
         } else if (gameData.highestSingularityCount < 216) {
-            if (!confirm(`AutoSing is an end-game QoL feature. \n\nIt is made for S256+ (yes, THAT much!), and is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`)) {
+            if (!confirm(`AutoSing is an end-game QoL feature. \n\nS256+ is expected (yes, THAT much!). It is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`)) {
                 this.stopAutosing();
                 return Promise.resolve();
             }
-            HSUI.Notify("You acknowledged that your singularity is too low and that AutoSing will not work properly.", { notificationType: "warning" });
+            HSUI.Notify("You acknowledged that your highest sing is too low and that Auto-Sing will NOT work properly.", { popDuration: 10000, notificationType: "warning" });
         }
 
         if (this.targetSingularity > gameData.highestSingularityCount) {
@@ -1419,7 +1418,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.waitForCompletion(10, 72, 2000, 0);
         await this.waitForCompletion(14, 0, 7777, 0);
         await this.waitForCompletion(10, 72, 2000, 0);
-        
+
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
         await this.waitForCompletion(15, 0, 7777, 0);   // C15 with auto-chall for 3s

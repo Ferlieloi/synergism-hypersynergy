@@ -549,7 +549,7 @@
   },
   "startAutosing": {
     "settingName": "startAutosing",
-    "settingDescription": "Start/Stop Auto-Sing",
+    "settingDescription": "Start/Stop Auto-Sing (S256+)",
     "settingHelpText": "When enabled, the mod will automatically perform singularities.",
     "settingType": "boolean",
     "enabled": false,
@@ -1206,7 +1206,7 @@
   },
     "ambrosiaQuickBar": {
       "settingName": "ambrosiaQuickBar",
-      "settingDescription": "Ambrosia quick bar",
+      "settingDescription": "Ambrosia quick bar (S25+)",
       "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
       "settingType": "boolean",
       "enabled": true,
@@ -1220,7 +1220,7 @@
     },
     "ambrosiaMinibars": {
       "settingName": "ambrosiaMinibars",
-      "settingDescription": "Ambrosia minibars",
+      "settingDescription": "Ambrosia minibars (S25+)",
       "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
       "settingType": "boolean",
       "enabled": true,

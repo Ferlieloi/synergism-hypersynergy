@@ -1114,7 +1114,7 @@ console.log('[HSAmbrosia] Drop event on slot:', slotElement, ' with iconEnum:', 
 
         if (!gameData) return;
 
-        if (gameData.blueberryTime && gameData.redAmbrosiaTime) {
+        if (gameData.blueberryTime != null && gameData.redAmbrosiaTime != null) {
 
             const blueAmbrosiaBarValue = gameData.blueberryTime;
             const redAmbrosiaBarValue = gameData.redAmbrosiaTime;
