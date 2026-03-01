@@ -1225,6 +1225,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // Wait for the C11-14 completions to stop increasing
         let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
+        await HSUtils.sleep(50); // doubble wait at the start
         while (true) {
             await HSUtils.sleep(50);
             const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
@@ -1390,6 +1391,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             // Stop at singularity's end requested
             if (this.stopAtSingularitysEnd && this.autosingEnabled) {
+                HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+                
                 await this.pushSingularityBeforeStop();
 
                 HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
@@ -1410,31 +1413,51 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
         // Max C11-14
-        await this.waitForCompletion(11, 0, 7777, 0);
-        await this.waitForCompletion(10, 72, 2000, 0);
-        await this.waitForCompletion(12, 0, 7777, 0);
-        await this.waitForCompletion(10, 72, 2000, 0);
-        await this.waitForCompletion(13, 0, 7777, 0);
-        await this.waitForCompletion(10, 72, 2000, 0);
-        await this.waitForCompletion(14, 0, 7777, 0);
-        await this.waitForCompletion(10, 72, 2000, 0);
+        await this.maxC11to14WithC10(11);
+        await this.maxC11to14WithC10(12);
+        await this.maxC11to14WithC10(13);
+        await this.maxC11to14WithC10(14);
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
 
-        await this.waitForCompletion(15, 0, 7777, 0);   // C15 with auto-chall for 3s
-        this.autoChallengeButton.click();
-        await HSUtils.sleep(3000);
+        for (let i = 1; i <= 2; i++) {                  // 2 loops
+            await this.waitForCompletion(15, 0, 0, 0);  // C15 with auto-chall for 3s
+            this.autoChallengeButton.click();
+            this.setAmbrosiaLoadout(this.ambrosia_off);
+            await HSUtils.sleep(2900);
+            this.antSacrifice.click();
+            await HSUtils.sleep(100);
+            this.setAmbrosiaLoadout(this.ambrosia_late_cube);
 
-        this.exitAscBtn.click();
-        await HSUtils.sleep(3000);                      // 3s with auto-chall without ascension challenge
+            this.exitAscBtn.click();                    // 3s with auto-chall without ascension challenge
+            this.setAmbrosiaLoadout(this.ambrosia_off);
+            await HSUtils.sleep(2900);
+            this.antSacrifice.click();
+            await HSUtils.sleep(100);
+            this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        }
 
-        await this.waitForCompletion(15, 0, 7777, 0);   // C15 with auto-chall for 3s
-        this.autoChallengeButton.click();
-        await HSUtils.sleep(3000);
-
+        await this.waitForCompletion(15, 0, 0, 0);      // Last C15 with auto-chall + Push C6->C1-5
+        this.setAmbrosiaLoadout(this.ambrosia_obt);
+        await HSUtils.sleep(2800);
+        this.setAmbrosiaLoadout(this.ambrosia_off);
+        await HSUtils.sleep(100);
+        this.antSacrifice.click();
+        await HSUtils.sleep(100);
+        this.setAmbrosiaLoadout(this.ambrosia_obt);
+        await this.waitForCompletion(6, 0, 1000, 0);       // Push C6 -> C1-5
+        await this.waitForCompletion(5, 0, 1000, 0);
+        await this.waitForCompletion(4, 0, 1000, 0);
+        await this.waitForCompletion(3, 0, 1000, 0);
+        await this.waitForCompletion(2, 0, 1000, 0);
+        await this.waitForCompletion(1, 0, 1000, 0);
+        this.exitTranscBtn.click();
+        await HSUtils.sleep(1000);
+        this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        await HSUtils.sleep(100);
         this.exitAscBtn.click();
         this.ambrosia_ambrosia.click();                 // Idle on Ambrosia loadout
-        this.exportBtn.click();                         // Export save file (doesn't work ?)
+        // this.exportBtn.click();                      // Export save file
 
         return Promise.resolve();
     }
