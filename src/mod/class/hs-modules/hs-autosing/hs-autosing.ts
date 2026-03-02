@@ -68,7 +68,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private ambrosia_quark!: HTMLButtonElement;
     private ambrosia_obt!: HTMLButtonElement;
     private ambrosia_off!: HTMLButtonElement;
-    private ambrosia_ambrosia!: HTMLButtonElement;
+    private ambrosia_luck!: HTMLButtonElement;
     private antSacrifice!: HTMLButtonElement;
     private coin!: HTMLButtonElement;
     private autosingModal!: HSAutosingModal;
@@ -349,9 +349,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ambrosia_quark = document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
         this.ambrosia_obt = document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`) as HTMLButtonElement;
         this.ambrosia_off = document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`) as HTMLButtonElement;
-        this.ambrosia_ambrosia = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
+        this.ambrosia_luck = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
-        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_ambrosia) {
+        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_luck) {
             HSLogger.debug("Autosing: Stopping - Required Ambrosia loadout buttons missing in DOM.", this.context);
             HSUI.Notify("Could not find all required Ambrosia loadout buttons", { notificationType: "warning" });
             this.stopAutosing();
@@ -394,7 +394,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async performAutosingLogic(): Promise<void> {
-        this.ambrosia_ambrosia.click();
+        this.ambrosia_luck.click();
         await this.useAddAndTimeCodes();
 
         try {
@@ -669,7 +669,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
             }
 
-            if (challenge.challengeNumber == 201) {
+            if (challenge.challengeNumber == 401) {
                 const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
                 if (phaseLoadout) {
                     await this.setCorruptions(phaseLoadout);
@@ -753,90 +753,90 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 104: // Ascend
                 this.ascendBtn.click();
                 break;
-            case 105: // Early Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+            case 151: // Wait
                 break;
-            case 106: // Late Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-                break;
-            case 107: // Quark
-                await this.setAmbrosiaLoadout(this.ambrosia_quark);
-                break;
-            case 108: // Ant sac
+            case 152: // Ant sac
                 await this.antSacrifice.click();
                 break;
-            case 109: // Ant Corruptions
-                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
-                await this.setCorruptions(antCorruptions);
-                break;
-            case 110: // Cleanse
-                await this.setCorruptions(ZERO_CORRUPTIONS);
-                break;
-            case 111: // Wait
-                break;
-            case 112: // Obt loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_obt);
-                break;
-            case 113: // Off loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_off);
-                break;
-            case 114: // Ambrosia loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
-                break;
-            case 115: // auto Challenge Toggle
+            case 153: // auto Challenge Toggle
                 this.autoChallengeButton.click();
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
-            case 116: // store C15
-                this.storedC15 = this.getChallengeCompletions(15);
-                break;
-            case 117: // Max C11
+            case 211: // Max C11
                 await this.maxC11to14WithC10(11);
                 break;
-            case 118: // Max C12
+            case 212: // Max C12
                 await this.maxC11to14WithC10(12);
                 break;
-            case 119: // Max C13
+            case 213: // Max C13
                 await this.maxC11to14WithC10(13);
                 break;
-            case 120: // Max C14
+            case 214: // Max C14
                 await this.maxC11to14WithC10(14);
                 break;
-            case 121: // Click AOAG
-                this.AOAG.click();
+            case 215: // store C15
+                this.storedC15 = this.getChallengeCompletions(15);
                 break;
-            case 301: // Max C1
+            case 301: // Early Cube
+                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+                break;
+            case 302: // Late Cube
+                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+                break;
+            case 303: // Quark
+                await this.setAmbrosiaLoadout(this.ambrosia_quark);
+                break;
+            case 304: // Obt loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_obt);
+                break;
+            case 305: // Off loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_off);
+                break;
+            case 306: // Ambrosia loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_luck);
+                break;
+            case 400: // Zero Corruptions
+                await this.setCorruptions(ZERO_CORRUPTIONS);
+                break;
+            case 402: // Ant Corruptions
+                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(antCorruptions);
+                break;
+            case 601: // Max C1
                 await this.C1to10UntilNoMoreCompletions(1, waitTime, maxTime);
                 break;
-            case 302: // Max C2
+            case 602: // Max C2
                 await this.C1to10UntilNoMoreCompletions(2, waitTime, maxTime);
                 break;
-            case 303: // Max C3
+            case 603: // Max C3
                 await this.C1to10UntilNoMoreCompletions(3, waitTime, maxTime);
                 break;
-            case 304: // Max C4
+            case 604: // Max C4
                 await this.C1to10UntilNoMoreCompletions(4, waitTime, maxTime);
                 break;
-            case 305: // Max C5
+            case 605: // Max C5
                 await this.C1to10UntilNoMoreCompletions(5, waitTime, maxTime);
                 break;
-            case 306: // Max C6
+            case 606: // Max C6
                 await this.C1to10UntilNoMoreCompletions(6, waitTime, maxTime);
                 break;
-            case 307: // Max C7
+            case 607: // Max C7
                 await this.C1to10UntilNoMoreCompletions(7, waitTime, maxTime);
                 break;
-            case 308: // Max C8
+            case 608: // Max C8
                 await this.C1to10UntilNoMoreCompletions(8, waitTime, maxTime);
                 break;
-            case 309: // Max C9
+            case 609: // Max C9
                 await this.C1to10UntilNoMoreCompletions(9, waitTime, maxTime);
                 break;
-            case 310: // Max C10
+            case 610: // Max C10
                 await this.C1to10UntilNoMoreCompletions(10, waitTime, maxTime);
                 break;
-            case 999: // Restart AutoSing
+            case 901: // Click AOAG
+                this.AOAG.click();
+                break;
+            case 902: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
                 if (restartBtn) restartBtn.click();
                 break;
@@ -1420,44 +1420,52 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
         
-        this.autoChallengeButton.click();                 // Auto-challenge ON
-        for (let i = 1; i <= 2; i++) {                    // 2 loops
-            await this.waitForCompletion(15, 0, 0, 0);    // C15 with auto-chall for 3s+    
-            this.setAmbrosiaLoadout(this.ambrosia_off);
+        // 2 loops Auto-challenge ON
+        await this.autoChallengeButton.click();
+        for (let i = 1; i <= 2; i++) {
+            // 3-4s with auto-chall in C15 
+            await this.waitForCompletion(15, 0, 0, 0);
+            await this.setAmbrosiaLoadout(this.ambrosia_obt);
             await HSUtils.sleep(3500);
-            this.antSacrifice.click();
+            await this.setAmbrosiaLoadout(this.ambrosia_off);
             await HSUtils.sleep(100);
-            this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+            await this.antSacrifice.click();
+            await HSUtils.sleep(100);
+            await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
 
-            this.exitAscBtn.click();                      // 3s+ with auto-chall without ascension challenge
-            this.setAmbrosiaLoadout(this.ambrosia_off);
+            // 3-4s with auto-chall without ascension challenge
+            await this.exitAscBtn.click();
+            await this.setAmbrosiaLoadout(this.ambrosia_off);
             await HSUtils.sleep(3500);
-            this.antSacrifice.click();
+            await this.antSacrifice.click();
             await HSUtils.sleep(100);
-            this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+            await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
         }
-
-        await this.waitForCompletion(15, 0, 0, 0);        // Last C15 with auto-chall + Push C6->C1-5
-        this.setAmbrosiaLoadout(this.ambrosia_obt);
+        // Last C15 with auto-chall + Push C6 -> C1-5
+        await this.waitForCompletion(15, 0, 0, 0);        
+        await this.setAmbrosiaLoadout(this.ambrosia_obt);
         await HSUtils.sleep(3500);
-        this.setAmbrosiaLoadout(this.ambrosia_off);
+        await this.setAmbrosiaLoadout(this.ambrosia_off);
         await HSUtils.sleep(100);
-        this.antSacrifice.click();
+        await this.antSacrifice.click();
         await HSUtils.sleep(100);
-        this.setAmbrosiaLoadout(this.ambrosia_obt);
-        await this.waitForCompletion(6, 150, 1000, 0);     // Push C6 -> C1-5
+        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+        // Push C6 -> C1-5
+        await this.waitForCompletion(6,  150, 1000, 0);
         await this.waitForCompletion(5, 9001, 1000, 0);
         await this.waitForCompletion(4, 9001, 1000, 0);
         await this.waitForCompletion(3, 9001, 1000, 0);
         await this.waitForCompletion(2, 9001, 1000, 0);
         await this.waitForCompletion(1, 9001, 1000, 0);
-        this.exitTranscBtn.click();
+        await this.exitTranscBtn.click();
         await HSUtils.sleep(1000);
-        this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-        this.autoChallengeButton.click();
-        this.exitAscBtn.click();
-        this.setAmbrosiaLoadout(this.ambrosia_ambrosia);  // Idle on Ambrosia loadout
-        // this.exportBtn.click();                        // Export save file
+        await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        await this.autoChallengeButton.click();
+        
+        // Idle on Ambrosia loadout
+        await this.exitAscBtn.click();
+        await this.setAmbrosiaLoadout(this.ambrosia_luck);  
+        // await this.exportBtn.click();
 
         return Promise.resolve();
     }

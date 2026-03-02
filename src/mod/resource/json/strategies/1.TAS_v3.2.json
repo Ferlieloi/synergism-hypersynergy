@@ -19,7 +19,7 @@
         {
           "challengeWaitBefore": 5,
           "comment": "==> Obt ldt",
-          "challengeNumber": 112,
+          "challengeNumber": 304,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -80,7 +80,7 @@
           }
         },
         {
-          "challengeNumber": 105,
+          "challengeNumber": 301,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -102,7 +102,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -136,7 +136,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -170,7 +170,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -191,7 +191,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -226,14 +226,14 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "challengeWaitBefore": 300,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -255,7 +255,7 @@
         },
         {
           "comment": "==> 10ms Wait to avoid wrong phase read",
-          "challengeNumber": 111,
+          "challengeNumber": 151,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 10,
@@ -280,7 +280,7 @@
       "strat": [
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -314,7 +314,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -335,14 +335,14 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "challengeWaitBefore": 250,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -372,7 +372,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -406,7 +406,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -427,14 +427,14 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "challengeWaitBefore": 250,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -464,7 +464,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -498,7 +498,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -519,14 +519,14 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "challengeWaitBefore": 350,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -571,7 +571,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -605,7 +605,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -626,14 +626,14 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "challengeWaitBefore": 250,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -662,7 +662,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -724,7 +724,7 @@
       "strat": [
         {
           "comment": "=> Post-AOAG ldt",
-          "challengeNumber": 106,
+          "challengeNumber": 302,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -760,7 +760,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -796,7 +796,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -825,7 +825,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -862,7 +862,7 @@
         },
         {
           "challengeWaitBefore": 5,
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -918,7 +918,7 @@
         },
         {
           "comment": "=> Auto-Chall ON",
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -926,7 +926,7 @@
         },
         {
           "comment": "=>DO YOU WANT ANTS??",
-          "challengeNumber": 109,
+          "challengeNumber": 409,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -941,14 +941,14 @@
         },
         {
           "comment": "==> Off ldt",
-          "challengeNumber": 113,
+          "challengeNumber": 305,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -962,7 +962,7 @@
           "challengeMaxTime": 50
         },
         {
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "comment": "=> Auto-Chall ON",
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -970,7 +970,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "comment": "=> 1st Ant-sac",
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -980,7 +980,7 @@
         {
           "challengeWaitBefore": 750,
           "comment": "=> 2nd Ant-sac",
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -988,14 +988,14 @@
         {
           "challengeWaitBefore": 750,
           "comment": "=> Auto-Chall OFF",
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "comment": "=> 3rd Ant-sac",
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -1003,7 +1003,7 @@
         },
         {
           "comment": "=> Auto-Chall ON",
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -1012,14 +1012,14 @@
         {
           "challengeWaitBefore": 1000,
           "comment": "=> Auto-Chall OFF",
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
           "comment": "=> 4th Ant-sac",
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -1027,7 +1027,7 @@
         },
         {
           "comment": "=> Auto-Chall ON",
-          "challengeNumber": 115,
+          "challengeNumber": 153,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -1036,7 +1036,7 @@
         {
           "challengeWaitBefore": 1000,
           "comment": "==> Post-AOAG ldt",
-          "challengeNumber": 106,
+          "challengeNumber": 302,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
@@ -1050,7 +1050,7 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 108,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -1138,28 +1138,28 @@
         "challengeMaxTime": 0
       },
       {
-        "challengeNumber": 111,
+        "challengeNumber": 151,
         "challengeCompletions": 0,
         "challengeWaitTime": 0,
         "challengeMaxTime": 0,
         "challengeWaitBefore": 100
       },
       {
-        "challengeNumber": 108,
+        "challengeNumber": 152,
         "challengeCompletions": 0,
         "challengeWaitTime": 0,
         "challengeWaitBefore": 0,
         "challengeMaxTime": 0
       },
       {
-        "challengeNumber": 111,
+        "challengeNumber": 151,
         "challengeCompletions": 0,
         "challengeWaitTime": 0,
         "challengeWaitBefore": 1,
         "challengeMaxTime": 0
       },
       {
-        "challengeNumber": 121,
+        "challengeNumber": 901,
         "challengeCompletions": 0,
         "challengeWaitTime": 0,
         "challengeWaitBefore": 0,

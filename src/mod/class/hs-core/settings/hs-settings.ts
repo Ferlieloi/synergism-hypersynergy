@@ -1350,6 +1350,21 @@ export class HSSettings extends HSModule {
 
         if (loaded) {
             const list = Array.isArray(loaded) ? loaded : [loaded];
+
+            // Migrate old action IDs to new ones for all user strategies
+            let didMigrate = false;
+            for (const strategy of list) {
+                const before = JSON.stringify(strategy);
+                HSSettings.migrateStrategyActionIdsAuto(strategy, true);
+                if (before !== JSON.stringify(strategy)) {
+                    didMigrate = true;
+                }
+            }
+            // And save them back to storage if any migration was done
+            if (didMigrate) {
+                storageMod.setData(HSGlobal.HSSettings.strategiesKey, list);
+            }
+
             return list.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
         }
 
@@ -1359,11 +1374,10 @@ export class HSSettings extends HSModule {
     // Migrates old action IDs to new ones or vice versa
     static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, oldToNewOnly: boolean = false): HSAutosingStrategy {
         const oldToNewActionIds: Record<number, number> = {
-            105: 301, 106: 302, 107: 303, 112: 304, 113: 305, 114: 306,
-            108: 152, 109: 409, 110: 400, 111: 151, 115: 153, 116: 215,
-            117: 211, 118: 212, 119: 213, 120: 214, 121: 901, 201: 410,
-            501: 401, 502: 402, 503: 403, 504: 404, 505: 405, 506: 406,
-            507: 407, 508: 408,
+            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402, 
+            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212, 
+            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605, 
+            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902
         };
         const newToOldActionIds = Object.fromEntries(
             Object.entries(oldToNewActionIds).map(([oldId, newId]) => [newId, Number(oldId)])
