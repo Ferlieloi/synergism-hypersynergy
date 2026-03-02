@@ -267,12 +267,13 @@ export class HSSettingActions {
 
             // Remove or inject the quickbar section based on setting
             const quickbarSectionId = 'automation';
-            // const quickbarManager = (window as any).HSQuickbarManager ? (window as any).HSQuickbarManager.getInstance() : undefined;
-            const quickbarManager = HSQuickbarManager.getInstance();
             // Fallback to import if not on window
             const HSQuickbarManagerImport = HSQuickbarManager.getInstance();
 
+            // Use explicit module teardown/setup wrappers so watcher and RAF lifecycle stays correct
+            // when this setting is toggled multiple times.
             if (params.disable && params.disable === true) {
+                qolButtonsMod.teardownAutomationQuickbarWrapper();
                 HSQuickbarManagerImport.removeSection(quickbarSectionId);
             } else {
                 HSQuickbarManagerImport.registerSection(quickbarSectionId, () => qolButtonsMod.getAutomationQuickbarSection());

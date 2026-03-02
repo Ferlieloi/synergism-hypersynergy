@@ -79,7 +79,7 @@ export interface HSGlobalAmbrosia extends IStoreable {
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 
-    idleSwapQuickIconUrl: string;
+    idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
     idleSwapIndicatorId: string;
     idleSwapMaxBlueTreshold: number;
     idleSwapMinBlueTreshold: number;
