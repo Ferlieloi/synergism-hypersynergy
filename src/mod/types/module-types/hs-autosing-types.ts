@@ -47,8 +47,10 @@ export const SPECIAL_ACTIONS = [
     { label: "Wait", value: 151 },
     { label: "Ant Sacrifice", value: 152 },
     { label: "Auto Challenge Toggle", value: 153 },
+    { label: "Auto Ant-Sac Toggle", value: 154 },
+    { label: "Auto Ascend Toggle", value: 155 },
 
-    { label: "If-jump", value: IF_JUMP_VALUE }, // 200
+    { label: "If-jump", value: IF_JUMP_VALUE },
 
     { label: "Max C11", value: 211 },
     { label: "Max C12", value: 212 },
@@ -78,8 +80,19 @@ export const SPECIAL_ACTIONS = [
     { label: "C9 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 609 },
     { label: "C10 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 610 },
 
+    { label: "Forge Auto-Buy Toggle - Chronos Hept", value: 701 },
+    { label: "Forge Auto-Buy Toggle - Hyperreal Hept", value: 702 },
+    { label: "Forge Auto-Buy Toggle - Quarks Hept", value: 703 },
+    { label: "Forge Auto-Buy Toggle - Challenge Hept", value: 704 },
+    { label: "Forge Auto-Buy Toggle - Abyss Hept", value: 705 },
+    { label: "Forge Auto-Buy Toggle - Accelerator Hept", value: 706 },
+    { label: "Forge Auto-Buy Toggle - Boost Hept", value: 707 },
+    { label: "Forge Auto-Buy Toggle - Multiplier Hept", value: 708 },
+    { label: "Forge Auto-Buy Toggle - Orbs", value: 709 },
+
     { label: "Click AOAG", value: 901 },
     { label: "Restart Autosing", value: 902 },
+    { label: "Stop Autosing", value: 903 },
 ] as const;
 
 export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({

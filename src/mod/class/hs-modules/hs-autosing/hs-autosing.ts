@@ -63,6 +63,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private elevatorTeleportButton!: HTMLButtonElement;
     private elevatorInput!: HTMLInputElement;
     private autoChallengeButton!: HTMLButtonElement;
+    private autoAntSacrificeButton!: HTMLButtonElement;
+    private autoAscendButton!: HTMLButtonElement;
+    private chronosHeptAutoBuyBtn!: HTMLButtonElement;
+    private hyperHeptAutoBuyBtn!: HTMLButtonElement;
+    private quarkHeptAutoBuyBtn!: HTMLButtonElement;
+    private challHeptAutoBuyBtn!: HTMLButtonElement;
+    private abyssHeptAutoBuyBtn!: HTMLButtonElement;
+    private accelHeptAutoBuyBtn!: HTMLButtonElement;
+    private boostHeptAutoBuyBtn!: HTMLButtonElement;
+    private multHeptAutoBuyBtn!: HTMLButtonElement;
+    private orbsAutoBuyBtn!: HTMLButtonElement;
     private ambrosia_early_cube!: HTMLButtonElement;
     private ambrosia_late_cube!: HTMLButtonElement;
     private ambrosia_quark!: HTMLButtonElement;
@@ -86,7 +97,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private gamestate!: HSGameState;
     private autosingGameSettingsFixer?: HSAutosingGameSettingsFixer;
 
-    // Cached DOM Elements
     private corrCurrent: Record<string, HTMLElement | null> = {};
     private corrNext: Record<string, HTMLElement | null> = {};
     private corruptionPromptInput!: HTMLInputElement;
@@ -134,6 +144,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
         this.autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
+        this.autoAntSacrificeButton = document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement;
+        this.autoAscendButton = document.getElementById('ascensionAutoEnable') as HTMLButtonElement;
+        this.chronosHeptAutoBuyBtn = document.getElementById('chronosHepteractAuto') as HTMLButtonElement;
+        this.hyperHeptAutoBuyBtn = document.getElementById('hyperrealismHepteractAuto') as HTMLButtonElement;
+        this.quarkHeptAutoBuyBtn = document.getElementById('quarkHepteractAuto') as HTMLButtonElement;
+        this.challHeptAutoBuyBtn = document.getElementById('challengeHepteractAuto') as HTMLButtonElement;
+        this.abyssHeptAutoBuyBtn = document.getElementById('abyssHepteractAuto') as HTMLButtonElement;
+        this.accelHeptAutoBuyBtn = document.getElementById('acceleratorHepteractAuto') as HTMLButtonElement;
+        this.boostHeptAutoBuyBtn = document.getElementById('acceleratorBoostHepteractAuto') as HTMLButtonElement;
+        this.multHeptAutoBuyBtn = document.getElementById('multiplierHepteractAuto') as HTMLButtonElement;
+        this.orbsAutoBuyBtn = document.getElementById('hepteractToQuarkTradeAuto') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
@@ -763,6 +784,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
+            case 154: // Auto Ant-Sac Toggle
+                await this.autoAntSacrificeButton.click();
+                break;
+            case 155: // Auto Ascend Toggle
+                await this.autoAscendButton.click();
+                break;
             case 211: // Max C11
                 await this.maxC11to14WithC10(11);
                 break;
@@ -833,12 +860,43 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 610: // Max C10
                 await this.C1to10UntilNoMoreCompletions(10, waitTime, maxTime);
                 break;
+            case 701: // Forge Auto-Buy Toggle - Chronos Hept
+                await this.chronosHeptAutoBuyBtn.click();
+                break;
+            case 702: // Forge Auto-Buy Toggle - Hyperreal Hept
+                await this.hyperHeptAutoBuyBtn.click();
+                break;
+            case 703: // Forge Auto-Buy Toggle - Quarks Hept
+                await this.quarkHeptAutoBuyBtn.click();
+                break;
+            case 704: // Forge Auto-Buy Toggle - Challenge Hept
+                await this.challHeptAutoBuyBtn.click();
+                break;
+            case 705: // Forge Auto-Buy Toggle - Abyss Hept
+                await this.abyssHeptAutoBuyBtn.click();
+                break;
+            case 706: // Forge Auto-Buy Toggle - Accelerator Hept
+                await this.accelHeptAutoBuyBtn.click();
+                break;
+            case 707: // Forge Auto-Buy Toggle - Boost Hept
+                await this.boostHeptAutoBuyBtn.click();
+                break;
+            case 708: // Forge Auto-Buy Toggle - Multiplier Hept
+                await this.multHeptAutoBuyBtn.click();
+                break;
+            case 709: // Forge Auto-Buy Toggle - Orbs
+                await this.orbsAutoBuyBtn.click();
+                break;
             case 901: // Click AOAG
                 this.AOAG.click();
                 break;
             case 902: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
                 if (restartBtn) restartBtn.click();
+                break;
+            case 903: // Stop AutoSing
+                const stopBtn = document.getElementById('hs-timer-ctrl-stop') as HTMLButtonElement;
+                if (stopBtn) stopBtn.click();
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
