@@ -169,20 +169,13 @@ export class HSSettingActions {
                     await ambrosiaMod.enableIdleSwap();
                     newState = true;
                 }
-                // Directly update UI elements
-                // Update settings panel toggle button
-                /* const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn');
-                if (idleSwapToggle) {
-                    idleSwapToggle.classList.toggle('hs-disabled', !newState);
-                    HSSettings.getSetting('ambrosiaIdleSwap').getValue();
-                } */
-                // Update quick menu button 
+                // Update quick access button
                 const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]');
                 if (quickMenuBtn) {
                     const stateHtml = newState
                         ? '<span style="color: #4caf50; font-weight: bold;">ON</span>'
                         : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
-                    quickMenuBtn.innerHTML = `<img src="https://synergism.cc/Pictures/Default/Blueberries.png" alt="Blueberries" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 6px;">Ambrosia Swapper [${stateHtml}]`;
+                    quickMenuBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [${stateHtml}]`;
                 }
 
                 HSUI.Notify(`Ambrosia AFK Swapper toggled ${newState ? 'ON' : 'OFF'}.`, {

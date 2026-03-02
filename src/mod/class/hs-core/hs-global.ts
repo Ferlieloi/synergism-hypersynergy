@@ -477,6 +477,7 @@ export const HSGlobal: IHSGlobal = class {
             }],
         ]),
 
+        idleSwapQuickIconUrl: 'https://synergism.cc/Pictures/Default/OcteractBlueberries.png',
         idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
         idleSwapMaxBlueTreshold: 97,
         idleSwapMinBlueTreshold: 3,

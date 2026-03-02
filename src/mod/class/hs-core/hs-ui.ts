@@ -259,7 +259,7 @@ export class HSUI extends HSModule {
 
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
-        autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center;">▶</span>Start Auto-Sing';
+        autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center; margin-right: 5px;">▶</span>Start Auto-Sing (S256+)';
         autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
@@ -271,7 +271,7 @@ export class HSUI extends HSModule {
 
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
-        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center;">🔥</span>Amb Heater Export';
+        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>Amb Heater Export';
         heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
@@ -283,8 +283,9 @@ export class HSUI extends HSModule {
 
         // Create Ambrosia Idle Swap toggle button
         const idleSwapBtn = document.createElement('button');
+        // The label and color will be updated by ambrosiaIdleSwapAction when ready
+        idleSwapBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [--]`;
         idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
-        // The label and color are updated by ambrosiaIdleSwapAction directly
         idleSwapBtn.addEventListener('click', async () => {
             const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
             const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
