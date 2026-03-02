@@ -29,7 +29,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.10.6',
+        currentModVersion: '2.10.6a-dev7',
         isLatestVersion: true,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
@@ -133,7 +133,8 @@ export const HSGlobal: IHSGlobal = class {
         gameDataCheckBlacklist: [
             'useGameData',
             'stopSniffOnError',
-            // These three settings auto-enable GDS when toggled on, so they should be allowed to toggle even when GDS is off
+            // These three settings auto-enable GDS when toggled on,
+            // so they should be allowed to toggle even when GDS is off
             'startAutosing',
             'ambrosiaIdleSwap',
             'ambrosiaMinibars'
@@ -476,6 +477,7 @@ export const HSGlobal: IHSGlobal = class {
             }],
         ]),
 
+        idleSwapQuickIconUrl: 'https://synergism.cc/Pictures/Default/OcteractBlueberries.png',
         idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
         idleSwapMaxBlueTreshold: 97,
         idleSwapMinBlueTreshold: 3,
@@ -493,7 +495,7 @@ export const HSGlobal: IHSGlobal = class {
         redBarId: 'hs-red-progress-bar',
         redBarProgressId: 'hs-red-progress',
         redBarProgressTextId: 'hs-red-progress-text',
-        barWrapperId: 'hs-minibar-wrapper',
+        barWrapperId: 'hs-minibars-wrapper',
     }
 
     // HSGameState

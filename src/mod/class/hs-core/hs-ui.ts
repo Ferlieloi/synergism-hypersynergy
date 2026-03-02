@@ -3,14 +3,15 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
+import { HSSettings } from "./settings/hs-settings";
 import { HSModule } from "./module/hs-module";
 import { HSUIC } from "./hs-ui-components";
 import panelCoreCSS from "inline:../../resource/css/hs-panel-core.css";
-import timerModalCSS from "inline:../../resource/css/hs-timer-modal.css";
-import gridsCSS from "inline:../../resource/css/hs-grids.css";
+import timerModalCSS from "inline:../../resource/css/hs-autosingModal.css";
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
+import { HSAutosingStrategyModal } from "../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSModuleOptions } from "../../types/hs-types";
 
 /*
@@ -84,7 +85,7 @@ export class HSUI extends HSModule {
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
-        this.#staticPanelCss = panelCoreCSS + timerModalCSS + gridsCSS + animationsCSS + utilitiesCSS;
+        this.#staticPanelCss = panelCoreCSS + timerModalCSS + animationsCSS + utilitiesCSS;
         this.#staticPanelHtml = panelHTML;
     }
 
@@ -232,6 +233,20 @@ export class HSUI extends HSModule {
 
         this.uiReady = true;
         this.isInitialized = true;
+        
+        // Ensure autosingStrategy dropdown optgroups are rendered after panel injection
+        setTimeout(() => {
+            try {
+                // Only update if the dropdown exists in DOM
+                const dropdown = document.getElementById('autosingStrategy');
+                if (dropdown) {
+                    // Call the update function to rebuild optgroups
+                    HSSettings.updateStrategyDropdownList();
+                }
+            } catch (e) {
+                console.error('Failed to update autosingStrategy dropdown:', e);
+            }
+        }, 0);
     }
 
     #createQuickAccessMenu() {
@@ -244,7 +259,8 @@ export class HSUI extends HSModule {
 
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
-        autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center;">▶</span>Start Auto-Sing';
+        autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center; margin-right: 5px;">▶</span>Start Auto-Sing (S256+)';
+        autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
             if (autoSingToggle) {
@@ -255,8 +271,8 @@ export class HSUI extends HSModule {
 
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
-        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center;">🔥</span>Amb Heater Export';
-        heaterBtn.setAttribute('data-type', 'heater');
+        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>Amb Heater Export';
+        heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
             if (heaterExportBtn) {
@@ -265,8 +281,23 @@ export class HSUI extends HSModule {
             }
         });
 
+        // Create Ambrosia Idle Swap toggle button
+        const idleSwapBtn = document.createElement('button');
+        // The label and color will be updated by ambrosiaIdleSwapAction when ready
+        idleSwapBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [--]`;
+        idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
+        idleSwapBtn.addEventListener('click', async () => {
+            const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
+            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
+            if (idleSwapToggle) {
+                idleSwapToggle.click();
+                HSLogger.log(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, this.context);
+            }
+        });
+
         quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterBtn);
+        quickMenu.appendChild(idleSwapBtn);
         document.body.appendChild(quickMenu);
 
         // Show/hide menu on hover
@@ -732,15 +763,17 @@ export class HSUI extends HSModule {
         }
     }
 
-
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
+        HSLogger.log(`[Notify] ${text}`);
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,
             displayDuration: notifyOptions?.displayDuration ?? 4000,
             hideDuration: notifyOptions?.hideDuration ?? 2300,
-            notificationType: notifyOptions?.notificationType ?? "default"
-        }
+            notificationType: notifyOptions?.notificationType ?? "default",
+            width: notifyOptions?.width ?? 300,
+            height: notifyOptions?.height ?? 50
+        };
 
         let notificationDiv: HTMLDivElement | null = document.createElement('div');
         let notificationText: HTMLDivElement | null = document.createElement('div');
@@ -748,27 +781,24 @@ export class HSUI extends HSModule {
         notificationDiv.className = HSGlobal.HSUI.notifyClassName;
         notificationText.className = HSGlobal.HSUI.notifyTextClassName;
 
-        const width = 300;
-        const height = 50;
-
         const bgColor = {
             'default': '#192a56',
             'warning': '#cd6133',
             'error': '#b33939',
             'success': '#009432',
-        }
+        };
 
         const positions = {
-            'topLeft': { top: `-${height}px`, left: `15px` },
-            'top': { top: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
-            'topRight': { top: `-${height}px`, right: `15px` },
-            'right': { top: `calc(50vh - ${height / 2}px)`, right: `-${width}px` },
-            'bottomRight': { bottom: `-${height}px`, right: `15px` },
-            'bottom': { bottom: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
-            'bottomLeft': { bottom: `-${height}px`, left: `15px` },
-            'left': { top: `calc(50vh - ${height / 2}px)`, left: `-${width}px` },
-        }
-
+            'topLeft': { top: `-${options.height}px`, left: `15px` },
+            'top': { top: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
+            'topRight': { top: `-${options.height}px`, right: `15px` },
+            'right': { top: `calc(50vh - ${options.height / 2}px)`, right: `-${options.width}px` },
+            'bottomRight': { bottom: `-${options.height}px`, right: `15px` },
+            'bottom': { bottom: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
+            'bottomLeft': { bottom: `-${options.height}px`, left: `15px` },
+            'left': { top: `calc(50vh - ${options.height / 2}px)`, left: `-${options.width}px` },
+        };
+    
         const transitions = {
             'topLeft': { top: `15px` },
             'top': { top: `15px` },
@@ -778,12 +808,14 @@ export class HSUI extends HSModule {
             'bottom': { bottom: `15px` },
             'bottomLeft': { bottom: `15px` },
             'left': { left: `15px` },
-        }
+        };
 
         notificationDiv.style = HSUtils.objectToCSS({
             ...positions[options.position],
             opacity: '1',
-            backgroundColor: bgColor[options.notificationType]
+            backgroundColor: bgColor[options.notificationType],
+            width: `${options.width}px`,
+            height: `${options.height}px`
         });
 
         notificationText.innerText = text;

@@ -1,11 +1,9 @@
-#hs-minibar-wrapper {
+#hs-minibars-wrapper {
     width: 281px;
     display: flex;
     padding: 0px;
     gap: 4px;
     flex-direction: column;
-    align-self: flex-end;
-    margin-right: 4%;
     margin-bottom: 5px;
 }
 

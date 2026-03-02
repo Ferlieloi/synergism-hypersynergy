@@ -1,4 +1,8 @@
- #hs-ambrosia-quick-loadout-container {
+#hs-ambrosia-group-wrapper {
+   margin-left: 50px;
+}
+
+#hs-ambrosia-quick-loadout-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -7,7 +11,6 @@
     gap: 4px;
     flex-direction: row;
     align-self: flex-end;
-    margin: 0px 3.85% 10px 0px;
     border: 0px solid #4f86f7;
  }
 
@@ -20,32 +23,38 @@
     border-right: none;
  }
 
- /* syn UI quickbar styles - overlay fixed to bottom center */
- #automationQuickBar {
-    position: fixed;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.75);
-    padding: 4px 6px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    z-index: 99999;
-    pointer-events: auto;
-    width: max-content;
-    max-width: calc(100% - 16px);
-    flex-wrap: wrap;
+/* Quickbar container styles */
+#quickbarsRow {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0px 4px;
+    margin: 0px 4% 10px 0px;
+    width: 100%;
     box-sizing: border-box;
- }
+}
+
+/* syn UI quickbar styles*/
+#automationQuickBar {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: flex-end;
+   justify-content: center;
+   background: none;
+   padding: 0px;
+   border-radius: 0px;
+   box-shadow: none;
+   width: auto;
+   max-width: 100%;
+   gap: 4px;
+   margin-left: 50px;
+   box-sizing: border-box;
+}
 
  #automationQuickBar .left,
  #automationQuickBar .center,
  #automationQuickBar .right {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4px;
     flex: 0 0 auto;
@@ -57,31 +66,21 @@
  }
 
  #automationQuickBar button.autoToggle {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     width: 32px;
     height: 32px;
     margin: 0 3px;
     padding: 0;
-    border-radius: 6px;
+    border-radius: 0px;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid #4f86f7;
  }
 
- #automationQuickBar button.autoToggle.enabled {
-    border-color: #006500;
- }
-
- #automationQuickBar button.autoToggle.disabled {
-    border-color: #bb0000;
-    background-color: rgba(255, 0, 0, 0.2);
- }
-
- #automationQuickBar button.autoToggle.mixed {
-    border-color: #dd8e01;
-    background-color: rgba(220, 140, 0, 0.2);
- }
+ #automationQuickBar button.autoToggle.enabled { border-color: #006500; }
+#automationQuickBar button.autoToggle.disabled { border-color: #bb0000; background-color: rgba(255, 0, 0, 0.2); }
+#automationQuickBar button.autoToggle.mixed { border-color: #dd8e01; background-color: rgba(220, 140, 0, 0.2); }
 
  #automationQuickBar button.autoToggle img {
     height: 18px;

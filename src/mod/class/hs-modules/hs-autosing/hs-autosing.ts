@@ -10,7 +10,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE } from "../../../types/module-types/hs-autosing-types";
-import { HSAutosingTimerModal } from "./hs-autosingTimerModal";
+import { HSAutosingModal } from "./hs-autosingModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
@@ -63,15 +63,26 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private elevatorTeleportButton!: HTMLButtonElement;
     private elevatorInput!: HTMLInputElement;
     private autoChallengeButton!: HTMLButtonElement;
+    private autoAntSacrificeButton!: HTMLButtonElement;
+    private autoAscendButton!: HTMLButtonElement;
+    private chronosHeptAutoBuyBtn!: HTMLButtonElement;
+    private hyperHeptAutoBuyBtn!: HTMLButtonElement;
+    private quarkHeptAutoBuyBtn!: HTMLButtonElement;
+    private challHeptAutoBuyBtn!: HTMLButtonElement;
+    private abyssHeptAutoBuyBtn!: HTMLButtonElement;
+    private accelHeptAutoBuyBtn!: HTMLButtonElement;
+    private boostHeptAutoBuyBtn!: HTMLButtonElement;
+    private multHeptAutoBuyBtn!: HTMLButtonElement;
+    private orbsAutoBuyBtn!: HTMLButtonElement;
     private ambrosia_early_cube!: HTMLButtonElement;
     private ambrosia_late_cube!: HTMLButtonElement;
     private ambrosia_quark!: HTMLButtonElement;
     private ambrosia_obt!: HTMLButtonElement;
     private ambrosia_off!: HTMLButtonElement;
-    private ambrosia_ambrosia!: HTMLButtonElement;
+    private ambrosia_luck!: HTMLButtonElement;
     private antSacrifice!: HTMLButtonElement;
     private coin!: HTMLButtonElement;
-    private timerModal!: HSAutosingTimerModal;
+    private autosingModal!: HSAutosingModal;
     private prevActionTime: number = 0;
     private AOAG!: HTMLButtonElement;
     private endStageDone: boolean = false;
@@ -86,7 +97,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private gamestate!: HSGameState;
     private autosingGameSettingsFixer?: HSAutosingGameSettingsFixer;
 
-    // Cached DOM Elements
     private corrCurrent: Record<string, HTMLElement | null> = {};
     private corrNext: Record<string, HTMLElement | null> = {};
     private corruptionPromptInput!: HTMLInputElement;
@@ -134,6 +144,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
         this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
         this.autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
+        this.autoAntSacrificeButton = document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement;
+        this.autoAscendButton = document.getElementById('ascensionAutoEnable') as HTMLButtonElement;
+        this.chronosHeptAutoBuyBtn = document.getElementById('chronosHepteractAuto') as HTMLButtonElement;
+        this.hyperHeptAutoBuyBtn = document.getElementById('hyperrealismHepteractAuto') as HTMLButtonElement;
+        this.quarkHeptAutoBuyBtn = document.getElementById('quarkHepteractAuto') as HTMLButtonElement;
+        this.challHeptAutoBuyBtn = document.getElementById('challengeHepteractAuto') as HTMLButtonElement;
+        this.abyssHeptAutoBuyBtn = document.getElementById('abyssHepteractAuto') as HTMLButtonElement;
+        this.accelHeptAutoBuyBtn = document.getElementById('acceleratorHepteractAuto') as HTMLButtonElement;
+        this.boostHeptAutoBuyBtn = document.getElementById('acceleratorBoostHepteractAuto') as HTMLButtonElement;
+        this.multHeptAutoBuyBtn = document.getElementById('multiplierHepteractAuto') as HTMLButtonElement;
+        this.orbsAutoBuyBtn = document.getElementById('hepteractToQuarkTradeAuto') as HTMLButtonElement;
         this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
         this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
         this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
@@ -181,8 +202,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.corrNext[name] = document.getElementById(`corrNext${name}`);
         });
 
-        if (!this.timerModal) {
-            this.timerModal = new HSAutosingTimerModal();
+        if (!this.autosingModal) {
+            this.autosingModal = new HSAutosingModal();
         }
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
@@ -240,7 +261,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // Advanced data collection is checked once at autosing start.
         // While autosing is running, we use this cached value to avoid repeated setting lookups.
-        // [SHEW] Always treat advancedDataCollection as disabled for now...
+        // [SHEWCHOU] Always treat advancedDataCollection as disabled for now...
         // this.advancedDataCollectionEnabledAtStart = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
         this.advancedDataCollectionEnabledAtStart = false;
 
@@ -258,8 +279,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.subscribeGameDataChanges();
         new Promise<void>(resolve => {
             this.gameDataResolver = resolve;
-        })
-
+        });
 
         this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!this.gameDataAPI) {
@@ -273,6 +293,18 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.debug("Could not get game data", this.context);
             this.stopAutosing();
             return Promise.resolve();
+        }
+
+        if (gameData.highestSingularityCount < 40) {
+            confirm(`AutoSing is an end-game QoL feature. \n\nS256+ is expected (yes, THAT much!). It is not available until you unlock EXALT2, and, even after that, it is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`);
+            this.stopAutosing();
+            return Promise.resolve();
+        } else if (gameData.highestSingularityCount < 216) {
+            if (!confirm(`AutoSing is an end-game QoL feature. \n\nS256+ is expected (yes, THAT much!). It is NOT fully functional until you completed EXALT6 at least once.\n\nYou can test it out now, but we (the developers of the mod) will NOT acknowledge nor act on suggestions, complaints or bug reports based on pre-S256 saves.`)) {
+                this.stopAutosing();
+                return Promise.resolve();
+            }
+            HSUI.Notify("You acknowledged that your highest sing is too low and that Auto-Sing will NOT work properly.", { popDuration: 10000, notificationType: "warning" });
         }
 
         if (this.targetSingularity > gameData.highestSingularityCount) {
@@ -295,22 +327,32 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         );
 
         if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found", { notificationType: "warning" });
+            HSUI.Notify("Selected strategy not found - Autosing stopped", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
 
-        const strategies = HSSettings.getStrategies();
-        this.strategy = strategies.find(
-            s => s.strategyName === selectedOption.text
-        );
+        // Lazy-load the selected strategy: check if it's a default (manifest) or user strategy
+        const defaultNames = HSSettings.getDefaultStrategyNames();
+        let strategy: HSAutosingStrategy | null = null;
+        const selectedRawName = selectedOption.value.toString();
+        if (defaultNames.includes(selectedRawName)) {
+            // Load from file only when needed
+            strategy = await HSSettings.loadDefaultStrategyByName(selectedRawName);
+        } else {
+            // User strategy: already in memory
+            const strategies = HSSettings.getStrategies();
+            strategy = strategies.find(s => s.strategyName === selectedRawName) || null;
+        }
 
-        if (!this.strategy) {
-            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedOption.text}" not found.`, this.context);
-            HSUI.Notify("Could not find strategy", { notificationType: "warning" });
+        if (!strategy) {
+            HSLogger.debug(`Autosing: Stopping - Strategy "${selectedRawName}" not found or failed to load.`, this.context);
+            HSUI.Notify("Could not find or load strategy", { notificationType: "warning" });
             this.stopAutosing();
             return Promise.resolve();
         }
+
+        this.strategy = strategy;
 
         this.rebuildStrategyPhaseCaches();
         this.buildLoadoutCache();
@@ -328,9 +370,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.ambrosia_quark = document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
         this.ambrosia_obt = document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`) as HTMLButtonElement;
         this.ambrosia_off = document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`) as HTMLButtonElement;
-        this.ambrosia_ambrosia = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
+        this.ambrosia_luck = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
-        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_ambrosia) {
+        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_luck) {
             HSLogger.debug("Autosing: Stopping - Required Ambrosia loadout buttons missing in DOM.", this.context);
             HSUI.Notify("Could not find all required Ambrosia loadout buttons", { notificationType: "warning" });
             this.stopAutosing();
@@ -339,12 +381,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
 
-        if (!this.timerModal) {
-            this.timerModal = new HSAutosingTimerModal();
+        if (!this.autosingModal) {
+            this.autosingModal = new HSAutosingModal();
         }
 
-        if (this.timerModal) {
-            this.timerModal.show();
+        if (this.autosingModal) {
+            this.autosingModal.show();
         }
 
         // Check and set the expected settings everywhere in the vanilla game
@@ -364,8 +406,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.saveType.checked = false;
         this.endStagePromise = undefined;
 
-        if (this.timerModal) {
-            this.timerModal.hide();
+        if (this.autosingModal) {
+            this.autosingModal.hide();
         }
         HSLogger.log(`Autosing disabled`, this.context);
         this.unsubscribeGameDataChanges();
@@ -373,14 +415,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async performAutosingLogic(): Promise<void> {
-        this.ambrosia_ambrosia.click();
+        this.ambrosia_luck.click();
         await this.useAddAndTimeCodes();
 
         try {
-            if (this.timerModal) {
+            if (this.autosingModal) {
+                // --- Synchronize with Ambrosia quickbar injection ---
+                const { HSQuickbarManager } = await import("../hs-quickbarManager");
+                await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
                 const q = await this.getCurrentQuarks();
                 const gq = await this.getCurrentGoldenQuarks();
-                this.timerModal.start(this.strategy!, q, gq);
+                this.autosingModal.start(this.strategy!, q, gq);
             }
             // The first singularity triggered by autosing startup is used
             // to reach the target state but should not be counted in the
@@ -473,8 +518,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stageEnd = phaseConfig.endPhase;
 
             HSLogger.debug(`Executing final phase: ${stageStart}-${stageEnd}`, this.context);
-            if (this.timerModal) {
-                this.timerModal.setCurrentPhase(`${stageStart}-${stageEnd}`);
+            if (this.autosingModal) {
+                this.autosingModal.setCurrentPhase(`${stageStart}-${stageEnd}`);
             }
 
             await this.executePhase(phaseConfig);
@@ -516,9 +561,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
-        if (this.timerModal) {
-            this.timerModal.setCurrentPhase(phaseConfig.startPhase + '-' + phaseConfig.endPhase);
-        }
         await this.executePhase(phaseConfig);
         return;
     }
@@ -609,8 +651,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     ): Promise<void> {
         const phaseLabel = options?.phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
-        if (this.timerModal) {
-            this.timerModal.setCurrentPhase(phaseLabel);
+        if (this.autosingModal) {
+            this.autosingModal.setCurrentPhase(phaseLabel);
         }
         if (!options?.skipInitialCorruptions) {
             const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
@@ -624,24 +666,31 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end") && !options?.ignoreObserverActivated)) {
-                // If observerActivated stops execution, record the current phase before exiting
-                if (this.timerModal) {
+                // If observerActivated stops execution (AOAG unlocked), record the current phase before exiting
+                if (this.autosingModal) {
                     try {
-                        this.timerModal.recordPhase(phaseLabel);
+                        this.autosingModal.recordPhase(phaseLabel);
                     } catch (e) {
                         HSLogger.debug(`Error recording phase on early exit: ${e}`, this.context);
                     }
                 }
                 return;
             }
-
+            // PAUSE LOGIC: Block actions inside phase loop
+            if (this.autosingModal && this.autosingModal.getIsPaused()) {
+                HSUI.Notify('Autosing is paused.');
+                while (this.autosingModal.getIsPaused() && this.isAutosingEnabled()) {
+                    await HSUtils.sleep(500);
+                }
+                HSUI.Notify('Autosing resumed.');
+            }
             const challenge = phaseConfig.strat[i];
 
             if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
                 await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
             }
 
-            if (challenge.challengeNumber == 201) {
+            if (challenge.challengeNumber == 401) {
                 const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
                 if (phaseLoadout) {
                     await this.setCorruptions(phaseLoadout);
@@ -705,8 +754,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (phaseConfig.endPhase == "end") {
             this.endStageDone = true;
         }
-        if (this.timerModal) {
-            this.timerModal.recordPhase(phaseLabel);
+        if (this.autosingModal) {
+            this.autosingModal.recordPhase(phaseLabel);
         }
     }
 
@@ -725,92 +774,129 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 104: // Ascend
                 this.ascendBtn.click();
                 break;
-            case 105: // Early Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+            case 151: // Wait
                 break;
-            case 106: // Late Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-                break;
-            case 107: // Quark
-                await this.setAmbrosiaLoadout(this.ambrosia_quark);
-                break;
-            case 108: // Ant sac
+            case 152: // Ant sac
                 await this.antSacrifice.click();
                 break;
-            case 109: // Ant Corruptions
-                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
-                await this.setCorruptions(antCorruptions);
-                break;
-            case 110: // Cleanse
-                await this.setCorruptions(ZERO_CORRUPTIONS);
-                break;
-            case 111: // Wait
-                break;
-            case 112: // Obt loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_obt);
-                break;
-            case 113: // Off loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_off);
-                break;
-            case 114: // Ambrosia loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_ambrosia);
-                break;
-            case 115: // auto Challenge Toggle
+            case 153: // auto Challenge Toggle
                 this.autoChallengeButton.click();
                 this.exitTranscBtn.click();
                 this.exitReincBtn.click();
                 break;
-            case 116: // store C15
-                this.storedC15 = this.getChallengeCompletions(15);
+            case 154: // Auto Ant-Sac Toggle
+                await this.autoAntSacrificeButton.click();
                 break;
-            case 117: // Max C11
+            case 155: // Auto Ascend Toggle
+                await this.autoAscendButton.click();
+                break;
+            case 211: // Max C11
                 await this.maxC11to14WithC10(11);
                 break;
-            case 118: // Max C12
+            case 212: // Max C12
                 await this.maxC11to14WithC10(12);
                 break;
-            case 119: // Max C13
+            case 213: // Max C13
                 await this.maxC11to14WithC10(13);
                 break;
-            case 120: // Max C14
+            case 214: // Max C14
                 await this.maxC11to14WithC10(14);
                 break;
-            case 121: // Click AOAG
-                this.AOAG.click();
+            case 215: // store C15
+                this.storedC15 = this.getChallengeCompletions(15);
                 break;
-            case 301: // Max C1
+            case 301: // Early Cube
+                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+                break;
+            case 302: // Late Cube
+                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+                break;
+            case 303: // Quark
+                await this.setAmbrosiaLoadout(this.ambrosia_quark);
+                break;
+            case 304: // Obt loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_obt);
+                break;
+            case 305: // Off loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_off);
+                break;
+            case 306: // Ambrosia loadout
+                await this.setAmbrosiaLoadout(this.ambrosia_luck);
+                break;
+            case 400: // Zero Corruptions
+                await this.setCorruptions(ZERO_CORRUPTIONS);
+                break;
+            case 402: // Ant Corruptions
+                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
+                await this.setCorruptions(antCorruptions);
+                break;
+            case 601: // Max C1
                 await this.C1to10UntilNoMoreCompletions(1, waitTime, maxTime);
                 break;
-            case 302: // Max C2
+            case 602: // Max C2
                 await this.C1to10UntilNoMoreCompletions(2, waitTime, maxTime);
                 break;
-            case 303: // Max C3
+            case 603: // Max C3
                 await this.C1to10UntilNoMoreCompletions(3, waitTime, maxTime);
                 break;
-            case 304: // Max C4
+            case 604: // Max C4
                 await this.C1to10UntilNoMoreCompletions(4, waitTime, maxTime);
                 break;
-            case 305: // Max C5
+            case 605: // Max C5
                 await this.C1to10UntilNoMoreCompletions(5, waitTime, maxTime);
                 break;
-            case 306: // Max C6
+            case 606: // Max C6
                 await this.C1to10UntilNoMoreCompletions(6, waitTime, maxTime);
                 break;
-            case 307: // Max C7
+            case 607: // Max C7
                 await this.C1to10UntilNoMoreCompletions(7, waitTime, maxTime);
                 break;
-            case 308: // Max C8
+            case 608: // Max C8
                 await this.C1to10UntilNoMoreCompletions(8, waitTime, maxTime);
                 break;
-            case 309: // Max C9
+            case 609: // Max C9
                 await this.C1to10UntilNoMoreCompletions(9, waitTime, maxTime);
                 break;
-            case 310: // Max C10
+            case 610: // Max C10
                 await this.C1to10UntilNoMoreCompletions(10, waitTime, maxTime);
                 break;
-            case 999: // Restart AutoSing
+            case 701: // Forge Auto-Buy Toggle - Chronos Hept
+                await this.chronosHeptAutoBuyBtn.click();
+                break;
+            case 702: // Forge Auto-Buy Toggle - Hyperreal Hept
+                await this.hyperHeptAutoBuyBtn.click();
+                break;
+            case 703: // Forge Auto-Buy Toggle - Quarks Hept
+                await this.quarkHeptAutoBuyBtn.click();
+                break;
+            case 704: // Forge Auto-Buy Toggle - Challenge Hept
+                await this.challHeptAutoBuyBtn.click();
+                break;
+            case 705: // Forge Auto-Buy Toggle - Abyss Hept
+                await this.abyssHeptAutoBuyBtn.click();
+                break;
+            case 706: // Forge Auto-Buy Toggle - Accelerator Hept
+                await this.accelHeptAutoBuyBtn.click();
+                break;
+            case 707: // Forge Auto-Buy Toggle - Boost Hept
+                await this.boostHeptAutoBuyBtn.click();
+                break;
+            case 708: // Forge Auto-Buy Toggle - Multiplier Hept
+                await this.multHeptAutoBuyBtn.click();
+                break;
+            case 709: // Forge Auto-Buy Toggle - Orbs
+                await this.orbsAutoBuyBtn.click();
+                break;
+            case 901: // Click AOAG
+                this.AOAG.click();
+                break;
+            case 902: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
                 if (restartBtn) restartBtn.click();
+                break;
+            case 903: // Stop AutoSing
+                const stopBtn = document.getElementById('hs-timer-ctrl-stop') as HTMLButtonElement;
+                if (stopBtn) stopBtn.click();
                 break;
             default:
                 HSLogger.log(`Unknown special action ${actionId}`, this.context);
@@ -925,9 +1011,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
         this.endStagePromise = undefined;
 
-        if (this.timerModal) {
-            this.timerModal.destroy();
-            this.timerModal = undefined!;
+        if (this.autosingModal) {
+            this.autosingModal.destroy();
+            this.autosingModal = undefined!;
         }
         HSUtils.stopDialogWatcher();
     }
@@ -1063,8 +1149,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         const gqGain = Math.max(0, gqAfter - gqBefore);
         const qGain = Math.max(0, qAfter - qBefore);
-        if (this.timerModal && !skipRecord) {
-            this.timerModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
+        if (this.autosingModal && !skipRecord) {
+            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
         }
 
         HSLogger.debug("Singularity performed", this.context);
@@ -1197,6 +1283,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         // Wait for the C11-14 completions to stop increasing
         let c11to14CurrentCompletions = this.getChallengeCompletions(challengeIndex);
+        await HSUtils.sleep(50); // doubble wait at the start
         while (true) {
             await HSUtils.sleep(50);
             const c11to14CurrentCompletions2 = this.getChallengeCompletions(challengeIndex);
@@ -1362,6 +1449,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
             // Stop at singularity's end requested
             if (this.stopAtSingularitysEnd && this.autosingEnabled) {
+                HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+                
                 await this.pushSingularityBeforeStop();
 
                 HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
@@ -1381,19 +1470,60 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await this.setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.performSpecialAction(117, 0, 0); // Max C11
-        await this.performSpecialAction(118, 0, 0); // Max C12
-        await this.performSpecialAction(119, 0, 0); // Max C13
-        await this.performSpecialAction(120, 0, 0); // Max C14
+        // Max C11-14
+        await this.maxC11to14WithC10(11);
+        await this.maxC11to14WithC10(12);
+        await this.maxC11to14WithC10(13);
+        await this.maxC11to14WithC10(14);
 
         await this.setCorruptions({ viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 });
+        
+        // 2 loops Auto-challenge ON
+        await this.autoChallengeButton.click();
+        for (let i = 1; i <= 2; i++) {
+            // 3-4s with auto-chall in C15 
+            await this.waitForCompletion(15, 0, 0, 0);
+            await this.setAmbrosiaLoadout(this.ambrosia_obt);
+            await HSUtils.sleep(3500);
+            await this.setAmbrosiaLoadout(this.ambrosia_off);
+            await HSUtils.sleep(100);
+            await this.antSacrifice.click();
+            await HSUtils.sleep(100);
+            await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
 
-        await this.waitForCompletion(15, 0, 7777, 0);
-        this.autoChallengeButton.click();
-        await HSUtils.sleep(3000);
-
-        this.exitAscBtn.click();
-        this.ambrosia_ambrosia.click();
+            // 3-4s with auto-chall without ascension challenge
+            await this.exitAscBtn.click();
+            await this.setAmbrosiaLoadout(this.ambrosia_off);
+            await HSUtils.sleep(3500);
+            await this.antSacrifice.click();
+            await HSUtils.sleep(100);
+            await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        }
+        // Last C15 with auto-chall + Push C6 -> C1-5
+        await this.waitForCompletion(15, 0, 0, 0);        
+        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+        await HSUtils.sleep(3500);
+        await this.setAmbrosiaLoadout(this.ambrosia_off);
+        await HSUtils.sleep(100);
+        await this.antSacrifice.click();
+        await HSUtils.sleep(100);
+        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+        // Push C6 -> C1-5
+        await this.waitForCompletion(6,  150, 1000, 0);
+        await this.waitForCompletion(5, 9001, 1000, 0);
+        await this.waitForCompletion(4, 9001, 1000, 0);
+        await this.waitForCompletion(3, 9001, 1000, 0);
+        await this.waitForCompletion(2, 9001, 1000, 0);
+        await this.waitForCompletion(1, 9001, 1000, 0);
+        await this.exitTranscBtn.click();
+        await HSUtils.sleep(1000);
+        await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        await this.autoChallengeButton.click();
+        
+        // Idle on Ambrosia loadout
+        await this.exitAscBtn.click();
+        await this.setAmbrosiaLoadout(this.ambrosia_luck);  
+        // await this.exportBtn.click();
 
         return Promise.resolve();
     }

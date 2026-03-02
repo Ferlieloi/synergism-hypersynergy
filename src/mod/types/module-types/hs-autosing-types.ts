@@ -43,36 +43,56 @@ export const SPECIAL_ACTIONS = [
     { label: "Exit Reincarnation challenge", value: 102 },
     { label: "Exit Ascension challenge", value: 103 },
     { label: "Ascend", value: 104 },
-    { label: "Ambrosia pre-AOAG loadout", value: 105 },
-    { label: "Ambrosia post-AOAG Cube loadout", value: 106 },
-    { label: "Ambrosia Quark loadout", value: 107 },
-    { label: "Ambrosia Obt loadout", value: 112 },
-    { label: "Ambrosia Off loadout", value: 113 },
-    { label: "Ambrosia Ambrosia loadout", value: 114 },
-    { label: "Ant Sacrifice", value: 108 },
-    { label: "Load Ant Speed Corruptions", value: 109 },
-    { label: "Load Zero corruptions", value: 110 },
-    { label: "Wait", value: 111 },
-    { label: "Auto Challenge Toggle", value: 115 },
-    { label: "Store C15", value: 116 },
-    { label: "Max C11", value: 117 },
-    { label: "Max C12", value: 118 },
-    { label: "Max C13", value: 119 },
-    { label: "Max C14", value: 120 },
-    { label: "Click AOAG", value: 121 },
+    
+    { label: "Wait", value: 151 },
+    { label: "Ant Sacrifice", value: 152 },
+    { label: "Auto Challenge Toggle", value: 153 },
+    { label: "Auto Ant-Sac Toggle", value: 154 },
+    { label: "Auto Ascend Toggle", value: 155 },
+
     { label: "If-jump", value: IF_JUMP_VALUE },
-    { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 301 },
-    { label: "C2 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 302 },
-    { label: "C3 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 303 },
-    { label: "C4 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 304 },
-    { label: "C5 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 305 },
-    { label: "C6 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 306 },
-    { label: "C7 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 307 },
-    { label: "C8 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 308 },
-    { label: "C9 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 309 },
-    { label: "C10 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 310 },
-    { label: "Load phase corruptions", value: 201 },
-    { label: "Restart Autosing", value: 999 },
+
+    { label: "Max C11", value: 211 },
+    { label: "Max C12", value: 212 },
+    { label: "Max C13", value: 213 },
+    { label: "Max C14", value: 214 },
+    { label: "Store C15", value: 215 },
+
+    { label: "Ambrosia pre-AOAG loadout", value: 301 },
+    { label: "Ambrosia post-AOAG Cube loadout", value: 302 },
+    { label: "Ambrosia Quark loadout", value: 303 },
+    { label: "Ambrosia Obt loadout", value: 304 },
+    { label: "Ambrosia Off loadout", value: 305 },
+    { label: "Ambrosia Luck loadout", value: 306 },
+
+    { label: "Corrup 0*", value: 400 },
+    { label: "Corrup from phase (reapply)", value: 401 },
+    { label: "Corrup Ants", value: 402 },
+    
+    { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 601 },
+    { label: "C2 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 602 },
+    { label: "C3 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 603 },
+    { label: "C4 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 604 },
+    { label: "C5 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 605 },
+    { label: "C6 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 606 },
+    { label: "C7 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 607 },
+    { label: "C8 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 608 },
+    { label: "C9 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 609 },
+    { label: "C10 until no more completions within maxTime ms (after initially waiting waitTime ms)", value: 610 },
+
+    { label: "Forge Auto-Buy Toggle - Chronos Hept", value: 701 },
+    { label: "Forge Auto-Buy Toggle - Hyperreal Hept", value: 702 },
+    { label: "Forge Auto-Buy Toggle - Quarks Hept", value: 703 },
+    { label: "Forge Auto-Buy Toggle - Challenge Hept", value: 704 },
+    { label: "Forge Auto-Buy Toggle - Abyss Hept", value: 705 },
+    { label: "Forge Auto-Buy Toggle - Accelerator Hept", value: 706 },
+    { label: "Forge Auto-Buy Toggle - Boost Hept", value: 707 },
+    { label: "Forge Auto-Buy Toggle - Multiplier Hept", value: 708 },
+    { label: "Forge Auto-Buy Toggle - Orbs", value: 709 },
+
+    { label: "Click AOAG", value: 901 },
+    { label: "Restart Autosing", value: 902 },
+    { label: "Stop Autosing", value: 903 },
 ] as const;
 
 export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
@@ -97,7 +117,7 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 110,
+            challengeNumber: 400,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
@@ -109,27 +129,27 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 111,
+            challengeNumber: 151,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0,
             challengeWaitBefore: 100
         },
         {
-            challengeNumber: 108,
+            challengeNumber: 152,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 111,
+            challengeNumber: 151,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0,
             challengeWaitBefore: 1
         },
         {
-            challengeNumber: 121,
+            challengeNumber: 901,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0

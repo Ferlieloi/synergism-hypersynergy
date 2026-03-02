@@ -18,6 +18,7 @@ import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEv
 import { HSWebSocket } from "../hs-websocket";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
+import { HSAutosingStrategyModal } from '../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal';
 
 export class HSGameData extends HSModule {
     #saveDataLocalStorageKey = 'Synergysave2';
@@ -700,6 +701,8 @@ export class HSGameData extends HSModule {
         });
 
         if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
+            // There's probably a better place to put this...
+            HSSettings.updateStrategyDropdownList();
             this.#performInitialLoadoutMatch();
             this.#hasPerformedInitialLoadoutMatch = true;
         }
@@ -825,8 +828,6 @@ export class HSGameData extends HSModule {
             let totalUpgrades = 0;
             const upgrades = Object.entries(loadoutDef);
 
-            HSLogger.debug(` -> Checking Loadout ${loadoutId}...`, this.context);
-
             for (const [upgradeKey, savedLevel] of upgrades) {
                 if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
 
@@ -837,13 +838,10 @@ export class HSGameData extends HSModule {
 
                 if (totalLevel === savedLevel) {
                     matches++;
-                } else {
-                    HSLogger.debug(`    - ${upgradeKey} Mismatch: Save=${totalLevel}, Loadout=${savedLevel}`, this.context);
                 }
             }
 
             const score = totalUpgrades > 0 ? (matches / totalUpgrades) : 0;
-            HSLogger.debug(`    - Similarity score: ${(score * 100).toFixed(1)}% (${matches}/${totalUpgrades})`, this.context);
 
             if (score > highestScore) {
                 highestScore = score;

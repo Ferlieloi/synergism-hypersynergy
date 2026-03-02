@@ -352,12 +352,16 @@
     width: 100%;
 }
 
-#hs-quick-access-menu button:hover {
+#hs-quick-access-menu button[data-type="autosing"]:hover {
     background: rgba(76, 175, 80, 0.25);
 }
 
-#hs-quick-access-menu button[data-type="heater"]:hover {
+#hs-quick-access-menu button[data-type="ambrosia-heater"]:hover {
     background: rgba(255, 152, 0, 0.25);
+}
+
+#hs-quick-access-menu button[data-type="ambrosia-idle-swap"]:hover {
+    background: rgba(81, 98, 212, 0.25);
 }
 
 /* ===== PANEL BUTTONS ===== */
@@ -581,10 +585,8 @@
 
 .hs-notification {
     position: fixed;
-    width: 300px;
-    max-width: 300px;
-    height: 50px;
-    max-height: 50px;
+    max-width: 600px;
+    max-height: 250px;
     color: #f5f6fa;
     border: 1px solid #f5f6fa;
     display: flex;
@@ -599,7 +601,7 @@
     text-overflow: ellipsis;
     overflow: hidden;
     font-size: 10pt;
-    max-height: 36px;
+    max-height: 250px;
     text-align: center;
     box-sizing: border-box;
 }
@@ -1299,6 +1301,12 @@ a.hs-link {
     color: #888;
     padding: 40px 20px;
     font-style: italic;
+}
+
+/* Mark visually the default strategies in dropdown list */
+select option[data-default="true"] {
+    font-weight: bold;
+    color: #888; 
 }
 
 /* ===== SHARED SCROLLBARS ===== */
