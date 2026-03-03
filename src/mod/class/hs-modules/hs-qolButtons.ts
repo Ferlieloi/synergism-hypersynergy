@@ -223,7 +223,8 @@ export class HSQOLButtons extends HSModule {
 
     // quickbar container
     automationQuickBarContainer: HTMLDivElement | null = null;
-    automationQuickBarObservers: string[] = [];
+    #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
+    #automationQuickbarBootstrapTimeoutIds: number[] = [];
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -249,6 +250,8 @@ export class HSQOLButtons extends HSModule {
         attributes: true,
         attributeFilter: ['style', 'class', 'aria-pressed', 'aria-checked']
     };
+
+    private static readonly AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS = [50, 150, 400, 1000] as const;
 
 
     /** Resolve a syn UI element by selector, falling back to window globals for cube upgrade toggles. */
@@ -500,6 +503,7 @@ export class HSQOLButtons extends HSModule {
             window.cancelAnimationFrame(this.#queuedAutomationFrameId);
             this.#queuedAutomationFrameId = null;
         }
+        this.#clearAutomationQuickbarBootstrapTimeouts();
         this.#clearAutomationQuickBarWatchers();
     }
 
@@ -529,6 +533,7 @@ export class HSQOLButtons extends HSModule {
         updateUIState();
         this.#registerAutomationQuickBarWatchers(requestUpdateUI);
         setTimeout(requestUpdateUI, 10);
+        this.#scheduleAutomationQuickbarBootstrapRetries(requestUpdateUI);
     }
 
     /**
@@ -711,10 +716,17 @@ export class HSQOLButtons extends HSModule {
     }
 
     #clearAutomationQuickBarWatchers(): void {
-        for (const watcherId of this.automationQuickBarObservers) {
-            HSElementHooker.stopWatching(watcherId);
+        for (const watcher of this.#automationQuickBarWatcherBySelector.values()) {
+            HSElementHooker.stopWatching(watcher.watcherId);
         }
-        this.automationQuickBarObservers = [];
+        this.#automationQuickBarWatcherBySelector.clear();
+    }
+
+    #clearAutomationQuickbarBootstrapTimeouts(): void {
+        for (const timeoutId of this.#automationQuickbarBootstrapTimeoutIds) {
+            window.clearTimeout(timeoutId);
+        }
+        this.#automationQuickbarBootstrapTimeoutIds = [];
     }
 
     /** Cleanup observers/render queue/container for the automation quickbar. */
@@ -723,6 +735,7 @@ export class HSQOLButtons extends HSModule {
             window.cancelAnimationFrame(this.#queuedAutomationFrameId);
             this.#queuedAutomationFrameId = null;
         }
+        this.#clearAutomationQuickbarBootstrapTimeouts();
         this.#clearAutomationQuickBarWatchers();
         if (this.automationQuickBarContainer) {
             this.automationQuickBarContainer.innerHTML = '';
@@ -845,11 +858,37 @@ export class HSQOLButtons extends HSModule {
             try {
                 const el = this.getCachedAutomationElement(sel);
                 if (!el) continue;
+
+                const existing = this.#automationQuickBarWatcherBySelector.get(sel);
+                if (existing && existing.element === el && existing.element.isConnected) {
+                    continue;
+                }
+                if (existing) {
+                    HSElementHooker.stopWatching(existing.watcherId);
+                    this.#automationQuickBarWatcherBySelector.delete(sel);
+                }
+
                 const id = HSElementHooker.watchElement(el, () => updateUI(), watchOpts);
-                if (id) this.automationQuickBarObservers.push(id as string);
+                if (id) {
+                    this.#automationQuickBarWatcherBySelector.set(sel, { watcherId: id as string, element: el });
+                }
             } catch (e) {
                 HSLogger.log(`Error setting watcher for ${sel}: ${e}`, this.context);
             }
+        }
+    }
+
+    #scheduleAutomationQuickbarBootstrapRetries(updateUI: () => void): void {
+        this.#clearAutomationQuickbarBootstrapTimeouts();
+
+        for (const delayMs of HSQOLButtons.AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS) {
+            const timeoutId = window.setTimeout(() => {
+                if (!this.automationQuickBarContainer) return;
+                this.#registerAutomationQuickBarWatchers(updateUI);
+                updateUI();
+            }, delayMs);
+
+            this.#automationQuickbarBootstrapTimeoutIds.push(timeoutId);
         }
     }
 
