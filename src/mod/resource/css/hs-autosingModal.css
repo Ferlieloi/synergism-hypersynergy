@@ -29,7 +29,7 @@
     font-family: monospace;
     font-size: 13px;
     z-index: 10000;
-    min-width: 300px;
+    min-width: 250px;
     width: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     overflow: visible;
@@ -63,13 +63,13 @@
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: var(--timer-text-primary);
-    width: 35px;
+    width: 30px;
     height: 20px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
     padding: 0;
-    margin-right: 10px;
+    margin-right: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,10 +84,6 @@
     width: 30px;
     font-size: 16px;
     margin-right: 0;
-}
-
-#hs-timer-ctrl-chart-toggle {
-    margin-right: 8px;
 }
 
 /* ===== TIMER CONTENT ===== */
@@ -167,7 +163,7 @@
     text-align: right;
 }
 
-.hs-detailed-value {
+.hs-secondary-data-style {
     color: var(--timer-text-secondary) !important;
     font-weight: normal !important;
     font-size: 11px;
@@ -205,6 +201,7 @@
 .hs-timer-controls {
     display: flex;
     align-items: center;
+    gap: 5px;
 }
 
 /* ===== VALUE COLORS ===== */
@@ -215,7 +212,7 @@
     margin-left: 8px;
 }
 
-#hs-progress-val {
+#hs-completed-sing-amount {
     color: var(--timer-color-progress);
     font-weight: bold;
     margin-left: 6px;
@@ -331,7 +328,7 @@
 /* ===== PHASE STATISTICS GRID ===== */
 
 /* ===== PHASE STATISTICS GRID ===== */
-.hs-stats-grid {
+#hs-phase-stats-container {
     display: grid;
     grid-template-columns: max-content max-content max-content max-content max-content;
     gap: 4px 2px;
@@ -343,7 +340,7 @@
 
 /* ===== PHASE STATS HEADERS ===== */
 
-.hs-phase-header {
+.hs-phase-stats-header {
     color: #888;
     font-size: 10px;
     font-weight: bold;
@@ -356,7 +353,7 @@
     align-self: stretch;
 }
 
-.hs-phase-header-title {
+.hs-phase-stats-header-title {
     font-size: 15px;
     font-weight: bold;
     color: #888;
@@ -422,7 +419,9 @@
     border-bottom: 1px solid #222;
 }
 
-.hs-stats-row {
+.hs-phase-row {
+    display: grid;
+    grid-template-columns: max-content max-content max-content max-content max-content;
     color: #bcb9b9;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -451,3 +450,113 @@
     text-align: center;
     color: var(--timer-color-quarks) !important;
 }
+
+
+/* ===== GRID LAYOUTS ===== */
+
+/* ===== CELL ALIGNMENT UTILITIES ===== */
+
+/* General cell alignment classes for grid layouts */
+.hs-label-cell {
+    text-align: right;
+}
+
+.hs-value-cell {
+    text-align: left;
+}
+
+/* ===== COLOR CLASSES ===== */
+
+/* Quarks rate color styling */
+.hs-quarks-rate-color {
+    color: var(--timer-color-quarks);
+    font-weight: bold;
+}
+
+/* Golden quarks rate color styling */
+.hs-gquarks-rate-color {
+    color: var(--timer-color-gquarks);
+    font-weight: bold;
+}
+
+/* ===== DISPLAY UTILITIES ===== */
+
+/* Flex display for current value displays */
+.hs-current-display {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== SECTION HEADER VARIANTS ===== */
+
+/* Base section header styling */
+.hs-section-header-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 1;
+}
+
+/* Section header spanning 2 grid columns */
+.hs-section-header-title-span2 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    grid-column: span 2;
+}
+
+/* Full-width section header */
+.hs-section-header-title-full {
+    grid-column: 1 / -1;
+}
+
+/* Single column section header */
+.hs-section-header-title-single {
+    grid-column: span 1;
+}
+
+/* ===== GRID DEFINITIONS ===== */
+
+/* Farming section grid layout */
+#hs-farming-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 2px;
+}
+#hs-farming-grid .hs-label-cell {
+    text-align: left;
+}
+#hs-farming-grid .hs-value-cell {
+    text-align: right;
+}
+
+/* Timer display grid layout */
+.hs-times-grid {
+    display: grid;
+    grid-template-columns: min-content auto min-content auto;
+    column-gap: 5px;
+    row-gap: 3px;
+    align-items: center;
+}
+
+/* General section grid layout */
+.hs-section-grid {
+    display: grid;
+    grid-template-columns: min-content auto min-content auto;
+    gap: 2px;
+}
+
+.hs-hidden { display: none !important; }
+.hs-grid-4col { grid-template-columns: min-content auto min-content auto !important; }
+.hs-grid-2col-min-auto { grid-template-columns: min-content auto !important; }
+.hs-grid-2col-auto-auto { grid-template-columns: auto auto !important; }
+.hs-grid-1col { grid-template-columns: auto !important; }

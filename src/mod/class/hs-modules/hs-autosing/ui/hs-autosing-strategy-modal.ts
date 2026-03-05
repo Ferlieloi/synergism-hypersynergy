@@ -4,6 +4,8 @@ import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
+import { HSLogger } from '../../../hs-core/hs-logger';
+import { HSGlobal } from '../../../hs-core/hs-global';
 
 export class HSAutosingStrategyModal {
     static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number, parentModalId?: string): Promise<void> {
@@ -103,6 +105,7 @@ export class HSAutosingStrategyModal {
                             class="hs-strategy-name-input"
                             placeholder="Enter strategy name..."
                             value="${strategyDraft.strategyName}"
+                            ${isEditMode ? 'disabled style="background:#000;color:#888;cursor:not-allowed;"' : ''}
                         />
                     </div>
 
@@ -165,13 +168,17 @@ export class HSAutosingStrategyModal {
                     strategyDraft.strategyName = nameInput?.value || "Unnamed Strategy";
                     try {
                         if (isEditMode) {
-                            HSSettings.saveStrategiesToStorage(strategyDraft, existingStrategy!.strategyName);
+                            HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
+                            HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
+                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });
                         } else {
-                            HSSettings.saveStrategiesToStorage(strategyDraft);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created`, {
+                            HSSettings.saveStrategyToStorage(strategyDraft);
+                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
+                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
                                 notificationType: "success"
                             });
                         }

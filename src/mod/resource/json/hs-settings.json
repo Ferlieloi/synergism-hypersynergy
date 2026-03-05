@@ -547,24 +547,9 @@
       ]
     }
   },
-  "ambrosiaMinibars": {
-    "settingName": "ambrosiaMinibars",
-    "settingDescription": "Ambrosia minibars",
-    "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
-    "settingType": "boolean",
-    "enabled": true,
-    "usesGameData": true,
-    "settingAction": "ambrosiaMinibarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ambrosia3",
-      "controlPage": "ambrosia",
-      "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
-    }
-  },
   "startAutosing": {
     "settingName": "startAutosing",
-    "settingDescription": "Start/Stop Auto-Sing",
+    "settingDescription": "Start/Stop Auto-Sing (S256+)",
     "settingHelpText": "When enabled, the mod will automatically perform singularities.",
     "settingType": "boolean",
     "enabled": false,
@@ -602,7 +587,7 @@
     "settingHelpText": "This is the strategy that the autosinger will follow",
     "settingType": "selectstring",
     "enabled": true,
-    "settingValue": "default_strategy",
+    "settingValue": "1.TAS_v3.2",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy",
       "controlType": "select",
@@ -681,6 +666,21 @@
     "settingAction": "exportAutosingStrategy",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "migrateIdsAndExportAutosingStrategy": {
+    "settingName": "migrateIdsAndExportAutosingStrategy",
+    "settingDescription": "Migrate&Export",
+    "settingHelpText": "Migrates the special action IDs of the selected strategy",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "migrateIdsAndExportAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-migrator-button",
       "controlType": "button",
       "controlGroup": "auto-sing-strategy-controls",
       "controlPage": "auto-sing"
@@ -1204,20 +1204,35 @@
       "controlEnabledId": "hs-setting-auto-sing-advanced-data"
     }
   },
-  "ambrosiaQuickBar": {
-    "settingName": "ambrosiaQuickBar",
-    "settingDescription": "Ambrosia quick bar",
-    "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "ambrosiaQuickBarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
-    }
-  },
+    "ambrosiaQuickBar": {
+      "settingName": "ambrosiaQuickBar",
+      "settingDescription": "Ambrosia quick bar (S25+)",
+      "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
+      "settingType": "boolean",
+      "enabled": true,
+      "settingAction": "ambrosiaQuickBarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
+      }
+    },
+    "ambrosiaMinibars": {
+      "settingName": "ambrosiaMinibars",
+      "settingDescription": "Ambrosia minibars (S25+)",
+      "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
+      "settingType": "boolean",
+      "enabled": true,
+      "usesGameData": true,
+      "settingAction": "ambrosiaMinibarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
+      }
+    },
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",
@@ -1258,6 +1273,126 @@
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
+    }
+  },
+  "gqDistributorRatio1": {
+    "settingName": "gqDistributorRatio1",
+    "settingDescription": "GQ Distributor Ratio 1",
+    "settingHelpText": "Ratio for GQ distributor input 1.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-1",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio2": {
+    "settingName": "gqDistributorRatio2",
+    "settingDescription": "GQ Distributor Ratio 2",
+    "settingHelpText": "Ratio for GQ distributor input 2.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-2",
+      "controlType": "number",
+    "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio3": {
+    "settingName": "gqDistributorRatio3",
+    "settingDescription": "GQ Distributor Ratio 3",
+    "settingHelpText": "Ratio for GQ distributor input 3.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-3",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio4": {
+    "settingName": "gqDistributorRatio4",
+    "settingDescription": "GQ Distributor Ratio 4",
+    "settingHelpText": "Ratio for GQ distributor input 4.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-4",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio5": {
+    "settingName": "gqDistributorRatio5",
+    "settingDescription": "GQ Distributor Ratio 5",
+    "settingHelpText": "Ratio for GQ distributor input 5.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-5",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio6": {
+    "settingName": "gqDistributorRatio6",
+    "settingDescription": "GQ Distributor Ratio 6",
+    "settingHelpText": "Ratio for GQ distributor input 6.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-6",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio7": {
+    "settingName": "gqDistributorRatio7",
+    "settingDescription": "GQ Distributor Ratio 7",
+    "settingHelpText": "Ratio for GQ distributor input 7.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-7",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio8": {
+    "settingName": "gqDistributorRatio8",
+    "settingDescription": "GQ Distributor Ratio 8",
+    "settingHelpText": "Ratio for GQ distributor input 8.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-8",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
     }
   },
   "hideMaxedOctUpgrades": {
@@ -1363,6 +1498,101 @@
       "controlGroup": "talismans",
       "controlPage": "input",
       "controlEnabledId": "hs-setting-enable-talismans-btn"
+    }
+  },
+  "autosing3to6DCubeOpeningPercent": {
+    "settingName": "autosing3to6DCubeOpeningPercent",
+    "settingDescription": "3-6D Cube opening percentage",
+    "settingHelpText": "Percentage (1-100) for auto-opening 3-6D cubes.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 80,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-3-6d-cube-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingTessBuildingAutoBuyPercent": {
+    "settingName": "autosingTessBuildingAutoBuyPercent",
+    "settingDescription": "Tesseract building auto-buy percentage",
+    "settingHelpText": "Percentage (1-100) for auto-buying tesseract buildings.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 50,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-tesseract-auto-buy-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingAutoChallTimerStart": {
+    "settingName": "autosingAutoChallTimerStart",
+    "settingDescription": "Auto-challenge start timers",
+    "settingHelpText": "Timer (positive decimal) for auto-starting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-start-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
+    }
+  },
+  "autosingAutoChallTimerExit": {
+    "settingName": "autosingAutoChallTimerExit",
+    "settingDescription": "Auto-challenge exit timers",
+    "settingHelpText": "Timer (positive decimal) for auto-exiting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.2,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-exit-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
+    }
+  },
+  "autosingAutoChallTimerEnter": {
+    "settingName": "autosingAutoChallTimerEnter",
+    "settingDescription": "Auto-challenge enter timers",
+    "settingHelpText": "Timer (positive decimal) for auto-entering challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.1,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-enter-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.001
+      }
     }
   }
 }

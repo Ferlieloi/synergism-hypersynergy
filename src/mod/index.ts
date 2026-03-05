@@ -1,5 +1,6 @@
 import { Hypersynergism } from "./class/hypersynergism";
 import { HSExternalModuleKind, HSModuleDefinition, HSModuleType } from "./types/hs-types";
+import { HSQuickbarManager } from "./class/hs-modules/hs-quickbarManager";
 
 // Loader won't find the hypersynergism instance in window without this declaration
 declare global {
@@ -139,4 +140,7 @@ declare global {
     window.hypersynergism = hypersynergism;
 
     await hypersynergism.init();
+
+    // Ensure all quickbar sections are injected after all modules are initialized
+    // HSQuickbarManager.getInstance().injectAll();
 })();
