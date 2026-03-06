@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.4
+// @version      3.5
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
@@ -12,46 +12,176 @@
 (() => {
     'use strict';
 
+    // Phase 0: single-instance guard
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
+    // Shared logger helpers (timing-prefixed)
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
     const debug = (...a) => console.debug(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+    const logExposureTimeline = (step, extra = {}) => {
+        try {
+            const payload = {
+                step,
+                tMs: Math.round(performance.now() - startTime),
+                playerExposeState: window.__HS_PLAYER_EXPOSED,
+                hsPlayerType: typeof window.__HS_player,
+                windowPlayerType: typeof window.player,
+                ...extra
+            };
+            console.log('%c[HS-EXPOSE]', 'color:#7cf', payload);
+        } catch (e) {
+            debug('logExposureTimeline failed', e);
+        }
+    };
 
     const originalFetch = window.fetch.bind(window);
 
     const isFirefox = navigator.userAgent.includes('Firefox');
     log(`Browser: ${isFirefox ? 'Firefox' : 'Other'}`);
 
+    // Bundle debug helpers can be toggled at runtime via window.__HS_DUMP_PATCHED_BUNDLE_FULL
+    const HS_DUMP_PATCHED_BUNDLE = true;
+
+    // Runtime diagnostics exposed to window.__HS_LOADER_DIAGNOSTICS
+    const loaderDiagnostics = {
+        customElements: {
+            blockedCount: 0,
+            allowedCount: 0,
+            duplicateSkippedCount: 0,
+            blockedNamesSample: [],
+            allowedNamesSample: [],
+            tabRowFallbackCount: 0,
+            tabRowFallbackReasonsSample: [],
+            subTabFallbackCount: 0,
+            subTabFallbackReasonsSample: []
+        },
+        exportSilence: {
+            attempts: 0,
+            blockedAnchorClicks: 0,
+            lastBlockedDownloadName: null
+        },
+        blockedScripts: [],
+        lifecycle: {
+            injectedAtMs: null,
+            postInjectHealthAtMs: null,
+            firstFatalErrorAtMs: null,
+            manualInitAttempts: 0
+        }
+    };
+
+    window.__HS_LOADER_DIAGNOSTICS = loaderDiagnostics;
+
+    const isSilentExportActive = () => {
+        const until = Number(window.__HS_SILENT_EXPORT_UNTIL || 0);
+        return window.__HS_SILENT_EXPORT === true || until > Date.now();
+    };
+
+    const originalAnchorClick = HTMLAnchorElement.prototype.click;
+    // Guard save-download side effects when export is intentionally triggered for probing.
+    HTMLAnchorElement.prototype.click = function (...args) {
+        try {
+            const href = this.href || '';
+            const downloadName = this.getAttribute('download') || '';
+            const looksLikeSaveDownload = !!downloadName || href.startsWith('blob:') || /Synergysave/i.test(href);
+
+            if (isSilentExportActive() && looksLikeSaveDownload) {
+                loaderDiagnostics.exportSilence.blockedAnchorClicks += 1;
+                loaderDiagnostics.exportSilence.lastBlockedDownloadName = downloadName || href.slice(0, 120);
+                debug('[HS] Blocked export download click during silent export window', {
+                    href: href.slice(0, 120),
+                    download: downloadName
+                });
+                return;
+            }
+        } catch {
+            // Ignore guard errors and fall through to native behavior
+        }
+
+        return originalAnchorClick.apply(this, args);
+    };
+
+    const hasMeaningfulErrorDetails = (event) => {
+        if (!event) return false;
+        const hasMessage = typeof event.message === 'string' && event.message.trim().length > 0;
+        const hasFile = typeof event.filename === 'string' && event.filename.trim().length > 0;
+        const hasLine = Number.isFinite(event.lineno) && event.lineno > 0;
+        const hasColumn = Number.isFinite(event.colno) && event.colno > 0;
+        const hasErrorObject = event.error != null;
+        return hasMessage || hasFile || hasLine || hasColumn || hasErrorObject;
+    };
+
+    window.addEventListener('error', (event) => {
+        const isMeaningful = hasMeaningfulErrorDetails(event);
+
+        if (isMeaningful && loaderDiagnostics.lifecycle.firstFatalErrorAtMs == null) {
+            loaderDiagnostics.lifecycle.firstFatalErrorAtMs = Math.round(performance.now() - startTime);
+        }
+
+        const payload = {
+            message: event.message,
+            filename: event.filename,
+            line: event.lineno,
+            column: event.colno,
+            error: event.error ? String(event.error) : undefined,
+            stack: event.error?.stack,
+            allowCustomElements,
+            diagnostics: loaderDiagnostics
+        };
+
+        if (isMeaningful) {
+            warn('[HS] Global error captured', payload);
+        } else {
+            debug('[HS] Global error event with empty payload (likely extension/runtime noise)', payload);
+        }
+    }, true);
+
+    window.addEventListener('unhandledrejection', (event) => {
+        warn('[HS] Unhandled rejection captured', {
+            reason: event.reason,
+            allowCustomElements,
+            diagnostics: loaderDiagnostics
+        });
+    });
+
     let windowLoadFired = false;
     let gameScriptDetected = false;
-    let patchedScriptInjected = false;
-    let allowCustomElements = false; // LOCK definitions by default
+    let allowCustomElements = true;
+    let manualInitInFlight = null;
 
-    // CRITICAL FIX: Override customElements.define to BLOCK the original script
-    // If the original script runs, it will try to define elements. We IGNORE it.
-    // This effectively causes the original script to crash (safely) or fail to register,
-    // leaving the registry clean for our patched script.
+    // Phase 1: intercept + de-duplicate custom element registration during script race windows.
+    // Keep customElements.define duplicate-safe during interception/injection.
+    // We do not hard-block definitions globally; we only skip duplicates.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Log once per unique name to avoid spam, but BLOCK IT.
-            // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
-            // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
+            // Lock phase: skip definitions until we unlock right before injection.
+            // Log once per unique name to avoid spam.
             if (!customElements.get(name)) {
+                loaderDiagnostics.customElements.blockedCount += 1;
+                if (loaderDiagnostics.customElements.blockedNamesSample.length < 8) {
+                    loaderDiagnostics.customElements.blockedNamesSample.push(String(name));
+                }
                 debug(`[HS] Blocked original script from defining ${name} (Lock active)`);
             }
             return;
         }
 
         // Standard duplicate check
-        if (customElements.get(name)) return;
+        if (customElements.get(name)) {
+            loaderDiagnostics.customElements.duplicateSkippedCount += 1;
+            return;
+        }
+        loaderDiagnostics.customElements.allowedCount += 1;
+        if (loaderDiagnostics.customElements.allowedNamesSample.length < 8) {
+            loaderDiagnostics.customElements.allowedNamesSample.push(String(name));
+        }
         return origDefine.call(this, name, ctor, options);
     };
 
-    // Track when window.load fires
+    // Track when window.load fires (used by manual-init logic under throttled/background tabs).
     window.addEventListener('load', () => {
         windowLoadFired = true;
         log('Window load fired');
@@ -69,14 +199,17 @@
                 ? input.url
                 : '';
 
-        if (url.includes('rocket-loader') || (url.includes('/dist/out') && url.endsWith('.js'))) {
+        if (shouldBlockScript(url)) {
+            if (loaderDiagnostics.blockedScripts.length < 10) {
+                loaderDiagnostics.blockedScripts.push(url);
+            }
             debug(`Fetch blocked: ${url.substring(0, 80)}...`);
             return new Response('', { status: 200 });
         }
         return originalFetch(input, init);
     };
 
-    // Firefox-specific: Use beforescriptexecute event
+    // Firefox-specific interception path
     let beforeScriptExecute;
     if (isFirefox) {
         beforeScriptExecute = function (e) {
@@ -84,6 +217,9 @@
             const src = script.src || '';
 
             if (shouldBlockScript(src)) {
+                if (loaderDiagnostics.blockedScripts.length < 10) {
+                    loaderDiagnostics.blockedScripts.push(src);
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 script.remove();
@@ -98,13 +234,16 @@
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
-    // MutationObserver for Chrome and fallback
+    // Chromium + fallback interception path
     const mo = new MutationObserver(muts => {
         for (const m of muts) {
             for (const n of m.addedNodes) {
                 if (n.tagName === 'SCRIPT') {
                     const src = n.src || '';
                     if (shouldBlockScript(src)) {
+                        if (loaderDiagnostics.blockedScripts.length < 10) {
+                            loaderDiagnostics.blockedScripts.push(src);
+                        }
                         n.type = 'javascript/blocked';
                         n.remove();
                         debug(`Blocked (MutationObserver): ${src.substring(0, 60)}...`);
@@ -124,6 +263,10 @@
     function checkExistingScripts() {
         for (const script of document.getElementsByTagName('script')) {
             if (script.src && /\/dist\/out.*\.js/.test(script.src)) {
+                debug('Found pre-existing game script tag; removing and forcing patched injection');
+                if (loaderDiagnostics.blockedScripts.length < 10) {
+                    loaderDiagnostics.blockedScripts.push(script.src);
+                }
                 script.type = 'javascript/blocked';
                 script.remove();
                 if (!gameScriptDetected) {
@@ -137,6 +280,7 @@
     checkExistingScripts();
     setTimeout(checkExistingScripts, 10);
 
+    // Phase 2: fetch, patch, and inject official game bundle
     async function injectPatchedBundle() {
         if (window.__HS_INJECTED__) return;
         window.__HS_INJECTED__ = true;
@@ -156,7 +300,7 @@
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
 
             // ============================================================
-            // EXPORT + STAGE PATCHES v3.4
+            // EXPORT + STAGE PATCHES v3.4-dev [2026-02-21]
             // ============================================================
             // Strategy: scan for function HEADER patterns, then verify the
             // unique anchor string appears shortly after the opening '{'.
@@ -188,16 +332,42 @@
 
             if (exportResult) {
                 const exportFn = exportResult.match[1];
-
-                const expose = exportFn
-                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
-                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
-
                 const { bodyStart: exportBodyStart } = exportResult;
+                debug(`exportSynergism probe: bodyStart=${exportBodyStart} fn=${exportFn ?? 'unknown'}`);
+
+                const exportExpose = exportFn
+                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');}\n`
+                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');}\n`;
+
+                const expose = exportExpose + `if(window.__HS_SILENT_EXPORT)return;\n`;
+
                 code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
                 log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
             } else {
                 warn('Could not patch exportSynergism — header not found');
+            }
+
+            // ── WINDOW DEFINE PLAYER PATCH ─────────────────────────────
+            // Most robust path on some builds: Object.defineProperties(window, { player: { value:<sym> }, ... })
+            const defineWindowMatch = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}/.exec(code);
+            const defineWindowIdx = defineWindowMatch?.index ?? -1;
+            const playerVarFromDefine = defineWindowMatch?.[1];
+
+            if (defineWindowIdx !== -1) {
+                debug(`define player probe: idx=${defineWindowIdx} playerVar=${playerVarFromDefine ?? 'unknown'}`);
+
+                if (playerVarFromDefine) {
+                    const definePlayerExposeExpr = `((window.__HS_PLAYER_EXPOSED&&window.__HS_PLAYER_EXPOSED!=='missing')||((window.__HS_player=${playerVarFromDefine}),(window.player=${playerVarFromDefine}),(window.__HS_PLAYER_EXPOSED='define-window'),console.log('[HS] \u2705 player exposed via defineProperties (sym=${playerVarFromDefine})'))),`;
+                    code = code.slice(0, defineWindowIdx) + definePlayerExposeExpr + code.slice(defineWindowIdx);
+                    log(`Patched defineProperties player exposure (player=${playerVarFromDefine})`);
+                    logExposureTimeline('patch-define-inserted', { defineWindowIdx, playerSymbol: playerVarFromDefine });
+                } else {
+                    warn('defineProperties player patch: anchor found but symbol extraction failed');
+                    logExposureTimeline('patch-define-symbol-missing', { defineWindowIdx });
+                }
+            } else {
+                warn('Could not patch defineProperties player exposure — anchor not found');
+                logExposureTimeline('patch-define-anchor-missing');
             }
 
             // ── STAGE PATCH ──────────────────────────────────────────────
@@ -242,7 +412,84 @@
                 warn('Could not patch stage — "gameStageStatistic" not found in bundle');
             }
 
-            log('v3.4 [2026-02-22]c patch complete — injecting bundle');
+            // ── CUSTOM ELEMENT CONSTRUCTOR PATCH ─────────────────────
+            // On some race paths, direct customized built-in constructors throw
+            // Illegal constructor. We shim those constructors and preserve shape.
+            const tabRowDefineToken = 'customElements.define("tab-row",c0,{extends:"div"});';
+            if (code.includes(tabRowDefineToken)) {
+                const safeTabRowCtorHelper = 'const __HS_ORIG_C0=c0;const __HS_SAFE_NEW_C0=()=>{const existing=document.getElementById("tabrow");if(existing)return existing;try{return new __HS_ORIG_C0()}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.tabRowFallbackCount=(__hsDiag.tabRowFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.tabRowFallbackReasonsSample)&&reason&&__hsDiag.tabRowFallbackReasonsSample.length<10&&!__hsDiag.tabRowFallbackReasonsSample.includes(reason)){__hsDiag.tabRowFallbackReasonsSample.push(reason);}}const row=document.createElement("div");row.id="tabrow";row.__HS_subTabs=[];row.appendButton=(...tabs)=>{for(const tab of tabs){if(!tab)continue;let candidate=tab;if(tab.id){const existingTab=document.getElementById(tab.id);if(existingTab&&existingTab!==tab)candidate=existingTab;}if(!row.__HS_subTabs.includes(candidate))row.__HS_subTabs.push(candidate);if(candidate.parentElement===row)continue;try{row.appendChild(candidate);}catch(_a){}}return row;};row.getSubTabs=()=>row.__HS_subTabs;row.getCurrentTab=()=>{for(const tab of row.__HS_subTabs){try{if(typeof tab?.getSelectedState==="function"&&tab.getSelectedState())return tab;if(tab?.__HS_selected===true)return tab;}catch(_b){}}return row.__HS_subTabs[0]||{isUnlocked:()=>true,getUnlockedState:()=>true,getType:()=>0};};row.setCurrentTab=(idx)=>{const i=Number(idx)||0;row.__HS_subTabs.forEach((tab,n)=>{if(!tab)return;try{if(typeof tab.setSelectedState==="function")tab.setSelectedState(n===i);else tab.__HS_selected=(n===i);}catch(_c){}});return row;};return row;}};';
+                code = code.replace(tabRowDefineToken, `${tabRowDefineToken}${safeTabRowCtorHelper}`);
+
+                const newTabRowCtorPattern = /vn\s*=\s*new\s+c0\b/;
+                if (newTabRowCtorPattern.test(code)) {
+                    code = code.replace(newTabRowCtorPattern, 'vn=__HS_SAFE_NEW_C0()');
+                    log('Patched tab-row construction (new c0 -> __HS_SAFE_NEW_C0)');
+                } else {
+                    warn('Could not patch tab-row construction — new c0 pattern not found');
+                }
+            } else {
+                warn('Could not patch tab-row constructor shim — tab-row define token not found');
+            }
+
+            // ── SUB-TAB CONSTRUCTOR PATCH ─────────────────────────────
+            // If sub-tab is already registered from another execution path, direct
+            // `new lr(config)` can throw Illegal constructor. Use a safe shim.
+            const subTabDefineToken = 'customElements.define("sub-tab",lr,{extends:"button"});';
+            if (code.includes(subTabDefineToken)) {
+                const safeLrCtorHelper = 'const __HS_ORIG_LR=lr;const __HS_SAFE_NEW_LR=(cfg)=>{const safeCfg=(cfg&&typeof cfg==="object")?cfg:{};if(safeCfg.id){const existing=document.getElementById(safeCfg.id);if(existing)return existing;}try{return new __HS_ORIG_LR(safeCfg)}catch(_e){const __hsDiag=window.__HS_LOADER_DIAGNOSTICS&&window.__HS_LOADER_DIAGNOSTICS.customElements?window.__HS_LOADER_DIAGNOSTICS.customElements:null;if(__hsDiag){__hsDiag.subTabFallbackCount=(__hsDiag.subTabFallbackCount||0)+1;const reason=String(_e&&(_e.message||_e)||"unknown");if(Array.isArray(__hsDiag.subTabFallbackReasonsSample)&&reason&&__hsDiag.subTabFallbackReasonsSample.length<10&&!__hsDiag.subTabFallbackReasonsSample.includes(reason)){__hsDiag.subTabFallbackReasonsSample.push(reason);}}const el=document.createElement("button");el.__HS_tabType=0;el.__HS_unlocked=true;el.__HS_visible=true;el.__HS_enabled=true;el.__HS_selected=false;if(safeCfg.id)el.id=safeCfg.id;if(safeCfg.class)el.className=safeCfg.class;if(safeCfg.i18n){el.dataset.i18n=safeCfg.i18n;el.setAttribute("data-i18n",safeCfg.i18n);}if(typeof el.setType!=="function")el.setType=(v)=>{el.__HS_tabType=Number(v);return el;};if(typeof el.getType!=="function")el.getType=()=>Number.isFinite(el.__HS_tabType)?el.__HS_tabType:0;if(typeof el.setUnlockedState!=="function")el.setUnlockedState=(v)=>{el.__HS_unlocked=!!v;return el;};if(typeof el.getUnlockedState!=="function")el.getUnlockedState=()=>!!el.__HS_unlocked;if(typeof el.isUnlocked!=="function")el.isUnlocked=()=>!!el.__HS_unlocked;if(typeof el.setVisibleState!=="function")el.setVisibleState=(v)=>{el.__HS_visible=!!v;return el;};if(typeof el.getVisibleState!=="function")el.getVisibleState=()=>!!el.__HS_visible;if(typeof el.isVisible!=="function")el.isVisible=()=>!!el.__HS_visible;if(typeof el.setEnabledState!=="function")el.setEnabledState=(v)=>{el.__HS_enabled=!!v;return el;};if(typeof el.getEnabledState!=="function")el.getEnabledState=()=>!!el.__HS_enabled;if(typeof el.isEnabled!=="function")el.isEnabled=()=>!!el.__HS_enabled;if(typeof el.setSelectedState!=="function")el.setSelectedState=(v)=>{el.__HS_selected=!!v;return el;};if(typeof el.getSelectedState!=="function")el.getSelectedState=()=>!!el.__HS_selected;if(typeof el.isSelected!=="function")el.isSelected=()=>!!el.__HS_selected;const __HS_NOOP_CHAIN=["setHoverState","setNotificationState","setTabColor","setTabClass","setTooltip","setLabel","setText","setDescription","makeDraggable","makeRemoveable","makeNotToggleable","makeToggleable"];for(const k of __HS_NOOP_CHAIN){if(typeof el[k]!=="function")el[k]=()=>el;}return el;}};';
+                code = code.replace(subTabDefineToken, `${subTabDefineToken}${safeLrCtorHelper}`);
+
+                const newLrPattern = /new\s+lr\s*\(/g;
+                if (newLrPattern.test(code)) {
+                    code = code.replace(newLrPattern, '__HS_SAFE_NEW_LR(');
+                    log('Patched sub-tab construction (new lr -> __HS_SAFE_NEW_LR)');
+                } else {
+                    warn('Could not patch sub-tab construction — new lr pattern not found');
+                }
+            } else {
+                warn('Could not patch sub-tab constructor shim — sub-tab define token not found');
+            }
+
+            log(`Patch summary: export=${!!exportResult} define=${defineWindowIdx !== -1}`);
+            log('v3.5-dev [2026-03-05]f patch complete — injecting bundle');
+
+            if (HS_DUMP_PATCHED_BUNDLE) {
+                window.__HS_PATCHED_BUNDLE_META = {
+                    capturedAtMs: Math.round(performance.now() - startTime),
+                    length: code.length,
+                    exportPatched: !!exportResult,
+                    definePatched: defineWindowIdx !== -1,
+                    stagePatched: stageAnchorIdx !== -1
+                };
+                window.__HS_PATCHED_BUNDLE_HEAD = code.slice(0, 5000);
+                window.__HS_PATCHED_BUNDLE_TAIL = code.slice(Math.max(0, code.length - 5000));
+                window.__HS_PATCHED_BUNDLE_AROUND = (position, radius = 600) => {
+                    const p = Math.max(0, Number(position) || 0);
+                    const r = Math.max(0, Number(radius) || 0);
+                    const start = Math.max(0, p - r);
+                    const end = Math.min(code.length, p + r);
+                    return {
+                        start,
+                        end,
+                        text: code.slice(start, end)
+                    };
+                };
+                window.__HS_PATCHED_BUNDLE_FIND = (needle, fromIndex = 0) => {
+                    const token = String(needle ?? '');
+                    const from = Math.max(0, Number(fromIndex) || 0);
+                    if (!token) return -1;
+                    return code.indexOf(token, from);
+                };
+
+                if (window.__HS_DUMP_PATCHED_BUNDLE_FULL === true) {
+                    window.__HS_PATCHED_BUNDLE_TEXT = code;
+                }
+
+                log('Patched bundle debug hooks installed', {
+                    length: code.length,
+                    fullTextEnabled: window.__HS_DUMP_PATCHED_BUNDLE_FULL === true
+                });
+            }
 
             const gameScript = document.createElement('script');
             gameScript.textContent = code;
@@ -263,9 +510,19 @@
 
             // UNLOCK DEFINITIONS JUST BEFORE INJECTION
             allowCustomElements = true;
-            log('Custom Elements unlocked for patched bundle');
+            log('Custom Elements unlocked for patched bundle', {
+                blocked: loaderDiagnostics.customElements.blockedCount,
+                blockedNamesSample: loaderDiagnostics.customElements.blockedNamesSample,
+                allowedNamesSample: loaderDiagnostics.customElements.allowedNamesSample,
+                duplicateSkipped: loaderDiagnostics.customElements.duplicateSkippedCount
+            });
+
+            // Keep duplicate-safe define wrapper active during injection.
+            // If official out.js already registered built-ins (e.g. tab-row),
+            // this prevents NotSupportedError on duplicate customElements.define.
 
             (document.body || document.head || document.documentElement).appendChild(gameScript);
+            loaderDiagnostics.lifecycle.injectedAtMs = Math.round(performance.now() - startTime);
             try {
                 mo.disconnect();
                 log('MutationObserver disconnected');
@@ -275,18 +532,33 @@
                 document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
                 log('beforescriptexecute listener removed');
             }
-            customElements.define = origDefine;
-            log('customElements.define restored');
-            patchedScriptInjected = true;
             log('Game script injected');
 
+            setTimeout(() => {
+                loaderDiagnostics.lifecycle.postInjectHealthAtMs = Math.round(performance.now() - startTime);
+                log('Post-inject health snapshot', {
+                    exposedStage: !!window.__HS_EXPOSED,
+                    exposedExport: !!window.__HS_EXPORT_EXPOSED,
+                    playerExposeState: window.__HS_PLAYER_EXPOSED,
+                    hsPlayerType: typeof window.__HS_player,
+                    windowPlayerType: typeof window.player,
+                    customElements: loaderDiagnostics.customElements
+                });
+            }, 1200);
+
             if (windowLoadFired) {
-                log('Manually triggering game initialization...');
-                await manuallyInitializeGame();
+                await ensureManualInit('window-load-fired');
+            } else {
+                setTimeout(() => {
+                    const needsFallback = !window.__HS_EXPOSED || !window.__HS_EXPORT_EXPOSED || typeof window.player === 'undefined';
+                    if (needsFallback) {
+                        ensureManualInit('post-inject-fallback').catch((e) => warn('Fallback manual init failed:', e));
+                    }
+                }, 2200);
             }
 
             setTimeout(initBackdoor, 1500);
-            waitForOfflineContainerClosed().then(() => {
+            waitForOfflineContainerClosed(5000, 'initial').then(() => {
                 setTimeout(loadModAfterExposure, 100);
             });
 
@@ -316,46 +588,389 @@
         if (window.player) {
             log('Manual init successful - player exists');
         } else {
-            warn('Manual init may have failed - player not found');
-            warn('You may need to refresh the page');
+            debug('Manual init: player not found yet (expected on some builds before load path runs)');
         }
     }
 
+    async function ensureManualInit(reason) {
+        if (manualInitInFlight) {
+            debug(`Manual init already in-flight; reusing promise (${reason})`);
+            return manualInitInFlight;
+        }
+
+        loaderDiagnostics.lifecycle.manualInitAttempts += 1;
+        log(`Manual init requested (${reason})`);
+
+        manualInitInFlight = (async () => {
+            try {
+                await manuallyInitializeGame();
+            } finally {
+                manualInitInFlight = null;
+            }
+        })();
+
+        return manualInitInFlight;
+    }
+
+    // Phase 3: inject game API/backdoor bridge once game script is present
     function initBackdoor() {
         const s = document.createElement('script');
         s.textContent = `
-window.__HS_BACKDOOR__ = {
-    get exposed() {
-        return {
-            synergismStage: typeof window.__HS_synergismStage,
-            DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
-            loadStatistics: typeof window.__HS_loadStatistics,
-            loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
-        };
-    }
-};
+(function () {
+    const getPlayer = () => window.__HS_player ?? window.player ?? null;
+    const fnCache = Object.create(null);
+
+    const findWindowFunction = (cacheKey, mustContain = []) => {
+        if (Object.prototype.hasOwnProperty.call(fnCache, cacheKey)) {
+            const cached = fnCache[cacheKey];
+            if (typeof cached === 'function') {
+                return cached;
+            }
+            delete fnCache[cacheKey];
+        }
+
+        const names = Object.getOwnPropertyNames(window);
+        for (const name of names) {
+            let value;
+            try {
+                value = window[name];
+            } catch {
+                continue;
+            }
+
+            if (typeof value !== 'function') continue;
+
+            let src = '';
+            try {
+                src = Function.prototype.toString.call(value);
+            } catch {
+                continue;
+            }
+
+            if (!src || src.includes('[native code]')) continue;
+
+            let ok = true;
+            for (const token of mustContain) {
+                if (!src.includes(token)) {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok) {
+                fnCache[cacheKey] = value;
+                return value;
+            }
+        }
+
+        return null;
+    };
+
+    const safeCall = (fn, args) => {
+        if (typeof fn !== 'function') return { ok: false, value: undefined };
+        try {
+            return { ok: true, value: fn.apply(null, args) };
+        } catch (e) {
+            console.warn('[HS] __HS_GAME_API call failed:', e);
+            return { ok: false, value: undefined };
+        }
+    };
+
+    window.__HS_GAME_API = {
+        get status() {
+            return {
+                playerReady: typeof getPlayer() === 'object',
+                challengeDisplay: !!findWindowFunction('challengeDisplay', ['oneChallengeDetails', 'triggerChallenge']),
+                toggleChallenges: !!findWindowFunction('toggleChallenges', ['transcensionChallenge', 'reincarnationChallenge', 'enterChallenge']),
+                loadoutHandler: !!findWindowFunction('loadoutHandler', ['blueberryLoadoutMode', 'saveTree', 'loadTree']),
+                toggleAutomaticHepteracts: !!findWindowFunction('toggleAutomaticHepteracts', ['HepteractAuto', 'AUTO']),
+                updateAutoCubesOpens: !!findWindowFunction('updateAutoCubesOpens', ['openCubes', 'openTesseracts', 'openHypercubes', 'openPlatonicsCubes']),
+                updateTesseractAutoBuyAmount: !!findWindowFunction('updateTesseractAutoBuyAmount', ['tesseractAutoBuyerAmount']),
+                updateRuneBlessingBuyAmount: !!findWindowFunction('updateRuneBlessingBuyAmount', ['buyRuneBlessingInput', 'buyRuneSpiritInput'])
+            };
+        },
+
+        get diagnostics() {
+            return {
+                status: this.status,
+                synergismStage: typeof window.__HS_synergismStage,
+                DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
+                loadStatistics: typeof window.__HS_loadStatistics,
+                loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
+                i18next: typeof window.__HS_i18next,
+                hsPlayer: typeof window.__HS_player,
+                windowPlayer: typeof window.player,
+                playerExposeState: window.__HS_PLAYER_EXPOSED,
+                gameApi: typeof window.__HS_GAME_API,
+                loaderSubTabFallback: {
+                    count: window.__HS_LOADER_DIAGNOSTICS?.customElements?.subTabFallbackCount ?? 0,
+                    reasons: window.__HS_LOADER_DIAGNOSTICS?.customElements?.subTabFallbackReasonsSample ?? []
+                }
+            };
+        },
+
+        getPlayer,
+
+        challengeDisplay(challengeNumber) {
+            const direct = window.challengeDisplay;
+            const fn = (typeof direct === 'function')
+                ? direct
+                : findWindowFunction('challengeDisplay', ['oneChallengeDetails', 'triggerChallenge']);
+            if (typeof fn === 'function') {
+                const r = safeCall(fn, [Number(challengeNumber), true]);
+                if (r.ok) return true;
+            }
+
+            return false;
+        },
+
+        toggleChallenges(challengeNumber, auto = false) {
+            const direct = window.toggleChallenges;
+            const fn = (typeof direct === 'function')
+                ? direct
+                : findWindowFunction('toggleChallenges', ['transcensionChallenge', 'reincarnationChallenge', 'enterChallenge']);
+            if (typeof fn === 'function') {
+                const r = safeCall(fn, [Number(challengeNumber), !!auto]);
+                if (r.ok) return true;
+            }
+
+            return false;
+        },
+
+        enterChallenge(challengeNumber, auto = false) {
+            const n = Number(challengeNumber);
+            if (!Number.isFinite(n)) return false;
+            const displayed = this.challengeDisplay(n);
+            const toggled = this.toggleChallenges(n, auto);
+            return displayed && toggled;
+        },
+
+        loadAmbrosiaLoadout(slotNumber) {
+            const player = getPlayer();
+            if (!player) return false;
+            const slot = Number(slotNumber);
+            const modules = player.blueberryLoadouts?.[slot];
+            if (!modules) return false;
+
+            const fn = findWindowFunction('loadoutHandler', ['blueberryLoadoutMode', 'saveTree', 'loadTree']);
+            if (!fn) return false;
+
+            const previousMode = player.blueberryLoadoutMode;
+            player.blueberryLoadoutMode = 'loadTree';
+            const r = safeCall(fn, [slot, modules]);
+            player.blueberryLoadoutMode = previousMode;
+            return r.ok;
+        },
+
+        saveAmbrosiaLoadout(slotNumber) {
+            const player = getPlayer();
+            if (!player) return false;
+            const slot = Number(slotNumber);
+            if (!Number.isFinite(slot) || slot < 1) return false;
+
+            const fn = findWindowFunction('loadoutHandler', ['blueberryLoadoutMode', 'saveTree', 'loadTree']);
+            if (!fn) return false;
+
+            const previousMode = player.blueberryLoadoutMode;
+            player.blueberryLoadoutMode = 'saveTree';
+            const previous = player.blueberryLoadouts?.[slot] ?? {};
+            const r = safeCall(fn, [slot, previous]);
+            player.blueberryLoadoutMode = previousMode;
+            return r.ok;
+        },
+
+        getPlatonicUpgrades() {
+            const player = getPlayer();
+            if (!Array.isArray(player?.platonicUpgrades)) return [];
+            return player.platonicUpgrades.slice(1, 21);
+        },
+
+        toggleHepteractAuto(key, newValue) {
+            const fn = findWindowFunction('toggleAutomaticHepteracts', ['HepteractAuto', 'AUTO']);
+            const normalizedKey = String(key ?? '');
+            const valid = ['chronos', 'hyperrealism', 'quark', 'challenge', 'abyss', 'accelerator', 'acceleratorBoost', 'multiplier'];
+            if (!valid.includes(normalizedKey)) return false;
+            const args = (typeof newValue === 'boolean') ? [normalizedKey, newValue] : [normalizedKey];
+            const r = safeCall(fn, args);
+            return r.ok;
+        },
+
+        updateAutoCubesOpens(index) {
+            const fn = findWindowFunction('updateAutoCubesOpens', ['openCubes', 'openTesseracts', 'openHypercubes', 'openPlatonicsCubes']);
+            const r = safeCall(fn, [Number(index)]);
+            return r.ok;
+        },
+
+        setAutoCubeOpenAmount(index, value) {
+            const n = Number(index);
+            const numeric = Number(value);
+            if (!Number.isFinite(n) || !Number.isFinite(numeric)) return false;
+
+            const inputIdByIndex = {
+                1: 'cubeOpensInput',
+                2: 'tesseractsOpensInput',
+                3: 'hypercubesOpensInput',
+                4: 'platonicCubeOpensInput'
+            };
+
+            const inputId = inputIdByIndex[n];
+            if (!inputId) return false;
+
+            const input = document.getElementById(inputId);
+            if (!(input instanceof HTMLInputElement)) return false;
+
+            const bounded = Math.max(0, Math.min(100, Math.floor(numeric)));
+            input.value = String(bounded);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+            return this.updateAutoCubesOpens(n);
+        },
+
+        updateTesseractAutoBuyAmount() {
+            const fn = findWindowFunction('updateTesseractAutoBuyAmount', ['tesseractAutoBuyerAmount']);
+            const r = safeCall(fn, []);
+            return r.ok;
+        },
+
+        setTesseractAutoBuyAmount(value) {
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric)) return false;
+
+            const input = document.getElementById('tesseractAmount');
+            if (!(input instanceof HTMLInputElement)) return false;
+
+            const bounded = Math.max(0, Math.floor(numeric));
+            input.value = String(bounded);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+            return this.updateTesseractAutoBuyAmount();
+        },
+
+        setRuneBuyAmount(kind, value) {
+            const k = Number(kind);
+            const numeric = Number(value);
+            if (!Number.isFinite(k) || !Number.isFinite(numeric)) return false;
+            if (k !== 1 && k !== 2) return false;
+
+            const inputId = k === 1 ? 'buyRuneBlessingInput' : 'buyRuneSpiritInput';
+            const input = document.getElementById(inputId);
+            if (!(input instanceof HTMLInputElement)) return false;
+
+            const bounded = Math.max(1, Math.floor(numeric));
+            input.value = String(bounded);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+            const direct = window.updateRuneBlessingBuyAmount;
+            const fn = (typeof direct === 'function')
+                ? direct
+                : findWindowFunction('updateRuneBlessingBuyAmount', ['buyRuneBlessingInput', 'buyRuneSpiritInput']);
+
+            if (typeof fn !== 'function') {
+                return false;
+            }
+
+            const r = safeCall(fn, [k]);
+            return r.ok;
+        },
+
+        async triggerExport(copyToClipboard = true) {
+            try {
+                const saveType = document.getElementById('saveType');
+                if (saveType && 'checked' in saveType) {
+                    saveType.checked = !!copyToClipboard;
+                }
+
+                const direct = window.__HS_exportData;
+                if (typeof direct === 'function') {
+                    await direct(true);
+                    return true;
+                }
+
+                console.warn('[HS] triggerExport: __HS_exportData unavailable; skipping UI-button fallback to avoid view switches');
+                return false;
+            } catch (e) {
+                console.warn('[HS] triggerExport failed:', e);
+                return false;
+            }
+        },
+
+        callWindowFunction(functionName, args = []) {
+            const name = String(functionName ?? '');
+            if (!name) return false;
+
+            const fn = window[name];
+            if (typeof fn !== 'function') {
+                return false;
+            }
+
+            const callArgs = Array.isArray(args) ? args : [args];
+            const r = safeCall(fn, callArgs);
+            return r.ok;
+        },
+
+        callDiscoveredFunction(cacheKey, mustContain = [], args = []) {
+            const key = String(cacheKey ?? '');
+            if (!key) return false;
+
+            const tokens = Array.isArray(mustContain)
+                ? mustContain.map(token => String(token ?? '')).filter(Boolean)
+                : [];
+
+            const fn = findWindowFunction(key, tokens);
+            if (typeof fn !== 'function') {
+                return false;
+            }
+
+            const callArgs = Array.isArray(args) ? args : [args];
+            const r = safeCall(fn, callArgs);
+            return r.ok;
+        }
+    };
+
+    window.__HS_BACKDOOR__ = {
+        get exposed() {
+            return {
+                synergismStage: typeof window.__HS_synergismStage,
+                DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
+                loadStatistics: typeof window.__HS_loadStatistics,
+                loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
+                i18next: typeof window.__HS_i18next,
+                hsPlayer: typeof window.__HS_player,
+                windowPlayer: typeof window.player,
+                playerExposeState: window.__HS_PLAYER_EXPOSED,
+                gameApi: typeof window.__HS_GAME_API
+            };
+        },
+        getPlayer,
+        getGameApi() {
+            return window.__HS_GAME_API;
+        }
+    };
+
+    console.log('[HS] ✅ __HS_GAME_API exposed');
+})();
 `;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
+        logExposureTimeline('backdoor-ready');
     }
 
     function clickWhenAvailable(id) {
         return new Promise(resolve => {
             const start = performance.now();
-            const MAX = 15000;
+            const MAX = 5000;
 
             (function check() {
                 const el = document.getElementById(id);
                 if (el) {
-                    const events = ['mousedown', 'mouseup', 'click'];
-                    for (const type of events) {
-                        el.dispatchEvent(new MouseEvent(type, {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window
-                        }));
-                    }
+                    debug(`Found #${id} after ${Math.round(performance.now() - start)}ms; dispatching synthetic click`);
+                    clickElementSynthetic(el);
                     requestAnimationFrame(() => resolve(true));
                     return;
                 }
@@ -369,28 +984,91 @@ window.__HS_BACKDOOR__ = {
         });
     }
 
-    async function waitForOfflineContainerClosed() {
+    function isElementVisible(el) {
+        if (!el) return false;
+        const style = getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    }
+
+    function getOfflineExitButton(container = document.getElementById('offlineContainer')) {
+        return document.getElementById('exitOffline') || container?.querySelector('button') || null;
+    }
+
+    function clickElementSynthetic(el) {
+        if (!el) return;
+        const events = ['mousedown', 'mouseup', 'click'];
+        for (const type of events) {
+            el.dispatchEvent(new MouseEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            }));
+        }
+    }
+
+    async function runSilentExportProbe() {
+        const SILENCE_MS = 5000;
+        const until = Date.now() + SILENCE_MS;
+
+        debug(`Starting silent export probe (window=${SILENCE_MS}ms)`);
+
+        loaderDiagnostics.exportSilence.attempts += 1;
+        window.__HS_SILENT_EXPORT = true;
+        window.__HS_SILENT_EXPORT_UNTIL = until;
+
+        await clickWhenAvailable('exportgame');
+        await new Promise(r => setTimeout(r, 700));
+
+        const clearIfExpired = () => {
+            if ((Number(window.__HS_SILENT_EXPORT_UNTIL || 0) <= Date.now())) {
+                window.__HS_SILENT_EXPORT = false;
+            }
+        };
+
+        clearIfExpired();
+        setTimeout(clearIfExpired, Math.max(0, until - Date.now()) + 50);
+
+        debug('Silent export probe completed', {
+            attempts: loaderDiagnostics.exportSilence.attempts,
+            blockedAnchorClicks: loaderDiagnostics.exportSilence.blockedAnchorClicks,
+            lastBlockedDownloadName: loaderDiagnostics.exportSilence.lastBlockedDownloadName
+        });
+    }
+
+    // Wait until offline modal is hidden/stable, with active dismissal attempts.
+    async function waitForOfflineContainerClosed(maxMs = 15000, reason = 'default') {
         const start = performance.now();
-        const MAX = 60000;
+        const MAX = Math.max(1000, Number(maxMs) || 15000);
         let seenOpen = false;
-        log('Waiting for offlineContainer...');
+        let hiddenFrames = 0;
+        log(`Waiting for offlineContainer... (reason=${reason}, maxMs=${MAX})`);
         return new Promise(resolve => {
             (function check() {
                 const container = document.getElementById('offlineContainer');
-                if (container) {
-                    const style = getComputedStyle(container);
-                    if (style.display !== 'none') {
-                        seenOpen = true;
-                        const exitBtn = document.getElementById('exitOffline');
-                        if (exitBtn) exitBtn.click();
-                    } else if (seenOpen) {
-                        log('offlineContainer closed, UI ready');
+                const visible = isElementVisible(container);
+
+                if (visible) {
+                    seenOpen = true;
+                    hiddenFrames = 0;
+                    const exitBtn = getOfflineExitButton(container);
+                    if (exitBtn) clickElementSynthetic(exitBtn);
+                } else if (container) {
+                    hiddenFrames += 1;
+                    if (hiddenFrames >= 8) {
+                        log(`offlineContainer hidden, UI ready (reason=${reason}, seenOpen=${seenOpen})`);
                         resolve(true);
                         return;
                     }
+                } else if (!container && performance.now() - start > 3000) {
+                    log('offlineContainer not present, proceeding');
+                    resolve(true);
+                    return;
                 }
+
                 if (performance.now() - start > MAX) {
-                    warn('Offline container wait timed out, forcing proceed');
+                    warn(`Offline container wait timed out, forcing proceed (reason=${reason}, seenOpen=${seenOpen})`);
                     resolve(false);
                     return;
                 }
@@ -400,26 +1078,110 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function exposeViaUI() {
+        // Phase 4: drive UI-based exposure path for stage/export/player access.
+        log('Running UI exposure sequence (stage/export/player)...');
+
+        const stableGateStart = performance.now();
+        const STABLE_GATE_MAX = 8000;
+        let hiddenFramesBeforeExpose = 0;
+        let gatePlayerReady = false;
+        while (performance.now() - stableGateStart < STABLE_GATE_MAX) {
+            const offlineContainer = document.getElementById('offlineContainer');
+            const visible = isElementVisible(offlineContainer);
+            const playerReadyNow = typeof window.player === 'object' || typeof window.__HS_player === 'object';
+            gatePlayerReady = playerReadyNow;
+
+            if (visible) {
+                hiddenFramesBeforeExpose = 0;
+                const exitBtn = document.getElementById('exitOffline') || offlineContainer?.querySelector('button');
+                if (exitBtn) clickElementSynthetic(exitBtn);
+            } else {
+                hiddenFramesBeforeExpose += 1;
+            }
+
+            if (playerReadyNow && hiddenFramesBeforeExpose >= 6) break;
+            await new Promise(r => requestAnimationFrame(r));
+        }
+
+        debug('Stable gate result before exposure clicks', {
+            elapsedMs: Math.round(performance.now() - stableGateStart),
+            playerReady: gatePlayerReady,
+            hiddenFrames: hiddenFramesBeforeExpose
+        });
+
+        const offlineContainer = document.getElementById('offlineContainer');
+        if (isElementVisible(offlineContainer)) {
+            warn('offlineContainer still visible at exposure start; retrying dismissal');
+            const exitBtn = getOfflineExitButton(offlineContainer);
+            if (exitBtn) clickElementSynthetic(exitBtn);
+            await waitForOfflineContainerClosed(5000, 'pre-exposure-retry');
+        }
+
         await clickWhenAvailable('settingstab');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('switchSettingSubTab4');
         await new Promise(r => setTimeout(r, 100));
         await clickWhenAvailable('kMisc');
 
-        window.__HS_SILENT_EXPORT = true;
-        await clickWhenAvailable('exportgame');
-        window.__HS_SILENT_EXPORT = false;
+        await runSilentExportProbe();
 
-        const start = performance.now();
-        const MAX = 15000;
+        const MAX_ACTIVE = 8000;
+        let activeElapsed = 0;
+        let prevTs = performance.now();
+        let lastOfflineDismissAttemptAt = 0;
+        let offlineWasVisible = false;
         return new Promise(resolve => {
             (function waitExpose() {
-                if (window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED) {
+                const now = performance.now();
+                const offlineContainerNow = document.getElementById('offlineContainer');
+                const offlineVisible = isElementVisible(offlineContainerNow);
+
+                if (offlineVisible) {
+                    if (!offlineWasVisible) {
+                        activeElapsed = 0;
+                        offlineWasVisible = true;
+                        debug('offlineContainer became visible during exposure wait; resetting exposure timer and retrying dismissal');
+                    }
+                    if (now - lastOfflineDismissAttemptAt > 800) {
+                        lastOfflineDismissAttemptAt = now;
+                        const exitBtn = getOfflineExitButton(offlineContainerNow);
+                        if (exitBtn) {
+                            clickElementSynthetic(exitBtn);
+                        }
+                    }
+                } else {
+                    offlineWasVisible = false;
+                    activeElapsed += Math.max(0, now - prevTs);
+                }
+                prevTs = now;
+
+                if (!window.__HS_PLAYER_EXPOSED && window.player) {
+                    window.__HS_player = window.player;
+                    window.__HS_PLAYER_EXPOSED = 'ui-window-fallback';
+                    log('Player backfilled from window.player during UI exposure wait');
+                    logExposureTimeline('ui-window-backfill');
+                }
+
+                const stageReady = !!window.__HS_EXPOSED;
+                const exportReady = !!window.__HS_EXPORT_EXPOSED;
+                const playerReady = typeof window.__HS_PLAYER_EXPOSED !== 'undefined';
+
+                if (stageReady && exportReady) {
+                    log(`Exposure ready (stage=${stageReady} export=${exportReady} playerReady=${playerReady} player=${window.__HS_PLAYER_EXPOSED} hsPlayer=${typeof window.__HS_player} windowPlayer=${typeof window.player})`);
+                    logExposureTimeline('exposure-ready', { stageReady, exportReady, playerReady });
                     resolve(true);
                     return;
                 }
-                if (performance.now() - start > MAX) {
-                    warn('Exposure wait timed out');
+                if (activeElapsed > MAX_ACTIVE) {
+                    const apiDiagnostics = window.__HS_GAME_API?.diagnostics;
+                    warn(`Exposure wait timed out (stage=${stageReady} export=${exportReady} player=${window.__HS_PLAYER_EXPOSED} hsPlayer=${typeof window.__HS_player} windowPlayer=${typeof window.player})`);
+                    warn('[HS] Exposure timeout diagnostics', {
+                        apiDiagnostics,
+                        loaderDiagnostics,
+                        hasOfflineContainer: !!document.getElementById('offlineContainer'),
+                        activeExposureMs: Math.round(activeElapsed)
+                    });
+                    logExposureTimeline('exposure-timeout', { stageReady, exportReady, playerReady });
                     resolve(false);
                     return;
                 }
@@ -434,32 +1196,48 @@ window.__HS_BACKDOOR__ = {
     }
 
     async function loadModAfterExposure() {
+        // Phase 5: once exposure succeeds, load and initialize mod script.
         if (window.__HS_MOD_LOADED) return;
         window.__HS_MOD_LOADED = true;
 
-        const ok = await exposeViaUI();
-        if (!ok) return;
+        let ok = await exposeViaUI();
+        if (!ok) {
+            warn('Initial exposure attempt failed; running manual-init retry path');
+            await ensureManualInit('exposure-retry');
+            ok = await exposeViaUI();
+            if (!ok) return;
+        }
 
         await returnToBuildingsTab();
 
-        log('Loading mod');
+        log('Loading mod from CDN');
 
         const s = document.createElement('script');
         s.src = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
 
         s.onload = () => {
-            log('Mod script loaded');
+            log('✅ Mod script loaded from CDN');
             try {
                 window.hypersynergism.init();
+                logExposureTimeline('mod-init-success', {
+                    winnerPath: window.__HS_PLAYER_EXPOSED,
+                    hsPlayerReady: typeof window.__HS_player === 'object',
+                    windowPlayerReady: typeof window.player === 'object'
+                });
             } catch (e) {
                 warn('Mod init failed:', e);
+                logExposureTimeline('mod-init-failure', {
+                    winnerPath: window.__HS_PLAYER_EXPOSED,
+                    hsPlayerReady: typeof window.__HS_player === 'object',
+                    windowPlayerReady: typeof window.player === 'object'
+                });
             }
         };
 
-        s.onerror = () => warn('Mod failed to load');
+        s.onerror = () => warn('❌ Mod failed to load from CDN');
         (document.head || document.documentElement).appendChild(s);
     }
 
-    log('Initialized');
+    log('LOADER Initialized - CDN mode');
 
 })();

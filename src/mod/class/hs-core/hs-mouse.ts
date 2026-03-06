@@ -11,7 +11,7 @@ export class HSMouse extends HSModule {
 
     static #staticContext = '';
 
-    static #mousePosition: HSMousePosition;
+    static #mousePosition: HSMousePosition = { x: 0, y: 0 };
     static #mousePositionDebugElement?: HTMLDivElement;
 
     static #hoverUpdateInterval: number | null;
@@ -68,7 +68,10 @@ export class HSMouse extends HSModule {
 
     // Emits a mouse event at the current mouse position
     static #mouseEventAtPoint(eventType: 'mouseover' | 'click') {
-        const { x, y } = this.#mousePosition;
+        const pos = this.#mousePosition;
+        if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+
+        const { x, y } = pos;
 
         // The emitted event needs to have some (HTML) Element target it is emitted to
         // This is done by using the document.elementFromPoint method, which returns the topmost element at the specified coordinates

@@ -51,6 +51,17 @@ export class HSGameState extends HSModule {
         'pseudoCoins',
     ];
 
+    #debugThrottleState = new Map<string, { lastMessage: string; lastTime: number }>();
+
+    #debugThrottled(key: string, message: string, minIntervalMs: number = 300): void {
+        const now = performance.now();
+        const previous = this.#debugThrottleState.get(key);
+        if (!previous || previous.lastMessage !== message || now - previous.lastTime >= minIntervalMs) {
+            this.#debugThrottleState.set(key, { lastMessage: message, lastTime: now });
+            HSLogger.debug(message, this.context);
+        }
+    }
+
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
     }
@@ -72,7 +83,15 @@ export class HSGameState extends HSModule {
                     if (uiView.getId() !== MAIN_VIEW.UNKNOWN) {
                         self.#viewStates.MAIN_VIEW.previousView = self.#viewStates.MAIN_VIEW.currentView;
                         self.#viewStates.MAIN_VIEW.currentView = uiView;
-                        HSLogger.debug(`Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
+                        self.#debugThrottled(
+                            'main-view-change',
+                            `Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`,
+                            200
+                        );
+
+                        if (uiView.getId() === MAIN_VIEW.SETTINGS) {
+                            HSLogger.warn('[HSGameState] Entered settings view.', self.context);
+                        }
                     } else {
                         HSLogger.warn(`Main UI view ${view} not found`, self.context);
                         return;
@@ -151,6 +170,10 @@ export class HSGameState extends HSModule {
                             const previousView = self.#viewStates[viewKey].previousView;
                             const currentView = self.#viewStates[viewKey].currentView;
 
+                            if (previousView.getName() === currentView.getName()) {
+                                return;
+                            }
+
                             // Notify subscribers of the main view change
                             self.#viewStates[viewKey].viewChangeSubscribers.forEach((callback) => {
                                 try {
@@ -160,7 +183,19 @@ export class HSGameState extends HSModule {
                                 }
                             });
 
-                            HSLogger.debug(`Subview changed ${previousView.getName()} -> ${currentView.getName()}`, self.context);
+                            self.#debugThrottled(
+                                `subview-change-${viewKey}`,
+                                `Subview changed ${previousView.getName()} -> ${currentView.getName()}`,
+                                200
+                            );
+
+                            const currentMainView = self.#viewStates.MAIN_VIEW.currentView.getId();
+                            if (viewKey === 'RUNE_VIEW' && currentMainView !== MAIN_VIEW.RUNES) {
+                                HSLogger.warn(`[HSGameState] Rune subview changed while main view is ${self.#viewStates.MAIN_VIEW.currentView.getName()}.`, self.context);
+                            }
+                            if (viewKey === 'SETTINGS_VIEW' && currentMainView !== MAIN_VIEW.SETTINGS) {
+                                HSLogger.warn(`[HSGameState] Settings subview changed while main view is ${self.#viewStates.MAIN_VIEW.currentView.getName()}.`, self.context);
+                            }
                         } else {
                             HSLogger.warn(`Subview ${view} not found`, self.context);
                             return;

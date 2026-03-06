@@ -9,6 +9,10 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
  * Author: Copilot (based on HSQOLButtons)
  */
 export class HSAutosingGameSettingsFixer extends HSModule {
+    init(): Promise<void> {
+        HSLogger.log('[HSAutosing] HSAutosingGameSettingsFixer fake-load', this.context);
+        return Promise.resolve();
+    }
     /**
      * List of toggle requirements: selector and expected text.
      * Each entry specifies a selector and the text that should be present when ON.

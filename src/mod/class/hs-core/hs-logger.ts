@@ -23,6 +23,9 @@ export class HSLogger {
 
     static #lastLogHash = -1;
     static #displayTimestamp: boolean = false;
+    static #debugEnabledCache = false;
+    static #debugEnabledCacheAt = 0;
+    static #debugEnabledCacheMs = 250;
 
     static #oneShotLogHistory: Map<string, { logged: boolean, timestamp: number, level: ELogType, count: number }> = new Map();
     static #oneShotLogHistoryIvl?: number;
@@ -187,10 +190,20 @@ export class HSLogger {
         this.#logToUi(msg, context, ELogType.ERROR);
     }
 
-    static debug(msg: string, context: string = "HSMain", isImportant: boolean = false) {
-        const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
+    static #isDebugEnabled(): boolean {
+        const now = performance.now();
+        if (now - this.#debugEnabledCacheAt <= this.#debugEnabledCacheMs) {
+            return this.#debugEnabledCache;
+        }
 
-        if (debugLog && debugLog.getValue()) {
+        const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
+        this.#debugEnabledCache = !!(debugLog && debugLog.getValue());
+        this.#debugEnabledCacheAt = now;
+        return this.#debugEnabledCache;
+    }
+
+    static debug(msg: string, context: string = "HSMain", isImportant: boolean = false) {
+        if (this.#isDebugEnabled()) {
             console.log(`DBG [${context}]: ${HSUtils.removeColorTags(msg)}`);
             this.#logToUi(msg, context, ELogType.DEBUG);
         }
