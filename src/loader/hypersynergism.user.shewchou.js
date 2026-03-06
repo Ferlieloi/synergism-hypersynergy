@@ -451,7 +451,7 @@
             }
 
             log(`Patch summary: export=${!!exportResult} define=${defineWindowIdx !== -1}`);
-            log('v3.5-dev [2026-03-05]f patch complete — injecting bundle');
+            log('v3.5 [2026-03-05]f patch complete — injecting bundle');
 
             if (HS_DUMP_PATCHED_BUNDLE) {
                 window.__HS_PATCHED_BUNDLE_META = {
