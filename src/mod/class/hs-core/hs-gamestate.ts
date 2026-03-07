@@ -22,7 +22,7 @@ export class HSGameState extends HSModule {
     };
 
     #viewStates: HSViewStateRecord = {
-        MAIN_VIEW: { currentView: new MainView('unknown'), previousView: new MainView('unknown'), viewChangeSubscribers: new Map() },
+        MAIN_VIEW: { currentView: new MainView('buildings'), previousView: new MainView('buildings'), viewChangeSubscribers: new Map() },
         BUILDING_VIEW: { currentView: new BuildingView('unknown'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
         RUNE_VIEW: { currentView: new RuneView('unknown'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
         CHALLENGE_VIEW: { currentView: new ChallengeView('unknown'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
@@ -89,9 +89,6 @@ export class HSGameState extends HSModule {
                             200
                         );
 
-                        if (uiView.getId() === MAIN_VIEW.SETTINGS) {
-                            HSLogger.warn('[HSGameState] Entered settings view.', self.context);
-                        }
                     } else {
                         HSLogger.warn(`Main UI view ${view} not found`, self.context);
                         return;
@@ -189,13 +186,6 @@ export class HSGameState extends HSModule {
                                 200
                             );
 
-                            const currentMainView = self.#viewStates.MAIN_VIEW.currentView.getId();
-                            if (viewKey === 'RUNE_VIEW' && currentMainView !== MAIN_VIEW.RUNES) {
-                                HSLogger.warn(`[HSGameState] Rune subview changed while main view is ${self.#viewStates.MAIN_VIEW.currentView.getName()}.`, self.context);
-                            }
-                            if (viewKey === 'SETTINGS_VIEW' && currentMainView !== MAIN_VIEW.SETTINGS) {
-                                HSLogger.warn(`[HSGameState] Settings subview changed while main view is ${self.#viewStates.MAIN_VIEW.currentView.getName()}.`, self.context);
-                            }
                         } else {
                             HSLogger.warn(`Subview ${view} not found`, self.context);
                             return;

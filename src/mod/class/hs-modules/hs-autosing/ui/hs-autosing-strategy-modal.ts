@@ -8,11 +8,19 @@ import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
 
 export class HSAutosingStrategyModal {
-    static async open(existingStrategy?: HSAutosingStrategy, selectValue?: number, parentModalId?: string): Promise<void> {
+    static async open(
+        existingStrategy?: HSAutosingStrategy,
+        options?: {
+            duplicateFromDefault?: boolean;
+            suggestedName?: string;
+            parentModalId?: string;
+        }
+    ): Promise<void> {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
 
-        const isEditMode = !!existingStrategy;
+        const isDuplicateMode = !!options?.duplicateFromDefault;
+        const isEditMode = !!existingStrategy && !isDuplicateMode;
 
         const clonePhase = (phase: AutosingStrategyPhase) => JSON.parse(JSON.stringify(phase)) as AutosingStrategyPhase;
         const cloneLoadouts = (loadouts: CorruptionLoadoutDefinition[]) => JSON.parse(JSON.stringify(loadouts)) as CorruptionLoadoutDefinition[];
@@ -20,7 +28,9 @@ export class HSAutosingStrategyModal {
 
         const strategyDraft: HSAutosingStrategy = existingStrategy
             ? {
-                strategyName: existingStrategy.strategyName,
+                strategyName: isDuplicateMode
+                    ? (options?.suggestedName ?? `${existingStrategy.strategyName}_copy`)
+                    : existingStrategy.strategyName,
                 strategy: JSON.parse(JSON.stringify(existingStrategy.strategy)),
                 aoagPhase: existingStrategy.aoagPhase
                     ? clonePhase(existingStrategy.aoagPhase)
@@ -107,6 +117,9 @@ export class HSAutosingStrategyModal {
                             value="${strategyDraft.strategyName}"
                             ${isEditMode ? 'disabled style="background:#000;color:#888;cursor:not-allowed;"' : ''}
                         />
+                        ${isDuplicateMode
+                    ? '<div class="hs-strategy-note" style="margin-top: 6px; opacity: 0.8; font-size: 12px;">Default strategies are read-only; saving creates a user copy.</div>'
+                    : ''}
                     </div>
 
                     <div class="hs-strategy-input-section">
@@ -126,13 +139,15 @@ export class HSAutosingStrategyModal {
                             + Add Phase
                         </div>
                         <div class="hs-strategy-btn hs-strategy-btn-primary" id="hs-autosing-create-btn">
-                            ${isEditMode ? 'Update Strategy' : 'Create Strategy'}
+                            ${isEditMode ? 'Update Strategy' : (isDuplicateMode ? 'Save as a new Strategy' : 'Create Strategy')}
                         </div>
                     </div>
                 </div>
             `,
-            title: isEditMode ? "Edit Autosing Strategy" : "Create Autosing Strategy",
-            parentModalId: parentModalId
+            title: isEditMode
+                ? "Edit Autosing Strategy"
+                : (isDuplicateMode ? "View / Copy Default Strategy" : "Create Autosing Strategy"),
+            parentModalId: options?.parentModalId
         };
 
         const modalID = await uiMod.Modal(modalContent);
@@ -177,8 +192,7 @@ export class HSAutosingStrategyModal {
                         } else {
                             HSSettings.saveStrategyToStorage(strategyDraft);
                             HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
-                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" created and selected.`, 'HSAutosingStrategyModal');
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" created and selected.`, {
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, {
                                 notificationType: "success"
                             });
                         }

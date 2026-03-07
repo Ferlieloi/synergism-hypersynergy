@@ -1,5 +1,5 @@
 {
-  "strategyName": "BTMco. Lotus Eater",
+  "strategyName": "BTMco_Lotus_Eater",
   "strategy": [
     {
       "startPhase": "start",
@@ -838,7 +838,7 @@
           "challengeMaxTime": 200
         },
         {
-          "challengeNumber": 409,
+          "challengeNumber": 402,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,

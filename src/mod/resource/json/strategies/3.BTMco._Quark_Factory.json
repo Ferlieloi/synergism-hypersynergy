@@ -1,5 +1,5 @@
 {
-  "strategyName": "BTMco. Quark Factory",
+  "strategyName": "BTMco_Quark_Factory",
   "strategy": [
     {
       "startPhase": "start",
@@ -759,7 +759,7 @@
           }
         },
         {
-          "challengeNumber": 409,
+          "challengeNumber": 402,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,

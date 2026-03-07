@@ -671,14 +671,14 @@
       "controlPage": "auto-sing"
     }
   },
-  "migrateIdsAndExportAutosingStrategy": {
-    "settingName": "migrateIdsAndExportAutosingStrategy",
-    "settingDescription": "Migrate&Export",
-    "settingHelpText": "Migrates the special action IDs of the selected strategy",
+  "migrateAndSaveAllUserStrategies": {
+    "settingName": "migrateAndSaveAllUserStrategies",
+    "settingDescription": "Migrate&SaveAll",
+    "settingHelpText": "Migrates all non-default local strategies (old<=>new IDs) and saves them to localStorage",
     "settingType": "button",
     "enabled": true,
     "settingValue": "",
-    "settingAction": "migrateIdsAndExportAutosingStrategy",
+    "settingAction": "migrateAndSaveAllUserStrategies",
     "settingControl": {
       "controlId": "hs-setting-auto-sing-strategy-migrator-button",
       "controlType": "button",

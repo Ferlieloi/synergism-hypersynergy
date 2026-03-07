@@ -46,6 +46,7 @@ export class Hypersynergism {
     async init() {
         if (this.#isInitialized) return;
         this.#isInitialized = true;
+        HSGlobal.General.isModFullyLoaded = false;
 
         // Wait for game to be ready before doing ANYTHING substantial
         if (!await this.#waitForGameReady()) {
@@ -67,6 +68,10 @@ export class Hypersynergism {
         // Do this after UI Panel stuff is ready, because
         // syncing basically means syncing the UI with the settings
         await HSSettings.syncSettings();
+        // Mod fully loaded, so we show HS icon, and update the flag
+        const hsui = HSModuleManager.getModule<HSUI>('HSUI');
+        hsui?.setPanelControlVisible(true);
+        HSGlobal.General.isModFullyLoaded = true;
 
         await HSUI.Notify(`Hypersynergism v${HSGlobal.General.currentModVersion} loaded`, {
             position: 'top',

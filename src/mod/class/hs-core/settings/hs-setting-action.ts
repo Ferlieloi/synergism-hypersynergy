@@ -176,10 +176,25 @@ export class HSSettingActions {
         startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
+            if (!params.disable && !HSGlobal.General.isModFullyLoaded) {
+                if (!params.isInitialAction) {
+                    HSLogger.warn("Hypersynergism is still loading. Please wait before starting Auto-Sing.", context);
+                }
+                HSSettings.getSetting('startAutosing')?.disable();
+                return;
+            }
+
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
                 if (params.disable && params.disable === true) {
-                    await autosingMod.disableAutoSing();
+                    if (!autosingMod.isAutosingEnabled()) {
+                        return;
+                    }
+                    // Review mode: we stop autosing process but keep the modal visible
+                    autosingMod.stopAutosing({
+                        showReviewModal: true,
+                        syncSetting: false
+                    });
                 } else {
                     // Auto-enable GDS if not already enabled
                     const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
@@ -210,9 +225,9 @@ export class HSSettingActions {
             await HSSettings.exportSelectedStrategy();
         },
 
-        migrateIdsAndExportAutosingStrategy: async (params: HSSettingActionParams) => {
+        migrateAndSaveAllUserStrategies: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.exportSelectedStrategy(true);
+            await HSSettings.migrateAndSaveAllUserStrategies();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {

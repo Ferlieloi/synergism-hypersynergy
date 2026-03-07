@@ -4,13 +4,13 @@ import { HSLogger } from '../../hs-core/hs-logger';
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 
 /**
- * Class: HSAutosingGameSettingsFixer
+ * Class: HSAutosingSettingsFixer
  * Description: Automates, corrects, and manages game settings for AutoSing.
  * Author: Copilot (based on HSQOLButtons)
  */
-export class HSAutosingGameSettingsFixer extends HSModule {
+export class HSAutosingSettingsFixer extends HSModule {
     init(): Promise<void> {
-        HSLogger.log('[HSAutosing] HSAutosingGameSettingsFixer fake-load', this.context);
+        HSLogger.log('[HSAutosing] HSAutosingSettingsFixer fake-load', this.context);
         return Promise.resolve();
     }
     /**
@@ -121,12 +121,12 @@ export class HSAutosingGameSettingsFixer extends HSModule {
     ];
 
     /**
-     * Constructs the HSAutosingGameSettingsFixer and logs initialization.
+     * Constructs the HSAutosingSettingsFixer and logs initialization.
      * @param moduleOptions Options for module configuration and context.
      */
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
-        HSLogger.log('HSAutosingGameSettingsFixer initialized', this.context);
+        HSLogger.log('HSAutosingSettingsFixer initialized', this.context);
     }
 
     /**
@@ -144,6 +144,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         await this.ensureGreenButtons();
         await this.ensureChallengeAutoStates();
         await this.ensureNumberInputFields();
+        await this.disableHsSettingsForPerformance();
     }
 
     /**
@@ -185,7 +186,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
      * If the text does not match the expected value, the button is clicked to toggle it.
      */
     public async ensureAllTogglesOn(): Promise<void> {
-        for (const req of HSAutosingGameSettingsFixer.TOGGLE_REQUIREMENTS) {
+        for (const req of HSAutosingSettingsFixer.TOGGLE_REQUIREMENTS) {
             const el = document.querySelector(req.selector) as HTMLElement | null;
             if (!el) {
                 HSLogger.warn(`[HSAutosing] ensureAllTogglesOn: Element not found for selector: ${req.selector}`, this.context);
@@ -214,7 +215,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
      * If not, click the element to try to correct it.
      */
     private async ensurePercentSuffixElements(): Promise<void> {
-        for (const sel of HSAutosingGameSettingsFixer.PERCENT_SUFFIX_ELEMENTS) {
+        for (const sel of HSAutosingSettingsFixer.PERCENT_SUFFIX_ELEMENTS) {
             const el = document.querySelector(sel) as HTMLElement | null;
             if (!el) {
                 HSLogger.debug(`[HSAutosing] ensurePercentSuffixElements: Element not found for selector: ${sel}`, this.context);
@@ -249,7 +250,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
         HSLogger.debug(`[HSAutosing] ensureNumberInputFields: got ${settingsReqs.length} requirements from settings`, this.context);
 
         const requirements = [...settingsReqs];
-        requirements.push(...HSAutosingGameSettingsFixer.UPDATE_ON_BLUR_REQUIREMENTS);
+        requirements.push(...HSAutosingSettingsFixer.UPDATE_ON_BLUR_REQUIREMENTS);
         HSLogger.debug(`[HSAutosing] ensureNumberInputFields: total requirements after push = ${requirements.length}`, this.context);
 
         const matches = (current: string, expected: any): boolean => {
@@ -321,7 +322,7 @@ export class HSAutosingGameSettingsFixer extends HSModule {
      * If not, set the style attribute accordingly.
      */
     private ensureGreenButtons(): void {
-        for (const sel of HSAutosingGameSettingsFixer.GREEN_BUTTONS) {
+        for (const sel of HSAutosingSettingsFixer.GREEN_BUTTONS) {
             const el = document.querySelector(sel) as HTMLElement | null;
             if (!el) {
                 HSLogger.debug(`[HSAutosing] ensureGreenButtons: Element not found for selector: ${sel}`, this.context);
@@ -395,5 +396,9 @@ export class HSAutosingGameSettingsFixer extends HSModule {
                 }
             }
         }
+    }
+
+    private async disableHsSettingsForPerformance(): Promise<void> {
+        // Implementation for disabling HS settings for performance
     }
 }

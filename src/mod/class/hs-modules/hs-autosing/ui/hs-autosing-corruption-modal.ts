@@ -5,8 +5,10 @@ export async function openAutosingCorruptionModal(
     uiMod: HSUI,
     loadouts: CorruptionLoadoutDefinition[],
     selectedLoadoutRef: { value: string | null },
-    parentModalId?: string,
-    onDone?: (selectedValue: string | null) => void
+    options?: {
+        parentModalId?: string;
+        onDone?: (selectedValue: string | null) => void;
+    }
 ): Promise<void> {
     const modalId = "hs-autosing-corruption-modal";
     const selectedName = selectedLoadoutRef.value ?? "";
@@ -47,7 +49,7 @@ export async function openAutosingCorruptionModal(
 
     const modalInstance = await uiMod.Modal({
         ...modalContent,
-        parentModalId
+        parentModalId: options?.parentModalId
     });
 
     setTimeout(() => {
@@ -56,7 +58,7 @@ export async function openAutosingCorruptionModal(
             const value = selected?.value ?? "";
             selectedLoadoutRef.value = value.length > 0 ? value : null;
 
-            onDone?.(selectedLoadoutRef.value);
+            options?.onDone?.(selectedLoadoutRef.value);
 
             HSUI.removeInjectedStyle('hs-corruption-modal-styles');
             uiMod.CloseModal(modalInstance);

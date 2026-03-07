@@ -2,7 +2,7 @@
 // @name         HyperSynergism Dev Loader
 // @namespace    https://github.com/Ferlieloi
 // @version      3.5-dev
-// @description  Load Hypersynergism mod from local dev server
+// @description  Dev loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start

@@ -147,8 +147,11 @@ export abstract class HSSetting<T extends HSSettingType> {
 
         this.definition.enabled = newState;
 
-        // Use getElementById for safer and faster lookup
-        // Check if controlEnabledId is defined before trying to find it
+        if (this.definition.settingType === 'boolean') {
+            (this.definition as HSSettingBase<boolean>).settingValue = newState;
+            (this.definition as HSSettingBase<boolean>).calculatedSettingValue = newState;
+        }
+
         if (this.definition.settingControl?.controlEnabledId) {
             const toggleElement = document.getElementById(this.definition.settingControl.controlEnabledId) as HTMLDivElement;
 
@@ -171,17 +174,18 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     // For settings which have a settingAction defined, this will be called when the setting is initialized
     async initialAction(changeType: 'value' | 'state', initialState?: boolean) {
-        await this.handleSettingAction(changeType, initialState);
+        await this.handleSettingAction(changeType, initialState, true);
     }
 
     // Handles a setting's settingAction for all settings
-    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean): Promise<void> {
+    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean, isInitialAction: boolean = false): Promise<void> {
         if (this.settingAction) {
             const action = this.settingAction;
 
             const actionConfig: HSSettingActionParams = {
                 contextName: this.context,
-                value: this.definition.calculatedSettingValue ?? null
+                value: this.definition.calculatedSettingValue ?? null,
+                isInitialAction
             }
 
             if (this.definition.patchConfig && this.definition.patchConfig.patchName) {

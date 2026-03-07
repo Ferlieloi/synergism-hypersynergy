@@ -14,7 +14,7 @@ import { HSAutosingModal } from "./hs-autosingModal";
 import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
-import { HSAutosingGameSettingsFixer } from './hs-autosing-gameSettingsFixer';
+import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { PlayerData } from "../../../types/data-types/hs-player-savedata";
 
 /*
@@ -142,8 +142,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // Module References
     private stageFunc!: (arg0: number) => any;
     private gamestate!: HSGameState;
-    private autosingGameSettingsFixer?: HSAutosingGameSettingsFixer;
-    private autosingModal!: HSAutosingModal;
+    private autosingSettingsFixer?: HSAutosingSettingsFixer;
+    private autosingModal?: HSAutosingModal;
 
     // Strategy Caches
     private readonly phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
@@ -157,7 +157,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     init(): Promise<void> {
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
-        this.autosingGameSettingsFixer = new HSAutosingGameSettingsFixer({ moduleName: 'HSAutosingGameSettingsFixer', context: this.context });
+        this.autosingSettingsFixer = new HSAutosingSettingsFixer({ moduleName: 'HSAutosingSettingsFixer', context: this.context });
 
         this.autosingEnabled = false;
         this.targetSingularity = 0;
@@ -165,13 +165,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.cacheChallengeElements();
         this.cacheButtonElements();
         this.cacheCorruptionElements();
-        this.cacheAmbrosiaLoadoutElements();
         this.cacheMiscElements();
 
-        if (!this.autosingModal) {
-            this.autosingModal = new HSAutosingModal();
-        }
-
+        this.isInitialized = true;
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
     }
@@ -235,10 +231,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.corrCurrent[name] = document.getElementById(`corrCurrent${name}`);
             this.corrNext[name] = document.getElementById(`corrNext${name}`);
         });
-    }
-
-    private cacheAmbrosiaLoadoutElements(): void {
-        // Note: These are loaded dynamically in enableAutoSing()
     }
 
     private cacheMiscElements(): void {
@@ -344,7 +336,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // ============================================================================
 
     async enableAutoSing(): Promise<void> {
-        // enableAutoSing entered
+        if (!HSGlobal.General.isModFullyLoaded) {
+            HSUI.Notify("Hypersynergism is still loading. Please wait before starting Auto-Sing.", { notificationType: "warning" });
+            return;
+        }
+
         if (this.isInExalt()) {
             HSUI.Notify("Cannot start Auto-Sing while inside a singularity challenge.", { notificationType: "warning" });
             return;
@@ -387,32 +383,72 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
 
-        if (!this.autosingModal) {
-            this.autosingModal = new HSAutosingModal();
+        if (this.autosingModal) {
+            this.autosingModal.destroy();
         }
-        this.autosingModal.show();
+        this.autosingModal = new HSAutosingModal();
 
-        if (!this.autosingGameSettingsFixer) {
-            this.autosingGameSettingsFixer = new HSAutosingGameSettingsFixer({ moduleName: 'HSAutosingGameSettingsFixer', context: this.context });
+        if (!this.autosingSettingsFixer) {
+            this.autosingSettingsFixer = new HSAutosingSettingsFixer({ moduleName: 'HSAutosingSettingsFixer', context: this.context });
         }
-        await this.autosingGameSettingsFixer.fixAllSettings();
+        await this.autosingSettingsFixer.fixAllSettings();
 
         this.performAutosingLogic();
     }
 
-    async disableAutoSing(): Promise<void> {
+    public stopAutosing(options?: { showReviewModal?: boolean; syncSetting?: boolean }): void {
+        const showReviewModal = options?.showReviewModal ?? false;
+        const syncSetting = options?.syncSetting ?? true;
+
+        this.stopAutosingCore({
+            modalDisposition: showReviewModal ? 'review' : 'destroy'
+        });
+
+        if (syncSetting) {
+            const singSetting = HSSettings.getSetting("startAutosing");
+            if (singSetting && singSetting.isEnabled()) {
+                singSetting.disable();
+            }
+        }
+
+        HSLogger.log(`Autosing stopped.`, this.context);
+    }
+
+    private stopAutosingCore(options: { modalDisposition: 'review' | 'destroy' }): void {
         this.autosingEnabled = false;
         this.saveType.checked = false;
+        this.unsubscribeGameDataChanges();
+        this.antiquitiesObserver?.disconnect();
+        this.antiquitiesObserver = undefined;
+
+        if (this.endStageResolve) {
+            try {
+                this.endStageResolve();
+            } catch (e) {
+                /* ignore */
+            }
+            this.endStageResolve = undefined;
+        }
+
         this.endStagePromise = undefined;
 
         if (this.autosingModal) {
-            this.autosingModal.hide();
+            if (options.modalDisposition === 'review') {
+                this.autosingModal.enterReviewMode();
+            } else {
+                this.autosingModal.destroy();
+                this.autosingModal = undefined;
+            }
         }
 
-        this.unsubscribeGameDataChanges();
         HSUtils.stopDialogWatcher();
+    }
 
-        HSLogger.log(`Autosing disabled`, this.context);
+    public closeAutosingModalAfterReview(): void {
+        if (this.autosingModal) {
+            this.autosingModal.destroy();
+            this.autosingModal = undefined;
+        }
     }
 
     private async validateAutosingSetup(): Promise<boolean> {
@@ -532,6 +568,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 const q = await this.getCurrentQuarks();
                 const gq = await this.getCurrentGoldenQuarks();
                 this.autosingModal.start(this.strategy!, q, gq);
+                this.autosingModal.show();
             }
 
             await this.performSingularity(true);
@@ -859,7 +896,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (stopBtn) stopBtn.click();
                 break;
             default:
-                HSLogger.log(`Unknown special action ${actionId}`, this.context);
+                HSLogger.warn(`Unknown special action ${actionId}`, this.context);
         }
     }
 
@@ -1354,35 +1391,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private async enterAndLeaveExalt(): Promise<void> {
-        const clickDelayMs = Math.max(this.sleepTime, 25);
-        const enterTimeoutMs = 5000;
-        const leaveTimeoutMs = 6000;
-
-        const enterStart = performance.now();
-        let enterAttempts = 0;
         while (!this.isInExalt()) {
-            if (!this.autosingEnabled) return;
-            if (performance.now() - enterStart > enterTimeoutMs) {
-                throw new Error(`enterAndLeaveExalt timeout while entering EXALT (attempts=${enterAttempts})`);
-            }
             await HSUtils.click(this.exalt2Btn);
-            enterAttempts++;
-            await HSUtils.sleep(clickDelayMs);
+            await HSUtils.sleep(this.sleepTime);
         }
 
-        const leaveStart = performance.now();
-        let leaveAttempts = 0;
         while (this.isInExalt()) {
-            if (!this.autosingEnabled) return;
-            if (performance.now() - leaveStart > leaveTimeoutMs) {
-                throw new Error(`enterAndLeaveExalt timeout while leaving EXALT (attempts=${leaveAttempts})`);
-            }
             await HSUtils.click(this.exalt2Btn);
-            leaveAttempts++;
-            await HSUtils.sleep(clickDelayMs);
+            await HSUtils.sleep(this.sleepTime);
         }
-
-        HSLogger.debug(`enterAndLeaveExalt success (enterAttempts=${enterAttempts}, leaveAttempts=${leaveAttempts})`, this.context);
     }
 
     private isInExalt(): boolean {
@@ -1539,11 +1556,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.setAmbrosiaLoadout(this.ambrosia_obt);
 
         await this.waitForCompletion(6, 150, 1000, 0);
-        await this.waitForCompletion(5, 9001, 1000, 0);
-        await this.waitForCompletion(4, 9001, 1000, 0);
-        await this.waitForCompletion(3, 9001, 1000, 0);
-        await this.waitForCompletion(2, 9001, 1000, 0);
         await this.waitForCompletion(1, 9001, 1000, 0);
+        await this.waitForCompletion(2, 9001, 1000, 0);
+        await this.waitForCompletion(3, 9001, 1000, 0);
+        await this.waitForCompletion(4, 9001, 1000, 0);
+        await this.waitForCompletion(5, 9001, 1000, 0);
     }
 
     // ============================================================================
@@ -1590,33 +1607,5 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private fastDoubleClick(element: HTMLElement): void {
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    }
-
-    public stopAutosing(): void {
-        this.autosingEnabled = false;
-        this.unsubscribeGameDataChanges();
-        this.antiquitiesObserver?.disconnect();
-        this.antiquitiesObserver = undefined;
-
-        const singSetting = HSSettings.getSetting("startAutosing");
-        singSetting.disable();
-
-        if (this.endStageResolve) {
-            try {
-                this.endStageResolve();
-            } catch (e) {
-                /* ignore */
-            }
-            this.endStageResolve = undefined;
-        }
-
-        this.endStagePromise = undefined;
-
-        if (this.autosingModal) {
-            this.autosingModal.destroy();
-            this.autosingModal = undefined!;
-        }
-
-        HSUtils.stopDialogWatcher();
     }
 }

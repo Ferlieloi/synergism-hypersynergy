@@ -33,6 +33,7 @@ import { SingularityBundle } from "./hs-autosingExportManager";
 // =============================
 
 export class HSAutosingModal {
+    private modalMode: 'running' | 'review' = 'running';
     // --- DOM Elements & UI State ---
     private timerDisplay: HTMLDivElement | null = null;
     private timerHeader: HTMLDivElement | null = null;
@@ -247,7 +248,7 @@ export class HSAutosingModal {
         this.pauseBtn.id = 'hs-timer-ctrl-pause';
         this.pauseBtn.textContent = '⏸️';
         this.pauseBtn.title = "Pause Autosing";
-        this.pauseBtn.className = 'hs-timer-ctrl-btn hs-detailed-data';
+        this.pauseBtn.className = 'hs-timer-ctrl-btn';
         this.pauseBtn.onclick = () => {
             this.isPaused = !this.isPaused;
             this.pauseBtn.textContent = this.isPaused ? '▶️' : '⏸️';
@@ -258,7 +259,7 @@ export class HSAutosingModal {
         this.restartButton.id = 'hs-timer-ctrl-restart';
         this.restartButton.textContent = '🔄';
         this.restartButton.title = "Restart Singularity from the beginning";
-        this.restartButton.className = 'hs-timer-ctrl-btn hs-detailed-data';
+        this.restartButton.className = 'hs-timer-ctrl-btn';
         this.restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -276,6 +277,12 @@ export class HSAutosingModal {
         this.stopButton.title = "Stop Autosing NOW";
         this.stopButton.className = 'hs-timer-ctrl-btn';
         this.stopButton.onclick = () => {
+            if (this.modalMode === 'review') {
+                const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+                autosingMod?.closeAutosingModalAfterReview();
+                return;
+            }
+
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
         };
@@ -284,7 +291,7 @@ export class HSAutosingModal {
         this.finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
         this.finishStopBtn.textContent = '🟠';
         this.finishStopBtn.title = "Stop Autosing at the end of current Singularity";
-        this.finishStopBtn.className = 'hs-timer-ctrl-btn hs-detailed-data';
+        this.finishStopBtn.className = 'hs-timer-ctrl-btn';
         this.finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -328,6 +335,7 @@ export class HSAutosingModal {
         controls.appendChild(this.chartToggleBtn);
         controls.appendChild(this.minimizeBtn);
         this.timerHeader.appendChild(controls);
+        this.applyControlVisibility();
 
         // ----- CONTENT -----
         this.timerContent = document.createElement('div');
@@ -568,8 +576,37 @@ export class HSAutosingModal {
 
 
     // =============================
-    // Modal Controls (Drag/Resize/Minimize)
+    // Modal Controls (Visibility/Drag/Resize/Minimize)
     // =============================
+
+    public enterRunningMode(): void {
+        this.modalMode = 'running';
+        this.applyControlVisibility();
+    }
+
+    public enterReviewMode(): void {
+        this.modalMode = 'review';
+        this.clearSingularityInterval();
+        this.show();
+        this.applyControlVisibility();
+        HSLogger.log('Entered review mode', 'info');
+    }
+
+    private applyControlVisibility(): void {
+        if (!this.pauseBtn || !this.restartButton || !this.stopButton || !this.finishStopBtn || !this.chartToggleBtn) {
+            return;
+        }
+
+        const isReview = this.modalMode === 'review';
+
+        this.pauseBtn.classList.toggle('hs-hidden', isReview);
+        this.finishStopBtn.classList.toggle('hs-hidden', isReview || this.isMinimized);
+        this.restartButton.classList.toggle('hs-hidden', this.isMinimized);
+        this.chartToggleBtn.classList.toggle('hs-hidden', this.isMinimized);
+
+        this.stopButton.textContent = isReview ? '✖️' : '🔴';
+        this.stopButton.title = isReview ? 'Close stats modal' : 'Stop Autosing NOW';
+    }
 
     /**
      * Compute and apply auto width and height for the modal and chart containers.
@@ -722,9 +759,7 @@ export class HSAutosingModal {
 
         this.timerDisplay.classList.add('hs-minimized');
         this.timerContent.classList.toggle('hs-hidden', this.isMinimized);
-        this.restartButton?.classList.toggle('hs-hidden', this.isMinimized);
-        this.finishStopBtn?.classList.toggle('hs-hidden', this.isMinimized);
-        this.chartToggleBtn?.classList.toggle('hs-hidden', this.isMinimized);
+        this.applyControlVisibility();
 
         if (this.minimizeBtn) {
             this.minimizeBtn.textContent = this.isMinimized ? '+' : '−';
@@ -856,6 +891,9 @@ export class HSAutosingModal {
      * Reset phase history and metrics.
      */
     public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
+        this.reset();
+        this.enterRunningMode();
+
         // Defensive check: Ensure Ambrosia quickbar DOM is present
         const quickbar = document.getElementById(HSGlobal.HSAmbrosia.quickBarId);
         if (!quickbar) {
@@ -863,19 +901,7 @@ export class HSAutosingModal {
             return;
         }
 
-        // Reset metrics and phase history
-        HSLogger.log('[Autosing] start() called: resetting metrics and phase history');
-        this.singularityCount = 0;
-        this.phaseHistory.clear();
-        this.phaseRowMap.clear();
-
-        this.c15Count = 0;
-        this.c15Mean = new Decimal(0);
-        this.c15M2 = new Decimal(0);
-        this.logC15Count = 0;
-        this.logC15Mean = 0;
-        this.logC15M2 = 0;
-
+        HSLogger.log('[Autosing] start() called: reset complete, initializing run metadata');
         this.latestQuarksTotal = initialQuarks;
         this.latestGoldenQuarksTotal = initialGoldenQuarks;
 
@@ -1541,6 +1567,7 @@ export class HSAutosingModal {
      * Show the modal. Computes and applies width on first open, then displays the modal.
      */
     public show(): void {
+        // this.ensureCreated();
         if (!this.timerDisplay) { return; }
 
 
@@ -1569,6 +1596,11 @@ export class HSAutosingModal {
     public reset(): void {
         this.singularityCount = 0;
         this.lastSingularityTimestamp = 0;
+        this.singularityMetrics = [];
+        this.metricsSumDuration = 0;
+        this.metricsSumQuarks = 0;
+        this.metricsSumGoldenQuarks = 0;
+        this.currentSingularityPhases.clear();
         this.phaseHistory.clear();
         this.phaseRowMap.clear();
         this.allTimeStats = {
@@ -1589,6 +1621,14 @@ export class HSAutosingModal {
             meanGoldenQuarks: 0,
             sumSqGoldenQuarks: 0
         };
+        this.c15Count = 0;
+        this.c15Mean = new Decimal(0);
+        this.c15M2 = new Decimal(0);
+        this.logC15Count = 0;
+        this.logC15Mean = 0;
+        this.logC15M2 = 0;
+        this.latestQuarksTotal = 0;
+        this.latestGoldenQuarksTotal = 0;
         this.lastRecordedPhaseName = null;
         this.currentPhaseName = '';
         this.clearSingularityInterval();
@@ -1616,5 +1656,7 @@ export class HSAutosingModal {
         if (this.timerDisplay && this.timerDisplay.parentNode) {
             this.timerDisplay.parentNode.removeChild(this.timerDisplay);
         }
+        this.timerDisplay = null;
+        this.timerHeader = null;
     }
 }

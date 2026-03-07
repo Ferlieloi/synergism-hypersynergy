@@ -202,6 +202,8 @@ export class HSUI extends HSModule {
         // Create open button for the HS UI panel
         this.#uiPanelOpenBtn = document.createElement('div');
         this.#uiPanelOpenBtn.id = "hs-panel-control";
+        // We hide the button until the mod is fully loaded
+        this.#uiPanelOpenBtn.style.display = 'none';
 
         // Toggle button opens/closes the panel
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
@@ -475,6 +477,15 @@ export class HSUI extends HSModule {
         } else {
             HSLogger.warn(`Could not update panel title`, this.context);
         }
+    }
+
+    setPanelControlVisible(visible: boolean) {
+        if (!this.#uiPanelOpenBtn) {
+            HSLogger.warn(`Could not update panel control visibility`, this.context);
+            return;
+        }
+
+        this.#uiPanelOpenBtn.style.display = visible ? 'block' : 'none';
     }
 
     static #isStyleStringEmpty(styleString: string): boolean {

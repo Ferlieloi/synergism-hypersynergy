@@ -104,6 +104,7 @@ export interface HSSettingActionParams {
     value?: any,
     disable?: boolean,
     patchConfig?: HSPatchConfig;
+    isInitialAction?: boolean;
 }
 
 export interface HSSettingControlGroup {
