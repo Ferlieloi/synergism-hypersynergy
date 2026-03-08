@@ -170,7 +170,7 @@
   },
   "autoLoadout": {
     "settingName": "autoLoadout",
-    "settingDescription": "Auto loadout",
+    "settingDescription": "Add+Time Amb loadouts auto-switch",
     "settingHelpText": "When enabled, the mod will automatically switch to configured ambrosia loadouts when ADD or TIME buttons are clicked.",
     "settingType": "boolean",
     "enabled": false,

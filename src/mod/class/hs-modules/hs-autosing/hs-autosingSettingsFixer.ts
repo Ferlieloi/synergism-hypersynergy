@@ -13,6 +13,7 @@ export class HSAutosingSettingsFixer extends HSModule {
         HSLogger.log('[HSAutosing] HSAutosingSettingsFixer fake-load', this.context);
         return Promise.resolve();
     }
+
     /**
      * List of toggle requirements: selector and expected text.
      * Each entry specifies a selector and the text that should be present when ON.
@@ -144,7 +145,7 @@ export class HSAutosingSettingsFixer extends HSModule {
         await this.ensureGreenButtons();
         await this.ensureChallengeAutoStates();
         await this.ensureNumberInputFields();
-        await this.disableHsSettingsForPerformance();
+        await this.disableUnwantedSettings();
     }
 
     /**
@@ -398,7 +399,32 @@ export class HSAutosingSettingsFixer extends HSModule {
         }
     }
 
-    private async disableHsSettingsForPerformance(): Promise<void> {
-        // Implementation for disabling HS settings for performance
+    private async disableUnwantedSettings(): Promise<void> {
+        const performanceSettingKeys = [
+            'enableAutomationQuickBar',
+            'ambrosiaMinibars',
+            'ambrosiaIdleSwap'
+        ] as const;
+
+        let disabledCount = 0;
+
+        for (const settingKey of performanceSettingKeys) {
+            const setting = HSSettings.getSetting(settingKey);
+
+            if (!setting) {
+                HSLogger.warn(`disableUnwantedSettings: setting "${settingKey}" not found`, this.context);
+                continue;
+            }
+
+            if (setting.isEnabled()) {
+                setting.disable();
+                disabledCount++;
+                HSLogger.log(`disableUnwantedSettings: disabled "${settingKey}"`, this.context);
+            }
+        }
+
+        if (disabledCount > 0) {
+            HSLogger.log(`disableUnwantedSettings: disabled ${disabledCount} performance-impacting setting(s)`, this.context);
+        }
     }
 }
