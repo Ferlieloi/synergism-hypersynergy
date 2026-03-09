@@ -65,6 +65,21 @@ export interface CalculationCache {
     REDAMB_regularLuck: CachedValue;
     REDAMB_regularLuck2: CachedValue;
     REDAMB_viscount: CachedValue;
+    REDAMB_tutorial: CachedValue;
+    REDAMB_conversionImprovement1: CachedValue;
+    REDAMB_conversionImprovement2: CachedValue;
+    REDAMB_conversionImprovement3: CachedValue;
+    REDAMB_freeTutorialLevels: CachedValue;
+    REDAMB_redGenerationSpeed: CachedValue;
+    REDAMB_redLuck: CachedValue;
+    REDAMB_redAmbrosiaCube: CachedValue;
+    REDAMB_redAmbrosiaObtainium: CachedValue;
+    REDAMB_redAmbrosiaOffering: CachedValue;
+    REDAMB_redAmbrosiaCubeImprover: CachedValue;
+    REDAMB_infiniteShopUpgrades: CachedValue;
+    REDAMB_redAmbrosiaAccelerator: CachedValue;
+    REDAMB_salvageYinYang: CachedValue;
+    REDAMB_blueberries: CachedValue;
 
     R_CampaignAmbrosiaSpeedBonus: CachedValue;
     R_CampaignRune6Bonus: CachedValue;

@@ -459,7 +459,7 @@ export class SingularityView extends GameView<SINGULARITY_VIEW> {
 
     getViewEnum(tab: string): SINGULARITY_VIEW {
         switch (tab) {
-            case 'singularitycontainer1': return SINGULARITY_VIEW.ELEVATOR;
+            case 'singularityContainer1': return SINGULARITY_VIEW.ELEVATOR;
             case 'singularityContainer2': return SINGULARITY_VIEW.SHOP;
             case 'singularityContainer3': return SINGULARITY_VIEW.PERKS;
             case 'singularityContainer4': return SINGULARITY_VIEW.OCTERACTS;
