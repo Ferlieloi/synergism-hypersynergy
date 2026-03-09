@@ -982,7 +982,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        await HSUtils.sleep(50); // Crappy anti coin100 bug ? 
         this.coin.click();
 
         const startTime = performance.now();
@@ -1368,6 +1367,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.elevatorInput.value = this.targetSingularity.toString();
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
+
+        // Temporary fix for the buy coin bug...
+        setTimeout(() => {
+            this.coin.click();
+        }, 50);
 
         const [qAfter, gqAfter, stageInitial] = await Promise.all([
             this.getCurrentQuarks(),

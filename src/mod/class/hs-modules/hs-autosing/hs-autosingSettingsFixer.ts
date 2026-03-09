@@ -321,7 +321,11 @@ export class HSAutosingSettingsFixer extends HSModule {
             }
         }
 
-        HSLogger.warn(`ensureNumberInputFields: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, this.context);
+        if (corrected.length > 0 || failed.length > 0) {
+            HSLogger.warn(`ensureNumberInputFields: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, this.context);
+        } else {
+            HSLogger.debug(`ensureNumberInputFields: all elements already correct`, this.context);
+        }
     }
 
     /**
@@ -353,19 +357,19 @@ export class HSAutosingSettingsFixer extends HSModule {
         if (corrected.length > 0 || failed.length > 0) {
             HSLogger.warn(`ensureGreenButtons: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, "HSAutosingSettingsFixer");
         } else {
-            HSLogger.debug(`ensureGreenButtons: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, "HSAutosingSettingsFixer");
+            HSLogger.debug(`ensureGreenButtons: all elements already correct`, "HSAutosingSettingsFixer");
         }
     }
 
     /**
      * Ensure challenge auto states for challenge 1-15.
-     * For 1-10: ON, for 11-15: OFF. Logs all failures and missing elements.
+     * For 1-10: ON, (for 11-15: OFF maybe later if needed). Logs all failures and missing elements.
      */
     private async ensureChallengeAutoStates(): Promise<void> {
         const corrected: string[] = [];
         const failed: string[] = [];
 
-        // modified to only check 1-10 for now... 11-15 shouldn't be needed...
+        // Loop only challenges 1-10 for now... 11-15 shouldn't be needed...
         for (let i = 1; i <= 10; i++) {
             const challengeSel = `#challenge${i}.challenge`;
             const toggleSel = '#toggleAutoChallengeIgnore';
@@ -405,7 +409,7 @@ export class HSAutosingSettingsFixer extends HSModule {
         if (corrected.length > 0 || failed.length > 0) {
             HSLogger.warn(`ensureChallengeAutoStates: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, "HSAutosingSettingsFixer");
         } else {
-            HSLogger.debug(`ensureChallengeAutoStates: corrected=${corrected.length}, failed=${failed.length}${failed.length > 0 ? ` [${failed.join(', ')}]` : ''}`, "HSAutosingSettingsFixer");
+            HSLogger.debug(`ensureChallengeAutoStates: all elements already correct`, "HSAutosingSettingsFixer");
         }
     }
 
@@ -435,6 +439,8 @@ export class HSAutosingSettingsFixer extends HSModule {
 
         if (disabledCount > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledCount} performance-impacting setting(s)`, "HSAutosingSettingsFixer");
+        } else {
+            HSLogger.debug(`disableUnwantedSettings: all performance-impacting settings already disabled`, "HSAutosingSettingsFixer");
         }
     }
 }
