@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Dev Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.5-dev
+// @version      3.5b-dev
 // @description  Dev loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
@@ -1074,6 +1074,6 @@
         (document.head || document.documentElement).appendChild(s);
     }
 
-    log('DEV LOADER v3.5 Initialized - will load from http://127.0.0.1:8080');
+    log('DEV LOADER v3.5b Initialized - will load from http://127.0.0.1:8080');
 
 })();

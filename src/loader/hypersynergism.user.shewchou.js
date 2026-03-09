@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.5
+// @version      3.5b
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
@@ -1070,9 +1070,9 @@
         };
 
         s.onerror = () => warn('❌ Mod failed to load from CDN');
-        (document.head || document.documentElement).appendChild(s);
+        (document.head || document.documentElement).appendChild(s );
     }
 
-    log('LOADER v3.5 (Shewchou) Initialized - CDN mode');
+    log('LOADER v3.5b (Shewchou) Initialized - CDN mode');
 
 })();
