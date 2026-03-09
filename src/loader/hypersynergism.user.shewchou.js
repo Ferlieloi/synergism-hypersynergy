@@ -1048,7 +1048,7 @@
         log('Loading mod from CDN');
 
         const s = document.createElement('script');
-        s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@master/release/mod/hypersynergism_release.js?${Date.now()}`;
+        s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
 
         s.onload = () => {
             log('✅ Mod script loaded from CDN');

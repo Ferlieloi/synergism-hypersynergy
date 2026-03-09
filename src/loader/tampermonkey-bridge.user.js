@@ -7,8 +7,8 @@
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
-// @updateURL    https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
-// @downloadURL  https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/src/loader/tampermonkey-bridge.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/src/loader/tampermonkey-bridge.user.js
 // ==/UserScript==
 
 // Production Evergreen Bridge.
@@ -18,7 +18,7 @@
 
 (function () {
     'use strict';
-    const base = 'https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/hypersynergism.user.js';
+    const base = 'https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/src/loader/hypersynergism.user.js';
     const url = base + (base.includes('?') ? '&' : '?') + 't=' + Date.now();
 
     try {

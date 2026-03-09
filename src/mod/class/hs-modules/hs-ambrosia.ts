@@ -1126,7 +1126,7 @@ export class HSAmbrosia extends HSModule
                     secondsToNextAmbrosia * maxAccelMultiplier,
                     ambrosiaGainPerGen * 0.2 * ambrosiaAcceleratorCount
                 );
-                accelerationAmount = 1//accelerationSeconds * ambrosiaSpeed;
+                accelerationAmount = 1; //accelerationSeconds * ambrosiaSpeed;
                 accelerationPercent = (accelerationAmount / blueAmbrosiaBarMax) * 100;
             }
 
