@@ -383,9 +383,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
 
-        if (this.autosingModal) {
-            this.autosingModal.destroy();
-        }
+        this.autosingModal?.destroy();
         this.autosingModal = new HSAutosingModal();
 
         if (!this.autosingSettingsFixer) {

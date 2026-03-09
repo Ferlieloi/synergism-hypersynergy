@@ -22,6 +22,9 @@ export class HSGameState extends HSModule {
     };
 
     #viewStates: HSViewStateRecord = {
+        // Initialize all view states to UNKNOWN
+        // Except MAIN_VIEW to "buildings" (since that's where we leave the user after mod load),
+        // in order to avoid a warning at the very start (Maybe not the cleanest ?)
         MAIN_VIEW: { currentView: new MainView('buildings'), previousView: new MainView('buildings'), viewChangeSubscribers: new Map() },
         BUILDING_VIEW: { currentView: new BuildingView('unknown'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
         RUNE_VIEW: { currentView: new RuneView('unknown'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },

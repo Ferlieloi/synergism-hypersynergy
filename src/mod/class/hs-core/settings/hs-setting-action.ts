@@ -177,9 +177,7 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
 
             if (!params.disable && !HSGlobal.General.isModFullyLoaded) {
-                if (!params.isInitialAction) {
-                    HSLogger.warn("Hypersynergism is still loading. Please wait before starting Auto-Sing.", context);
-                }
+                HSLogger.log("Hypersynergism is still loading. Please wait before starting Auto-Sing.", context);
                 HSSettings.getSetting('startAutosing')?.disable();
                 return;
             }
@@ -187,16 +185,13 @@ export class HSSettingActions {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
                 if (params.disable && params.disable === true) {
-                    if (!autosingMod.isAutosingEnabled()) {
-                        return;
-                    }
                     // Review mode: we stop autosing process but keep the modal visible
                     autosingMod.stopAutosing({
                         showReviewModal: true,
                         syncSetting: false
                     });
                 } else {
-                    // Auto-enable GDS if not already enabled
+                    // Auto-enable GDS if not already enabled, and start autosing
                     const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
                     if (!gdsSettingEnabled) {
                         HSSettings.getSetting('useGameData')?.enable();
