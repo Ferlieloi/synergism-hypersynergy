@@ -982,7 +982,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        this.coin.click();
+        this.coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
 
         const startTime = performance.now();
         const endTime = startTime + maxTime;
@@ -1236,16 +1236,72 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     private antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
+        const snapImmediate = this.getGameDataSnapshot();
+        const upg81ElImmediate = document.getElementById('upg81');
+        const snapshotAgeMsImmediate = this.latestGameDataSnapshotTimestamp
+            ? Date.now() - this.latestGameDataSnapshotTimestamp
+            : -1;
+        HSLogger.debug(`antiBuyCoinBug: So anyway, after ${initialDelayMs}ms, I'll start blasting.`, this.context);
+        HSLogger.debug(
+            `antiBuyCoinBug INITIAL STATE (at call time):\n` +
+            `  snapshot age: ${snapshotAgeMsImmediate}ms (stale if >1000)\n` +
+            `  upgrades[81]: ${snapImmediate?.upgrades?.['81'] ?? 'N/A'} (1=bought, 0=not bought)\n` +
+            `  prestigePoints: ${snapImmediate?.prestigePoints ?? 'N/A'} (need >=1000 to buy upg81)\n` +
+            `  coins: ${snapImmediate?.coins ?? 'N/A'}\n` +
+            `  firstCostCoin: ${snapImmediate?.firstCostCoin ?? 'N/A'}\n` +
+            `  firstOwnedCoin: ${snapImmediate?.firstOwnedCoin ?? 'N/A'}\n` +
+            `  upg81 el display: "${upg81ElImmediate?.style.display ?? 'N/A'}" classList: "${upg81ElImmediate?.className ?? 'N/A'}"\n` +
+            `  #buycoin1 text: "${this.coin.textContent?.trim()}" display: "${this.coin.style.display}"`,
+            this.context
+        );
         window.setTimeout(() => {
+            const snapBefore = this.getGameDataSnapshot();
+            const upg81El = document.getElementById('upg81');
+            const snapshotAgeMs = this.latestGameDataSnapshotTimestamp
+                ? Date.now() - this.latestGameDataSnapshotTimestamp
+                : -1;
+            HSLogger.debug(
+                `antiBuyCoinBug PRE-BURST STATE (after ${initialDelayMs}ms delay):\n` +
+                `  snapshot age: ${snapshotAgeMs}ms (stale if >1000)\n` +
+                `  upgrades[81]: ${snapBefore?.upgrades?.['81'] ?? 'N/A'} (1=bought, 0=not bought)\n` +
+                `  prestigePoints: ${snapBefore?.prestigePoints ?? 'N/A'} (need >=1000 to buy upg81)\n` +
+                `  coins: ${snapBefore?.coins ?? 'N/A'}\n` +
+                `  firstCostCoin: ${snapBefore?.firstCostCoin ?? 'N/A'}\n` +
+                `  firstOwnedCoin: ${snapBefore?.firstOwnedCoin ?? 'N/A'}\n` +
+                `  upg81 el display: "${upg81El?.style.display ?? 'N/A'}" classList: "${upg81El?.className ?? 'N/A'}"\n` +
+                `  #buycoin1 text: "${this.coin.textContent?.trim()}" display: "${this.coin.style.display}"`,
+                this.context
+            );
+
             let attempt = 0;
             const intervalId = window.setInterval(() => {
                 attempt++;
-                this.coin.click();
-                // HSLogger.debug(`antiBuyCoinBug: this.coin.click() burst ${attempt}/${repeatCount} via interval (${intervalMs}ms).`, this.context);
+                this.coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
+
+                const snapAttempt = this.getGameDataSnapshot();
+                HSLogger.debug(
+                    `antiBuyCoinBug: PEW !! Try ${attempt}/${repeatCount} (${intervalMs}ms interval) — ` +
+                    `firstOwnedCoin: ${snapAttempt?.firstOwnedCoin ?? 'N/A'}, ` +
+                    `coins: ${snapAttempt?.coins ?? 'N/A'}, ` +
+                    `upgrades[81]: ${snapAttempt?.upgrades?.['81'] ?? 'N/A'}, ` +
+                    `PP: ${snapAttempt?.prestigePoints ?? 'N/A'}, ` +
+                    `#buycoin1: "${this.coin.textContent?.trim()}"`,
+                    this.context
+                );
 
                 if (attempt >= repeatCount) {
                     window.clearInterval(intervalId);
-                    HSLogger.debug("antiBuyCoinBug: Finished anti-buyCoinBug burst clicks.", this.context);
+
+                    const snapAfter = this.getGameDataSnapshot();
+                    HSLogger.debug(
+                        `antiBuyCoinBug POST-BURST STATE:\n` +
+                        `  upgrades[81]: ${snapAfter?.upgrades?.['81'] ?? 'N/A'}\n` +
+                        `  prestigePoints: ${snapAfter?.prestigePoints ?? 'N/A'}\n` +
+                        `  coins: ${snapAfter?.coins ?? 'N/A'}\n` +
+                        `  firstOwnedCoin: ${snapAfter?.firstOwnedCoin ?? 'N/A'}`,
+                        this.context
+                    );
+                    HSLogger.debug("antiBuyCoinBug: Finished anti-buyCoinBug burst blasting... Hope you died, mothafucka.", this.context);
                 }
             }, intervalMs);
         }, initialDelayMs);
@@ -1407,7 +1463,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stage = await this.getStage();
         }
 
-        this.antiBuyCoinBug(20, 10, 8);
+        this.antiBuyCoinBug(0, 15, 15);
 
         this.observeAntiquitiesRune();
         this.prevActionTime = performance.now();
