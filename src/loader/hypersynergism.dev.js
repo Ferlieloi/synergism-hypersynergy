@@ -778,44 +778,62 @@
          * Returns { ok, method, upgrades81Before } for diagnostic logging.
          */
         ensureWorkerAutobuyer() {
-            console.debug('[HS] ensureWorkerAutobuyer: called');
             const p = getPlayer();
             if (!p) {
-                console.warn('[HS] ensureWorkerAutobuyer: no player object available');
+                console.log('[HS] ensureWorkerAutobuyer: no player object available');
                 return { ok: false, method: 'no-player', upgrades81Before: undefined };
             }
             const highestSing = p.highestSingularityCount ?? 0;
             const upgrades81Now = p.upgrades?.[81];
-            const coins = p.coins;
-            const prestigePoints = p.prestigePoints;
+            const fmtDecimal = (d) => d != null && typeof d === 'object' && 'mantissa' in d && 'exponent' in d
+                ? d.mantissa.toPrecision(4) + 'e+' + d.exponent
+                : String(d ?? 'N/A');
             const firstOwnedCoin = p.firstOwnedCoin;
-            console.debug('[HS] ensureWorkerAutobuyer: player state', {
+            console.log('[HS] ensureWorkerAutobuyer: player state', {
                 highestSing,
                 upgrades81: upgrades81Now,
-                coins,
-                prestigePoints,
-                firstOwnedCoin,
-                hasUpgradesArray: !!p.upgrades
+                coins: fmtDecimal(p.coins),
+                prestigePoints: fmtDecimal(p.prestigePoints),
+                firstOwnedCoin
             });
             if (highestSing < 25) {
                 const result = { ok: false, method: 'sing-too-low', highestSing, upgrades81Before: upgrades81Now };
-                console.warn('[HS] ensureWorkerAutobuyer: rejected —', result);
+                console.log('[HS] ensureWorkerAutobuyer: rejected —', result);
                 return result;
             }
             if (upgrades81Now === 1) {
                 const result = { ok: true, method: 'already-enabled', upgrades81Before: upgrades81Now };
-                console.debug('[HS] ensureWorkerAutobuyer: no-op —', result);
+                console.log('[HS] ensureWorkerAutobuyer: no-op —', result);
                 return result;
             }
             if (!p.upgrades) {
                 const result = { ok: false, method: 'no-upgrades-array', upgrades81Before: undefined };
-                console.warn('[HS] ensureWorkerAutobuyer: rejected —', result);
+                console.log('[HS] ensureWorkerAutobuyer: rejected —', result);
                 return result;
             }
             p.upgrades[81] = 1;
             const result = { ok: true, method: 'direct-write', upgrades81Before: upgrades81Now };
             console.log('[HS] ensureWorkerAutobuyer: ✅ upgrades[81] set to 1 —', result);
             return result;
+        },
+
+        checkWorkerAutobuyer() {
+            const p = getPlayer();
+            if (!p) {
+                return;
+            }
+            const upgrades81Now = p.upgrades?.[81];
+            const fmtDecimal = (d) => d != null && typeof d === 'object' && 'mantissa' in d && 'exponent' in d
+                ? d.mantissa.toPrecision(4) + 'e+' + d.exponent
+                : String(d ?? 'N/A');
+            const firstOwnedCoin = p.firstOwnedCoin;
+            console.log('[HS] checkWorkerAutobuyer: player state', {
+                upgrades81: upgrades81Now,
+                coins: fmtDecimal(p.coins),
+                prestigePoints: fmtDecimal(p.prestigePoints),
+                firstOwnedCoin
+            });
+            return;
         }
     };
 

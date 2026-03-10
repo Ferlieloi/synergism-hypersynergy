@@ -22,18 +22,17 @@ export class HSGameState extends HSModule {
     };
 
     #viewStates: HSViewStateRecord = {
-        // Initialize all view states to UNKNOWN
-        // Except MAIN_VIEW to "buildings" (since that's where we leave the user after mod load),
-        // in order to avoid a warning at the very start (Maybe not the cleanest ?)
+        // Initialize MAIN_VIEW to Buildings (where the mod leave the user after loading)
+        // And all subtabs to their default/first ones (allow to avoid a warning...)
         MAIN_VIEW: { currentView: new MainView('buildings'), previousView: new MainView('buildings'), viewChangeSubscribers: new Map() },
-        BUILDING_VIEW: { currentView: new BuildingView('unknown'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
-        RUNE_VIEW: { currentView: new RuneView('unknown'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
-        CHALLENGE_VIEW: { currentView: new ChallengeView('unknown'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
-        ANT_VIEW: { currentView: new AntView('unknown'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
-        CUBE_VIEW: { currentView: new CubeView('unknown'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
-        SETTINGS_VIEW: { currentView: new SettingsView('unknown'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
-        SINGULARITY_VIEW: { currentView: new SingularityView('unknown'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
-        PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('unknown'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
+        BUILDING_VIEW: { currentView: new BuildingView('switchToCoinBuilding'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
+        RUNE_VIEW: { currentView: new RuneView('toggleRuneSubTab1'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
+        CHALLENGE_VIEW: { currentView: new ChallengeView('toggleChallengesSubTab1'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
+        ANT_VIEW: { currentView: new AntView('toggleAntSubtab1'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
+        CUBE_VIEW: { currentView: new CubeView('switchCubeSubTab1'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
+        SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
+        SINGULARITY_VIEW: { currentView: new SingularityView('toggleSingularitySubTab1'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
+        PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
     };
 
     #mainUIViews: string[] = [
