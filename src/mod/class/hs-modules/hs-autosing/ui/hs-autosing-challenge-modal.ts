@@ -25,6 +25,8 @@ export async function openAutosingChallengesModal(
     // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
     const workingChallenges: Challenge[] = [...stratData];
+    // Separator index: where new actions are inserted
+    let separatorIndex: number = workingChallenges.length;
 
     // Precompute map for fast special-action label lookup
     const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map(a => [a.value, a.label] as const));
@@ -128,6 +130,15 @@ export async function openAutosingChallengesModal(
         `;
     };
 
+    // Render a draggable separator for inserting new challenges at specific positions
+    const renderSeparator = () => {
+        return `
+        <div class="hs-challenge-separator" data-separator-index="${separatorIndex}" style="position: relative; display: flex; align-items: center; margin: 4px 0; cursor: grab;">
+            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin-right: 8px; display: flex; align-items: center; height: 18px;">⋮⋮ Insert here</span>
+            <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
+        </div>`;
+    };
+
     // Render the full challenge list, inserting jump targets at correct positions
     // Handles mapping IF jumps to their targets and rendering all entries
     const renderChallengeList = () => {
@@ -149,9 +160,14 @@ export async function openAutosingChallengesModal(
                     ifId: entry.ifJump.id
                 });
             }
-        })
+        });
 
-        // Render items with jump targets inserted at appropriate positions
+        // Render separator before first item if separatorIndex <= 0
+        if (separatorIndex <= 0) {
+            elements.push(renderSeparator());
+        }
+
+        // Render items with jump targets inserted at appropriate positions + dragable "insert at" separator
         workingChallenges.forEach((entry, index) => {
             // Render any jump targets that should appear before this index
             if (jumpTargetMap.has(index)) {
@@ -160,12 +176,15 @@ export async function openAutosingChallengesModal(
                     elements.push(renderIfTarget(ifAction.ifIndex, entry.ifJump.id));
                 });
             }
-
             // Render the actual challenge
             if (isIfJumpEntry(entry)) {
                 elements.push(renderIfBlock(entry as IsJumpChallenge, index));
             } else {
                 elements.push(renderNormalEntry(entry, index));
+            }
+            // Render separator after this item if separatorIndex == index + 1
+            if (separatorIndex === index + 1) {
+                elements.push(renderSeparator());
             }
         });
 
@@ -365,7 +384,6 @@ export async function openAutosingChallengesModal(
     // Handles both normal entries and IF jump target blocks
     const attachDragListeners = () => {
         const items = document.querySelectorAll(".hs-challenge-item");
-
         items.forEach((item) => {
             const dragHandle = item.querySelector(".hs-challenge-drag-handle") as HTMLElement;
 
@@ -576,6 +594,67 @@ export async function openAutosingChallengesModal(
 
             dragHandle.style.cursor = "grab";
         });
+
+        // Drag logic for separator (inserting new items)
+        const separator = document.querySelector('.hs-challenge-separator') as HTMLElement;
+        if (!separator) return;
+        separator.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            separator.style.position = 'fixed';
+            separator.style.zIndex = '1000';
+            separator.style.cursor = 'grabbing';
+            separator.style.width = separator.offsetWidth + 'px';
+            separator.style.height = separator.offsetHeight + 'px';
+            separator.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+            separator.style.transform = 'scale(1.05)';
+            separator.style.transition = 'transform 0.15s ease';
+
+            const moveAt = (clientX: number, clientY: number) => {
+                separator.style.left = clientX - separator.offsetWidth / 2 + 'px';
+                separator.style.top = clientY - separator.offsetHeight / 2 + 'px';
+            };
+            moveAt(e.clientX, e.clientY);
+
+            const onMouseMove = throttle((e: MouseEvent) => {
+                moveAt(e.clientX, e.clientY);
+                separator.style.display = 'none';
+                const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+                separator.style.display = '';
+                if (!elemBelow) return;
+                // Find closest .hs-challenge-item or separator
+                const container = document.getElementById('hs-challenge-list-container');
+                if (!container) return;
+                const allItems = Array.from(container.querySelectorAll('.hs-challenge-item'));
+                let newIndex = allItems.length;
+                for (let i = 0; i < allItems.length; i++) {
+                    const rect = allItems[i].getBoundingClientRect();
+                    if (e.clientY < rect.top + rect.height / 2) {
+                        newIndex = i;
+                        break;
+                    }
+                }
+                separatorIndex = newIndex;
+                updateUI();
+            }, 16);
+
+            const onMouseUp = () => {
+                separator.style.position = '';
+                separator.style.zIndex = '';
+                separator.style.cursor = '';
+                separator.style.width = '';
+                separator.style.height = '';
+                separator.style.boxShadow = '';
+                separator.style.transform = '';
+                separator.style.left = '';
+                separator.style.top = '';
+                separator.style.transition = '';
+                document.removeEventListener('mousemove', onMouseMove as any);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove as any);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+        separator.style.cursor = 'grab';
     };
 
     // Update input state: disables/enables fields based on selected action type
@@ -796,9 +875,12 @@ export async function openAutosingChallengesModal(
                     if (commentValue) (newEntry as any).comment = commentValue;
                 }
 
-                if (editingIndex !== null) workingChallenges[editingIndex] = newEntry;
-                else workingChallenges.push(newEntry);
-
+                if (editingIndex !== null) {
+                    workingChallenges[editingIndex] = newEntry;
+                } else {
+                    workingChallenges.splice(separatorIndex, 0, newEntry);
+                    separatorIndex = separatorIndex + 1;
+                }
                 updateUI();
                 resetInputs();
             }
@@ -862,7 +944,11 @@ export async function openAutosingChallengesModal(
 
             // DELETE
             if (id.startsWith("hs-challenge-delete-")) {
-                workingChallenges.splice(Number(el.dataset.index), 1);
+                const deleteIndex = Number(el.dataset.index);
+                workingChallenges.splice(deleteIndex, 1);
+                if (deleteIndex < separatorIndex) {
+                    separatorIndex = Math.max(0, separatorIndex - 1);
+                }
                 updateUI();
                 resetInputs();
             }
