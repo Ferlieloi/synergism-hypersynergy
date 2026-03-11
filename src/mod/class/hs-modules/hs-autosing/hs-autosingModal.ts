@@ -283,7 +283,6 @@ export class HSAutosingModal {
                 autosingMod?.closeAutosingModalAfterReview();
                 return;
             }
-
             const toggle = document.getElementById('hs-setting-auto-sing-enabled');
             if (toggle) toggle.click();
         };
@@ -600,9 +599,9 @@ export class HSAutosingModal {
 
         const isReview = this.modalMode === 'review';
 
-        this.pauseBtn.classList.toggle('hs-hidden', isReview);
-        this.finishStopBtn.classList.toggle('hs-hidden', isReview || this.isMinimized);
-        this.restartButton.classList.toggle('hs-hidden', this.isMinimized);
+        this.pauseBtn.classList.toggle('hs-hidden', isReview || !this.showDetailedData);
+        this.finishStopBtn.classList.toggle('hs-hidden', isReview || this.isMinimized || !this.showDetailedData);
+        this.restartButton.classList.toggle('hs-hidden', this.isMinimized || !this.showDetailedData);
         this.chartToggleBtn.classList.toggle('hs-hidden', this.isMinimized);
 
         // In review mode, move the "close" button to the left so it doesn't change place
@@ -799,6 +798,8 @@ export class HSAutosingModal {
             sectionGrid.classList.toggle('hs-grid-4col', visible);
             sectionGrid.classList.toggle('hs-grid-2col-min-auto', !visible);
         });
+
+        this.applyControlVisibility();
 
         if (visible) {
             this.rebuildDetailedDataDom();

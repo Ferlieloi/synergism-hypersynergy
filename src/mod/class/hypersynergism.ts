@@ -189,6 +189,7 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-dump-gamedata-btn', text: 'Dump Game vars' }),
                     HSUIC.Button({ id: 'hs-panel-clear-settings-btn', text: 'CLEAR SETTINGS', styles: { borderColor: 'red' } }),
                     HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
+                    HSUIC.Button({ id: 'hs-panel-exit-sing-btn', text: 'Exit Exalt' }),
                     HSUIC.Div({
                         html: 'Testing tools',
                         styles: {
@@ -337,6 +338,21 @@ export class Hypersynergism {
                     position: 'top',
                     notificationType: "warning"
                 });
+            }
+        });
+
+        document.querySelector('#hs-panel-exit-sing-btn')?.addEventListener('click', () => {
+            console.log('Attempting to exit singularity by clicking the active challenge (if any).');
+            
+            const singChallengesWrapper = document.querySelector('#singularityChallenges');
+            if (!singChallengesWrapper) return;
+            
+            const img = singChallengesWrapper.querySelector('img.challenge[style*="background-color: orchid"]') as HTMLElement;
+            if (img) {
+                console.log('Found active challenge img, clicking:', img);
+                img.click();
+            } else {
+                console.log('Could not find an active Singularity challenge.');
             }
         });
 

@@ -637,21 +637,17 @@ export class HSAmbrosia extends HSModule
             HSLogger.warn('Could not find group wrapper for quickbar', this.context);
             return;
         }
-        const wrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-        if (wrapper) {
-            wrapper.style.display = 'none';
+        const ambQuickBar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+        if (ambQuickBar) {
+            ambQuickBar.style.display = 'none';
             HSUI.removeInjectedStyle(this.#quickbarCSSId);
-        }
-        if (barWrapper) {
-            barWrapper.style.display = 'block'; // Ensure minibars remain visible
         }
     }
 
     async #refreshQuickbarIcons() {
-        const wrapper = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-        if (wrapper) {
-            const quickbarSlots = wrapper.querySelectorAll('.blueberryLoadoutSlot') as NodeListOf<HTMLElement>;
+        const ambQuickBar = this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+        if (ambQuickBar) {
+            const quickbarSlots = ambQuickBar.querySelectorAll('.blueberryLoadoutSlot') as NodeListOf<HTMLElement>;
             quickbarSlots.forEach((slot) => {
                 const originalSlotId = slot.dataset.originalId;
                 if (!originalSlotId) return;
