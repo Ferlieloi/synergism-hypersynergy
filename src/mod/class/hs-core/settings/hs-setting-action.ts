@@ -265,6 +265,10 @@ export class HSSettingActions {
             } else {
                 qolButtonsMod.enableAutomationQuickbar();
             }
+        },
+
+        eventQuickBarAction: async (params: HSSettingActionParams) => {
+            /* to do */
         }
     }
 

@@ -1247,6 +1247,20 @@
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
     }
   },
+  "eventQuickBar": {
+    "settingName": "eventQuickBar",
+    "settingDescription": "Event quick bar",
+    "settingHelpText": "When enabled, shows a bell icon in the header during events.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "eventQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-event-quickbar-btn"
+    }
+  },
   "hideMaxedGQUpgrades": {
     "settingName": "hideMaxedGQUpgrades",
     "settingDescription": "Hide maxed GQ upgrades",
