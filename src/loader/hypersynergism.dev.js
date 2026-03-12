@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         HyperSynergism Dev Loader
+// @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.4-dev
-// @description  Load Hypersynergism mod from local dev server
+// @version      3.5
+// @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
@@ -16,111 +16,93 @@
     window.HS_LOADER_INITIALIZED = true;
 
     const startTime = performance.now();
-    const log = (...a) => console.log(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
-    const warn = (...a) => console.warn(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
-    const debug = (...a) => console.debug(`%c[HS-DEV +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+    const log = (...a) => console.log(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const warn = (...a) => console.warn(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
+    const debug = (...a) => console.debug(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
 
     const originalFetch = window.fetch.bind(window);
-
     const isFirefox = navigator.userAgent.includes('Firefox');
     log(`Browser: ${isFirefox ? 'Firefox' : 'Other'}`);
 
-    let windowLoadFired = false;
+    // ─── State ────────────────────────────────────────────────────────────────
     let gameScriptDetected = false;
-    let patchedScriptInjected = false;
-    let allowCustomElements = false; // LOCK definitions by default
+    let allowCustomElements = false;
 
-    // CRITICAL FIX: Override customElements.define to BLOCK the original script
-    // If the original script runs, it will try to define elements. We IGNORE it.
-    // This effectively causes the original script to crash (safely) or fail to register,
-    // leaving the registry clean for our patched script.
+    // ─── customElements lock ──────────────────────────────────────────────────
+    // Block the original game script from registering Custom Elements.
+    // Our patched copy will register them once allowCustomElements is set.
     const origDefine = customElements.define;
     customElements.define = function (name, ctor, options) {
         if (!allowCustomElements) {
-            // Log once per unique name to avoid spam, but BLOCK IT.
-            // This prevents the "Illegal constructor" error later because the Old_o0 won't be in the registry.
-            // The Original Script will likely crash when it tries `new o0()`, which is GOOD (it stops it).
             if (!customElements.get(name)) {
-                debug(`[HS] Blocked original script from defining ${name} (Lock active)`);
+                debug(`Blocked original script from defining <${name}> (lock active)`);
             }
             return;
         }
-
-        // Standard duplicate check
         if (customElements.get(name)) return;
         return origDefine.call(this, name, ctor, options);
     };
 
-    // Track when window.load fires
-    window.addEventListener('load', () => {
-        windowLoadFired = true;
-        log('Window load fired');
-    }, { once: true });
-
-    function shouldBlockScript(src) {
-        return src.includes('rocket-loader') || /\/dist\/out.*\.js/.test(src);
-    }
-
-    // Block fetch requests
+    // ─── Fetch block ──────────────────────────────────────────────────────────
     window.fetch = async function (input, init) {
-        const url = typeof input === 'string'
-            ? input
-            : input instanceof Request
-                ? input.url
+        const url = typeof input === 'string' ? input
+            : input instanceof Request ? input.url
                 : '';
-
         if (url.includes('rocket-loader') || (url.includes('/dist/out') && url.endsWith('.js'))) {
-            debug(`Fetch blocked: ${url.substring(0, 80)}...`);
+            debug(`Fetch blocked: ${url.substring(0, 80)}`);
             return new Response('', { status: 200 });
         }
         return originalFetch(input, init);
     };
 
-    // Firefox-specific: Use beforescriptexecute event
+    function shouldBlockScript(src) {
+        return src.includes('rocket-loader') || /\/dist\/out.*\.js/.test(src);
+    }
+
+    // ─── Script interception ──────────────────────────────────────────────────
+    // We need to intercept the game's <script src="…/dist/out….js"> tag,
+    // prevent it from running, then inject our patched version in its place.
+
     let beforeScriptExecute;
     if (isFirefox) {
+        // Firefox supports beforescriptexecute which fires before the script runs.
         beforeScriptExecute = function (e) {
-            const script = e.target;
-            const src = script.src || '';
-
+            const src = e.target.src || '';
             if (shouldBlockScript(src)) {
                 e.preventDefault();
                 e.stopPropagation();
-                script.remove();
-                log(`Blocked (beforescriptexecute): ${src.substring(0, 60)}...`);
-
+                e.target.remove();
+                log(`Blocked (beforescriptexecute): ${src.substring(0, 60)}`);
                 if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
                     gameScriptDetected = true;
-                    setTimeout(injectPatchedBundle, 0);
+                    injectPatchedBundle();
                 }
             }
         };
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
-    // MutationObserver for Chrome and fallback
+    // Chrome/Edge: use a MutationObserver to catch the tag before it executes.
     const mo = new MutationObserver(muts => {
         for (const m of muts) {
             for (const n of m.addedNodes) {
-                if (n.tagName === 'SCRIPT') {
-                    const src = n.src || '';
-                    if (shouldBlockScript(src)) {
-                        n.type = 'javascript/blocked';
-                        n.remove();
-                        debug(`Blocked (MutationObserver): ${src.substring(0, 60)}...`);
-
-                        if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
-                            gameScriptDetected = true;
-                            setTimeout(injectPatchedBundle, 0);
-                        }
+                if (n.tagName !== 'SCRIPT') continue;
+                const src = n.src || '';
+                if (shouldBlockScript(src)) {
+                    n.type = 'javascript/blocked';
+                    n.remove();
+                    debug(`Blocked (MutationObserver): ${src.substring(0, 60)}`);
+                    if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
+                        gameScriptDetected = true;
+                        injectPatchedBundle();
                     }
                 }
             }
         }
     });
-
     mo.observe(document.documentElement, { childList: true, subtree: true });
 
+    // Also check scripts that may already exist in the DOM at injection time.
     function checkExistingScripts() {
         for (const script of document.getElementsByTagName('script')) {
             if (script.src && /\/dist\/out.*\.js/.test(script.src)) {
@@ -133,334 +115,282 @@
             }
         }
     }
-
     checkExistingScripts();
     setTimeout(checkExistingScripts, 10);
+
+    // ─── Utilities ────────────────────────────────────────────────────────────
+
+    // Resolves when condition() returns truthy, or rejects after timeoutMs.
+    // Uses setTimeout (not rAF) so it works reliably in background tabs.
+    function waitFor(condition, timeoutMs, label, intervalMs = 200) {
+        return new Promise((resolve, reject) => {
+            const deadline = performance.now() + timeoutMs;
+            (function poll() {
+                const result = condition();
+                if (result) { resolve(result); return; }
+                if (performance.now() >= deadline) {
+                    reject(new Error(`waitFor timed out: ${label}`));
+                    return;
+                }
+                setTimeout(poll, intervalMs);
+            })();
+        });
+    }
+
+    // Waits for #id to exist, then clicks it. Returns true on success.
+    async function clickWhenAvailable(id, timeoutMs = 20000) {
+        log(`Waiting for #${id}...`);
+        try {
+            await waitFor(() => document.getElementById(id), timeoutMs, `#${id} to appear`);
+        } catch {
+            warn(`Timed out waiting for #${id}`);
+            return false;
+        }
+        const el = document.getElementById(id);
+        // Dispatch the full mouse event sequence the game expects.
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+            el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        }
+        // Yield one tick so the game's event handler can run before we continue.
+        await new Promise(r => setTimeout(r, 0));
+        return true;
+    }
+
+    // ─── Phase 1 & 2: Fetch, patch, and inject the game bundle ───────────────
 
     async function injectPatchedBundle() {
         if (window.__HS_INJECTED__) return;
         window.__HS_INJECTED__ = true;
 
         log('Fetching game bundle...');
-
+        let code;
         try {
             const res = await originalFetch(`https://synergism.cc/dist/out.js?t=${Date.now()}`, {
                 cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
             });
-
-            let code = await res.text();
+            code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
-
-            // ============================================================
-            // EXPORT + STAGE PATCHES v3.4-dev [2026-02-21]
-            // ============================================================
-            // Strategy: scan for function HEADER patterns, then verify the
-            // unique anchor string appears shortly after the opening '{'.
-            // This avoids brace-counting bugs caused by {/} inside string
-            // literals and template expressions in minified code.
-            // ============================================================
-
-            // Helper: scan all occurrences of headerRegex, return the index
-            // right after the '{' of the FIRST match where anchorStr appears
-            // within `windowSize` chars of that '{'.
-            const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
-                const re = new RegExp(headerRegex.source, 'g');
-                let m;
-                while ((m = re.exec(src)) !== null) {
-                    const bodyStart = m.index + m[0].length; // char after '{'
-                    const slice = src.slice(bodyStart, bodyStart + windowSize);
-                    if (slice.includes(anchorStr)) return { bodyStart, match: m };
-                }
-                return null;
-            };
-
-            // ── EXPORT PATCH ─────────────────────────────────────────────
-            // exportSynergism is an async function containing "Synergysave2"
-            const exportResult = findFunctionBodyContaining(
-                code,
-                /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
-                '"Synergysave2"'
-            );
-
-            if (exportResult) {
-                const exportFn = exportResult.match[1];
-
-                const expose = exportFn
-                    ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
-                    : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
-
-                const { bodyStart: exportBodyStart } = exportResult;
-                code = code.slice(0, exportBodyStart) + expose + code.slice(exportBodyStart);
-                log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
-            } else {
-                warn('Could not patch exportSynergism — header not found');
-            }
-
-            // ── STAGE PATCH ──────────────────────────────────────────────
-            // Step 1: locate the anchor string with indexOf (guaranteed match if
-            // the string exists, regardless of surrounding whitespace/formatting).
-            // Step 2: extract each variable name with small, independent patterns
-            // instead of one monolithic regex that fails if any part changes.
-            // Step 3: find the enclosing no-arg arrow function and inject at its
-            // ENTRY — so ANY call to loadMiscellaneousStats exposes the vars,
-            // not just the specific code path that reaches the innerHTML line.
-            const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
-
-            if (stageAnchorIdx !== -1) {
-                const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
-                const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
-                const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
-                const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
-
-                if (domFn && i18nObj && stageFn) {
-                    const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
-
-                    // Walk back up to 4000 chars, find the LAST no-arg arrow fn before anchor.
-                    // loadMiscellaneousStats is always ()=>{ in minified output.
-                    const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
-                    const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
-                    let am, lastBodyStart = -1;
-                    while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
-
-                    if (lastBodyStart !== -1) {
-                        const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
-                        code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                        log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-                    } else {
-                        // Fallback: inject right before the anchor line
-                        code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
-                        log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-                    }
-                } else {
-                    warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
-                }
-            } else {
-                warn('Could not patch stage — "gameStageStatistic" not found in bundle');
-            }
-
-            log('v3.4-dev [2026-02-22]c patch complete — injecting bundle');
-
-            const gameScript = document.createElement('script');
-            gameScript.textContent = code;
-
-            // CRITICAL: Wait for body to ensure game script doesn't crash on early querySelectors
-            if (!document.body) {
-                log('Waiting for body before injection...');
-                await new Promise(resolve => {
-                    const observer = new MutationObserver(() => {
-                        if (document.body) {
-                            observer.disconnect();
-                            resolve();
-                        }
-                    });
-                    observer.observe(document.documentElement, { childList: true });
-                });
-            }
-
-            // UNLOCK DEFINITIONS JUST BEFORE INJECTION
-            allowCustomElements = true;
-            log('Custom Elements unlocked for patched bundle');
-
-            (document.body || document.head || document.documentElement).appendChild(gameScript);
-            try {
-                mo.disconnect();
-                log('MutationObserver disconnected');
-            } catch { }
-
-            if (isFirefox && beforeScriptExecute) {
-                document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
-                log('beforescriptexecute listener removed');
-            }
-            customElements.define = origDefine;
-            log('customElements.define restored');
-            patchedScriptInjected = true;
-            log('Game script injected');
-
-            if (windowLoadFired) {
-                log('Manually triggering game initialization...');
-                await manuallyInitializeGame();
-            }
-
-            setTimeout(initBackdoor, 1500);
-            waitForOfflineContainerClosed().then(() => {
-                setTimeout(loadModAfterExposure, 100);
-            });
-
         } catch (e) {
-            warn('Failed to load game:', e);
+            warn('Failed to fetch game bundle:', e);
+            return;
         }
-    }
 
-    async function manuallyInitializeGame() {
-        await new Promise(r => setTimeout(r, 100));
-        log('Attempting to dispatch synthetic load event...');
-        const initScript = document.createElement('script');
-        initScript.textContent = `
-(async () => {
-    console.log('[HS] Manual init: checking for reloadShit...');
-    await new Promise(r => setTimeout(r, 50));
-    try {
-        window.dispatchEvent(new Event('load'));
-        console.log('[HS] Manual init: dispatched load event');
-    } catch(e) {
-        console.warn('[HS] Manual init: load dispatch failed', e);
-    }
-})();
-`;
-        document.head.appendChild(initScript);
-        await new Promise(r => setTimeout(r, 500));
-        if (window.player) {
-            log('Manual init successful - player exists');
+        // ── Bundle patches ────────────────────────────────────────────────────
+        // Strategy: find function headers by pattern, verify a unique anchor
+        // string appears near the opening brace, then inject at that point.
+        // This avoids brace-counting bugs in minified code.
+
+        const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
+            const re = new RegExp(headerRegex.source, 'g');
+            let m;
+            while ((m = re.exec(src)) !== null) {
+                const bodyStart = m.index + m[0].length;
+                if (src.slice(bodyStart, bodyStart + windowSize).includes(anchorStr))
+                    return { bodyStart, match: m };
+            }
+            return null;
+        };
+
+        // EXPORT PATCH — inject at the start of exportSynergism's body.
+        // The function is async, takes a bool arg, and contains "Synergysave2".
+        const exportResult = findFunctionBodyContaining(
+            code,
+            /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
+            '"Synergysave2"'
+        );
+        if (exportResult) {
+            const exportFn = exportResult.match[1];
+            const expose = exportFn
+                ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
+                : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
+            code = code.slice(0, exportResult.bodyStart) + expose + code.slice(exportResult.bodyStart);
+            log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
         } else {
-            warn('Manual init may have failed - player not found');
-            warn('You may need to refresh the page');
+            warn('Could not patch exportSynergism — header not found');
         }
+
+        // STAGE PATCH — inject at the entry of loadMiscellaneousStats.
+        // Locate the unique anchor, extract variable names, find the enclosing
+        // no-arg arrow function, and inject at its opening brace.
+        const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
+        if (stageAnchorIdx !== -1) {
+            const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
+            const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
+            const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
+            const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
+            if (domFn && i18nObj && stageFn) {
+                const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
+                const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
+                const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
+                let am, lastBodyStart = -1;
+                while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
+                if (lastBodyStart !== -1) {
+                    const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
+                    code = code.slice(0, insertAt) + expose + code.slice(insertAt);
+                    log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                } else {
+                    code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
+                    log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+                }
+            } else {
+                warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+            }
+        } else {
+            warn('Could not patch stage — "gameStageStatistic" not found in bundle');
+        }
+
+        log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
+
+        // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
+        // Checking document.body is not enough — the body element can exist while
+        // the rest of the DOM is still being built, causing querySelector calls
+        // inside the game bundle to hit null elements.
+        if (document.readyState === 'loading') {
+            await new Promise(resolve =>
+                document.addEventListener('DOMContentLoaded', resolve, { once: true })
+            );
+        }
+        await new Promise(r => setTimeout(r, 100));
+
+        // ── Phase 2: Inject patched bundle ────────────────────────────────────
+        allowCustomElements = true;
+        log('Custom Elements unlocked — injecting patched bundle');
+
+        const gameScript = document.createElement('script');
+        gameScript.textContent = code;
+        (document.body || document.head || document.documentElement).appendChild(gameScript);
+        // The script has been parsed and executed — drop the source text so the
+        // ~1.6 MB string can be garbage-collected.
+        gameScript.textContent = '';
+
+        // Clean up interception machinery — we no longer need any of it.
+        try { mo.disconnect(); } catch { }
+        if (isFirefox && beforeScriptExecute) {
+            document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
+        }
+        customElements.define = origDefine;
+        // Restore fetch — the block on /dist/out*.js is no longer needed.
+        window.fetch = originalFetch;
+        log('Bundle injected; interception cleaned up');
+
+        // ── Phase 3: Ensure the game initialises ──────────────────────────────
+        // The game hooks onto window's "load" event. When we inject the bundle
+        // after window.load has already fired, the game never receives it, so
+        // the player object is never set up. We fire a synthetic load event to
+        // guarantee the game always initialises, regardless of timing.
+        log('Dispatching synthetic load event to initialise game');
+        window.dispatchEvent(new Event('load'));
+
+        // ── Proceed to post-load phases ───────────────────────────────────────
+        initBackdoor();
+        runPostLoadSequence();
     }
 
+    // ─── Phase 3 helper: expose __HS_BACKDOOR__ for external diagnostics ──────
     function initBackdoor() {
         const s = document.createElement('script');
         s.textContent = `
 window.__HS_BACKDOOR__ = {
     get exposed() {
         return {
-            synergismStage: typeof window.__HS_synergismStage,
-            DOMCacheGetOrSet: typeof window.DOMCacheGetOrSet,
-            loadStatistics: typeof window.__HS_loadStatistics,
-            loadMiscellaneousStats: typeof window.__HS_loadMiscellaneousStats,
-            i18next: typeof window.__HS_i18next
+            synergismStage:      typeof window.__HS_synergismStage,
+            DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,
+            i18next:             typeof window.__HS_i18next,
+            exportData:          typeof window.__HS_exportData,
         };
     }
-};
-`;
+};`;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
     }
 
-    function clickWhenAvailable(id) {
-        return new Promise(resolve => {
-            const start = performance.now();
-            const MAX = 15000;
+    // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ──
 
-            (function check() {
-                const el = document.getElementById(id);
-                if (el) {
-                    const events = ['mousedown', 'mouseup', 'click'];
-                    for (const type of events) {
-                        el.dispatchEvent(new MouseEvent(type, {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window
-                        }));
-                    }
-                    requestAnimationFrame(() => resolve(true));
-                    return;
+    async function runPostLoadSequence() {
+        try {
+            // Phase 4: Wait for the game to finish loading.
+            // The offline container is the game's own "loading done" signal —
+            // it only appears after the save has been read and the UI is ready.
+            log('Phase 4 — waiting for offlineContainer to appear...');
+            await waitFor(
+                () => {
+                    const el = document.getElementById('offlineContainer');
+                    return el && getComputedStyle(el).display !== 'none';
+                },
+                60000,
+                'offlineContainer to become visible'
+            );
+            log('offlineContainer visible — game is loaded');
+
+            // Dismiss the offline container.
+            const offlineContainer = document.getElementById('offlineContainer');
+            log('Dismissing offlineContainer...');
+            const exitBtn = document.getElementById('exitOffline')
+                || offlineContainer.querySelector('button');
+            if (exitBtn) exitBtn.click();
+
+            // Wait 100 ms for the dismissal animation and any post-modal setup.
+            await new Promise(r => setTimeout(r, 100));
+
+            // Phase 5: Trigger exposure by navigating to Settings → Misc → Export.
+            log('Phase 5 — navigating to Settings to trigger exposure...');
+            await clickWhenAvailable('settingstab');
+            await new Promise(r => setTimeout(r, 300));
+            await clickWhenAvailable('switchSettingSubTab4');
+            await new Promise(r => setTimeout(r, 300));
+            await clickWhenAvailable('kMisc');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Trigger exportSynergism silently to expose __HS_exportData.
+            window.__HS_SILENT_EXPORT = true;
+            await clickWhenAvailable('exportgame');
+            window.__HS_SILENT_EXPORT = false;
+
+            // Wait for both exposure flags.
+            log('Waiting for stage and export exposure flags...');
+            await waitFor(
+                () => window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED,
+                20000,
+                '__HS_EXPOSED and __HS_EXPORT_EXPOSED'
+            );
+            log('Exposure complete — stage and export are ready');
+
+            // Return to Buildings tab so the game looks normal to the player.
+            await clickWhenAvailable('buildingstab');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Phase 6: Load the mod.
+            log('Phase 6 — loading mod from LOCAL DEV SERVER...');
+            await loadMod();
+
+        } catch (e) {
+            warn('Post-load sequence failed:', e);
+        }
+    }
+
+    function loadMod() {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            s.onload = () => {
+                log('✅ Mod script loaded from CDN');
+                try {
+                    window.hypersynergism.init();
+                    log('✅ Mod initialised');
+                } catch (e) {
+                    warn('Mod init failed:', e);
                 }
-                if (performance.now() - start > MAX) {
-                    warn(`Timed out waiting for #${id}`);
-                    resolve(false);
-                    return;
-                }
-                requestAnimationFrame(check);
-            })();
+                resolve();
+            };
+            s.onerror = () => {
+                warn('❌ Mod failed to load from CDN');
+                reject(new Error('Mod CDN load failed'));
+            };
+            (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    async function waitForOfflineContainerClosed() {
-        const start = performance.now();
-        const MAX = 60000;
-        let seenOpen = false;
-        log('Waiting for offlineContainer...');
-        return new Promise(resolve => {
-            (function check() {
-                const container = document.getElementById('offlineContainer');
-                if (container) {
-                    const style = getComputedStyle(container);
-                    if (style.display !== 'none') {
-                        seenOpen = true;
-                        const exitBtn = document.getElementById('exitOffline');
-                        if (exitBtn) exitBtn.click();
-                    } else if (seenOpen) {
-                        log('offlineContainer closed, UI ready');
-                        resolve(true);
-                        return;
-                    }
-                }
-                if (performance.now() - start > MAX) {
-                    warn('Offline container wait timed out, forcing proceed');
-                    resolve(false);
-                    return;
-                }
-                requestAnimationFrame(check);
-            })();
-        });
-    }
-
-    async function exposeViaUI() {
-        await clickWhenAvailable('settingstab');
-        await new Promise(r => setTimeout(r, 100));
-        await clickWhenAvailable('switchSettingSubTab4');
-        await new Promise(r => setTimeout(r, 100));
-        await clickWhenAvailable('kMisc');
-
-        window.__HS_SILENT_EXPORT = true;
-        await clickWhenAvailable('exportgame');
-        window.__HS_SILENT_EXPORT = false;
-
-        const start = performance.now();
-        const MAX = 15000;
-        return new Promise(resolve => {
-            (function waitExpose() {
-                if (window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED) {
-                    resolve(true);
-                    return;
-                }
-                if (performance.now() - start > MAX) {
-                    warn('Exposure wait timed out');
-                    resolve(false);
-                    return;
-                }
-                requestAnimationFrame(waitExpose);
-            })();
-        });
-    }
-
-    async function returnToBuildingsTab() {
-        await clickWhenAvailable('buildingstab');
-        await new Promise(r => setTimeout(r, 100));
-    }
-
-    async function loadModAfterExposure() {
-        if (window.__HS_MOD_LOADED) return;
-        window.__HS_MOD_LOADED = true;
-
-        const ok = await exposeViaUI();
-        if (!ok) return;
-
-        await returnToBuildingsTab();
-
-        log('Loading mod from LOCAL DEV SERVER');
-
-        const s = document.createElement('script');
-        // Load from local dev server instead of CDN
-        s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
-
-        s.onload = () => {
-            log('✅ Mod script loaded from dev server');
-            try {
-                window.hypersynergism.init();
-            } catch (e) {
-                warn('Mod init failed:', e);
-            }
-        };
-
-        s.onerror = () => warn('❌ Mod failed to load from dev server - is it running?');
-        (document.head || document.documentElement).appendChild(s);
-    }
-
-    log('DEV LOADER Initialized - will load from http://127.0.0.1:8080');
+    log('LOADER v3.5 (Shewchou) initialised');
 
 })();
