@@ -62,6 +62,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private hasWarnedMissingStageFunc: boolean = false;
     private storedC15: Decimal = new Decimal(0);
     private challengeAccessors: Record<number, ChallengeAccessor> = {};
+    private hsSettingsToRestore: string[] = [];
 
     // DOM Elements - Settings & UI
     private settingsTab!: HTMLButtonElement;
@@ -362,7 +363,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.autosingModal?.destroy();
         this.autosingModal = new HSAutosingModal();
 
-        await HSAutosingSettingsFixer.fixAllSettings();
+        this.hsSettingsToRestore = await HSAutosingSettingsFixer.fixAllSettings();
 
         this.performAutosingLogic();
     }
@@ -375,10 +376,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             modalDisposition: showReviewModal ? 'review' : 'destroy'
         });
 
-        const singSetting = HSSettings.getSetting("startAutosing");
-        if (singSetting && singSetting.isEnabled()) {
-            singSetting.disable();
+        const autosingSetting = HSSettings.getSetting("startAutosing");
+        if (autosingSetting && autosingSetting.isEnabled()) {
+            autosingSetting.disable();
         }
+        HSAutosingSettingsFixer.restoreUnwantedSettings(this.hsSettingsToRestore);
 
         HSLogger.log(`Autosing stopped.`, this.context);
     }
