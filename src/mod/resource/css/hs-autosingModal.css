@@ -212,10 +212,15 @@
     margin-left: 8px;
 }
 
+#hs-completed-sing-full-div {
+    display: flex;
+    align-items: flex-end;
+}
+
 #hs-completed-sing-amount {
     color: var(--timer-color-progress);
     font-weight: bold;
-    margin-left: 6px;
+    margin: 0 6px;
 }
 
 #hs-phase-name-val {

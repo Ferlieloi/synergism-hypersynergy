@@ -1335,9 +1335,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async performSingularity(skipRecord: boolean = false): Promise<void> {
         const prevMainView = this.gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-        const [qBefore, gqBefore] = await Promise.all([
+        const [qBefore, gqBefore, happyHourStackAmount] = await Promise.all([
             this.getCurrentQuarks(),
             this.getCurrentGoldenQuarks(),
+            this.gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0
         ]);
 
         const c15ScoreBefore = this.getChallengeAccessor(15).getCompletions();
@@ -1359,7 +1360,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const qGain = Math.max(0, qAfter - qBefore);
 
         if (this.autosingModal && !skipRecord) {
-            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, c15ScoreBefore);
+            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, happyHourStackAmount, c15ScoreBefore);
         }
 
         prevMainView.goto();
@@ -1374,7 +1375,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         this.antiBuyCoinBug(0, 15, 10);
-        // this.antiBuyCoinBugViaExpose(0, 10, 50);
 
         this.observeAntiquitiesRune();
         this.prevActionTime = performance.now();
