@@ -37,6 +37,9 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     protected eventData: ConsumableGameEvents | undefined;
     protected isEvent: boolean = false;
 
+    // Subscribers for event data changes
+    private eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
+
     static readonly Calculations: HSCalculationDefinition[] = HSCalculationDefinitions;
 
     constructor(moduleOptions: HSModuleOptions) {
@@ -76,6 +79,15 @@ export abstract class HSGameDataAPIPartial extends HSModule {
                 this.isEvent = this.eventData.HAPPY_HOUR_BELL.amount > 0;
             }
         }
+
+        // Notify subscribers
+        for (const cb of this.eventDataSubscribers) {
+            try {
+                cb(this.eventData);
+            } catch (e) {
+                HSLogger.error("EventData subscriber error: " + e, this.context);
+            }
+        }
     }
 
     // These get methods are meant to be the public methods to get data
@@ -107,6 +119,18 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     getEventData(): ConsumableGameEvents | undefined {
         return this.eventData;
+    }
+
+    /**
+     * Subscribe to event data changes. Returns an unsubscribe function.
+     */
+    public subscribeEventDataChange(cb: (eventData: ConsumableGameEvents | undefined) => void): () => void {
+        this.eventDataSubscribers.add(cb);
+        // Immediately call with current data
+        cb(this.eventData);
+        return () => {
+            this.eventDataSubscribers.delete(cb);
+        };
     }
 
     static getCalculationDefinitions(filter?: {

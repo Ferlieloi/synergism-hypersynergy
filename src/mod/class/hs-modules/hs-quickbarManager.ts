@@ -11,7 +11,8 @@ export class HSQuickbarManager {
     private sectionOrder: string[] = [];
     // Hard-coded desired order for quickbars (left-to-right)
     private static readonly QUICKBAR_ORDER: string[] = [
-        'automation', // left-most
+        'events',     // left-most
+        'automation', 
         'other',      // add other quickbars here
         'ambrosia'    // right-most
     ];
@@ -220,6 +221,35 @@ export class HSQuickbarManager {
      */
     public disableAutomationQuickbar(teardownCallback?: () => void): void {
         const id = 'automation';
+        if (teardownCallback) {
+            try { teardownCallback(); } catch (e) { /* ignore */ }
+        }
+        this.removeSection(id);
+    }
+
+    /**
+     * Convenience wrapper to enable the events quickbar.
+     * Accepts a factory that returns the section element and an optional setup callback
+     * to perform module-specific wiring once the section is injected.
+     */
+    public enableEventsQuickbar(factory: QuickbarSectionFactory, setupCallback?: (section: HTMLElement) => void): void {
+        const id = 'events';
+        this.registerSection(id, factory);
+        this.injectSection(id);
+        this.whenSectionInjected(id).then(() => {
+            const section = this.getSection(id);
+            if (section && setupCallback) {
+                try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
+            }
+        });
+    }
+
+    /**
+     * Convenience wrapper to disable the events quickbar.
+     * Accepts an optional teardown callback to allow module-specific cleanup.
+     */
+    public disableEventsQuickbar(teardownCallback?: () => void): void {
+        const id = 'events';
         if (teardownCallback) {
             try { teardownCallback(); } catch (e) { /* ignore */ }
         }

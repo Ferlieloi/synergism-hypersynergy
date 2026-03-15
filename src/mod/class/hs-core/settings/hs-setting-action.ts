@@ -267,8 +267,16 @@ export class HSSettingActions {
             }
         },
 
-        eventQuickBarAction: async (params: HSSettingActionParams) => {
-            /* to  do */
+        eventsQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.disableEventsQuickbar();
+            } else {
+                qolButtonsMod.enableEventsQuickbar();
+            }
         }
     }
 

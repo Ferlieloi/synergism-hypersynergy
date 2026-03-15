@@ -86,3 +86,9 @@
    width: 18px;
    display: block;
 }
+
+/* Events quickbar styles */
+#eventsQuickBar {
+    display: flex;
+    align-items: flex-end;
+}

@@ -62,7 +62,7 @@ type QuickbarToggleConfig = SynQuickbarConfig | GroupQuickbarConfig;
 */
 export class HSQOLButtons extends HSModule {
     static SYN_UI_SETTING_KEY: keyof HSSettingsDefinition = 'enableAutomationQuickBar';
-
+    #eventsQuickbarUnsubscribe: (() => void) | null = null;
     // Shared selector arrays for the different groups
     private static readonly buildingsAndUpgradesSelectors = [
         { selector: '#toggle1.auto.autobuyerToggleButton' },
@@ -229,6 +229,7 @@ export class HSQOLButtons extends HSModule {
 
     // quickbar container
     automationQuickBarContainer: HTMLDivElement | null = null;
+    eventsQuickBarContainer: HTMLDivElement | null = null;
     #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
     #automationQuickbarBootstrapTimeoutIds: number[] = [];
 
@@ -453,7 +454,7 @@ export class HSQOLButtons extends HSModule {
         HSLogger.debug('[HSQOLButtons]: Registering placeholder quickbar section for instant injection', this.context);
         const placeholder = document.createElement('div');
         placeholder.id = 'automationQuickBar';
-        placeholder.textContent = 'Loading Automation Quickbar...';
+        placeholder.textContent = 'Loading...';
         HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => placeholder);
 
         gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
@@ -506,6 +507,15 @@ export class HSQOLButtons extends HSModule {
             this.automationQuickBarContainer = HSQuickbarManager.getInstance().getSection(this.#quickbarSectionId) as HTMLDivElement;
             this.#setupAutomationQuickbar();
         });
+
+        // --- Events Quickbar setup ---
+        HSQuickbarManager.getInstance().enableEventsQuickbar(
+            () => this.getEventsQuickbarSection(),
+            (section) => {
+                this.eventsQuickBarContainer = section as HTMLDivElement;
+                this.setupEventsQuickbarWrapper();
+            }
+        );
     }
 
     /** Returns a prepared Automation quickbar DOM node for the quickbarsRow. */
@@ -513,6 +523,14 @@ export class HSQOLButtons extends HSModule {
         const container = document.createElement('div');
         container.id = 'automationQuickBar';
         container.className = 'hs-automation-quickbar';
+        return container;
+    }
+
+    /** Returns a prepared Events quickbar DOM node for the quickbarsRow. */
+    public getEventsQuickbarSection(): HTMLElement {
+        const container = document.createElement('div');
+        container.id = 'eventsQuickBar';
+        container.className = 'hs-events-quickbar';
         return container;
     }
 
@@ -929,6 +947,34 @@ export class HSQOLButtons extends HSModule {
             this.#automationQuickbarBootstrapTimeoutIds.push(timeoutId);
         }
     }
+
+
+    #setupEventsQuickbar(): void {
+        if (!this.eventsQuickBarContainer) return;
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+
+        const amount = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL?.amount ?? 0;
+
+        this.eventsQuickBarContainer.innerHTML = '';
+        const bellSpan = document.createElement('span');
+        bellSpan.className = 'events-quickbar-bells';
+        bellSpan.innerHTML = `${amount}\uD83D\uDD14`; // Bell icon
+
+        this.eventsQuickBarContainer.appendChild(bellSpan);
+    }
+
+    /** Cleanup observers/render queue/container for the events quickbar. */
+    #teardownEventsQuickbar(): void {
+        if (this.#eventsQuickbarUnsubscribe) {
+            this.#eventsQuickbarUnsubscribe();
+            this.#eventsQuickbarUnsubscribe = null;
+        }
+        if (this.eventsQuickBarContainer) {
+            this.eventsQuickBarContainer.innerHTML = '';
+            this.eventsQuickBarContainer = null;
+        }
+    }
+    
 
     observe() {
         if (this.#offeringPotion) {
@@ -1485,6 +1531,23 @@ export class HSQOLButtons extends HSModule {
         this.#teardownAutomationQuickbar();
     }
 
+    /** Public wrapper to call the private setup method for Events Quickbar. */
+    public setupEventsQuickbarWrapper(): void {
+        this.#setupEventsQuickbar();
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (gameDataAPI && typeof gameDataAPI.subscribeEventDataChange === 'function') {
+            this.#eventsQuickbarUnsubscribe = gameDataAPI.subscribeEventDataChange(() => {
+                this.#setupEventsQuickbar();
+            }) ?? null;
+            HSLogger.debug('Subscribed to event data changes for Events Quickbar', this.context);
+        }
+    }
+
+    /** Public wrapper to cleanup observers/raf for Events Quickbar. */
+    public teardownEventsQuickbarWrapper(): void {
+        this.#teardownEventsQuickbar();
+    }
+
     /**
      * Public method to enable the automation quickbar using HSQuickbarManager.
      * This delegates registration/injection to HSQuickbarManager and ensures
@@ -1506,4 +1569,26 @@ export class HSQOLButtons extends HSModule {
         HSQuickbarManager.getInstance().disableAutomationQuickbar();
     }
 
+    /**
+     * Public method to enable the events quickbar using HSQuickbarManager.
+     * This delegates registration/injection to HSQuickbarManager and ensures
+     * the module's setup runs once the section is injected.
+     */
+    public enableEventsQuickbar(): void {
+        HSLogger.debug('Enabling Events Quickbar', this.context);
+        HSQuickbarManager.getInstance().enableEventsQuickbar(() => this.getEventsQuickbarSection(), (section) => {
+            this.eventsQuickBarContainer = section as HTMLDivElement;
+            this.setupEventsQuickbarWrapper();
+        });
+    }
+
+    /**
+     * Public method to disable the events quickbar using HSQuickbarManager.
+     * This triggers module teardown and removes the section from the manager.
+     */
+    public disableEventsQuickbar(): void {
+        HSLogger.debug('Disabling Events Quickbar', this.context);
+        this.teardownEventsQuickbarWrapper();
+        HSQuickbarManager.getInstance().disableEventsQuickbar();
+    }
 }
