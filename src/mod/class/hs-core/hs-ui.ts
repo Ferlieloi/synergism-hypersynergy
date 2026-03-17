@@ -259,9 +259,70 @@ export class HSUI extends HSModule {
         quickMenu.id = 'hs-quick-access-menu';
         quickMenu.style.display = 'none';
 
+        // Create Quickbars menu item (button to toggle all quickbars)
+        const quickbarsBtn = document.createElement('button');
+        quickbarsBtn.setAttribute('data-type', 'quickbars');
+        quickbarsBtn.innerHTML = `
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">☰</span>
+            <span>Quickbars</span>
+            <span class="quickbars-arrow">&gt;</span>
+        `;
+
+        // Create Quickbars submenu
+        const quickbarsSubmenu = document.createElement('div');
+        quickbarsSubmenu.id = 'hs-quickbars-submenu';
+        quickbarsSubmenu.style.display = 'none';
+
+        // Helper to create submenu toggles
+        function createQuickbarToggle(label: string, btnId: string): HTMLElement {
+            const btn = document.createElement('button');
+            btn.innerHTML = label;
+            btn.setAttribute('data-type', btnId);
+            btn.addEventListener('click', () => {
+                const toggleBtn = document.getElementById(btnId) as HTMLElement;
+                if (toggleBtn) {
+                    toggleBtn.click();
+                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`);
+                }
+            });
+            return btn;
+        }
+
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Ambrosia', 'hs-setting-qol-ambrosia-quickbar-btn'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Amb minibars', 'hs-setting-ambrosia-minibar-btn'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Automation', 'hs-setting-qol-enable-syn-ui-btn'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Events', 'hs-setting-qol-enable-events-quickbar-btn'));
+
+        // Add click handler for bulk toggle logic
+        quickbarsBtn.addEventListener('click', (e) => {
+            const toggleIds = [
+                'hs-setting-qol-ambrosia-quickbar-btn',
+                'hs-setting-ambrosia-minibar-btn',
+                'hs-setting-qol-enable-syn-ui-btn',
+                'hs-setting-qol-enable-events-quickbar-btn'
+            ];
+            const toggles = toggleIds.map(id => document.getElementById(id));
+            // Determine ON/OFF state of each toggle
+            const states = toggles.map(btn => {
+                if (!btn) return false;
+                if (btn.classList.contains('hs-disabled')) return false;
+                else return true;
+            });
+            const enabledCount = states.filter(Boolean).length;
+            // If some enabled and some disabled, turn all disabled ON
+            if (enabledCount > 0 && enabledCount < states.length) {
+                toggles.forEach((btn, i) => {
+                    if (!states[i] && btn) btn.click();
+                });
+            } else {
+                // If all ON or all OFF, toggle all
+                toggles.forEach(btn => { if (btn) btn.click(); });
+            }
+        });
+
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
-        autoSingBtn.innerHTML = '<span style="color: #4caf50; display: inline-block; width: 20px; text-align: center; margin-right: 5px;">▶</span>Start Auto-Sing (S256+)';
+        autoSingBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px; color: #4caf50;">▶</span><span>Start Auto-Sing (S256+)</span>';
         autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
@@ -270,10 +331,9 @@ export class HSUI extends HSModule {
                 HSLogger.log('Auto-Sing toggled via quick menu', this.context);
             }
         });
-
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
-        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>Amb Heater Export';
+        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span><span>Amb Heater Export</span>';
         heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
@@ -282,11 +342,9 @@ export class HSUI extends HSModule {
                 HSLogger.log('Ambrosia Heater exported via quick menu', this.context);
             }
         });
-
         // Create Ambrosia Idle Swap toggle button
         const idleSwapBtn = document.createElement('button');
-        // The label and color will be updated by ambrosiaIdleSwapAction when ready
-        idleSwapBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [--]`;
+        idleSwapBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span><span>Ambrosia Swapper</span>`;
         idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
         idleSwapBtn.addEventListener('click', async () => {
             const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
@@ -297,6 +355,8 @@ export class HSUI extends HSModule {
             }
         });
 
+        quickMenu.appendChild(quickbarsSubmenu);
+        quickMenu.appendChild(quickbarsBtn);
         quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterBtn);
         quickMenu.appendChild(idleSwapBtn);
@@ -304,28 +364,29 @@ export class HSUI extends HSModule {
 
         // Show/hide menu on hover
         let hoverTimeout: number | null = null;
-
         this.#uiPanelOpenBtn.addEventListener('mouseenter', () => {
             if (hoverTimeout) clearTimeout(hoverTimeout);
             quickMenu.style.display = 'flex';
         });
-
         this.#uiPanelOpenBtn.addEventListener('mouseleave', () => {
             hoverTimeout = window.setTimeout(() => {
                 quickMenu.style.display = 'none';
             }, 200);
         });
-
         quickMenu.addEventListener('mouseenter', () => {
             if (hoverTimeout) clearTimeout(hoverTimeout);
             quickMenu.style.display = 'flex';
         });
-
         quickMenu.addEventListener('mouseleave', () => {
             hoverTimeout = window.setTimeout(() => {
                 quickMenu.style.display = 'none';
             }, 200);
         });
+        // Show/hide submenu on hover (using both button and submenu)
+        quickbarsBtn.addEventListener('mouseenter', () => { quickbarsSubmenu.style.display = 'block'; });
+        quickbarsBtn.addEventListener('mouseleave', () => { quickbarsSubmenu.style.display = 'none'; });
+        quickbarsSubmenu.addEventListener('mouseenter', () => { quickbarsSubmenu.style.display = 'block'; });
+        quickbarsSubmenu.addEventListener('mouseleave', () => { quickbarsSubmenu.style.display = 'none'; });
     }
 
     static isModPanelOpen() {

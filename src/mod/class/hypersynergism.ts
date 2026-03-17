@@ -352,8 +352,13 @@ export class Hypersynergism {
                 console.log('Found active challenge img, clicking:', img);
                 img.click();
             } else {
-                console.log('Could not find an active Singularity challenge in the DOM.');
+                HSUI.Notify('Could not find an active Singularity challenge in the DOM.', {
+                    position: 'top',
+                    notificationType: "warning"
+                });
             }
+            // TODO: Handle the other bug where the exalt timer is visible but no exalt are active 
+            // We need exposed player (or at least a specific function) for this
         });
 
         document.querySelector('#hs-panel-test-calc-redu-btn')?.addEventListener('click', () => {

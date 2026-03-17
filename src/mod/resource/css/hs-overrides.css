@@ -89,6 +89,12 @@
 
 /* Events quickbar styles */
 #eventsQuickBar {
-    display: flex;
-    align-items: flex-end;
+   display: flex;
+   align-items: flex-end;
+}
+
+/* Less visible bell when no events */
+.events-quickbar-bells.no-events {
+   opacity: 0.4;
+   filter: grayscale(80%);
 }

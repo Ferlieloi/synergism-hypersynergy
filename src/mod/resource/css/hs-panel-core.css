@@ -336,8 +336,8 @@
     z-index: 999999;
     min-width: 180px;
 }
-
-#hs-quick-access-menu button {
+#hs-quick-access-menu button,
+#hs-quickbars-submenu button {
     background: transparent;
     border: none;
     color: #e0e0e0;
@@ -351,18 +351,51 @@
     text-align: left;
     width: 100%;
 }
+#hs-quick-access-menu button[data-type="quickbars"] {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    cursor: pointer;
+    position: relative;
+}
+#hs-quick-access-menu .quickbars-arrow {
+    display: inline-block;
+    margin-left: auto;
+    font-size: 16px;
+    color: #ccc;
+    vertical-align: middle;
+}
 
+#hs-quick-access-menu button[data-type="quickbars"]:hover {
+    background: rgba(188, 189, 188, 0.25);
+}
 #hs-quick-access-menu button[data-type="autosing"]:hover {
     background: rgba(76, 175, 80, 0.25);
 }
-
 #hs-quick-access-menu button[data-type="ambrosia-heater"]:hover {
     background: rgba(255, 152, 0, 0.25);
 }
-
 #hs-quick-access-menu button[data-type="ambrosia-idle-swap"]:hover {
     background: rgba(81, 98, 212, 0.25);
 }
+
+#hs-quickbars-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background: #222;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    min-width: 140px;
+}
+#hs-quickbars-submenu button {
+    display: block;
+}
+#hs-quickbars-submenu button:hover {
+    background: #444;
+}
+
 
 /* ===== PANEL BUTTONS ===== */
 

@@ -1256,8 +1256,6 @@ export class HSAmbrosia extends HSModule
                 this.#isIdleSwapEnabled = true;
                 this.#maybeInsertIdleLoadoutIndicator();
                 this.subscribeGameDataChanges();
-                // Update quick access button to reflect enabled state
-                this.updateIdleSwapQuickAccessButton(true);
             }
         } else {
             HSLogger.warn('HSAmbrosia.enableIdleSwap() - gameStateMod==undefined', 'hs-enable-idleswap-gamestate');
@@ -1288,32 +1286,6 @@ export class HSAmbrosia extends HSModule
         }
 
         this.#removeIdleLoadoutIndicator();
-        // Update quick access button to reflect disabled state
-        this.updateIdleSwapQuickAccessButton(false);
-    }
-
-    /**
-     * Update the quick access button label for the Ambrosia Idle Swap toggle.
-     * If `enabled` is omitted, uses the module's internal state.
-     */
-    public updateIdleSwapQuickAccessButton(enabled?: boolean): void {
-        const state = enabled ?? this.#isIdleSwapEnabled;
-        const quickMenuBtn = document.querySelector('button[data-type="ambrosia-idle-swap"]') as HTMLButtonElement | null;
-        if (!quickMenuBtn) return;
-        const stateHtml = state
-            ? '<span style="color: #4caf50; font-weight: bold;">ON</span>'
-            : '<span style="color: #e53935; font-weight: bold;">OFF</span>';
-        quickMenuBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span>Ambrosia Swapper [${stateHtml}]`;
-
-        // Notify user of toggle state
-        try {
-            HSUI.Notify(`Ambrosia AFK Swapper toggled ${state ? 'ON' : 'OFF'}.`, {
-                position: 'top',
-                notificationType: 'default'
-            });
-        } catch (e) {
-            /* ignore notification errors */
-        }
     }
 
     #gameStateCallbackMain(previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) {

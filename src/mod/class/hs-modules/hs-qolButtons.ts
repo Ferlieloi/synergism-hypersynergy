@@ -953,12 +953,15 @@ export class HSQOLButtons extends HSModule {
         if (!this.eventsQuickBarContainer) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
-        const amount = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL?.amount ?? 0;
+        const bellAmount = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL?.amount ?? 0;
 
         this.eventsQuickBarContainer.innerHTML = '';
         const bellSpan = document.createElement('span');
         bellSpan.className = 'events-quickbar-bells';
-        bellSpan.innerHTML = `${amount}\uD83D\uDD14`; // Bell icon
+        if (bellAmount <= 0) {
+            bellSpan.classList.add('no-events');
+        }
+        bellSpan.innerHTML = `${bellAmount}\uD83D\uDD14`; // Bell icon
 
         this.eventsQuickBarContainer.appendChild(bellSpan);
     }
@@ -1534,6 +1537,10 @@ export class HSQOLButtons extends HSModule {
     /** Public wrapper to call the private setup method for Events Quickbar. */
     public setupEventsQuickbarWrapper(): void {
         this.#setupEventsQuickbar();
+        if (this.#eventsQuickbarUnsubscribe) {
+            HSLogger.debug('Events Quickbar is already subscribed to event data changes', this.context);
+            return;
+        }
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (gameDataAPI && typeof gameDataAPI.subscribeEventDataChange === 'function') {
             this.#eventsQuickbarUnsubscribe = gameDataAPI.subscribeEventDataChange(() => {
@@ -1554,6 +1561,7 @@ export class HSQOLButtons extends HSModule {
      * the module's setup runs once the section is injected.
      */
     public enableAutomationQuickbar(): void {
+        HSLogger.debug('Enabling Automation Quickbar', this.context);
         HSQuickbarManager.getInstance().enableAutomationQuickbar(() => this.getAutomationQuickbarSection(), (section) => {
             this.automationQuickBarContainer = section as HTMLDivElement;
             this.setupAutomationQuickbarWrapper();
@@ -1565,6 +1573,7 @@ export class HSQOLButtons extends HSModule {
      * This triggers module teardown and removes the section from the manager.
      */
     public disableAutomationQuickbar(): void {
+        HSLogger.debug('Disabling Automation Quickbar', this.context);
         this.teardownAutomationQuickbarWrapper();
         HSQuickbarManager.getInstance().disableAutomationQuickbar();
     }
