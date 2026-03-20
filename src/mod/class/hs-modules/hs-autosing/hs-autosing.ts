@@ -63,6 +63,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     private storedC15: Decimal = new Decimal(0);
     private challengeAccessors: Record<number, ChallengeAccessor> = {};
     private hsSettingsToRestore: string[] = [];
+    private previousQuarkAmount: number = 0;
+    private previousGoldenQuarkAmount: number = 0;
 
     // DOM Elements - Settings & UI
     private settingsTab!: HTMLButtonElement;
@@ -335,11 +337,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        this.subscribeGameDataChanges();
-        await new Promise<void>(resolve => {
-            this.gameDataResolver = resolve;
-        });
-        const gameData = this.gameDataAPI?.getGameData();
+        await this.gameDataAPI?.prepareForAutosing(); 
+        const gameData = await this.gameDataAPI?.getForcedGameData(); 
 
         if (!await this.validateSingularityRequirements(gameData)) {
             this.stopAutosing();
@@ -547,9 +546,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             if (this.autosingModal) {
                 const { HSQuickbarManager } = await import("../hs-quickbarManager");
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-                const q = await this.getCurrentQuarks();
-                const gq = await this.getCurrentGoldenQuarks();
-                this.autosingModal.start(this.strategy!, q, gq);
+                const gameData = await this.gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 };
+                this.autosingModal.start(this.strategy!, gameData.quarks, gameData.goldenQuarks);
                 this.autosingModal.show();
             }
 
@@ -1335,13 +1333,19 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     private async performSingularity(skipRecord: boolean = false): Promise<void> {
         const prevMainView = this.gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-        const [qBefore, gqBefore, happyHourStackAmount] = await Promise.all([
-            this.getCurrentQuarks(),
-            this.getCurrentGoldenQuarks(),
+        
+        const [gameData, happyHourStackAmount] = await Promise.all([
+            this.gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 },
             this.gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0
         ]);
+        const gq = gameData?.goldenQuarks ?? 0;
+        const q = gameData?.quarks ?? 0;
+        const gqGain = Math.max(0, gq - this.previousGoldenQuarkAmount);
+        const qGain = Math.max(0, q - this.previousQuarkAmount);
+        this.previousQuarkAmount = q;
+        this.previousGoldenQuarkAmount = gq;
+        const c15ScoreBeforeSinging = this.getChallengeAccessor(15).getCompletions();
 
-        const c15ScoreBefore = this.getChallengeAccessor(15).getCompletions();
         await this.enterAndLeaveExalt();
 
         this.endStageDone = false;
@@ -1349,18 +1353,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.elevatorInput.value = this.targetSingularity.toString();
         this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
         this.elevatorTeleportButton.click();
+        
+        const stageInitial = await this.getStage();
 
-        const [qAfter, gqAfter, stageInitial] = await Promise.all([
-            this.getCurrentQuarks(),
-            this.getCurrentGoldenQuarks(),
-            this.getStage(),
-        ]);
-
-        const gqGain = Math.max(0, gqAfter - gqBefore);
-        const qGain = Math.max(0, qAfter - qBefore);
-
-        if (this.autosingModal && !skipRecord) {
-            this.autosingModal.recordSingularity(gqGain, gqAfter, qGain, qAfter, happyHourStackAmount, c15ScoreBefore);
+        if (!skipRecord) {
+            this.autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
 
         prevMainView.goto();

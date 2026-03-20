@@ -7,7 +7,9 @@ import { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
+import { HSModuleManager } from "../module/hs-module-manager";
 import { HSCalculationDefinitions } from "./hs-calculation-definition";
+import { HSGameData } from "./hs-gamedata";
 
 /*
     The implementation here is a bit silly.
@@ -30,6 +32,8 @@ import { HSCalculationDefinitions } from "./hs-calculation-definition";
 */
 export abstract class HSGameDataAPIPartial extends HSModule {
 
+    protected gameDataModule: HSGameData | undefined;
+
     protected gameData: PlayerData | undefined;
     protected meData: MeData | undefined;
     protected pseudoData: PseudoGameData | undefined;
@@ -49,6 +53,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     async init() {
         const self = this;
         HSLogger.log(`Initializing HSGameDataAPI module`, this.context);
+        this.gameDataModule = HSModuleManager.getModule<HSGameData>('HSGameData');
 
         this.isInitialized = true;
     }
@@ -119,6 +124,23 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     getEventData(): ConsumableGameEvents | undefined {
         return this.eventData;
+    }
+
+    async getForcedGameData(): Promise<PlayerData | undefined> {
+        if (this.gameDataModule) {
+            await this.gameDataModule.forceUpdateAllData();
+            // HSGameData will call _updateGameData internally
+            return this.gameData;
+        }
+        return undefined;
+    }
+
+    async prepareForAutosing() {
+        await this.gameDataModule?.prepareForAutosing();
+    }
+
+    async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number; } | null> {
+        return await this.gameDataModule?.getLatestAutosingData() || null;
     }
 
     /**

@@ -185,6 +185,31 @@ export class HSGameData extends HSModule {
         this.#saveDataUpdated();
     }
 
+    async prepareForAutosing() {
+        this.#hackJSNativebtoa();
+        this.#hackJSNativeAtob();
+    }
+
+    async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number } | null> {
+        const saveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
+        
+        saveButton.dispatchEvent(this.#saveTriggerEvent);
+        
+        if (this.#mitm_gamedata) {
+            try {
+                // Parse only the needed fields
+                const parsed = JSON.parse(this.#mitm_gamedata);
+                const quarks = typeof parsed.worlds === 'number' ? parsed.worlds : 0;
+                const goldenQuarks = typeof parsed.goldenQuarks === 'number' ? parsed.goldenQuarks : 0;
+                return { quarks, goldenQuarks };
+            } catch (e) {
+                HSLogger.error('Failed to parse mitm_gamedata for autosing', this.context);
+                return null;
+            }
+        }
+        return null;
+    }
+
     #registerWebSocket() {
         const self = this;
         const wsMod = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');

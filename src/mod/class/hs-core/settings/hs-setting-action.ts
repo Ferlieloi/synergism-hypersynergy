@@ -188,10 +188,10 @@ export class HSSettingActions {
                     // Review mode: we stop autosing process but keep the modal visible
                     autosingMod.stopAutosing({ showReviewModal: true });
                 } else {
-                    // Auto-enable GDS if not already enabled, and start autosing
+                    // Auto-DISABLE GDS, and start autosing
                     const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
+                    if (gdsSettingEnabled) {
+                        HSSettings.getSetting('useGameData')?.disable();
                     }
                     await autosingMod.enableAutoSing();
                 }
