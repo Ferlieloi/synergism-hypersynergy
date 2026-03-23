@@ -754,4 +754,28 @@ export class HSUtils {
     static sumContents(arr: (number | null)[]): number {
         return arr.reduce<number>((acc, val) => acc + (val ?? 0), 0);
     }
+
+    /**
+     * Waits for a DOM element matching the selector to exist and returns it, or rejects after timeout.
+     * @param selector CSS selector string
+     * @param timeoutMs Timeout in milliseconds (default 2000)
+     */
+    static async waitForElement<T extends HTMLElement = HTMLElement>(selector: string, timeoutMs = 2000): Promise<T> {
+        const start = performance.now();
+        return new Promise<T>((resolve, reject) => {
+            const check = () => {
+                const el = document.querySelector(selector) as T | null;
+                if (el) {
+                    resolve(el);
+                    return;
+                }
+                if (performance.now() - start > timeoutMs) {
+                    reject(new Error(`waitForElement timed out: ${selector}`));
+                    return;
+                }
+                setTimeout(check, 50);
+            };
+            check();
+        });
+    }
 }

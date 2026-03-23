@@ -73,6 +73,7 @@ export interface HSSettingsDefinition {
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
+    enableEventsQuickBar: QOLButtonsEnableEventsQuickBarSetting;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
@@ -212,6 +213,7 @@ export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<bool
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsEnableEventsQuickBarSetting extends HSSettingBase<boolean> { }
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }

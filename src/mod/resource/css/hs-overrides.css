@@ -91,10 +91,29 @@
 #eventsQuickBar {
    display: flex;
    align-items: flex-end;
+   font-size: 18px;
+   font-weight: bold;
+   margin-right: 2px;
 }
-
-/* Less visible bell when no events */
-.events-quickbar-bells.no-events {
+#eventsQuickBar .no-event {
    opacity: 0.4;
    filter: grayscale(80%);
+   font-size: 14px;
+   font-weight: normal;
+}
+#events-quickbar-happy-hour-span,
+#events-quickbar-lotus-span {
+   display: inline-flex;
+   align-items: center;
+}
+.events-quickbar-event-img {
+   height: 25px;
+   width: 25px;
+   border-radius: 8px;
+   margin-left: 2px;
+}
+/* Lotus image: visually match bell size by zooming in a bit to crop useless pixels */
+#events-quickbar-lotus-span .events-quickbar-event-img {
+   object-fit: cover;
+   width: 32px;
 }

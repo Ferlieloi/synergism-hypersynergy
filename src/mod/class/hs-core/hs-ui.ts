@@ -322,7 +322,10 @@ export class HSUI extends HSModule {
 
         // Create Auto-Sing toggle button
         const autoSingBtn = document.createElement('button');
-        autoSingBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px; color: #4caf50;">▶</span><span>Start Auto-Sing (S256+)</span>';
+        autoSingBtn.innerHTML = `
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px; color: #4caf50;">▶</span>
+            <span>Start Auto-Sing (S256+)</span>
+        `;
         autoSingBtn.setAttribute('data-type', 'autosing');
         autoSingBtn.addEventListener('click', () => {
             const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
@@ -333,7 +336,10 @@ export class HSUI extends HSModule {
         });
         // Create Ambrosia Heater export button
         const heaterBtn = document.createElement('button');
-        heaterBtn.innerHTML = '<span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span><span>Amb Heater Export</span>';
+        heaterBtn.innerHTML = `
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>
+            <span>Amb Heater Export</span>
+        `;
         heaterBtn.setAttribute('data-type', 'ambrosia-heater');
         heaterBtn.addEventListener('click', () => {
             const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
@@ -342,24 +348,11 @@ export class HSUI extends HSModule {
                 HSLogger.log('Ambrosia Heater exported via quick menu', this.context);
             }
         });
-        // Create Ambrosia Idle Swap toggle button
-        const idleSwapBtn = document.createElement('button');
-        idleSwapBtn.innerHTML = `<span style="display: inline-block; width: 20px; height: 18px; text-align: center; margin-right: 5px; overflow: hidden;"><img src="${HSGlobal.HSAmbrosia.idleSwapQuickIconUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1.3);"></span><span>Ambrosia Swapper</span>`;
-        idleSwapBtn.setAttribute('data-type', 'ambrosia-idle-swap');
-        idleSwapBtn.addEventListener('click', async () => {
-            const currentState = HSSettings?.getSetting?.('ambrosiaIdleSwap')?.getValue();
-            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
-            if (idleSwapToggle) {
-                idleSwapToggle.click();
-                HSLogger.log(`ambrosiaIdleSwap toggled to ${currentState ? 'OFF' : 'ON'} via quick menu`, this.context);
-            }
-        });
 
         quickMenu.appendChild(quickbarsSubmenu);
         quickMenu.appendChild(quickbarsBtn);
         quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterBtn);
-        quickMenu.appendChild(idleSwapBtn);
         document.body.appendChild(quickMenu);
 
         // Show/hide menu on hover

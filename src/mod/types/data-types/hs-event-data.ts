@@ -29,14 +29,11 @@ export interface GameEvent {
 
 /**
  * Internal identifiers for tracked game events.
- * Notes:
- * - The LOTUS_OF_REJUVENATION isn't technically part of the vanilla "event" system (it's not in info-all);
- * - CUSTOM_EVENT is for unknown events (like anniversary or christmas).
+ * Notes: The LOTUS_OF_REJUVENATION isn't technically part of the vanilla "event" system (it's not in info-all);
  */
 export enum GameEventID {
     HAPPY_HOUR_BELL = "HAPPY_HOUR_BELL",
-    LOTUS_OF_REJUVENATION = "LOTUS_OF_REJUVENATION",
-    CUSTOM_EVENT = "CUSTOM_EVENT"
+    LOTUS_OF_REJUVENATION = "LOTUS_OF_REJUVENATION"
 }
 
 /**
@@ -245,11 +242,6 @@ export type ConsumableGameEvents = {
             "name": "Happy Hour Bell",
             "internalName": "HAPPY_HOUR_BELL",
             "endsAt": 1747402576000
-        },
-        {
-            "name": "Custom Event Example",
-            "internalName": "CUSTOM_EVENT_EXAMPLE",
-            "endsAt": 1747402846000
         }
     ],
     "tips": 0,

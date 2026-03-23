@@ -1,4 +1,3 @@
-
 import { HSModuleOptions } from "../../types/hs-types";
 import { SINGULARITY_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
@@ -14,12 +13,13 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQuickbarManager } from "./hs-quickbarManager";
+import type { QUICKBAR_ID } from "./hs-quickbarManager";
 import { HSUI } from "../hs-core/hs-ui";
 
-type SelectorExpectation = 'ON' | 'OFF' | string;
-type AutomationSelectorSpec = string | { selector: string; expected?: SelectorExpectation };
-type SelectorVisibilityMode = 'self' | 'parent' | 'none';
-type QuickbarRenderKey =
+type AutomationSelectorExpectation = 'ON' | 'OFF' | string;
+type AutomationSelectorSpec = string | { selector: string; expected?: AutomationSelectorExpectation };
+type AutomationSelectorVisibilityMode = 'self' | 'parent' | 'none';
+type AutomationQuickbarRenderKey =
     | 'AutoChallenge'
     | 'BuildingsAndUpgrades'
     | 'Rune'
@@ -29,11 +29,11 @@ type QuickbarRenderKey =
     | 'Hepteract'
     | 'AutoAscend';
 
-type SynQuickbarConfig = {
-    kind: 'syn';
+type AutomationQuickbarSoloConfig = {
+    kind: 'solo';
     actionDOM: string;
     checks: readonly AutomationSelectorSpec[];
-    selectorVisibility?: SelectorVisibilityMode;
+    selectorVisibility?: AutomationSelectorVisibilityMode;
     hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
@@ -41,10 +41,10 @@ type SynQuickbarConfig = {
     minHighestSingularityCount?: number;
 };
 
-type GroupQuickbarConfig = {
+type AutomationQuickbarGroupConfig = {
     kind: 'group';
     selectors: readonly AutomationSelectorSpec[];
-    selectorVisibility?: SelectorVisibilityMode;
+    selectorVisibility?: AutomationSelectorVisibilityMode;
     hideWhenFullyEnabledMinHighestSingularityCount?: number;
     buttonId: string;
     label: string;
@@ -52,7 +52,7 @@ type GroupQuickbarConfig = {
     minHighestSingularityCount?: number;
 };
 
-type QuickbarToggleConfig = SynQuickbarConfig | GroupQuickbarConfig;
+type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQuickbarGroupConfig;
 
 /*
     Class: QOLButtons
@@ -62,10 +62,11 @@ type QuickbarToggleConfig = SynQuickbarConfig | GroupQuickbarConfig;
     Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
 */
 export class HSQOLButtons extends HSModule {
-    static SYN_UI_SETTING_KEY: keyof HSSettingsDefinition = 'enableAutomationQuickBar';
-    #eventsQuickbarUnsubscribe: (() => void) | null = null;
+    // Tracks active tab visit unsubscribers per SINGULARITY_VIEW. 
+    #tabVisitUnsubscribers: Map<SINGULARITY_VIEW, () => void> = new Map();
+
     // Shared selector arrays for the different groups
-    private static readonly buildingsAndUpgradesSelectors = [
+    private static readonly automationBuildingsAndUpgradesSelectors = [
         { selector: '#toggle1.auto.autobuyerToggleButton' },
         { selector: '#toggle2.auto.autobuyerToggleButton' },
         { selector: '#toggle3.auto.autobuyerToggleButton' },
@@ -103,7 +104,7 @@ export class HSQOLButtons extends HSModule {
         { selector: '#generatorsAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
     ] as const satisfies readonly AutomationSelectorSpec[];
 
-    private static readonly runeSelectors = [
+    private static readonly automationRuneSelectors = [
         '#toggleautosacrifice',
         '#toggleautoBuyFragments',
         '#toggleautofortify',
@@ -111,13 +112,13 @@ export class HSQOLButtons extends HSModule {
         '#toggle37'
     ];
 
-    private static readonly researchSelectors = [
+    private static readonly automationResearchSelectors = [
         { selector: '#toggleresearchbuy', expected: 'Upgrade: MAX [if possible]' },
         { selector: '#toggleautoresearch', expected: 'Automatic: ON' },
         { selector: '#toggleautoresearchmode', expected: 'Automatic mode: Cheapest' },
     ] as const satisfies readonly AutomationSelectorSpec[];
 
-    private static readonly cubeSelectors = [
+    private static readonly automationCubeSelectors = [
         '#openCubes',
         '#openTesseracts',
         '#openHypercubes',
@@ -126,7 +127,7 @@ export class HSQOLButtons extends HSModule {
         '#toggleAutoPlatonicUpgrades'
     ];
 
-    private static readonly hepteractSelectors = [
+    private static readonly automationHepteractSelectors = [
         '#chronosHepteractAuto',
         '#hyperrealismHepteractAuto',
         '#challengeHepteractAuto',
@@ -138,7 +139,7 @@ export class HSQOLButtons extends HSModule {
     ];
 
     /**
-     * Quickbar visibility rules:
+     * Automation Quickbar visibility rules:
         * - Any toggle with `minHighestSingularityCount` is shown based on threshold only.
         * - Other toggles are shown only when at least one linked selector is visible in DOM
         *   (DOM-only check via inline `style.display`).
@@ -146,9 +147,9 @@ export class HSQOLButtons extends HSModule {
         * - Optional `hideWhenFullyEnabledMinHighestSingularityCount` hides already-fully-on
         *   toggles once the requested singularity threshold is reached.
      */
-    private static readonly QUICKBAR_CONFIG = {
+    private static readonly AUTOMATION_QUICKBAR_CONFIG = {
         AutoChallenge: {
-            kind: 'syn',
+            kind: 'solo',
             actionDOM: '#toggleAutoChallengeStart',
             checks: [{ selector: '#toggleAutoChallengeStart', expected: 'Auto Challenge Sweep [ON]' }],
             buttonId: 'automationQuickBar-autochallenge',
@@ -157,7 +158,7 @@ export class HSQOLButtons extends HSModule {
         },
         BuildingsAndUpgrades: {
             kind: 'group',
-            selectors: HSQOLButtons.buildingsAndUpgradesSelectors,
+            selectors: HSQOLButtons.automationBuildingsAndUpgradesSelectors,
             hideWhenFullyEnabledMinHighestSingularityCount: 25,
             buttonId: 'automationQuickBar-buildings',
             label: 'Buildings and Upgrades',
@@ -165,21 +166,21 @@ export class HSQOLButtons extends HSModule {
         },
         Rune: {
             kind: 'group',
-            selectors: HSQOLButtons.runeSelectors,
+            selectors: HSQOLButtons.automationRuneSelectors,
             buttonId: 'automationQuickBar-runes',
             label: 'Runes',
             iconSrc: './Pictures/Simplified/Offering.png'
         },
         Research: {
             kind: 'group',
-            selectors: HSQOLButtons.researchSelectors,
+            selectors: HSQOLButtons.automationResearchSelectors,
             hideWhenFullyEnabledMinHighestSingularityCount: 11,
             buttonId: 'automationQuickBar-research',
             label: 'Research',
             iconSrc: './Pictures/Simplified/Obtainium.png'
         },
         AutoAntSacrifice: {
-            kind: 'syn',
+            kind: 'solo',
             actionDOM: '#toggleAutoSacrificeAnt',
             checks: [{ selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: ON' }],
             selectorVisibility: 'parent',
@@ -189,21 +190,21 @@ export class HSQOLButtons extends HSModule {
         },
         Cube: {
             kind: 'group',
-            selectors: HSQOLButtons.cubeSelectors,
+            selectors: HSQOLButtons.automationCubeSelectors,
             buttonId: 'automationQuickBar-cubes',
             label: 'Cube Auto-Open',
             iconSrc: './Pictures/Default/TinyWow3.png',
         },
         Hepteract: {
             kind: 'group',
-            selectors: HSQOLButtons.hepteractSelectors,
+            selectors: HSQOLButtons.automationHepteractSelectors,
             buttonId: 'automationQuickBar-hepteracts',
             label: 'Hept Auto-Open',
             iconSrc: './Pictures/Default/TinyWow7.png',
             minHighestSingularityCount: 15
         },
         AutoAscend: {
-            kind: 'syn',
+            kind: 'solo',
             actionDOM: '#ascensionAutoEnable',
             checks: [{ selector: '#ascensionAutoEnable', expected: 'Auto Ascend [ON]' }],
             buttonId: 'automationQuickBar-autoascend',
@@ -211,10 +212,10 @@ export class HSQOLButtons extends HSModule {
             iconSrc: './Pictures/Simplified/AscensionNoBorder.png',
             minHighestSingularityCount: 25
         }
-    } as const satisfies Record<QuickbarRenderKey, QuickbarToggleConfig>;
+    } as const satisfies Record<AutomationQuickbarRenderKey, AutomationQuickbarToggleConfig>;
 
-    // Keep internal config keys here; labels/icons/behavior come from QUICKBAR_CONFIG.
-    private static readonly QUICKBAR_RENDER_ORDER: readonly (keyof typeof HSQOLButtons.QUICKBAR_CONFIG)[] = [
+    // Keep internal config keys here; labels/icons/behavior come from AUTOMATION_QUICKBAR_CONFIG.
+    private static readonly AUTOMATION_QUICKBAR_RENDER_ORDER: readonly (keyof typeof HSQOLButtons.AUTOMATION_QUICKBAR_CONFIG)[] = [
         'AutoChallenge',
         'BuildingsAndUpgrades',
         'Rune',
@@ -225,14 +226,18 @@ export class HSQOLButtons extends HSModule {
         'AutoAscend'
     ];
 
-    // quickbar section ID
-    #quickbarSectionId = 'automation';
-
     // quickbar container
     automationQuickBarContainer: HTMLDivElement | null = null;
-    eventsQuickBarContainer: HTMLDivElement | null = null;
     #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
     #automationQuickbarBootstrapTimeoutIds: number[] = [];
+    
+    private eventsQuickBarElements?: {
+        happyHourSpan: HTMLSpanElement;
+        happyHourAmountSpan: HTMLSpanElement;
+        lotusSpan: HTMLSpanElement;
+    };
+    #eventsQuickbarUnsubscribe: (() => void) | null = null;
+    eventsQuickBarContainer: HTMLDivElement | null = null;
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -262,7 +267,7 @@ export class HSQOLButtons extends HSModule {
     private static readonly AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS = [50, 150, 500, 1000, 2000] as const;
 
 
-    /** Resolve a syn UI element by selector, falling back to window globals for cube upgrade toggles. */
+    /** Resolve an automation quickbar element by selector, falling back to window globals for cube upgrade toggles. */
     private resolveAutomationQuickBarElement(sel: string): HTMLElement | null {
         const el = document.querySelector(sel) as HTMLElement | null;
         if (el) return el;
@@ -333,7 +338,7 @@ export class HSQOLButtons extends HSModule {
         return resolved;
     }
 
-    private getCompiledSelectorMatcher(selectorSpec: AutomationSelectorSpec): (el: HTMLElement | null) => boolean {
+    private getCompiledAutomationSelectorMatcher(selectorSpec: AutomationSelectorSpec): (el: HTMLElement | null) => boolean {
         const selector = this.selectorToString(selectorSpec);
         const expected = typeof selectorSpec === 'string' ? undefined : selectorSpec.expected;
         const matcherKey = `${selector}::${this.expectedToString(selectorSpec)}`;
@@ -379,7 +384,7 @@ export class HSQOLButtons extends HSModule {
         return gameData?.highestSingularityCount ?? 0;
     }
 
-    private isQuickbarToggleVisible(config: QuickbarToggleConfig, highestSingularityCount: number): boolean {
+    private isAutomationToggleVisible(config: AutomationQuickbarToggleConfig, highestSingularityCount: number): boolean {
         const minSingularity = config.minHighestSingularityCount;
         if (minSingularity === undefined) {
             return true;
@@ -387,7 +392,7 @@ export class HSQOLButtons extends HSModule {
         return highestSingularityCount >= minSingularity;
     }
 
-    private shouldApplySelectorVisibility(config: QuickbarToggleConfig): boolean {
+    private shouldApplyAutomationSelectorVisibility(config: AutomationQuickbarToggleConfig): boolean {
         // Threshold-gated toggles are shown/hidden only by singularity count.
         if (config.minHighestSingularityCount !== undefined) {
             return false;
@@ -395,8 +400,8 @@ export class HSQOLButtons extends HSModule {
         return config.selectorVisibility !== 'none';
     }
 
-    private shouldHideQuickbarWhenFullyEnabled(
-        config: QuickbarToggleConfig,
+    private shouldHideAutomationButtonWhenFullyEnabled(
+        config: AutomationQuickbarToggleConfig,
         highestSingularityCount: number,
         isFullyEnabled: boolean
     ): boolean {
@@ -409,7 +414,7 @@ export class HSQOLButtons extends HSModule {
         return highestSingularityCount >= minSingularity;
     }
 
-    private getVisibilityTargetElement(el: HTMLElement | null, config: QuickbarToggleConfig): HTMLElement | null {
+    private getVisibilityTargetElement(el: HTMLElement | null, config: AutomationQuickbarToggleConfig): HTMLElement | null {
         if (!el) return null;
         if (config.selectorVisibility === 'parent') {
             return el.parentElement;
@@ -417,10 +422,10 @@ export class HSQOLButtons extends HSModule {
         return el;
     }
 
-    private getVisibleAutomationElement(selectorSpec: AutomationSelectorSpec, config: QuickbarToggleConfig): HTMLElement | null {
+    private getVisibleAutomationElement(selectorSpec: AutomationSelectorSpec, config: AutomationQuickbarToggleConfig): HTMLElement | null {
         const el = this.getCachedAutomationElement(selectorSpec);
         if (!el) return null;
-        if (!this.shouldApplySelectorVisibility(config)) return el;
+        if (!this.shouldApplyAutomationSelectorVisibility(config)) return el;
 
         const visibilityTarget = this.getVisibilityTargetElement(el, config);
         return this.isElementVisibleInDom(visibilityTarget) ? el : null;
@@ -449,82 +454,20 @@ export class HSQOLButtons extends HSModule {
         HSLogger.log('Initialising HSQOLButtons module', this.context);
         this.observe();
         this.isInitialized = true;
-        const gameState = HSModuleManager.getModule('HSGameState') as HSGameState;
 
-        // Register a placeholder quickbar section immediately for instant injection
-        HSLogger.debug('[HSQOLButtons]: Registering placeholder quickbar section for instant injection', this.context);
-        const placeholder = document.createElement('div');
-        placeholder.id = 'automationQuickBar';
-        placeholder.textContent = 'Loading...';
-        HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => placeholder);
+        // Register tab visit handlers
+        this.subscribeToTabVisit(
+            SINGULARITY_VIEW.SHOP,
+            async () => { this.setMaxedGQUpgradesVisibility(); });
 
-        gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
-            if (currentView.getId() === SINGULARITY_VIEW.SHOP) {
-                setTimeout(() => {
-                    this.setGQButtonsVisibility();
-                }, 20);
-            }
-        });
+        this.subscribeToTabVisit(
+            SINGULARITY_VIEW.OCTERACTS,
+            async () => { this.setMaxedOctUpgradesVisibility(); });
 
-        gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
-            if (currentView.getId() === SINGULARITY_VIEW.OCTERACTS) {
-                setTimeout(() => {
-                    this.setOctButtonsVisibility();
-                }, 20);
-            }
-        });
-
-        gameState.subscribeGameStateChange<SingularityView>('SINGULARITY_VIEW', (previousView, currentView) => {
-            if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
-                setTimeout(() => {
-                    this.injectAmbrosiaSubtabButton();
-                }, 20);
-            }
-        });
-
-        // Apply visibility on load in case the user is already on the relevant tab
-        setTimeout(() => {
-            this.setGQButtonsVisibility();
-            this.setOctButtonsVisibility();
-        }, 50);
-
+        // Any settings-driven feature activation is handled by HSSettings.syncSettings().
+        // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
-
-        // Register and apply syn UI setting (show automation status bar)
-        try {
-            const existing = HSSettings.getSetting(HSQOLButtons.SYN_UI_SETTING_KEY) as HSSetting<boolean> | undefined;
-            if (!existing && (HSSettings as any).registerSetting) {
-                (HSSettings as any).registerSetting(HSQOLButtons.SYN_UI_SETTING_KEY, {
-                    name: 'Enable syn UI bar',
-                    description: 'Show automation status bar (syn UI) in header',
-                    type: 'boolean',
-                    value: true
-                });
-            }
-        } catch (e) {
-            HSLogger.log(`Register syn UI setting failed: ${e}`, this.context);
-        }
-
-        // Replace the placeholder with the real quickbar section as soon as possible
-        HSLogger.debug('[HSQOLButtons]: Replacing placeholder with real quickbar section', this.context);
-        HSQuickbarManager.getInstance().removeSection(this.#quickbarSectionId);
-        HSQuickbarManager.getInstance().registerSection(this.#quickbarSectionId, () => this.getAutomationQuickbarSection());
-        HSQuickbarManager.getInstance().injectSection(this.#quickbarSectionId); // Only update Automation section
-
-        // Synchronize with quickbar injection using promise-based API
-        HSQuickbarManager.getInstance().whenSectionInjected(this.#quickbarSectionId).then(() => {
-            this.automationQuickBarContainer = HSQuickbarManager.getInstance().getSection(this.#quickbarSectionId) as HTMLDivElement;
-            this.#setupAutomationQuickbar();
-        });
-
-        // --- Events Quickbar setup ---
-        HSQuickbarManager.getInstance().enableEventsQuickbar(
-            () => this.getEventsQuickbarSection(),
-            (section) => {
-                this.eventsQuickBarContainer = section as HTMLDivElement;
-                this.setupEventsQuickbarWrapper();
-            }
-        );
+        this.injectAFKSwapperToggleButton();
     }
 
     /** Returns a prepared Automation quickbar DOM node for the quickbarsRow. */
@@ -553,27 +496,6 @@ export class HSQOLButtons extends HSModule {
         this.#clearAutomationQuickBarWatchers();
     }
 
-    /** Build and inject quickbar column layout, returning the 3 column nodes. */
-    #createAutomationQuickbarColumns(container: HTMLDivElement): {
-        left: HTMLSpanElement;
-        center: HTMLSpanElement;
-        right: HTMLSpanElement;
-    } {
-        const left = document.createElement('span');
-        left.className = 'left';
-        const center = document.createElement('span');
-        center.className = 'center';
-        const right = document.createElement('span');
-        right.className = 'right';
-
-        container.innerHTML = '';
-        container.appendChild(left);
-        container.appendChild(center);
-        container.appendChild(right);
-
-        return { left, center, right };
-    }
-
     /** Apply initial UI state and wire mutation-driven refreshes. */
     #finalizeAutomationQuickbarSetup(updateUIState: () => void, requestUpdateUI: () => void): void {
         updateUIState();
@@ -593,13 +515,12 @@ export class HSQOLButtons extends HSModule {
         if (!this.automationQuickBarContainer) return;
 
         this.#resetAutomationQuickbarRuntime();
-        const { left } = this.#createAutomationQuickbarColumns(this.automationQuickBarContainer);
 
         // Each button registers an updater that runs in the shared RAF-batched refresh.
         // We pass highestSingularityCount once per cycle to avoid repeating lookups.
         const stateUpdaters: Array<(highestSingularityCount: number) => void> = [];
 
-        const setButtonState = (btn: HTMLButtonElement, targetsCount: number, allOn: boolean, allOff: boolean) => {
+        const setAutomationButtonState = (btn: HTMLButtonElement, targetsCount: number, allOn: boolean, allOff: boolean) => {
             btn.classList.remove('enabled', 'disabled', 'mixed');
             btn.disabled = targetsCount === 0;
             if (targetsCount === 0) {
@@ -618,20 +539,20 @@ export class HSQOLButtons extends HSModule {
             matcher: (el: HTMLElement | null) => boolean;
         }>>();
 
-        const getCompiledGroupSelectors = (selectors: readonly AutomationSelectorSpec[]) => {
+        const getAutomationCompiledGroupSelectors = (selectors: readonly AutomationSelectorSpec[]) => {
             const existing = compiledGroupSelectors.get(selectors);
             if (existing) return existing;
 
             const compiled = selectors.map(selectorSpec => ({
                 selectorSpec,
-                matcher: this.getCompiledSelectorMatcher(selectorSpec)
+                matcher: this.getCompiledAutomationSelectorMatcher(selectorSpec)
             }));
             compiledGroupSelectors.set(selectors, compiled);
             return compiled;
         };
 
-        const getGroupState = (selectors: readonly AutomationSelectorSpec[], config: GroupQuickbarConfig) => {
-            const compiledSelectors = getCompiledGroupSelectors(selectors);
+        const getAutomationGroupState = (selectors: readonly AutomationSelectorSpec[], config: AutomationQuickbarToggleConfig) => {
+            const compiledSelectors = getAutomationCompiledGroupSelectors(selectors);
 
             const targets = selectors
                 .map((selectorSpec, idx) => {
@@ -648,20 +569,20 @@ export class HSQOLButtons extends HSModule {
             return { targets, states, allOn, allOff };
         };
 
-        const updateUIState = () => {
+        const updateAutomationUIState = () => {
             const highestSingularityCount = this.getHighestSingularityCount();
             stateUpdaters.forEach(update => update(highestSingularityCount));
         };
 
-        const requestUpdateUI = () => this.queueAutomationQuickbarRender(updateUIState);
+        const requestAutomationUpdateUI = () => this.queueAutomationQuickbarRender(updateAutomationUIState);
 
-        const addQuickbarToggle = (toggleKey: keyof typeof HSQOLButtons.QUICKBAR_CONFIG) => {
-            const config = HSQOLButtons.QUICKBAR_CONFIG[toggleKey];
+        const addAutomationQuickbarToggle = (toggleKey: keyof typeof HSQOLButtons.AUTOMATION_QUICKBAR_CONFIG) => {
+            const config = HSQOLButtons.AUTOMATION_QUICKBAR_CONFIG[toggleKey];
 
-            if (config.kind === 'syn') {
+            if (config.kind === 'solo') {
                 const compiledChecks = config.checks.map(spec => ({
                     spec,
-                    matcher: this.getCompiledSelectorMatcher(spec)
+                    matcher: this.getCompiledAutomationSelectorMatcher(spec)
                 }));
 
                 const btn = document.createElement('button');
@@ -687,15 +608,15 @@ export class HSQOLButtons extends HSModule {
                     } else {
                         HSLogger.log(`Target element for ${toggleKey} not found: ${config.actionDOM}`, this.context);
                     }
-                    requestUpdateUI();
+                    requestAutomationUpdateUI();
                 });
 
                 stateUpdaters.push((highestSingularityCount) => {
-                    const meetsSingularityRequirement = this.isQuickbarToggleVisible(config, highestSingularityCount);
+                    const meetsSingularityRequirement = this.isAutomationToggleVisible(config, highestSingularityCount);
 
                     const visibleActionTarget = this.getVisibleAutomationElement(config.actionDOM, config);
                     const visibleCheckTargets = compiledChecks.map(({ spec }) => this.getVisibleAutomationElement(spec, config));
-                    const hasVisibleLinkedTarget = !this.shouldApplySelectorVisibility(config)
+                    const hasVisibleLinkedTarget = !this.shouldApplyAutomationSelectorVisibility(config)
                         || !!visibleActionTarget
                         || visibleCheckTargets.some((el): el is HTMLElement => !!el);
 
@@ -716,7 +637,7 @@ export class HSQOLButtons extends HSModule {
 
                     const enabled = checkStates.length > 0 && checkStates.every(Boolean);
 
-                    if (this.shouldHideQuickbarWhenFullyEnabled(config, highestSingularityCount, enabled)) {
+                    if (this.shouldHideAutomationButtonWhenFullyEnabled(config, highestSingularityCount, enabled)) {
                         btn.style.display = 'none';
                         btn.classList.remove('enabled', 'mixed');
                         btn.classList.add('disabled');
@@ -729,24 +650,24 @@ export class HSQOLButtons extends HSModule {
                     btn.disabled = checkStates.length === 0;
                 });
 
-                left.appendChild(btn);
+                this.automationQuickBarContainer?.appendChild(btn);
                 return;
             }
 
-            const btn = this.#createGroupButton(
+            const btn = this.#createAutomationGroupButton(
                 config.selectors,
                 config,
                 config.label,
                 config.label,
                 config.iconSrc,
-                requestUpdateUI
+                requestAutomationUpdateUI
             );
             btn.id = config.buttonId;
 
             stateUpdaters.push((highestSingularityCount) => {
-                const { targets, allOn, allOff } = getGroupState(config.selectors, config);
-                const meetsSingularityRequirement = this.isQuickbarToggleVisible(config, highestSingularityCount);
-                const hasVisibleLinkedTarget = !this.shouldApplySelectorVisibility(config) || targets.length > 0;
+                const { targets, allOn, allOff } = getAutomationGroupState(config.selectors, config);
+                const meetsSingularityRequirement = this.isAutomationToggleVisible(config, highestSingularityCount);
+                const hasVisibleLinkedTarget = !this.shouldApplyAutomationSelectorVisibility(config) || targets.length > 0;
 
                 btn.style.display = meetsSingularityRequirement && hasVisibleLinkedTarget ? '' : 'none';
 
@@ -757,7 +678,7 @@ export class HSQOLButtons extends HSModule {
                     return;
                 }
 
-                if (this.shouldHideQuickbarWhenFullyEnabled(config, highestSingularityCount, allOn)) {
+                if (this.shouldHideAutomationButtonWhenFullyEnabled(config, highestSingularityCount, allOn)) {
                     btn.style.display = 'none';
                     btn.classList.remove('enabled', 'mixed');
                     btn.classList.add('disabled');
@@ -765,17 +686,17 @@ export class HSQOLButtons extends HSModule {
                     return;
                 }
 
-                setButtonState(btn, targets.length, allOn, allOff);
+                setAutomationButtonState(btn, targets.length, allOn, allOff);
             });
 
-            left.appendChild(btn);
+            this.automationQuickBarContainer?.appendChild(btn);
         };
 
-        for (const item of HSQOLButtons.QUICKBAR_RENDER_ORDER) {
-            addQuickbarToggle(item);
+        for (const item of HSQOLButtons.AUTOMATION_QUICKBAR_RENDER_ORDER) {
+            addAutomationQuickbarToggle(item);
         }
 
-        this.#finalizeAutomationQuickbarSetup(updateUIState, requestUpdateUI);
+        this.#finalizeAutomationQuickbarSetup(updateAutomationUIState, requestAutomationUpdateUI);
     }
 
     #clearAutomationQuickBarWatchers(): void {
@@ -810,9 +731,9 @@ export class HSQOLButtons extends HSModule {
      * Create a combined group toggle button for a set of selectors.
      * Clicking toggles all targets on/off as a group.
      */
-    #createGroupButton(
+    #createAutomationGroupButton(
         selectors: readonly AutomationSelectorSpec[],
-        config: GroupQuickbarConfig,
+        config: AutomationQuickbarToggleConfig,
         title: string,
         ariaLabel: string,
         iconSrc: string,
@@ -820,7 +741,7 @@ export class HSQOLButtons extends HSModule {
     ): HTMLButtonElement {
         const compiledSelectors = selectors.map(selectorSpec => ({
             selectorSpec,
-            matcher: this.getCompiledSelectorMatcher(selectorSpec)
+            matcher: this.getCompiledAutomationSelectorMatcher(selectorSpec)
         }));
 
         const btn = document.createElement('button');
@@ -888,7 +809,7 @@ export class HSQOLButtons extends HSModule {
 
     private collectAutomationQuickbarSelectors(): string[] {
         const allSelectorSet = new Set<string>();
-        const configs = Object.values(HSQOLButtons.QUICKBAR_CONFIG) as readonly QuickbarToggleConfig[];
+        const configs = Object.values(HSQOLButtons.AUTOMATION_QUICKBAR_CONFIG) as readonly AutomationQuickbarToggleConfig[];
 
         for (const config of configs) {
             if (config.kind === 'group') {
@@ -957,33 +878,114 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-
+    /**
+     * Events quickbar lifecycle:
+     * - setup clears container, builds DOM once, wires state updaters.
+     * - teardown clears container and element refs.
+     * Repeated setup calls are safe and intentionally supported.
+     */
     #setupEventsQuickbar(): void {
         if (!this.eventsQuickBarContainer) return;
+        // Always clear previous DOM and refs
+        this.#resetEventsQuickbarRuntime();
+        this.createEventsQuickbarDOM();
+        this.updateEventsQuickbarDOM();
+    }
+
+    /** Reset events quickbar DOM and element refs. */
+    #resetEventsQuickbarRuntime(): void {
+        if (this.eventsQuickBarContainer) {
+            this.eventsQuickBarContainer.innerHTML = '';
+        }
+        this.eventsQuickBarElements = undefined;
+    }
+
+    private createEventsQuickbarDOM() {
+        if (!this.eventsQuickBarContainer) return;
+
+        // Bell span
+        const happyHourSpan = document.createElement('span');
+        happyHourSpan.id = 'events-quickbar-happy-hour-span';
+        happyHourSpan.style.cursor = 'help';
+
+        const happyHourAmountSpan = document.createElement('span');
+        happyHourSpan.appendChild(happyHourAmountSpan);
+
+        const happyHourImg = document.createElement('img');
+        happyHourImg.className = 'events-quickbar-event-img';
+        happyHourImg.src = 'Pictures/PseudoShop/HAPPY_HOUR_BELL.png';
+        happyHourSpan.appendChild(happyHourImg);
+
+        // Lotus span
+        const lotusSpan = document.createElement('span');
+        lotusSpan.id = 'events-quickbar-lotus-span';
+        lotusSpan.style.cursor = 'help';
+
+        const lotusImg = document.createElement('img');
+        lotusImg.className = 'events-quickbar-event-img';
+        lotusImg.src = 'Pictures/PseudoShop/LOTUS.png';
+        lotusSpan.appendChild(lotusImg);
+
+        // Store references
+        this.eventsQuickBarElements = {
+            happyHourSpan,
+            happyHourAmountSpan: happyHourAmountSpan,
+            lotusSpan
+        };
+
+        // Inject into container
+        this.eventsQuickBarContainer.innerHTML = '';
+        this.eventsQuickBarContainer.appendChild(happyHourSpan);
+        this.eventsQuickBarContainer.appendChild(lotusSpan);
+
+        HSLogger.debug(`Events quickbar DOM created`, this.context );
+    }
+
+    private updateEventsQuickbarDOM() {
+        if (!this.eventsQuickBarElements) return;
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const eventData = gameDataAPI?.getEventData();
+        const happyHourEvent = eventData?.HAPPY_HOUR_BELL;
+        const lotusEvent = eventData?.LOTUS_OF_REJUVENATION;
+        const happyHourAmount = happyHourEvent?.amount ?? 0;
 
-        const happyHourEvent = gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL;
-        const bellAmount = happyHourEvent?.amount ?? 0;
-
-        const bellSpan = document.createElement('span');
-        bellSpan.className = 'events-quickbar-bells';
+        // Build tooltip strings
+        let hhTooltipText = '';
         if (happyHourEvent?.ends && happyHourEvent.ends.length > 0) {
-            const endsTimes = happyHourEvent.ends
-                .map(e => new Date(e).toLocaleTimeString())
-                .join(', ');
-            bellSpan.title = `Ends at: ${endsTimes}`;
-            bellSpan.style.cursor = 'help';
-            HSLogger.log(`Events quickbar updated: ${bellAmount} Happy Hour bell ending at: ${endsTimes}`, this.context);
+            const hhEndsTimes = happyHourEvent.ends.map(e => new Date(e).toLocaleTimeString(undefined, { hour12: false })).join(', ');
+            hhTooltipText = `${happyHourAmount} HH ending at: ${hhEndsTimes}`;
         } else {
-            bellSpan.title = 'No active Happy Hour events';
-            bellSpan.classList.add('no-events');
-            HSLogger.log(`Events quickbar updated: No active Happy Hour events`, this.context);
+            hhTooltipText = 'No active HH event';
+        }
+        let lotusTooltipText = '';
+        if (lotusEvent?.ends && lotusEvent.ends.length > 0) {
+            const lotusEndTime = new Date(lotusEvent.ends[0]).toLocaleTimeString(undefined, { hour12: false });
+            lotusTooltipText = `Lotus until: ${lotusEndTime}`;
+        } else {
+            lotusTooltipText = 'No active Lotus event';
         }
 
-        bellSpan.innerHTML = `${bellAmount}\uD83D\uDD14`; // Bell icon
+        // Update DOM elements
+        const { happyHourSpan, happyHourAmountSpan, lotusSpan } = this.eventsQuickBarElements;
 
-        this.eventsQuickBarContainer.innerHTML = '';
-        this.eventsQuickBarContainer.appendChild(bellSpan);
+        happyHourSpan.title = hhTooltipText;
+        happyHourAmountSpan.textContent = `${happyHourAmount}`;
+        if (happyHourEvent?.ends?.length === 0) {
+            happyHourSpan.classList.add('no-event');
+        } else {
+            happyHourSpan.classList.remove('no-event');
+        }
+
+        lotusSpan.title = lotusTooltipText;
+        if (lotusEvent?.ends?.length === 0) {
+            lotusSpan.classList.add('hs-hidden');
+            // lotusSpan.classList.add('no-event');
+        } else {
+            lotusSpan.classList.remove('hs-hidden');
+            // lotusSpan.classList.remove('no-event');
+        }
+
+        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.context );
     }
 
     /** Cleanup observers/render queue/container for the events quickbar. */
@@ -992,13 +994,10 @@ export class HSQOLButtons extends HSModule {
             this.#eventsQuickbarUnsubscribe();
             this.#eventsQuickbarUnsubscribe = null;
         }
-        if (this.eventsQuickBarContainer) {
-            this.eventsQuickBarContainer.innerHTML = '';
-            this.eventsQuickBarContainer = null;
-        }
+        this.#resetEventsQuickbarRuntime();
+        this.eventsQuickBarContainer = null;
     }
     
-
     observe() {
         if (this.#offeringPotion) {
             this.#offeringPotionObserver.observe(this.#offeringPotion, this.#config);
@@ -1148,85 +1147,99 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    setGQButtonsVisibility(): void {
-        const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
-
-        if (hideMaxedGQUpgradesSetting.getValue()) {
-            this.#disableGQButtons();
-        } else {
-            this.#enableGQButtons();
-        }
-    }
-
-    setOctButtonsVisibility(): void {
+    public async setMaxedOctUpgradesVisibility(): Promise<void> {
         const hideMaxedOctUpgradesSetting = HSSettings.getSetting('hideMaxedOctUpgrades') as HSSetting<boolean>;
-
         if (hideMaxedOctUpgradesSetting.getValue()) {
-            this.#disableOctButtons();
+            await this.hideButtons<OcteractUpgradeKey>(
+                'singularityOcteracts',
+                '.octeractUpgrade',
+                (key) => octeractUpgradeMaxLevels[key]?.maxLevel,
+                (gameData, key) => gameData.octUpgrades[key]?.level ?? 0
+            );
         } else {
-            this.#enableOctButtons();
+            await this.#unhideButtons('singularityOcteracts', '.octeractUpgrade');
+        }
+    }
+    public async setMaxedGQUpgradesVisibility(): Promise<void> {
+        const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
+        if (hideMaxedGQUpgradesSetting.getValue()) {
+            await this.hideButtons<GoldenQuarkUpgradeKey>(
+                'actualSingularityUpgradeContainer',
+                '.singularityUpgrade',
+                (key) => goldenQuarkUpgradeMaxLevels[key]?.maxLevel,
+                (gameData, key) => gameData.goldenQuarkUpgrades[key]?.level ?? 0
+            );
+        } else {
+            await this.#unhideButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
         }
     }
 
-    #enableButtons(containerId: string, selector: string): void {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        const buttons = container.querySelectorAll<HTMLButtonElement>(selector);
-        buttons.forEach(button => button.style.display = '');
-    }
-
-    #enableOctButtons(): void {
-        this.#enableButtons('singularityOcteracts', '.octeractUpgrade');
-    }
-
-    #enableGQButtons(): void {
-        this.#enableButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
-    }
-
-    #disableOctButtons(): void {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!gameDataAPI) return;
-        const gameData = gameDataAPI.getGameData();
-        if (!gameData) return;
-
-        const container = document.getElementById('singularityOcteracts');
-        if (!container) return;
-
-        const buttons = Array.from(
-            container.querySelectorAll<HTMLElement>('.octeractUpgrade')
-        );
-
-        for (const button of buttons) {
-            const upgradeKey = button.id as OcteractUpgradeKey;
-            const maxLevel = octeractUpgradeMaxLevels[upgradeKey]?.maxLevel;
-            const currentLevel = gameData.octUpgrades[upgradeKey]?.level ?? 0;
-
-            if (maxLevel !== undefined && maxLevel !== -1 && currentLevel >= maxLevel) {
-                button.style.display = 'none';
-            } else {
-                button.style.display = '';
+    async #unhideButtons(containerId: string, selector: string): Promise<void> {
+        try {
+            const container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 5000);
+            // Wait for at least one matching button to exist
+            const start = performance.now();
+            const timeoutMs = 5000;
+            let buttons: NodeListOf<HTMLButtonElement> | null = null;
+            while (true) {
+                HSLogger.warn(`#unhideButtons: Waiting for buttons matching '${selector}' in #${containerId}...`, this.context);
+                buttons = container.querySelectorAll<HTMLButtonElement>(selector);
+                if (buttons.length > 0) {
+                    await new Promise(res => setTimeout(res, 100));
+                    break;
+                }
+                if (performance.now() - start > timeoutMs) {
+                    throw new Error(`No buttons matching '${selector}' found in #${containerId} after ${timeoutMs}ms`);
+                }
+                await new Promise(res => setTimeout(res, 100));
             }
+            buttons.forEach(button => button.style.display = '');
+        } catch (e) {
+            HSLogger.warn(`#unhideButtons: Could not find #${containerId} or matching buttons: ${e}`, this.context);
         }
     }
 
-    #disableGQButtons(): void {
+    private async hideButtons<TUpgradeKey extends string>(
+        containerId: string,
+        selector: string,
+        getMaxLevel: (key: TUpgradeKey) => number | undefined,
+        getCurrentLevel: (gameData: any, key: TUpgradeKey) => number,
+    ): Promise<void> {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
         const gameData = gameDataAPI.getGameData();
         if (!gameData) return;
 
-        const container = document.getElementById('actualSingularityUpgradeContainer');
-        if (!container) return;
+        let container: HTMLElement;
+        try {
+            container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 1000);
+        } catch (e) {
+            HSLogger.warn(`#hideButtons: Could not find #${containerId}: ${e}`, this.context);
+            return;
+        }
 
-        const buttons = Array.from(
-            container.querySelectorAll<HTMLElement>('.singularityUpgrade')
-        );
+        // Wait for at least one matching button to exist (robust to async DOM rendering)
+        const start = performance.now();
+        const timeoutMs = 1000;
+        let buttons: HTMLElement[] = [];
+        while (true) {
+            buttons = Array.from(container.querySelectorAll<HTMLElement>(selector));
+            if (buttons.length > 0) {
+                // Wait a bit more... and leave...
+                await new Promise(res => setTimeout(res, 100));
+                break;
+            }
+            if (performance.now() - start > timeoutMs) {
+                HSLogger.warn(`#hideButtons: No buttons matching '${selector}' found in #${containerId} after ${timeoutMs}ms`, this.context);
+                return;
+            }
+            await new Promise(res => setTimeout(res, 100));
+        }
 
         for (const button of buttons) {
-            const upgradeKey = button.id as GoldenQuarkUpgradeKey;
-            const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey]?.maxLevel;
-            const currentLevel = gameData.goldenQuarkUpgrades[upgradeKey]?.level ?? 0;
+            const upgradeKey = button.id as TUpgradeKey;
+            const maxLevel = getMaxLevel(upgradeKey);
+            const currentLevel = getCurrentLevel(gameData, upgradeKey);
 
             if (maxLevel !== undefined && maxLevel !== -1 && currentLevel >= maxLevel) {
                 button.style.display = 'none';
@@ -1544,19 +1557,8 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    /** Public wrapper to call the private setup method for Automation Quickbar. */
-    public setupAutomationQuickbarWrapper(): void {
-        this.#setupAutomationQuickbar();
-    }
-
-    /** Public wrapper to cleanup observers/raf for Automation Quickbar. */
-    public teardownAutomationQuickbarWrapper(): void {
-        this.#teardownAutomationQuickbar();
-    }
-
-    /** Public wrapper to call the private setup method for Events Quickbar. */
-    public setupEventsQuickbarWrapper(): void {
-        this.#setupEventsQuickbar();
+    // Internal: Setup event data subscription for Events Quickbar
+    #setupEventsQuickbarSubscription(): void {
         if (this.#eventsQuickbarUnsubscribe) {
             HSLogger.debug('Events Quickbar is already subscribed to event data changes', this.context);
             return;
@@ -1564,102 +1566,170 @@ export class HSQOLButtons extends HSModule {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (gameDataAPI && typeof gameDataAPI.subscribeEventDataChange === 'function') {
             this.#eventsQuickbarUnsubscribe = gameDataAPI.subscribeEventDataChange(() => {
-                this.#setupEventsQuickbar();
+                this.updateEventsQuickbarDOM();
             }) ?? null;
             HSLogger.debug('Subscribed to event data changes for Events Quickbar', this.context);
         }
     }
 
-    /** Public wrapper to cleanup observers/raf for Events Quickbar. */
-    public teardownEventsQuickbarWrapper(): void {
-        this.#teardownEventsQuickbar();
+    // Internal: Cleanup event data subscription for Events Quickbar
+    #cleanupEventsQuickbarSubscription(): void {
+        if (this.#eventsQuickbarUnsubscribe) {
+            this.#eventsQuickbarUnsubscribe();
+            this.#eventsQuickbarUnsubscribe = null;
+            HSLogger.debug('Unsubscribed from event data changes for Events Quickbar', this.context);
+        }
     }
 
-    /**
-     * Public method to enable the automation quickbar using HSQuickbarManager.
-     * This delegates registration/injection to HSQuickbarManager and ensures
-     * the module's setup runs once the section is injected.
-     */
+    /** Public wrapper to enable the Automation Quickbar. */
     public enableAutomationQuickbar(): void {
-        HSLogger.debug('Enabling Automation Quickbar', this.context);
-        HSQuickbarManager.getInstance().enableAutomationQuickbar(() => this.getAutomationQuickbarSection(), (section) => {
-            this.automationQuickBarContainer = section as HTMLDivElement;
-            this.setupAutomationQuickbarWrapper();
-        });
+        this.enableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
+            () => this.getAutomationQuickbarSection(),
+            () => this.#setupAutomationQuickbar(),
+            (el) => { this.automationQuickBarContainer = el as HTMLDivElement; }
+        );
     }
 
-    /**
-     * Public method to disable the automation quickbar using HSQuickbarManager.
-     * This triggers module teardown and removes the section from the manager.
-     */
-    public disableAutomationQuickbar(): void {
-        HSLogger.debug('Disabling Automation Quickbar', this.context);
-        this.teardownAutomationQuickbarWrapper();
-        HSQuickbarManager.getInstance().disableAutomationQuickbar();
-    }
-
-    /**
-     * Public method to enable the events quickbar using HSQuickbarManager.
-     * This delegates registration/injection to HSQuickbarManager and ensures
-     * the module's setup runs once the section is injected.
-     */
+    /** Public wrapper to enable the Events Quickbar. */
     public enableEventsQuickbar(): void {
-        HSLogger.debug('Enabling Events Quickbar', this.context);
-        HSQuickbarManager.getInstance().enableEventsQuickbar(() => this.getEventsQuickbarSection(), (section) => {
-            this.eventsQuickBarContainer = section as HTMLDivElement;
-            this.setupEventsQuickbarWrapper();
-        });
+        this.#cleanupEventsQuickbarSubscription();
+        this.enableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.EVENTS,
+            () => this.getEventsQuickbarSection(),
+            () => {
+                this.#setupEventsQuickbar();
+                this.#setupEventsQuickbarSubscription();
+            },
+            (el) => { this.eventsQuickBarContainer = el as HTMLDivElement; }
+        );
+    }
+
+    /** Public wrapper to disable the Automation Quickbar. */
+    public disableAutomationQuickbar(): void {
+        this.disableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
+            () => this.#teardownAutomationQuickbar()
+        );
+    }
+
+    /** Public wrapper to disable the Events Quickbar. */
+    public disableEventsQuickbar(): void {
+        this.disableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.EVENTS,
+            () => {
+                this.#teardownEventsQuickbar();
+                this.#cleanupEventsQuickbarSubscription();
+            }
+        );
     }
 
     /**
-     * Public method to disable the events quickbar using HSQuickbarManager.
-     * This triggers module teardown and removes the section from the manager.
+     * Generic method to enable a quickbar using HSQuickbarManager.
+     * @param id - The quickbar ID (use HSQuickbarManager.QUICKBAR_IDS)
+     * @param factory - Factory function to create the quickbar section
+     * @param setupCallback - Optional setup callback after injection
+     * @param containerSetter - Optional setter for the quickbar container
      */
-    public disableEventsQuickbar(): void {
-        HSLogger.debug('Disabling Events Quickbar', this.context);
-        this.teardownEventsQuickbarWrapper();
-        HSQuickbarManager.getInstance().disableEventsQuickbar();
+    private enableQuickbar(
+        id: QUICKBAR_ID,
+        factory: () => HTMLElement,
+        setupCallback?: () => void,
+        containerSetter?: (el: HTMLElement) => void
+    ): void {
+        HSLogger.debug(`Enabling Quickbar: ${id}`, this.context);
+        HSQuickbarManager.getInstance().enableQuickbar(
+            id,
+            factory,
+            (section) => {
+                if (containerSetter) containerSetter(section);
+                if (setupCallback) setupCallback();
+            }
+        );
     }
 
-    /** Injects a custom button into the Ambrosia subtab when active. */
-    public injectAmbrosiaSubtabButton(): void {
+    /**
+     * Generic method to disable a quickbar using HSQuickbarManager.
+     * @param id - The quickbar ID (use HSQuickbarManager.QUICKBAR_IDS)
+     * @param teardownCallback - Optional teardown callback before removal
+     */
+    private disableQuickbar(
+        id: QUICKBAR_ID,
+        teardownCallback?: () => void
+    ): void {
+        HSLogger.debug(`Disabling Quickbar: ${id}`, this.context);
+        if (teardownCallback) teardownCallback();
+        HSQuickbarManager.getInstance().disableQuickbar(id);
+    }
+
+    /**
+     * Injects a custom button into the Ambrosia subtab when active, waiting for DOM readiness.
+     */
+    public async injectAFKSwapperToggleButton(): Promise<void> {
         if (document.getElementById('hs-ambrosia-loadout-idle-swap-toggle')) return;
-        const parent = document.querySelector('#singularityAmbrosia') as HTMLElement;
-        const child = document.querySelector('#ambrosiaProgressBar') as HTMLElement;
-        if (!parent || !child) return;
+        try {
+            const parent = await HSUtils.waitForElement<HTMLElement>('#singularityAmbrosia', 1000);
+            const child = await HSUtils.waitForElement<HTMLElement>('#ambrosiaProgressBar', 1000);
+            const afkSwapperToggle = document.createElement('button');
+            afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
+            afkSwapperToggle.textContent = 'Toggle AFK Swapper';
 
-        const afkSwapperToggle = document.createElement('button');
-        afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
-        afkSwapperToggle.textContent = 'Toggle AFK Swapper';
+            afkSwapperToggle.addEventListener('click', () => {
+                const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
+                if (idleSwapToggle) {
+                    idleSwapToggle.click();
+                }
+            });
 
-        afkSwapperToggle.addEventListener('click', () => {
-            HSLogger.log('AFK Swapper button clicked', this.context);
-            const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
-            if (idleSwapToggle) {
-                idleSwapToggle.click();
-                HSLogger.log(`ambrosiaIdleSwap toggled via quick menu`, this.context);
+            HSUI.injectHTMLElement(afkSwapperToggle, (element) => {
+                parent.insertBefore(element, child);
+            });
+        } catch (e) {
+            HSLogger.warn(`injectAFKSwapperToggleButton: Could not find required elements: ${e}`, this.context);
+        }
+    }
+
+    /**
+     * DRY helper: subscribe to a SINGULARITY_VIEW tab visit and run a callback.
+     * Deduplicates subscriptions per tab. Returns an unsubscribe function.
+     */
+    private subscribeToTabVisit(
+        tabId: SINGULARITY_VIEW,
+        onTabVisit: () => void
+    ): (() => void) | undefined {
+        const gameState = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (!gameState) return;
+
+        // If a subscription for this tab already exists, unsubscribe it first
+        const oldUnsub = this.#tabVisitUnsubscribers.get(tabId);
+        if (oldUnsub) {
+            try {
+                oldUnsub();
+                HSLogger.debug(`subscribeToTabVisit: Unsubscribed previous handler for tab ${tabId}`, this.context);
+            } catch (e) {
+                HSLogger.warn(`subscribeToTabVisit: Error unsubscribing previous handler for tab ${tabId}: ${e}`, this.context);
             }
-        });
+        }
 
-        HSUI.injectHTMLElement(afkSwapperToggle, (element) => {
-            parent.insertBefore(element, child);
-        });
-
-        HSUI.injectStyle(`
-            button#hs-ambrosia-loadout-idle-swap-toggle {
-            margin-bottom: 10px;
-            font-family: fantasy;
-            letter-spacing: 3px;
-            border: 2px solid;
-            padding: 10px 20px;
-            font-size: 1.1em;
-            font-weight: 500;
-            cursor: pointer;
-            background: #774ed1;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+        const subId = gameState.subscribeGameStateChange<SingularityView>(
+            'SINGULARITY_VIEW',
+            (prev, curr) => {
+                if (curr.getId() === tabId) {
+                    setTimeout(onTabVisit, 20);
+                }
             }
-        `);
+        );
+        if (subId) {
+            const unsubscribe = () => gameState.unsubscribeGameStateChange('SINGULARITY_VIEW', subId);
+            this.#tabVisitUnsubscribers.set(tabId, unsubscribe);
+            HSLogger.debug(`subscribeToTabVisit: Subscribed to SINGULARITY_VIEW changes for tab ${tabId}`, this.context);
+            return unsubscribe;
+        } else {
+            HSLogger.warn(`subscribeToTabVisit: Failed to subscribe to SINGULARITY_VIEW changes for tab ${tabId}`, this.context);
+            this.#tabVisitUnsubscribers.delete(tabId);
+            return;
+        }
     }
 }
+
+

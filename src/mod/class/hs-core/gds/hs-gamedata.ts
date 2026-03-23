@@ -79,8 +79,7 @@ export class HSGameData extends HSModule {
     // --- Game Events ---
     #gameEvents: ConsumableGameEvents = {
         HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: "Happy Hour Bell" },
-        LOTUS_OF_REJUVENATION: { amount: 0, ends: [], displayName: "Lotus of Rejuvenation" },
-        CUSTOM_EVENT: { amount: 0, ends: [], displayName: "Custom/unknown Event" }
+        LOTUS_OF_REJUVENATION: { amount: 0, ends: [], displayName: "Lotus of Rejuvenation" }
     };
 
     // --- Miscellaneous ---
@@ -329,14 +328,10 @@ export class HSGameData extends HSModule {
                             if (msg.active && msg.active.length > 0) {
                                 HSLogger.debug(`Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
                                 for (const { internalName, endsAt, name } of msg.active) {
-                                    const eventKey = internalName as keyof ConsumableGameEvents;
-                                    const consumable = self.#gameEvents[eventKey] ?? self.#gameEvents[GameEventID.CUSTOM_EVENT];
+                                    const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
                                     consumable.ends.push(endsAt);
                                     consumable.amount++;
                                     consumable.displayName = name;
-                                    if (consumable === self.#gameEvents[GameEventID.CUSTOM_EVENT]) {
-                                        HSLogger.warn(`Custom/Unknown event: ${internalName}`, this.context);
-                                    }
                                 }
                                 self.#eventDataUpdated();
                             } else {

@@ -6,13 +6,10 @@ import { HSLogger } from "../hs-logger";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
-import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
-import { HSUI } from "../hs-ui";
-import { HSQuickbarManager } from '../../hs-modules/hs-quickbarManager';
 /*
     Class: HSSettingActions
     IsExplicitHSModule: No
@@ -225,7 +222,7 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
-                qolButtonsMod.setGQButtonsVisibility();
+                qolButtonsMod.setMaxedGQUpgradesVisibility();
             }
         },
 
@@ -233,7 +230,7 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
-                qolButtonsMod.setOctButtonsVisibility();
+                qolButtonsMod.setMaxedOctUpgradesVisibility();
             }
         },
 
