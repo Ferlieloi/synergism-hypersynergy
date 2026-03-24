@@ -49,106 +49,106 @@ type ChallengeAccessor = {
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 
-    private gameDataAPI?: HSGameDataAPI;
-    private gameDataResolver?: (value: void) => void;
+    #gameDataAPI?: HSGameDataAPI;
+    #gameDataResolver?: (value: void) => void;
 
-    private strategy?: HSAutosingStrategy;
-    private loadoutByName: Map<string, CorruptionLoadout> = new Map();
-    private autosingEnabled = false;
-    private targetSingularity = 0;
-    private sleepTime = 10;
-    private prevActionTime: number = 0;
-    private stopAtSingularitysEnd: boolean = false;
-    private hasWarnedMissingStageFunc: boolean = false;
-    private storedC15: Decimal = new Decimal(0);
-    private challengeAccessors: Record<number, ChallengeAccessor> = {};
-    private hsSettingsToRestore: string[] = [];
-    private previousQuarkAmount: number = 0;
-    private previousGoldenQuarkAmount: number = 0;
+    #strategy?: HSAutosingStrategy;
+    #loadoutByName: Map<string, CorruptionLoadout> = new Map();
+    #autosingEnabled = false;
+    #targetSingularity = 0;
+    #sleepTime = 10;
+    #prevActionTime: number = 0;
+    #stopAtSingularitysEnd: boolean = false;
+    #hasWarnedMissingStageFunc: boolean = false;
+    #storedC15: Decimal = new Decimal(0);
+    #challengeAccessors: Record<number, ChallengeAccessor> = {};
+    #hsSettingsToRestore: string[] = [];
+    #previousQuarkAmount: number = 0;
+    #previousGoldenQuarkAmount: number = 0;
 
     // DOM Elements - Settings & UI
-    private settingsTab!: HTMLButtonElement;
-    private settingsSubTab!: HTMLButtonElement;
-    private misc!: HTMLButtonElement;
-    private stage!: HTMLParagraphElement;
+    #settingsTab!: HTMLButtonElement;
+    #settingsSubTab!: HTMLButtonElement;
+    #misc!: HTMLButtonElement;
+    #stage!: HTMLParagraphElement;
 
     // DOM Elements - Challenges
-    private challengeButtons: Record<number, HTMLButtonElement> = {};
-    private levelElements: Record<number, HTMLParagraphElement> = {};
+    #challengeButtons: Record<number, HTMLButtonElement> = {};
+    #levelElements: Record<number, HTMLParagraphElement> = {};
 
     // DOM Elements - Challenge Actions
-    private exitTranscBtn!: HTMLButtonElement;
-    private exitReincBtn!: HTMLButtonElement;
-    private exitAscBtn!: HTMLButtonElement;
-    private ascendBtn!: HTMLButtonElement;
+    #exitTranscBtn!: HTMLButtonElement;
+    #exitReincBtn!: HTMLButtonElement;
+    #exitAscBtn!: HTMLButtonElement;
+    #ascendBtn!: HTMLButtonElement;
 
     // DOM Elements - Elevator & Navigation
-    private elevatorTeleportButton!: HTMLButtonElement;
-    private elevatorInput!: HTMLInputElement;
+    #elevatorTeleportButton!: HTMLButtonElement;
+    #elevatorInput!: HTMLInputElement;
 
     // DOM Elements - Auto Toggles
-    private autoChallengeButton!: HTMLButtonElement;
-    private autoAntSacrificeButton!: HTMLButtonElement;
-    private autoAscendButton!: HTMLButtonElement;
+    #autoChallengeButton!: HTMLButtonElement;
+    #autoAntSacrificeButton!: HTMLButtonElement;
+    #autoAscendButton!: HTMLButtonElement;
 
     // DOM Elements - Heptract Auto-Buy
-    private chronosHeptAutoBuyBtn!: HTMLButtonElement;
-    private hyperHeptAutoBuyBtn!: HTMLButtonElement;
-    private quarkHeptAutoBuyBtn!: HTMLButtonElement;
-    private challHeptAutoBuyBtn!: HTMLButtonElement;
-    private abyssHeptAutoBuyBtn!: HTMLButtonElement;
-    private accelHeptAutoBuyBtn!: HTMLButtonElement;
-    private boostHeptAutoBuyBtn!: HTMLButtonElement;
-    private multHeptAutoBuyBtn!: HTMLButtonElement;
-    private orbsAutoBuyBtn!: HTMLButtonElement;
+    #chronosHeptAutoBuyBtn!: HTMLButtonElement;
+    #hyperHeptAutoBuyBtn!: HTMLButtonElement;
+    #quarkHeptAutoBuyBtn!: HTMLButtonElement;
+    #challHeptAutoBuyBtn!: HTMLButtonElement;
+    #abyssHeptAutoBuyBtn!: HTMLButtonElement;
+    #accelHeptAutoBuyBtn!: HTMLButtonElement;
+    #boostHeptAutoBuyBtn!: HTMLButtonElement;
+    #multHeptAutoBuyBtn!: HTMLButtonElement;
+    #orbsAutoBuyBtn!: HTMLButtonElement;
 
     // DOM Elements - Ambrosia Loadouts
-    private ambrosia_early_cube!: HTMLButtonElement;
-    private ambrosia_late_cube!: HTMLButtonElement;
-    private ambrosia_quark!: HTMLButtonElement;
-    private ambrosia_obt!: HTMLButtonElement;
-    private ambrosia_off!: HTMLButtonElement;
-    private ambrosia_luck!: HTMLButtonElement;
+    #ambrosia_early_cube!: HTMLButtonElement;
+    #ambrosia_late_cube!: HTMLButtonElement;
+    #ambrosia_quark!: HTMLButtonElement;
+    #ambrosia_obt!: HTMLButtonElement;
+    #ambrosia_off!: HTMLButtonElement;
+    #ambrosia_luck!: HTMLButtonElement;
 
     // DOM Elements - Misc
-    private antSacrifice!: HTMLButtonElement;
-    private coin!: HTMLButtonElement;
-    private AOAG!: HTMLButtonElement;
-    private exalt2Btn!: HTMLButtonElement;
-    private exaltTimer!: HTMLSpanElement;
-    private importBtn!: HTMLButtonElement;
-    private saveType!: HTMLInputElement;
-    private exportBtn!: HTMLButtonElement;
-    private exportBtnClone?: HTMLButtonElement;
+    #antSacrifice!: HTMLButtonElement;
+    #coin!: HTMLButtonElement;
+    #AOAG!: HTMLButtonElement;
+    #exalt2Btn!: HTMLButtonElement;
+    #exaltTimer!: HTMLSpanElement;
+    #importBtn!: HTMLButtonElement;
+    #saveType!: HTMLInputElement;
+    #exportBtn!: HTMLButtonElement;
+    #exportBtnClone?: HTMLButtonElement;
 
     // DOM Elements - Corruptions
-    private corrCurrent: Record<string, HTMLElement | null> = {};
-    private corrNext: Record<string, HTMLElement | null> = {};
-    private corruptionPromptInput!: HTMLInputElement;
-    private corruptionPromptOkBtn!: HTMLButtonElement;
-    private addCodeAllBtn!: HTMLButtonElement;
-    private timeCodeBtn!: HTMLButtonElement;
+    #corrCurrent: Record<string, HTMLElement | null> = {};
+    #corrNext: Record<string, HTMLElement | null> = {};
+    #corruptionPromptInput!: HTMLInputElement;
+    #corruptionPromptOkBtn!: HTMLButtonElement;
+    #addCodeAllBtn!: HTMLButtonElement;
+    #timeCodeBtn!: HTMLButtonElement;
 
     // DOM Elements - Antiquities
-    private antiquitiesRuneLockedContainer!: HTMLDivElement;
+    #antiquitiesRuneLockedContainer!: HTMLDivElement;
 
     // State Management
-    private endStageDone: boolean = false;
-    private observerActivated: boolean = false;
-    private endStagePromise?: Promise<void>;
-    private endStageResolve?: () => void;
-    private antiquitiesObserver?: MutationObserver;
+    #endStageDone: boolean = false;
+    #observerActivated: boolean = false;
+    #endStagePromise?: Promise<void>;
+    #endStageResolve?: () => void;
+    #antiquitiesObserver?: MutationObserver;
 
     // Module References
-    private stageFunc!: (arg0: number) => any;
-    private gamestate!: HSGameState;
+    #stageFunc?: (arg0: number) => any;
+    #gamestate!: HSGameState;
 
-    private autosingModal?: HSAutosingModal;
+    #autosingModal?: HSAutosingModal;
 
     // Strategy Caches
-    private readonly phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
-    private strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
-    private finalPhaseConfig?: AutosingStrategyPhase;
+    readonly #phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
+    #strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
+    #finalPhaseConfig?: AutosingStrategyPhase;
 
     // ============================================================================
     // INITIALIZATION
@@ -158,97 +158,97 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
 
-        this.autosingEnabled = false;
-        this.targetSingularity = 0;
-        this.cacheSettingsElements();
-        this.cacheChallengeElements();
-        this.cacheButtonElements();
-        this.cacheCorruptionElements();
-        this.cacheMiscElements();
+        this.#autosingEnabled = false;
+        this.#targetSingularity = 0;
+        this.#cacheSettingsElements();
+        this.#cacheChallengeElements();
+        this.#cacheButtonElements();
+        this.#cacheCorruptionElements();
+        this.#cacheMiscElements();
 
         this.isInitialized = true;
         HSLogger.log(`HSAutosing module initialized`, this.context);
         return Promise.resolve();
     }
 
-    private cacheSettingsElements(): void {
-        this.settingsTab = document.getElementById('settingstab') as HTMLButtonElement;
-        this.settingsSubTab = document.getElementById('switchSettingSubTab4') as HTMLButtonElement;
-        this.misc = document.getElementById('kMisc') as HTMLButtonElement;
-        this.stage = document.getElementById('gameStageStatistic') as HTMLParagraphElement;
+    #cacheSettingsElements(): void {
+        this.#settingsTab = document.getElementById('settingstab') as HTMLButtonElement;
+        this.#settingsSubTab = document.getElementById('switchSettingSubTab4') as HTMLButtonElement;
+        this.#misc = document.getElementById('kMisc') as HTMLButtonElement;
+        this.#stage = document.getElementById('gameStageStatistic') as HTMLParagraphElement;
     }
 
-    private cacheChallengeElements(): void {
+    #cacheChallengeElements(): void {
         for (let i = 1; i <= 15; i++) {
             const btn = document.getElementById(`challenge${i}`) as HTMLButtonElement;
-            if (btn) this.challengeButtons[i] = btn;
+            if (btn) this.#challengeButtons[i] = btn;
 
             const el = document.getElementById(`challenge${i}level`) as HTMLParagraphElement;
-            if (el) this.levelElements[i] = el;
+            if (el) this.#levelElements[i] = el;
         }
-        this.buildChallengeAccessors();
+        this.#buildChallengeAccessors();
     }
 
-    private cacheButtonElements(): void {
-        this.exitTranscBtn = document.getElementById('challengebtn') as HTMLButtonElement;
-        this.exitReincBtn = document.getElementById('reincarnatechallengebtn') as HTMLButtonElement;
-        this.exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
-        this.ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
-        this.autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
-        this.autoAntSacrificeButton = document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement;
-        this.autoAscendButton = document.getElementById('ascensionAutoEnable') as HTMLButtonElement;
-        this.antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
-        this.coin = document.getElementById('buycoin1') as HTMLButtonElement;
-        this.AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
-        this.exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
-        this.exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
-        this.elevatorTeleportButton = document.getElementById('elevatorTeleportButton') as HTMLButtonElement;
-        this.elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
-        this.importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
+    #cacheButtonElements(): void {
+        this.#exitTranscBtn = document.getElementById('challengebtn') as HTMLButtonElement;
+        this.#exitReincBtn = document.getElementById('reincarnatechallengebtn') as HTMLButtonElement;
+        this.#exitAscBtn = document.getElementById('ascendChallengeBtn') as HTMLButtonElement;
+        this.#ascendBtn = document.getElementById('ascendbtn') as HTMLButtonElement;
+        this.#autoChallengeButton = document.getElementById('toggleAutoChallengeStart') as HTMLButtonElement;
+        this.#autoAntSacrificeButton = document.getElementById('toggleAutoSacrificeAnt') as HTMLButtonElement;
+        this.#autoAscendButton = document.getElementById('ascensionAutoEnable') as HTMLButtonElement;
+        this.#antSacrifice = document.getElementById(`antSacrifice`) as HTMLButtonElement;
+        this.#coin = document.getElementById('buycoin1') as HTMLButtonElement;
+        this.#AOAG = document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement;
+        this.#exalt2Btn = document.getElementById('oneChallengeCap') as HTMLButtonElement;
+        this.#exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
+        this.#elevatorTeleportButton = document.getElementById('elevatorTeleportButton') as HTMLButtonElement;
+        this.#elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
+        this.#importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
     }
 
-    private cacheHeptractButtons(): void {
-        this.chronosHeptAutoBuyBtn = document.getElementById('chronosHepteractAuto') as HTMLButtonElement;
-        this.hyperHeptAutoBuyBtn = document.getElementById('hyperrealismHepteractAuto') as HTMLButtonElement;
-        this.quarkHeptAutoBuyBtn = document.getElementById('quarkHepteractAuto') as HTMLButtonElement;
-        this.challHeptAutoBuyBtn = document.getElementById('challengeHepteractAuto') as HTMLButtonElement;
-        this.abyssHeptAutoBuyBtn = document.getElementById('abyssHepteractAuto') as HTMLButtonElement;
-        this.accelHeptAutoBuyBtn = document.getElementById('acceleratorHepteractAuto') as HTMLButtonElement;
-        this.boostHeptAutoBuyBtn = document.getElementById('acceleratorBoostHepteractAuto') as HTMLButtonElement;
-        this.multHeptAutoBuyBtn = document.getElementById('multiplierHepteractAuto') as HTMLButtonElement;
-        this.orbsAutoBuyBtn = document.getElementById('hepteractToQuarkTradeAuto') as HTMLButtonElement;
+    #cacheHeptractButtons(): void {
+        this.#chronosHeptAutoBuyBtn = document.getElementById('chronosHepteractAuto') as HTMLButtonElement;
+        this.#hyperHeptAutoBuyBtn = document.getElementById('hyperrealismHepteractAuto') as HTMLButtonElement;
+        this.#quarkHeptAutoBuyBtn = document.getElementById('quarkHepteractAuto') as HTMLButtonElement;
+        this.#challHeptAutoBuyBtn = document.getElementById('challengeHepteractAuto') as HTMLButtonElement;
+        this.#abyssHeptAutoBuyBtn = document.getElementById('abyssHepteractAuto') as HTMLButtonElement;
+        this.#accelHeptAutoBuyBtn = document.getElementById('acceleratorHepteractAuto') as HTMLButtonElement;
+        this.#boostHeptAutoBuyBtn = document.getElementById('acceleratorBoostHepteractAuto') as HTMLButtonElement;
+        this.#multHeptAutoBuyBtn = document.getElementById('multiplierHepteractAuto') as HTMLButtonElement;
+        this.#orbsAutoBuyBtn = document.getElementById('hepteractToQuarkTradeAuto') as HTMLButtonElement;
     }
 
-    private cacheCorruptionElements(): void {
-        this.corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
-        this.corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
-        this.addCodeAllBtn = document.getElementById("addCodeAll") as HTMLButtonElement;
-        this.timeCodeBtn = document.getElementById("timeCode") as HTMLButtonElement;
+    #cacheCorruptionElements(): void {
+        this.#corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
+        this.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
+        this.#addCodeAllBtn = document.getElementById("addCodeAll") as HTMLButtonElement;
+        this.#timeCodeBtn = document.getElementById("timeCode") as HTMLButtonElement;
 
         const corrNames = ["viscosity", "drought", "deflation", "extinction", "illiteracy", "recession", "dilation", "hyperchallenge"];
         corrNames.forEach(name => {
-            this.corrCurrent[name] = document.getElementById(`corrCurrent${name}`);
-            this.corrNext[name] = document.getElementById(`corrNext${name}`);
+            this.#corrCurrent[name] = document.getElementById(`corrCurrent${name}`);
+            this.#corrNext[name] = document.getElementById(`corrNext${name}`);
         });
     }
 
-    private cacheMiscElements(): void {
-        this.endStageDone = false;
-        this.observerActivated = false;
-        this.stageFunc = (window as any).__HS_synergismStage;
-        this.antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
-        this.gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
-        this.saveType = document.getElementById('saveType') as HTMLInputElement;
-        this.exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
-        this.exportBtnClone = this.exportBtn ? (this.exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
+    #cacheMiscElements(): void {
+        this.#endStageDone = false;
+        this.#observerActivated = false;
+        this.#stageFunc = (window as any).__HS_synergismStage;
+        this.#antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
+        this.#gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
+        this.#saveType = document.getElementById('saveType') as HTMLInputElement;
+        this.#exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
+        this.#exportBtnClone = this.#exportBtn ? (this.#exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
 
-        if (this.exportBtnClone && (window as any).__HS_EXPORT_EXPOSED) {
-            this.setupExportButtonClone();
+        if (this.#exportBtnClone && (window as any).__HS_EXPORT_EXPOSED) {
+            this.#setupExportButtonClone();
         }
     }
 
-    private setupExportButtonClone(): void {
-        this.exportBtnClone!.addEventListener(
+    #setupExportButtonClone(): void {
+        this.#exportBtnClone!.addEventListener(
             'click',
             () => {
                 const hasExportHook = Object.prototype.hasOwnProperty.call(window, "__HS_exportData")
@@ -270,15 +270,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // ============================================================================
 
     isAutosingEnabled(): boolean {
-        return this.autosingEnabled;
+        return this.#autosingEnabled;
     }
 
     setStopAtSingularitysEnd(value: boolean): void {
-        this.stopAtSingularitysEnd = value;
+        this.#stopAtSingularitysEnd = value;
     }
 
     getStopAtSingularitysEnd(): boolean {
-        return this.stopAtSingularitysEnd;
+        return this.#stopAtSingularitysEnd;
     }
 
     // ============================================================================
@@ -303,9 +303,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     gameDataCallback(): Promise<void> {
-        if (this.gameDataResolver) {
-            this.gameDataResolver();
-            this.gameDataResolver = undefined;
+        if (this.#gameDataResolver) {
+            this.#gameDataResolver();
+            this.#gameDataResolver = undefined;
         }
         return Promise.resolve();
     }
@@ -321,57 +321,57 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        if (this.isInExalt()) {
+        if (this.#isInExalt()) {
             HSUI.Notify("Cannot start Auto-Sing while inside a singularity challenge.", { notificationType: "warning" });
             this.stopAutosing();
             return;
         }
 
-        this.autosingEnabled = true;
-        this.stopAtSingularitysEnd = false;
-        this.endStagePromise = undefined;
+        this.#autosingEnabled = true;
+        this.#stopAtSingularitysEnd = false;
+        this.#endStagePromise = undefined;
 
-        if (!await this.validateAutosingSetup()) {
+        if (!await this.#validateAutosingSetup()) {
             this.stopAutosing();
             return;
         }
 
-        this.gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        await this.gameDataAPI?.prepareForAutosing(); 
-        const gameData = await this.gameDataAPI?.getForcedGameData(); 
+        this.#gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        await this.#gameDataAPI?.prepareForAutosing(); 
+        const gameData = await this.#gameDataAPI?.getForcedGameData(); 
 
-        if (!await this.validateSingularityRequirements(gameData)) {
+        if (!await this.#validateSingularityRequirements(gameData)) {
             this.stopAutosing();
             return;
         }
 
-        const strategy = await this.loadStrategy();
+        const strategy = await this.#loadStrategy();
         if (!strategy) {
             this.stopAutosing();
             return;
         }
 
-        this.strategy = strategy;
-        this.rebuildStrategyPhaseCaches();
-        this.buildLoadoutCache();
+        this.#strategy = strategy;
+        this.#rebuildStrategyPhaseCaches();
+        this.#buildLoadoutCache();
 
-        await this.loadAmbrosiaLoadoutButtons();
+        await this.#loadAmbrosiaLoadoutButtons();
 
-        HSLogger.log(`Autosing enabled for target singularity: ${this.targetSingularity}`, this.context);
+        HSLogger.log(`Autosing enabled for target singularity: ${this.#targetSingularity}`, this.context);
 
-        this.autosingModal?.destroy();
-        this.autosingModal = new HSAutosingModal();
+        this.#autosingModal?.destroy();
+        this.#autosingModal = new HSAutosingModal();
 
-        this.hsSettingsToRestore = await HSAutosingSettingsFixer.fixAllSettings();
+        this.#hsSettingsToRestore = await HSAutosingSettingsFixer.fixAllSettings();
 
-        this.performAutosingLogic();
+        this.#performAutosingLogic();
     }
 
     public stopAutosing(options?: { showReviewModal?: boolean }): void {
-        if (!this.autosingEnabled) { return; }
+        if (!this.#autosingEnabled) { return; }
         const showReviewModal = options?.showReviewModal ?? false;
 
-        this.stopAutosingCore({
+        this.#stopAutosingCore({
             modalDisposition: showReviewModal ? 'review' : 'destroy'
         });
 
@@ -379,35 +379,35 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (autosingSetting && autosingSetting.isEnabled()) {
             autosingSetting.disable();
         }
-        HSAutosingSettingsFixer.restoreUnwantedSettings(this.hsSettingsToRestore);
+        HSAutosingSettingsFixer.restoreUnwantedSettings(this.#hsSettingsToRestore);
 
         HSLogger.log(`Autosing stopped.`, this.context);
     }
 
-    private stopAutosingCore(options: { modalDisposition: 'review' | 'destroy' }): void {
-        this.autosingEnabled = false;
-        this.saveType.checked = false;
+    #stopAutosingCore(options: { modalDisposition: 'review' | 'destroy' }): void {
+        this.#autosingEnabled = false;
+        this.#saveType.checked = false;
         this.unsubscribeGameDataChanges();
-        this.antiquitiesObserver?.disconnect();
-        this.antiquitiesObserver = undefined;
+        this.#antiquitiesObserver?.disconnect();
+        this.#antiquitiesObserver = undefined;
 
-        if (this.endStageResolve) {
+        if (this.#endStageResolve) {
             try {
-                this.endStageResolve();
+                this.#endStageResolve();
             } catch (e) {
                 /* ignore */
             }
-            this.endStageResolve = undefined;
+            this.#endStageResolve = undefined;
         }
 
-        this.endStagePromise = undefined;
+        this.#endStagePromise = undefined;
 
-        if (this.autosingModal) {
+        if (this.#autosingModal) {
             if (options.modalDisposition === 'review') {
-                this.autosingModal.enterReviewMode();
+                this.#autosingModal.enterReviewMode();
             } else {
-                this.autosingModal.destroy();
-                this.autosingModal = undefined;
+                this.#autosingModal.destroy();
+                this.#autosingModal = undefined;
             }
         }
 
@@ -415,13 +415,13 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     public closeAutosingModalAfterReview(): void {
-        if (this.autosingModal) {
-            this.autosingModal.destroy();
-            this.autosingModal = undefined;
+        if (this.#autosingModal) {
+            this.#autosingModal.destroy();
+            this.#autosingModal = undefined;
         }
     }
 
-    private async validateAutosingSetup(): Promise<boolean> {
+    async #validateAutosingSetup(): Promise<boolean> {
         HSUtils.startDialogWatcher();
 
         const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar');
@@ -431,12 +431,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
-        this.targetSingularity = singularitySetting.getValue();
+        this.#targetSingularity = singularitySetting.getValue();
 
         return true;
     }
 
-    private async validateSingularityRequirements(gameData: any): Promise<boolean> {
+    async #validateSingularityRequirements(gameData: any): Promise<boolean> {
         if (!gameData) {
             HSLogger.debug("Could not get game data", this.context);
             return false;
@@ -454,15 +454,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSUI.Notify("You acknowledged that your highest sing is too low.", { popDuration: 10000, notificationType: "warning" });
         }
 
-        if (this.targetSingularity > gameData.highestSingularityCount) {
+        if (this.#targetSingularity > gameData.highestSingularityCount) {
             HSLogger.log(`Target singularity bigger than highest. Going to highest.`);
-            this.targetSingularity = gameData.highestSingularityCount;
+            this.#targetSingularity = gameData.highestSingularityCount;
         }
 
         return true;
     }
 
-    private async loadStrategy(): Promise<HSAutosingStrategy | null> {
+    async #loadStrategy(): Promise<HSAutosingStrategy | null> {
         const strategySetting = HSSettings.getSetting("autosingStrategy");
         const selectedValue = strategySetting.getValue();
         const control = strategySetting.getDefinition().settingControl;
@@ -510,7 +510,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return runtimeStrategy;
     }
 
-    private async loadAmbrosiaLoadoutButtons(): Promise<void> {
+    async #loadAmbrosiaLoadoutButtons(): Promise<void> {
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
@@ -519,14 +519,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const ambrosiaVal = HSSettings.getSetting("autosingAmbrosiaLoadout").getValue();
 
         const ambPrefix = HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix;
-        this.ambrosia_early_cube = document.getElementById(`${ambPrefix}-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement;
-        this.ambrosia_late_cube = document.getElementById(`${ambPrefix}-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
-        this.ambrosia_quark = document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
-        this.ambrosia_obt = document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`) as HTMLButtonElement;
-        this.ambrosia_off = document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`) as HTMLButtonElement;
-        this.ambrosia_luck = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
+        this.#ambrosia_early_cube = document.getElementById(`${ambPrefix}-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement;
+        this.#ambrosia_late_cube = document.getElementById(`${ambPrefix}-blueberryLoadout${lateCubeVal}`) as HTMLButtonElement;
+        this.#ambrosia_quark = document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`) as HTMLButtonElement;
+        this.#ambrosia_obt = document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`) as HTMLButtonElement;
+        this.#ambrosia_off = document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`) as HTMLButtonElement;
+        this.#ambrosia_luck = document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`) as HTMLButtonElement;
 
-        if (!this.ambrosia_early_cube || !this.ambrosia_late_cube || !this.ambrosia_quark || !this.ambrosia_obt || !this.ambrosia_off || !this.ambrosia_luck) {
+        if (!this.#ambrosia_early_cube || !this.#ambrosia_late_cube || !this.#ambrosia_quark || !this.#ambrosia_obt || !this.#ambrosia_off || !this.#ambrosia_luck) {
             HSLogger.debug("Autosing: Required Ambrosia loadout buttons missing.", this.context);
             HSUI.Notify("Could not find all required Ambrosia loadout buttons - Autosing stopped.", { notificationType: "warning" });
             this.stopAutosing();
@@ -538,30 +538,30 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // MAIN AUTOSING LOGIC
     // ============================================================================
 
-    private async performAutosingLogic(): Promise<void> {
-        this.ambrosia_luck.click();
-        await this.useAddAndTimeCodes();
+    async #performAutosingLogic(): Promise<void> {
+        this.#ambrosia_luck.click();
+        await this.#useAddAndTimeCodes();
 
         try {
-            if (this.autosingModal) {
+            if (this.#autosingModal) {
                 const { HSQuickbarManager } = await import("../hs-quickbarManager");
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-                const gameData = await this.gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 };
-                this.autosingModal.start(this.strategy!, gameData.quarks, gameData.goldenQuarks);
-                this.autosingModal.show();
+                const gameData = await this.#gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 };
+                this.#autosingModal.start(this.#strategy!, gameData.quarks, gameData.goldenQuarks);
+                this.#autosingModal.show();
             }
 
-            await this.performSingularity(true);
+            await this.#performSingularity(true);
 
             while (this.isAutosingEnabled()) {
-                if (this.endStageDone || this.observerActivated) {
-                    await this.endStagePromise;
+                if (this.#endStageDone || this.#observerActivated) {
+                    await this.#endStagePromise;
                     continue;
                 }
 
-                while (this.isAutosingEnabled() && !this.endStageDone && !this.observerActivated) {
-                    const stage = await this.getStage();
-                    await this.matchStageToStrategy(stage);
+                while (this.isAutosingEnabled() && !this.#endStageDone && !this.#observerActivated) {
+                    const stage = await this.#getStage();
+                    await this.#matchStageToStrategy(stage);
                 }
             }
         } catch (error) {
@@ -571,17 +571,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    private async matchStageToStrategy(stage: string | null): Promise<void> {
-        if (!stage || !this.strategy) return;
+    async #matchStageToStrategy(stage: string | null): Promise<void> {
+        if (!stage || !this.#strategy) return;
 
-        if (!this.strategyPhaseRanges) this.rebuildStrategyPhaseCaches();
+        if (!this.#strategyPhaseRanges) this.#rebuildStrategyPhaseCaches();
 
         let phaseConfig: AutosingStrategyPhase | null = null;
         let stageStart: PhaseOption | null = null;
         let stageEnd: PhaseOption | null = null;
 
         if (stage === 'final') {
-            phaseConfig = this.finalPhaseConfig ?? null;
+            phaseConfig = this.#finalPhaseConfig ?? null;
             if (!phaseConfig) {
                 HSLogger.debug("No final phase found in strategy - Autosing stopped.", this.context);
                 this.stopAutosing();
@@ -591,7 +591,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stageStart = phaseConfig.startPhase;
             stageEnd = phaseConfig.endPhase;
 
-            await this.executePhase(phaseConfig);
+            await this.#executePhase(phaseConfig);
             return;
         }
 
@@ -600,7 +600,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             const startCandidate = stage.slice(0, dashIndex);
             const endCandidate = stage.slice(dashIndex + 1);
 
-            if (this.isPhaseOption(startCandidate) && this.isPhaseOption(endCandidate)) {
+            if (this.#isPhaseOption(startCandidate) && this.#isPhaseOption(endCandidate)) {
                 stageStart = startCandidate;
                 stageEnd = endCandidate;
                 break;
@@ -612,8 +612,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stageEnd = "end";
         }
 
-        const stageStartIndex: number = this.getPhaseIndex(stageStart);
-        const stageEndIndex: number = this.getPhaseIndex(stageEnd);
+        const stageStartIndex: number = this.#getPhaseIndex(stageStart);
+        const stageEndIndex: number = this.#getPhaseIndex(stageEnd);
 
         if (stageStartIndex === -1 || stageEndIndex === -1) {
             HSLogger.debug(`Unknown stage ${stage} - Autosing stopped.`, this.context);
@@ -621,7 +621,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        const ranges = this.strategyPhaseRanges ?? [];
+        const ranges = this.#strategyPhaseRanges ?? [];
         phaseConfig = ranges.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
 
         if (!phaseConfig) {
@@ -631,14 +631,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
-        await this.executePhase(phaseConfig);
+        await this.#executePhase(phaseConfig);
     }
 
     // ============================================================================
     // PHASE EXECUTION
     // ============================================================================
 
-    private async executePhase(
+    async #executePhase(
         phaseConfig: AutosingStrategyPhase,
         options?: {
             phaseLabelOverride?: string;
@@ -648,71 +648,71 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     ): Promise<void> {
         const phaseLabel = options?.phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
-        this.autosingModal?.setCurrentPhase(phaseLabel);
+        this.#autosingModal?.setCurrentPhase(phaseLabel);
 
         if (!options?.skipInitialCorruptions) {
-            const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
+            const phaseLoadout = this.#getPhaseCorruptionLoadout(phaseConfig);
             if (phaseLoadout) {
-                await this.setCorruptions(phaseLoadout);
+                await this.#setCorruptions(phaseLoadout);
             }
         }
 
         if (!options?.skipInitialAscend) {
-            this.ascendBtn.click();
+            this.#ascendBtn.click();
         }
 
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             // Autosing disabled or AOAG observer activated
-            if (!this.autosingEnabled || (this.observerActivated && !(phaseConfig.endPhase === "end") && !options?.ignoreObserverActivated)) {
-                this.autosingModal?.recordPhase(phaseLabel);
+            if (!this.#autosingEnabled || (this.#observerActivated && !(phaseConfig.endPhase === "end") && !options?.ignoreObserverActivated)) {
+                this.#autosingModal?.recordPhase(phaseLabel);
                 return;
             }
 
-            if (this.autosingModal?.getIsPaused()) {
+            if (this.#autosingModal?.getIsPaused()) {
                 HSUI.Notify('Autosing is paused.');
-                while (this.autosingModal?.getIsPaused() && this.isAutosingEnabled()) {
+                while (this.#autosingModal?.getIsPaused() && this.isAutosingEnabled()) {
                     await HSUtils.sleep(500);
                 }
                 HSUI.Notify('Autosing resumed.');
             }
 
-            const jumpIndex = await this.executeStrategyAction(phaseConfig, i);
+            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i);
             if (typeof jumpIndex === 'number') {
                 // set loop index to jumpIndex-1 because the for-loop will increment it
                 i = jumpIndex - 1;
             }
-            this.prevActionTime = performance.now();
+            this.#prevActionTime = performance.now();
         }
 
         if (phaseConfig.endPhase == "end") {
-            this.endStageDone = true;
+            this.#endStageDone = true;
         }
 
-        this.autosingModal?.recordPhase(phaseLabel);
+        this.#autosingModal?.recordPhase(phaseLabel);
     }
 
-    private async executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number): Promise<number | null> {
+    async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
 
         if (challenge.challengeWaitBefore && challenge.challengeWaitBefore > 0) {
-            await HSUtils.sleepUntilElapsed(this.prevActionTime, challenge.challengeWaitBefore);
+            await HSUtils.sleepUntilElapsed(this.#prevActionTime, challenge.challengeWaitBefore);
         }
 
         if (challenge.challengeNumber == 401) {
-            const phaseLoadout = this.getPhaseCorruptionLoadout(phaseConfig);
+            const phaseLoadout = this.#getPhaseCorruptionLoadout(phaseConfig);
             if (phaseLoadout) {
-                await this.setCorruptions(phaseLoadout);
+                await this.#setCorruptions(phaseLoadout);
             }
         } else if (challenge.challengeNumber == LOADOUT_ACTION_VALUE) {
-            await this.applyLoadoutByName(challenge.loadoutName);
+            await this.#applyLoadoutByName(challenge.loadoutName);
         } else if (challenge.challengeNumber == IF_JUMP_VALUE) {
-            return await this.handleIfJumpAction(challenge);
+            return await this.#handleIfJumpAction(challenge);
         } else if (challenge.challengeNumber >= 100) {
             HSLogger.debug(`Autosing: Performing special action: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
-            await this.performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
+            await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
         } else {
             HSLogger.debug(`Autosing: waiting for: ${challenge.challengeCompletions ?? 0} completions of challenge${challenge.challengeNumber}, max time: ${challenge.challengeMaxTime}`, this.context);
-            await this.waitForCompletion(
+            await this.#waitForCompletion(
                 challenge.challengeNumber,
                 challenge.challengeCompletions ?? 0,
                 challenge.challengeMaxTime,
@@ -723,7 +723,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return null;
     }
 
-    private async handleIfJumpAction(challenge: any): Promise<number | null> {
+    async #handleIfJumpAction(challenge: any): Promise<number | null> {
         const mode = challenge.ifJump?.ifJumpMode;
         const operator = challenge.ifJump?.ifJumpOperator;
 
@@ -731,7 +731,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case "challenges":
                 const _ifIdx = challenge.ifJump?.ifJumpChallenge ?? -1;
                 const challengeCompletions = (_ifIdx >= 1 && _ifIdx <= 15)
-                    ? this.getChallengeAccessor(_ifIdx).getCompletions()
+                    ? this.#getChallengeAccessor(_ifIdx).getCompletions()
                     : new Decimal(0);
                 if (operator === ">" && challengeCompletions.gt(challenge.ifJump?.ifJumpValue ?? 0)) {
                     if (challenge.ifJump?.ifJumpIndex !== undefined) {
@@ -745,8 +745,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 break;
             case "stored_c15":
                 const exponent = challenge.ifJump?.ifJumpMultiplier ?? 0;
-                const c15Score = this.getChallengeAccessor(15).getCompletions();
-                const targetStats = this.storedC15.plus(exponent);
+                const c15Score = this.#getChallengeAccessor(15).getCompletions();
+                const targetStats = this.#storedC15.plus(exponent);
 
                 if ((operator === ">" && c15Score.gt(targetStats)) ||
                     (operator === "<" && c15Score.lt(targetStats))) {
@@ -764,75 +764,75 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // SPECIAL ACTIONS
     // ============================================================================
 
-    private async performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
+    async #performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
-                this.exitTranscBtn.click();
+                this.#exitTranscBtn.click();
                 break;
             case 102: // Exit Reincarnation challenge
-                this.exitReincBtn.click();
+                this.#exitReincBtn.click();
                 break;
             case 103: // Exit Ascension challenge
-                this.exitAscBtn.click();
+                this.#exitAscBtn.click();
                 break;
             case 104:
-                this.ascendBtn.click();
+                this.#ascendBtn.click();
                 break;
             case 151: // Wait
                 break;
             case 152: // Ant sac
-                await this.antSacrifice.click();
+                await this.#antSacrifice.click();
                 break;
             case 153: // auto Challenge Toggle
-                this.autoChallengeButton.click();
-                this.exitTranscBtn.click();
-                this.exitReincBtn.click();
+                this.#autoChallengeButton.click();
+                this.#exitTranscBtn.click();
+                this.#exitReincBtn.click();
                 break;
             case 154: // Auto Ant-Sac Toggle
-                await this.autoAntSacrificeButton.click();
+                await this.#autoAntSacrificeButton.click();
                 break;
             case 155: // Auto Ascend Toggle
-                await this.autoAscendButton.click();
+                await this.#autoAscendButton.click();
                 break;
             case 211: // Max C11
-                await this.maxC11to14WithC10(11);
+                await this.#maxC11to14WithC10(11);
                 break;
             case 212: // Max C12
-                await this.maxC11to14WithC10(12);
+                await this.#maxC11to14WithC10(12);
                 break;
             case 213: // Max C13
-                await this.maxC11to14WithC10(13);
+                await this.#maxC11to14WithC10(13);
                 break;
             case 214: // Max C14
-                await this.maxC11to14WithC10(14);
+                await this.#maxC11to14WithC10(14);
                 break;
             case 215: // store C15
-                this.storedC15 = this.getChallengeAccessor(15).getCompletions();
+                this.#storedC15 = this.#getChallengeAccessor(15).getCompletions();
                 break;
             case 301: // Early Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_early_cube);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_early_cube);
                 break;
             case 302: // Late Cube
-                await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
                 break;
             case 303: // Quark
-                await this.setAmbrosiaLoadout(this.ambrosia_quark);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
                 break;
             case 304: // Obt loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_obt);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
                 break;
             case 305: // Off loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_off);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_off);
                 break;
             case 306: // Ambrosia loadout
-                await this.setAmbrosiaLoadout(this.ambrosia_luck);
+                await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
                 break;
             case 400: // Zero Corruptions
-                await this.setCorruptions(ZERO_CORRUPTIONS);
+                await this.#setCorruptions(ZERO_CORRUPTIONS);
                 break;
             case 402: // Ant Corruptions
                 const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
-                await this.setCorruptions(antCorruptions);
+                await this.#setCorruptions(antCorruptions);
                 break;
             case 601:
             case 602:
@@ -844,7 +844,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 608:
             case 609:
             case 610:
-                await this.C1to10UntilNoMoreCompletions((actionId - 600) as any, waitTime, maxTime);
+                await this.#C1to10UntilNoMoreCompletions((actionId - 600) as any, waitTime, maxTime);
                 break;
             case 701:
             case 702:
@@ -855,10 +855,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             case 707:
             case 708:
             case 709:
-                await this.clickHeptractButton(actionId);
+                await this.#clickHeptractButton(actionId);
                 break;
             case 901:
-                this.AOAG.click();
+                this.#AOAG.click();
                 break;
             case 902: // Restart AutoSing
                 const restartBtn = document.getElementById('hs-timer-ctrl-restart') as HTMLButtonElement;
@@ -873,46 +873,46 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    private async clickHeptractButton(actionId: number): Promise<void> {
+    async #clickHeptractButton(actionId: number): Promise<void> {
         switch (actionId) {
             case 701:
-                this.chronosHeptAutoBuyBtn?.click();
+                this.#chronosHeptAutoBuyBtn?.click();
                 break;
             case 702:
-                this.hyperHeptAutoBuyBtn?.click();
+                this.#hyperHeptAutoBuyBtn?.click();
                 break;
             case 703:
-                this.quarkHeptAutoBuyBtn?.click();
+                this.#quarkHeptAutoBuyBtn?.click();
                 break;
             case 704:
-                this.challHeptAutoBuyBtn?.click();
+                this.#challHeptAutoBuyBtn?.click();
                 break;
             case 705:
-                this.abyssHeptAutoBuyBtn?.click();
+                this.#abyssHeptAutoBuyBtn?.click();
                 break;
             case 706:
-                this.accelHeptAutoBuyBtn?.click();
+                this.#accelHeptAutoBuyBtn?.click();
                 break;
             case 707:
-                this.boostHeptAutoBuyBtn?.click();
+                this.#boostHeptAutoBuyBtn?.click();
                 break;
             case 708:
-                this.multHeptAutoBuyBtn?.click();
+                this.#multHeptAutoBuyBtn?.click();
                 break;
             case 709:
-                this.orbsAutoBuyBtn?.click();
+                this.#orbsAutoBuyBtn?.click();
                 break;
         }
     }
 
-    private async waitForCompletion(
+    async #waitForCompletion(
         challengeIndex: number,
         minCompletions: number,
         maxTime: number = 99999999,
         waitTime: number = 0
     ): Promise<void> {
         const sleepInterval = 5;
-        const accessor = this.getChallengeAccessor(challengeIndex);
+        const accessor = this.#getChallengeAccessor(challengeIndex);
         const challengeBtn = accessor.button;
         const isActive = accessor.isActive;
         const getLevelText = accessor.getLevelText;
@@ -939,7 +939,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             await HSUtils.sleep(5);
         }
 
-        this.fastDoubleClick(challengeBtn);
+        this.#fastDoubleClick(challengeBtn);
         while (!isActive()) {
             if (isActive()) {
                 break;
@@ -993,27 +993,27 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    private getChallengeAccessor(challengeIndex: number): ChallengeAccessor {
-        return this.challengeAccessors[challengeIndex] ?? this.makeChallengeAccessor(challengeIndex);
+    #getChallengeAccessor(challengeIndex: number): ChallengeAccessor {
+        return this.#challengeAccessors[challengeIndex] ?? this.#makeChallengeAccessor(challengeIndex);
     }
 
-    private buildChallengeAccessors(): void {
+    #buildChallengeAccessors(): void {
         for (let i = 1; i <= 15; i++) {
-            this.challengeAccessors[i] = this.makeChallengeAccessor(i);
+            this.#challengeAccessors[i] = this.#makeChallengeAccessor(i);
         }
     }
 
-    private makeChallengeAccessor(challengeIndex: number): ChallengeAccessor {
-        const challengeBtn = this.challengeButtons[challengeIndex];
-        const levelElement = this.levelElements[challengeIndex];
+    #makeChallengeAccessor(challengeIndex: number): ChallengeAccessor {
+        const challengeBtn = this.#challengeButtons[challengeIndex];
+        const levelElement = this.#levelElements[challengeIndex];
 
         const getLevelText = () => levelElement?.textContent ?? '';
-        const parseValue = (text: string) => new Decimal(this.parseNumber(text));
+        const parseValue = (text: string) => new Decimal(this.#parseNumber(text));
 
         const getCompletions = () => {
             const text = getLevelText();
             if (challengeIndex === 15) {
-                return this.parseDecimal(text);
+                return this.#parseDecimal(text);
             }
             return parseValue(text.split('/')[0] ?? '0');
         };
@@ -1026,7 +1026,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             if (goalText.includes('/')) {
                 const parts = goalText.split('/');
                 return challengeIndex === 15
-                    ? this.parseDecimal(parts[1].trim())
+                    ? this.#parseDecimal(parts[1].trim())
                     : parseValue(parts[1].trim());
             }
             return new Decimal(9999);
@@ -1042,16 +1042,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         };
     }
 
-    private async maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14): Promise<void> {
-        await this.waitForCompletion(challengeIndex, 0, 0, 0);
-        await this.waitForCompletion(10, 0, 0, 0);
+    async #maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14): Promise<void> {
+        await this.#waitForCompletion(challengeIndex, 0, 0, 0);
+        await this.#waitForCompletion(10, 0, 0, 0);
 
-        let c11to14CurrentCompletions = this.getChallengeAccessor(challengeIndex).getCompletions();
+        let c11to14CurrentCompletions = this.#getChallengeAccessor(challengeIndex).getCompletions();
         await HSUtils.sleep(50);
 
         while (true) {
             await HSUtils.sleep(50);
-            const c11to14CurrentCompletions2 = this.getChallengeAccessor(challengeIndex).getCompletions();
+            const c11to14CurrentCompletions2 = this.#getChallengeAccessor(challengeIndex).getCompletions();
             if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
                 return;
             }
@@ -1059,9 +1059,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    private async C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
-        await this.waitForCompletion(challengeIndex, 0, 0, 0);
-        const accessor = this.getChallengeAccessor(challengeIndex);
+    async #C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
+        await this.#waitForCompletion(challengeIndex, 0, 0, 0);
+        const accessor = this.#getChallengeAccessor(challengeIndex);
         const getCompletions = accessor.getCompletions;
         const maxPossible = accessor.getGoal();
         let c1to10CurrentCompletions = getCompletions();
@@ -1091,8 +1091,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // CORRUPTION LOGIC
     // ============================================================================
 
-    private async setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
-        if (!this.corruptionPromptInput || !this.corruptionPromptOkBtn) {
+    async #setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
+        if (!this.#corruptionPromptInput || !this.#corruptionPromptOkBtn) {
             HSLogger.debug("Error: could not access corruption prompt elements", this.context);
             return;
         }
@@ -1101,20 +1101,20 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const targetCorruptions = corruptions;
 
         while (true) {
-            this.importBtn.click();
-            this.corruptionPromptInput.value = jsonString;
-            await HSUtils.click(this.corruptionPromptOkBtn);
+            this.#importBtn.click();
+            this.#corruptionPromptInput.value = jsonString;
+            await HSUtils.click(this.#corruptionPromptOkBtn);
 
-            const current = this.getNextCorruptionsFromCache();
-            if (this.corruptionsMatch(current, targetCorruptions)) {
-                HSLogger.debug(`Corruptions set: ${this.stringifyCorruptions(corruptions)}`, this.context);
+            const current = this.#getNextCorruptionsFromCache();
+            if (this.#corruptionsMatch(current, targetCorruptions)) {
+                HSLogger.debug(`Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.context);
                 break;
             }
-            await HSUtils.sleep(this.sleepTime);
+            await HSUtils.sleep(this.#sleepTime);
         }
     }
 
-    private corruptionsMatch(a: CorruptionLoadout, b: CorruptionLoadout): boolean {
+    #corruptionsMatch(a: CorruptionLoadout, b: CorruptionLoadout): boolean {
         return a.viscosity === b.viscosity &&
             a.drought === b.drought &&
             a.deflation === b.deflation &&
@@ -1125,9 +1125,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             a.hyperchallenge === b.hyperchallenge;
     }
 
-    private getNextCorruptionsFromCache(): CorruptionLoadout {
+    #getNextCorruptionsFromCache(): CorruptionLoadout {
         const getVal = (name: string) => {
-            const el = this.corrNext[name];
+            const el = this.#corrNext[name];
             return el ? parseInt(el.textContent || '0', 10) : 0;
         };
 
@@ -1143,7 +1143,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         };
     }
 
-    private getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
+    #getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
         if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") {
             return null;
         }
@@ -1152,32 +1152,32 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return phaseConfig.corruptions ?? null;
         }
 
-        const named = this.getLoadoutByName(phaseConfig.corruptionLoadoutName);
+        const named = this.#getLoadoutByName(phaseConfig.corruptionLoadoutName);
         return named ?? phaseConfig.corruptions ?? null;
     }
 
-    private async applyLoadoutByName(name?: string | null): Promise<void> {
-        const loadout = this.getLoadoutByName(name);
+    async #applyLoadoutByName(name?: string | null): Promise<void> {
+        const loadout = this.#getLoadoutByName(name);
         if (!loadout) {
             HSLogger.debug(`Loadout not found: ${name ?? "(none)"}`, this.context);
             return;
         }
-        await this.setCorruptions(loadout);
+        await this.#setCorruptions(loadout);
     }
 
-    private getLoadoutByName(name?: string | null): CorruptionLoadout | null {
+    #getLoadoutByName(name?: string | null): CorruptionLoadout | null {
         if (!name) return null;
-        if (this.loadoutByName.size > 0) {
-            const l = this.loadoutByName.get(name);
+        if (this.#loadoutByName.size > 0) {
+            const l = this.#loadoutByName.get(name);
             return l ? { ...l } : null;
         }
 
-        const loadouts = this.strategy?.corruptionLoadouts ?? [];
+        const loadouts = this.#strategy?.corruptionLoadouts ?? [];
         const match = loadouts.find(loadout => loadout.name === name);
         return match ? { ...match.loadout } : null;
     }
 
-    private stringifyCorruptions(loadout: CorruptionLoadout): string {
+    #stringifyCorruptions(loadout: CorruptionLoadout): string {
         return [
             loadout.viscosity,
             loadout.drought,
@@ -1190,21 +1190,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         ].join(',');
     }
 
-    private buildLoadoutCache(): void {
-        this.loadoutByName.clear();
-        const defs = this.strategy?.corruptionLoadouts ?? [];
+    #buildLoadoutCache(): void {
+        this.#loadoutByName.clear();
+        const defs = this.#strategy?.corruptionLoadouts ?? [];
         for (const d of defs) {
-            this.loadoutByName.set(d.name, { ...d.loadout });
+            this.#loadoutByName.set(d.name, { ...d.loadout });
         }
     }
 
-    private antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
+    #antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
         HSLogger.debug(`antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
         window.setTimeout(() => {
             let attempt = 0;
             const intervalId = window.setInterval(() => {
                 attempt++;
-                this.coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
+                this.#coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
 
                 if (attempt >= repeatCount) {
                     window.clearInterval(intervalId);
@@ -1218,17 +1218,17 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // AMBROSIA LOADOUT
     // ============================================================================
 
-    private async setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
+    async #setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
         loadout.click();
-        while (!this.isInAmbLoadout(loadout)) {
-            if (this.isInAmbLoadout(loadout)) {
+        while (!this.#isInAmbLoadout(loadout)) {
+            if (this.#isInAmbLoadout(loadout)) {
                 return;
             }
-            await HSUtils.sleep(this.sleepTime);
+            await HSUtils.sleep(this.#sleepTime);
         }
     }
 
-    private isInAmbLoadout(loadout: HTMLButtonElement): boolean {
+    #isInAmbLoadout(loadout: HTMLButtonElement): boolean {
         return !!loadout?.classList.contains('hs-ambrosia-active-slot');
     }
 
@@ -1236,24 +1236,24 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // STAGE & PHASES
     // ============================================================================
 
-    private async getStage(): Promise<string> {
-        if (this.stageFunc) {
+    async #getStage(): Promise<string> {
+        if (this.#stageFunc) {
             try {
-                const stage = this.stageFunc(0);
+                const stage = this.#stageFunc(0);
                 HSLogger.debug(`Got stage directly: ${stage}`, this.context);
                 return stage;
             } catch (error) {
                 HSLogger.debug(`Error getting stage from stageFunc: ${error}`, this.context);
             }
         } else {
-            if (!this.hasWarnedMissingStageFunc) {
+            if (!this.#hasWarnedMissingStageFunc) {
                 HSLogger.debug("Performance Warning: 'synergismStage' function not exposed.", this.context);
-                this.hasWarnedMissingStageFunc = true;
+                this.#hasWarnedMissingStageFunc = true;
             }
         }
 
         try {
-            const raw = this.stage?.textContent ?? '';
+            const raw = this.#stage?.textContent ?? '';
             const m = raw.match(/Current Game Section:\s*(.+)/);
             if (m && m[1]) {
                 HSLogger.debug(`Got stage from element: ${m[1]}`, this.context);
@@ -1263,15 +1263,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.debug(`Error reading stage element: ${e}`, this.context);
         }
 
-        return this.getStageViaDOM();
+        return this.#getStageViaDOM();
     }
 
-    private async getStageViaDOM(): Promise<string> {
-        this.settingsTab.click();
-        this.settingsSubTab.click();
-        this.misc.click();
+    async #getStageViaDOM(): Promise<string> {
+        this.#settingsTab.click();
+        this.#settingsSubTab.click();
+        this.#misc.click();
 
-        const stageText = await this.getFromDOM<string>(this.stage, {
+        const stageText = await this.#getFromDOM<string>(this.#stage, {
             regex: /Current Game Section:\s*(.+)/,
             predicate: t => t.includes("Current Game Section:")
         });
@@ -1279,7 +1279,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return stageText || "";
     }
 
-    private async getFromDOM<T>(
+    async #getFromDOM<T>(
         el: HTMLElement | null,
         {
             regex,
@@ -1302,26 +1302,26 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         return parser ? parser(extracted.trim()) : (extracted.trim() as unknown as T);
     }
 
-    private isPhaseOption(value: string): value is PhaseOption {
-        return this.phaseIndexByOption.has(value as PhaseOption);
+    #isPhaseOption(value: string): value is PhaseOption {
+        return this.#phaseIndexByOption.has(value as PhaseOption);
     }
 
-    private getPhaseIndex(phase: PhaseOption): number {
-        return this.phaseIndexByOption.get(phase) ?? -1;
+    #getPhaseIndex(phase: PhaseOption): number {
+        return this.#phaseIndexByOption.get(phase) ?? -1;
     }
 
-    private rebuildStrategyPhaseCaches(): void {
-        if (!this.strategy) {
-            this.strategyPhaseRanges = undefined;
-            this.finalPhaseConfig = undefined;
+    #rebuildStrategyPhaseCaches(): void {
+        if (!this.#strategy) {
+            this.#strategyPhaseRanges = undefined;
+            this.#finalPhaseConfig = undefined;
             return;
         }
 
-        this.finalPhaseConfig = this.strategy.strategy.find(p => p.endPhase === 'end') ?? undefined;
-        this.strategyPhaseRanges = this.strategy.strategy
+        this.#finalPhaseConfig = this.#strategy.strategy.find(p => p.endPhase === 'end') ?? undefined;
+        this.#strategyPhaseRanges = this.#strategy.strategy
             .map((p) => {
-                const startIndex = this.getPhaseIndex(p.startPhase);
-                const endIndex = this.getPhaseIndex(p.endPhase);
+                const startIndex = this.#getPhaseIndex(p.startPhase);
+                const endIndex = this.#getPhaseIndex(p.endPhase);
                 return { phase: p, startIndex, endIndex };
             })
             .filter((r) => r.startIndex !== -1 && r.endIndex !== -1);
@@ -1331,33 +1331,33 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // SINGULARITY LOGIC
     // ============================================================================
 
-    private async performSingularity(skipRecord: boolean = false): Promise<void> {
-        const prevMainView = this.gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+    async #performSingularity(skipRecord: boolean = false): Promise<void> {
+        const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
         
         const [gameData, happyHourStackAmount] = await Promise.all([
-            this.gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 },
-            this.gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0
+            this.#gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 },
+            this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0
         ]);
         const gq = gameData?.goldenQuarks ?? 0;
         const q = gameData?.quarks ?? 0;
-        const gqGain = Math.max(0, gq - this.previousGoldenQuarkAmount);
-        const qGain = Math.max(0, q - this.previousQuarkAmount);
-        this.previousQuarkAmount = q;
-        this.previousGoldenQuarkAmount = gq;
-        const c15ScoreBeforeSinging = this.getChallengeAccessor(15).getCompletions();
+        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
+        const qGain = Math.max(0, q - this.#previousQuarkAmount);
+        this.#previousQuarkAmount = q;
+        this.#previousGoldenQuarkAmount = gq;
+        const c15ScoreBeforeSinging = this.#getChallengeAccessor(15).getCompletions();
 
-        await this.enterAndLeaveExalt();
+        await this.#enterAndLeaveExalt();
 
-        this.endStageDone = false;
-        this.observerActivated = false;
-        this.elevatorInput.value = this.targetSingularity.toString();
-        this.elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
-        this.elevatorTeleportButton.click();
+        this.#endStageDone = false;
+        this.#observerActivated = false;
+        this.#elevatorInput.value = this.#targetSingularity.toString();
+        this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        this.#elevatorTeleportButton.click();
         
-        const stageInitial = await this.getStage();
+        const stageInitial = await this.#getStage();
 
         if (!skipRecord) {
-            this.autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
+            this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
 
         prevMainView.goto();
@@ -1365,47 +1365,47 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         let stage = stageInitial;
         let i = 0;
-        while (!this.isAllowedStage(stage)) {
+        while (!this.#isAllowedStage(stage)) {
             i++;
             await HSUtils.sleep(1);
-            stage = await this.getStage();
+            stage = await this.#getStage();
         }
 
-        this.antiBuyCoinBug(0, 15, 10);
+        this.#antiBuyCoinBug(0, 15, 10);
 
-        this.observeAntiquitiesRune();
-        this.prevActionTime = performance.now();
+        this.#observeAntiquitiesRune();
+        this.#prevActionTime = performance.now();
     }
 
-    private async enterAndLeaveExalt(): Promise<void> {
+    async #enterAndLeaveExalt(): Promise<void> {
 
-        await HSUtils.click(this.exalt2Btn);
-        while (!this.isInExalt()) {
-            await HSUtils.sleep(this.sleepTime);
+        await HSUtils.click(this.#exalt2Btn);
+        while (!this.#isInExalt()) {
+            await HSUtils.sleep(this.#sleepTime);
         }
 
-        await HSUtils.click(this.exalt2Btn);
-        while (this.isInExalt()) {
-            await HSUtils.sleep(this.sleepTime);
+        await HSUtils.click(this.#exalt2Btn);
+        while (this.#isInExalt()) {
+            await HSUtils.sleep(this.#sleepTime);
         }
     }
 
-    private isInExalt(): boolean {
-        const style = window.getComputedStyle(this.exaltTimer);
+    #isInExalt(): boolean {
+        const style = window.getComputedStyle(this.#exaltTimer);
         return style.display !== "none";
     }
 
-    private isAllowedStage(stage: string): boolean {
+    #isAllowedStage(stage: string): boolean {
         return ALLOWED.some(allowed => stage.includes(allowed));
     }
 
-    private getCurrentQuarks(): Promise<number> {
-        const data = this.gameDataAPI?.getGameData();
+    #getCurrentQuarks(): Promise<number> {
+        const data = this.#gameDataAPI?.getGameData();
         return Promise.resolve(data?.worlds ?? 0);
     }
 
-    private getCurrentGoldenQuarks(): Promise<number> {
-        const data = this.gameDataAPI?.getGameData();
+    #getCurrentGoldenQuarks(): Promise<number> {
+        const data = this.#gameDataAPI?.getGameData();
         return Promise.resolve(data?.goldenQuarks ?? 0);
     }
 
@@ -1413,155 +1413,155 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // ANTIQUITIES
     // ============================================================================
 
-    private observeAntiquitiesRune(): void {
-        if (!this.antiquitiesRuneLockedContainer) {
+    #observeAntiquitiesRune(): void {
+        if (!this.#antiquitiesRuneLockedContainer) {
             HSLogger.debug("Could not find antiquitiesRuneLockedContainer element", this.context);
             return;
         }
 
-        this.antiquitiesObserver?.disconnect();
+        this.#antiquitiesObserver?.disconnect();
 
-        this.antiquitiesObserver = new MutationObserver(mutations => {
+        this.#antiquitiesObserver = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     const style = (mutation.target as HTMLElement).style;
                     if (style.display === 'none') {
                         HSLogger.debug('antiquitiesRuneLockedContainer hidden - buying antiquities', this.context);
-                        this.observerActivated = true;
-                        this.antiquitiesObserver?.disconnect();
-                        this.antiquitiesObserver = undefined;
-                        this.performFinalStage();
+                        this.#observerActivated = true;
+                        this.#antiquitiesObserver?.disconnect();
+                        this.#antiquitiesObserver = undefined;
+                        this.#performFinalStage();
                         break;
                     }
                 }
             }
         });
 
-        this.antiquitiesObserver.observe(this.antiquitiesRuneLockedContainer, { attributes: true, attributeFilter: ['style'] });
+        this.#antiquitiesObserver.observe(this.#antiquitiesRuneLockedContainer, { attributes: true, attributeFilter: ['style'] });
     }
 
-    private async performFinalStage(): Promise<void> {
-        if (this.endStagePromise) return;
+    async #performFinalStage(): Promise<void> {
+        if (this.#endStagePromise) return;
 
-        this.endStagePromise = new Promise<void>(resolve => {
-            this.endStageResolve = resolve;
+        this.#endStagePromise = new Promise<void>(resolve => {
+            this.#endStageResolve = resolve;
         });
 
-        const aoagPhase = this.strategy?.aoagPhase ?? createDefaultAoagPhase();
+        const aoagPhase = this.#strategy?.aoagPhase ?? createDefaultAoagPhase();
         aoagPhase.phaseId = AOAG_PHASE_ID;
 
-        await this.executePhase(aoagPhase, {
+        await this.#executePhase(aoagPhase, {
             phaseLabelOverride: AOAG_PHASE_NAME,
             skipInitialCorruptions: false,
             skipInitialAscend: false,
             ignoreObserverActivated: true
         });
 
-        this.prevActionTime = performance.now();
-        await this.matchStageToStrategy('final');
+        this.#prevActionTime = performance.now();
+        await this.#matchStageToStrategy('final');
 
         if (this.isAutosingEnabled()) {
-            await this.setAmbrosiaLoadout(this.ambrosia_quark);
-            const exportBtn = this.exportBtnClone ?? this.exportBtn;
+            await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
+            const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
 
             if (exportBtn) {
-                this.saveType.checked = true;
+                this.#saveType.checked = true;
                 exportBtn.click();
             }
 
-            this.ascendBtn.click();
+            this.#ascendBtn.click();
 
-            if (this.stopAtSingularitysEnd && this.autosingEnabled) {
+            if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
                 HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
-                await this.pushSingularityBeforeStop();
+                await this.#pushSingularityBeforeStop();
                 HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
                 this.stopAutosing();
                 return;
             }
 
-            await this.performSingularity();
+            await this.#performSingularity();
         }
 
-        this.endStageResolve?.();
-        this.endStagePromise = undefined;
-        this.endStageResolve = undefined;
+        this.#endStageResolve?.();
+        this.#endStagePromise = undefined;
+        this.#endStageResolve = undefined;
     }
 
-    private async pushSingularityBeforeStop(): Promise<void> {
-        this.ambrosia_late_cube.click();
-        await this.setCorruptions(ZERO_CORRUPTIONS);
+    async #pushSingularityBeforeStop(): Promise<void> {
+        this.#ambrosia_late_cube.click();
+        await this.#setCorruptions(ZERO_CORRUPTIONS);
 
-        await this.maxC11to14WithC10(11);
-        await this.maxC11to14WithC10(12);
-        await this.maxC11to14WithC10(13);
-        await this.maxC11to14WithC10(14);
+        await this.#maxC11to14WithC10(11);
+        await this.#maxC11to14WithC10(12);
+        await this.#maxC11to14WithC10(13);
+        await this.#maxC11to14WithC10(14);
 
-        await this.setCorruptions(
+        await this.#setCorruptions(
             { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 }
         );
 
-        await this.autoChallengeButton.click();
+        await this.#autoChallengeButton.click();
 
         for (let i = 1; i <= 2; i++) {
-            await this.executePushLoop();
+            await this.#executePushLoop();
         }
 
-        await this.executeLastPushLoop();
-        await this.exitTranscBtn.click();
+        await this.#executeLastPushLoop();
+        await this.#exitTranscBtn.click();
         await HSUtils.sleep(1000);
-        await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
-        await this.autoChallengeButton.click();
-        await this.exitAscBtn.click();
-        await this.setAmbrosiaLoadout(this.ambrosia_luck);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
+        await this.#autoChallengeButton.click();
+        await this.#exitAscBtn.click();
+        await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
     }
 
-    private async executePushLoop(): Promise<void> {
-        await this.waitForCompletion(15, 0, 0, 0);
-        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+    async #executePushLoop(): Promise<void> {
+        await this.#waitForCompletion(15, 0, 0, 0);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
         await HSUtils.sleep(3500);
-        await this.setAmbrosiaLoadout(this.ambrosia_off);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(100);
-        await this.antSacrifice.click();
+        await this.#antSacrifice.click();
         await HSUtils.sleep(100);
-        await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
 
-        await this.exitAscBtn.click();
-        await this.setAmbrosiaLoadout(this.ambrosia_off);
+        await this.#exitAscBtn.click();
+        await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(3500);
-        await this.antSacrifice.click();
+        await this.#antSacrifice.click();
         await HSUtils.sleep(100);
-        await this.setAmbrosiaLoadout(this.ambrosia_late_cube);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
     }
 
-    private async executeLastPushLoop(): Promise<void> {
-        await this.waitForCompletion(15, 0, 0, 0);
-        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+    async #executeLastPushLoop(): Promise<void> {
+        await this.#waitForCompletion(15, 0, 0, 0);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
         await HSUtils.sleep(3500);
-        await this.setAmbrosiaLoadout(this.ambrosia_off);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(100);
-        await this.antSacrifice.click();
+        await this.#antSacrifice.click();
         await HSUtils.sleep(100);
-        await this.setAmbrosiaLoadout(this.ambrosia_obt);
+        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
 
-        await this.waitForCompletion(6, 150, 1000, 0);
-        await this.waitForCompletion(1, 9001, 1000, 0);
-        await this.waitForCompletion(2, 9001, 1000, 0);
-        await this.waitForCompletion(3, 9001, 1000, 0);
-        await this.waitForCompletion(4, 9001, 1000, 0);
-        await this.waitForCompletion(5, 9001, 1000, 0);
+        await this.#waitForCompletion(6, 150, 1000, 0);
+        await this.#waitForCompletion(1, 9001, 1000, 0);
+        await this.#waitForCompletion(2, 9001, 1000, 0);
+        await this.#waitForCompletion(3, 9001, 1000, 0);
+        await this.#waitForCompletion(4, 9001, 1000, 0);
+        await this.#waitForCompletion(5, 9001, 1000, 0);
     }
 
     // ============================================================================
     // UTILITY & HELPERS
     // ============================================================================
 
-    private async useAddAndTimeCodes(): Promise<void> {
-        if (this.addCodeAllBtn) this.addCodeAllBtn.click();
-        if (this.timeCodeBtn) this.timeCodeBtn.click();
+    async #useAddAndTimeCodes(): Promise<void> {
+        if (this.#addCodeAllBtn) this.#addCodeAllBtn.click();
+        if (this.#timeCodeBtn) this.#timeCodeBtn.click();
         await HSUtils.sleep(0);
     }
 
-    private parseDecimal(text: string): Decimal {
+    #parseDecimal(text: string): Decimal {
         let cleanText = text.replace(/,/g, '').trim();
         try {
             return new Decimal(cleanText);
@@ -1570,12 +1570,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
-    private parseNumber(text: string): number {
+    #parseNumber(text: string): number {
         const parsed = parseFloat(text.replace(/,/g, '').trim());
         return isNaN(parsed) ? 0 : parsed;
     }
 
-    private fastDoubleClick(element: HTMLElement): void {
+    #fastDoubleClick(element: HTMLElement): void {
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     }
 }

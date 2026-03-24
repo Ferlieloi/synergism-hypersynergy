@@ -3,6 +3,15 @@ import { HSLogger } from "../hs-core/hs-logger";
 // Canonical factory: must return an object with `element` and optional `teardown`.
 export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };
 export type QUICKBAR_ID = typeof HSQuickbarManager.QUICKBAR_IDS[keyof typeof HSQuickbarManager.QUICKBAR_IDS];
+/**
+ * HSQuickbarManager
+ *
+ * Manages registration, injection, ordering, and lifecycle of small UI quickbar
+ * sections injected into the page header. Each section is provided via a
+ * `QuickbarSectionFactory` that returns an element and optional teardown.
+ *
+ * Public lifecycle: registerSection -> injectSection/setup -> removeSection.
+ */
 export class HSQuickbarManager {
     private static instance: HSQuickbarManager;
     private sectionFactories: Map<QUICKBAR_ID, QuickbarSectionFactory> = new Map();
@@ -20,7 +29,7 @@ export class HSQuickbarManager {
         AMBROSIA: 'ambrosia',
     } as const;
 
-    // Hard-coded desired order for quickbars (left-to-right)
+    /** Hard-coded desired order for quickbars (left-to-right) */
     private static readonly QUICKBAR_ORDER: QUICKBAR_ID[] = [
         HSQuickbarManager.QUICKBAR_IDS.EVENTS,     // left-most
         HSQuickbarManager.QUICKBAR_IDS.AUTOMATION, 
@@ -33,9 +42,7 @@ export class HSQuickbarManager {
     private sectionInjectedResolvers: Map<QUICKBAR_ID, () => void> = new Map();
     private teardownCallbacks: Map<QUICKBAR_ID, () => void> = new Map();
 
-
     private constructor() {}
-
 
     public static getInstance(): HSQuickbarManager {
         if (!HSQuickbarManager.instance) {
@@ -44,10 +51,7 @@ export class HSQuickbarManager {
         return HSQuickbarManager.instance;
     }
 
-    /**
-     * Ensure #quickbarsRow exists in the DOM, inserted before .navbar in header.
-     * Returns the #quickbarsRow element.
-     */
+    /** Ensure #quickbarsRow exists in the DOM and return it. */
     public static ensureQuickbarsRow(): HTMLDivElement {
         const header = document.querySelector('header');
         if (!header) throw new Error('[HSQuickbarManager] Header element not found');
@@ -66,21 +70,15 @@ export class HSQuickbarManager {
         return quickbarsRow;
     }
 
-    /**
-     * Get #quickbarsRow if present, else undefined.
-     */
+    /** Get the #quickbarsRow element if it exists, otherwise undefined. */
     public static getQuickbarsRow(): HTMLDivElement | undefined {
         let header = document.querySelector('header');
         if (!header) return undefined;
         return header.querySelector('#quickbarsRow') as HTMLDivElement | null || undefined;
     }
 
-    /**
-     * Register a quickbar section by id and factory function.
-     * If already registered, replaces the factory.
-     */
+    /** Register a quickbar section factory for the given id. */
     public registerSection(id: QUICKBAR_ID, factory: QuickbarSectionFactory): void {
-        // Diagnostic log
         HSLogger.debug(`registerSection(${id}) called`, "HSQuickbarManager");
         this.sectionFactories.set(id, factory);
         if (!this.sectionOrder.includes(id)) {
@@ -95,17 +93,12 @@ export class HSQuickbarManager {
         }
     }
    
-    /**
-     * Inject or update a single quickbar section by id, without affecting others.
-     * If the section is not registered, does nothing.
-     * If no parent is provided, uses ensureQuickbarsRow().
-     */
+    /** Inject or update the DOM for a single quickbar section. */
     public injectSection(id: QUICKBAR_ID, parent?: HTMLElement): void {
         HSLogger.debug(`injectSection(${id}) called`, "HSQuickbarManager");
         const row = parent || HSQuickbarManager.ensureQuickbarsRow();
         if (!row) return;
 
-        // Only inject/update the targeted quickbar section
         // Remove existing element for this section if present
         const existing = this.sectionElements.get(id);
         if (existing && existing.parentElement === row) {
@@ -165,16 +158,11 @@ export class HSQuickbarManager {
         }
     }
 
-    /**
-     * Returns a promise that resolves when the given section is injected.
-     * Use this for robust async coordination.
-     */
+    /** Return a promise that resolves when the specified section has been injected. */
     public whenSectionInjected(id: QUICKBAR_ID): Promise<void> {
-        // If already injected, return resolved promise
         if (this.sectionElements.has(id)) {
             return Promise.resolve();
         }
-        // Otherwise, return or create the promise
         if (!this.sectionInjectedPromises.has(id)) {
             this.sectionInjectedPromises.set(id, new Promise(resolve => {
                 this.sectionInjectedResolvers.set(id, resolve);
@@ -183,14 +171,10 @@ export class HSQuickbarManager {
         return this.sectionInjectedPromises.get(id)!;
     }
 
-    /**
-     * Register a callback to be called when a section is injected.
-     * If already injected, calls immediately.
-     */
+    /** Register a callback to run when a section is injected (calls immediately if already injected). */
     public onSectionInjected(id: QUICKBAR_ID, callback: () => void): void {
         HSLogger.debug(`onSectionInjected(${id}) called`, "HSQuickbarManager");
         if (this.sectionElements.has(id)) {
-            // Already injected, call immediately
             HSLogger.debug(`section ${id} already injected, calling callback immediately`, "HSQuickbarManager");
             callback();
             return;
@@ -201,21 +185,18 @@ export class HSQuickbarManager {
         this.sectionInjectedCallbacks.get(id)!.push(callback);
     }
 
-    /**
-     * Get the order of registered section IDs
-     */
+    /** Return the current ordered list of registered section IDs. */
     public getSectionOrder(): QUICKBAR_ID[] {
         return [...this.sectionOrder];
     }
 
-    /**
-     * Get the DOM element for a registered section (after injection)
-     */
+    /** Get the DOM element for a registered section (after injection). */
     public getSection(id: QUICKBAR_ID): HTMLElement | undefined {
         HSLogger.debug(`getSection(${id}) called`, "HSQuickbarManager");
         return this.sectionElements.get(id);
     }
 
+    /** Register and enable a quickbar: registers the factory, injects the section, and runs setup callback. */
     public enableQuickbar(
         id: QUICKBAR_ID,
         factory: QuickbarSectionFactory,
@@ -240,6 +221,7 @@ export class HSQuickbarManager {
         });
     }
 
+    /** Run an optional teardown callback and disable the quickbar by removing its section. */
     public disableQuickbar(
         id: QUICKBAR_ID,
         teardownCallback?: () => void
@@ -250,9 +232,7 @@ export class HSQuickbarManager {
         this.removeSection(id);
     }
 
-    /**
-     * Remove a section by ID
-     */
+    /** Remove a section by ID and run any stored teardown callback. */
     public removeSection(id: QUICKBAR_ID): void {
         HSLogger.debug(`removeSection(${id}) called`, "HSQuickbarManager");
         // Call stored teardown callback if any

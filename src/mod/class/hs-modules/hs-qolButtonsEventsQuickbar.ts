@@ -113,7 +113,7 @@ export class HSQOLEventsQuickbar {
                 .join(', ');
             hhTooltipText = `${happyHourAmount} HH ending at: ${hhEndsTimes}`;
         } else {
-            hhTooltipText = 'No active HH event';
+            hhTooltipText = 'No active HH';
         }
 
         let lotusTooltipText = '';
@@ -121,7 +121,7 @@ export class HSQOLEventsQuickbar {
             const lotusEndTime = new Date(lotusEvent.ends[0]).toLocaleTimeString(undefined, { hour12: false });
             lotusTooltipText = `Lotus until: ${lotusEndTime}`;
         } else {
-            lotusTooltipText = 'No active Lotus event';
+            lotusTooltipText = 'No active Lotus';
         }
 
         // Update cached elements with computed values and adjust visibility classes
