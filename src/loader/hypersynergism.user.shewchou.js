@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         HyperSynergism Loader (Shewchou)
-// @namespace    https://github.com/maenhiir
+// @name         HyperSynergism Loader
+// @namespace    https://github.com/Ferlieloi
 // @version      3.5
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
@@ -240,6 +240,30 @@
             warn('Could not patch stage — "gameStageStatistic" not found in bundle');
         }
 
+        // ── WINDOW DEFINE PLAYER PATCH (simple) ─────────────────────────
+        // Detect builds that call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
+        // and inject a tiny expression to expose the player symbol to window.
+        try {
+            const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}/;
+            const m = re.exec(code);
+            if (m) {
+                const idx = m.index;
+                const playerVar = m[1];
+                debug(`define player probe: idx=${idx} playerVar=${playerVar ?? 'unknown'}`);
+                if (playerVar) {
+                    const definePlayerExposeExpr = `((window.__HS_PLAYER_EXPOSED&&window.__HS_PLAYER_EXPOSED!=='missing')||((window.__HS_player=${playerVar}),(window.player=${playerVar}),(window.__HS_PLAYER_EXPOSED='define-window'),console.log('[HS] \u2705 player exposed via defineProperties (sym=${playerVar})'))),`;
+                    code = code.slice(0, idx) + definePlayerExposeExpr + code.slice(idx);
+                    log(`Patched defineProperties player exposure (player=${playerVar})`);
+                } else {
+                    warn('defineProperties player patch: anchor found but symbol extraction failed');
+                }
+            } else {
+                debug('No defineProperties(player) anchor found in bundle');
+            }
+        } catch (e) {
+            warn('Error while probing for defineProperties player patch', e);
+        }
+
         log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
 
         // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
@@ -360,7 +384,7 @@ window.__HS_BACKDOOR__ = {
             await clickWhenAvailable('buildingstab');
             await new Promise(r => setTimeout(r, 300));
 
-            // Phase 6: Load the mod
+            // Phase 6: Load the mod.
             log('Phase 6 — loading mod script');
             await loadMod();
 
@@ -371,10 +395,58 @@ window.__HS_BACKDOOR__ = {
 
     function loadMod() {
         return new Promise((resolve, reject) => {
+            log('loadMod: Starting mod load sequence');
+            let env = 'CDN';
+            let owner;
+            const detectDevAndOwner = () => {
+                try {
+                    // If bridge explicitly set __HS_ISDEV, prefer local dev server.
+                    if (typeof window !== 'undefined' && window.__HS_ISDEV === true) {
+                        env = 'LOCALDEV';
+                        owner = 'LOCALDEV';
+                        log('loadMod: Detected global __HS_ISDEV=true — using local dev server');
+                    } else { // CDN
+                        for (const sc of document.getElementsByTagName('script')) {
+                            const src = sc.src || '';
+                            const m = src.match(/\/gh\/([^\/]+)\//);
+                            log(`loadMod: Probing script scr: ${src} for owner: ${src.substring(0, 60)} => ${m ? m[1] : 'no match'}`);
+                            if (m && !owner) owner = m[1];
+                        }
+                        if (!owner) owner = 'Ferlieloi';
+                        log(`loadMod: Owner probe complete; owner=${owner}`);
+                        
+                        try {
+                            if (typeof window !== 'undefined') {
+                                window.__HS_REPO_OWNER = owner;
+                                log(`loadMod: window.__HS_REPO_OWNER set to ${owner}`); // Log the resolved owner for debugging
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+                } catch (e) {
+                    warn('loadMod: detectDevAndOwner failed:', e);
+                }
+            };
+
+            try {
+                detectDevAndOwner();
+            } catch (e) {
+                warn('loadMod: Loader owner detection failed:', e);
+            }
+
+            const localUrl = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            const cdnUrl = `https://cdn.jsdelivr.net/gh/${owner}/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
             const s = document.createElement('script');
-            s.src = `https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
+            if (window.__HS_ISDEV) {
+                s.src = localUrl;
+                log(`Loading mod from LOCAL DEV SERVER: ${localUrl}`);
+            } else {
+                s.src = cdnUrl;
+                log(`Loading mod from CDN: ${cdnUrl}`);
+            }
+
+            // Attach handlers before appending the element.
             s.onload = () => {
-                log('✅ Mod script loaded from CDN');
+                log(`✅ Mod script loaded (${env}) (${owner})`);
                 try {
                     window.hypersynergism.init();
                     log('✅ Mod initialised');
@@ -384,13 +456,13 @@ window.__HS_BACKDOOR__ = {
                 resolve();
             };
             s.onerror = () => {
-                warn('❌ Mod failed to load from CDN');
-                reject(new Error('Mod CDN load failed'));
+                warn(`❌ Mod failed to load (${env}) (${owner})`);
+                reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    log('HyperSynergism loader v3.5 (Shewchou) initialised');
+    log(`HyperSynergism loader v3.5 initialised`);
 
 })();

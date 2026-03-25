@@ -17,11 +17,10 @@ export const HSGlobal: IHSGlobal = class {
         calculationCacheDebugMode: false,
     }
 
-    // --- PrivateAPI ---
+    // --- Release check configuration ---
 
-    static PrivateAPI = {
-        base: 'https://jonah.fi',
-        latestRelease: '/hs-version',
+    static Release = {
+        githubOwner: 'Ferlieloi',
 
         checkIntervalMs: 900000 // 15min
     }

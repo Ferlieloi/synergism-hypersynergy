@@ -21,6 +21,7 @@
         if (xhr.status === 200) {
             const s = document.createElement('script');
             s.textContent = xhr.responseText;
+            try { window.__HS_ISDEV = true; } catch (e) { }
             document.documentElement.appendChild(s);
             console.log(`%c[HS-BRIDGE] Loaded dev loader fresh from ${url}`, 'color:#4af');
         } else {

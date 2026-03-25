@@ -99,7 +99,7 @@ export class Hypersynergism {
                     }
                 }*/
             }
-        }, HSGlobal.PrivateAPI.checkIntervalMs);
+        }, HSGlobal.Release.checkIntervalMs);
     }
 
     #buildUIPanelContents() {

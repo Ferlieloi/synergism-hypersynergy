@@ -14,9 +14,8 @@ export interface HSGlobalDebug {
     calculationCacheDebugMode: boolean;
 }
 
-export interface HSGlobalPrivateAPI {
-    base: string;
-    latestRelease: string;
+export interface HSGlobalRelease {
+    githubOwner: string;
     checkIntervalMs: number;
 }
 
@@ -125,7 +124,7 @@ export interface HSGlobalHSUIC {
 
 export interface IHSGlobal {
     Debug: HSGlobalDebug;
-    PrivateAPI: HSGlobalPrivateAPI;
+    Release: HSGlobalRelease;
     General: HSGlobalGeneral;
     Common: HSGlobalCommon;
     HSPrototypes: HSGlobalPrototypes;
