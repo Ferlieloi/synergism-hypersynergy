@@ -82,6 +82,7 @@ if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
     console.log('  node scripts/release-and-tag.js                 # show this help and exit');
     console.log('  node scripts/release-and-tag.js --commit        # build, commit and tag locally');
     console.log('  node scripts/release-and-tag.js --commit --push # build, commit, tag and push');
+    console.log('  --push can be done after a --commit, or manually with `git push --follow-tags`');
     console.log('');
     console.log('Notes:');
     console.log('  - Version is read from package.json; update it manually before running.');
@@ -113,6 +114,7 @@ const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const targetVersion = pkg.version;
 if (!targetVersion) fatal('no version found in package.json');
 const targetTagName = 'v' + targetVersion;
+
 
 // ----------------
 // Get latest remote tag
@@ -167,12 +169,12 @@ if (opts.commit) {
     runAndCheck('node', [esbuildScript, 'release'], { cwd: root });
     console.log('Lockfile synced and release built.');
 
-    // check if release file is tracked in HEAD
+    // Ensure the release file is tracked in HEAD
     const t = run('git', ['ls-files', '--error-unmatch', releaseFileRel]);
     if (t.error) fatal('git failed while verifying if release file is tracked', t);
     if (t.status !== 0) fatal('Built release file is untracked.');
 
-    // check if release file differs from HEAD
+    // Ensure the release file does not differ from HEAD
     const d = run('git', ['diff', '--quiet', '--', releaseFileRel]);
     if (d.error) fatal('git failed while verifying if release file differs', d);
     if (d.status !== 0) fatal('Built release file differs from HEAD.');
