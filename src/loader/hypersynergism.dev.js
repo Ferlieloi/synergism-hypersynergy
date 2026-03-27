@@ -394,11 +394,15 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
+        const owner = 'DevServer';
+        window.__HS_REPO_OWNER = owner;
+        window.__HS_IS_DEV = true;
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            const url = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            s.src = url;
             s.onload = () => {
-                log('✅ Mod script loaded from LOCAL DEV SERVER');
+                log(`✅ Mod script loaded from LOCAL DEV SERVER: ${url}`);
                 try {
                     window.hypersynergism.init();
                     log('✅ Mod initialised');
@@ -408,7 +412,7 @@ window.__HS_BACKDOOR__ = {
                 resolve();
             };
             s.onerror = () => {
-                warn('❌ Mod failed to load from LOCAL DEV SERVER');
+                warn(`❌ Mod failed to load from LOCAL DEV SERVER: ${url}`);
                 reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);

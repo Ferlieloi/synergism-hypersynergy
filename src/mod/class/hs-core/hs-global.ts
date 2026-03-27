@@ -3,6 +3,9 @@ import { HSViewProperties, MAIN_VIEW } from "../../types/module-types/hs-gamesta
 import { IHSGlobal } from "../../types/module-types/hs-global-types";
 import { ELogLevel } from "../../types/module-types/hs-logger-types";
 
+// Build-time injected by esbuild via `define`.
+declare const HS_BUILD_VERSION: string;
+
 export const HSGlobal: IHSGlobal = class {
 
     private constructor() {
@@ -21,14 +24,14 @@ export const HSGlobal: IHSGlobal = class {
 
     static Release = {
         githubOwner: 'Ferlieloi',
-
-        checkIntervalMs: 900000 // 15min
+        checkIntervalMs: 300000 // 5min
     }
 
     // --- GENERAL ---
 
     static General = {
-        currentModVersion: '2.11.0-dev3',
+        // Version number bumping should be done in package.json.version
+        currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isLatestVersion: true,
         isModFullyLoaded: false,
 
