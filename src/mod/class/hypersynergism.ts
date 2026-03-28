@@ -1,4 +1,4 @@
-import { HSModuleDefinition, HSReleaseInfo } from "../types/hs-types";
+import { HSModuleDefinition } from "../types/hs-types";
 import { HSLogger } from "./hs-core/hs-logger";
 import { HSModuleManager } from "./hs-core/module/hs-module-manager";
 import { HSUI } from "./hs-core/hs-ui";
@@ -30,7 +30,6 @@ export class Hypersynergism {
     #moduleManager: HSModuleManager;
 
     #versionCheckIvl?: number;
-    #latestRelease?: HSReleaseInfo;
     #isInitialized = false;
 
     constructor(modulesToEnable: HSModuleDefinition[]) {
@@ -78,26 +77,36 @@ export class Hypersynergism {
             notificationType: "success"
         });
 
+        // I'm not really sure how to do this cleanly (and where)...
+        // I think checking the "==UserScript==" block could be cleaner. But reading the loader doesn't feels clean anyway ><
+        // Before this, I was using a __HS_IS_DEV set by the loader (and __HS_REPO_OWNER), but that didn't felt clean too.
+
+        // Search for the loader script url to determine if we're in dev mode
+        const regexIsDev = /const\s+url\s*=\s*`http:\/\/127\.0\.0\.1:8080\/hypersynergism\.js\?/;
+        for (const script of document.scripts) {
+            if (!script.src && script.textContent) {
+                const isDev = script.textContent.match(regexIsDev);
+                if (isDev) HSGlobal.General.isDev = true;
+            }
+        }
+        
         this.#versionCheckIvl = setInterval(async () => {
-            const latestRelease = await HSGithub.getLatestRelease();
+            const latestTag = await HSGithub.getLatestTag();
+            console.log(`versionCheckIvl: Version check - current: v${HSGlobal.General.currentModVersion}, latest: ${latestTag}`);
+            if (latestTag && latestTag !== HSGlobal.General.currentModVersion) {
+                console.log(`Newest tag found: ${latestTag}!`);
+                HSGlobal.General.isLatestVersion = false;
 
-            if (latestRelease) {
-                HSLogger.debug(`Latest release: ${latestRelease.name} (${latestRelease.version})`, this.#context);
-                /*
-                if (latestRelease.version !== HSGlobal.General.currentModVersion) {
-                    HSGlobal.General.isLatestVersion = false;
+                const modIcon = document.querySelector('#hs-panel-control') as HTMLDivElement;
+                const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement;
 
-                    const modIcon = document.querySelector('#hs-panel-control') as HTMLDivElement;
-                    const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement;
+                if (modIcon && modPanelHead) {
+                    modIcon.classList.add('hs-rainbowBorder');
+                    modPanelHead.innerHTML += ` - <span id="hs-panel-new-ver">New version available!</span>`;
 
-                    if (modIcon && modPanelHead) {
-                        modIcon.classList.add('hs-rainbowBorder');
-                        modPanelHead.innerHTML += ` - <span id="hs-panel-new-ver">New version available!</span>`;
-
-                        clearInterval(this.#versionCheckIvl);
-                        this.#versionCheckIvl = undefined;
-                    }
-                }*/
+                    clearInterval(this.#versionCheckIvl);
+                    this.#versionCheckIvl = undefined;
+                }
             }
         }, HSGlobal.Release.checkIntervalMs);
     }
@@ -326,7 +335,9 @@ export class Hypersynergism {
         });
 
         document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async () => {
-            const isLatest = await HSUtils.isLatestVersion();
+            const isLatest = await HSGithub.isLatestTag();
+            const latest = await HSGithub.getLatestTag();
+            HSLogger.info(`Tag check - is latest: ${isLatest}, current version: ${HSGlobal.General.currentModVersion}, latest version: ${latest}`, this.#context);
 
             if (isLatest) {
                 HSUI.Notify('You are using the latest version of Hypersynergism!', {
@@ -334,7 +345,7 @@ export class Hypersynergism {
                     notificationType: "success"
                 });
             } else {
-                HSUI.Notify('You are not using the latest version of Hypersynergism!', {
+                HSUI.Notify('You are NOT using the latest version of Hypersynergism!', {
                     position: 'top',
                     notificationType: "warning"
                 });

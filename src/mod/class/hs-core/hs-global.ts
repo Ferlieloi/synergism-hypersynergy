@@ -34,6 +34,7 @@ export const HSGlobal: IHSGlobal = class {
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isLatestVersion: true,
         isModFullyLoaded: false,
+        isDev: false,
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
         modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',

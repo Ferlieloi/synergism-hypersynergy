@@ -1,6 +1,6 @@
 {
   "name": "synergism-hypersynergy",
-  "version": "2.11.0-dev4", 
+  "version": "2.11.1",
   "private": true,
   "description": "Hypersynergism mod for the Synergism browser game.",
   "repository": {
@@ -8,7 +8,11 @@
     "url": "https://github.com/Ferlieloi/synergism-hypersynergy.git"
   },
   "author": "Ferlieloi",
-  "keywords": ["synergism","mod","hypersynergism"],
+  "keywords": [
+    "synergism",
+    "mod",
+    "hypersynergism"
+  ],
   "engines": {
     "node": ">=18"
   },

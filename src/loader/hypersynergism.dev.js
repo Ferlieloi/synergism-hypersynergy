@@ -394,9 +394,6 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
-        const owner = 'DevServer';
-        window.__HS_REPO_OWNER = owner;
-        window.__HS_IS_DEV = true;
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
             const url = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;

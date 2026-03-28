@@ -13,7 +13,10 @@ const baseOptions = {
         })
     ],
     legalComments: 'none',
-    logLevel: 'info'
+    logLevel: 'info',
+    define: {
+        HS_BUILD_VERSION: JSON.stringify(require('./package.json').version)
+    }
 };
 
 // Copy loader files to build directory for dev server

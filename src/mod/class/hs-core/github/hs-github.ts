@@ -1,40 +1,58 @@
-import { HSReleaseInfo } from "../../../types/hs-types";
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
-import { HSModule } from "../module/hs-module";
 
 /*
-    Small helper to fetch the latest published GitHub release for the configured repo.
+    Small helper to fetch the latest published GitHub tag for the configured repo.
 */
 export class HSGithub {
-    static context: string;
+    static context: string = 'HSGithub';
 
-    static async getLatestRelease() {
-        this.context = 'HSGithub';
+    static owner: string = '';
+    static latestTag: string;
+
+    static async isLatestTag(): Promise<boolean> {
+        const latestTag = await HSGithub.getLatestTag();
+        return !(latestTag && latestTag !== `v${HSGlobal.General.currentModVersion}`);
+    }
+
+    static async getLatestTag(): Promise<string | null> {
         try {
-            const owner = (globalThis as any).__HS_REPO_OWNER || HSGlobal.Release.githubOwner;
-
-            const devSentinels = ['DevServer', 'local', 'dev'];
-            if (devSentinels.includes(owner)) {
-                HSLogger.debug(`[HSGithub] Skipping GitHub API for dev sentinel owner: ${owner}`, this.context);
-                return null;
+            if (this.owner === '') {
+                this.owner = this.getOwnerFromInlineScript() || '';
             }
-            const githubUrl = `https://api.github.com/repos/${owner}/synergism-hypersynergy/releases/latest`;
 
+            // GitHub API: List tags (sorted by commit date descending)
+            const githubUrl = `https://api.github.com/repos/${this.owner}/synergism-hypersynergy/tags?per_page=1`;
             const ghResp = await fetch(githubUrl);
             if (!ghResp.ok) return null;
             const ghJson = await ghResp.json();
-
-            const info: HSReleaseInfo = {
-                version: ghJson.tag_name || ghJson.name || '',
-                name: ghJson.name || ghJson.tag_name || '',
-                published: ghJson.published_at ? new Date(ghJson.published_at) : new Date()
-            };
-
-            return info;
+            if (Array.isArray(ghJson) && ghJson.length > 0 && ghJson[0].name) {
+                HSLogger.debug(`[HSGithub] Latest tag from GitHub API: ${ghJson[0].name}`, this.context);
+                HSGithub.latestTag = ghJson[0].name;
+                return ghJson[0].name;
+            }
+            return null;
         } catch (err) {
             return null;
         }
+    }
+
+    static getOwnerFromInlineScript() {
+        if (HSGlobal.General.isDev) return 'maenhiir';
+
+        const regex = /https:\/\/cdn\.jsdelivr\.net\/gh\/([^/]+)\/synergism-hypersynergy@/;
+        for (const script of document.scripts) {
+            if (!script.src && script.textContent) {
+                const m = script.textContent.match(regex);
+                if (m) {
+                    HSLogger.debug(`Extracted owner from inline script: ${m[1]}`, this.context);
+                    this.owner = m[1];
+                    return m[1];
+                }
+            }
+        }
+        HSLogger.debug(`Owner not found in inline scripts`, this.context);
+        return null;
     }
 }
  

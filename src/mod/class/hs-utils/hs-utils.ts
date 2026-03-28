@@ -1,9 +1,7 @@
 import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
-import { HSGithub } from "../hs-core/github/hs-github";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 
 /*
@@ -430,18 +428,6 @@ export class HSUtils {
         }
 
         return reverse[buff];
-    }
-
-    static async isLatestVersion() {
-        const latestRelease = await HSGithub.getLatestRelease();
-
-        if (latestRelease) {
-            if (latestRelease.version !== HSGlobal.General.currentModVersion) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     static asString(settingValue: HSSettingType): string {
