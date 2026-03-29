@@ -240,28 +240,37 @@
             warn('Could not patch stage — "gameStageStatistic" not found in bundle');
         }
 
-        // ── WINDOW DEFINE PLAYER PATCH (simple) ─────────────────────────
-        // Detect builds that call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
-        // and inject a tiny expression to expose the player symbol to window.
+        // ── WINDOW DEFINE PLAYER PATCH ─────────────────────────
+        // Detect the call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
+        // and expose the player object  via an obfuscated, non-enumerable Symbol property on window (window.symp)
         try {
-            const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}/;
+            // Match the full Object.defineProperties(...) call
+            const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}[^}]*\}[^)]*\)/;
             const m = re.exec(code);
             if (m) {
-                const idx = m.index;
+                const insertPos = m.index + m[0].length;
                 const playerVar = m[1];
-                debug(`define player probe: idx=${idx} playerVar=${playerVar ?? 'unknown'}`);
                 if (playerVar) {
-                    const definePlayerExposeExpr = `((window.__HS_PLAYER_EXPOSED&&window.__HS_PLAYER_EXPOSED!=='missing')||((window.__HS_player=${playerVar}),(window.player=${playerVar}),(window.__HS_PLAYER_EXPOSED='define-window'),console.log('[HS] \u2705 player exposed via defineProperties (sym=${playerVar})'))),`;
-                    code = code.slice(0, idx) + definePlayerExposeExpr + code.slice(idx);
-                    log(`Patched defineProperties player exposure (player=${playerVar})`);
+                    // Expose player using a Symbol property, with Symbol stored globally (symp = symbol player)
+                    const expose =
+                    ',(' +
+                        'window.symp=window.symp||Symbol(),' +
+                        'Object.defineProperty(' + 
+                            'window,window.symp,' +
+                            '{enumerable:false,configurable:true,writable:true,value:' + playerVar + '}' +
+                        ')' +
+                        // line below to remove in prod
+                        ',console.log("[HS] \u2705 player exposed via Symbol property")' + 
+                    ' )';
+                    code = code.slice(0, insertPos) + expose + code.slice(insertPos);
                 } else {
-                    warn('defineProperties player patch: anchor found but symbol extraction failed');
+                    warn('❌ Error in defineProperties player patch: anchor found but symbol extraction failed');
                 }
             } else {
-                debug('No defineProperties(player) anchor found in bundle');
+                warn('❌ Error while searching for defineProperties(player) anchor in bundle');
             }
         } catch (e) {
-            warn('Error while probing for defineProperties player patch', e);
+            warn('❌ Error while probing for defineProperties player patch', e);
         }
 
         log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');

@@ -6,10 +6,21 @@ import { ELogLevel } from "../../types/module-types/hs-logger-types";
 // Build-time injected by esbuild via `define`.
 declare const HS_BUILD_VERSION: string;
 
+/**
+ * Class: HSGlobal
+ * IsExplicitHSModule: No
+ * Description:
+ *     Static class containing global configuration and constants for the Hypersynergism mod.
+ * Author: Swiffy
+ */
 export const HSGlobal: IHSGlobal = class {
 
     constructor() {
         throw new Error("Cannot instantiate a static class");
+    }
+
+    static get exposedPlayer() {
+        return (window as any)[(window as any).symp] || null;
     }
 
     // --- DEBUG ---

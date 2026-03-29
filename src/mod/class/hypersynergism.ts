@@ -77,10 +77,9 @@ export class Hypersynergism {
             notificationType: "success"
         });
 
-        // I'm not really sure how to do this cleanly (and where)...
+        // I'm not really sure how to do the code block below cleanly (and where)...
         // I think checking the "==UserScript==" block could be cleaner. But reading the loader doesn't feels clean anyway ><
-        // Before this, I was using a __HS_IS_DEV set by the loader (and __HS_REPO_OWNER), but that didn't felt clean too.
-
+        // Before this, I was using a __HS_IS_DEV set by the loader (and __HS_REPO_OWNER), but that didn't felt clean too (in restrospect it felt cleaner than this ^^")
         // Search for the loader script url to determine if we're in dev mode
         const regexIsDev = /const\s+url\s*=\s*`http:\/\/127\.0\.0\.1:8080\/hypersynergism\.js\?/;
         for (const script of document.scripts) {
@@ -91,9 +90,10 @@ export class Hypersynergism {
         }
         
         this.#versionCheckIvl = setInterval(async () => {
-            const latestTag = await HSGithub.getLatestTag();
-            console.log(`versionCheckIvl: Version check - current: v${HSGlobal.General.currentModVersion}, latest: ${latestTag}`);
-            if (latestTag && latestTag !== HSGlobal.General.currentModVersion) {
+            const latestTag = await HSGithub.getLatestRemoteTag();
+            console.log(`versionCheckIvl: Version check - current: ${HSGithub.currentTag}, latest: ${latestTag}`);
+
+            if (latestTag && latestTag !== HSGithub.currentTag) {
                 console.log(`Newest tag found: ${latestTag}!`);
                 HSGlobal.General.isLatestVersion = false;
 
@@ -330,14 +330,14 @@ export class Hypersynergism {
 
             if (storageMod) {
                 storageMod.clearData(HSGlobal.HSSettings.storageKey);
-                HSLogger.info('Stored settings cleared', this.#context);
+                HSLogger.log('Stored settings cleared', this.#context);
             }
         });
 
         document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async () => {
             const isLatest = await HSGithub.isLatestTag();
-            const latest = await HSGithub.getLatestTag();
-            HSLogger.info(`Tag check - is latest: ${isLatest}, current version: ${HSGlobal.General.currentModVersion}, latest version: ${latest}`, this.#context);
+            const latest = await HSGithub.getLatestRemoteTag();
+            HSLogger.log(`Tag check - is latest: ${isLatest}, current tag: ${HSGithub.currentTag}, latest version: ${latest}`, this.#context);
 
             if (isLatest) {
                 HSUI.Notify('You are using the latest version of Hypersynergism!', {
@@ -363,13 +363,18 @@ export class Hypersynergism {
                 console.log('Found active challenge img, clicking:', img);
                 img.click();
             } else {
-                HSUI.Notify('Could not find an active Singularity challenge in the DOM.', {
-                    position: 'top',
-                    notificationType: "warning"
-                });
+                let exposedPlayer = HSGlobal.exposedPlayer;
+                if (exposedPlayer) {
+                    if (exposedPlayer.insideSingularityChallenge === false) {
+                        HSLogger.debug('No active Exalt found in DOM or exposed stuff... Are you sure you have a bug?', this.#context);
+                    } else {
+                        exposedPlayer.insideSingularityChallenge = true;
+                        HSLogger.log('Exalt bug fix done with exposed stuff (?)', this.#context);
+                    }
+                } else {
+                    HSLogger.log('If you are using the bookmark loader, please try again with the TAMPERMONKEY loader instead.', this.#context);
+                }
             }
-            // TODO: Handle the other bug where the exalt timer is visible but no exalt are active 
-            // We need exposed player (or at least a specific function) for this
         });
 
         document.querySelector('#hs-panel-test-calc-redu-btn')?.addEventListener('click', () => {
@@ -434,7 +439,7 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
             if (dataModule) {
-                HSLogger.info('Cleared calculation cache', this.#context);
+                HSLogger.log('Cleared calculation cache', this.#context);
                 dataModule.clearCache();
             }
         });
@@ -443,7 +448,7 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
             if (dataModule) {
-                HSLogger.info('Calculation cache dump', this.#context);
+                HSLogger.log('Calculation cache dump', this.#context);
                 dataModule.dumpCache();
             }
         });

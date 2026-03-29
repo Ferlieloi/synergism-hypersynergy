@@ -2,6 +2,7 @@ import { HSAmbrosiaLoadoutIconMapping } from "./hs-ambrosia-types";
 import { HSWatcherOptions } from "./hs-elementhooker-types";
 import { HSViewProperties, MAIN_VIEW } from "./hs-gamestate-types";
 import { ELogLevel } from "./hs-logger-types";
+import { PlayerData } from "../data-types/hs-player-savedata";
 
 interface IStoreable {
     storageKey: string;
@@ -124,6 +125,7 @@ export interface HSGlobalHSUIC {
 }
 
 export interface IHSGlobal {
+    exposedPlayer: PlayerData | null;
     Debug: HSGlobalDebug;
     Release: HSGlobalRelease;
     General: HSGlobalGeneral;

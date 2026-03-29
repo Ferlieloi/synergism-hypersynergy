@@ -829,7 +829,7 @@ export class HSUI extends HSModule {
     }
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
-        HSLogger.log(`${text}`, '[Notify]');
+        HSLogger.log(`${text}`, 'Notify');
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,
