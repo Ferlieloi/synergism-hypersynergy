@@ -81,6 +81,7 @@ export class Hypersynergism {
         // I think checking the "==UserScript==" block could be cleaner. But reading the loader doesn't feels clean anyway ><
         // Before this, I was using a __HS_IS_DEV set by the loader (and __HS_REPO_OWNER), but that didn't felt clean too (in restrospect it felt cleaner than this ^^")
         // Search for the loader script url to determine if we're in dev mode
+        /*
         const regexIsDev = /const\s+url\s*=\s*`http:\/\/127\.0\.0\.1:8080\/hypersynergism\.js\?/;
         for (const script of document.scripts) {
             if (!script.src && script.textContent) {
@@ -88,25 +89,15 @@ export class Hypersynergism {
                 if (isDev) HSGlobal.General.isDev = true;
             }
         }
+        */
         
         this.#versionCheckIvl = setInterval(async () => {
-            const latestTag = await HSGithub.getLatestRemoteTag();
-            console.log(`versionCheckIvl: Version check - current: ${HSGithub.currentTag}, latest: ${latestTag}`);
-
-            if (latestTag && latestTag !== HSGithub.currentTag) {
-                console.log(`Newest tag found: ${latestTag}!`);
+            // isLatestTag() handles the styling
+            const isLatest = await HSGithub.isLatestTag();
+            if (!isLatest) {
                 HSGlobal.General.isLatestVersion = false;
-
-                const modIcon = document.querySelector('#hs-panel-control') as HTMLDivElement;
-                const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement;
-
-                if (modIcon && modPanelHead) {
-                    modIcon.classList.add('hs-rainbowBorder');
-                    modPanelHead.innerHTML += ` - <span id="hs-panel-new-ver">New version available!</span>`;
-
-                    clearInterval(this.#versionCheckIvl);
-                    this.#versionCheckIvl = undefined;
-                }
+                clearInterval(this.#versionCheckIvl);
+                this.#versionCheckIvl = undefined;
             }
         }, HSGlobal.Release.checkIntervalMs);
     }

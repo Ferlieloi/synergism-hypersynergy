@@ -134,7 +134,7 @@ export class HSSettingActions {
             }
         },
 
-        autoLoadout: async (params: HSSettingActionParams) => {
+        addTimeAutoLoadoutsAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');

@@ -29,8 +29,8 @@ export interface HSSettingsDefinition {
     autoClickIgnoreElements: AutoClickIgnoreElementsSetting;
 
     // Ambrosia Settings
-    autoLoadout: AutoLoadoutSetting;
-    autoLoadoutState: AutoLoadoutStateSetting;
+    addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
+    activeAmbrosiaLoadout: ActiveAmbrosiaLoadoutSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
@@ -168,8 +168,8 @@ export interface AutoclickSetting extends HSSettingBase<number> { }
 export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
 
 // Ambrosia Settings
-export interface AutoLoadoutSetting extends HSSettingBase<boolean> { }
-export interface AutoLoadoutStateSetting extends HSSettingBase<string> { }
+export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
+export interface ActiveAmbrosiaLoadoutSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 

@@ -34,7 +34,7 @@ export const HSGlobal: IHSGlobal = class {
     // --- Release check configuration ---
     static Release = {
         githubOwner: 'Ferlieloi',
-        checkIntervalMs: 300000 // 5min
+        checkIntervalMs: 900000 // 15min
     }
 
     // --- GENERAL ---
@@ -43,7 +43,7 @@ export const HSGlobal: IHSGlobal = class {
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isLatestVersion: true,
         isModFullyLoaded: false,
-        isDev: false,
+        isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
         modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
         modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',

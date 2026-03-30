@@ -3,6 +3,7 @@ import { HSLogger } from "../hs-core/hs-logger";
 // Canonical factory: must return an object with `element` and optional `teardown`.
 export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };
 export type QUICKBAR_ID = typeof HSQuickbarManager.QUICKBAR_IDS[keyof typeof HSQuickbarManager.QUICKBAR_IDS];
+
 /**
  * Class: HSQuickbarManager
  * IsExplicitHSModule: No
@@ -189,6 +190,11 @@ export class HSQuickbarManager {
     /** Return the current ordered list of registered section IDs. */
     public getSectionOrder(): QUICKBAR_ID[] {
         return [...this.#sectionOrder];
+    }
+
+    /** Return whether the section has already been injected into the DOM. */
+    public isInjected(id: QUICKBAR_ID): boolean {
+        return this.#sectionElements.has(id);
     }
 
     /** Get the DOM element for a registered section (after injection). */

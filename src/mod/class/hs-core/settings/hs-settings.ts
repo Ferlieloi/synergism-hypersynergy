@@ -3,6 +3,7 @@ import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
@@ -10,7 +11,7 @@ import settings_control_pages from "inline:../../../resource/json/hs-settings-co
 import manifest from '../../../resource/json/strategies/manifest.json';
 import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
-import { HSInputType } from "../../../types/module-types/hs-ui-types";
+import { HSInputType, HSUICSelectOption } from "../../../types/module-types/hs-ui-types";
 import { HSSettingActions } from "./hs-setting-action";
 import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
 import { HSModuleManager } from "../module/hs-module-manager";
@@ -271,7 +272,85 @@ export class HSSettings extends HSModule {
         this.#settingsSynced = true;
     }
 
-    // Builds the settings UI in the mod's panel
+    /**
+     * Limit loadout options to only the reachable loadout slots (1..maxLoadouts).
+     */
+    static filterLoadoutSelectOptions(options: HSUICSelectOption[], maxLoadouts: number): HSUICSelectOption[] {
+        return options.filter((option) => {
+            const valueRaw = option.value;
+
+            // Keep default unset / none item
+            if (valueRaw === "" || String(valueRaw).toLowerCase() === "none")
+                return true;
+
+            // Keep values within the supported range
+            const parsed = parseInt(String(valueRaw), 10);
+            if (Number.isInteger(parsed)) {
+                if (parsed <= 0) return false;
+                if (parsed > maxLoadouts) return false;
+                return true;
+            }
+            // Keep non-numeric options (for unexpected options)
+            return true;
+        });
+    }
+
+    /**
+     * Iterate all settings and re-filter Ambrosia loadout selects after loadout amount is known.
+     * This is intended to be called when HSAmbrosia finishes initialization.
+     */
+    static refreshAmbrosiaLoadoutDropdowns(): void {
+        const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+        if (!ambrosiaMod) {
+            HSLogger.warn(`HSAmbrosia module not found. Dropdown lists for Ambrosia loadouts defaulted to 16.`, HSSettings.#staticContext);
+            return; 
+        }
+        
+        const nbLoadouts = ambrosiaMod.getAmbrosiaLoadoutsAmount();
+        HSLogger.debug(`Detected ${nbLoadouts}/16 ambrosia loadout slots, updating dropdown lists...`, HSSettings.#staticContext);
+
+        const count = ambrosiaMod.getAmbrosiaLoadoutsAmount();
+        // If count is somehow invalid or 0, fallback to 16
+        const maxLoadouts = count > 0 ? count : 16;
+
+        const settingsEntries = Object.typedEntries(HSSettings.getSettings());
+        for (const [, setting] of settingsEntries) {
+            const control = setting.getDefinition().settingControl;
+            if (!control || !control.selectOptions) continue;
+
+            // Only process Ambrosia loadout selects, ignore unrelated selects.
+            if (!control.selectOptions.some((option) => /loadout\s*\d+/i.test(option.text))) continue;
+
+            // Prune the select option list to active loadout count.
+            const filtered = HSSettings.filterLoadoutSelectOptions(control.selectOptions, maxLoadouts);
+            control.selectOptions = filtered;
+
+            const currentValue = setting.getValue();
+            if (currentValue && currentValue !== '' && !filtered.some(opt => String(opt.value) === String(currentValue))) {
+                setting.setValue('');
+            }
+
+            // Keep the visible <select> in sync with the filtered options.
+            const htmlSelect = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
+            if (htmlSelect) {
+                // Rebuild the <select> options from scratch so removed values disappear.
+                htmlSelect.innerHTML = '';
+
+                for (const option of filtered) {
+                    const opt = document.createElement('option');
+                    opt.value = String(option.value);
+                    opt.text = option.text;
+
+                    // Preserve previous selection when still valid.
+                    if (String(option.value) === String(currentValue)) {
+                        opt.selected = true;
+                    }
+                    htmlSelect.appendChild(opt);
+                }
+            }
+        }
+    }
+
     static autoBuildSettingsUI(): { didBuild: boolean, navHTML: string, pagesHTML: string } {
         const self = this;
 

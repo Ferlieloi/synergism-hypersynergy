@@ -403,9 +403,11 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
+        const repoOwner = 'Ferlieloi';
+        window.__HS_REPO_OWNER = repoOwner;
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            const url = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
+            const url = `https://cdn.jsdelivr.net/gh/${repoOwner}/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
             s.src = url;
             s.onload = () => {
                 log(`✅ Mod script loaded from CDN: ${url}`);

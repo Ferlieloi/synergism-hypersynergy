@@ -37,7 +37,7 @@
     "settingDescription": "Suppress cost protection logs",
     "settingHelpText": "Check this if you want to suppress the rather spammy cost protection notifications in the log",
     "settingType": "boolean",
-    "enabled": false,
+    "enabled": true,
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "hepteracts",
@@ -160,7 +160,7 @@
     "settingDescription": "Auto disable on error",
     "settingHelpText": "When enabled, the mod will automatically disable game data sniffing if an error occurs. Recommended to be enabled as reading game data is not always reliable.",
     "settingType": "boolean",
-    "enabled": true,
+    "enabled": false,
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "gamedata",
@@ -168,29 +168,29 @@
       "controlEnabledId": "hs-setting-stop-sniff-on-error-btn"
     }
   },
-  "autoLoadout": {
-    "settingName": "autoLoadout",
+  "addTimeAutoLoadouts": {
+    "settingName": "addTimeAutoLoadouts",
     "settingDescription": "Add+Time Amb loadouts auto-switch",
     "settingHelpText": "When enabled, the mod will automatically switch to configured ambrosia loadouts when ADD or TIME buttons are clicked.",
     "settingType": "boolean",
     "enabled": false,
-    "settingAction": "autoLoadout",
+    "settingAction": "addTimeAutoLoadoutsAction",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "ambrosia",
       "controlPage": "ambrosia",
-      "controlEnabledId": "hs-setting-auto-loadout-btn"
+      "controlEnabledId": "hs-setting-add-time-auto-loadouts-btn"
     }
   },
-  "autoLoadoutState": {
-    "settingName": "autoLoadoutState",
-    "settingDescription": "Current loadout state",
-    "settingHelpText": "This shows if the mod is aware of your current loadout state. If the state is Unknown, auto loadout switch will not work. To fix this, open the ambrosia menu and switch to any loadout.",
+  "activeAmbrosiaLoadout": {
+    "settingName": "activeAmbrosiaLoadout",
+    "settingDescription": "Current active ambrosia loadout",
+    "settingHelpText": "This stores the current active ambrosia loadout (with <red>/<green> formatting).",
     "settingType": "state",
     "settingValue": "\u003cred\u003eUnknown\u003c/red\u003e",
     "enabled": true,
     "settingControl": {
-      "controlId": "hs-setting-auto-loadout-state-value",
+      "controlId": "hs-setting-active-ambrosia-loadout-value",
       "controlType": "state",
       "controlGroup": "ambrosia",
       "controlPage": "ambrosia"
@@ -199,7 +199,7 @@
   "autoLoadoutAdd": {
     "settingName": "autoLoadoutAdd",
     "settingDescription": "ADD Loadout",
-    "settingHelpText": "Configures to loadout to use when ADD button is clicked.",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the ADD button is clicked.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -283,7 +283,7 @@
   "autoLoadoutTime": {
     "settingName": "autoLoadoutTime",
     "settingDescription": "TIME loadout",
-    "settingHelpText": "Configures to loadout to use when TIME button is clicked.",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the TIME button is clicked.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -1252,7 +1252,7 @@
     "settingDescription": "Events quick bar",
     "settingHelpText": "When enabled, shows a bell icon in the header during events.",
     "settingType": "boolean",
-    "enabled": false,
+    "enabled": true,
     "settingAction": "eventsQuickBarAction",
     "settingControl": {
       "controlType": "switch",
