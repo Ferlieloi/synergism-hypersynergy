@@ -379,7 +379,7 @@ async function chooseTarget(status) {
     warn(`Target version ${status.pkgVersion} already exists in ${conflictText}. Auto bump recommended.`);
 
     const semverMatch = status.pkgVersion.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-.]+))?$/);
-    if (!semverMatch) fatal('Unable to parse package version for bump. Expected semver like 2.11.0 or 2.11.0-dev3.');
+    if (!semverMatch) fatal('Unable to parse package version for bump. Expected semver like 2.10.0 or 2.10.0-dev3.');
 
     const major = Number(semverMatch[1]);
     const minor = Number(semverMatch[2]);
