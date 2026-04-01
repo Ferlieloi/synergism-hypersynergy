@@ -3,10 +3,24 @@ import { HSViewProperties, MAIN_VIEW } from "../../types/module-types/hs-gamesta
 import { IHSGlobal } from "../../types/module-types/hs-global-types";
 import { ELogLevel } from "../../types/module-types/hs-logger-types";
 
+// Build-time injected by esbuild via `define`.
+declare const HS_BUILD_VERSION: string;
+
+/**
+ * Class: HSGlobal
+ * IsExplicitHSModule: No
+ * Description:
+ *     Static class containing global configuration and constants for the Hypersynergism mod.
+ * Author: Swiffy
+ */
 export const HSGlobal: IHSGlobal = class {
 
-    private constructor() {
+    constructor() {
         throw new Error("Cannot instantiate a static class");
+    }
+
+    static get exposedPlayer() {
+        return (window as any)[(window as any).symp] || null;
     }
 
     // --- DEBUG ---
@@ -17,31 +31,27 @@ export const HSGlobal: IHSGlobal = class {
         calculationCacheDebugMode: false,
     }
 
-    // --- PrivateAPI ---
-
-    static PrivateAPI = {
-        base: 'https://jonah.fi',
-        latestRelease: '/hs-version',
-
-        checkIntervalMs: 900000 // 15min
+    // --- Release check configuration ---
+    static Release = {
+        githubOwner: 'Ferlieloi',  // Could we do without this ????
+        isLatestVersion: true,
+        checkIntervalMs: 900000    // 15min
     }
 
     // --- GENERAL ---
-
     static General = {
-        currentModVersion: '2.11.0-dev3',
-        isLatestVersion: true,
+        // Version number bumping should be done in package.json.version
+        currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isModFullyLoaded: false,
+        isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
-        modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
-        modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',
-        modWikiFeaturesUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features',
-        modWebsiteUrl: 'https://ahvonenj.github.io/synergism-hypersynergy/',
+        get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
+        get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
+        get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
         heaterUrl: 'https://docs.google.com/spreadsheets/d/1v02fjAeAHtLBMB5-7Spz5OHVb-eEDg7m5ISi5Mk0YAY/edit?usp=sharing'
     };
 
     // --- COMMON ---
-
     static Common = {
         eventAPIUrl: 'wss://synergism.cc/consumables/connect',
         pseudoAPIurl: 'https://synergism.cc/stripe/upgrades',
@@ -51,15 +61,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSPrototypes ---
-
-    // Default CSS transition timing 100ms
     static HSPrototypes = {
+        // Default CSS transition timing 100ms
         defaultTransitionTiming: 100
     }
 
-
     // --- HSElementHooker ---
-
     // watchElement's MutationObserver can fire max 20 times / second
     static HSElementHooker = {
         // HookElement / HookElements
@@ -83,22 +90,18 @@ export const HSGlobal: IHSGlobal = class {
         }
     }
 
-
     // --- HSLogger ---
-
     static HSLogger = {
         logLevel: ELogLevel.ALL,
         logSize: 5000
     }
 
     // --- HSStorage ---
-
     static HSStorage = {
         storagePrefix: 'hs-',
     }
 
     // --- HSUI ---
-
     static HSUI = {
         injectedStylesDomId: 'hs-injected-styles',
         notifyClassName: 'hs-notification',
@@ -106,14 +109,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSUIC ---
-
     static HSUIC = {
         defaultImageWidth: 32,
         defaultImageHeight: 32,
     }
 
     // --- HSSettings ---
-
     static HSSettings = {
         storageKey: 'settings',
         strategiesKey: 'strategies',
@@ -136,15 +137,10 @@ export const HSGlobal: IHSGlobal = class {
             'stopSniffOnError',
             // These three settings auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            'startAutosing',
             'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
-
-    /*static HSSettingAction = {
-        
-    }*/
 
     static HSMouse = {
         autoClickIgnoredElements: [

@@ -6,6 +6,13 @@ import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSGameState
+ * IsExplicitHSModule: Yes
+ * Description:
+ *     Manages the game state, including views and their transitions.
+ * Author: Swiffy
+ */
 export class HSGameState extends HSModule {
 
     #UNKNOWN_VIEW = -1;
@@ -95,26 +102,26 @@ export class HSGameState extends HSModule {
                     this.#resolveSubViewChanges(uiView.getId());
                 }
             },
-                {
-                    characterData: false,
-                    childList: false,
-                    subtree: false,
-                    attributes: true,
-                    attributeOldValue: false,
-                    attributeFilter: ['style'],
-                    valueParser: (element, mutations) => {
-                        for (const mutation of mutations) {
-                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                                const target = mutation.target as HTMLElement;
-                                const display = target.style.getPropertyValue('display');
-                                return {
-                                    view: target.id,
-                                    state: display
-                                }
+            {
+                characterData: false,
+                childList: false,
+                subtree: false,
+                attributes: true,
+                attributeOldValue: false,
+                attributeFilter: ['style'],
+                valueParser: (element, mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            const target = mutation.target as HTMLElement;
+                            const display = target.style.getPropertyValue('display');
+                            return {
+                                view: target.id,
+                                state: display
                             }
                         }
                     }
-                });
+                }
+            });
         }
 
         HSGlobal.HSGameState.viewProperties.forEach(async (viewProperties, mainViewId) => {
@@ -168,30 +175,28 @@ export class HSGameState extends HSModule {
                         }
                     }
                 },
-                    {
-                        characterData: false,
-                        childList: false,
-                        subtree: false,
-                        attributes: true,
-                        attributeOldValue: false,
-                        attributeFilter: ['style'],
-                        valueParser: (element, mutations) => {
-                            for (const mutation of mutations) {
-                                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                                    const target = mutation.target as HTMLElement;
-                                    const display = target.style.getPropertyValue('display');
-                                    return {
-                                        view: target.id,
-                                        state: display
-                                    }
+                {
+                    characterData: false,
+                    childList: false,
+                    subtree: false,
+                    attributes: true,
+                    attributeOldValue: false,
+                    attributeFilter: ['style'],
+                    valueParser: (element, mutations) => {
+                        for (const mutation of mutations) {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                                const target = mutation.target as HTMLElement;
+                                const display = target.style.getPropertyValue('display');
+                                return {
+                                    view: target.id,
+                                    state: display
                                 }
                             }
                         }
-                    });
+                    }
+                });
             }
         });
-        // Setup watchers and handling for when cube tab changes
-
 
         this.isInitialized = true;
     }
@@ -277,9 +282,7 @@ export class HSGameState extends HSModule {
         return this.#viewStates[viewKey].currentView as T;
     }
 
-    /**
-     * Get the previous sub-view (if any) for a given main view
-     */
+    /** Get the previous sub-view (if any) for a given main view */
     getPreviousSubViewForMainView(mainView: MainView): GameView<VIEW_TYPE> | undefined {
         const mainViewId = mainView.getId();
 
@@ -319,9 +322,7 @@ export abstract class GameView<T extends VIEW_TYPE> {
     abstract getId(): T
     abstract getViewEnum(view: string): T
 
-    /**
-     * Navigate to this view by clicking its associated button
-     */
+    /** Navigate to this view by clicking its associated button */
     goto(): void {
         const id = this.getId();
         let buttonId = '';

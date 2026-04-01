@@ -240,6 +240,39 @@
             warn('Could not patch stage — "gameStageStatistic" not found in bundle');
         }
 
+        // ── WINDOW DEFINE PLAYER PATCH ─────────────────────────
+        // Detect the call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
+        // and expose the player object  via an obfuscated, non-enumerable Symbol property on window (window.symp)
+        try {
+            // Match the full Object.defineProperties(...) call
+            const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}[^}]*\}[^)]*\)/;
+            const m = re.exec(code);
+            if (m) {
+                const insertPos = m.index + m[0].length;
+                const playerVar = m[1];
+                if (playerVar) {
+                    // Expose player using a Symbol property, with Symbol stored globally (symp = symbol player)
+                    const expose =
+                    ',(' +
+                        'window.symp=window.symp||Symbol(),' +
+                        'Object.defineProperty(' + 
+                            'window,window.symp,' +
+                            '{enumerable:false,configurable:true,writable:true,value:' + playerVar + '}' +
+                        ')' +
+                        // line below to remove in prod
+                        ',console.log("[HS] \u2705 player exposed via Symbol property")' + 
+                    ' )';
+                    code = code.slice(0, insertPos) + expose + code.slice(insertPos);
+                } else {
+                    warn('❌ Error in defineProperties player patch: anchor found but symbol extraction failed');
+                }
+            } else {
+                warn('❌ Error while searching for defineProperties(player) anchor in bundle');
+            }
+        } catch (e) {
+            warn('❌ Error while probing for defineProperties player patch', e);
+        }
+
         log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
 
         // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
@@ -370,11 +403,15 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
+        window.__HS_IS_DEV = true;
+        const repoOwner = 'maenhiir'; // for tests
+        window.__HS_REPO_OWNER = repoOwner;
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            const url = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;
+            s.src = url;
             s.onload = () => {
-                log('✅ Mod script loaded from CDN');
+                log(`✅ Mod script loaded from LOCAL DEV SERVER: ${url}`);
                 try {
                     window.hypersynergism.init();
                     log('✅ Mod initialised');
@@ -384,13 +421,13 @@ window.__HS_BACKDOOR__ = {
                 resolve();
             };
             s.onerror = () => {
-                warn('❌ Mod failed to load from CDN');
-                reject(new Error('Mod CDN load failed'));
+                warn(`❌ Mod failed to load from LOCAL DEV SERVER: ${url}`);
+                reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    log('LOADER v3.5 (Shewchou) initialised');
+    log('HyperSynergism loader v3.5 (DEV) initialised');
 
 })();

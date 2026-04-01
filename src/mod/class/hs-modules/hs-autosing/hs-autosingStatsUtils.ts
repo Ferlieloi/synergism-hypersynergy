@@ -1,5 +1,3 @@
-// hs-autosingStatsUtils.ts
-// Stateless statistical helpers for autosing modules
 import Decimal from "break_infinity.js";
 
 /**

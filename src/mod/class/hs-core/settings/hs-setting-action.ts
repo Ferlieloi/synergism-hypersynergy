@@ -10,13 +10,14 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
-/*
-    Class: HSSettingActions
-    IsExplicitHSModule: No
-    Description: 
-        Helper wrapper for HSSettings.
-        Encapsulates SettingActions and their functionality.
-    Author: Swiffy
+
+/**
+ * Class: HSSettingActions
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Helper wrapper for HSSettings.
+ *     Encapsulates SettingActions and their functionality.
+ * Author: Swiffy
 */
 export class HSSettingActions {
     // Record for SettingActions
@@ -133,7 +134,7 @@ export class HSSettingActions {
             }
         },
 
-        autoLoadout: async (params: HSSettingActionParams) => {
+        addTimeAutoLoadoutsAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
@@ -267,6 +268,18 @@ export class HSSettingActions {
                 qolButtonsMod.disableEventsQuickbar();
             } else {
                 qolButtonsMod.enableEventsQuickbar();
+            }
+        },
+
+        corruptionQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.disableCorruptionQuickbar();
+            } else {
+                qolButtonsMod.enableCorruptionQuickbar();
             }
         }
     }

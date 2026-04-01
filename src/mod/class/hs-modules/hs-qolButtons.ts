@@ -17,21 +17,22 @@ import type { QUICKBAR_ID } from "./hs-quickbarManager";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSQOLAutomationQuickbar } from "./hs-qolButtonsAutomationQuickbar";
 import { HSQOLEventsQuickbar } from "./hs-qolButtonsEventsQuickbar";
+import { HSQOLCorruptionQuickbar } from "./hs-qolButtonsCorruptionQuickbar";
 
-/*
-    Class: QOLButtons
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module which adds qol buttons to the game.
-    Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
+/**
+ *  Class: HSQOLButtons
+ *  IsExplicitHSModule: Yes
+ *  Description: 
+ *    Hypersynergism module which adds qol buttons to the game.
+ *  Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
 */
 export class HSQOLButtons extends HSModule {
     // Tracks active tab visit unsubscribers per SINGULARITY_VIEW. 
     #tabVisitUnsubscribers: Map<SINGULARITY_VIEW, () => void> = new Map();
 
-    
     #automationQuickbarHandler: HSQOLAutomationQuickbar | null = null;
     #eventsQuickbarHandler: HSQOLEventsQuickbar | null = null;
+    #corruptionQuickbarHandler: HSQOLCorruptionQuickbar | null = null;
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -47,10 +48,10 @@ export class HSQOLButtons extends HSModule {
         this.#config = { attributes: false, childList: true, subtree: true };
 
         this.#offeringPotionObserver = new MutationObserver(
-            (mutations, observer) => this.#offeringMutationTrigger(mutations, observer)
+            () => this.#offeringMutationTrigger()
         );
         this.#obtainiumPotionObserver = new MutationObserver(
-            (mutations, observer) => this.#obtainiumMutationTrigger(mutations, observer)
+            () => this.#obtainiumMutationTrigger()
         );
     }
 
@@ -62,18 +63,20 @@ export class HSQOLButtons extends HSModule {
 
         // Register tab visit handlers
         // (with the current code, we need them to stay always ON)
-        this.subscribeToTabVisit(
+        this.#subscribeToTabVisit(
             SINGULARITY_VIEW.SHOP,
-            async () => { this.setMaxedGQUpgradesVisibility(); });
-
-        this.subscribeToTabVisit(
+            async () => { this.setMaxedGQUpgradesVisibility(); }
+        );
+        this.#subscribeToTabVisit(
             SINGULARITY_VIEW.OCTERACTS,
-            async () => { this.setMaxedOctUpgradesVisibility(); });
+            async () => { this.setMaxedOctUpgradesVisibility(); }
+        );
 
         // Any settings-driven feature activation is handled by HSSettings.syncSettings().
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
         this.injectAFKSwapperToggleButton();
+        this.enableCorruptionQuickbar();
     }
 
     public getEventsQuickbarSection(): HTMLElement {
@@ -92,7 +95,7 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    #offeringMutationTrigger(mutations: MutationRecord[], observer: MutationObserver) {
+    #offeringMutationTrigger() {
         const moddedButton = document.getElementById('offeringPotionMultiUseButton');
 
         if (moddedButton === null) {
@@ -132,7 +135,7 @@ export class HSQOLButtons extends HSModule {
         }
     };
 
-    #obtainiumMutationTrigger(mutations: MutationRecord[], observer: MutationObserver) {
+    #obtainiumMutationTrigger() {
         const moddedButton = document.getElementById('obtainiumPotionMultiUseButton');
 
         if (moddedButton === null) {
@@ -235,7 +238,7 @@ export class HSQOLButtons extends HSModule {
     public async setMaxedOctUpgradesVisibility(): Promise<void> {
         const hideMaxedOctUpgradesSetting = HSSettings.getSetting('hideMaxedOctUpgrades') as HSSetting<boolean>;
         if (hideMaxedOctUpgradesSetting.getValue()) {
-            await this.hideButtons<OcteractUpgradeKey>(
+            await this.#hideButtons<OcteractUpgradeKey>(
                 'singularityOcteracts',
                 '.octeractUpgrade',
                 (key) => octeractUpgradeMaxLevels[key]?.maxLevel,
@@ -245,10 +248,11 @@ export class HSQOLButtons extends HSModule {
             await this.#unhideButtons('singularityOcteracts', '.octeractUpgrade');
         }
     }
+
     public async setMaxedGQUpgradesVisibility(): Promise<void> {
         const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
         if (hideMaxedGQUpgradesSetting.getValue()) {
-            await this.hideButtons<GoldenQuarkUpgradeKey>(
+            await this.#hideButtons<GoldenQuarkUpgradeKey>(
                 'actualSingularityUpgradeContainer',
                 '.singularityUpgrade',
                 (key) => goldenQuarkUpgradeMaxLevels[key]?.maxLevel,
@@ -261,7 +265,7 @@ export class HSQOLButtons extends HSModule {
 
     async #unhideButtons(containerId: string, selector: string): Promise<void> {
         try {
-            const container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 5000);
+            const container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
             const buttons = container.querySelectorAll<HTMLButtonElement>(selector);
             buttons.forEach(button => button.style.display = '');
         } catch (e) {
@@ -269,7 +273,7 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    private async hideButtons<TUpgradeKey extends string>(
+    async #hideButtons<TUpgradeKey extends string>(
         containerId: string,
         selector: string,
         getMaxLevel: (key: TUpgradeKey) => number | undefined,
@@ -282,7 +286,7 @@ export class HSQOLButtons extends HSModule {
 
         let container: HTMLElement;
         try {
-            container = await HSUtils.waitForElement<HTMLElement>(`#${containerId}`, 1000);
+            container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
         } catch (e) {
             HSLogger.warn(`#hideButtons: Could not find #${containerId}: ${e}`, this.context);
             return;
@@ -559,7 +563,7 @@ export class HSQOLButtons extends HSModule {
             const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
 
             HSLogger.debug(
-                `[HSQOLButtons][GQDistributor] budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
+                `GQ Distributor: budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
                     ids.map(id => ({
                         id,
                         weight: ratios[id] ?? 0,
@@ -628,15 +632,11 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    // Internal: Setup event data subscription for Events Quickbar
-    // Legacy getter left for compatibility with external callers
-    // Actual Events quickbar lifecycle is handled by HSQOLEventsQuickbar.
-
     /** Public wrapper to enable the Automation Quickbar. */
     public enableAutomationQuickbar(): void {
         if (!this.#automationQuickbarHandler) this.#automationQuickbarHandler = new HSQOLAutomationQuickbar();
         const handler = this.#automationQuickbarHandler;
-        this.enableQuickbar(
+        this.#enableQuickbar(
             HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
             () => ({
                 element: handler!.createSection(),
@@ -654,7 +654,7 @@ export class HSQOLButtons extends HSModule {
     public enableEventsQuickbar(): void {
         if (!this.#eventsQuickbarHandler) this.#eventsQuickbarHandler = new HSQOLEventsQuickbar();
         const handler = this.#eventsQuickbarHandler;
-        this.enableQuickbar(
+        this.#enableQuickbar(
             HSQuickbarManager.QUICKBAR_IDS.EVENTS,
             () => ({ 
                 element: handler!.createSection(),
@@ -668,17 +668,44 @@ export class HSQOLButtons extends HSModule {
         );
     }
 
+    /** Public wrapper to enable the Corruption Quickbar. */
+    public enableCorruptionQuickbar(): void {
+        if (!this.#corruptionQuickbarHandler) this.#corruptionQuickbarHandler = new HSQOLCorruptionQuickbar();
+        const handler = this.#corruptionQuickbarHandler;
+        this.#enableQuickbar(
+            HSQuickbarManager.QUICKBAR_IDS.CORRUPTION,
+            () => ({
+                element: handler!.createSection(),
+                teardown: () => {
+                    HSLogger.debug('Corruption quickbar teardown invoked', this.context);
+                    try { handler!.teardown(); } catch (e) { HSLogger.log(`Error during corruption quickbar teardown: ${e}`, this.context); }
+                }
+            }),
+            (section) => {
+                handler!.setup(section as HTMLDivElement).catch((e) => {
+                    HSLogger.log(`Error during corruption quickbar setup: ${e}`, this.context);
+                });
+            }
+        );
+    }
+
     /** Public wrapper to disable the Automation Quickbar. */
     public disableAutomationQuickbar(): void {
         // Manager will call the stored teardown; just remove the section and drop handler reference.
-        this.disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
+        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
         this.#automationQuickbarHandler = null;
     }
 
     /** Public wrapper to disable the Events Quickbar. */
     public disableEventsQuickbar(): void {
-        this.disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.EVENTS);
+        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.EVENTS);
         this.#eventsQuickbarHandler = null;
+    }
+
+    /** Public wrapper to disable the Corruption Quickbar. */
+    public disableCorruptionQuickbar(): void {
+        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.CORRUPTION);
+        this.#corruptionQuickbarHandler = null;
     }
 
     /**
@@ -688,7 +715,7 @@ export class HSQOLButtons extends HSModule {
      * @param setupCallback - Optional setup callback after injection
      * @param containerSetter - Optional setter for the quickbar container
      */
-    private enableQuickbar(
+    #enableQuickbar(
         id: QUICKBAR_ID,
         factory: () => { element: HTMLElement; teardown?: () => void },
         setupCallback?: (section: HTMLElement) => void,
@@ -711,7 +738,7 @@ export class HSQOLButtons extends HSModule {
      * @param id - The quickbar ID (use HSQuickbarManager.QUICKBAR_IDS)
      * @param teardownCallback - Optional teardown callback before removal
      */
-    private disableQuickbar(
+    #disableQuickbar(
         id: QUICKBAR_ID,
         teardownCallback?: () => void
     ): void {
@@ -726,8 +753,8 @@ export class HSQOLButtons extends HSModule {
     public async injectAFKSwapperToggleButton(): Promise<void> {
         if (document.getElementById('hs-ambrosia-loadout-idle-swap-toggle')) return;
         try {
-            const parent = await HSUtils.waitForElement<HTMLElement>('#singularityAmbrosia', 1000);
-            const child = await HSUtils.waitForElement<HTMLElement>('#ambrosiaProgressBar', 1000);
+            const parent = await HSElementHooker.HookElement('#singularityAmbrosia', undefined, 2000);
+            const child = await HSElementHooker.HookElement('#ambrosiaProgressBar', undefined, 2000);
             const afkSwapperToggle = document.createElement('button');
             afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
             afkSwapperToggle.textContent = 'Toggle AFK Swapper';
@@ -748,11 +775,11 @@ export class HSQOLButtons extends HSModule {
     }
 
     /**
-     * DRY helper: subscribe to a SINGULARITY_VIEW tab visit and run a callback.
+     * Subscribe to a SINGULARITY_VIEW tab visit and run a callback.
      * Deduplicates subscriptions per tab.
      * Returns an unsubscribe function 
      */
-    private subscribeToTabVisit( tabId: SINGULARITY_VIEW, onTabVisit: () => void ): (() => void) | null {
+    #subscribeToTabVisit( tabId: SINGULARITY_VIEW, onTabVisit: () => void ): (() => void) | null {
         const gameState = HSModuleManager.getModule<HSGameState>('HSGameState');
         if (!gameState) return null;
 
@@ -790,5 +817,3 @@ export class HSQOLButtons extends HSModule {
         }
     }
 }
-
-

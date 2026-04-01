@@ -19,6 +19,14 @@ import { HSWebSocket } from "../hs-websocket";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
 
+/**
+ * Class: HSGameData
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     Core module responsible for fetching, processing, and providing game data to other modules.
+ *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages campaign tokens, pseudo/me data,
+ *     and subscribes to consumable game events via WebSocket. Provides APIs for other modules to access game data.
+ */
 export class HSGameData extends HSModule {
     // --- Save Data & State ---
     #saveDataLocalStorageKey = 'Synergysave2';

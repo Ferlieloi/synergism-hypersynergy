@@ -1,5 +1,3 @@
-import { HSLogger } from "../../hs-core/hs-logger";
-
 export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
 
 /**

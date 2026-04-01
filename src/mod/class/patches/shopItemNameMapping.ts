@@ -3,7 +3,16 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSPatch } from "./hs-patch";
 import shop_item_map from "inline:../../resource/data/shop.json";
 
+/**
+ * Class: PATCH_ShopItemNameMapping
+ * IsExplicitHSModule: No
+ * Description:
+ *     Patch to map shop item IDs to their display names in the shop hover tooltip.
+ *     Uses a JSON mapping of item IDs to names and updates the tooltip on mouseover events.
+ * Author: Swiffy
+ */
 export class PATCH_ShopItemNameMapping extends HSPatch {
+    #context = 'PATCH_ShopItemNameMapping';
 
     #shopItemNameMap?: { [key: string]: string; };
     #hoverEvent?: (event: MouseEvent) => void;
@@ -25,7 +34,7 @@ export class PATCH_ShopItemNameMapping extends HSPatch {
                 shopWrapper.delegateEventListener('mouseover', 'div', this.#hoverEvent);
             }
         } catch(err) {
-            HSLogger.error("Failed to parse shop item map");
+            HSLogger.error("Failed to parse shop item map", this.#context);
             this.#shopItemNameMap = undefined;
         }
     }

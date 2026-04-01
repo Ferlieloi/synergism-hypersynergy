@@ -1,18 +1,31 @@
 {
   "name": "synergism-hypersynergy",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.11.0-dev4",
+  "private": true,
+  "description": "Hypersynergism mod for the Synergism browser game.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ferlieloi/synergism-hypersynergy.git"
+  },
+  "author": "Ferlieloi",
+  "keywords": [
+    "synergism",
+    "mod",
+    "hypersynergism"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "main": "index.js",
   "scripts": {
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
-    "dev": "node esbuild.config.js dev"
+    "dev": "node esbuild.config.js dev",
+    "release-and-tag-helper": "node scripts/release-and-tag-helper.mjs"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "devDependencies": {
-    "esbuild": "^0.25.12",
+    "esbuild": "^0.27.4",
     "esbuild-plugin-inline-import": "^1.1.0",
     "typescript": "^5.8.2"
   },

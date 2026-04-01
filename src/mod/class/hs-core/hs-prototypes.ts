@@ -49,14 +49,14 @@ declare global {
     }
 }
 
-/*
-    Class: HSPrototypes
-    IsExplicitHSModule: Yes
-    Description: 
-        Prototype extension module for Hypersynergism.
-        All (global) prototype extensions should be implemented here.
-    Author: Swiffy
-*/
+/**
+ *   Class: HSPrototypes
+ *   IsExplicitHSModule: Yes
+ *   Description: 
+ *     Prototype extension module for Hypersynergism.
+ *     All (global) prototype extensions should be implemented here.
+ *   Author: Swiffy
+ */
 export class HSPrototypes extends HSModule {
     
     constructor(moduleOptions : HSModuleOptions) {

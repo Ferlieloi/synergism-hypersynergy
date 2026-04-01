@@ -3,12 +3,12 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
-/*
-    Class: HSShadowDOM
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module for creating and managing shadow DOM elements.
-*/
+/**
+ * Class: HSShadowDOM
+ * IsExplicitHSModule: Yes
+ * Description: Hypersynergism module for creating and managing shadow DOM elements.
+ * Author: Swiffy
+ */
 export class HSShadowDOM extends HSModule {
 
     #shadows;
@@ -63,13 +63,13 @@ export class HSShadowDOM extends HSModule {
     }
 }
 
-/*
-    Class: HSShadow
-    IsExplicitHSModule: No
-    Description: 
-        Wrapper class for shadow DOM elements created by HSShadowDOM.
-        Contains methods to create, destroy and manage the shadow DOM elements.
-*/
+/**
+ *   Class: HSShadow
+ *   IsExplicitHSModule: No
+ *   Description: Wrapper class for shadow DOM elements created by HSShadowDOM.
+ *     - Contains methods to create, destroy and manage the shadow DOM elements.
+ *   Author: Swiffy
+ */
 export class HSShadow {
     #context = 'HSShadow';
 
@@ -154,7 +154,7 @@ export class HSShadow {
     }
 
     destroySelf() {
-        
+        this._destroy();
     }
 
     _destroy() {

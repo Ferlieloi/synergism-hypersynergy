@@ -2,6 +2,7 @@ import { HSAmbrosiaLoadoutIconMapping } from "./hs-ambrosia-types";
 import { HSWatcherOptions } from "./hs-elementhooker-types";
 import { HSViewProperties, MAIN_VIEW } from "./hs-gamestate-types";
 import { ELogLevel } from "./hs-logger-types";
+import { PlayerData } from "../data-types/hs-player-savedata";
 
 interface IStoreable {
     storageKey: string;
@@ -14,20 +15,19 @@ export interface HSGlobalDebug {
     calculationCacheDebugMode: boolean;
 }
 
-export interface HSGlobalPrivateAPI {
-    base: string;
-    latestRelease: string;
+export interface HSGlobalRelease {
+    githubOwner: string;
+    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 
 export interface HSGlobalGeneral {
     currentModVersion: string;
-    isLatestVersion: boolean;
     isModFullyLoaded: boolean;
+    isDev: boolean;
     modGithubUrl: string;
     modWikiUrl: string;
     modWikiFeaturesUrl: string;
-    modWebsiteUrl: string;
     heaterUrl: string;
 }
 
@@ -124,8 +124,9 @@ export interface HSGlobalHSUIC {
 }
 
 export interface IHSGlobal {
+    exposedPlayer: PlayerData | null;
     Debug: HSGlobalDebug;
-    PrivateAPI: HSGlobalPrivateAPI;
+    Release: HSGlobalRelease;
     General: HSGlobalGeneral;
     Common: HSGlobalCommon;
     HSPrototypes: HSGlobalPrototypes;

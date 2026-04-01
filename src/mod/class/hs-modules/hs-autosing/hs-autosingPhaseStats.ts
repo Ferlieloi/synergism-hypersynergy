@@ -33,28 +33,6 @@ export interface PhaseRowDom {
 }
 
 /**
- * Creates the header DOM nodes for the phase stats table.
- * @returns Array of header divs (title and column headers)
- */
-/*
-export function createPhaseStatsHeader(): HTMLDivElement[] {
-    function mkHeader(text: string, isTitle = false): HTMLDivElement {
-        const div = document.createElement('div');
-        div.textContent = text;
-        div.className = isTitle ? 'hs-phase-stats-header-title' : 'hs-phase-stats-header';
-        return div;
-    }
-    return [
-        mkHeader('PHASE STATISTICS', true),
-        mkHeader('Loops'),
-        mkHeader('Avg'),
-        mkHeader('SD'),
-        mkHeader('Last')
-    ];
-}
-*/
-
-/**
  * Creates 5 cell divs for a phase row, with a data-row-index for identification.
  * @param phaseName
  * @param phaseCount

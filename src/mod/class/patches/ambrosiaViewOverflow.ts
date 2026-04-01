@@ -1,6 +1,14 @@
 import { HSUI } from "../hs-core/hs-ui";
 import { HSPatch } from "./hs-patch";
 
+/**
+ * Class: PATCH_AmbrosiaViewOverflow
+ * IsExplicitHSModule: No
+ * Description:
+ *     Patch to add a scrollbar to the ambrosia upgrade view when the content exceeds the available space.
+ *     Injects custom CSS to set a max height and enable vertical scrolling on the upgrade values container.
+ * Author: Swiffy
+ */
 export class PATCH_AmbrosiaViewOverflow extends HSPatch {
     #patchCSS = `
         #ambrosiaUpgradeValues {

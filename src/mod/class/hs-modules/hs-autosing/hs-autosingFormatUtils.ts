@@ -1,5 +1,3 @@
-// hs-autosingFormatUtils.ts
-// Formatting helpers for autosing modules
 import Decimal from "break_infinity.js";
 
 /**

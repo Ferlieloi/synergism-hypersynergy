@@ -7,6 +7,16 @@ import { PATCH_IconSetCaching } from "../patches/iconSetCaching";
 import { PATCH_ShopItemNameMapping } from "../patches/shopItemNameMapping";
 import { PATCH_TestPatch } from "../patches/test";
 
+/**
+ * Class: HSPatches
+ * IsExplicitHSModule: Yes
+ * Description:
+ *     Centralized manager for applying and reverting code patches to the game.
+ *     - Maintains a registry of available patches and their corresponding classes.
+ *     - Handles instantiation and lifecycle of patch instances, ensuring single instantiation per patch.
+ *     - Provides methods to apply or revert patches by name, with logging and error handling.
+ * Author: Swiffy
+ */
 export class HSPatches extends HSModule {
 
     #patchCollection: Record<string, new (patchName: string) => HSPatch> = {

@@ -1,11 +1,14 @@
-// Challenge Modal Builder for Autosing
-// This file builds and manages the modal UI for configuring autosing challenge strategies.
-// It supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
-// Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
 import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_ACTION_VALUE } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
+
+/** Challenge Modal Builder for Autosing
+ * Description: Builds and manages the modal UI for configuring autosing challenge strategies.
+ *   - Supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
+ *   - Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
+ * Author: XxMolkxX
+ */
 
 // Helper type for mapping IF jump targets in the challenge list
 type JumpTargetInfo = {

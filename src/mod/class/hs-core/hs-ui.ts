@@ -11,20 +11,19 @@ import timerModalCSS from "inline:../../resource/css/hs-autosingModal.css";
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
-import { HSAutosingStrategyModal } from "../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSModuleOptions } from "../../types/hs-types";
 
-/*
-    Class: HSUI
-    IsExplicitHSModule: Yes
-    Description: 
-        UI modules for Hypersynergism.
-        Mostly responsible for handling everything related to the mod's panel,
-        but also contains methods such as:
-            - injectCSS() for injecting arbitrary styles in to the DOM
-            - injectHTML() for injecting arbitrary HTML in to the DOM
-            - Modal() for creating and displaying custom modals
-    Author: Swiffy
+/**
+ * Class: HSUI
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     UI modules for Hypersynergism.
+ *     Mostly responsible for handling everything related to the mod's panel,
+ *     but also contains methods such as:
+ *         - injectCSS() for injecting arbitrary styles in to the DOM
+ *         - injectHTML() for injecting arbitrary HTML in to the DOM
+ *         - Modal() for creating and displaying custom modals
+ * Author: Swiffy
 */
 export class HSUI extends HSModule {
     static #staticContext = 'HSUI';
@@ -92,8 +91,19 @@ export class HSUI extends HSModule {
     async init(): Promise<void> {
         HSLogger.log("Initialising HSUI module", this.context);
 
-        const self = this;
+        await this.#initializePanelMarkup();
+        await this.#initializePanelElements();
+        this.#setupPanelInteractions();
+        this.#setupPanelToggle();
+        this.#createQuickAccessMenu();
 
+        this.uiReady = true;
+        this.isInitialized = true;
+
+        this.#deferAutoSingStrategyOptGroupUpdate();
+    }
+
+    async #initializePanelMarkup(): Promise<void> {
         HSUI.#injectedStylesHolder = document.createElement('style');
         HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
         document.head.appendChild(HSUI.#injectedStylesHolder);
@@ -103,7 +113,9 @@ export class HSUI extends HSModule {
 
         // Create temp div, inject UI panel HTML and append the contents to body
         HSUI.injectHTMLString(this.#staticPanelHtml);
+    }
 
+    async #initializePanelElements(): Promise<void> {
         // Find the UI elements in DOM and store the refs
         this.#uiPanel = await HSElementHooker.HookElement('#hs-panel') as HTMLDivElement;
         this.#uiPanelTitle = await HSElementHooker.HookElement('#hs-panel-version') as HTMLDivElement;
@@ -111,138 +123,111 @@ export class HSUI extends HSModule {
         this.#loggerElement = await HSElementHooker.HookElement('#hs-ui-log') as HTMLElement;
         this.#logClearBtn = await HSElementHooker.HookElement('#hs-ui-log-clear') as HTMLButtonElement;
         this.#logCopyBtn = await HSElementHooker.HookElement('#hs-ui-log-copy') as HTMLButtonElement;
+
         const panelHandle = await HSElementHooker.HookElement('.hs-panel-header') as HTMLDivElement;
         const panelResizeHandle = await HSElementHooker.HookElement('.hs-resizer') as HTMLDivElement;
 
-        // Make the HS UI panel draggable
         this.#makeDraggable(this.#uiPanel, panelHandle);
-
-        // Make the HS UI panel resizable
         this.#makeResizable(this.#uiPanel, panelResizeHandle);
+    }
 
-        // Make the HS UI panel closeable
+    #setupPanelInteractions(): void {
+        if (!this.#uiPanelCloseBtn) return;
+
+        const self = this;
+
         this.#uiPanelCloseBtn.addEventListener('click', async () => {
             if (HSUI.#modPanelOpen && self.#uiPanel) {
-                await self.#uiPanel.transition({
-                    opacity: 0
-                });
-
+                await self.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
                 self.#uiPanel?.classList.add('hs-panel-closed');
             }
         });
 
-        this.#logClearBtn.addEventListener('click', () => {
-            HSLogger.clear();
-        })
+        if (this.#logClearBtn) {
+            this.#logClearBtn.addEventListener('click', () => HSLogger.clear());
+        }
 
-        this.#logCopyBtn.addEventListener('click', async () => {
-            if (self.#loggerElement) {
+        if (this.#logCopyBtn) {
+            this.#logCopyBtn.addEventListener('click', async () => {
+                if (!self.#loggerElement) return;
                 try {
                     await navigator.clipboard.writeText(self.#loggerElement.textContent || '');
                     HSUI.Notify('Log copied to clipboard!', { notificationType: 'success' });
                 } catch (err) {
                     HSLogger.error('Failed to copy log to clipboard', self.context);
                 }
-            }
-        });
+            });
+        }
 
         // Bind panel controls
         const tabs = document.querySelectorAll('.hs-panel-tab');
-
         tabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
-                const tab = e.target as HTMLDivElement;
-                const tabId = tab.dataset.tab ? parseInt(tab.dataset.tab, 10) : null;
+                const tabEl = e.target as HTMLDivElement;
+                const tabId = tabEl.dataset.tab ? parseInt(tabEl.dataset.tab, 10) : null;
+                if (!tabId || tabEl.classList.contains('hs-tab-selected')) return;
 
-                if (tab.classList.contains('hs-tab-selected'))
+                const tabConfig = self.#tabs.find((t) => t.tabId === tabId);
+                if (!tabConfig) {
+                    HSLogger.error(`Could not find tab config for tabId ${tabId}`, self.context);
                     return;
-
-                if (tabId) {
-                    const tabConfig = self.#tabs.find((tab) => tab.tabId === tabId);
-
-                    if (!tabConfig) {
-                        HSLogger.error(`Could not find tab config for tabId ${tabId}`, self.context);
-                        return;
-                    }
-
-                    tabs.forEach(tab => {
-                        tab.classList.remove('hs-tab-selected');
-                    });
-
-                    tab.classList.add('hs-tab-selected');
-
-                    document.querySelectorAll('.hs-panel-body').forEach(panel => {
-                        panel.classList.remove('hs-panel-body-open-flex');
-                        panel.classList.remove('hs-panel-body-open-block');
-                    });
-
-                    const targetPanel = document.querySelector(tabConfig.tabBodySel) as HTMLDivElement;
-
-                    if (targetPanel) {
-                        switch (tabConfig.panelDisplayType) {
-                            case "flex":
-                                targetPanel.classList.add('hs-panel-body-open-flex');
-                                break;
-                            case "block":
-                                targetPanel.classList.add('hs-panel-body-open-block');
-                                break;
-                        }
-
-                        // Log panel (auto scroll to bottom when log tab selected)
-                        if (tabId === 1)
-                            HSLogger.scrollToBottom();
-                    }
-                } else {
-                    HSLogger.error(`tabId is null`, self.context);
                 }
+
+                tabs.forEach(t => t.classList.remove('hs-tab-selected'));
+                tabEl.classList.add('hs-tab-selected');
+
+                document.querySelectorAll('.hs-panel-body').forEach(panel => {
+                    panel.classList.remove('hs-panel-body-open-flex');
+                    panel.classList.remove('hs-panel-body-open-block');
+                });
+
+                const targetPanel = document.querySelector(tabConfig.tabBodySel) as HTMLDivElement;
+                if (!targetPanel) return;
+
+                if (tabConfig.panelDisplayType === 'flex') {
+                    targetPanel.classList.add('hs-panel-body-open-flex');
+                } else {
+                    targetPanel.classList.add('hs-panel-body-open-block');
+                }
+
+                if (tabId === 1) HSLogger.scrollToBottom();
             });
         });
+    }
 
-        // Create open button for the HS UI panel
+    #setupPanelToggle(): void {
+        if (!this.#uiPanel) return;
+
         this.#uiPanelOpenBtn = document.createElement('div');
-        this.#uiPanelOpenBtn.id = "hs-panel-control";
-        // We hide the button until the mod is fully loaded
+        this.#uiPanelOpenBtn.id = 'hs-panel-control';
         this.#uiPanelOpenBtn.style.display = 'none';
 
-        // Toggle button opens/closes the panel
+        const self = this;
+
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
             if (HSUI.#modPanelOpen && self.#uiPanel) {
-                // Close the panel
-                await self.#uiPanel.transition({
-                    opacity: 0
-                });
+                await self.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
                 self.#uiPanel.classList.add('hs-panel-closed');
-            } else if (!HSUI.#modPanelOpen && self.#uiPanel) {
-                // Open the panel
+            } else if (self.#uiPanel) {
                 HSUI.#modPanelOpen = true;
                 self.#uiPanel.style.opacity = '0';
                 self.#uiPanel.classList.remove('hs-panel-closed');
 
                 HSLogger.scrollToBottom();
-
-                await self.#uiPanel.transition({
-                    opacity: 0.92
-                });
+                await self.#uiPanel.transition({ opacity: 0.92 });
             }
         });
 
         document.body.appendChild(this.#uiPanelOpenBtn);
+    }
 
-        // Create quick access hover menu
-        this.#createQuickAccessMenu();
-
-        this.uiReady = true;
-        this.isInitialized = true;
-        
-        // Ensure autosingStrategy dropdown optgroups are rendered after panel injection
+    #deferAutoSingStrategyOptGroupUpdate(): void {
         setTimeout(() => {
             try {
-                // Only update if the dropdown exists in DOM
                 const dropdown = document.getElementById('autosingStrategy');
                 if (dropdown) {
-                    // Call the update function to rebuild optgroups
                     HSSettings.updateStrategyDropdownList();
                 }
             } catch (e) {
@@ -253,6 +238,7 @@ export class HSUI extends HSModule {
 
     #createQuickAccessMenu() {
         if (!this.#uiPanelOpenBtn) return;
+        const context = this.context;
 
         // Create the menu container
         const quickMenu = document.createElement('div');
@@ -282,7 +268,7 @@ export class HSUI extends HSModule {
                 const toggleBtn = document.getElementById(btnId) as HTMLElement;
                 if (toggleBtn) {
                     toggleBtn.click();
-                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`);
+                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`, context);
                 }
             });
             return btn;
@@ -290,6 +276,7 @@ export class HSUI extends HSModule {
 
         quickbarsSubmenu.appendChild(createQuickbarToggle('Ambrosia', 'hs-setting-qol-ambrosia-quickbar-btn'));
         quickbarsSubmenu.appendChild(createQuickbarToggle('Amb minibars', 'hs-setting-ambrosia-minibar-btn'));
+        quickbarsSubmenu.appendChild(createQuickbarToggle('Corruption', 'hs-setting-qol-enable-corruption-quickbar-btn'));
         quickbarsSubmenu.appendChild(createQuickbarToggle('Automation', 'hs-setting-qol-enable-syn-ui-btn'));
         quickbarsSubmenu.appendChild(createQuickbarToggle('Events', 'hs-setting-qol-enable-events-quickbar-btn'));
 
@@ -298,6 +285,7 @@ export class HSUI extends HSModule {
             const toggleIds = [
                 'hs-setting-qol-ambrosia-quickbar-btn',
                 'hs-setting-ambrosia-minibar-btn',
+                'hs-setting-qol-enable-corruption-quickbar-btn',
                 'hs-setting-qol-enable-syn-ui-btn',
                 'hs-setting-qol-enable-events-quickbar-btn'
             ];
@@ -829,7 +817,7 @@ export class HSUI extends HSModule {
     }
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
-        HSLogger.log(`[Notify] ${text}`);
+        HSLogger.log(`${text}`, 'Notify');
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,

@@ -1,25 +1,24 @@
 import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
-import { HSGithub } from "../hs-core/github/hs-github";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 
-/*
-    Class: HSUtils
-    IsExplicitHSModule: No
-    Description: 
-        Static utility module for Hypersynergism.
-        Functionalities include:
-            - wait() method to wait for an arbitrary amount of time
-            - uuidv4() for generating UUIDs
-            - domid() method for generating DOM-compliant unique ids
-            - hashCode() for calculating a unique hash for arbitrary string
-            - N() for pertty printing numbers
-    Author: Swiffy
-*/
+/**
+ * Class: HSUtils
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Static utility module for Hypersynergism.
+ *     Functionalities include:
+ *         - wait() method to wait for an arbitrary amount of time
+ *         - uuidv4() for generating UUIDs
+ *         - domid() method for generating DOM-compliant unique ids
+ *         - hashCode() for calculating a unique hash for arbitrary string
+ *         - N() for pretty printing numbers
+ * Author: Swiffy
+ */
 export class HSUtils {
+    static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     static sleepTime = 5;
@@ -43,10 +42,10 @@ export class HSUtils {
         if (remaining > 0) {
             await Promise.all([
                 HSUtils.sleep(remaining),
-                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, 'HSUtils'),
+                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, HSUtils.#context),
             ]);
         } else {
-            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, 'HSUtils');
+            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, HSUtils.#context);
         }
     }
 
@@ -108,7 +107,7 @@ export class HSUtils {
                 numString = tempNum.toFixed(precision);
             }
         } catch (e) {
-            console.error(`[HS]: HSUtil.N FAILED FOR ${num}`);
+            HSLogger.error(`HSUtils.N FAILED FOR ${num}`, HSUtils.#context);
             return numString;
         }
 
@@ -192,11 +191,11 @@ export class HSUtils {
     static nullProxy<T>(proxyName: string): T {
         const nullProxy = new Proxy({}, {
             get: () => {
-                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return nullProxy;
             },
             set: () => {
-                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return true;
             }
         });
@@ -432,18 +431,6 @@ export class HSUtils {
         return reverse[buff];
     }
 
-    static async isLatestVersion() {
-        const latestRelease = await HSGithub.getLatestRelease();
-
-        if (latestRelease) {
-            if (latestRelease.version !== HSGlobal.General.currentModVersion) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     static asString(settingValue: HSSettingType): string {
         if (settingValue === null) return '';
         return String(settingValue);
@@ -648,7 +635,7 @@ export class HSUtils {
                         this.#dialogWatcherInterval = null;
                     }
 
-                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs');
+                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
             }, HSUtils.sleepTime);
@@ -753,29 +740,5 @@ export class HSUtils {
 
     static sumContents(arr: (number | null)[]): number {
         return arr.reduce<number>((acc, val) => acc + (val ?? 0), 0);
-    }
-
-    /**
-     * Waits for a DOM element matching the selector to exist and returns it, or rejects after timeout.
-     * @param selector CSS selector string
-     * @param timeoutMs Timeout in milliseconds (default 2000)
-     */
-    static async waitForElement<T extends HTMLElement = HTMLElement>(selector: string, timeoutMs = 2000): Promise<T> {
-        const start = performance.now();
-        return new Promise<T>((resolve, reject) => {
-            const check = () => {
-                const el = document.querySelector(selector) as T | null;
-                if (el) {
-                    resolve(el);
-                    return;
-                }
-                if (performance.now() - start > timeoutMs) {
-                    reject(new Error(`waitForElement timed out: ${selector}`));
-                    return;
-                }
-                setTimeout(check, 50);
-            };
-            check();
-        });
     }
 }

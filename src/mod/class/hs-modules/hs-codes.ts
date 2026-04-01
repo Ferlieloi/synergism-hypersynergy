@@ -2,14 +2,12 @@ import { HSModuleOptions } from "../../types/hs-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
-import { HSUtils } from "../hs-utils/hs-utils";
 
-/*
-    Class: HSCodes
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module aimed to make reusable code input more convenient.
-    Author: Swiffy
+/**
+ * Class: HSCodes
+ * IsExplicitHSModule: Yes
+ * Description: Hypersynergism module aimed to make reusable code input more convenient.
+ * Author: Swiffy
 */
 export class HSCodes extends HSModule {
     #codeBoxLabel?: HTMLLabelElement;

@@ -1,4 +1,4 @@
-import { HSModuleDefinition, HSReleaseInfo } from "../types/hs-types";
+import { HSModuleDefinition } from "../types/hs-types";
 import { HSLogger } from "./hs-core/hs-logger";
 import { HSModuleManager } from "./hs-core/module/hs-module-manager";
 import { HSUI } from "./hs-core/hs-ui";
@@ -15,12 +15,12 @@ import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
 
 
-/*
-    Class: Hypersynergism
-    Description: 
-        Hypersynergism main class.
-        Instantiates the module manager and handles calls to building the mod's panel and working with mod's settings
-    Author: Swiffy
+/**
+ * Class: Hypersynergism
+ * Description: 
+ *     Hypersynergism main class.
+ *     Instantiates the module manager and handles calls to building the mod's panel and working with mod's settings
+ * Author: Swiffy
 */
 export class Hypersynergism {
     // Class context, mainly for HSLogger
@@ -30,7 +30,6 @@ export class Hypersynergism {
     #moduleManager: HSModuleManager;
 
     #versionCheckIvl?: number;
-    #latestRelease?: HSReleaseInfo;
     #isInitialized = false;
 
     constructor(modulesToEnable: HSModuleDefinition[]) {
@@ -78,28 +77,7 @@ export class Hypersynergism {
             notificationType: "success"
         });
 
-        this.#versionCheckIvl = setInterval(async () => {
-            const latestRelease = await HSGithub.getLatestRelease();
-
-            if (latestRelease) {
-                HSLogger.debug(`Latest release: ${latestRelease.name} (${latestRelease.version})`, this.#context);
-                /*
-                if (latestRelease.version !== HSGlobal.General.currentModVersion) {
-                    HSGlobal.General.isLatestVersion = false;
-
-                    const modIcon = document.querySelector('#hs-panel-control') as HTMLDivElement;
-                    const modPanelHead = document.querySelector('#hs-panel-version') as HTMLDivElement;
-
-                    if (modIcon && modPanelHead) {
-                        modIcon.classList.add('hs-rainbowBorder');
-                        modPanelHead.innerHTML += ` - <span id="hs-panel-new-ver">New version available!</span>`;
-
-                        clearInterval(this.#versionCheckIvl);
-                        this.#versionCheckIvl = undefined;
-                    }
-                }*/
-            }
-        }, HSGlobal.PrivateAPI.checkIntervalMs);
+        HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
     }
 
     #buildUIPanelContents() {
@@ -177,7 +155,6 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: 'Mod Github' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki_features-btn', text: 'Mod Features' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-website-btn', text: 'Mod Website' }),
                     HSUIC.Div({
                         html: 'Other tools',
                         styles: {
@@ -287,10 +264,6 @@ export class Hypersynergism {
             window.open(HSGlobal.General.modWikiFeaturesUrl, '_blank')
         });
 
-        document.querySelector('#hs-panel-mod-website-btn')?.addEventListener('click', () => {
-            window.open(HSGlobal.General.modWebsiteUrl, '_blank')
-        });
-
         document.querySelector('#hs-panel-dump-settings-btn')?.addEventListener('click', () => {
             HSSettings.dumpToConsole();
         });
@@ -321,12 +294,12 @@ export class Hypersynergism {
 
             if (storageMod) {
                 storageMod.clearData(HSGlobal.HSSettings.storageKey);
-                HSLogger.info('Stored settings cleared', this.#context);
+                HSLogger.log('Stored settings cleared', this.#context);
             }
         });
 
         document.querySelector('#hs-panel-check-version-btn')?.addEventListener('click', async () => {
-            const isLatest = await HSUtils.isLatestVersion();
+            const isLatest = await HSGithub.isLatestTag();
 
             if (isLatest) {
                 HSUI.Notify('You are using the latest version of Hypersynergism!', {
@@ -334,7 +307,7 @@ export class Hypersynergism {
                     notificationType: "success"
                 });
             } else {
-                HSUI.Notify('You are not using the latest version of Hypersynergism!', {
+                HSUI.Notify('You are NOT using the latest version of Hypersynergism!', {
                     position: 'top',
                     notificationType: "warning"
                 });
@@ -352,13 +325,18 @@ export class Hypersynergism {
                 console.log('Found active challenge img, clicking:', img);
                 img.click();
             } else {
-                HSUI.Notify('Could not find an active Singularity challenge in the DOM.', {
-                    position: 'top',
-                    notificationType: "warning"
-                });
+                let exposedPlayer = HSGlobal.exposedPlayer;
+                if (exposedPlayer) {
+                    if (exposedPlayer.insideSingularityChallenge === false) {
+                        HSLogger.debug('No active Exalt found in DOM or exposed stuff... Are you sure you have a bug?', this.#context);
+                    } else {
+                        exposedPlayer.insideSingularityChallenge = true;
+                        HSLogger.log('Exalt bug fix done with exposed stuff (?)', this.#context);
+                    }
+                } else {
+                    HSLogger.log('If you are using the bookmark loader, please try again with the TAMPERMONKEY loader instead.', this.#context);
+                }
             }
-            // TODO: Handle the other bug where the exalt timer is visible but no exalt are active 
-            // We need exposed player (or at least a specific function) for this
         });
 
         document.querySelector('#hs-panel-test-calc-redu-btn')?.addEventListener('click', () => {
@@ -423,7 +401,7 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
             if (dataModule) {
-                HSLogger.info('Cleared calculation cache', this.#context);
+                HSLogger.log('Cleared calculation cache', this.#context);
                 dataModule.clearCache();
             }
         });
@@ -432,7 +410,7 @@ export class Hypersynergism {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 
             if (dataModule) {
-                HSLogger.info('Calculation cache dump', this.#context);
+                HSLogger.log('Calculation cache dump', this.#context);
                 dataModule.dumpCache();
             }
         });

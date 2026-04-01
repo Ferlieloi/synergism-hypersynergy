@@ -4,14 +4,14 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSSettings } from "./hs-settings";
 
-
-/* 
-    Class: HSSetting
-    IsExplicitHSModule: No
-    Description: 
-        Abstract class for all Hypersynergism settings
-        Contains the setting's definition and the action to be performed when the setting is changed
-*/
+/**
+ * Class: HSSetting
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Abstract class for all Hypersynergism settings
+ *     Contains the setting's definition and the action to be performed when the setting is changed
+ * Author: Swiffy
+ */
 export abstract class HSSetting<T extends HSSettingType> {
     protected context = 'HSSetting';
 
@@ -71,7 +71,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {
-                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`);
+                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`, this.context);
                     return;
                 }
             }

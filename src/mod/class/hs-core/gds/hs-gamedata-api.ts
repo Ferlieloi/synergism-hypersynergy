@@ -12,25 +12,28 @@ import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
 import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, SINGULARITY_CHALLENGE_DATA, TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, regularCostProgressionString, exponentialCostProgressionString } from "./stored-vars-and-calculations";
 import Decimal from "break_infinity.js";
 
-/*
-    If this looks silly, check details in hs-gamedata-api-partial.ts
-
-    This class, even though the name is HSGameDataAPI, contains only
-    calculation functions which use game data
-
-    The main game data API class is HSGameDataAPIPartial.
-    Yes, they are basically wrong way around but it is what it is.
-
-    --
-
-    This file is also very long and will most likely get a lot longer still.
-    This is because this file mostly contains functions ripped from the game's code
-    and modified to work with the mod's own cache etc. (*) The big idea in the end is that
-    I'll try to expose everything in here in some sane way so nobody needs to look in here.
-
-    --
-
-    (*) All of the R_ methods are ripped from the game's code
+/**
+ * Class: HSGameDataAPI
+ * IsExplicitHSModule: Yes
+ * Description:
+ *   If this looks silly, check details in hs-gamedata-api-partial.ts
+ *
+ *   This class, even though the name is HSGameDataAPI, contains only
+ *   calculation functions which use game data
+ *
+ *   The main game data API class is HSGameDataAPIPartial.
+ *   Yes, they are basically wrong way around but it is what it is.
+ *
+ *   --
+ *
+ *   This file is also very long and will most likely get a lot longer still.
+ *   This is because this file mostly contains functions ripped from the game's code
+ *   and modified to work with the mod's own cache etc. (*) The big idea in the end is that
+ *   I'll try to expose everything in here in some sane way so nobody needs to look in here.
+ *
+ *   --
+ *
+ *   (*) All of the R_ methods are ripped from the game's code
 */
 export class HSGameDataAPI extends HSGameDataAPIPartial {
 

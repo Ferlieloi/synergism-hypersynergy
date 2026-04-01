@@ -2,7 +2,14 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSPatch } from "./hs-patch";
 
-// Currently borked
+/**
+ * Class: PATCH_IconSetCaching
+ * IsExplicitHSModule: No
+ * Description: (Currently borked)
+ *     Patch to preload the current icon set's images to improve performance when switching icon sets.
+ *     Injects <link rel="preload"> tags for each icon in the current set to prompt the browser to cache them.
+ * Author: Swiffy
+ */
 export class PATCH_IconSetCaching extends HSPatch {
 
     /*#icons = [

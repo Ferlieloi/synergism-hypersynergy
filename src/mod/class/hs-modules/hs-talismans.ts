@@ -5,12 +5,12 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 
-/*
-    Class: HSTalismans
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism module which adds an enhanced "Cycle BUY" button next to the vanilla talisman "Buy All" button that cycles through fragments
-    Author: Swiffy
+/**
+ * Class: HSTalismans
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     Hypersynergism module which adds an enhanced "Cycle BUY" button next to the vanilla talisman "Buy All" button that cycles through fragments
+ * Author: Swiffy
 */
 export class HSTalismans extends HSModule {
     #talismanBuyButtons : HTMLButtonElement[] = []; 

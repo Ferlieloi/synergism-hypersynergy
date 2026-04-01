@@ -7,13 +7,13 @@ import { HSSetting } from "./settings/hs-setting";
 import { HSSettings } from "./settings/hs-settings";
 import { ShowDebugLogsSetting } from "../../types/module-types/hs-settings-types";
 
-/*
-    Class: HSLogger
-    IsExplicitHSModule: No
-    Description: 
-        Logging module for Hypersynergism. 
-        Contains methods to log things in both the devtools console and the mod's panel's log
-    Author: Swiffy
+/**
+ * Class: HSLogger
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Logging module for Hypersynergism. 
+ *     Contains methods to log things in both the devtools console and the mod's panel's log
+ * Author: Swiffy
 */
 export class HSLogger {
 

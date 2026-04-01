@@ -7,6 +7,14 @@ import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-lo
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
 
+/**
+ * Class: HSAutosingStrategyModal
+ * Description: Modal for creating and editing autosing strategies, which consist of sequential phases with defined start/end points and optional AoAG phase.
+ *   - Supports strategy duplication from defaults, with safeguards to prevent overwriting default strategies.
+ *   - Provides UI for adding/editing/deleting phases, including a special AoAG phase that can be toggled on/off.
+ *   - Integrates with corruption loadout management for phase-specific loadout assignment.
+ * Author: XxMolkxX
+ */
 export class HSAutosingStrategyModal {
     static async open(
         existingStrategy?: HSAutosingStrategy,
@@ -16,6 +24,7 @@ export class HSAutosingStrategyModal {
             parentModalId?: string;
         }
     ): Promise<void> {
+        const context = 'HSAutosingStrategyModal';
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
 
@@ -185,7 +194,7 @@ export class HSAutosingStrategyModal {
                         if (isEditMode) {
                             HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
                             HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
-                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
+                            HSLogger.log(`Strategy "${strategyDraft.strategyName}" updated.`, context);
                             HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
                                 notificationType: "success"
                             });
