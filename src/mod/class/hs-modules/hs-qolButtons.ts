@@ -12,12 +12,12 @@ import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
-import { HSQuickbarManager } from "./hs-quickbarManager";
-import type { QUICKBAR_ID } from "./hs-quickbarManager";
 import { HSUI } from "../hs-core/hs-ui";
-import { HSQOLAutomationQuickbar } from "./hs-qolButtonsAutomationQuickbar";
-import { HSQOLEventsQuickbar } from "./hs-qolButtonsEventsQuickbar";
-import { HSQOLCorruptionQuickbar } from "./hs-qolButtonsCorruptionQuickbar";
+import { HSQOLAutomationQuickbar } from "./hs-qolQuickbarAutomation";
+import { HSQOLEventsQuickbar } from "./hs-qolQuickbarEvents";
+import { HSQOLCorruptionQuickbar } from "./hs-qolQuickbarCorruption";
+import { HSQuickbarManager } from "./hs-qolQuickbarManager";
+import type { QUICKBAR_ID } from "./hs-qolQuickbarManager";
 
 /**
  *  Class: HSQOLButtons
@@ -76,7 +76,6 @@ export class HSQOLButtons extends HSModule {
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
         this.injectAFKSwapperToggleButton();
-        this.enableCorruptionQuickbar();
     }
 
     public getEventsQuickbarSection(): HTMLElement {

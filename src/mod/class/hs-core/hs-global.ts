@@ -33,7 +33,7 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- Release check configuration ---
     static Release = {
-        githubOwner: 'Ferlieloi',  // Could we do without this ????
+        githubOwner: 'Ferlieloi',
         isLatestVersion: true,
         checkIntervalMs: 900000    // 15min
     }

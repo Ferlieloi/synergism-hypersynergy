@@ -199,6 +199,16 @@ export class HSQuickbarManager {
         return this.#sectionElements.has(id);
     }
 
+    /** Inject all registered quickbar sections into the DOM in configured order. */
+    public injectAll(): void {
+        const row = HSQuickbarManager.ensureQuickbarsRow();
+        for (const sectionId of HSQuickbarManager.#QUICKBAR_ORDER) {
+            if (this.#sectionFactories.has(sectionId)) {
+                this.injectSection(sectionId, row);
+            }
+        }
+    }
+
     /** Get the DOM element for a registered section (after injection). */
     public getSection(id: QUICKBAR_ID): HTMLElement | undefined {
         HSLogger.debug(`getSection(${id}) called`, this.#context);

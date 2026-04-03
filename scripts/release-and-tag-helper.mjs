@@ -408,6 +408,19 @@ async function chooseTarget(status) {
     status.pkg.version = newVersion;
     writeFileSync(pkgPath, JSON.stringify(status.pkg, null, 2) + '\n', 'utf8');
 
+    const lockPath = join(root, 'package-lock.json');
+    if (existsSync(lockPath)) {
+        try {
+            const lockRaw = readFileSync(lockPath, 'utf8');
+            const lockJson = JSON.parse(lockRaw);
+            lockJson.version = newVersion;
+            writeFileSync(lockPath, JSON.stringify(lockJson, null, 2) + '\n', 'utf8');
+            info(`package-lock.json version synchronized to ${newVersion}`);
+        } catch (err) {
+            warn(`Could not update package-lock.json version: ${err.message || err}`);
+        }
+    }
+
     status.pkgVersion = newVersion;
     status.targetVersion = newVersion;
     status.targetTag = `v${newVersion}`;

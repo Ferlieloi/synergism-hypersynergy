@@ -262,7 +262,10 @@ export class HSGameData extends HSModule {
         if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
             // There's probably a better place to put this...
             HSSettings.updateStrategyDropdownList();
-            this.#performInitialLoadoutMatch();
+            const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+            if (ambrosiaModule) {
+                ambrosiaModule.performInitialActiveLoadoutMatch(this.#saveData);
+            }
             this.#hasPerformedInitialLoadoutMatch = true;
         }
     }
@@ -791,20 +794,8 @@ export class HSGameData extends HSModule {
                     if (self.#mitm_atob_data) {
                         try {
                             const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
-                            const { id: bestMatchId, score: highestScore } = self.#findBestMatchingAmbrosiaLoadout(saveData);
-
-                            const SIMILARITY_THRESHOLD = 0.8;
-
-                            if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-                                HSLogger.debug(` -> BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, self.context);
-                                if (ambrosiaModule) {
-                                    // AWAIT the activation to ensure it completes before any other logic runs
-                                    await ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
-                                }
-                            } else if (bestMatchId) {
-                                HSLogger.debug(`No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, self.context);
-                            } else {
-                                HSLogger.debug(`No saved loadouts found to match.`, self.context);
+                            if (ambrosiaModule) {
+                                ambrosiaModule.performInitialActiveLoadoutMatch(saveData);
                             }
                         } catch (e) {
                             HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
@@ -1038,84 +1029,5 @@ export class HSGameData extends HSModule {
             investmentParameters.costFunction
         );
         return level;
-    }
-
-    /**
-     * Finds the best matching saved Ambrosia loadout based on the player's current save data.
-     * Compares upgrades and calculates a similarity score for each loadout.
-     * Returns the loadout ID and score of the best match.
-     * @param saveData Player save data.
-     * @returns Object with best match loadout ID and similarity score.
-     */
-    #findBestMatchingAmbrosiaLoadout(saveData: PlayerData): { id: string | undefined, score: number } {
-        const currentUpgrades = saveData.ambrosiaUpgrades;
-        const savedLoadouts = saveData.blueberryLoadouts;
-
-        if (!currentUpgrades || !savedLoadouts) {
-            return { id: undefined, score: 0 };
-        }
-
-        let bestMatchId: string | undefined;
-        let highestScore = 0;
-
-        HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, this.context);
-
-        for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
-            if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
-
-            let matches = 0;
-            let totalUpgrades = 0;
-            const upgrades = Object.entries(loadoutDef);
-
-            for (const [upgradeKey, savedLevel] of upgrades) {
-                if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
-
-                totalUpgrades++;
-
-                const currentLevelData = currentUpgrades[upgradeKey as keyof AmbrosiaUpgrades] as AmbrosiaUpgradeData;
-                const totalLevel = currentLevelData ? this.#calculateAmbUpgradeLevelFromSave(upgradeKey as keyof AmbrosiaUpgrades, currentLevelData.ambrosiaInvested, saveData) : 0;
-
-                if (totalLevel === savedLevel) {
-                    matches++;
-                }
-            }
-
-            const score = totalUpgrades > 0 ? (matches / totalUpgrades) : 0;
-
-            if (score > highestScore) {
-                highestScore = score;
-                bestMatchId = loadoutId;
-            }
-
-            if (score === 1) break;
-        }
-
-        return { id: bestMatchId, score: highestScore };
-    }
-    
-    /**
-     * Performs the initial loadout matching when the game is first loaded.
-     * Sets the active loadout if a compliant match is found.
-     * @returns void
-     */
-    #performInitialLoadoutMatch() {
-        const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-        if (ambrosiaModule && this.#saveData) {
-            // Reset active loadout
-            ambrosiaModule.resetActiveLoadout();
-
-            const { id: bestMatchId, score: highestScore } = this.#findBestMatchingAmbrosiaLoadout(this.#saveData);
-
-            const SIMILARITY_THRESHOLD = 0.8;
-
-            if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-                HSLogger.debug(`Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
-                ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
-            } else if (bestMatchId) {
-                HSLogger.debug(`Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
-            } else {
-                HSLogger.debug(`Initial load - No saved loadouts found to match.`, this.context);
-            }
-        }
     }
 }

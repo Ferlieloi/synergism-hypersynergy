@@ -1,11 +1,13 @@
 import { HSGameDataSubscriber, HSModuleOptions, HSPersistable } from "../../types/hs-types";
+import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../types/data-types/hs-gamedata-api-types";
+import { AmbrosiaUpgradeData, AmbrosiaUpgrades, PlayerData } from "../../types/data-types/hs-player-savedata";
 import { AMBROSIA_ICON, AMBROSIA_LOADOUT_SLOT, HSAmbrosiaLoadoutState } from "../../types/module-types/hs-ambrosia-types";
 import { MAIN_VIEW, SINGULARITY_VIEW, VIEW_TYPE } from "../../types/module-types/hs-gamestate-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { GameView, HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
-import { HSQuickbarManager } from "./hs-quickbarManager";
+import { HSQuickbarManager } from "./hs-qolQuickbarManager";
 import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
@@ -362,6 +364,10 @@ export class HSAmbrosia extends HSModule
         } else {
             HSLogger.warn('Could not find bar wrapper element', this.context);
         }
+
+        // Hide automation/corruption summary headers when minibars quickbar is disabled.
+        HSAmbrosiaHelper.setQuickbarTopTextVisibility(false);
+
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
     }
@@ -379,6 +385,9 @@ export class HSAmbrosia extends HSModule
             HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
             this.subscribeGameDataChanges();
             this.#berryMinibarsEnabled = true;
+
+            // Restore automation/corruption summary headers when minibars quickbar is enabled.
+            HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
         } else {
             HSLogger.warn('Could not find minibar wrapper', this.context);
         }
@@ -456,7 +465,6 @@ export class HSAmbrosia extends HSModule
         // Ensure quickbar section is injected before manipulating DOM
         await this.#ensureAmbrosiaSection();
         this.activeLoadout = undefined;
-        HSAmbrosiaHelper.setActiveLoadoutSetting(undefined);
 
         // Clear visual state from both containers
         const containers = [
@@ -494,7 +502,6 @@ export class HSAmbrosia extends HSModule
         // Only update if the slot is not already active, or if forceUpdate is true
         if (this.activeLoadout !== slotEnum || forceUpdate) {
             this.activeLoadout = slotEnum;
-            HSAmbrosiaHelper.setActiveLoadoutSetting(slotEnum);
             // Update Visuals
             await this.#updateActiveLoadout(slotEnum);
             HSLogger.log(`Programmatically set active loadout to ${slotNumber}`, this.context);
@@ -515,7 +522,6 @@ export class HSAmbrosia extends HSModule
         }
 
         this.activeLoadout = resolvedSlot;
-        HSAmbrosiaHelper.setActiveLoadoutSetting(resolvedSlot);
 
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
@@ -574,6 +580,88 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    private calculateAmbUpgradeLevelFromSave(upgradeName: keyof AmbrosiaUpgrades, invested: number, saveData: PlayerData): number {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return 0;
+
+        const investmentParameters = ((gameDataAPI.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
+        if (!investmentParameters) return 0;
+
+        return gameDataAPI.investToAmbrosiaUpgrade(
+            0,
+            invested,
+            investmentParameters.costPerLevel,
+            investmentParameters.maxLevel,
+            investmentParameters.costFunction
+        );
+    }
+
+    public findBestMatchingAmbrosiaLoadout(saveData: PlayerData): { id: string | undefined; score: number } {
+        const currentUpgrades = saveData.ambrosiaUpgrades;
+        const savedLoadouts = saveData.blueberryLoadouts;
+
+        if (!currentUpgrades || !savedLoadouts) {
+            return { id: undefined, score: 0 };
+        }
+
+        let bestMatchId: string | undefined;
+        let highestScore = 0;
+
+        HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, this.context);
+
+        for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
+            if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
+
+            let matches = 0;
+            let totalUpgrades = 0;
+            const upgrades = Object.entries(loadoutDef);
+
+            for (const [upgradeKey, savedLevel] of upgrades) {
+                if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
+
+                totalUpgrades++;
+
+                const currentLevelData = currentUpgrades[upgradeKey as keyof AmbrosiaUpgrades] as AmbrosiaUpgradeData;
+                const totalLevel = currentLevelData ? this.calculateAmbUpgradeLevelFromSave(upgradeKey as keyof AmbrosiaUpgrades, currentLevelData.ambrosiaInvested, saveData) : 0;
+
+                if (totalLevel === savedLevel) {
+                    matches++;
+                }
+            }
+
+            const score = totalUpgrades > 0 ? matches / totalUpgrades : 0;
+
+            if (score > highestScore) {
+                highestScore = score;
+                bestMatchId = loadoutId;
+            }
+
+            if (score === 1) {
+                break;
+            }
+        }
+
+        return { id: bestMatchId, score: highestScore };
+    }
+
+    public performInitialActiveLoadoutMatch(saveData: PlayerData): void {
+        if (!saveData) return;
+
+        this.resetActiveLoadout();
+
+        const { id: bestMatchId, score: highestScore } = this.findBestMatchingAmbrosiaLoadout(saveData);
+        const SIMILARITY_THRESHOLD = 0.8;
+
+        if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
+            HSLogger.debug(`Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
+            this.setActiveLoadout(parseInt(bestMatchId, 10), true);
+        } else if (bestMatchId) {
+            HSLogger.debug(`Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
+        } else {
+            HSLogger.debug(`Initial load - No saved loadouts found to match.`, this.context);
+        }
+    }
+
     public getAmbrosiaLoadoutsAmount(): number {
         if (!this.#loadoutsSlots || this.#loadoutsSlots.length === 0) return 0;
         return this.#loadoutsSlots.filter((slot) => {
@@ -610,9 +698,8 @@ export class HSAmbrosia extends HSModule
     async enableAutoLoadout() {
         const self = this;
 
-        const activeLoadoutSetting = HSSettings.getSetting('activeAmbrosiaLoadout') as HSSetting<string>;
-
-        if ((activeLoadoutSetting && activeLoadoutSetting.getValue().includes('Unknown')) || !this.activeLoadout) {
+        // Use module canonical state instead of the removed setting.
+        if (!this.activeLoadout) {
             const autoLoadoutsSetting = HSSettings.getSetting('addTimeAutoLoadouts') as HSSetting<boolean>;
 
             if (autoLoadoutsSetting && autoLoadoutsSetting.isEnabled()) {
@@ -748,8 +835,11 @@ export class HSAmbrosia extends HSModule
         const storageModule = HSModuleManager.getModule('HSStorage') as HSStorage;
 
         if (storageModule) {
-            const serializedState = JSON.stringify(Array.from(this.#loadoutState.entries()));
-            storageModule.setData(HSGlobal.HSAmbrosia.storageKey, serializedState);
+            const payload = {
+                loadoutState: Array.from(this.#loadoutState.entries()),
+                activeLoadout: this.activeLoadout ?? null
+            };
+            storageModule.setData(HSGlobal.HSAmbrosia.storageKey, JSON.stringify(payload));
         } else {
             HSLogger.warn(`saveState - Could not find storage module`, this.context);
         }
@@ -767,8 +857,24 @@ export class HSAmbrosia extends HSModule
             }
 
             try {
-                const parsedData = JSON.parse(data) as [AMBROSIA_LOADOUT_SLOT, AMBROSIA_ICON][];
-                this.#loadoutState = new Map(parsedData);
+                const parsedData = JSON.parse(data);
+
+                // Backwards-compatible format support:
+                // - Old versions stored a plain array of [slot, icon] pairs
+                // - New versions store {loadoutState, activeLoadout}
+                if (Array.isArray(parsedData)) {
+                    this.#loadoutState = new Map(parsedData as [AMBROSIA_LOADOUT_SLOT, AMBROSIA_ICON][]);
+                } else if (parsedData && typeof parsedData === 'object') {
+                    if (parsedData.loadoutState) {
+                        this.#loadoutState = new Map(parsedData.loadoutState as [AMBROSIA_LOADOUT_SLOT, AMBROSIA_ICON][]);
+                    }
+
+                    if (parsedData.activeLoadout) {
+                        this.activeLoadout = HSAmbrosiaHelper.resolveAmbrosiaLoadout(parsedData.activeLoadout);
+                    } else {
+                        this.activeLoadout = undefined;
+                    }
+                }
             } catch (e) {
                 HSLogger.warn(`loadState - Error parsing data`, this.context);
                 return;
@@ -777,25 +883,6 @@ export class HSAmbrosia extends HSModule
             HSLogger.warn(`loadState - Could not find storage module`, this.context);
         }
 
-        const activeLoadoutSetting = HSSettings.getSetting('activeAmbrosiaLoadout') as HSSetting<string>;
-
-        if (activeLoadoutSetting) {
-            if (!this.activeLoadout) {
-                const rawSetting = HSUtils.removeColorTags(String(activeLoadoutSetting.getValue())).trim();
-                const resolved = HSAmbrosiaHelper.resolveAmbrosiaLoadout(rawSetting);
-
-                if (resolved) {
-                    this.activeLoadout = resolved;
-                    HSAmbrosiaHelper.setActiveLoadoutSetting(resolved);
-                } else {
-                    HSLogger.debug(`loadState - Invalid activeAmbrosiaLoadout value, resetting to unknown: ${rawSetting}`, this.context);
-                    this.activeLoadout = undefined;
-                    HSAmbrosiaHelper.setActiveAmbrosiaLoadoutToUnknown();
-                }
-            }
-        } else {
-            HSLogger.warn(`loadState - Could not find active Ambrosia loadout setting`, this.context);
-        }
     }
 
 

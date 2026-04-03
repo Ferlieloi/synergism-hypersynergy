@@ -30,7 +30,6 @@ export interface HSSettingsDefinition {
 
     // Ambrosia Settings
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
-    activeAmbrosiaLoadout: ActiveAmbrosiaLoadoutSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
@@ -72,6 +71,7 @@ export interface HSSettingsDefinition {
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
+    enableCorruptionQuickBar: QOLButtonsEnableCorruptionQuickBarSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     enableEventsQuickBar: QOLButtonsEnableEventsQuickBarSetting;
 
@@ -169,7 +169,6 @@ export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> {
 
 // Ambrosia Settings
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
-export interface ActiveAmbrosiaLoadoutSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
@@ -212,6 +211,7 @@ export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsEnableCorruptionQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableEventsQuickBarSetting extends HSSettingBase<boolean> { }
 

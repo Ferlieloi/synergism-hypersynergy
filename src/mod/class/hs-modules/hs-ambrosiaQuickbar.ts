@@ -1,5 +1,5 @@
 import type { HSAmbrosia } from "./hs-ambrosia";
-import { HSQuickbarManager } from "./hs-quickbarManager";
+import { HSQuickbarManager } from "./hs-qolQuickbarManager";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -7,7 +7,6 @@ import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
-import { AMBROSIA_ICON, AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
 
 export class HSAmbrosiaQuickbar {
     readonly context = 'HSAmbrosiaQuickbar';

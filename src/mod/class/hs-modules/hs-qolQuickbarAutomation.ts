@@ -2,6 +2,7 @@ import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
+import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 
 type AutomationSelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: AutomationSelectorExpectation };
@@ -50,10 +51,15 @@ type AutomationQuickbarToggleConfig = AutomationQuickbarSoloConfig | AutomationQ
  *     Observe the DOM for relevant automation controls and update button states/visibility reactively.
  *     Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
  */
-export class HSQOLAutomationQuickbar {
-    #context = 'HSQOLAutomationQuickbar';
-    // quickbar container
-    automationQuickBarContainer: HTMLDivElement | null = null;
+export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
+    protected readonly context = 'HSQOLAutomationQuickbar';
+    protected readonly sectionId = 'automationQuickBar';
+    protected readonly sectionClass = 'hs-automation-quickbar';
+
+    #automationQuickBarContainer: HTMLDivElement | null = null;
+    #automationSummaryWrapper: HTMLDivElement | null = null;
+    #automationSlotsWrapper: HTMLDivElement | null = null;
+    #challengeMutationObservers: MutationObserver[] = [];
     #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
     #automationQuickbarBootstrapTimeoutIds: number[] = [];
     #selectorElementCache = new Map<string, HTMLElement | null>();
@@ -228,19 +234,7 @@ export class HSQOLAutomationQuickbar {
         'AutoAscend'
     ];
 
-    /** Create and return the root DOM element for the Automation quickbar. */
-    public createSection(): HTMLElement {
-        const container = document.createElement('div');
-        container.id = 'automationQuickBar';
-        container.className = 'hs-automation-quickbar';
-        return container;
-    }
-
-    /**
-     * Resolve a selector string to an HTMLElement.
-     * @param sel CSS selector or id to resolve
-     * @returns The resolved HTMLElement or null if not found
-     */
+    /** Resolve a selector string to an HTMLElement. */
     #resolveAutomationQuickBarElement(sel: string): HTMLElement | null {
         const el = document.querySelector(sel) as HTMLElement | null;
         if (el) return el;
@@ -259,8 +253,6 @@ export class HSQOLAutomationQuickbar {
      * Heuristically determine whether a given automation toggle/control is "on".
      * Checks ARIA attributes, text content, specific patterns, and CSS class hints.
      * This function is intentionally tolerant of multiple UI representations.
-     * @param el Element to inspect
-     * @returns true if element appears to be enabled/on, false otherwise
      */
     #isElementOn(el: HTMLElement | null): boolean {
         if (!el) return false;
@@ -288,7 +280,7 @@ export class HSQOLAutomationQuickbar {
             if (/\b(on|enabled|active)\b/i.test(cls)) return true;
             if (/\bON\b/i.test(text) || /enabled/i.test(text)) return true;
         } catch (e) {
-            HSLogger.log(`isElementOn check failed: ${e}`, 'HSQOLAutomationQuickbar');
+            HSLogger.log(`isElementOn check failed: ${e}`, this.context);
         }
         return false;
     }
@@ -462,9 +454,13 @@ export class HSQOLAutomationQuickbar {
         this.#scheduleAutomationQuickbarBootstrapRetries(requestUpdateUI);
     }
 
-    /** Setup event binding and UI logic for the injected Automation quickbar section. */
+    /**
+     * Setup Automation quickbar container and rendering logic.
+     * Includes refresh scheduling (raf), watcher registration (DOM mutation),
+     * and button creation for each static config entry.
+     */
     #setupAutomationQuickbar(): void {
-        if (!this.automationQuickBarContainer) return;
+        if (!this.#automationQuickBarContainer) return;
 
         this.#resetAutomationQuickbarRuntime();
 
@@ -554,9 +550,9 @@ export class HSQOLAutomationQuickbar {
                         ?? null;
 
                     if (target) {
-                        try { target.click(); } catch (e) { HSLogger.log(`Failed to click target ${config.actionDOM}: ${e}`, this.#context); }
+                        try { target.click(); } catch (e) { HSLogger.log(`Failed to click target ${config.actionDOM}: ${e}`, this.context); }
                     } else {
-                        HSLogger.log(`Target element for ${toggleKey} not found: ${config.actionDOM}`, this.#context);
+                        HSLogger.log(`Target element for ${toggleKey} not found: ${config.actionDOM}`, this.context);
                     }
                     requestAutomationUpdateUI();
                 });
@@ -600,7 +596,7 @@ export class HSQOLAutomationQuickbar {
                     btn.disabled = checkStates.length === 0;
                 });
 
-                this.automationQuickBarContainer?.appendChild(btn);
+                this.#automationQuickBarContainer?.appendChild(btn);
                 return;
             }
 
@@ -639,7 +635,7 @@ export class HSQOLAutomationQuickbar {
                 setAutomationButtonState(btn, targets.length, allOn, allOff);
             });
 
-            this.automationQuickBarContainer?.appendChild(btn);
+            this.#automationQuickBarContainer?.appendChild(btn);
         };
 
         for (const item of HSQOLAutomationQuickbar.#AUTOMATION_QUICKBAR_RENDER_ORDER) {
@@ -649,9 +645,7 @@ export class HSQOLAutomationQuickbar {
         this.#finalizeAutomationQuickbarSetup(updateAutomationUIState, requestAutomationUpdateUI);
     }
 
-    /**
-     * Stop and clear all element watchers registered for the automation quickbar.
-     */
+    /** Stop and clear all element watchers registered for the automation quickbar. */
     #clearAutomationQuickBarWatchers(): void {
         for (const watcher of this.#automationQuickBarWatcherBySelector.values()) {
             HSElementHooker.stopWatching(watcher.watcherId);
@@ -659,9 +653,7 @@ export class HSQOLAutomationQuickbar {
         this.#automationQuickBarWatcherBySelector.clear();
     }
 
-    /**
-     * Clear all pending bootstrap retry timeouts used to attempt watcher registration.
-     */
+    /** Clear all pending bootstrap retry timeouts used to attempt watcher registration. */
     #clearAutomationQuickbarBootstrapTimeouts(): void {
         for (const timeoutId of this.#automationQuickbarBootstrapTimeoutIds) {
             window.clearTimeout(timeoutId);
@@ -669,9 +661,7 @@ export class HSQOLAutomationQuickbar {
         this.#automationQuickbarBootstrapTimeoutIds = [];
     }
 
-    /**
-     * Cleanup observers, cancel queued renders, and remove the quickbar container.
-     */
+    /** * Cleanup observers, cancel queued renders, and remove the quickbar container. */
     #teardownAutomationQuickbar(): void {
         if (this.#queuedAutomationFrameId !== null) {
             window.cancelAnimationFrame(this.#queuedAutomationFrameId);
@@ -679,9 +669,9 @@ export class HSQOLAutomationQuickbar {
         }
         this.#clearAutomationQuickbarBootstrapTimeouts();
         this.#clearAutomationQuickBarWatchers();
-        if (this.automationQuickBarContainer) {
-            this.automationQuickBarContainer.innerHTML = '';
-            this.automationQuickBarContainer = null;
+        if (this.#automationQuickBarContainer) {
+            this.#automationQuickBarContainer.innerHTML = '';
+            this.#automationQuickBarContainer = null;
         }
     }
 
@@ -751,13 +741,13 @@ export class HSQOLAutomationQuickbar {
             if (targets.length === 0) return;
 
             const wantOn = !allOn;
-            HSLogger.log(`automationQuickBar: ${ariaLabel} click wantOn=${wantOn} targets=${targets.length}`, this.#context);
+            HSLogger.log(`automationQuickBar: ${ariaLabel} click wantOn=${wantOn} targets=${targets.length}`, this.context);
 
             targets.forEach((t, idx) => {
                 if (!t.el) return;
                 const currentlyOn = states[idx];
                 if (wantOn !== currentlyOn) {
-                    try { t.el.click(); } catch (e) { HSLogger.log(`Failed to click ${t.sel}: ${e}`, this.#context); }
+                    try { t.el.click(); } catch (e) { HSLogger.log(`Failed to click ${t.sel}: ${e}`, this.context); }
                 }
             });
 
@@ -814,7 +804,7 @@ export class HSQOLAutomationQuickbar {
                     this.#automationQuickBarWatcherBySelector.set(sel, { watcherId: id as string, element: el });
                 }
             } catch (e) {
-                HSLogger.log(`Error setting watcher for ${sel}: ${e}`, this.#context);
+                HSLogger.log(`Error setting watcher for ${sel}: ${e}`, this.context);
             }
         }
     }
@@ -825,7 +815,7 @@ export class HSQOLAutomationQuickbar {
 
         for (const delayMs of HSQOLAutomationQuickbar.#AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS) {
             const timeoutId = window.setTimeout(() => {
-                if (!this.automationQuickBarContainer) return;
+                if (!this.#automationQuickBarContainer) return;
                 this.#registerAutomationQuickBarWatchers(updateUI);
                 updateUI();
             }, delayMs);
@@ -834,15 +824,87 @@ export class HSQOLAutomationQuickbar {
         }
     }
 
-    // Public lifecycle
-    /** Initialize the automation quickbar into the provided container. */
-    public setup(container: HTMLElement): void {
-        this.automationQuickBarContainer = container as HTMLDivElement;
-        this.#setupAutomationQuickbar();
+    #resolveCurrentChallenge(): string {
+        // Reverse order to have the highest one
+        for (let challenge = 15; challenge >= 1; challenge -= 1) {
+            const el = document.getElementById(`challenge${challenge}`);
+            if (el && el.classList.contains('challengeActive')) {
+                return `C${challenge}`;
+            }
+        }
+        return 'C-';
     }
 
-    /** Teardown the automation quickbar and remove all observers/resources. */
-    public teardown(): void {
+    #updateAutomationSummaryText(): void {
+        if (!this.#automationSummaryWrapper) return;
+
+        const challenge = this.#resolveCurrentChallenge();
+        this.#automationSummaryWrapper.textContent = challenge || '';
+    }
+
+    #setupChallengeActiveObservers(): void {
+        this.#clearChallengeActiveObservers();
+
+        for (let challenge = 1; challenge <= 15; challenge += 1) {
+            const el = document.getElementById(`challenge${challenge}`);
+            if (!el) continue;
+
+            const observer = new MutationObserver(() => {
+                this.#updateAutomationSummaryText();
+            });
+            observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+            this.#challengeMutationObservers.push(observer);
+        }
+    }
+
+    #clearChallengeActiveObservers(): void {
+        for (const observer of this.#challengeMutationObservers) {
+            observer.disconnect();
+        }
+        this.#challengeMutationObservers = [];
+    }
+
+    // Public lifecycle is supplied by HSQOLQuickbarBase via createSection/setup/teardown.
+    protected createDOM(): void {
+        if (!this.container) return;
+
+        this.#automationSummaryWrapper = document.createElement('div');
+        this.#automationSummaryWrapper.id = 'hs-automation-summary-wrapper';
+        this.#automationSummaryWrapper.className = 'hs-quickbar-summary-wrapper';
+        
+        const minibarsSetting = document.getElementById('hs-setting-ambrosia-minibar-btn') as HTMLElement;
+        if (minibarsSetting && minibarsSetting.classList.contains('hs-disabled'))
+            this.#automationSummaryWrapper.classList.add('hs-hidden');
+
+        this.#automationSlotsWrapper = document.createElement('div');
+        this.#automationSlotsWrapper.id = 'hs-automation-slots-wrapper';
+        this.#automationSlotsWrapper.className = 'hs-quickbar-slots-wrapper';
+
+        this.container.appendChild(this.#automationSummaryWrapper);
+        this.container.appendChild(this.#automationSlotsWrapper);
+    }
+
+    protected cleanupDOM(): void {
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+        this.#automationQuickBarContainer = null;
+        this.#automationSummaryWrapper = null;
+        this.#automationSlotsWrapper = null;
+    }
+
+    protected onSetup(): void {
+        this.#automationQuickBarContainer = this.#automationSlotsWrapper;
+        this.#setupAutomationQuickbar();
+
+        // Challenge text summary for C11-15
+        this.#updateAutomationSummaryText();
+        this.#setupChallengeActiveObservers();
+    }
+
+    protected onTeardown(): void {
         this.#teardownAutomationQuickbar();
+        this.#automationQuickBarContainer = null;
+        this.#clearChallengeActiveObservers();
     }
 }

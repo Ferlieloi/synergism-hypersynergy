@@ -32,11 +32,6 @@
     transition: width 0.4s ease;
 }
 
-#hs-blue-progress-text,
-#hs-red-progress-text {
-    display: none;
-}
-
 #hs-ambrosia-loadout-idle-swap-toggle {
     font-size: 1.0em;
     font-family: fantasy;

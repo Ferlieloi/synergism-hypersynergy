@@ -1,10 +1,19 @@
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
-import { CorruptionLevels } from "../../types/data-types/hs-player-savedata";
+import { HSUtils } from "../hs-utils/hs-utils";
 
-export type HSCorruptionValueKey = keyof CorruptionLevels;
+export interface HSCorruptionLevels {
+    viscosity: number;
+    drought: number;
+    deflation: number;
+    extinction: number;
+    illiteracy: number;
+    recession: number;
+    dilation: number;
+    hyperchallenge: number;
+}
 
-export interface HSCorruptionValueCells {
+export interface HSCorruptionLoadoutElements {
     viscosity: HTMLElement | null;
     drought: HTMLElement | null;
     deflation: HTMLElement | null;
@@ -15,19 +24,20 @@ export interface HSCorruptionValueCells {
     hyperchallenge: HTMLElement | null;
 }
 
-export interface HSCorruptionLoadout {
-    slotIndex: number; // 1-based slot identifier
+export interface HSCorruptionUserLoadout {
     name: string;
-    levels: CorruptionLevels;
+    levels: HSCorruptionLevels;
+    elements: HSCorruptionLoadoutElements;
     loadButton: HTMLButtonElement | null;
     saveButton: HTMLButtonElement | null;
-    valueCells: HSCorruptionValueCells;
 }
 
-export type HSCorruptionValuesMap = Record<HSCorruptionValueKey, HTMLElement | null>;
+export type HSCorruptionUserLoadouts = HSCorruptionUserLoadout[];
 
 export class HSCorruption {
-    static readonly corruptionNames: HSCorruptionValueKey[] = [
+    static readonly #context = 'HSCorruption';
+
+    static readonly #CORRUPTION_NAMES: (keyof HSCorruptionLevels)[] = [
         "viscosity",
         "drought",
         "deflation",
@@ -37,239 +47,385 @@ export class HSCorruption {
         "dilation",
         "hyperchallenge",
     ];
-
-    static cachedCurrent: HSCorruptionValuesMap | null = null;
-    static cachedNext: HSCorruptionValuesMap | null = null;
-
-    private static corruptionObservers: Array<(current: CorruptionLevels, next: CorruptionLevels) => void> = [];
-    private static mutationObserver: MutationObserver | null = null;
-
-
-    // =================================
-    // ------------ Public -------------
-    // =================================
-
-    static async getUserLoadouts(): Promise<HSCorruptionLoadout[]> {
-        await HSElementHooker.HookElement('#corruptionLoadouts');
-        const rows = Array.from(document.querySelectorAll<HTMLTableRowElement>('#corruptionLoadouts tr'));
-        const validRows = rows.slice(1).filter(row => {
-            const name = row.querySelector<HTMLTableCellElement>('.corrLoadoutName')?.textContent ?? '';
-            const normalized = HSCorruption.#normalizeLoadoutName(name.toLowerCase());
-            return normalized !== 'next' && normalized.length > 0;
-        });
-
-        return validRows.map((row, index) => HSCorruption.#getLoadoutFromRow(row, index));
-    }
-
-    static matches(levelsA: CorruptionLevels, levelsB: CorruptionLevels): boolean {
-        return HSCorruption.corruptionNames.every(name => levelsA[name] === levelsB[name]);
-    }
-
-    // =================================
-    // ------------ Helpers ------------
-    // =================================
-
-    static #normalizeLoadoutName(name: string): string {
-        return name.trim().replace(/[:\s]+$/g, "");
-    }
-
-    static #getValueCellsFromRow(row: HTMLTableRowElement): HSCorruptionValueCells {
-        return {
-            viscosity: row.querySelector<HTMLElement>(".testviscosity"),
-            drought: row.querySelector<HTMLElement>(".testdrought"),
-            deflation: row.querySelector<HTMLElement>(".testdeflation"),
-            extinction: row.querySelector<HTMLElement>(".testextinction"),
-            illiteracy: row.querySelector<HTMLElement>(".testilliteracy"),
-            recession: row.querySelector<HTMLElement>(".testrecession"),
-            dilation: row.querySelector<HTMLElement>(".testdilation"),
-            hyperchallenge: row.querySelector<HTMLElement>(".testhyperchallenge"),
-        };
-    }
-
-    static getLevelsFromCells(cells: HSCorruptionValueCells): CorruptionLevels {
-        return {
-            viscosity: Number(cells.viscosity?.textContent ?? 0),
-            drought: Number(cells.drought?.textContent ?? 0),
-            deflation: Number(cells.deflation?.textContent ?? 0),
-            extinction: Number(cells.extinction?.textContent ?? 0),
-            illiteracy: Number(cells.illiteracy?.textContent ?? 0),
-            recession: Number(cells.recession?.textContent ?? 0),
-            dilation: Number(cells.dilation?.textContent ?? 0),
-            hyperchallenge: Number(cells.hyperchallenge?.textContent ?? 0),
-        };
-    }
-
-    static getLevelsFromCurrentElements(current: HSCorruptionValuesMap): CorruptionLevels {
-        const result = {} as any;
-        HSCorruption.corruptionNames.forEach((name) => {
-            result[name] = Number(current[name]?.textContent ?? 0);
-        });
-        return result as CorruptionLevels;
-    }
-
-    static getLevelsFromNextElements(next: HSCorruptionValuesMap): CorruptionLevels {
-        const result = {} as any;
-        HSCorruption.corruptionNames.forEach((name) => {
-            result[name] = Number(next[name]?.textContent ?? 0);
-        });
-        return result as CorruptionLevels;
-    }
-
-    static #getLoadoutFromRow(row: HTMLTableRowElement, slotIndex: number): HSCorruptionLoadout { 
-        const nameCell = row.querySelector<HTMLTableCellElement>(".corrLoadoutName");
-        const rawName = nameCell?.textContent ?? `Loadout ${slotIndex + 1}`;
-        const slotName = HSCorruption.#normalizeLoadoutName(rawName);
-
-        const valueCells = HSCorruption.#getValueCellsFromRow(row);
-        const levels = HSCorruption.getLevelsFromCells(valueCells);
-
-        return {
-            slotIndex: slotIndex + 1,
-            name: slotName,
-            levels,
-            loadButton: row.querySelector<HTMLButtonElement>(".corrLoad"),
-            saveButton: row.querySelector<HTMLButtonElement>(".corrSave"),
-            valueCells,
-        };
-    }
-
-    static updateLoadout(loadout: HSCorruptionLoadout): void {
-        loadout.levels = HSCorruption.getLevelsFromCells(loadout.valueCells);
-    }
-
-    static getCurrentCorruptionLevelsCached(): CorruptionLevels {
-        if (!HSCorruption.cachedCurrent) {
-            throw new Error('HSCorruption cached current values not initialized');
-        }
-
-        return HSCorruption.getLevelsFromCurrentElements(HSCorruption.cachedCurrent);
-    }
-
-    static getNextCorruptionLevelsCached(): CorruptionLevels {
-        if (!HSCorruption.cachedNext) {
-            throw new Error('HSCorruption cached next values not initialized');
-        }
-
-        return HSCorruption.getLevelsFromNextElements(HSCorruption.cachedNext);
-    }
-
-    static async getCurrentCorruptionLevels(): Promise<CorruptionLevels> {
-        if (!HSCorruption.cachedCurrent) {
-            await HSCorruption.cacheCorruptionElements();
-        }
-
-        return HSCorruption.getLevelsFromCurrentElements(HSCorruption.cachedCurrent!);
-    }
-
-    static async getNextCorruptionLevels(): Promise<CorruptionLevels> {
-        if (!HSCorruption.cachedNext) {
-            await HSCorruption.cacheCorruptionElements();
-        }
-
-        return HSCorruption.getLevelsFromNextElements(HSCorruption.cachedNext!);
-    }
-
-
-    // =================================
-    // ------------ Caching ------------
-    // =================================
+    static readonly #ZERO_CORRUPTIONS: HSCorruptionLevels = {
+        viscosity: 0,
+        drought: 0,
+        deflation: 0,
+        extinction: 0,
+        illiteracy: 0,
+        recession: 0,
+        dilation: 0,
+        hyperchallenge: 0,
+    };
+    static #corruptionObservers: Array<(current: HSCorruptionLevels, next: HSCorruptionLevels) => void> = [];
+    static #mutationObserver: MutationObserver | null = null;
     
+    static #currentCorruptionEls: HSCorruptionLoadoutElements | null = null;
+    static #nextCorruptionEls: HSCorruptionLoadoutElements | null = null;
+    static #currentCorruptionLevels: HSCorruptionLevels | null = null;
+    static #nextCorruptionLevels: HSCorruptionLevels | null = null;
+    static #userLoadouts: HSCorruptionUserLoadouts = [];
+    
+    static #corruptionPromptInput: HTMLInputElement | null = null;
+    static #corruptionPromptOkBtn: HTMLButtonElement | null = null;
+    static #importBtn: HTMLButtonElement | null = null;
+    static #importSleepTime = 10;
+
+    static readonly #CORRUPTION_ICON_STORAGE_KEY = 'hs-corruption-loadout-icons';
+    static #corruptionLoadoutIcons: Map<number, string> = new Map();
+
+    // =================================
+    // ------- Helpers & Getters -------
+    // =================================
+
+    static match(a: HSCorruptionLevels, b: HSCorruptionLevels): boolean {
+        return  a.viscosity      === b.viscosity    &&
+                a.drought        === b.drought      &&
+                a.deflation      === b.deflation    &&
+                a.extinction     === b.extinction   &&
+                a.illiteracy     === b.illiteracy   &&
+                a.recession      === b.recession    &&
+                a.dilation       === b.dilation     &&
+                a.hyperchallenge === b.hyperchallenge;
+    }
+
+    static get corruptionNames(): (keyof HSCorruptionLevels)[] {
+        return [...HSCorruption.#CORRUPTION_NAMES];
+    }
+
+    static matches(a: HSCorruptionLevels, b: HSCorruptionLevels): boolean {
+        return HSCorruption.match(a, b);
+    }
+
+    static observeCorruptions(callback: (current: HSCorruptionLevels, next: HSCorruptionLevels) => void): () => void {
+        return HSCorruption.observeCorruption(callback);
+    }
+
     static async cacheCorruptionElements(): Promise<void> {
-        await HSElementHooker.HookElement('#corruptionLoadouts');
+        await HSCorruption.#cacheLoadedCorruptionElements();
+    }
 
-        const current = {} as HSCorruptionValuesMap;
-        const next = {} as HSCorruptionValuesMap;
+    static async getBothLoadedCorruptions(): Promise<{ current: HSCorruptionLevels; next: HSCorruptionLevels }> {
+        await HSCorruption.refreshLoadedCorruptions();
 
-        HSCorruption.corruptionNames.forEach((name) => {
+        return {
+            current: HSCorruption.#currentCorruptionLevels ?? HSCorruption.#ZERO_CORRUPTIONS,
+            next: HSCorruption.#nextCorruptionLevels ?? HSCorruption.#ZERO_CORRUPTIONS,
+        };
+    }
+
+    static updateLoadout(loadout: HSCorruptionUserLoadout): void {
+        HSLogger.debug('HSCorruption.updateLoadout: no-op placeholder', this.#context);
+    }
+
+    static #buildCorruptionLevels(elems: HSCorruptionLoadoutElements): HSCorruptionLevels {
+        const getVal = (name: keyof HSCorruptionLevels) => {
+            const el = elems[name];
+            return el ? parseInt(el.textContent || '0', 10) : 0;
+        };
+
+        return {
+            viscosity: getVal("viscosity"),
+            drought: getVal("drought"),
+            deflation: getVal("deflation"),
+            extinction: getVal("extinction"),
+            illiteracy: getVal("illiteracy"),
+            recession: getVal("recession"),
+            dilation: getVal("dilation"),
+            hyperchallenge: getVal("hyperchallenge")
+        };
+    }
+
+    /** Return cached user corruption loadouts if available; otherwise cache them first. */
+    static async getUserLoadouts(): Promise<HSCorruptionUserLoadouts> {
+        if (!HSCorruption.#userLoadouts.length) await HSCorruption.#cacheUserLoadoutsElements();
+        return this.#userLoadouts;
+    }
+
+    /** Return the currently loaded corruption levels (refresh from DOM first). */
+    static async getCurrentLoadedCorruption(): Promise<HSCorruptionLevels> {
+        if (!HSCorruption.#currentCorruptionEls) { await HSCorruption.#cacheLoadedCorruptionElements(); }
+        await HSCorruption.refreshLoadedCorruptions();
+        return this.#currentCorruptionLevels ?? this.#ZERO_CORRUPTIONS;
+    }
+
+    /** Return the next planned corruption levels (refresh from DOM first). */
+    static async getNextLoadedCorruption(): Promise<HSCorruptionLevels> {
+        if (!HSCorruption.#nextCorruptionEls) { await HSCorruption.#cacheLoadedCorruptionElements(); }
+        await HSCorruption.refreshLoadedCorruptions();
+        return this.#nextCorruptionLevels ?? this.#ZERO_CORRUPTIONS;
+    }
+
+    /** Return both current and next corruption levels after refresh. */
+    static async getBothLoadedCorruption(): Promise<{ current: HSCorruptionLevels; next: HSCorruptionLevels }> {
+        if (!HSCorruption.#currentCorruptionEls || !HSCorruption.#nextCorruptionEls) { await HSCorruption.#cacheLoadedCorruptionElements(); }
+        await HSCorruption.refreshLoadedCorruptions();
+        return {
+            current: this.#currentCorruptionLevels ?? this.#ZERO_CORRUPTIONS,
+            next: this.#nextCorruptionLevels ?? this.#ZERO_CORRUPTIONS
+        };
+    }
+
+    /** Refresh the cached current/next corruption numeric levels from DOM elements. */
+    static async refreshLoadedCorruptions(): Promise<void> {
+        if (!HSCorruption.#currentCorruptionEls || !HSCorruption.#nextCorruptionEls) { await HSCorruption.#cacheLoadedCorruptionElements(); }
+
+        if (HSCorruption.#currentCorruptionEls) {
+            HSCorruption.#currentCorruptionLevels = HSCorruption.#buildCorruptionLevels(HSCorruption.#currentCorruptionEls);
+        }
+
+        if (HSCorruption.#nextCorruptionEls) {
+            HSCorruption.#nextCorruptionLevels = HSCorruption.#buildCorruptionLevels(HSCorruption.#nextCorruptionEls);
+        }
+    }
+      
+
+    // =================================
+    // ---------- DOM caching ----------
+    // =================================
+
+    /** Cache corruption import dialog DOM elements for later operations. */
+    static async #cacheImportCorruptionElements(): Promise<void> {
+        HSCorruption.#importBtn = document.querySelector<HTMLButtonElement>('#corruptionLoadoutTable button.corrImport');
+        HSCorruption.#corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement | null;
+        HSCorruption.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement | null;
+    }
+
+    /** Cache corruption table DOM elements for current/next corruption values. */
+    static async #cacheLoadedCorruptionElements(): Promise<void> {
+        await HSElementHooker.HookElement('#corruptionStats');
+
+        const current = {} as HSCorruptionLoadoutElements;
+        const next = {} as HSCorruptionLoadoutElements;
+
+        HSCorruption.#CORRUPTION_NAMES.forEach((name) => {
             current[name] = document.getElementById(`corrCurrent${name}`);
             next[name] = document.getElementById(`corrNext${name}`);
-
-            if (!current[name] || !next[name]) {
-                if (HSLogger) {
-                    HSLogger.warn(`HSCorruption.cacheCorruptionElements: Missing corrCurrent/corrNext element for ${name}`, 'HSCorruption');
-                }
-            }
         });
 
-        HSCorruption.cachedCurrent = current;
-        HSCorruption.cachedNext = next;
+        HSCorruption.#currentCorruptionEls = current;
+        HSCorruption.#nextCorruptionEls = next;
+    }
+
+    /** Cache user-defined corruption loadout entries from the table. */
+    static async #cacheUserLoadoutsElements(): Promise<void> {
+        await HSElementHooker.HookElement('#corruptionLoadoutTable');
+
+        const names = HSCorruption.#CORRUPTION_NAMES;
+        const rows = Array.from(document.querySelectorAll<HTMLTableRowElement>('#corruptionLoadoutTable tr'));
+        const validRows = rows
+            .slice(1) // First line is the "Next" loadout
+            .filter(row => {
+                const name = row.querySelector<HTMLTableCellElement>('.corrLoadoutName')?.textContent ?? '';
+                const normalized = name.slice(0, -1); // Last character is ':'
+                return normalized !== 'Next' && normalized.length > 0;
+            });
+            
+        HSCorruption.#userLoadouts = validRows.map((row) => {
+            const nameCell = row.querySelector<HTMLTableCellElement>('.corrLoadoutName');
+            const slotName = nameCell?.textContent?.slice(0, -1) ?? '';
+
+            const elements = {} as HSCorruptionLoadoutElements;
+            const levels = {} as HSCorruptionLevels;
+
+            for (let i = 0; i < names.length; i++) {
+                const key = names[i];
+                const el = row.querySelector<HTMLElement>(`.test${key}`);
+                elements[key] = el;
+                const raw = el?.textContent ?? '0';
+                levels[key] = Number(raw) || 0;
+            }
+
+            return {
+                name: slotName,
+                levels,
+                elements,
+                loadButton: row.querySelector<HTMLButtonElement>('.corrLoad'),
+                saveButton: row.querySelector<HTMLButtonElement>('.corrSave'),
+            };
+        });
+    }
+
+    static loadCorruptionLoadoutIcons(): void {
+        try {
+            const raw = localStorage.getItem(HSCorruption.#CORRUPTION_ICON_STORAGE_KEY);
+            if (!raw) {
+                HSCorruption.#corruptionLoadoutIcons = new Map();
+                return;
+            }
+            const parsed = JSON.parse(raw) as Record<string, string>;
+            HSCorruption.#corruptionLoadoutIcons = new Map(Object.entries(parsed).map(([k, v]) => [Number(k), v] as [number, string]));
+        } catch (error) {
+            HSLogger.warn(`HSCorruption.loadCorruptionLoadoutIcons failed: ${String(error)}`, HSCorruption.#context);
+            HSCorruption.#corruptionLoadoutIcons = new Map();
+        }
+    }
+
+    static saveCorruptionLoadoutIcons(): void {
+        try {
+            const obj: Record<string, string> = {};
+            HSCorruption.#corruptionLoadoutIcons.forEach((url, key) => {
+                obj[String(key)] = url;
+            });
+            localStorage.setItem(HSCorruption.#CORRUPTION_ICON_STORAGE_KEY, JSON.stringify(obj));
+        } catch (error) {
+            HSLogger.warn(`HSCorruption.saveCorruptionLoadoutIcons failed: ${String(error)}`, HSCorruption.#context);
+        }
+    }
+
+    static getCorruptionLoadoutIcon(slotKey: number): string | undefined {
+        return HSCorruption.#corruptionLoadoutIcons.get(slotKey);
+    }
+
+    static setCorruptionLoadoutIcon(slotKey: number, iconUrl: string): void {
+        HSCorruption.#corruptionLoadoutIcons.set(slotKey, iconUrl);
+        HSCorruption.saveCorruptionLoadoutIcons();
+    }
+
+    static clearCorruptionLoadoutIcon(slotKey: number): void {
+        HSCorruption.#corruptionLoadoutIcons.delete(slotKey);
+        HSCorruption.saveCorruptionLoadoutIcons();
     }
 
     static clearCache(): void {
         HSCorruption.stopCorruptionObservation();
-        HSCorruption.cachedCurrent = null;
-        HSCorruption.cachedNext = null;
+        HSCorruption.#currentCorruptionEls = null;
+        HSCorruption.#nextCorruptionEls = null;
+        HSCorruption.#currentCorruptionLevels = null;
+        HSCorruption.#nextCorruptionLevels = null;
+        HSCorruption.#userLoadouts = [];
+        HSCorruption.#corruptionPromptInput = null;
+        HSCorruption.#corruptionPromptOkBtn = null;
+        HSCorruption.#importBtn = null;
+        HSCorruption.#corruptionLoadoutIcons = new Map();
     }
 
 
     // =================================
-    // ----------- Observers -----------
+    // -------- Observers Setup --------
     // =================================
 
-    static observeCurrentCorruptions(callback: (current: CorruptionLevels, next: CorruptionLevels) => void): () => void {
-        HSCorruption.corruptionObservers.push(callback);
+    /** Subscribe to corruption state updates and returns an unsubscribe callback. */
+    static observeCorruption(callback: (current: HSCorruptionLevels, next: HSCorruptionLevels) => void): () => void {
+        if (!HSCorruption.#corruptionObservers.includes(callback)) {
+            HSCorruption.#corruptionObservers.push(callback);
+        }
 
         // Immediately emit current values if available.
-        if (HSCorruption.cachedCurrent && HSCorruption.cachedNext) {
-            callback(HSCorruption.getLevelsFromCurrentElements(HSCorruption.cachedCurrent), HSCorruption.getLevelsFromNextElements(HSCorruption.cachedNext));
+        if (HSCorruption.#currentCorruptionLevels && HSCorruption.#nextCorruptionLevels) {
+            callback(HSCorruption.#currentCorruptionLevels, HSCorruption.#nextCorruptionLevels);
         }
 
         const unsubscribe = () => {
-            HSCorruption.corruptionObservers = HSCorruption.corruptionObservers.filter((cb) => cb !== callback);
+            HSCorruption.#corruptionObservers = HSCorruption.#corruptionObservers.filter((cb) => cb !== callback);
         };
 
         return unsubscribe;
     }
 
-    static async startCorruptionObservation(): Promise<void> {
-        await HSCorruption.cacheCorruptionElements();
+    /** Notify all registered observers of the current corruption match state. */
+    static #notifyCorruptionObservers(): void {
+        const current = HSCorruption.#currentCorruptionLevels;
+        const next = HSCorruption.#nextCorruptionLevels;
 
-        if (!HSCorruption.cachedCurrent || !HSCorruption.cachedNext) {
+        if (!current || !next) {
+            HSLogger.debug('HSCorruption.#notifyCorruptionObservers: corruption levels not ready', this.#context);
             return;
         }
 
-        if (HSCorruption.mutationObserver) {
+        HSCorruption.#corruptionObservers.forEach((cb) => cb(current, next));
+    }
+
+    /** Start observing changes on the corruption loadout table and notify subscribers. */
+    static async startCorruptionObservationContainer(containerSelector: string = '#corruptionStatsLoadouts'): Promise<void> {
+        await HSCorruption.#cacheLoadedCorruptionElements();
+
+        if (HSCorruption.#mutationObserver) { return; }
+
+        const container = document.querySelector<HTMLElement>(containerSelector);
+        if (!container) {
+            HSLogger.warn(`startCorruptionObservationContainer: container not found (${containerSelector})`, HSCorruption.#context);
             return;
         }
 
-        const elements = [
-            ...Object.values(HSCorruption.cachedCurrent),
-            ...Object.values(HSCorruption.cachedNext),
-        ].filter(Boolean) as HTMLElement[];
-
-        if (elements.length === 0) {
-            return;
-        }
-
-        const notify = () => {
-            if (!HSCorruption.cachedCurrent || !HSCorruption.cachedNext) return;
-            const current = HSCorruption.getLevelsFromCurrentElements(HSCorruption.cachedCurrent);
-            const next = HSCorruption.getLevelsFromNextElements(HSCorruption.cachedNext);
-            HSCorruption.corruptionObservers.forEach((cb) => cb(current, next));
+        const notify = async () => {
+            await HSCorruption.refreshLoadedCorruptions();
+            HSCorruption.#notifyCorruptionObservers();
         };
 
-        HSCorruption.mutationObserver = new MutationObserver(() => {
-            notify();
-        });
-
-        elements.forEach((element) => {
-            HSCorruption.mutationObserver?.observe(element, {
-                childList: true,
-                characterData: true,
-                subtree: true,
-            });
+        HSCorruption.#mutationObserver = new MutationObserver(() => { notify(); });
+        HSCorruption.#mutationObserver.observe(container, {
+            childList: true,
+            characterData: true,
+            subtree: true,
         });
 
         // Initial notification.
         notify();
     }
 
+    static stopCorruptionObservationContainer(): void {
+        HSCorruption.stopCorruptionObservation();
+    }
+
     static stopCorruptionObservation(): void {
-        if (HSCorruption.mutationObserver) {
-            HSCorruption.mutationObserver.disconnect();
-            HSCorruption.mutationObserver = null;
+        if (HSCorruption.#mutationObserver) {
+            HSCorruption.#mutationObserver.disconnect();
+            HSCorruption.#mutationObserver = null;
+        }
+    }
+
+
+    // =================================
+    // ------------ Import -------------
+    // =================================
+
+    /** Import corruption levels via the game import UI (no confirmation). */
+    static async importCorruption(corruptions: HSCorruptionLevels): Promise<void> {
+        if (!HSCorruption.#importBtn || !HSCorruption.#corruptionPromptInput || !HSCorruption.#corruptionPromptOkBtn) {
+            await HSCorruption.#cacheImportCorruptionElements();
         }
 
-        HSCorruption.corruptionObservers = [];
+        if (!HSCorruption.#importBtn || !HSCorruption.#corruptionPromptInput || !HSCorruption.#corruptionPromptOkBtn) {
+            HSLogger.warn('HSCorruption.importCorruption: Could not find import UI elements', this.#context);
+            return;
+        }
+
+        const jsonString = JSON.stringify(corruptions);
+        HSCorruption.#importBtn.click();
+        HSCorruption.#corruptionPromptInput.value = jsonString;
+        HSCorruption.#corruptionPromptOkBtn.click();
+    }
+
+    /** Import corruption and poll until applied, returns success/failure. */
+    static async importCorruptionAndConfirm(corruptions: HSCorruptionLevels): Promise<boolean> {
+        if (!HSCorruption.#importBtn || !HSCorruption.#corruptionPromptInput || !HSCorruption.#corruptionPromptOkBtn) {
+            await HSCorruption.#cacheImportCorruptionElements();
+        }
+        if (!HSCorruption.#importBtn || !HSCorruption.#corruptionPromptInput || !HSCorruption.#corruptionPromptOkBtn || !HSCorruption.#nextCorruptionLevels) {
+            HSLogger.warn("HSCorruption.importCorruptionAndConfirm: Could not find import UI elements", this.#context);
+            return false;
+        }
+
+        const jsonString = JSON.stringify(corruptions);
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            HSCorruption.#importBtn.click();
+            HSCorruption.#corruptionPromptInput.value = jsonString;
+            HSCorruption.#corruptionPromptOkBtn.click();
+
+            await HSUtils.sleep(HSCorruption.#importSleepTime);
+
+            await HSCorruption.refreshLoadedCorruptions();
+            if (HSCorruption.match(HSCorruption.#nextCorruptionLevels, corruptions)) {
+                HSLogger.debug(`HSCorruption.importCorruptionAndConfirm: success (${Object.values(corruptions).join(',')})`, this.#context);
+                return true;
+            }
+
+            HSLogger.debug(`HSCorruption.importCorruptionAndConfirm: retry ${attempt + 1}/30`, this.#context);
+        }
+
+        HSLogger.warn("HSCorruption.importCorruptionAndConfirm: failed to apply target corruption values", this.#context);
+        return false;
     }
 }
