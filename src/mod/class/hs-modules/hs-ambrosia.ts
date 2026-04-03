@@ -364,6 +364,10 @@ export class HSAmbrosia extends HSModule
         } else {
             HSLogger.warn('Could not find bar wrapper element', this.context);
         }
+
+        // Hide automation/corruption summary headers when minibars quickbar is disabled.
+        HSAmbrosiaHelper.setQuickbarTopTextVisibility(false);
+
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
     }
@@ -381,6 +385,9 @@ export class HSAmbrosia extends HSModule
             HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
             this.subscribeGameDataChanges();
             this.#berryMinibarsEnabled = true;
+
+            // Restore automation/corruption summary headers when minibars quickbar is enabled.
+            HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
         } else {
             HSLogger.warn('Could not find minibar wrapper', this.context);
         }

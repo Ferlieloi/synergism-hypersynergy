@@ -1,4 +1,3 @@
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "../hs-core/hs-logger";
@@ -24,9 +23,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #corruptionSummaryWrapper: HTMLDivElement | null = null;
     #currentCorruptionsTextEl: HTMLDivElement | null = null;
     #nextCorruptionTextEl: HTMLDivElement | null = null;
-    #summaryToggleBtn: HTMLButtonElement | null = null;
     #slotsWrapper: HTMLDivElement | null = null;
-    #isSummaryVisible = true;
     #slots: HTMLButtonElement[] = [];
     #loadouts: HSCorruptionUserLoadout[] = [];
     #corruptionObserverUnsubscribe: (() => void) | null = null;
@@ -51,36 +48,34 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (!this.container) return;
 
         this.#corruptionSummaryWrapper = document.createElement('div');
-        this.#corruptionSummaryWrapper.className = 'hs-corruption-summary-wrapper';
+        this.#corruptionSummaryWrapper.id = 'hs-corruption-summary-wrapper';
+        this.#corruptionSummaryWrapper.className = 'hs-quickbar-summary-wrapper';
 
-        this.#summaryToggleBtn = document.createElement('button');
-        this.#summaryToggleBtn.id = 'hs-corruption-summary-toggle';
-        this.#summaryToggleBtn.type = 'button';
-        this.#summaryToggleBtn.textContent = '▾';
-        this.#summaryToggleBtn.addEventListener('click', () => {
-            if (!this.#corruptionSummaryWrapper || !this.#summaryToggleBtn) return;
-            this.#isSummaryVisible = !this.#isSummaryVisible;
-            this.#corruptionSummaryWrapper.classList.toggle('hs-hidden', !this.#isSummaryVisible);
-            this.#summaryToggleBtn.textContent = this.#isSummaryVisible ? '▾' : '▸';
-        });
+        const minibarsSetting = document.getElementById('hs-setting-ambrosia-minibar-btn') as HTMLElement;
+        if (minibarsSetting && minibarsSetting.classList.contains('hs-disabled'))
+            this.#corruptionSummaryWrapper.classList.add('hs-hidden');
 
         this.#currentCorruptionsTextEl = document.createElement('div');
-        this.#currentCorruptionsTextEl.id = 'hs-corruption-current-value';
+        this.#currentCorruptionsTextEl.id = 'hs-corruption-current-levels';
 
         this.#nextCorruptionTextEl = document.createElement('div');
-        this.#nextCorruptionTextEl.id = 'hs-corruption-next-value';
+        this.#nextCorruptionTextEl.id = 'hs-corruption-next-levels';
         this.#nextCorruptionTextEl.classList.add('hs-hidden');
 
         this.#corruptionSummaryWrapper.appendChild(this.#currentCorruptionsTextEl);
         this.#corruptionSummaryWrapper.appendChild(this.#nextCorruptionTextEl);
-        this.#corruptionSummaryWrapper.classList.toggle('hs-hidden', !this.#isSummaryVisible);
 
-        this.container.appendChild(this.#summaryToggleBtn);
         this.#slotsWrapper = document.createElement('div');
         this.#slotsWrapper.className = 'hs-corruption-slots-wrapper';
 
+        const infobox = document.createElement('div');
+        infobox.id = 'hs-corruption-infobox';
+        infobox.textContent = '?';
+        infobox.title = 'Alt+Click a slot to pick an icon for it.\nRight-click to clear the assigned icon.';
+
         this.container.appendChild(this.#corruptionSummaryWrapper);
         this.container.appendChild(this.#slotsWrapper);
+        this.container.appendChild(infobox);
     }
 
     /** Cleans up quickbar DOM content from the container. */
@@ -101,7 +96,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         await this.#buildSlots();
 
         this.#setupCorruptionObserver();
-        await HSCorruption.startCorruptionObservationContainer('#corruptionLoadoutTable');
+        await HSCorruption.startCorruptionObservationContainer('#corruptionStatsLoadouts');
     }
 
     /** Tear down quickbar and release resources/observers. */
@@ -118,7 +113,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#corruptionSummaryWrapper = null;
         this.#currentCorruptionsTextEl = null;
         this.#nextCorruptionTextEl = null;
-        this.#summaryToggleBtn = null;
         this.#slotsWrapper = null;
         this.#loadouts = [];
         this.#slots = [];
@@ -148,7 +142,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (!this.container || !this.#slotsWrapper) return;
         if (this.#slots.length > 0) return;
 
-        await HSElementHooker.HookElement('#corruptionLoadoutTable');
+        await HSElementHooker.HookElement('#corruptionStatsLoadouts');
 
         const loadouts = await HSCorruption.getUserLoadouts();
         if (!loadouts.length) {
@@ -424,7 +418,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
 
             const iconUrl = this.#findIconUrlFromEventTarget(event.target);
             if (!iconUrl) {
-                HSUI.Notify('No usable icon found on clicked element; pick mode ended. Retry by Alt+clicking a slot.', { notificationType: 'warning' });
+                HSUI.Notify('No usable icon found on the clicked element.', { notificationType: 'warning' });
                 this.#endPickupMode();
                 return;
             }

@@ -34,21 +34,44 @@
     box-sizing: border-box;
 }
 
-/* syn UI quickbar styles*/
-#automationQuickBar {
+/* Quickbar styles*/
+.hs-quickbar {
    display: flex;
-   flex-wrap: wrap;
-   align-items: flex-end;
-   justify-content: center;
+   flex-direction: column;
+   align-items: flex-start;
+   justify-content: flex-end;
    background: none;
    padding: 0px;
    border-radius: 0px;
    box-shadow: none;
    width: auto;
    max-width: 100%;
-   gap: 4px;
+   gap: 2px;
    margin-left: 50px;
    box-sizing: border-box;
+}
+
+.hs-quickbar-summary-wrapper {
+   display: inline-flex;
+   align-items: center;
+   justify-content: flex-start;
+   width: 100%;
+   font-size: 11px;
+   font-weight: 500;
+   color: #248b23;
+   letter-spacing: 0.03em;
+   padding-left: 2px;
+}
+
+.hs-quickbar-slots-wrapper,
+.hs-corruption-slots-wrapper {
+   display: inline-flex;
+   flex-wrap: wrap;
+   align-items: flex-end;
+   justify-content: center;
+   gap: 4px;
+   width: auto;
+   max-width: 100%;
 }
 
 #automationQuickBar button.autoToggle {
@@ -74,12 +97,14 @@
 }
 
 /* Events quickbar styles */
-#eventsQuickBar {
+.hs-events-quickbar {
    display: flex;
-   align-items: flex-end;
-
+   flex-direction: column;
+   align-items: flex-start;
+   justify-content: flex-end;
+   gap: 2px;
 }
-#eventsQuickBar .no-event {
+.hs-events-quickbar .no-event {
    opacity: 0.4;
    filter: grayscale(80%);
    font-size: 14px;
@@ -115,47 +140,39 @@
    animation: hs-animtext-1 3.5s ease-in-out infinite alternate;
 }
 
-/* Corruption quickbar styles (matching automation/ambrosia global style) */
-#corruptionQuickBar {
+.hs-corruption-quickbar {
    position: relative;
-   display: flex;
-   flex-direction: column;
-   align-items: flex-start;
-   justify-content: flex-end;
-   margin-left: 50px;
-   width: auto;
-   max-width: 100%;
-   box-sizing: border-box;
 }
 
-#hs-corruption-summary-toggle {
+#hs-corruption-infobox {
    position: absolute;
    top: 0px;
    right: 0px;
-   width: 13px;
-   height: 13px;
-   min-height: 13px;
-   line-height: 13px;
-   font-size: 12px;
+   width: 11px;
+   height: 11px;
+   min-height: 11px;
+   line-height: 10px;
+   font-size: 10px;
+   font-weight: bold;
    text-align: center;
    border: 1px solid #999;
    color: #cecece;
-   cursor: pointer;
+   background: rgba(0, 0, 0, 0.45);
+   cursor: help;
    z-index: 20;
-}
-.hs-corruption-summary-wrapper {
+   box-shadow: 0 0 4px rgba(0,0,0,0.5);
    display: flex;
-   flex-direction: row;
    align-items: center;
-   justify-content: flex-start;
-   width: 100%;
-   max-width: 100%;
-   color: #eb4c4c;
-   font-size: 12px;
-   font-weight: 500;
+   justify-content: center;
+   user-select: none;
 }
-#hs-corruption-next-value {
-   color: #c7ffb7;
+
+#hs-corruption-current-levels {
+   color: #ba2d2d;
+}
+
+#hs-corruption-next-levels {
+   color: #aeaeae;
    padding-left: 5px;
 }
 
@@ -184,10 +201,12 @@
    cursor: pointer;
    overflow: hidden;
 }
+
 .hs-corruption-slot:hover {
    filter: brightness(130%);
    box-shadow: 0 0 8px rgba(255, 0, 0, 0.35);
 }
+
 .hs-corruption-slot::before {
    content: attr(data-quickbar-index);
    position: absolute;
@@ -277,4 +296,10 @@
    syntax: '<angle>';
    initial-value: 0deg;
    inherits: false;
+}
+
+/* Always hide the ambrosia minibars numbers to avoid a visual 'jump' when enabling them. */
+#hs-blue-progress-text,
+#hs-red-progress-text {
+    display: none;
 }

@@ -55,9 +55,6 @@ export class HSAmbrosiaHelper {
         return undefined;
     }
 
-    // no UI state formatting or setting persistence is performed by this helper anymore.
-    // HSAmbrosia now owns canonical active state and persistence directly.
-
     /** Convert loadout-setting string (e.g. "1") to a real slot enum. */
     static convertSettingLoadoutToSlot(loadoutNumber: string): AMBROSIA_LOADOUT_SLOT | undefined {
         const loadoutEnum = Object.values(AMBROSIA_LOADOUT_SLOT).find(
@@ -84,5 +81,14 @@ export class HSAmbrosiaHelper {
                 modeButton.click();
             }
         }
+    }
+
+    /** Show or hide other quickbars' summary headers. */
+    static setQuickbarTopTextVisibility(visibility: boolean): void {
+        const quickbarSummaryElements = document.querySelectorAll('.hs-quickbar-summary-wrapper');
+
+        quickbarSummaryElements.forEach(
+            (el) => el.classList.toggle('hs-hidden', !visibility)
+        );
     }
 }

@@ -417,10 +417,11 @@ export class HSAutosingSettingsFixer {
 
     static async #disableUnwantedSettings(): Promise<string[]> {
         const performanceSettingKeys = [
+            'enableCorruptionQuickBar',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
             'ambrosiaIdleSwap',
-            'useGameData'           // Disable GDS last
+            'useGameData'
         ] as const;
 
         const disabledSettings: string[] = [];

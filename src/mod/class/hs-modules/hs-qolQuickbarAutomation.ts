@@ -56,8 +56,10 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
     protected readonly sectionId = 'automationQuickBar';
     protected readonly sectionClass = 'hs-automation-quickbar';
 
-    // quickbar container
-    automationQuickBarContainer: HTMLDivElement | null = null;
+    #automationQuickBarContainer: HTMLDivElement | null = null;
+    #automationSummaryWrapper: HTMLDivElement | null = null;
+    #automationSlotsWrapper: HTMLDivElement | null = null;
+    #challengeMutationObservers: MutationObserver[] = [];
     #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
     #automationQuickbarBootstrapTimeoutIds: number[] = [];
     #selectorElementCache = new Map<string, HTMLElement | null>();
@@ -458,7 +460,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
      * and button creation for each static config entry.
      */
     #setupAutomationQuickbar(): void {
-        if (!this.automationQuickBarContainer) return;
+        if (!this.#automationQuickBarContainer) return;
 
         this.#resetAutomationQuickbarRuntime();
 
@@ -594,7 +596,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                     btn.disabled = checkStates.length === 0;
                 });
 
-                this.automationQuickBarContainer?.appendChild(btn);
+                this.#automationQuickBarContainer?.appendChild(btn);
                 return;
             }
 
@@ -633,7 +635,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 setAutomationButtonState(btn, targets.length, allOn, allOff);
             });
 
-            this.automationQuickBarContainer?.appendChild(btn);
+            this.#automationQuickBarContainer?.appendChild(btn);
         };
 
         for (const item of HSQOLAutomationQuickbar.#AUTOMATION_QUICKBAR_RENDER_ORDER) {
@@ -667,9 +669,9 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         }
         this.#clearAutomationQuickbarBootstrapTimeouts();
         this.#clearAutomationQuickBarWatchers();
-        if (this.automationQuickBarContainer) {
-            this.automationQuickBarContainer.innerHTML = '';
-            this.automationQuickBarContainer = null;
+        if (this.#automationQuickBarContainer) {
+            this.#automationQuickBarContainer.innerHTML = '';
+            this.#automationQuickBarContainer = null;
         }
     }
 
@@ -813,7 +815,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
 
         for (const delayMs of HSQOLAutomationQuickbar.#AUTOMATION_QUICKBAR_BOOTSTRAP_RETRY_MS) {
             const timeoutId = window.setTimeout(() => {
-                if (!this.automationQuickBarContainer) return;
+                if (!this.#automationQuickBarContainer) return;
                 this.#registerAutomationQuickBarWatchers(updateUI);
                 updateUI();
             }, delayMs);
@@ -822,24 +824,87 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         }
     }
 
-    // Public lifecycle is supplied by HSQOLQuickbarBase via createSection/setup/teardown.
-    protected createDOM(): void {
-        /* no extra DOM required: #setupAutomationQuickbar is responsible for actual quickbar contents */
+    #resolveCurrentChallenge(): string {
+        // Reverse order to have the highest one
+        for (let challenge = 15; challenge >= 1; challenge -= 1) {
+            const el = document.getElementById(`challenge${challenge}`);
+            if (el && el.classList.contains('challengeActive')) {
+                return `C${challenge}`;
+            }
+        }
+        return 'C-';
     }
 
-    protected cleanupDOM(): void {
-        if (this.automationQuickBarContainer) {
-            this.automationQuickBarContainer.innerHTML = '';
+    #updateAutomationSummaryText(): void {
+        if (!this.#automationSummaryWrapper) return;
+
+        const challenge = this.#resolveCurrentChallenge();
+        this.#automationSummaryWrapper.textContent = challenge || '';
+    }
+
+    #setupChallengeActiveObservers(): void {
+        this.#clearChallengeActiveObservers();
+
+        for (let challenge = 1; challenge <= 15; challenge += 1) {
+            const el = document.getElementById(`challenge${challenge}`);
+            if (!el) continue;
+
+            const observer = new MutationObserver(() => {
+                this.#updateAutomationSummaryText();
+            });
+            observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+            this.#challengeMutationObservers.push(observer);
         }
     }
 
+    #clearChallengeActiveObservers(): void {
+        for (const observer of this.#challengeMutationObservers) {
+            observer.disconnect();
+        }
+        this.#challengeMutationObservers = [];
+    }
+
+    // Public lifecycle is supplied by HSQOLQuickbarBase via createSection/setup/teardown.
+    protected createDOM(): void {
+        if (!this.container) return;
+
+        this.#automationSummaryWrapper = document.createElement('div');
+        this.#automationSummaryWrapper.id = 'hs-automation-summary-wrapper';
+        this.#automationSummaryWrapper.className = 'hs-quickbar-summary-wrapper';
+        
+        const minibarsSetting = document.getElementById('hs-setting-ambrosia-minibar-btn') as HTMLElement;
+        if (minibarsSetting && minibarsSetting.classList.contains('hs-disabled'))
+            this.#automationSummaryWrapper.classList.add('hs-hidden');
+
+        this.#automationSlotsWrapper = document.createElement('div');
+        this.#automationSlotsWrapper.id = 'hs-automation-slots-wrapper';
+        this.#automationSlotsWrapper.className = 'hs-quickbar-slots-wrapper';
+
+        this.container.appendChild(this.#automationSummaryWrapper);
+        this.container.appendChild(this.#automationSlotsWrapper);
+    }
+
+    protected cleanupDOM(): void {
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+        this.#automationQuickBarContainer = null;
+        this.#automationSummaryWrapper = null;
+        this.#automationSlotsWrapper = null;
+    }
+
     protected onSetup(): void {
-        this.automationQuickBarContainer = this.container;
+        this.#automationQuickBarContainer = this.#automationSlotsWrapper;
         this.#setupAutomationQuickbar();
+
+        // Challenge text summary for C11-15
+        this.#updateAutomationSummaryText();
+        this.#setupChallengeActiveObservers();
     }
 
     protected onTeardown(): void {
         this.#teardownAutomationQuickbar();
-        this.automationQuickBarContainer = null;
+        this.#automationQuickBarContainer = null;
+        this.#clearChallengeActiveObservers();
     }
 }

@@ -268,7 +268,7 @@ export class HSUI extends HSModule {
                 const toggleBtn = document.getElementById(btnId) as HTMLElement;
                 if (toggleBtn) {
                     toggleBtn.click();
-                    HSLogger.log(`${label} quickbar toggled via quickbars submenu`, context);
+                    HSLogger.debug(`${label} quickbar toggled via quickbars submenu`, context);
                 }
             });
             return btn;

@@ -193,7 +193,7 @@ export class HSCorruption {
 
     /** Cache corruption table DOM elements for current/next corruption values. */
     static async #cacheLoadedCorruptionElements(): Promise<void> {
-        await HSElementHooker.HookElement('#corruptionLoadoutTable');
+        await HSElementHooker.HookElement('#corruptionStats');
 
         const current = {} as HSCorruptionLoadoutElements;
         const next = {} as HSCorruptionLoadoutElements;
@@ -337,7 +337,7 @@ export class HSCorruption {
     }
 
     /** Start observing changes on the corruption loadout table and notify subscribers. */
-    static async startCorruptionObservationContainer(containerSelector: string = '#corruptionLoadoutTable'): Promise<void> {
+    static async startCorruptionObservationContainer(containerSelector: string = '#corruptionStatsLoadouts'): Promise<void> {
         await HSCorruption.#cacheLoadedCorruptionElements();
 
         if (HSCorruption.#mutationObserver) { return; }

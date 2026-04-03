@@ -13,7 +13,7 @@ export abstract class HSQOLQuickbarBase {
     public createSection(): HTMLElement {
         const section = document.createElement('div');
         section.id = this.sectionId;
-        section.className = this.sectionClass;
+        section.className = `${this.sectionClass} hs-quickbar`;
         return section;
     }
 
