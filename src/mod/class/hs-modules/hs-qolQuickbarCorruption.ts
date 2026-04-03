@@ -5,7 +5,7 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "./hs-corruption";
-import { HSQOLQuickbarBase } from "./hs-qolButtonsQuickbarBase";
+import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 
 /**
  * Class: HSQOLCorruptionQuickbar

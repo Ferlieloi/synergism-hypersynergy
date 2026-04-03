@@ -2,7 +2,7 @@ import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { HSQOLQuickbarBase } from "./hs-qolButtonsQuickbarBase";
+import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 
 type AutomationSelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: AutomationSelectorExpectation };

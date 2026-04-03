@@ -541,7 +541,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         try {
             if (this.#autosingModal) {
-                const { HSQuickbarManager } = await import("../hs-quickbarManager");
+                const { HSQuickbarManager } = await import("../hs-qolQuickbarManager");
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
                 const gameData = await this.#gameDataAPI?.getLatestAutosingData() ?? { quarks: 0, goldenQuarks: 0 };
                 this.#autosingModal.start(this.#strategy!, gameData.quarks, gameData.goldenQuarks);

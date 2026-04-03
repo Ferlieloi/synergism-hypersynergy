@@ -7,7 +7,7 @@ import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { GameView, HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
-import { HSQuickbarManager } from "./hs-quickbarManager";
+import { HSQuickbarManager } from "./hs-qolQuickbarManager";
 import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";

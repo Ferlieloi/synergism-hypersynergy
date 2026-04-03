@@ -1,5 +1,5 @@
 import type { HSAmbrosia } from "./hs-ambrosia";
-import { HSQuickbarManager } from "./hs-quickbarManager";
+import { HSQuickbarManager } from "./hs-qolQuickbarManager";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
