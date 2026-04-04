@@ -607,11 +607,7 @@ async function pushFlow(status) {
 
     await commitFlow(status);
 
-    if (await askYesNo('Push the current branch and tag to origin now?')) {
-        await pushFlow(status);
-    } else {
-        info('Push skipped by user. You can do it manually with `git push --follow-tags`.');
-    }
+    await pushFlow(status);
 
     success(`Completed: ${status.targetTag}`);
 })();
