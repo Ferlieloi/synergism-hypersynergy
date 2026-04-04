@@ -192,7 +192,7 @@ function getWorkingTreeStatus() {
 }
 
 /** Check whether current branch is ahead of upstream by commits or has upstream issues. */
-function isBranchNotAhead() {
+function isBranchAheadOfUpstream() {
     const upstreamRes = run('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
     if (upstreamRes.error || upstreamRes.status !== 0) {
         const errText = String(upstreamRes.stderr || upstreamRes.stdout || '').toLowerCase();
@@ -203,27 +203,27 @@ function isBranchNotAhead() {
         } else {
             warn('Unable to resolve upstream branch (inaccessible or no upstream). This is not fatal, but please check git remote configuration.');
         }
-        return false;
+        return true;
     }
 
     const aheadRes = run('git', ['rev-list', '--count', '@{u}..HEAD']);
     if (aheadRes.error || aheadRes.status !== 0) {
         warn('Could not determine upstream ahead/behind status even though an upstream exists. Please verify branch tracking.');
-        return false;
+        return true;
     }
 
     const aheadCount = parseInt(aheadRes.stdout.toString().trim(), 10);
     if (Number.isNaN(aheadCount)) {
         warn('Could not parse ahead count from git output.');
-        return false;
+        return true;
     }
 
     if (aheadCount > 0) {
         warn(`Branch is ahead of upstream by ${aheadCount} commits.`);
-        return false;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 /** Check if the release artifact exists in a given Git ref. */
@@ -261,7 +261,7 @@ function readPackage() {
 function collectStatus() {
     checkGitBase();
 
-    const branchOk = isBranchNotAhead();
+    const isBranchAhead = isBranchAheadOfUpstream();
 
     const tree = getWorkingTreeStatus();
     const branch = runAndCheck('git', ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
@@ -294,7 +294,7 @@ function collectStatus() {
     return {
         // current branch and HEAD info
         branch,
-        branchOk,
+        isBranchAhead,
         head,
         headShort: head.substring(0, 7),
 
@@ -468,6 +468,8 @@ async function commitFlow(status) {
         if (await askYesNo('Stage all changes for commit?')) {
             runAndCheck('git', ['add', '-A']);
             success('Staged all changes.');
+        } else {
+            info('Proceeding without staging changes.');
         }
     }
 
@@ -567,7 +569,7 @@ async function pushFlow(status) {
     }
 
     if (!(await askYesNo(`Push branch and tag ${status.targetTag} to origin?`))) {
-        info('Aborted by user.');
+        info('Push skipped. You can do it manually with `git push --follow-tags`.');
         process.exit(0);
     }
 
@@ -593,9 +595,9 @@ async function pushFlow(status) {
     const status = collectStatus(opts);
     printStatus(status);
 
-    if (!status.branchOk) {
-        warn('Branch check indicates upstream/advance issues. This is advisory only.');
-        if (!await askYesNo('Continue anyway with commit/tag workflow?')) {
+    if (status.isBranchAhead) {
+        warn('Branch check indicates upstream/advance issues (this is advisory only).');
+        if (!await askYesNo(`Continue anyway? (y/N)`)) {
             info('Aborted by user.');
             process.exit(0);
         }
