@@ -99,6 +99,10 @@ export class HSSettingActions {
             }
         },
 
+        hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
+            HSSettings.applyHiddenVanillaTabsSetting();
+        },
+
         patch: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 

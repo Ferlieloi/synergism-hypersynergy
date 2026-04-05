@@ -45,6 +45,54 @@
       "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
     }
   },
+  "hiddenVanillaTabs": {
+    "settingName": "hiddenVanillaTabs",
+    "settingDescription": "Hide vanilla tabs",
+    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row.",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": [],
+    "settingAction": "hiddenVanillaTabsAction",
+    "settingControl": {
+      "controlId": "hs-setting-hidden-vanilla-tabs",
+      "controlType": "select",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "props": {
+        "multiple": "multiple",
+        "size": "8"
+      },
+      "selectOptions": [
+        { "text": "Buildings", "value": "buildingstab" },
+        { "text": "Upgrades", "value": "upgradestab" },
+        { "text": "Achievements", "value": "achievementstab" },
+        { "text": "Runes", "value": "runestab" },
+        { "text": "Research", "value": "researchtab" },
+        { "text": "Ant Hill", "value": "anttab" },
+        { "text": "Campaign", "value": "campaigntab" },
+        { "text": "Shop", "value": "shoptab" },
+        { "text": "Events", "value": "eventtab" },
+        { "text": "PseudoCoins", "value": "pseudoCoinstab" }
+      ]
+    }
+  },
+  "patch_shopItemNameMapping": {
+    "settingName": "patch_shopItemNameMapping",
+    "settingDescription": "Display shop item names",
+    "settingHelpText": "Populates the shop items with their names.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "ShopItemNameMapping"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-patch-shopnames-btn"
+    }
+  },
   "syncNotificationOpacity": {
     "settingName": "syncNotificationOpacity",
     "settingDescription": "Notification opacity",
@@ -64,23 +112,6 @@
         "max": 1,
         "step": 0.05
       }
-    }
-  },
-  "patch_shopItemNameMapping": {
-    "settingName": "patch_shopItemNameMapping",
-    "settingDescription": "Display shop item names",
-    "settingHelpText": "Populates the shop items with their names.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "patch",
-    "patchConfig": {
-      "patchName": "ShopItemNameMapping"
-    },
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ui",
-      "controlPage": "ui",
-      "controlEnabledId": "hs-setting-patch-shopnames-btn"
     }
   },
   "reactiveMouseHover": {

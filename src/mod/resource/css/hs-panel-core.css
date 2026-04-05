@@ -571,6 +571,10 @@
     background-color: #101828;
 }
 
+.hs-panel-setting-block-select-input[multiple] {
+    height: 80px;
+}
+
 .hs-panel-setting-block-select-input:hover {
     cursor: pointer;
 }

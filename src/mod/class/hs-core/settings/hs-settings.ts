@@ -13,7 +13,7 @@ import { HSUI } from "../hs-ui";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType, HSUICSelectOption } from "../../../types/module-types/hs-ui-types";
 import { HSSettingActions } from "./hs-setting-action";
-import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
+import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSelectStringsSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
@@ -142,6 +142,14 @@ export class HSSettings extends HSModule {
                             HSSettings.#settingDisabledString
                         );
                         break;
+                    case 'selectstrings':
+                        (HSSettings.#settings as any)[key] = new HSSelectStringsSetting(
+                            setting as unknown as HSSettingBase<string[]>,
+                            settingAction,
+                            HSSettings.#settingEnabledString,
+                            HSSettings.#settingDisabledString
+                        );
+                        break;
                     case 'state':
                         (HSSettings.#settings as any)[key] = new HSStateSetting(
                             setting as unknown as HSSettingBase<string>,
@@ -217,14 +225,27 @@ export class HSSettings extends HSModule {
                     const selectElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement;
 
                     if (selectElement) {
-                        const optionExists = Array.from(selectElement.options).some(option => option.value === settingValue);
-
-                        if (optionExists) {
-                            // Set the input value to the JSON setting value
-                            selectElement.value = settingValue;
+                        if (selectElement.multiple) {
+                            const values = setting.settingValue;
+                            if (Array.isArray(values)) {
+                                for (const option of Array.from(selectElement.options)) {
+                                    option.selected = values.includes(option.value);
+                                }
+                            } else {
+                                for (const option of Array.from(selectElement.options)) {
+                                    option.selected = false;
+                                }
+                            }
                         } else {
-                            selectElement.value = ""; // Set to empty string if the value doesn't exist in the options
-                            HSLogger.warn(`Setting value ${settingValue} does not exist in select options for setting ${key}`, HSSettings.#staticContext);
+                            const optionExists = Array.from(selectElement.options).some(option => option.value === settingValue);
+
+                            if (optionExists) {
+                                // Set the input value to the JSON setting value
+                                selectElement.value = settingValue;
+                            } else {
+                                selectElement.value = ""; // Set to empty string if the value doesn't exist in the options
+                                HSLogger.warn(`Setting value ${settingValue} does not exist in select options for setting ${key}`, HSSettings.#staticContext);
+                            }
                         }
 
                         // Listen for changes in the UI input to change the setting value
@@ -269,7 +290,22 @@ export class HSSettings extends HSModule {
         }
 
         HSLogger.log(`Finished syncing mod settings`, HSSettings.#staticContext);
+        this.applyHiddenVanillaTabsSetting();
         this.#settingsSynced = true;
+    }
+
+    static applyHiddenVanillaTabsSetting(): void {
+        const setting = HSSettings.getSetting('hiddenVanillaTabs');
+        if (!setting) return;
+
+        const hiddenVanillaTabs = setting.getValue();
+        if (!Array.isArray(hiddenVanillaTabs)) return;
+
+        const tabElements = document.querySelectorAll<HTMLElement>('#tabrow > button');
+        for (const tabElement of Array.from(tabElements)) {
+            if (!tabElement.id) continue;
+            tabElement.style.display = hiddenVanillaTabs.includes(tabElement.id) ? 'none' : '';
+        }
     }
 
     /**
@@ -548,7 +584,7 @@ export class HSSettings extends HSModule {
                             }
                             if (controls.selectOptions) {
                                 components.push(HSUIC.Select(
-                                    { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType },
+                                    { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType, props: controls.props },
                                     controls.selectOptions
                                 ));
                             } else {
@@ -776,7 +812,7 @@ export class HSSettings extends HSModule {
         const validControlTypes = ['text', 'number', 'switch', 'select', 'state', 'button'];
 
         // These should be the same as HSSettingJSONType in hs-settings-types.ts
-        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'state', 'button'];
+        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'selectstrings', 'state', 'button'];
 
         // Check the name first so we can use it in the error messages
         if (!('settingName' in setting)) throw new Error(`Setting is missing settingName property`);

@@ -5,9 +5,9 @@
 */
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
-import { HSUICSelectOption } from "./hs-ui-types";
+import { HSUICSelectOption, HTMLProps } from "./hs-ui-types";
 
-export type HSSettingType = number | string | boolean | null;
+export type HSSettingType = number | string | string[] | boolean | null;
 export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSettingType>>;
 
 export interface HSSettingsDefinition {
@@ -18,6 +18,9 @@ export interface HSSettingsDefinition {
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
+
+    // UI Settings
+    hiddenVanillaTabs: HiddenVanillaTabsSetting;
 
     // Log Settings
     logTimestamp: LogTimestampSetting;
@@ -98,7 +101,7 @@ export interface HSSettingControlOptions {
 }
 
 export type HSSettingsControlType = "text" | "number" | "switch" | "select" | "state" | "button";
-export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "state" | "button";
+export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "selectstrings" | "state" | "button";
 
 export interface HSSettingActionParams {
     contextName?: string,
@@ -120,6 +123,7 @@ export interface HSSettingControl {
     controlEnabledId?: string;
     controlOptions?: HSSettingControlOptions;
     selectOptions?: HSUICSelectOption[];
+    props?: HTMLProps;
 }
 
 export interface HSSettingControlPage {
@@ -150,6 +154,8 @@ export interface HSSettingBase<T> {
     usesGameData?: boolean;
 }
 
+export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
+
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
 export interface ExpandCostProtectionDoubleCap extends HSSettingBase<boolean> { }
@@ -166,6 +172,7 @@ export interface ShowDebugLogsSetting extends HSSettingBase<boolean> { }
 export interface ReactiveMouseHoverSetting extends HSSettingBase<number> { }
 export interface AutoclickSetting extends HSSettingBase<number> { }
 export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
+export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
 
 // Ambrosia Settings
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }

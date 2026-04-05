@@ -436,6 +436,39 @@ export class HSSelectStringSetting extends HSSetting<string> {
     }
 }
 
+export class HSSelectStringsSetting extends HSSetting<string[]> {
+    constructor(
+        settingDefinition: HSSettingBase<string[]>,
+        settingAction: ((params: HSSettingActionParams) => any) | null,
+        enabledString: string,
+        disabledString: string) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
+    }
+
+    getValue() {
+        return this.definition.settingValue;
+    }
+
+    setValue(value: string[]) {
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
+    }
+
+    async handleChange(e: Event) {
+        const selectElement = e.target as HTMLSelectElement;
+        const newValue = Array.from(selectElement.selectedOptions).map((option) => option.value);
+
+        HSLogger.log(`${this.definition.settingName}: ${JSON.stringify(this.definition.settingValue)} -> ${JSON.stringify(newValue)}`, this.context);
+
+        this.definition.settingValue = newValue;
+        this.definition.calculatedSettingValue = newValue;
+        await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
+    }
+}
+
 export class HSStateSetting extends HSSetting<string> {
     constructor(
         settingDefinition: HSSettingBase<string>,
