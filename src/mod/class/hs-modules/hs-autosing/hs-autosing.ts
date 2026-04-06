@@ -133,6 +133,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     // State Management
     #endStageDone: boolean = false;
     #observerActivated: boolean = false;
+    #coinDiagnosticIntervalId: number | null = null;
     #endStagePromise?: Promise<void>;
     #endStageResolve?: () => void;
     #antiquitiesObserver?: MutationObserver;
@@ -628,7 +629,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         HSLogger.debug(`executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
-        await this.#executePhase(phaseConfig);
+        if (phaseConfig.startPhase === "start") {
+            await this.#executePhase(phaseConfig, { skipInitialAscend: true });
+        } else {
+            await this.#executePhase(phaseConfig);
+        }
     }
 
     // ============================================================================
@@ -658,6 +663,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             this.#ascendBtn.click();
         }
 
+        // Ensure coin autobuyer (upgrades[81]) is active before entering challenges.
+        // We detect purchase via the DOM: #upg81 gets a green background when bought.
+        if (phaseConfig.startPhase === 'start') {
+            await this.#antiBuyCoinBug2();
+        }
+
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             // Autosing disabled or AOAG observer activated
             if (!this.#autosingEnabled || (this.#observerActivated && !(phaseConfig.endPhase === "end") && !options?.ignoreObserverActivated)) {
@@ -680,6 +691,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }
             this.#prevActionTime = performance.now();
         }
+
+        // this.#stopCoinDiagnostic();
 
         if (phaseConfig.endPhase == "end") {
             this.#endStageDone = true;
@@ -1195,26 +1208,99 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
     }
 
+    #startCoinDiagnostic(): void {
+        this.#stopCoinDiagnostic();
+        const start = performance.now();
+        const logLine = () => {
+            const ep = HSGlobal.exposedPlayer;
+            const elapsed = (performance.now() - start).toFixed(0);
+            const foc = ep?.firstOwnedCoin ?? '?';
+            const u81 = ep?.upgrades?.[81] ?? '?';
+            const toggle1 = ep?.toggles?.[1] ?? '?';
+            const coins = ep?.coins ?? '?';
+            HSLogger.debug(
+                `[COIN-DIAG +${elapsed}ms] firstOwnedCoin=${foc}, upgrades[81]=${u81}, toggle1=${toggle1}, coins=${coins}`,
+                this.context
+            );
+        };
+        logLine();
+        this.#coinDiagnosticIntervalId = window.setInterval(() => {
+            logLine();
+            if (performance.now() - start >= 3000) {
+                this.#stopCoinDiagnostic();
+            }
+        }, 20);
+        HSLogger.debug(`[COIN-DIAG] Started diagnostic interval`, this.context);
+    }
+
+    #stopCoinDiagnostic(): void {
+        if (this.#coinDiagnosticIntervalId !== null) {
+            window.clearInterval(this.#coinDiagnosticIntervalId);
+            this.#coinDiagnosticIntervalId = null;
+            HSLogger.debug(`[COIN-DIAG] Stopped diagnostic interval`, this.context);
+        }
+    }
+
     #antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
-        HSLogger.debug(`antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
+        HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
         window.setTimeout(() => {
             let attempt = 0;
             const intervalId = window.setInterval(() => {
                 attempt++;
                 this.#coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
-                
+
                 // Exposed player use
+                HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
                 if (HSGlobal.exposedPlayer && HSGlobal.exposedPlayer.firstOwnedCoin === 0) {
-                    HSLogger.debug(`antiBuyCoinBug: Detected firstOwnedCoin is 0, incrementing to prevent bug.`, this.context);
+                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Detected firstOwnedCoin is 0, incrementing to prevent bug.`, this.context);
                     HSGlobal.exposedPlayer.firstOwnedCoin++;
+                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
                 }
 
                 if (attempt >= repeatCount) {
                     window.clearInterval(intervalId);
-                    HSLogger.debug(`antiBuyCoinBug: completed ${attempt} attempts, stopping.`, this.context);
+                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: completed ${attempt} attempts, stopping.`, this.context);
                 }
             }, intervalMs);
         }, initialDelayMs);
+    }
+
+    async #antiBuyCoinBug2(maxWaitMs = 2000): Promise<void> {
+        const upg81El = document.getElementById('upg81') as HTMLElement | null;
+        if (!upg81El) {
+            HSLogger.warn(`[COIN-FIX] #upg81 element not found in DOM`, this.context);
+            return;
+        }
+
+        const isGreen = () => upg81El.classList.contains('green-background');
+        if (isGreen()) return;
+
+        const waitStart = performance.now();
+        HSLogger.debug(`[COIN-FIX] Waiting for #upg81 to turn green (upgrades[81] auto-bought)...`, this.context);
+
+        const turned = await new Promise<boolean>(resolve => {
+            const timer = window.setTimeout(() => {
+                observer.disconnect();
+                resolve(false);
+            }, maxWaitMs);
+
+            const observer = new MutationObserver(() => {
+                if (isGreen()) {
+                    window.clearTimeout(timer);
+                    observer.disconnect();
+                    resolve(true);
+                }
+            });
+
+            observer.observe(upg81El, { attributes: true, attributeFilter: ['class'] });
+        });
+
+        const elapsedStr = (performance.now() - waitStart).toFixed(0);
+        if (turned) {
+            HSLogger.debug(`[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
+        } else {
+            HSLogger.warn(`[COIN-FIX] #upg81 still not green after ${maxWaitMs}ms, firstOwnedCoin bug may occur...`, this.context);
+        }
     }
 
     // ============================================================================
@@ -1374,7 +1460,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             stage = await this.#getStage();
         }
 
-        this.#antiBuyCoinBug(0, 15, 10);
+        // this.#startCoinDiagnostic();
+
+        // this.#antiBuyCoinBug(0, 15, 20);
 
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();

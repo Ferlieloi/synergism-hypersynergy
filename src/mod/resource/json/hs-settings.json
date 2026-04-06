@@ -48,7 +48,7 @@
   "hiddenVanillaTabs": {
     "settingName": "hiddenVanillaTabs",
     "settingDescription": "Hide vanilla tabs",
-    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row.",
+    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row (Ctrl+click to select multiple).",
     "settingType": "selectstrings",
     "enabled": true,
     "settingValue": [],

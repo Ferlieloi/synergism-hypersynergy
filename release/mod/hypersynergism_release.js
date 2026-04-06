@@ -1818,7 +1818,7 @@
         }`),`<div class="hs-panel-div ${e}" ${a?`id="${a}"`:""}${i} ${s}>${n}</div>`}static P(t){let e=t.class??"",a=t.id??f.domid(),n="",i=this.#n(t.props),s=this.#a(t.data);return t.text&&(Array.isArray(t.text)?n=t.text.join(`
 `):n=t.text),E.injectStyle(`#${a} {
             ${f.objectToCSS(t.styles)}
-        }`),`<p class="hs-panel-p ${e}" ${a?`id="${a}"`:""}${i} ${s}>${n}</p>`}static Image(t){let e=t.class??"",a=t.id??f.domid(),n=this.#n(t.props),i=this.#a(t.data);if(!t.src)return u.warn("HSUIC.Image: No src provided for image component",this.#e),"";let s=t.width?t.width:T.HSUIC.defaultImageWidth,r=t.height?t.height:T.HSUIC.defaultImageHeight;return E.injectStyle(`#${a} {
+        }`),`<p class="hs-panel-p ${e}" ${a?`id="${a}"`:""}${i} ${s}>${n}</p>`}static Image(t){let e=t.class??"",a=t.id??f.domid(),n=this.#n(t.props),i=this.#a(t.data);if(!t.src)return u.warn("HSUIC.Image: No src provided for image component",this.#e),"";let s=t.width?t.width:M.HSUIC.defaultImageWidth,r=t.height?t.height:M.HSUIC.defaultImageHeight;return E.injectStyle(`#${a} {
             ${f.objectToCSS(t.styles)}
         }`),`<img src="${t.src}" width="${s}" height="${r}" class="hs-panel-img ${e}" ${a?`id="${a}"`:""}${n} ${i}/>`}static Grid(t){let e=t.class??"",a=t.id??f.domid(),n="",i=this.#n(t.props),s=this.#a(t.data);return t.html&&(Array.isArray(t.html)?n=t.html.join(`
 `):n=t.html),E.injectStyle(`#${a} {
@@ -3264,7 +3264,7 @@ a.hs-link {
             <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">\u2630</span>
             <span>Quickbars</span>
             <span class="quickbars-arrow">&gt;</span>
-        `;let i=document.createElement("div");i.id="hs-quickbars-submenu",i.style.display="none";function s(g,m,h){let d=document.createElement("button");return d.innerHTML=g,d.setAttribute("data-type",h),d.addEventListener("click",()=>{let p=document.getElementById(m);p&&(p.click(),u.debug(`${g} quickbar toggled via quickbars submenu`,e))}),d}i.appendChild(s("Ambrosia","hs-setting-qol-ambrosia-quickbar-btn","ambrosia")),i.appendChild(s("Amb minibars","hs-setting-ambrosia-minibar-btn","amb-minibars")),i.appendChild(s("Corruption","hs-setting-qol-enable-corruption-quickbar-btn","corruption")),i.appendChild(s("Automation","hs-setting-qol-enable-syn-ui-btn","automation")),i.appendChild(s("Events","hs-setting-qol-enable-events-quickbar-btn","events")),n.addEventListener("click",g=>{let h=["hs-setting-qol-ambrosia-quickbar-btn","hs-setting-ambrosia-minibar-btn","hs-setting-qol-enable-corruption-quickbar-btn","hs-setting-qol-enable-syn-ui-btn","hs-setting-qol-enable-events-quickbar-btn"].map(b=>document.getElementById(b)),d=h.map(b=>!(!b||b.classList.contains("hs-disabled"))),p=d.filter(Boolean).length;p>0&&p<d.length?h.forEach((b,M)=>{!d[M]&&b&&b.click()}):h.forEach(b=>{b&&b.click()})});let r=document.createElement("button");r.innerHTML=`
+        `;let i=document.createElement("div");i.id="hs-quickbars-submenu",i.style.display="none";function s(g,m,h){let d=document.createElement("button");return d.innerHTML=g,d.setAttribute("data-type",h),d.addEventListener("click",()=>{let p=document.getElementById(m);p&&(p.click(),u.debug(`${g} quickbar toggled via quickbars submenu`,e))}),d}i.appendChild(s("Ambrosia","hs-setting-qol-ambrosia-quickbar-btn","ambrosia")),i.appendChild(s("Amb minibars","hs-setting-ambrosia-minibar-btn","amb-minibars")),i.appendChild(s("Corruption","hs-setting-qol-enable-corruption-quickbar-btn","corruption")),i.appendChild(s("Automation","hs-setting-qol-enable-syn-ui-btn","automation")),i.appendChild(s("Events","hs-setting-qol-enable-events-quickbar-btn","events")),n.addEventListener("click",g=>{let h=["hs-setting-qol-ambrosia-quickbar-btn","hs-setting-ambrosia-minibar-btn","hs-setting-qol-enable-corruption-quickbar-btn","hs-setting-qol-enable-syn-ui-btn","hs-setting-qol-enable-events-quickbar-btn"].map(b=>document.getElementById(b)),d=h.map(b=>!(!b||b.classList.contains("hs-disabled"))),p=d.filter(Boolean).length;p>0&&p<d.length?h.forEach((b,T)=>{!d[T]&&b&&b.click()}):h.forEach(b=>{b&&b.click()})});let r=document.createElement("button");r.innerHTML=`
             <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px; color: #4caf50;">\u25B6</span>
             <span>Start Auto-Sing (S256+)</span>
         `,r.setAttribute("data-type","autosing"),r.addEventListener("click",()=>{let g=document.getElementById("hs-setting-auto-sing-enabled");g&&(g.click(),u.log("Auto-Sing toggled via quick menu",this.context))});let l=document.createElement("button");l.innerHTML=`
@@ -3292,23 +3292,23 @@ a.hs-link {
             </div>
         `,title:"Select Corruption Loadout"},c=await o.Modal({...l,parentModalId:a?.parentModalId});setTimeout(()=>{document.getElementById("hs-corruption-save-btn")?.addEventListener("click",()=>{let m=document.querySelector('input[name="hs-corruption-loadout"]:checked')?.value??"";e.value=m.length>0?m:null,a?.onDone?.(e.value),E.removeInjectedStyle("hs-corruption-modal-styles"),o.CloseModal(c)})},0)}var gn=R(()=>{"use strict";he()});async function mn(o,t,e,a,n,i,s){let r="hs-autosing-challenges-modal",l=[...t],c=l.length,g=new Map(_e.map(U=>[U.value,U.label])),m=U=>U.challengeNumber===202?U.loadoutName?`Load Corruption Loadout: ${U.loadoutName}`:"Load Corruption Loadout":g.get(U.challengeNumber)??null,h=U=>U.challengeNumber===200&&U.ifJump!==void 0,d=U=>`${U.toLocaleString()}ms`,p=(U,G)=>{let B=(U.ifJump.ifJumpMode??"challenges")==="challenges",O;if(B)O=`
                 <strong>IF</strong>
-                challenge ${U.ifJump.ifJumpChallenge}
-                ${U.ifJump.ifJumpOperator}
-                ${U.ifJump.ifJumpValue}
-            `;else{let j=U.ifJump.ifJumpMultiplier??0;O=`
+                challenge ${O.ifJump.ifJumpChallenge}
+                ${O.ifJump.ifJumpOperator}
+                ${O.ifJump.ifJumpValue}
+            `;else{let j=O.ifJump.ifJumpMultiplier??0;U=`
                 <strong>IF</strong>
                 Stored C15${j===0?"":` \xD7 10^${j}`}
-                ${U.ifJump.ifJumpOperator}
+                ${O.ifJump.ifJumpOperator}
                 Current C15
             `}return`
     <div class="hs-challenge-item hs-if-block"
         data-index="${G}"
         data-if-index="${G}"
-        data-if-id="${U.ifJump.id}">
+        data-if-id="${O.ifJump.id}">
         <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
         
         <div class="hs-if-content">
-            ${O}
+            ${U}
         </div>
 
         <div style="flex-grow: 1;"></div>
@@ -3316,25 +3316,25 @@ a.hs-link {
         <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${G}" data-index="${G}">\u270E</div>
         <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${G}" data-index="${G}">\xD7</div>
     </div>
-    `},b=(U,G)=>`
+    `},b=(O,G)=>`
         <div class="hs-challenge-item hs-if-target"
-            data-jump-for="${U}"
+            data-jump-for="${O}"
             data-if-id="${G}">
             <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
             \u21B3 Jump here (IF)
         </div>
-    `,M=(U,G)=>{let J=m(U),B=!!J,O=B?`<strong>${J}</strong>`:`Challenge ${U.challengeNumber}
-     (${U.challengeCompletions} completions)`;return`
+    `,T=(O,G)=>{let J=m(O),B=!!J,U=B?`<strong>${J}</strong>`:`Challenge ${O.challengeNumber}
+     (${O.challengeCompletions} completions)`;return`
         <div class="hs-challenge-item" data-index="${G}">
             <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
             <div class="hs-challenge-item-text">
-                ${O}
+                ${U}
                 <div class="hs-challenge-meta">
-                    Wait before: ${d(U.challengeWaitBefore??0)} 
-                    ${B?"":` | Wait inside: ${d(U.challengeWaitTime)}`}
-                    ${B?"":` | Max: ${d(U.challengeMaxTime??-1)}`}
+                    Wait before: ${d(O.challengeWaitBefore??0)} 
+                    ${B?"":` | Wait inside: ${d(O.challengeWaitTime)}`}
+                    ${B?"":` | Max: ${d(O.challengeMaxTime??-1)}`}
                 </div>
-                ${U.comment?`<div class="hs-challenge-comment">\u{1F5E8}\uFE0F ${U.comment}</div>`:""}
+                ${O.comment?`<div class="hs-challenge-comment">\u{1F5E8}\uFE0F ${O.comment}</div>`:""}
             </div>
             <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${G}" data-index="${G}">\u270E</div>
             <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${G}" data-index="${G}">\xD7</div>
@@ -3344,9 +3344,9 @@ a.hs-link {
             <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
             <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin: 0px 8px; display: flex; align-items: center; height: 18px;">\u22EE\u22EE Add Here \u22EE\u22EE</span>
             <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
-        </div>`,S=()=>{let U=[],G=new Map;l.forEach((B,O)=>{if(h(B)){let j=B.ifJump.ifJumpIndex;G.has(j)||G.set(j,[]),G.get(j).push({ifIndex:O,ifId:B.ifJump.id})}}),c<=0&&U.push(y()),l.forEach((B,O)=>{G.has(O)&&G.get(O).forEach(j=>{let N=l[j.ifIndex];U.push(b(j.ifIndex,N.ifJump.id))}),h(B)?U.push(p(B,O)):U.push(M(B,O)),c===O+1&&U.push(y())});let J=l.length;return G.has(J)&&G.get(J).forEach(B=>{let O=l[B.ifIndex];U.push(b(B.ifIndex,O.ifJump.id))}),U.join("")},v=()=>{let U=document.getElementById("hs-challenge-list-container");U&&(U.innerHTML=S(),oe(),te())},A=n.length>0?`
+        </div>`,S=()=>{let O=[],G=new Map;l.forEach((B,U)=>{if(h(B)){let j=B.ifJump.ifJumpIndex;G.has(j)||G.set(j,[]),G.get(j).push({ifIndex:U,ifId:B.ifJump.id})}}),c<=0&&O.push(y()),l.forEach((B,U)=>{G.has(U)&&G.get(U).forEach(j=>{let N=l[j.ifIndex];O.push(b(j.ifIndex,N.ifJump.id))}),h(B)?O.push(p(B,U)):O.push(T(B,U)),c===U+1&&O.push(y())});let J=l.length;return G.has(J)&&G.get(J).forEach(B=>{let U=l[B.ifIndex];O.push(b(B.ifIndex,U.ifJump.id))}),O.join("")},v=()=>{let O=document.getElementById("hs-challenge-list-container");O&&(O.innerHTML=S(),oe(),te())},A=n.length>0?`
             <option value="" disabled>-- Corruption Loadouts --</option>
-            ${n.map(U=>`<option value="loadout:${U.name}">Load Corruption Loadout: ${U.name}</option>`).join("")}
+            ${n.map(O=>`<option value="loadout:${O.name}">Load Corruption Loadout: ${O.name}</option>`).join("")}
         `:"",C={htmlContent:`
     <div id="${r}" class="hs-challenges-modal-container">
         <div class="hs-challenges-input-section">
@@ -3354,7 +3354,7 @@ a.hs-link {
             <div class="hs-challenges-input-label">Special Action:</div>
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
                     <option value="">None (Standard Challenge)</option>
-                    ${_e.map(U=>`<option value="${U.value}">${U.label}</option>`).join("")}
+                    ${_e.map(O=>`<option value="${O.value}">${O.label}</option>`).join("")}
                     ${A}
                 </select>
             </div>
@@ -3564,7 +3564,7 @@ a.hs-link {
                                 \xD7
                             </div>
                         </div>
-                    `).join("");b.innerHTML=`${M}${y}`},d={htmlContent:`
+                    `).join("");b.innerHTML=`${T}${y}`},d={htmlContent:`
                 <div class="hs-strategy-modal-container" id="hs-strategy-modal-root">
                     <div class="hs-strategy-input-section">
                         <div class="hs-strategy-input-label">Strategy Name</div>
@@ -3629,13 +3629,13 @@ a.hs-link {
             grid-template-rows: 1fr;
             grid-column-gap: 0px;
             grid-row-gap: 0px;
-        }`;#m;#f;#y;#M;#A;#h;#S;#T=!1;#x=!1;constructor(t){super(t),this.#o=this.#t.map(e=>`${e}Hepteract`),this.#n=this.#t.map(e=>`${e}ProgressBarText`)}async init(){let t=this;u.log("Initialising HSHepteracts module",this.context);let e=D.getModule("HSGameState");e&&(e.subscribeGameStateChange("MAIN_VIEW",(a,n)=>{a.getId()===8&&n.getId()!==8&&e.getCurrentUIView("CUBE_VIEW").getId()===7&&t.#S&&(u.debug("Hepteract forge view closed, stopping watch",this.context),L.stopWatching(t.#S))}),e.subscribeGameStateChange("CUBE_VIEW",async(a,n)=>{n.getId()===7?(u.debug("Hepteract forge view opened, starting watch",this.context),t.#A=await L.HookElement("#hepteractQuantity"),t.#S=L.watchElement(t.#A,i=>{try{let s=parseFloat(f.unfuckNumericString(i));t.#h=s}catch{u.error("Failed to parse owned hepteracts",t.context)}t.#x=!1},{greedy:!0,overrideThrottle:!0,valueParser:i=>i.querySelector("span")?.innerText})):a.getId()===7&&t.#S&&(u.debug("Hepteract forge view closed, stopping watch",this.context),L.stopWatching(t.#S))})),this.#e=await L.HookElement("#heptGrid"),this.#a=await L.HookElement("#hepteractCraftTexts"),this.#e.childNodes.forEach(a=>{if(a.nodeType===1){let n=a,i=n.id;if(t.#o.includes(i)){let s=document.querySelector(`#${i}CraftMax`),r=document.querySelector(`#${i}Cap`),l=document.querySelector(`#${i}Image`);n.addEventListener("mouseenter",async c=>{if(i in t.#s&&i==="quarkHepteract")return;let g=document.querySelector("#hepteractCostText");if(g){let h=g.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(h){let d=h[1];try{if(i in t.#s){let p=f.parseFloat2(d);t.#s[i]=p}}catch{u.warn(`Error while parsing hepteract cost for ${i}`,t.context)}}}}),s&&r&&l&&(l.addEventListener("mouseenter",async c=>{let h=c.target.id.toLowerCase().includes("quark");if(t.#h!==null&&t.#h!==void 0){let d=t.#i[i],p=t.#s[i];if(d===null||p===null)return;let b=w.getSetting("expandCostProtectionDoubleCap"),M=null;if(b.getValue(),M=d*2*p,t.#h===0)t.#E(M,"\u221E",h);else{let y=t.#h>0?M/t.#h:1;t.#E(M,y,h)}}}),l.addEventListener("click",async c=>{let m=c.target.id,h=m.toLowerCase().includes("quark");if(!m||h)return;if(t.#T||t.#x){u.debug(`Quick expand cancelled, another expand was still pending (exp ${t.#T}, wtch: ${t.#x})`,t.context);return}t.#T=!0;let d=null,p=null;if(t.#h!==null&&t.#h!==void 0){if(t.#h===0){u.info("Owned hepteracts is 0",this.context),t.#T=!1;return}let y=t.#i[i],S=t.#s[i];(y===null||S===null)&&u.warn(`Hepteract cost for ${i} not parsed yet`,t.context);let v=w.getSetting("expandCostProtectionDoubleCap"),A=null;v.getValue(),A=y*2,d=y*2*S,p=t.#h>0?d/t.#h:1,u.debug(`
+        }`;#m;#f;#y;#M;#A;#h;#S;#T=!1;#x=!1;constructor(t){super(t),this.#o=this.#t.map(e=>`${e}Hepteract`),this.#n=this.#t.map(e=>`${e}ProgressBarText`)}async init(){let t=this;u.log("Initialising HSHepteracts module",this.context);let e=D.getModule("HSGameState");e&&(e.subscribeGameStateChange("MAIN_VIEW",(a,n)=>{a.getId()===8&&n.getId()!==8&&e.getCurrentUIView("CUBE_VIEW").getId()===7&&t.#S&&(u.debug("Hepteract forge view closed, stopping watch",this.context),L.stopWatching(t.#S))}),e.subscribeGameStateChange("CUBE_VIEW",async(a,n)=>{n.getId()===7?(u.debug("Hepteract forge view opened, starting watch",this.context),t.#A=await L.HookElement("#hepteractQuantity"),t.#S=L.watchElement(t.#A,i=>{try{let s=parseFloat(f.unfuckNumericString(i));t.#h=s}catch{u.error("Failed to parse owned hepteracts",t.context)}t.#x=!1},{greedy:!0,overrideThrottle:!0,valueParser:i=>i.querySelector("span")?.innerText})):a.getId()===7&&t.#S&&(u.debug("Hepteract forge view closed, stopping watch",this.context),L.stopWatching(t.#S))})),this.#e=await L.HookElement("#heptGrid"),this.#a=await L.HookElement("#hepteractCraftTexts"),this.#e.childNodes.forEach(a=>{if(a.nodeType===1){let n=a,i=n.id;if(t.#o.includes(i)){let s=document.querySelector(`#${i}CraftMax`),r=document.querySelector(`#${i}Cap`),l=document.querySelector(`#${i}Image`);n.addEventListener("mouseenter",async c=>{if(i in t.#s&&i==="quarkHepteract")return;let g=document.querySelector("#hepteractCostText");if(g){let h=g.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(h){let d=h[1];try{if(i in t.#s){let p=f.parseFloat2(d);t.#s[i]=p}}catch{u.warn(`Error while parsing hepteract cost for ${i}`,t.context)}}}}),s&&r&&l&&(l.addEventListener("mouseenter",async c=>{let h=c.target.id.toLowerCase().includes("quark");if(t.#h!==null&&t.#h!==void 0){let d=t.#i[i],p=t.#s[i];if(d===null||p===null)return;let b=w.getSetting("expandCostProtectionDoubleCap"),T=null;if(b.getValue(),T=d*2*p,t.#h===0)t.#L(T,"\u221E",h);else{let y=t.#h>0?T/t.#h:1;t.#L(T,y,h)}}}),l.addEventListener("click",async c=>{let m=c.target.id,h=m.toLowerCase().includes("quark");if(!m||h)return;if(t.#T||t.#x){u.debug(`Quick expand cancelled, another expand was still pending (exp ${t.#T}, wtch: ${t.#x})`,t.context);return}t.#T=!0;let d=null,p=null;if(t.#h!==null&&t.#h!==void 0){if(t.#h===0){u.info("Owned hepteracts is 0",this.context),t.#T=!1;return}let y=t.#i[i],S=t.#s[i];(y===null||S===null)&&u.warn(`Hepteract cost for ${i} not parsed yet`,t.context);let v=w.getSetting("expandCostProtectionDoubleCap"),A=null;v.getValue(),A=y*2,d=y*2*S,p=t.#h>0?d/t.#h:1,u.debug(`
                                     Current max: ${y},
                                     Cube cost: ${f.N(S)},
                                     Next hepts: ${f.N(A)},
                                     Buy cost: ${f.N(d)},
                                     Percent owned: ${f.N(p)},
-                                    Double Cap: ${v.getValue()}`,this.context);let C=w.getSetting("expandCostProtection"),k=w.getSetting("expandCostProtectionNotifications"),x=!(k&&k.getValue()===!0);if(C.isEnabled()){let H=C.getCalculatedValue();if(H&&p>=H){x&&u.info(`Hept. cost protection: Cost owned ${f.N(p*100)}% >= ${H*100}%`,this.context),t.#T=!1;return}}}else{u.warn("Owned hepteracts not parsed yet",this.context),t.#x=!1,t.#T=!1;return}let b=await L.HookElement("#toggle35");if(b&&b.innerText.includes("ON")&&(u.info("Turned hepteract notification toggle OFF",this.context),b.click()),await f.hiddenAction(async()=>{r.click()},"confirm",!1,25),await f.wait(25),s.click(),d&&p&&t.#E(d,p),await f.wait(5),i!=="quarkHepteract"){let y=document.querySelector("#hepteractCostText");if(y){let v=y.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(v){let A=v[1];try{if(i in t.#s){let C=f.parseFloat2(A);t.#s[i]=C}}catch{u.warn(`Error while parsing NEW hepteract cost for ${i}`,t.context)}}}}let M=t.#A?t.#A:document.querySelector("#hepteractQuantity");if(M){let y=M.querySelector("span");if(y){let S=y.innerText,v=parseFloat(S);t.#h=v}}t.#T=!1}))}}}),document.querySelectorAll(".heptTypeImage").length>0&&E.injectStyle(`
+                                    Double Cap: ${v.getValue()}`,this.context);let C=w.getSetting("expandCostProtection"),k=w.getSetting("expandCostProtectionNotifications"),x=!(k&&k.getValue()===!0);if(C.isEnabled()){let H=C.getCalculatedValue();if(H&&p>=H){x&&u.info(`Hept. cost protection: Cost owned ${f.N(p*100)}% >= ${H*100}%`,this.context),t.#T=!1;return}}}else{u.warn("Owned hepteracts not parsed yet",this.context),t.#x=!1,t.#T=!1;return}let b=await L.HookElement("#toggle35");if(b&&b.innerText.includes("ON")&&(u.info("Turned hepteract notification toggle OFF",this.context),b.click()),await f.hiddenAction(async()=>{r.click()},"confirm",!1,25),await f.wait(25),s.click(),d&&p&&t.#L(d,p),await f.wait(5),i!=="quarkHepteract"){let y=document.querySelector("#hepteractCostText");if(y){let v=y.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(v){let A=v[1];try{if(i in t.#s){let C=f.parseFloat2(A);t.#s[i]=C}}catch{u.warn(`Error while parsing NEW hepteract cost for ${i}`,t.context)}}}}let T=t.#A?t.#A:document.querySelector("#hepteractQuantity");if(T){let y=T.querySelector("span");if(y){let S=y.innerText,v=parseFloat(S);t.#h=v}}t.#T=!1}))}}}),document.querySelectorAll(".heptTypeImage").length>0&&E.injectStyle(`
                 .heptTypeImage:not(#quarkHepteractImage):not(#hepteractToQuarkImage):not(#overfluxPowderImage) {
                     transform: scale(1);
                     transform-origin: 50% 50%;

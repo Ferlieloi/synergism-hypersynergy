@@ -824,22 +824,25 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         }
     }
 
-    #resolveCurrentChallenge(): string {
-        // Reverse order to have the highest one
+    #resolveActiveChallenges(): string {
+        const activeChallenges: string[] = [];
+
+        // Reverse order to have the highest one first
         for (let challenge = 15; challenge >= 1; challenge -= 1) {
             const el = document.getElementById(`challenge${challenge}`);
             if (el && el.classList.contains('challengeActive')) {
-                return `C${challenge}`;
+                activeChallenges.push(`C${challenge}`);
             }
         }
-        return 'C∅';
+
+        return activeChallenges.length > 0 ? activeChallenges.join(' > ') : 'C∅';
     }
 
     #updateAutomationSummaryText(): void {
         if (!this.#automationSummaryWrapper) return;
 
-        const challenge = this.#resolveCurrentChallenge();
-        this.#automationSummaryWrapper.textContent = challenge || '';
+        const activeChallenges = this.#resolveActiveChallenges();
+        this.#automationSummaryWrapper.textContent = activeChallenges || '';
     }
 
     #setupChallengeActiveObservers(): void {

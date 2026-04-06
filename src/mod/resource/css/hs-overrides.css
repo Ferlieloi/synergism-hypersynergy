@@ -1,14 +1,37 @@
-#hs-ambrosia-extra-btn {
-   border: 2px solid orange;
-}
-
+/* New 'Add 10' button in Settings tab */
 #hs-add-10-btn {
    border: 2px solid green;
    border-right: none;
 }
 
+/* Quick import button in Ambrosia subtab */
+#hs-ambrosia-extra-btn {
+   border: 2px solid orange;
+}
+
+/* AFK Swapper toggle button in Ambrosia subtab */
+#hs-ambrosia-loadout-idle-swap-toggle {
+    font-size: 1.0em;
+    font-family: fantasy;
+    letter-spacing: 3px;
+    border: 2px solid;
+    border-color: #0190cd;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    background: #774ed1;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
 /* Always hide the visually-useless ambrosia minibars numbers to avoid a 'jump' when enabling them. */
 #hs-blue-progress-text,
 #hs-red-progress-text {
-    display: none;
+   display: none;
+}
+
+/* Add some empty space at the bottom of the game to avoid having elements too close to it */
+body {
+   margin-bottom: 150px;
 }

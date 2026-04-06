@@ -520,7 +520,6 @@ export const HSGlobal: IHSGlobal = class {
         barWrapperId: 'hs-minibars-wrapper',
     }
 
-    /*
     // HSCorruptionQuickbar
     static HSCorruptionQuickbar = {
         storageKey: 'corruption-loadouts',
@@ -541,7 +540,6 @@ export const HSGlobal: IHSGlobal = class {
         quickBarId: 'hs-events-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-events-quickbar',
     }
-    */
 
     // HSGameState
     static HSGameState = {

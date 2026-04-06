@@ -31,18 +31,3 @@
     border-radius: 0px;
     transition: width 0.4s ease;
 }
-
-#hs-ambrosia-loadout-idle-swap-toggle {
-    font-size: 1.0em;
-    font-family: fantasy;
-    letter-spacing: 3px;
-    border: 2px solid;
-    border-color: #0190cd;
-    padding: 10px 20px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    background: #774ed1;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
