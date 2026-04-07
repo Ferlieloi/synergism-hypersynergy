@@ -46,8 +46,23 @@ export class HSUI extends HSModule {
 
     #activeModals: Set<HTMLDivElement> = new Set();
     #modalParents: Map<string, string> = new Map();
+
     static #injectedStyles = new Map<string, string>();
     static #injectedStylesHolder?: HTMLStyleElement;
+
+    #tabHeaderCache: Map<number, HTMLDivElement> = new Map();
+    #tabBodyCache: Map<number, HTMLDivElement> = new Map();
+    #panelBodyCache: HTMLDivElement[] = [];
+
+    readonly #tabConfigMap: Map<number, HSPanelTabDefinition>;
+
+    readonly #quickbarSubMenuItems = [
+        { label: 'Ambrosia', btnId: 'hs-setting-qol-ambrosia-quickbar-btn' },
+        { label: 'Amb minibars', btnId: 'hs-setting-ambrosia-minibar-btn' },
+        { label: 'Corruption', btnId: 'hs-setting-qol-enable-corruption-quickbar-btn' },
+        { label: 'Automation', btnId: 'hs-setting-qol-enable-syn-ui-btn' },
+        { label: 'Events', btnId: 'hs-setting-qol-enable-events-quickbar-btn' }
+    ];
 
     #tabs: HSPanelTabDefinition[] = [
         {
@@ -82,10 +97,34 @@ export class HSUI extends HSModule {
         }
     ];
 
+    static #notifyBackgroundColors = {
+        'default': '#192a56',
+        'warning': '#cd6133',
+        'error': '#b33939',
+        'success': '#009432'
+    };
+
+    static #notifyTransitions: Record<string, Record<string, string>> = {
+        topLeft: { top: '15px' },
+        top: { top: '15px' },
+        topRight: { top: '15px' },
+        right: { right: '15px' },
+        bottomRight: { bottom: '15px' },
+        bottom: { bottom: '15px' },
+        bottomLeft: { bottom: '15px' },
+        left: { left: '15px' }
+    };
+
+
+    // ========================================
+    // ------ Initialization / lifecycle ------
+    // ========================================
+
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
         this.#staticPanelCss = panelCoreCSS + autosingModalCSS + animationsCSS + utilitiesCSS;
         this.#staticPanelHtml = panelHTML;
+        this.#tabConfigMap = new Map(this.#tabs.map((tab) => [tab.tabId, tab]));
     }
 
     async init(): Promise<void> {
@@ -134,13 +173,11 @@ export class HSUI extends HSModule {
     #setupPanelInteractions(): void {
         if (!this.#uiPanelCloseBtn) return;
 
-        const self = this;
-
         this.#uiPanelCloseBtn.addEventListener('click', async () => {
-            if (HSUI.#modPanelOpen && self.#uiPanel) {
-                await self.#uiPanel.transition({ opacity: 0 });
+            if (HSUI.#modPanelOpen && this.#uiPanel) {
+                await this.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
-                self.#uiPanel?.classList.add('hs-panel-closed');
+                this.#uiPanel.classList.add('hs-panel-closed');
             }
         });
 
@@ -150,50 +187,53 @@ export class HSUI extends HSModule {
 
         if (this.#logCopyBtn) {
             this.#logCopyBtn.addEventListener('click', async () => {
-                if (!self.#loggerElement) return;
+                if (!this.#loggerElement) return;
                 try {
-                    await navigator.clipboard.writeText(self.#loggerElement.textContent || '');
+                    await navigator.clipboard.writeText(this.#loggerElement.textContent || '');
                     HSUI.Notify('Log copied to clipboard!', { notificationType: 'success' });
                 } catch (err) {
-                    HSLogger.error('Failed to copy log to clipboard', self.context);
+                    HSLogger.error('Failed to copy log to clipboard', this.context);
                 }
             });
         }
 
         // Bind panel controls
-        const tabs = document.querySelectorAll('.hs-panel-tab');
+        this.#panelBodyCache = Array.from(document.querySelectorAll('.hs-panel-body')) as HTMLDivElement[];
+        const tabs = document.querySelectorAll<HTMLDivElement>('.hs-panel-tab');
+
         tabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
-                const tabEl = e.target as HTMLDivElement;
-                const tabId = tabEl.dataset.tab ? parseInt(tabEl.dataset.tab, 10) : null;
-                if (!tabId || tabEl.classList.contains('hs-tab-selected')) return;
-
-                const tabConfig = self.#tabs.find((t) => t.tabId === tabId);
-                if (!tabConfig) {
-                    HSLogger.error(`Could not find tab config for tabId ${tabId}`, self.context);
-                    return;
-                }
-
-                tabs.forEach(t => t.classList.remove('hs-tab-selected'));
-                tabEl.classList.add('hs-tab-selected');
-
-                document.querySelectorAll('.hs-panel-body').forEach(panel => {
-                    panel.classList.remove('hs-panel-body-open-flex');
-                    panel.classList.remove('hs-panel-body-open-block');
-                });
-
-                const targetPanel = document.querySelector(tabConfig.tabBodySel) as HTMLDivElement;
-                if (!targetPanel) return;
-
-                if (tabConfig.panelDisplayType === 'flex') {
-                    targetPanel.classList.add('hs-panel-body-open-flex');
-                } else {
-                    targetPanel.classList.add('hs-panel-body-open-block');
-                }
-
-                if (tabId === 1) HSLogger.scrollToBottom();
+                this.#handlePanelTabClick(e.currentTarget as HTMLDivElement, tabs);
             });
         });
+    }
+
+    #handlePanelTabClick(tabEl: HTMLDivElement, tabs: NodeListOf<HTMLDivElement>): void {
+        const tabId = tabEl.dataset.tab ? parseInt(tabEl.dataset.tab, 10) : null;
+        if (!tabId || tabEl.classList.contains('hs-tab-selected')) return;
+
+        const tabConfig = this.#tabConfigMap.get(tabId);
+        if (!tabConfig) {
+            HSLogger.error(`Could not find tab config for tabId ${tabId}`, this.context);
+            return;
+        }
+
+        tabs.forEach(t => t.classList.remove('hs-tab-selected'));
+        tabEl.classList.add('hs-tab-selected');
+
+        this.#panelBodyCache.forEach(panel => {
+            panel.classList.remove('hs-panel-body-open-flex');
+            panel.classList.remove('hs-panel-body-open-block');
+        });
+
+        const targetPanel = this.#getTabBody(tabId);
+        if (!targetPanel) return;
+
+        targetPanel.classList.add(tabConfig.panelDisplayType === 'flex'
+            ? 'hs-panel-body-open-flex'
+            : 'hs-panel-body-open-block');
+
+        if (tabId === 1) HSLogger.scrollToBottom();
     }
 
     #setupPanelToggle(): void {
@@ -203,20 +243,18 @@ export class HSUI extends HSModule {
         this.#uiPanelOpenBtn.id = 'hs-panel-control';
         this.#uiPanelOpenBtn.style.display = 'none';
 
-        const self = this;
-
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
-            if (HSUI.#modPanelOpen && self.#uiPanel) {
-                await self.#uiPanel.transition({ opacity: 0 });
+            if (HSUI.#modPanelOpen && this.#uiPanel) {
+                await this.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
-                self.#uiPanel.classList.add('hs-panel-closed');
-            } else if (self.#uiPanel) {
+                this.#uiPanel.classList.add('hs-panel-closed');
+            } else if (this.#uiPanel) {
                 HSUI.#modPanelOpen = true;
-                self.#uiPanel.style.opacity = '0';
-                self.#uiPanel.classList.remove('hs-panel-closed');
+                this.#uiPanel.style.opacity = '0';
+                this.#uiPanel.classList.remove('hs-panel-closed');
 
                 HSLogger.scrollToBottom();
-                await self.#uiPanel.transition({ opacity: 0.92 });
+                await this.#uiPanel.transition({ opacity: 0.92 });
             }
         });
 
@@ -236,16 +274,37 @@ export class HSUI extends HSModule {
         }, 0);
     }
 
+
+    // ========================================
+    // ---------- Quick access menu -----------
+    // ========================================
+
     #createQuickAccessMenu() {
         if (!this.#uiPanelOpenBtn) return;
-        const context = this.context;
 
-        // Create the menu container
+        const quickMenu = this.#buildQuickAccessMenuContainer();
+        const quickbarsSubmenu = this.#buildQuickbarsSubmenu();
+        const quickbarsBtn = this.#buildQuickbarsButton();
+        const autoSingBtn = this.#buildQuickAccessButton('autosing', '▶', 'Start Auto-Sing (S256+)', () => this.#toggleAutoSing());
+        const heaterBtn = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater Export', () => this.#triggerHeaterExport());
+
+        quickMenu.appendChild(quickbarsSubmenu);
+        quickMenu.appendChild(quickbarsBtn);
+        quickMenu.appendChild(autoSingBtn);
+        quickMenu.appendChild(heaterBtn);
+        document.body.appendChild(quickMenu);
+
+        this.#attachQuickAccessMenuHandlers(quickMenu, quickbarsBtn, quickbarsSubmenu);
+    }
+
+    #buildQuickAccessMenuContainer(): HTMLDivElement {
         const quickMenu = document.createElement('div');
         quickMenu.id = 'hs-quick-access-menu';
         quickMenu.style.display = 'none';
+        return quickMenu;
+    }
 
-        // Create Quickbars menu item (button to toggle all quickbars)
+    #buildQuickbarsButton(): HTMLButtonElement {
         const quickbarsBtn = document.createElement('button');
         quickbarsBtn.setAttribute('data-type', 'quickbars');
         quickbarsBtn.innerHTML = `
@@ -254,121 +313,111 @@ export class HSUI extends HSModule {
             <span class="quickbars-arrow">&gt;</span>
         `;
 
-        // Create Quickbars submenu
+        quickbarsBtn.addEventListener('click', () => this.#toggleQuickbarsBulk());
+
+        return quickbarsBtn;
+    }
+
+    #buildQuickbarsSubmenu(): HTMLDivElement {
         const quickbarsSubmenu = document.createElement('div');
         quickbarsSubmenu.id = 'hs-quickbars-submenu';
         quickbarsSubmenu.style.display = 'none';
 
-        // Helper to create submenu toggles
-        function createQuickbarToggle(label: string, btnId: string, dataType: string): HTMLElement {
-            const btn = document.createElement('button');
-            btn.innerHTML = label;
-            btn.setAttribute('data-type', dataType);
-            btn.addEventListener('click', () => {
-                const toggleBtn = document.getElementById(btnId) as HTMLElement;
-                if (toggleBtn) {
-                    toggleBtn.click();
-                    HSLogger.debug(`${label} quickbar toggled via quickbars submenu`, context);
-                }
-            });
-            return btn;
-        }
-
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Ambrosia', 'hs-setting-qol-ambrosia-quickbar-btn', 'ambrosia'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Amb minibars', 'hs-setting-ambrosia-minibar-btn', 'amb-minibars'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Corruption', 'hs-setting-qol-enable-corruption-quickbar-btn', 'corruption'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Automation', 'hs-setting-qol-enable-syn-ui-btn', 'automation'));
-        quickbarsSubmenu.appendChild(createQuickbarToggle('Events', 'hs-setting-qol-enable-events-quickbar-btn', 'events'));
-
-        // Add click handler for bulk toggle logic
-        quickbarsBtn.addEventListener('click', (e) => {
-            const toggleIds = [
-                'hs-setting-qol-ambrosia-quickbar-btn',
-                'hs-setting-ambrosia-minibar-btn',
-                'hs-setting-qol-enable-corruption-quickbar-btn',
-                'hs-setting-qol-enable-syn-ui-btn',
-                'hs-setting-qol-enable-events-quickbar-btn'
-            ];
-            const toggles = toggleIds.map(id => document.getElementById(id));
-            // Determine ON/OFF state of each toggle
-            const states = toggles.map(btn => {
-                if (!btn) return false;
-                if (btn.classList.contains('hs-disabled')) return false;
-                else return true;
-            });
-            const enabledCount = states.filter(Boolean).length;
-            // If some enabled and some disabled, turn all disabled ON
-            if (enabledCount > 0 && enabledCount < states.length) {
-                toggles.forEach((btn, i) => {
-                    if (!states[i] && btn) btn.click();
-                });
-            } else {
-                // If all ON or all OFF, toggle all
-                toggles.forEach(btn => { if (btn) btn.click(); });
-            }
+        this.#quickbarSubMenuItems.forEach(({ label, btnId }) => {
+            quickbarsSubmenu.appendChild(this.#createQuickbarToggle(label, btnId));
         });
 
-        // Create Auto-Sing toggle button
-        const autoSingBtn = document.createElement('button');
-        autoSingBtn.innerHTML = `
-            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px; color: #4caf50;">▶</span>
-            <span>Start Auto-Sing (S256+)</span>
-        `;
-        autoSingBtn.setAttribute('data-type', 'autosing');
-        autoSingBtn.addEventListener('click', () => {
-            const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement;
-            if (autoSingToggle) {
-                autoSingToggle.click();
-                HSLogger.log('Auto-Sing toggled via quick menu', this.context);
-            }
-        });
-        // Create Ambrosia Heater export button
-        const heaterBtn = document.createElement('button');
-        heaterBtn.innerHTML = `
-            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">🔥</span>
-            <span>Amb Heater Export</span>
-        `;
-        heaterBtn.setAttribute('data-type', 'amb-heater');
-        heaterBtn.addEventListener('click', () => {
-            const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement;
-            if (heaterExportBtn) {
-                heaterExportBtn.click();
-                HSLogger.log('Ambrosia Heater exported via quick menu', this.context);
-            }
-        });
-
-        quickMenu.appendChild(quickbarsSubmenu);
-        quickMenu.appendChild(quickbarsBtn);
-        quickMenu.appendChild(autoSingBtn);
-        quickMenu.appendChild(heaterBtn);
-        document.body.appendChild(quickMenu);
-
-        // Show/hide menu on hover
-        let hoverTimeout: number | null = null;
-        this.#uiPanelOpenBtn.addEventListener('mouseenter', () => {
-            if (hoverTimeout) clearTimeout(hoverTimeout);
-            quickMenu.style.display = 'flex';
-        });
-        this.#uiPanelOpenBtn.addEventListener('mouseleave', () => {
-            hoverTimeout = window.setTimeout(() => {
-                quickMenu.style.display = 'none';
-            }, 200);
-        });
-        quickMenu.addEventListener('mouseenter', () => {
-            if (hoverTimeout) clearTimeout(hoverTimeout);
-            quickMenu.style.display = 'flex';
-        });
-        quickMenu.addEventListener('mouseleave', () => {
-            hoverTimeout = window.setTimeout(() => {
-                quickMenu.style.display = 'none';
-            }, 200);
-        });
-        // Show/hide submenu on hover (using both button and submenu)
-        quickbarsBtn.addEventListener('mouseenter', () => { quickbarsSubmenu.style.display = 'block'; });
-        quickbarsBtn.addEventListener('mouseleave', () => { quickbarsSubmenu.style.display = 'none'; });
-        quickbarsSubmenu.addEventListener('mouseenter', () => { quickbarsSubmenu.style.display = 'block'; });
-        quickbarsSubmenu.addEventListener('mouseleave', () => { quickbarsSubmenu.style.display = 'none'; });
+        return quickbarsSubmenu;
     }
+
+    #buildQuickAccessButton(type: string, icon: string, label: string, onClick: () => void): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.innerHTML = `
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">${icon}</span>
+            <span>${label}</span>
+        `;
+        button.setAttribute('data-type', type);
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    #createQuickbarToggle(label: string, btnId: string): HTMLElement {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+            const toggleBtn = document.getElementById(btnId) as HTMLElement | null;
+            if (toggleBtn) {
+                toggleBtn.click();
+                HSLogger.debug(`${label} quickbar toggled via quickbars submenu`, this.context);
+            }
+        });
+        return btn;
+    }
+
+    #attachQuickAccessMenuHandlers(quickMenu: HTMLDivElement, quickbarsBtn: HTMLButtonElement, quickbarsSubmenu: HTMLDivElement) {
+        let hoverTimeout: number | null = null;
+
+        const showMenu = () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+            quickMenu.style.display = 'flex';
+        };
+
+        const hideMenu = () => {
+            hoverTimeout = window.setTimeout(() => {
+                quickMenu.style.display = 'none';
+            }, 200);
+        };
+
+        const showSubmenu = () => { quickbarsSubmenu.style.display = 'block'; };
+        const hideSubmenu = () => { quickbarsSubmenu.style.display = 'none'; };
+
+        this.#uiPanelOpenBtn?.addEventListener('mouseenter', showMenu);
+        this.#uiPanelOpenBtn?.addEventListener('mouseleave', hideMenu);
+        quickMenu.addEventListener('mouseenter', showMenu);
+        quickMenu.addEventListener('mouseleave', hideMenu);
+
+        quickbarsBtn.addEventListener('mouseenter', showSubmenu);
+        quickbarsBtn.addEventListener('mouseleave', hideSubmenu);
+        quickbarsSubmenu.addEventListener('mouseenter', showSubmenu);
+        quickbarsSubmenu.addEventListener('mouseleave', hideSubmenu);
+    }
+
+    #toggleQuickbarsBulk() {
+        const toggleIds = this.#quickbarSubMenuItems.map(({ btnId }) => btnId);
+
+        const toggles = toggleIds.map(id => document.getElementById(id));
+        const states = toggles.map(btn => btn ? !btn.classList.contains('hs-disabled') : false);
+        const enabledCount = states.filter(Boolean).length;
+
+        if (enabledCount > 0 && enabledCount < states.length) {
+            toggles.forEach((btn, i) => {
+                if (!states[i] && btn) btn.click();
+            });
+        } else {
+            toggles.forEach(btn => { if (btn) btn.click(); });
+        }
+    }
+
+    #toggleAutoSing() {
+        const autoSingToggle = document.getElementById('hs-setting-auto-sing-enabled') as HTMLElement | null;
+        if (autoSingToggle) {
+            autoSingToggle.click();
+            HSLogger.log('Auto-Sing toggled via quick menu', this.context);
+        }
+    }
+
+    #triggerHeaterExport() {
+        const heaterExportBtn = document.getElementById('hs-panel-amb-heater-btn') as HTMLElement | null;
+        if (heaterExportBtn) {
+            heaterExportBtn.click();
+            HSLogger.log('Ambrosia Heater exported via quick menu', this.context);
+        }
+    }
+
+
+    // ========================================
+    // ----------- Panel utilities ------------
+    // ========================================
 
     static isModPanelOpen() {
         return HSUI.#modPanelOpen;
@@ -381,18 +430,7 @@ export class HSUI extends HSModule {
         let pos3 = 0;
         let pos4 = 0;
 
-        dragHandle.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e: MouseEvent) {
-            e.preventDefault();
-
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e: MouseEvent) {
+        const elementDrag = (e: MouseEvent) => {
             e.preventDefault();
 
             pos1 = pos3 - e.clientX;
@@ -420,14 +458,25 @@ export class HSUI extends HSModule {
                 Math.min(newTop, viewportHeight - minVisibleHeight)
             );
 
-            element.style.top = newTop + "px";
-            element.style.left = newLeft + "px";
-        }
+            element.style.top = `${newTop}px`;
+            element.style.left = `${newLeft}px`;
+        };
 
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
+        const closeDragElement = () => {
+            document.removeEventListener('mousemove', elementDrag);
+            document.removeEventListener('mouseup', closeDragElement);
+        };
+
+        const dragMouseDown = (e: MouseEvent) => {
+            e.preventDefault();
+
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.addEventListener('mousemove', elementDrag);
+            document.addEventListener('mouseup', closeDragElement);
+        };
+
+        dragHandle.addEventListener('mousedown', dragMouseDown);
     }
 
     #makeResizable(element: HTMLElement, resizeHandle: HTMLElement) {
@@ -438,6 +487,8 @@ export class HSUI extends HSModule {
         let startY: number;
         let startWidth: number;
         let startHeight: number;
+
+        const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
 
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
@@ -459,23 +510,11 @@ export class HSUI extends HSModule {
         function resize(e: MouseEvent) {
             if (!isResizing) return;
 
-            let newWidth = startWidth + (e.clientX - startX);
-            let newHeight = startHeight + (e.clientY - startY);
+            const newWidth = clamp(startWidth + (e.clientX - startX), 500, 2500);
+            const newHeight = clamp(startHeight + (e.clientY - startY), 400, 1500);
 
-            if (newWidth <= 500)
-                newWidth = 500;
-
-            if (newHeight <= 400)
-                newHeight = 400;
-
-            if (newWidth >= 2500)
-                newWidth = 2500;
-
-            if (newHeight >= 1500)
-                newHeight = 1500;
-
-            resizable.style.width = newWidth + 'px';
-            resizable.style.height = newHeight + 'px';
+            resizable.style.width = `${newWidth}px`;
+            resizable.style.height = `${newHeight}px`;
         }
 
         function stopResize() {
@@ -495,22 +534,50 @@ export class HSUI extends HSModule {
         }
     }
 
-    replaceTabContents(tabId: number, htmlContent: string) {
-        const tab = this.#tabs.find(t => {
-            return t.tabId === tabId;
-        });
 
-        if (!tab) {
+    // ========================================
+    // ----- Tab / panel content helpers ------
+    // ========================================
+
+    #getTabBody(tabId: number): HTMLDivElement | null {
+        if (this.#tabBodyCache.has(tabId)) {
+            return this.#tabBodyCache.get(tabId) || null;
+        }
+
+        const tab = this.#tabConfigMap.get(tabId);
+        if (!tab) return null;
+
+        const tabBody = document.querySelector(tab.tabBodySel) as HTMLDivElement | null;
+        if (tabBody) {
+            this.#tabBodyCache.set(tabId, tabBody);
+        }
+        return tabBody;
+    }
+
+    #getTabHeader(tabId: number): HTMLDivElement | null {
+        if (this.#tabHeaderCache.has(tabId)) {
+            return this.#tabHeaderCache.get(tabId) || null;
+        }
+
+        const tab = this.#tabConfigMap.get(tabId);
+        if (!tab) return null;
+
+        const tabHeader = document.querySelector(tab.tabSel) as HTMLDivElement | null;
+        if (tabHeader) {
+            this.#tabHeaderCache.set(tabId, tabHeader);
+        }
+        return tabHeader;
+    }
+
+    replaceTabContents(tabId: number, htmlContent: string) {
+        const tabBody = this.#getTabBody(tabId);
+        if (!tabBody) {
             HSLogger.warn('Could not find tab to replace contents', this.context);
             return;
         }
 
-        const tabBody = document.querySelector(tab.tabBodySel) as HTMLDivElement;
-
-        if (tabBody) {
-            tabBody.innerHTML = htmlContent;
-            HSLogger.log(`Replaced tab ${tab.tabId} content`, this.context);
-        }
+        tabBody.innerHTML = htmlContent;
+        HSLogger.debug(`Replaced tab ${tabId} content`, this.context);
     }
 
     updateTitle(newTitle: string) {
@@ -530,39 +597,42 @@ export class HSUI extends HSModule {
         this.#uiPanelOpenBtn.style.display = visible ? 'block' : 'none';
     }
 
+    renameTab(tabId: number, newName: string) {
+        const tabHeader = this.#getTabHeader(tabId);
+        if (!tabHeader) {
+            HSLogger.warn('Could not find tab to rename', this.context);
+            return;
+        }
+
+        tabHeader.innerHTML = newName;
+    }
+
+
+    // ========================================
+    // ---- Style / DOM injection helpers -----
+    // ========================================
+
     static #isStyleStringEmpty(styleString: string): boolean {
-        // The style is in form #<someid> { <empty or css rules> }
-        // Here we want to check if the brackets contain anything
-        let openBracketIdx = styleString.indexOf('{');
-        const closeBracketIdx = styleString.indexOf('}');
-
-        if (openBracketIdx > -1 && closeBracketIdx > -1) {
-            openBracketIdx++;
-
-            const bracketInsides = styleString.substring(openBracketIdx, closeBracketIdx);
-
-            if (!HSUtils.isString(bracketInsides)) {
-                return true;
-            } else {
-                const bracketsInsidesRemoveWhiteSpace = bracketInsides.replace(/\s+/g, '');
-                const areBracketsEmpty = bracketsInsidesRemoveWhiteSpace.length === 0;
-
-                return areBracketsEmpty;
-            }
-        } else {
-            // Not sure of this but lets return true if no brackets are found
+        if (!HSUtils.isString(styleString)) {
             return true;
         }
+
+        const match = styleString.match(/\{([\s\S]*)\}/);
+        if (!match) {
+            return true;
+        }
+
+        return match[1].trim().length === 0;
     }
 
     // Can be used to inject arbitrary CSS into the page
     static injectStyle(styleString: string, styleId?: string) {
         if (styleString && !this.#isStyleStringEmpty(styleString)) {
 
-            let style_id = styleId ? styleId : 'hs-injected-style-' + HSUtils.domid();
+            const targetStyleId = styleId ?? 'hs-injected-style-' + HSUtils.domid();
 
-            if (!this.#injectedStyles.has(style_id)) {
-                this.#injectedStyles.set(style_id, styleString);
+            if (!this.#injectedStyles.has(targetStyleId)) {
+                this.#injectedStyles.set(targetStyleId, styleString);
             }
 
             this.updateInjectedStyleBlock();
@@ -590,19 +660,13 @@ export class HSUI extends HSModule {
         setTimeout(() => {
             HSUI.#updatePending = false;
 
-            const styleHolder = document.querySelector(`#${HSGlobal.HSUI.injectedStylesDomId}`) as HTMLStyleElement;
-
             if (!HSUI.#injectedStylesHolder) {
                 HSUI.#injectedStylesHolder = document.createElement('style');
                 HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
                 document.head.appendChild(HSUI.#injectedStylesHolder);
             }
 
-            HSUI.#injectedStylesHolder.innerHTML = '';
-
-            HSUI.#injectedStyles.forEach((style, styleId) => {
-                HSUI.#injectedStylesHolder!.innerHTML += style;
-            });
+            HSUI.#injectedStylesHolder.innerHTML = Array.from(HSUI.#injectedStyles.values()).join('');
 
             HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
         }, 0);
@@ -629,24 +693,59 @@ export class HSUI extends HSModule {
         injectFunction(element);
     }
 
-    renameTab(tabId: number, newName: string) {
-        const tab = this.#tabs.find(t => {
-            return t.tabId === tabId;
+
+    // ========================================
+    // ------------ Modal helpers -------------
+    // ========================================
+
+    async #waitForModalImages(modal: HTMLDivElement): Promise<void> {
+        const images = modal.querySelectorAll<HTMLImageElement>('.hs-modal-body img');
+        const imagePromises = Array.from(images).map((img) => {
+            return new Promise<void>((resolve) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.addEventListener('load', () => resolve());
+                    img.addEventListener('error', () => resolve());
+                }
+            });
         });
 
-        if (!tab) {
-            HSLogger.warn('Could not find tab to rename', this.context);
-            return;
-        }
-
-        const tabEl = document.querySelector(tab.tabSel) as HTMLDivElement;
-
-        if (tabEl) {
-            tabEl.innerHTML = newName;
-        }
+        await Promise.all(imagePromises);
     }
 
-    // Used by modals to calculate their open position
+    #clampModalPosition(modal: HTMLDivElement, coordinates: HSUIXY): HSUIXY {
+        const { width, height } = modal.getBoundingClientRect();
+        const padding = 10;
+        const maxX = window.innerWidth - width - padding;
+        const maxY = window.innerHeight - height - padding;
+
+        return {
+            x: Math.max(padding, Math.min(coordinates.x, maxX)),
+            y: Math.max(padding, Math.min(coordinates.y, maxY))
+        };
+    }
+
+    #attachModalHandlers(modal: HTMLDivElement, modalHead: HTMLDivElement | null): void {
+        if (modalHead) {
+            this.#makeDraggable(modal, modalHead);
+        }
+
+        const modalResizer = modal.querySelector('.hs-modal-resizer') as HTMLElement | null;
+        if (modalResizer) {
+            this.#makeResizable(modal, modalResizer);
+        }
+
+        modal.addEventListener('click', async (e) => {
+            const closeTarget = (e.target as HTMLElement)?.closest('[data-close]') as HTMLElement | null;
+            const dClose = closeTarget?.dataset.close;
+
+            if (dClose) {
+                await this.CloseModal(dClose);
+            }
+        });
+    }
+
     #resolveCoordinates(coordinates: HSUIDOMCoordinates = EPredefinedPosition.CENTER, relativeTo?: HTMLElement, parentModalId?: string): HSUIXY {
         let position = { x: 0, y: 10 };
 
@@ -709,111 +808,94 @@ export class HSUI extends HSModule {
             }
         });
 
-        // Create temp div, inject UI panel HTML and append the contents to body
         HSUI.injectHTMLString(html);
 
-        const modal = document.querySelector(`#${uuid}`) as HTMLDivElement;
-        const modalHead = document.querySelector(`#${uuid} > .hs-modal-head`) as HTMLDivElement;
+        const modal = document.getElementById(uuid) as HTMLDivElement | null;
+        if (!modal) return uuid;
+
+        const modalHead = modal.querySelector('.hs-modal-head') as HTMLDivElement | null;
 
         this.#activeModals.add(modal);
         if (modalOptions.parentModalId) {
             this.#modalParents.set(uuid, modalOptions.parentModalId);
         }
 
-        // If the modal contains something (images mainly) which take time to load, needsToLoad should be set to true
-        // And this is where we handle / wait for the loading to happen before showing the modal
-        if (modalOptions.needsToLoad && modalOptions.needsToLoad === true) {
-            const images = document.querySelectorAll(`#${uuid} > .hs-modal-body img`);
-
-            const imagePromises = (Array.from(images) as HTMLImageElement[]).map(img => {
-                return new Promise<void>((resolve) => {
-                    if (img.complete) {
-                        resolve();
-                    } else {
-                        img.addEventListener('load', () => resolve());
-                        img.addEventListener('error', () => {
-                            resolve();
-                        });
-                    }
-                });
-            });
-
-            // Wait for images to load and then resolve open coordinates for the modal
-            await Promise.all(imagePromises);
+        if (modalOptions.needsToLoad === true) {
+            await this.#waitForModalImages(modal);
         }
 
-        if (modal) {
-            const finalCoords = this.#resolveCoordinates(modalOptions.position, modal, modalOptions.parentModalId);
-            const modalRect = modal.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
+        const finalCoords = this.#clampModalPosition(
+            modal,
+            this.#resolveCoordinates(modalOptions.position, modal, modalOptions.parentModalId)
+        );
 
-            let finalX = finalCoords.x;
-            let finalY = finalCoords.y;
+        modal.style.left = `${finalCoords.x}px`;
+        modal.style.top = `${finalCoords.y}px`;
 
-            if (finalX + modalRect.width > viewportWidth - 10) {
-                finalX = viewportWidth - modalRect.width - 10;
-            }
+        await modal.transition({ opacity: 1 });
+        this.#attachModalHandlers(modal, modalHead);
 
-            if (finalX < 10) {
-                finalX = 10;
-            }
-
-            if (finalY + modalRect.height > viewportHeight - 10) {
-                finalY = viewportHeight - modalRect.height - 10;
-            }
-
-            if (finalY < 10) {
-                finalY = 10;
-            }
-
-            modal.style.left = `${finalX}px`;
-            modal.style.top = `${finalY}px`;
-
-            await modal.transition({
-                opacity: 1
-            });
-
-            // Make the modal draggable
-            this.#makeDraggable(modal, modalHead);
-            const modalResizer = modal.querySelector('.hs-modal-resizer') as HTMLElement;
-            if (modalResizer) {
-                this.#makeResizable(modal, modalResizer);
-            }
-
-            modal.addEventListener('click', async (e) => {
-                const dClose = (e.target as HTMLDivElement).dataset.close;
-
-                if (dClose) {
-                    await this.CloseModal(dClose);
-                }
-            })
-        }
         return uuid;
     }
 
     async CloseModal(modalId?: string): Promise<void> {
         if (modalId) {
-            const modal = document.getElementById(modalId) as HTMLDivElement;
+            const modal = document.getElementById(modalId) as HTMLDivElement | null;
             if (modal) {
                 await modal.transition({
                     opacity: 0
                 });
                 modal.remove();
                 this.#activeModals.delete(modal);
-                this.#modalParents.delete(modalId);
+            } else {
+                const staleModal = Array.from(this.#activeModals).find((activeModal) => activeModal.id === modalId);
+                if (staleModal) {
+                    this.#activeModals.delete(staleModal);
+                }
             }
+
+            this.#modalParents.delete(modalId);
         } else {
             // Close all modals
-            for (const modal of this.#activeModals) {
-                await modal.transition({
-                    opacity: 0
-                });
-                modal.remove();
+            for (const modal of Array.from(this.#activeModals)) {
+                if (modal.isConnected) {
+                    await modal.transition({
+                        opacity: 0
+                    });
+                    modal.remove();
+                }
+                this.#activeModals.delete(modal);
             }
-            this.#activeModals.clear();
             this.#modalParents.clear();
         }
+    }
+
+
+    // ========================================
+    // --------- Notification helpers ---------
+    // ========================================
+
+    static #getNotifyPositionStyles(position: string, width: number, height: number): Record<string, string> {
+        return {
+            topLeft: { top: `-${height}px`, left: '15px' },
+            top: { top: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
+            topRight: { top: `-${height}px`, right: '15px' },
+            right: { top: `calc(50vh - ${height / 2}px)`, right: `-${width}px` },
+            bottomRight: { bottom: `-${height}px`, right: '15px' },
+            bottom: { bottom: `-${height}px`, left: `calc(50vw - ${width / 2}px)` },
+            bottomLeft: { bottom: `-${height}px`, left: '15px' },
+            left: { top: `calc(50vh - ${height / 2}px)`, left: `-${width}px` }
+        }[position] || { bottom: `-${height}px`, right: '15px' };
+    }
+
+    static #getNotifyStyles(options: HSNotifyOptions): Record<string, string> {
+        return {
+            ...HSUI.#getNotifyPositionStyles(options.position, options.width, options.height),
+            opacity: '1',
+            backgroundColor: HSUI.#notifyBackgroundColors[options.notificationType],
+            width: `${options.width}px`,
+            height: `${options.height}px`
+        };
     }
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
@@ -828,48 +910,13 @@ export class HSUI extends HSModule {
             height: notifyOptions?.height ?? 50
         };
 
-        let notificationDiv: HTMLDivElement | null = document.createElement('div');
-        let notificationText: HTMLDivElement | null = document.createElement('div');
+        const notificationDiv = document.createElement('div');
+        const notificationText = document.createElement('div');
 
         notificationDiv.className = HSGlobal.HSUI.notifyClassName;
         notificationText.className = HSGlobal.HSUI.notifyTextClassName;
 
-        const bgColor = {
-            'default': '#192a56',
-            'warning': '#cd6133',
-            'error': '#b33939',
-            'success': '#009432',
-        };
-
-        const positions = {
-            'topLeft': { top: `-${options.height}px`, left: `15px` },
-            'top': { top: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
-            'topRight': { top: `-${options.height}px`, right: `15px` },
-            'right': { top: `calc(50vh - ${options.height / 2}px)`, right: `-${options.width}px` },
-            'bottomRight': { bottom: `-${options.height}px`, right: `15px` },
-            'bottom': { bottom: `-${options.height}px`, left: `calc(50vw - ${options.width / 2}px)` },
-            'bottomLeft': { bottom: `-${options.height}px`, left: `15px` },
-            'left': { top: `calc(50vh - ${options.height / 2}px)`, left: `-${options.width}px` },
-        };
-    
-        const transitions = {
-            'topLeft': { top: `15px` },
-            'top': { top: `15px` },
-            'topRight': { top: `15px` },
-            'right': { right: `15px` },
-            'bottomRight': { bottom: `15px` },
-            'bottom': { bottom: `15px` },
-            'bottomLeft': { bottom: `15px` },
-            'left': { left: `15px` },
-        };
-
-        notificationDiv.style = HSUtils.objectToCSS({
-            ...positions[options.position],
-            opacity: '1',
-            backgroundColor: bgColor[options.notificationType],
-            width: `${options.width}px`,
-            height: `${options.height}px`
-        });
+        notificationDiv.style.cssText = HSUtils.objectToCSS(HSUI.#getNotifyStyles(options));
 
         notificationText.innerText = text;
         notificationDiv.appendChild(notificationText);
@@ -882,7 +929,7 @@ export class HSUI extends HSModule {
         document.body.appendChild(notificationDiv);
 
         await notificationDiv.transition({
-            ...transitions[options.position],
+            ...HSUI.#notifyTransitions[options.position],
         }, options.popDuration, `linear(0, 0.408 26.7%, 0.882 50.9%, 0.999 57.7%, 0.913 65.3%, 0.893 68.8%, 0.886 72.4%, 0.903 78.5%, 0.986 92.3%, 1)`);
 
         await HSUtils.wait(options.displayDuration);
@@ -893,7 +940,5 @@ export class HSUI extends HSModule {
 
         notificationText.remove();
         notificationDiv.remove();
-        notificationText = null;
-        notificationDiv = null;
     }
 }
