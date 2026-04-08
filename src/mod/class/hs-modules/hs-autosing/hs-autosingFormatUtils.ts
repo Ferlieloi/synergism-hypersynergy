@@ -4,14 +4,14 @@ import Decimal from "break_infinity.js";
  * Formats a number in exponential notation (2 decimals).
  */
 export function formatNumber(num: number): string {
-    return Number(num).toExponential(2).replace('+', '');
+    return num.toExponential(2).replace('+', '');
 }
 
 /**
  * Formats a number in exponential notation with sign.
  */
 export function formatNumberWithSign(num: number): string {
-    return Number(num).toExponential(2);
+    return num.toExponential(2);
 }
 
 /**
@@ -20,14 +20,10 @@ export function formatNumberWithSign(num: number): string {
 export function formatDecimal(d: Decimal | null | undefined): string {
     if (d === null || d === undefined) return '-';
     try {
-        let s = (d as Decimal).toExponential(2);
-        s = s.replace(/E/g, 'e').replace(/\+/g, '');
-        return s;
+        return d.toExponential(2).replace(/[E+]/g, m => m === 'E' ? 'e' : '');
     } catch (e) {
         try {
-            let s2 = new Decimal(d as any).toExponential(2);
-            s2 = s2.replace(/E/g, 'e').replace(/\+/g, '');
-            return s2;
+            return new Decimal(d as any).toExponential(2).replace(/[E+]/g, m => m === 'E' ? 'e' : '');
         } catch (e2) {
             return String(d);
         }

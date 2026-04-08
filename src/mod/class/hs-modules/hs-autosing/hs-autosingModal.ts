@@ -8,7 +8,7 @@ import { HSAutosing } from "./hs-autosing";
 // import { HSAutosingDB } from './hs-autosingDB';
 import { HSAutosingExportManager } from './hs-autosingExportManager';
 import { createPhaseRowDom, updatePhaseRowDom, PhaseRowDom } from "./hs-autosingPhaseStats";
-import { SparklineDom, SparklineDataKey, buildSparklineDom, updateSparkline } from './hs-autosingSparkline';
+import { SparklineDom, buildSparklineDom, updateSparkline } from './hs-autosingSparkline';
 import Decimal from "break_infinity.js";
 import { formatNumber, formatNumberWithSign, formatDecimal, formatTotalTime } from "./hs-autosingFormatUtils";
 import { getAvgAndStdLast, getC15AverageLast, getLogC15Std } from "./hs-autosingStatsUtils";
@@ -55,7 +55,6 @@ export class HSAutosingModal {
 
     // --- Cached DOM Nodes ---
     #phaseNameSpan: HTMLElement | null = null;
-    #footerSection: HTMLElement | null = null;
     #singTargetSpan: HTMLElement | null = null;
     #singHighestSpan: HTMLElement | null = null;
     #completedSingAmountSpan: HTMLElement | null = null;
@@ -87,7 +86,6 @@ export class HSAutosingModal {
     #sparklineQuarksContainer: HTMLElement | null = null;
     #sparklineGoldenQuarksContainer: HTMLElement | null = null;
     #sparklineTimeContainer: HTMLElement | null = null;
-    #phaseHeaderNodes: HTMLDivElement[] = [];
     #avgSpanParts: Map<HTMLElement, { main: HTMLSpanElement; sd: HTMLSpanElement }> = new Map();
     #cachedDetailedEls: HTMLElement[] = [];
     #sectionGrids: HTMLElement[] = [];
@@ -160,9 +158,10 @@ export class HSAutosingModal {
         lastTime: number;
         innerLoopCount: number;
     }> = new Map();
+    static readonly #DECIMAL_0 = new Decimal(0);
     #c15Count: number = 0;
-    #c15Mean: Decimal = new Decimal(0);
-    #c15M2: Decimal = new Decimal(0);
+    #c15Mean: Decimal = HSAutosingModal.#DECIMAL_0;
+    #c15M2: Decimal = HSAutosingModal.#DECIMAL_0;
     #logC15Count: number = 0;
     #logC15Mean: number = 0;
     #logC15M2: number = 0;
@@ -217,7 +216,6 @@ export class HSAutosingModal {
         // this.#db = new HSAutosingDB('HSAutosingTimerDB', 'singularityBundles', 10);
         this.#createTimerDisplay();
         this.#setupDragAndResize();
-        this.#cachedGlobalPhaseIndex = new Map();
         phases.forEach((phase, i) => {
             this.#cachedGlobalPhaseIndex.set(phase as unknown as string, i);
         });
@@ -525,7 +523,6 @@ export class HSAutosingModal {
         this.#sparklineGoldenQuarks = buildSparklineDom(this.#sparklineGoldenQuarksContainer, '#F1FA8C', false, 'goldenQuarks');
         this.#sparklineTimes = buildSparklineDom(this.#sparklineTimeContainer, '#FF8A80', true, 'time');
 
-        this.#footerSection = document.getElementById('hs-footer-section');
         this.#footerVersionSpan = document.getElementById('hs-footer-version');
         this.#footerStrategySpan = document.getElementById('hs-footer-strategy');
         this.#footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
@@ -1081,17 +1078,16 @@ export class HSAutosingModal {
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
             // Update C15 online stats (Decimal Welford)
-            const dec = new Decimal(c15Score);
             const k = this.#c15Count + 1;
-            const delta = dec.minus(this.#c15Mean);
+            const delta = c15Score.minus(this.#c15Mean);
             this.#c15Mean = this.#c15Mean.plus(delta.div(k));
-            const delta2 = dec.minus(this.#c15Mean);
+            const delta2 = c15Score.minus(this.#c15Mean);
             this.#c15M2 = this.#c15M2.plus(delta.times(delta2));
             this.#c15Count = k;
 
             // Update online stats for log(C15) using Welford's algorithm (natural log)
             try {
-                const asNumber = Number(dec);
+                const asNumber = Number(c15Score);
                 if (!Number.isNaN(asNumber) && asNumber > 0) {
                     const logVal = Math.log(asNumber);
                     const k = this.#logC15Count + 1;
@@ -1207,13 +1203,6 @@ export class HSAutosingModal {
      */
     public getIsPaused(): boolean {
         return this.#isPaused;
-    }
-
-    /**
-     * Return the number of completed singularities in the current session.
-     */
-    #getSingularityCount(): number {
-        return this.#singularityCount;
     }
 
     /**
@@ -1399,21 +1388,20 @@ export class HSAutosingModal {
 
         const singCount = this.#allTimeStats.singCompleted;
         const avg1 = this.#getLastDuration();
-        const avgAllCount = singCount;
         const avgAll = this.#getAllTimeAvgDuration();
         const sdAll = this.#getAllTimeStdDuration();
         const allTimeDuration = this.#allTimeStats.totalDuration;
         const allTimeQuarks = this.#allTimeStats.totalQuarks;
-        let allTimeQuarksPerSec = allTimeDuration > 0 ? allTimeQuarks / allTimeDuration : 0;
+        const allTimeQuarksPerSec = allTimeDuration > 0 ? allTimeQuarks / allTimeDuration : 0;
         const allTimeGoldenQuarks = this.#allTimeStats.totalGoldenQuarks;
-        let allTimeGoldenQuarksPerSec = allTimeDuration > 0 ? allTimeGoldenQuarks / allTimeDuration : 0;
+        const allTimeGoldenQuarksPerSec = allTimeDuration > 0 ? allTimeGoldenQuarks / allTimeDuration : 0;
 
         // Farming section
         this.#setTextEl(this.#completedSingAmountSpan, singCount ? `${singCount}` : '-');
 
         // Times section
         this.#setTextEl(this.#avg1Span, avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
-        this.#setTextEl(this.#avgAllCountSpan, avgAllCount ? `${avgAllCount}` : '-');
+        this.#setTextEl(this.#avgAllCountSpan, singCount ? `${singCount}` : '-');
         this.#setAvgEl(this.#avgAllSpan, avgAll, sdAll);
 
         // Quarks section
@@ -1640,8 +1628,8 @@ export class HSAutosingModal {
             sumSqGoldenQuarks: 0
         };
         this.#c15Count = 0;
-        this.#c15Mean = new Decimal(0);
-        this.#c15M2 = new Decimal(0);
+        this.#c15Mean = HSAutosingModal.#DECIMAL_0;
+        this.#c15M2 = HSAutosingModal.#DECIMAL_0;
         this.#logC15Count = 0;
         this.#logC15Mean = 0;
         this.#logC15M2 = 0;

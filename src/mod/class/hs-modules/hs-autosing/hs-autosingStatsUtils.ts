@@ -52,13 +52,10 @@ export function getAvgAndStdLast(metrics: Array<{ duration: number }>, n: number
  */
 export function getQuarksPerSecond(metrics: Array<{ duration: number, quarksGained: number, goldenQuarksGained: number }>, isGolden: boolean): number | null {
     if (metrics.length === 0) return null;
+    const key = isGolden ? 'goldenQuarksGained' : 'quarksGained';
     let total = 0, totalTime = 0;
     for (const m of metrics) {
-        if (isGolden) {
-            total += m.goldenQuarksGained;
-        } else {
-            total += m.quarksGained;
-        }
+        total += m[key];
         totalTime += m.duration;
     }
     if (totalTime <= 0) return null;

@@ -8,7 +8,7 @@ import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-ty
  * Description: Automates, corrects, and manages game settings for AutoSing.
  */
 export class HSAutosingSettingsFixer {
-    static #context = 'HSAutosingSettingsFixer';
+    static readonly #context = 'HSAutosingSettingsFixer';
 
     /**
      * List of toggle requirements: selector and expected text.
@@ -254,12 +254,9 @@ export class HSAutosingSettingsFixer {
         ];
 
         // Helper to compare current value to expected
-        const valuesMatch = (currentValue: string, expectedValue: any): boolean => {
-            if (typeof expectedValue === 'number') {
-                const numeric = Number(currentValue);
-                return !Number.isNaN(numeric) && numeric === expectedValue;
-            }
-            return currentValue === String(expectedValue);
+        const valuesMatch = (currentValue: string, expected: number): boolean => {
+            const numeric = Number(currentValue);
+            return !Number.isNaN(numeric) && numeric === expected;
         };
 
         // Track which selectors were corrected or failed
@@ -360,24 +357,25 @@ export class HSAutosingSettingsFixer {
 
     /**
      * Ensure challenge auto states for challenge 1-15.
-     * For 1-10: ON, (for 11-15: OFF maybe later if needed). Logs all failures and missing elements.
      */
     static async #ensureChallengeAutoStates(): Promise<void> {
         // Track which challenge selectors were corrected or failed
         const correctedChallenges: string[] = [];
         const failedChallenges: string[] = [];
 
+        const toggleElement = document.querySelector('#toggleAutoChallengeIgnore') as HTMLElement | null;
+        if (!toggleElement) {
+            HSLogger.warn(`ensureChallengeAutoStates: #toggleAutoChallengeIgnore not found`, HSAutosingSettingsFixer.#context);
+            return;
+        }
+
         // Loop through challenges 1-10 and ensure correct auto state
         for (let challengeIndex = 1; challengeIndex <= 10; challengeIndex++) {
-            const challengeSelector = `#challenge${challengeIndex}.challenge`;
-            const toggleSelector = '#toggleAutoChallengeIgnore';
             const expectedPrefix = `Automatically Run Chal.${challengeIndex}`;
-            const expectedState = challengeIndex <= 10 ? '[ON]' : '[OFF]';
-            const expectedFullText = `${expectedPrefix} ${expectedState}`;
-            const challengeElement = document.querySelector(challengeSelector) as HTMLElement | null;
-            const toggleElement = document.querySelector(toggleSelector) as HTMLElement | null;
+            const expectedFullText = `${expectedPrefix} [ON]`;
+            const challengeElement = document.querySelector(`#challenge${challengeIndex}.challenge`) as HTMLElement | null;
 
-            if (!challengeElement || !toggleElement) {
+            if (!challengeElement) {
                 failedChallenges.push(`chal${challengeIndex}`);
                 continue;
             }
@@ -436,13 +434,9 @@ export class HSAutosingSettingsFixer {
             if (setting.isEnabled()) {
                 setting.disable();
                 disabledSettings.push(settingKey);
-                HSLogger.log(`disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
+                HSLogger.debug(() => `disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
             }
         }
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.disable();
-                    }
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, HSAutosingSettingsFixer.#context);
         } else {
@@ -451,8 +445,8 @@ export class HSAutosingSettingsFixer {
         return disabledSettings;
     }
 
-    public static async restoreUnwantedSettings(settingsToRestore: string[]): Promise<void> {
-        // Reverse to re-enable GDS first
+    public static restoreUnwantedSettings(settingsToRestore: string[]): void {
+        // Reverse order to re-enable GDS first
         for (let i = settingsToRestore.length - 1; i >= 0; i--) {
             const settingKey = settingsToRestore[i];
             const setting = HSSettings.getSetting(settingKey as keyof HSSettingsDefinition);

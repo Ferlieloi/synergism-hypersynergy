@@ -9,31 +9,16 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, CorruptionLoadout, AutosingStrategyPhase, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, AutosingStrategyPhase, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
-import { ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
-
-
-const ZERO_CORRUPTIONS: CorruptionLoadout = {
-    viscosity: 0,
-    drought: 0,
-    deflation: 0,
-    extinction: 0,
-    illiteracy: 0,
-    recession: 0,
-    dilation: 0,
-    hyperchallenge: 0,
-};
-
-const ANT_CORRUPTIONS: CorruptionLoadout = {
-    viscosity: 16, drought: 0, deflation: 16, extinction: 0,
-    illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16,
-};
+import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
+const STAGE_REGEX = /Current Game Section:\s*(.+)/;
+const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -53,18 +38,22 @@ type ChallengeAccessor = {
 export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
 
+    static readonly #DECIMAL_INFINITY = new Decimal(Infinity);
+    static readonly #DECIMAL_9999 = new Decimal(9999);
+    static readonly #DECIMAL_0 = new Decimal(0);
     #gameDataAPI?: HSGameDataAPI;
     #gameDataResolver?: (value: void) => void;
 
+    #corruptionManager!: HSAutosingCorruption;
+
     #strategy?: HSAutosingStrategy;
-    #loadoutByName: Map<string, CorruptionLoadout> = new Map();
     #autosingEnabled = false;
     #targetSingularity = 0;
     #sleepTime = 10;
     #prevActionTime: number = 0;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
-    #storedC15: Decimal = new Decimal(0);
+    #storedC15: Decimal = HSAutosing.#DECIMAL_0;
     #challengeAccessors: Record<number, ChallengeAccessor> = {};
     #hsSettingsToRestore: string[] = [];
     #previousQuarkAmount: number = 0;
@@ -120,16 +109,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     #AOAG!: HTMLButtonElement;
     #exalt2Btn!: HTMLButtonElement;
     #exaltTimer!: HTMLSpanElement;
-    #importBtn!: HTMLButtonElement;
     #saveType!: HTMLInputElement;
     #exportBtn!: HTMLButtonElement;
     #exportBtnClone?: HTMLButtonElement;
-
-    // DOM Elements - Corruptions
-    #corrNext: Record<string, HTMLElement | null> = {};
-    #corruptionStatsContainer?: HTMLElement | null;
-    #corruptionPromptInput!: HTMLInputElement;
-    #corruptionPromptOkBtn!: HTMLButtonElement;
     #addCodeAllBtn!: HTMLButtonElement;
     #timeCodeBtn!: HTMLButtonElement;
 
@@ -161,12 +143,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     init(): Promise<void> {
         HSLogger.log(`Initializing HSAutosing module`, this.context);
 
-
         this.#autosingEnabled = false;
         this.#targetSingularity = 0;
         this.#cacheSettingsElements();
         this.#cacheChallengeElements();
         this.#cacheButtonElements();
+        this.#cacheHeptractButtons();
         this.#cacheCorruptionElements();
         this.#cacheMiscElements();
 
@@ -208,7 +190,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.#exaltTimer = document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement;
         this.#elevatorTeleportButton = document.getElementById('elevatorTeleportButton') as HTMLButtonElement;
         this.#elevatorInput = document.getElementById('elevatorTargetInput') as HTMLInputElement;
-        this.#importBtn = document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement;
     }
 
     #cacheHeptractButtons(): void {
@@ -224,16 +205,21 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     #cacheCorruptionElements(): void {
-        this.#corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement;
-        this.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement;
-        this.#corruptionStatsContainer = document.getElementById('corruptionStats');
         this.#addCodeAllBtn = document.getElementById("addCodeAll") as HTMLButtonElement;
         this.#timeCodeBtn = document.getElementById("timeCode") as HTMLButtonElement;
-        
-        const corrNames = ["viscosity", "drought", "deflation", "extinction", "illiteracy", "recession", "dilation", "hyperchallenge"];
-        corrNames.forEach(name => {
-            this.#corrNext[name] = document.getElementById(`corrNext${name}`);
+
+        const corrNext: Record<string, HTMLElement | null> = {};
+        CORRUPTION_NAMES.forEach(name => {
+            corrNext[name] = document.getElementById(`corrNext${name}`);
         });
+
+        this.#corruptionManager = new HSAutosingCorruption(
+            corrNext,
+            document.getElementById('corruptionStats'),
+            document.getElementById('prompt_text') as HTMLInputElement,
+            document.getElementById('ok_prompt') as HTMLButtonElement,
+            document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement
+        );
     }
 
     #cacheMiscElements(): void {
@@ -357,7 +343,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         this.#strategy = strategy;
         this.#rebuildStrategyPhaseCaches();
-        this.#buildLoadoutCache();
+        this.#corruptionManager.buildLoadoutCache(this.#strategy?.corruptionLoadouts ?? []);
 
         await this.#loadAmbrosiaLoadoutButtons();
 
@@ -622,8 +608,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        const ranges = this.#strategyPhaseRanges ?? [];
-        phaseConfig = ranges.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
+        phaseConfig = this.#strategyPhaseRanges!.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
 
         if (!phaseConfig) {
             HSLogger.warn(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context);
@@ -656,9 +641,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
 
         if (!options?.skipInitialCorruptions) {
-            const phaseLoadout = this.#getPhaseCorruptionLoadout(phaseConfig);
+            const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
             if (phaseLoadout) {
-                await this.#setCorruptions(phaseLoadout);
+                await this.#corruptionManager.setCorruptions(phaseLoadout);
             }
         }
 
@@ -710,12 +695,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         if (challenge.challengeNumber == 401) {
-            const phaseLoadout = this.#getPhaseCorruptionLoadout(phaseConfig);
+            const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
             if (phaseLoadout) {
-                await this.#setCorruptions(phaseLoadout);
+                await this.#corruptionManager.setCorruptions(phaseLoadout);
             }
         } else if (challenge.challengeNumber == LOADOUT_ACTION_VALUE) {
-            await this.#applyLoadoutByName(challenge.loadoutName);
+            await this.#corruptionManager.applyLoadoutByName(challenge.loadoutName);
         } else if (challenge.challengeNumber == IF_JUMP_VALUE) {
             return await this.#handleIfJumpAction(challenge);
         } else if (challenge.challengeNumber >= 100) {
@@ -737,35 +722,33 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async #handleIfJumpAction(challenge: any): Promise<number | null> {
         const mode = challenge.ifJump?.ifJumpMode;
         const operator = challenge.ifJump?.ifJumpOperator;
+        const jumpIndex = challenge.ifJump?.ifJumpIndex;
 
         switch (mode) {
-            case "challenges":
-                const _ifIdx = challenge.ifJump?.ifJumpChallenge ?? -1;
-                const challengeCompletions = (_ifIdx >= 1 && _ifIdx <= 15)
-                    ? this.#getChallengeAccessor(_ifIdx).getCompletions()
-                    : new Decimal(0);
-                if (operator === ">" && challengeCompletions.gt(challenge.ifJump?.ifJumpValue ?? 0)) {
-                    if (challenge.ifJump?.ifJumpIndex !== undefined) {
-                        return challenge.ifJump.ifJumpIndex;
-                    }
-                } else if (operator === "<" && challengeCompletions.lt(challenge.ifJump?.ifJumpValue ?? 0)) {
-                    if (challenge.ifJump?.ifJumpIndex !== undefined) {
-                        return challenge.ifJump.ifJumpIndex;
-                    }
+            case "challenges": {
+                const ifIdx = challenge.ifJump?.ifJumpChallenge ?? -1;
+                const completions = (ifIdx >= 1 && ifIdx <= 15)
+                    ? this.#getChallengeAccessor(ifIdx).getCompletions()
+                    : HSAutosing.#DECIMAL_0;
+                const value = challenge.ifJump?.ifJumpValue ?? 0;
+                if (jumpIndex !== undefined &&
+                    ((operator === ">" && completions.gt(value)) ||
+                     (operator === "<" && completions.lt(value)))) {
+                    return jumpIndex;
                 }
                 break;
-            case "stored_c15":
+            }
+            case "stored_c15": {
                 const exponent = challenge.ifJump?.ifJumpMultiplier ?? 0;
                 const c15Score = this.#getChallengeAccessor(15).getCompletions();
                 const targetStats = this.#storedC15.plus(exponent);
-
-                if ((operator === ">" && c15Score.gt(targetStats)) ||
-                    (operator === "<" && c15Score.lt(targetStats))) {
-                    if (challenge.ifJump?.ifJumpIndex !== undefined) {
-                        return challenge.ifJump.ifJumpIndex;
-                    }
+                if (jumpIndex !== undefined &&
+                    ((operator === ">" && c15Score.gt(targetStats)) ||
+                     (operator === "<" && c15Score.lt(targetStats)))) {
+                    return jumpIndex;
                 }
                 break;
+            }
         }
 
         return null;
@@ -839,10 +822,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
                 break;
             case 400: // Zero Corruptions
-                await this.#setCorruptions(ZERO_CORRUPTIONS);
+                await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
                 break;
             case 402: // Ant Corruptions
-                await this.#setCorruptions(ANT_CORRUPTIONS);
+                await this.#corruptionManager.setCorruptions(ANT_CORRUPTIONS);
                 break;
             case 601:
             case 602:
@@ -947,9 +930,9 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const endTime = startTime + maxTime;
 
         const maxPossible = getGoal();
-        const minCompletionsDecimal = new Decimal(minCompletions);
+        const minCompletionsDecimal = minCompletions === 0 ? HSAutosing.#DECIMAL_0 : new Decimal(minCompletions);
         let lastText = '';
-        let currentCompletions = new Decimal(0);
+        let currentCompletions = HSAutosing.#DECIMAL_0;
 
         while (true) {
             const now = performance.now();
@@ -1015,12 +998,12 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             };
 
         const getGoal = challengeIndex === 15
-            ? () => { return new Decimal(Infinity); }
+            ? () => HSAutosing.#DECIMAL_INFINITY
             : () => {
-                if (!levelElement) return new Decimal(9999);
+                if (!levelElement) return HSAutosing.#DECIMAL_9999;
                 const goalText = levelElement.textContent ?? '';
                 const slashIdx = goalText.indexOf('/');
-                return slashIdx !== -1 ? parseValue(goalText.slice(slashIdx + 1).trim()) : new Decimal(9999);
+                return slashIdx !== -1 ? parseValue(goalText.slice(slashIdx + 1).trim()) : HSAutosing.#DECIMAL_9999;
             };
 
         return {
@@ -1041,12 +1024,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const levelElement = accessor.levelElement;
         const getCompletions = accessor.getCompletions;
         const maxPossible = accessor.getGoal();
-
         if (!levelElement || getCompletions().gte(maxPossible)) return;
 
         await new Promise<void>((resolve) => {
             let finished = false;
-
             const cleanup = (): void => {
                 if (finished) return;
                 finished = true;
@@ -1054,19 +1035,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 observer.disconnect();
                 resolve();
             };
-
-            const observer = new MutationObserver(() => {
-                if (getCompletions().gte(maxPossible)) cleanup();
-            });
-
+            const observer = new MutationObserver(() => { if (getCompletions().gte(maxPossible)) cleanup(); });
             const timeoutId = window.setTimeout(() => cleanup(), 3000);
 
-            observer.observe(levelElement, {
-                childList: true,
-                characterData: true,
-                subtree: true
-            });
-
+            observer.observe(levelElement, { childList: true, characterData: true, subtree: true });
             if (getCompletions().gte(maxPossible)) cleanup();
         });
     }
@@ -1105,157 +1077,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     // ============================================================================
-    // CORRUPTION LOGIC
+    // CORRUPTION LOGIC — see HSAutosingCorruption
     // ============================================================================
 
-    async #setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
-        if (!this.#corruptionPromptInput || !this.#corruptionPromptOkBtn) {
-            HSLogger.warn("Error: could not access corruption prompt elements", this.context);
-            return;
-        }
-
-        const jsonString = JSON.stringify(corruptions);
-
-        while (true) {
-            this.#importBtn.click();
-            this.#corruptionPromptInput.value = jsonString;
-
-            HSUtils.clickWithoutSleep(this.#corruptionPromptOkBtn);
-            const success = await this.#waitForCorruptionMatch(corruptions, 500);
-            if (success) {
-                HSLogger.debug(() => `Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.context);
-                break;
-            }
-            HSLogger.debug(() => `Corruptions did not match after timeout: ${this.#stringifyCorruptions(this.#getNextCorruptionsFromCache())}`, this.context);
-        }
-    }
-
-    #corruptionsMatchDOM(target: CorruptionLoadout): boolean {
-        const names = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'] as const;
-        for (const name of names) {
-            const el = this.#corrNext[name];
-            if (!el) return false;
-            if (parseInt(el.textContent || '0', 10) !== target[name]) return false;
-        }
-        return true;
-    }
-
-    #getNextCorruptionsFromCache(): CorruptionLoadout {
-        const getVal = (name: string) => {
-            const el = this.#corrNext[name];
-            return el ? parseInt(el.textContent || '0', 10) : 0;
-        };
-
-        return {
-            viscosity: getVal("viscosity"),
-            drought: getVal("drought"),
-            deflation: getVal("deflation"),
-            extinction: getVal("extinction"),
-            illiteracy: getVal("illiteracy"),
-            recession: getVal("recession"),
-            dilation: getVal("dilation"),
-            hyperchallenge: getVal("hyperchallenge")
-        };
-    }
-
-    async #waitForCorruptionMatch(targetCorruptions: CorruptionLoadout, timeoutMs = 500): Promise<boolean> {
-        if (this.#corruptionsMatchDOM(targetCorruptions)) {
-            return true;
-        }
-
-        const container = this.#corruptionStatsContainer;
-        if (!container) {
-            return false;
-        }
-
-        return new Promise<boolean>((resolve) => {
-            let finished = false;
-
-            const cleanup = (result: boolean) => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeoutId);
-                observer.disconnect();
-                resolve(result);
-            };
-
-            const observer = new MutationObserver(() => {
-                if (this.#corruptionsMatchDOM(targetCorruptions)) {
-                    cleanup(true);
-                }
-            });
-
-            const timeoutId = window.setTimeout(() => {
-                cleanup(false);
-            }, timeoutMs);
-
-            observer.observe(container, {
-                childList: true,
-                characterData: true,
-                subtree: true
-            });
-
-            if (this.#corruptionsMatchDOM(targetCorruptions)) {
-                cleanup(true);
-            }
-        });
-    }
-
-    #getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
-        if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") {
-            return null;
-        }
-
-        if (phaseConfig.corruptionLoadoutName === undefined) {
-            return phaseConfig.corruptions ?? null;
-        }
-
-        const named = this.#getLoadoutByName(phaseConfig.corruptionLoadoutName);
-        return named ?? phaseConfig.corruptions ?? null;
-    }
-
-    async #applyLoadoutByName(name?: string | null): Promise<void> {
-        const loadout = this.#getLoadoutByName(name);
-        if (!loadout) {
-            HSLogger.debug(() => `Loadout not found: ${name ?? "(none)"}`, this.context);
-            return;
-        }
-        await this.#setCorruptions(loadout);
-    }
-
-    #getLoadoutByName(name?: string | null): CorruptionLoadout | null {
-        if (!name) return null;
-        if (this.#loadoutByName.size > 0) {
-            const l = this.#loadoutByName.get(name);
-            return l ? { ...l } : null;
-        }
-
-        const loadouts = this.#strategy?.corruptionLoadouts ?? [];
-        const match = loadouts.find(loadout => loadout.name === name);
-        return match ? { ...match.loadout } : null;
-    }
-
-    #stringifyCorruptions(loadout: CorruptionLoadout): string {
-        return [
-            loadout.viscosity,
-            loadout.drought,
-            loadout.deflation,
-            loadout.extinction,
-            loadout.illiteracy,
-            loadout.recession,
-            loadout.dilation,
-            loadout.hyperchallenge
-        ].join(',');
-    }
-
-    #buildLoadoutCache(): void {
-        this.#loadoutByName.clear();
-        const defs = this.#strategy?.corruptionLoadouts ?? [];
-        for (const d of defs) {
-            this.#loadoutByName.set(d.name, { ...d.loadout });
-        }
-    }
-
+    /*
     #antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
         HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
         window.setTimeout(() => {
@@ -1279,6 +1104,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             }, intervalMs);
         }, initialDelayMs);
     }
+    */
 
     async #antiBuyCoinBug2(maxWaitMs = 2000): Promise<void> {
         const upg81El = document.getElementById('upg81') as HTMLElement | null;
@@ -1286,10 +1112,8 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             HSLogger.warn(`[COIN-FIX] #upg81 element not found in DOM`, this.context);
             return;
         }
-
         const isGreen = () => upg81El.classList.contains('green-background');
         if (isGreen()) return;
-
         const waitStart = performance.now();
         HSLogger.debug(() => `[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
 
@@ -1298,7 +1122,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 observer.disconnect();
                 resolve(false);
             }, maxWaitMs);
-
             const observer = new MutationObserver(() => {
                 if (isGreen()) {
                     window.clearTimeout(timer);
@@ -1368,7 +1191,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         try {
             const raw = this.#stage?.textContent ?? '';
-            const m = raw.match(/Current Game Section:\s*(.+)/);
+            const m = raw.match(STAGE_REGEX);
             if (m && m[1]) {
                 HSLogger.debug(() => `Got stage from element: ${m[1]}`, this.context);
                 return m[1].trim();
@@ -1386,7 +1209,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         this.#misc.click();
 
         const stageText = await this.#getFromDOM<string>(this.#stage, {
-            regex: /Current Game Section:\s*(.+)/,
+            regex: STAGE_REGEX,
             predicate: t => t.includes("Current Game Section:")
         });
 
@@ -1498,10 +1321,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async #waitForExaltState(targetState: boolean, timeoutMs = 3000): Promise<void> {
-        if (this.#isInExalt() === targetState) {
-            return;
-        }
-
+        if (this.#isInExalt() === targetState) { return; }
         const exaltTimerElement = this.#exaltTimer;
         if (!exaltTimerElement) {
             HSLogger.warn("Could not observe exalt state because exalt timer element is missing.", this.context);
@@ -1510,7 +1330,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         await new Promise<void>((resolve) => {
             let finished = false;
-
             const cleanup = (): void => {
                 if (finished) return;
                 finished = true;
@@ -1518,25 +1337,15 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 observer.disconnect();
                 resolve();
             };
-
             const observer = new MutationObserver(() => {
                 if (this.#isInExalt() === targetState) {
                     cleanup();
                 }
             });
+            const timeoutId = window.setTimeout(() => { cleanup(); }, timeoutMs);
 
-            const timeoutId = window.setTimeout(() => {
-                cleanup();
-            }, timeoutMs);
-
-            observer.observe(exaltTimerElement, {
-                attributes: true,
-                attributeFilter: ['style', 'class']
-            });
-
-            if (this.#isInExalt() === targetState) {
-                cleanup();
-            }
+            observer.observe(exaltTimerElement, { attributes: true, attributeFilter: ['style', 'class'] });
+            if (this.#isInExalt() === targetState) { cleanup(); }
         });
 
         if (this.#isInExalt() !== targetState) {
@@ -1553,7 +1362,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     #isAllowedStage(stage: string): boolean {
-        return ALLOWED.some(allowed => stage.includes(allowed));
+        return ALLOWED_REGEX.test(stage);
     }
 
 
@@ -1637,14 +1446,14 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
     async #pushSingularityBeforeStop(): Promise<void> {
         this.#ambrosia_late_cube.click();
-        await this.#setCorruptions(ZERO_CORRUPTIONS);
+        await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
         await this.#maxC11to14WithC10(11);
         await this.#maxC11to14WithC10(12);
         await this.#maxC11to14WithC10(13);
         await this.#maxC11to14WithC10(14);
 
-        await this.#setCorruptions(
+        await this.#corruptionManager.setCorruptions(
             { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 }
         );
 
@@ -1714,7 +1523,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         try {
             return new Decimal(cleanText);
         } catch (e) {
-            return new Decimal(0);
+            return HSAutosing.#DECIMAL_0;
         }
     }
 
