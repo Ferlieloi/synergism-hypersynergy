@@ -928,7 +928,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const getCompletions = accessor.getCompletions;
         const getGoal = accessor.getGoal;
 
-        if (!challengeBtn! || accessor.levelElement) {
+        if (!challengeBtn || !accessor.levelElement) {
             HSLogger.debug(`Challenge element ${challengeIndex} not found - Autosing stopped.`, this.context);
             this.stopAutosing();
             return;
