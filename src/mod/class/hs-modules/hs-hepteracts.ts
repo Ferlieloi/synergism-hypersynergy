@@ -128,7 +128,7 @@ export class HSHepteracts extends HSModule {
                     gameStateMod.getCurrentUIView("CUBE_VIEW").getId() === CUBE_VIEW.HEPTERACT_FORGE
                 ) {
                     if(self.#ownedHepteractsWatch) {
-                        HSLogger.debug("Hepteract forge view closed, stopping watch", this.context);
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
                     }
                 } 
@@ -136,7 +136,7 @@ export class HSHepteracts extends HSModule {
 
             gameStateMod.subscribeGameStateChange("CUBE_VIEW", async (prevView, currentView) => {
                 if(currentView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
-                    HSLogger.debug("Hepteract forge view opened, starting watch", this.context);
+                    HSLogger.debug(() => "Hepteract forge view opened, starting watch", this.context);
                     self.#ownedHepteractsElement = await HSElementHooker.HookElement('#hepteractQuantity') as HTMLElement;
 
                     // Sets up a watch to watch for changes in the element which shows owned hepteracts amount
@@ -161,7 +161,7 @@ export class HSHepteracts extends HSModule {
                     });
                 } else if(prevView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
                     if(self.#ownedHepteractsWatch) {
-                        HSLogger.debug("Hepteract forge view closed, stopping watch", this.context);
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
                     }
                 }
@@ -252,7 +252,7 @@ export class HSHepteracts extends HSModule {
                             if(isQuarkHepteract) return;
 
                             if(self.#expandPending || self.#watchUpdatePending) {
-                                HSLogger.debug(`Quick expand cancelled, another expand was still pending (exp ${self.#expandPending}, wtch: ${self.#watchUpdatePending})`, self.context);
+                                HSLogger.debug(() => `Quick expand cancelled, another expand was still pending (exp ${self.#expandPending}, wtch: ${self.#watchUpdatePending})`, self.context);
                                 //self.#expandPending = false;
                                 return;
                             }
@@ -260,9 +260,9 @@ export class HSHepteracts extends HSModule {
                             self.#expandPending = true;
                             //self.#watchUpdatePending = true;
 
-                            let buyCost = null;
+                            let buyCost: number | null = null;
 
-                            let percentHeptOwned = null;
+                            let percentHeptOwned: number | null = null;
                             //let percentObtOwned = null;
                             //let percentOfferingOwned = null;
 
@@ -309,12 +309,12 @@ export class HSHepteracts extends HSModule {
                                     }
                                 }*/
 
-                                HSLogger.debug(`
+                                HSLogger.debug(() => `
                                     Current max: ${currentMax},
-                                    Cube cost: ${HSUtils.N(cubeCost)},
-                                    Next hepts: ${HSUtils.N(nextHepts)},
-                                    Buy cost: ${HSUtils.N(buyCost)},
-                                    Percent owned: ${HSUtils.N(percentHeptOwned)},
+                                    Cube cost: ${HSUtils.N(cubeCost ?? 0)},
+                                    Next hepts: ${HSUtils.N(nextHepts ?? 0)},
+                                    Buy cost: ${HSUtils.N(buyCost ?? 0)},
+                                    Percent owned: ${HSUtils.N(percentHeptOwned ?? 0)},
                                     Double Cap: ${hepteractDoubleCapSetting.getValue()}`,
                                     this.context
                                 );

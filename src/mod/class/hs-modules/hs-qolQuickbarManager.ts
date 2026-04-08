@@ -175,7 +175,7 @@ export class HSQuickbarManager {
     /** Register a callback to run when a section is injected (calls immediately if already injected). */
     public onSectionInjected(id: QUICKBAR_ID, callback: () => void): void {
         if (this.#sectionElements.has(id)) {
-            HSLogger.debug(`section ${id} already injected, calling callback immediately`, this.#context);
+            HSLogger.debug(() => `section ${id} already injected, calling callback immediately`, this.#context);
             callback();
             return;
         }
@@ -230,7 +230,7 @@ export class HSQuickbarManager {
         if (section && setupCallback) {
             try { setupCallback(section); } catch (e) { /* ignore errors in callback */ }
         }
-        HSLogger.debug(`Quickbar ${id} enabled`, this.#context);
+        HSLogger.debug(() => `Quickbar ${id} enabled`, this.#context);
         return section;
     }
 

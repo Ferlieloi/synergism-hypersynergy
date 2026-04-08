@@ -327,7 +327,7 @@ export class HSStrategyManager {
         if (!saved) {
             HSLogger.warn(`Could not save Strategy to localStorage`, context);
         } else {
-            HSLogger.debug(`<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`, context);
+            HSLogger.debug(() => `<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`, context);
         }
 
         return { strategy: normalizedStrategy, isUpdate, saved };
@@ -513,23 +513,23 @@ export class HSStrategyManager {
         const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
 
         if (allMatchOldState) {
-            HSLogger.debug(`Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
+            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
         } else if (allMatchNewState) {
-            HSLogger.debug(`Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
+            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
         } else if (allShared) {
-            HSLogger.debug(`Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
+            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
         } else {
             HSLogger.warn(`Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
         }
 
-        HSLogger.debug(`Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`, context);
+        HSLogger.debug(() => `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`, context);
 
         let map: Record<number, number> | null = null;
         let direction: 'old->new' | 'new->old' | 'none' = 'none';
 
         if (target === 'toNew') {
             if (newOnlyCount > 0 && oldOnlyCount === 0) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, context);
+                HSLogger.debug(() => `Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, context);
                 return strategy;
             }
             if (oldOnlyCount > 0 && newOnlyCount === 0) {
@@ -538,7 +538,7 @@ export class HSStrategyManager {
             }
         } else {
             if (oldOnlyCount > 0 && newOnlyCount === 0) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, context);
+                HSLogger.debug(() => `Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, context);
                 return strategy;
             }
             if (newOnlyCount > 0 && oldOnlyCount === 0) {
@@ -559,7 +559,7 @@ export class HSStrategyManager {
                 } else if (sharedCount > 0 && unknownCount > 0) {
                     reason = 'shared-and-unknown-only';
                 }
-                HSLogger.debug(`Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`, context);
+                HSLogger.debug(() => `Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`, context);
             }
             return strategy;
         }
@@ -580,7 +580,7 @@ export class HSStrategyManager {
         strategy.strategy?.forEach(phase => phase.strat?.forEach(migrateChallenge));
         strategy.aoagPhase?.strat?.forEach(migrateChallenge);
 
-        HSLogger.debug(`Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`, context);
+        HSLogger.debug(() => `Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`, context);
         return strategy;
     }
 }

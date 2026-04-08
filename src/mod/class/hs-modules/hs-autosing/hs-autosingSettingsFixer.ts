@@ -199,7 +199,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureAllTogglesOn: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureAllTogglesOn: all toggles already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureAllTogglesOn: all toggles already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -238,7 +238,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensurePercentSuffixElements: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensurePercentSuffixElements: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensurePercentSuffixElements: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -274,7 +274,7 @@ export class HSAutosingSettingsFixer {
                 continue;
             }
             if (valuesMatch(inputElement.value, req.expected)) {
-                HSLogger.debug(`ensureNumberInputFields: already correct: ${req.selector}='${inputElement.value}'`, HSAutosingSettingsFixer.#context);
+                HSLogger.debug(() => `ensureNumberInputFields: already correct: ${req.selector}='${inputElement.value}'`, HSAutosingSettingsFixer.#context);
                 continue;
             }
 
@@ -315,7 +315,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureNumberInputFields: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureNumberInputFields: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureNumberInputFields: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -354,7 +354,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureGreenButtons: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureGreenButtons: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureGreenButtons: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -411,7 +411,7 @@ export class HSAutosingSettingsFixer {
         if (correctedChallenges.length > 0 || failedChallenges.length > 0) {
             HSLogger.warn(`ensureChallengeAutoStates: failed=${failedChallenges.length}${failedChallenges.length > 0 ? ` [${failedChallenges.join(', ')}]` : ''}, corrected=${correctedChallenges.length}${correctedChallenges.length > 0 ? ` [${correctedChallenges.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureChallengeAutoStates: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureChallengeAutoStates: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -446,7 +446,7 @@ export class HSAutosingSettingsFixer {
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`disableUnwantedSettings: all performance-impacting settings already disabled`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `disableUnwantedSettings: all performance-impacting settings already disabled`, HSAutosingSettingsFixer.#context);
         }
         return disabledSettings;
     }

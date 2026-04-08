@@ -115,7 +115,7 @@ export class HSCorruption {
     }
 
     static updateLoadout(loadout: HSCorruptionUserLoadout): void {
-        HSLogger.debug('HSCorruption.updateLoadout: no-op placeholder', this.#context);
+        HSLogger.debug(() => 'HSCorruption.updateLoadout: no-op placeholder', this.#context);
     }
 
     static #buildCorruptionLevels(elems: HSCorruptionLoadoutElements): HSCorruptionLevels {
@@ -329,7 +329,7 @@ export class HSCorruption {
         const next = HSCorruption.#nextCorruptionLevels;
 
         if (!current || !next) {
-            HSLogger.debug('HSCorruption.#notifyCorruptionObservers: corruption levels not ready', this.#context);
+            HSLogger.debug(() => 'HSCorruption.#notifyCorruptionObservers: corruption levels not ready', this.#context);
             return;
         }
 
@@ -418,11 +418,11 @@ export class HSCorruption {
 
             await HSCorruption.refreshLoadedCorruptions();
             if (HSCorruption.match(HSCorruption.#nextCorruptionLevels, corruptions)) {
-                HSLogger.debug(`HSCorruption.importCorruptionAndConfirm: success (${Object.values(corruptions).join(',')})`, this.#context);
+                HSLogger.debug(() => `HSCorruption.importCorruptionAndConfirm: success (${Object.values(corruptions).join(',')})`, this.#context);
                 return true;
             }
 
-            HSLogger.debug(`HSCorruption.importCorruptionAndConfirm: retry ${attempt + 1}/30`, this.#context);
+            HSLogger.debug(() => `HSCorruption.importCorruptionAndConfirm: retry ${attempt + 1}/30`, this.#context);
         }
 
         HSLogger.warn("HSCorruption.importCorruptionAndConfirm: failed to apply target corruption values", this.#context);

@@ -41,7 +41,7 @@ export class HSWebSocket extends HSModule {
         const self = this;
 
         if (this.#webSockets.has(name)) {
-            HSLogger.debug(`Tried to register websocket ${name} again`, this.context);
+            HSLogger.debug(() => `Tried to register websocket ${name} again`, this.context);
             return;
         }
 
@@ -141,7 +141,7 @@ export class HSWebSocket extends HSModule {
 
             HSLogger.log(`Unregistered websocket ${name}`, this.context);
         } else {
-            HSLogger.debug(`Could not unregister websocket (Maybe you're not logged in?) ${name}`, this.context);
+            HSLogger.debug(() => `Could not unregister websocket (Maybe you're not logged in?) ${name}`, this.context);
         }
     }
 

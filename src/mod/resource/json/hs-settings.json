@@ -1475,6 +1475,7 @@
     "settingHelpText": "Controls whether \u0027debug\u0027 type logs are visible or not in the mod\u0027s log view.",
     "settingType": "boolean",
     "enabled": false,
+    "settingAction": "showDebugLogs",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "debug",

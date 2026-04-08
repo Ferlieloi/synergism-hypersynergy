@@ -1,4 +1,4 @@
-import { HSGameDataSubscriber } from "../../../types/hs-types";
+﻿import { HSGameDataSubscriber } from "../../../types/hs-types";
 import Decimal from "break_infinity.js";
 import { HSGameData } from "../../hs-core/gds/hs-gamedata";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
@@ -26,6 +26,11 @@ const ZERO_CORRUPTIONS: CorruptionLoadout = {
     recession: 0,
     dilation: 0,
     hyperchallenge: 0,
+};
+
+const ANT_CORRUPTIONS: CorruptionLoadout = {
+    viscosity: 16, drought: 0, deflation: 16, extinction: 0,
+    illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16,
 };
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
@@ -587,9 +592,6 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 return;
             }
 
-            stageStart = phaseConfig.startPhase;
-            stageEnd = phaseConfig.endPhase;
-
             await this.#executePhase(phaseConfig);
             return;
         }
@@ -629,7 +631,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        HSLogger.debug(`Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
+        HSLogger.debug(() => `Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         if (phaseConfig.startPhase === "start") {
             await this.#executePhase(phaseConfig, { skipInitialAscend: true });
         } else {
@@ -717,10 +719,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         } else if (challenge.challengeNumber == IF_JUMP_VALUE) {
             return await this.#handleIfJumpAction(challenge);
         } else if (challenge.challengeNumber >= 100) {
-            HSLogger.debug(`Step#${actionIndex} - SA: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
+            HSLogger.debug(() => `Step#${actionIndex} - SA: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
             await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
         } else {
-            HSLogger.debug(`Step#${actionIndex} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, max time: ${challenge.challengeMaxTime}`, this.context);
+            HSLogger.debug(() => `Step#${actionIndex} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, max time: ${challenge.challengeMaxTime}`, this.context);
             await this.#waitForCompletion(
                 challenge.challengeNumber,
                 challenge.challengeCompletions ?? 0,
@@ -840,8 +842,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 await this.#setCorruptions(ZERO_CORRUPTIONS);
                 break;
             case 402: // Ant Corruptions
-                const antCorruptions = { viscosity: 16, drought: 0, deflation: 16, extinction: 0, illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16 } as CorruptionLoadout;
-                await this.#setCorruptions(antCorruptions);
+                await this.#setCorruptions(ANT_CORRUPTIONS);
                 break;
             case 601:
             case 602:
@@ -929,38 +930,31 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const getGoal = accessor.getGoal;
 
         if (!challengeBtn || !accessor.levelElement) {
-            HSLogger.debug(`Challenge element ${challengeIndex} not found - Autosing stopped.`, this.context);
+            HSLogger.debug(() => `Challenge element ${challengeIndex} not found - Autosing stopped.`, this.context);
             this.stopAutosing();
             return;
         }
 
-        let attempts = 0;
-        const maxAttempts = 5;
-        while (isActive() && attempts < maxAttempts) {
-            HSLogger.debug(`Already in challenge ${challengeIndex}, waiting for exit (attempt ${attempts + 1}/${maxAttempts})`, this.context);
-            attempts++;
-            await HSUtils.sleep(5);
-        }
+        await HSUtils.waitForClassCondition(challengeBtn, () => !isActive(), 500);
 
         this.#fastDoubleClick(challengeBtn);
+        await HSUtils.waitForClassCondition(challengeBtn, () => isActive(), 300);
         while (!isActive()) {
-            if (isActive()) {
-                break;
-            }
             await HSUtils.sleep(1);
         }
 
         const startTime = performance.now();
         const endTime = startTime + maxTime;
 
-        const maxPossible = challengeIndex === 15
-            ? new Decimal(Infinity)
-            : getGoal();
+        const maxPossible = getGoal();
         const minCompletionsDecimal = new Decimal(minCompletions);
         let lastText = '';
         let currentCompletions = new Decimal(0);
 
-        while (performance.now() < endTime) {
+        while (true) {
+            const now = performance.now();
+            if (now >= endTime) break;
+
             if (!this.isAutosingEnabled()) {
                 this.stopAutosing();
                 return;
@@ -980,12 +974,11 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (waitTime > 0) {
                     await HSUtils.sleep(waitTime);
                 }
-                HSLogger.debug(`    ---> C${challengeIndex}: ${currentCompletions} completions reached`, this.context);
+                HSLogger.debug(() => `    ---> C${challengeIndex}: ${currentCompletions} completions reached`, this.context);
                 return;
             }
 
-            const nowInner = performance.now();
-            const remaining = endTime - nowInner;
+            const remaining = endTime - now;
             const sleepMs = (remaining > 0 && remaining < sleepInterval) ? Math.max(0, remaining) : sleepInterval;
             await HSUtils.sleep(sleepMs);
         }
@@ -1013,27 +1006,22 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         const getLevelText = () => levelElement?.textContent ?? '';
         const parseValue = (text: string) => new Decimal(this.#parseNumber(text));
 
-        const getCompletions = () => {
-            const text = getLevelText();
-            if (challengeIndex === 15) {
-                return this.#parseDecimal(text);
-            }
-            return parseValue(text.split('/')[0] ?? '0');
-        };
+        const getCompletions = challengeIndex === 15
+            ? () => this.#parseDecimal(getLevelText())
+            : () => {
+                const text = getLevelText();
+                const slashIdx = text.indexOf('/');
+                return parseValue(slashIdx === -1 ? text : text.slice(0, slashIdx));
+            };
 
-        const getGoal = () => {
-            if (!levelElement) {
-                return new Decimal(9999);
-            }
-            const goalText = levelElement.innerText ?? '';
-            if (goalText.includes('/')) {
-                const parts = goalText.split('/');
-                return challengeIndex === 15
-                    ? this.#parseDecimal(parts[1].trim())
-                    : parseValue(parts[1].trim());
-            }
-            return new Decimal(9999);
-        };
+        const getGoal = challengeIndex === 15
+            ? () => { return new Decimal(Infinity); }
+            : () => {
+                if (!levelElement) return new Decimal(9999);
+                const goalText = levelElement.textContent ?? '';
+                const slashIdx = goalText.indexOf('/');
+                return slashIdx !== -1 ? parseValue(goalText.slice(slashIdx + 1).trim()) : new Decimal(9999);
+            };
 
         return {
             button: challengeBtn,
@@ -1049,40 +1037,66 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
         await this.#waitForCompletion(10, 0, 0, 0);
 
-        let c11to14CurrentCompletions = this.#getChallengeAccessor(challengeIndex).getCompletions();
-        await HSUtils.sleep(50);
+        const accessor = this.#getChallengeAccessor(challengeIndex);
+        const levelElement = accessor.levelElement;
+        const getCompletions = accessor.getCompletions;
+        const maxPossible = accessor.getGoal();
 
-        while (true) {
-            await HSUtils.sleep(50);
-            const c11to14CurrentCompletions2 = this.#getChallengeAccessor(challengeIndex).getCompletions();
-            if (c11to14CurrentCompletions2.eq(c11to14CurrentCompletions)) {
-                return;
-            }
-            c11to14CurrentCompletions = c11to14CurrentCompletions2;
-        }
+        if (!levelElement || getCompletions().gte(maxPossible)) return;
+
+        await new Promise<void>((resolve) => {
+            let finished = false;
+
+            const cleanup = (): void => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve();
+            };
+
+            const observer = new MutationObserver(() => {
+                if (getCompletions().gte(maxPossible)) cleanup();
+            });
+
+            const timeoutId = window.setTimeout(() => cleanup(), 3000);
+
+            observer.observe(levelElement, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+
+            if (getCompletions().gte(maxPossible)) cleanup();
+        });
     }
 
     async #C1to10UntilNoMoreCompletions(challengeIndex: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, initialWaitTime: number, maxTime: number): Promise<void> {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
         const accessor = this.#getChallengeAccessor(challengeIndex);
+        const getLevelText = accessor.getLevelText;
         const getCompletions = accessor.getCompletions;
         const maxPossible = accessor.getGoal();
         let c1to10CurrentCompletions = getCompletions();
         let timeSinceNoMoreCompletion = performance.now();
+        let lastRawText = getLevelText();
 
         await HSUtils.sleep(initialWaitTime);
 
         while (true) {
-            const c1to10CurrentCompletions2 = getCompletions();
+            const rawText = getLevelText();
+            if (rawText !== lastRawText) {
+                lastRawText = rawText;
+                const newCompletions = getCompletions();
+                if (!newCompletions.eq(c1to10CurrentCompletions)) {
+                    c1to10CurrentCompletions = newCompletions;
+                    timeSinceNoMoreCompletion = performance.now();
+                }
+            }
             const now = performance.now();
 
-            if (!c1to10CurrentCompletions2.eq(c1to10CurrentCompletions)) {
-                timeSinceNoMoreCompletion = now;
-                c1to10CurrentCompletions = c1to10CurrentCompletions2;
-            }
-
-            if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions2.gte(maxPossible)) {
-                HSLogger.debug(`    C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
+            if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions.gte(maxPossible)) {
+                HSLogger.debug(() => `    C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
                 return;
             }
 
@@ -1101,32 +1115,29 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         const jsonString = JSON.stringify(corruptions);
-        const targetCorruptions = corruptions;
 
         while (true) {
             this.#importBtn.click();
             this.#corruptionPromptInput.value = jsonString;
-            await HSUtils.click(this.#corruptionPromptOkBtn);
 
-            const success = await this.#waitForCorruptionMatch(targetCorruptions, 500);
+            HSUtils.clickWithoutSleep(this.#corruptionPromptOkBtn);
+            const success = await this.#waitForCorruptionMatch(corruptions, 500);
             if (success) {
-                HSLogger.debug(`Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.context);
+                HSLogger.debug(() => `Corruptions set: ${this.#stringifyCorruptions(corruptions)}`, this.context);
                 break;
             }
-            const current = this.#getNextCorruptionsFromCache();
-            HSLogger.debug(`Corruptions did not match after timeout: ${this.#stringifyCorruptions(current)}`, this.context);
+            HSLogger.debug(() => `Corruptions did not match after timeout: ${this.#stringifyCorruptions(this.#getNextCorruptionsFromCache())}`, this.context);
         }
     }
 
-    #corruptionsMatch(a: CorruptionLoadout, b: CorruptionLoadout): boolean {
-        return a.viscosity === b.viscosity &&
-            a.drought === b.drought &&
-            a.deflation === b.deflation &&
-            a.extinction === b.extinction &&
-            a.illiteracy === b.illiteracy &&
-            a.recession === b.recession &&
-            a.dilation === b.dilation &&
-            a.hyperchallenge === b.hyperchallenge;
+    #corruptionsMatchDOM(target: CorruptionLoadout): boolean {
+        const names = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'] as const;
+        for (const name of names) {
+            const el = this.#corrNext[name];
+            if (!el) return false;
+            if (parseInt(el.textContent || '0', 10) !== target[name]) return false;
+        }
+        return true;
     }
 
     #getNextCorruptionsFromCache(): CorruptionLoadout {
@@ -1148,7 +1159,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async #waitForCorruptionMatch(targetCorruptions: CorruptionLoadout, timeoutMs = 500): Promise<boolean> {
-        if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+        if (this.#corruptionsMatchDOM(targetCorruptions)) {
             return true;
         }
 
@@ -1169,7 +1180,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             };
 
             const observer = new MutationObserver(() => {
-                if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+                if (this.#corruptionsMatchDOM(targetCorruptions)) {
                     cleanup(true);
                 }
             });
@@ -1184,7 +1195,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 subtree: true
             });
 
-            if (this.#corruptionsMatch(this.#getNextCorruptionsFromCache(), targetCorruptions)) {
+            if (this.#corruptionsMatchDOM(targetCorruptions)) {
                 cleanup(true);
             }
         });
@@ -1206,7 +1217,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     async #applyLoadoutByName(name?: string | null): Promise<void> {
         const loadout = this.#getLoadoutByName(name);
         if (!loadout) {
-            HSLogger.debug(`Loadout not found: ${name ?? "(none)"}`, this.context);
+            HSLogger.debug(() => `Loadout not found: ${name ?? "(none)"}`, this.context);
             return;
         }
         await this.#setCorruptions(loadout);
@@ -1246,7 +1257,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     #antiBuyCoinBug(initialDelayMs = 0, intervalMs = 10, repeatCount = 10): void {
-        HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
+        HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: called, ${initialDelayMs}ms initial delay, ${intervalMs}ms interval, ${repeatCount} attempts`, this.context);
         window.setTimeout(() => {
             let attempt = 0;
             const intervalId = window.setInterval(() => {
@@ -1254,16 +1265,16 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 this.#coin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, isPrimary: true }));
 
                 // Exposed player use
-                HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
+                HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
                 if (HSGlobal.exposedPlayer && HSGlobal.exposedPlayer.firstOwnedCoin === 0) {
-                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Detected firstOwnedCoin is 0, incrementing to prevent bug.`, this.context);
+                    HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: Detected firstOwnedCoin is 0, incrementing to prevent bug.`, this.context);
                     HSGlobal.exposedPlayer.firstOwnedCoin++;
-                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
+                    HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: Reading firstOwnedCoin = ${HSGlobal.exposedPlayer?.firstOwnedCoin}`, this.context);
                 }
 
                 if (attempt >= repeatCount) {
                     window.clearInterval(intervalId);
-                    HSLogger.debug(`[COIN-DIAG] antiBuyCoinBug: completed ${attempt} attempts, stopping.`, this.context);
+                    HSLogger.debug(() => `[COIN-DIAG] antiBuyCoinBug: completed ${attempt} attempts, stopping.`, this.context);
                 }
             }, intervalMs);
         }, initialDelayMs);
@@ -1280,7 +1291,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (isGreen()) return;
 
         const waitStart = performance.now();
-        HSLogger.debug(`[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
+        HSLogger.debug(() => `[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
 
         const turned = await new Promise<boolean>(resolve => {
             const timer = window.setTimeout(() => {
@@ -1301,7 +1312,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
 
         const elapsedStr = (performance.now() - waitStart).toFixed(0);
         if (turned) {
-            HSLogger.debug(`[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
+            HSLogger.debug(() => `[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
         } else {
             HSLogger.warn(`[COIN-FIX] #upg81 still not green after ${maxWaitMs}ms...`, this.context);
         }
@@ -1321,39 +1332,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             return;
         }
 
-        await new Promise<void>((resolve) => {
-            let finished = false;
-
-            const cleanup = (): void => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeoutId);
-                observer.disconnect();
-                resolve();
-            };
-
-            const observer = new MutationObserver(() => {
-                if (this.#isInAmbLoadout(loadout)) {
-                    cleanup();
-                }
-            });
-
-            const timeoutId = window.setTimeout(() => {
-                cleanup();
-            }, timeoutMs);
-
-            observer.observe(loadout, {
-                attributes: true,
-                attributeFilter: ['class']
-            });
-
-            if (this.#isInAmbLoadout(loadout)) {
-                cleanup();
-            }
-        });
+        await HSUtils.waitForClassCondition(loadout, () => this.#isInAmbLoadout(loadout), timeoutMs);
 
         if (!this.#isInAmbLoadout(loadout)) {
-            HSLogger.debug(`Ambrosia loadout did not select within ${timeoutMs}ms, falling back to polling.`, this.context);
+            HSLogger.debug(() => `Ambrosia loadout did not select within ${timeoutMs}ms, falling back to polling.`, this.context);
             while (!this.#isInAmbLoadout(loadout)) {
                 await HSUtils.sleep(this.#sleepTime);
             }
@@ -1372,10 +1354,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         if (this.#stageFunc) {
             try {
                 const stage = this.#stageFunc(0);
-                HSLogger.debug(`Got stage directly: ${stage}`, this.context);
+                HSLogger.debug(() => `Got stage directly: ${stage}`, this.context);
                 return stage;
             } catch (error) {
-                HSLogger.debug(`Error getting stage from stageFunc: ${error}`, this.context);
+                HSLogger.debug(() => `Error getting stage from stageFunc: ${error}`, this.context);
             }
         } else {
             if (!this.#hasWarnedMissingStageFunc) {
@@ -1388,7 +1370,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
             const raw = this.#stage?.textContent ?? '';
             const m = raw.match(/Current Game Section:\s*(.+)/);
             if (m && m[1]) {
-                HSLogger.debug(`Got stage from element: ${m[1]}`, this.context);
+                HSLogger.debug(() => `Got stage from element: ${m[1]}`, this.context);
                 return m[1].trim();
             }
         } catch (e) {
@@ -1493,7 +1475,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
         }
 
         prevMainView.goto();
-        HSLogger.debug("Singularity performed", this.context);
+        HSLogger.debug(() => "Singularity performed", this.context);
 
         let stage = stageInitial;
         while (!this.#isAllowedStage(stage)) {
@@ -1508,11 +1490,10 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
     }
 
     async #enterAndLeaveExalt(): Promise<void> {
-
-        await HSUtils.click(this.#exalt2Btn);
+        HSUtils.clickWithoutSleep(this.#exalt2Btn);
         await this.#waitForExaltState(true);
 
-        await HSUtils.click(this.#exalt2Btn);
+        HSUtils.clickWithoutSleep(this.#exalt2Btn);
         await this.#waitForExaltState(false);
     }
 
@@ -1593,7 +1574,7 @@ export class HSAutosing extends HSModule implements HSGameDataSubscriber {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     const style = (mutation.target as HTMLElement).style;
                     if (style.display === 'none') {
-                        HSLogger.debug('antiquitiesRuneLockedContainer found hidden - buying antiquities', this.context);
+                        HSLogger.debug(() => 'antiquitiesRuneLockedContainer found hidden - buying antiquities', this.context);
                         this.#observerActivated = true;
                         this.#antiquitiesObserver?.disconnect();
                         this.#antiquitiesObserver = undefined;

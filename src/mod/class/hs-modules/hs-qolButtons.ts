@@ -560,7 +560,7 @@ export class HSQOLButtons extends HSModule {
             );
             const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
 
-            HSLogger.debug(
+            HSLogger.debug(() => 
                 `GQ Distributor: budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
                     ids.map(id => ({
                         id,
@@ -639,7 +639,7 @@ export class HSQOLButtons extends HSModule {
             () => ({
                 element: handler!.createSection(),
                 teardown: () => {
-                    HSLogger.debug('Automation quickbar teardown invoked', this.context);
+                    HSLogger.debug(() => 'Automation quickbar teardown invoked', this.context);
                     try { handler!.teardown(); }
                     catch (e) { HSLogger.log(`Error during automation quickbar teardown: ${e}`, this.context); }
                 }
@@ -657,7 +657,7 @@ export class HSQOLButtons extends HSModule {
             () => ({ 
                 element: handler!.createSection(),
                 teardown: () => { 
-                    HSLogger.debug('Events quickbar teardown invoked', this.context);
+                    HSLogger.debug(() => 'Events quickbar teardown invoked', this.context);
                     try { handler!.teardown(); } 
                     catch (e) { HSLogger.log(`Error during events quickbar teardown: ${e}`, this.context); }
                 }
@@ -675,7 +675,7 @@ export class HSQOLButtons extends HSModule {
             () => ({
                 element: handler!.createSection(),
                 teardown: () => {
-                    HSLogger.debug('Corruption quickbar teardown invoked', this.context);
+                    HSLogger.debug(() => 'Corruption quickbar teardown invoked', this.context);
                     try { handler!.teardown(); } catch (e) { HSLogger.log(`Error during corruption quickbar teardown: ${e}`, this.context); }
                 }
             }),
@@ -719,7 +719,7 @@ export class HSQOLButtons extends HSModule {
         setupCallback?: (section: HTMLElement) => void,
         teardownCallback?: () => void
     ): Promise<HTMLElement> {
-        HSLogger.debug(`Enabling Quickbar: ${id}`, this.context);
+        HSLogger.debug(() => `Enabling Quickbar: ${id}`, this.context);
         const managerSetup = (section: HTMLElement) => {
             if (setupCallback) setupCallback(section);
         };
@@ -740,7 +740,7 @@ export class HSQOLButtons extends HSModule {
         id: QUICKBAR_ID,
         teardownCallback?: () => void
     ): void {
-        HSLogger.debug(`Disabling Quickbar: ${id}`, this.context);
+        HSLogger.debug(() => `Disabling Quickbar: ${id}`, this.context);
         if (teardownCallback) teardownCallback();
         HSQuickbarManager.getInstance().disableQuickbar(id);
     }
@@ -786,7 +786,7 @@ export class HSQOLButtons extends HSModule {
         if (oldUnsub) {
             try {
                 oldUnsub();
-                HSLogger.debug(`subscribeToTabVisit: Unsubscribed previous handler for tab ${tabId}`, this.context);
+                HSLogger.debug(() => `subscribeToTabVisit: Unsubscribed previous handler for tab ${tabId}`, this.context);
             } catch (e) {
                 HSLogger.warn(`subscribeToTabVisit: Error unsubscribing previous handler for tab ${tabId}: ${e}`, this.context);
             }
@@ -805,7 +805,7 @@ export class HSQOLButtons extends HSModule {
         if (subId) {
             const unsubscribe = () => gameState.unsubscribeGameStateChange('SINGULARITY_VIEW', subId);
             this.#tabVisitUnsubscribers.set(tabId, unsubscribe);
-            HSLogger.debug(`subscribeToTabVisit: Subscribed to SINGULARITY_VIEW changes for tab ${tabId}`, this.context);
+            HSLogger.debug(() => `subscribeToTabVisit: Subscribed to SINGULARITY_VIEW changes for tab ${tabId}`, this.context);
             // return value not used currently since we don't need it for the ones using it
             return unsubscribe;
         } else {

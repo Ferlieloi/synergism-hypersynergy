@@ -166,7 +166,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     toggleElement.classList.add('hs-disabled');
                 }
             } else {
-                HSLogger.debug(`Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl.controlEnabledId})`, this.context);
+                HSLogger.debug(() => `Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl?.controlEnabledId})`, this.context);
             }
         }
 

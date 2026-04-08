@@ -81,7 +81,7 @@ export class HSGameState extends HSModule {
                     if (uiView.getId() !== MAIN_VIEW.UNKNOWN) {
                         self.#viewStates.MAIN_VIEW.previousView = self.#viewStates.MAIN_VIEW.currentView;
                         self.#viewStates.MAIN_VIEW.currentView = uiView;
-                        HSLogger.debug(`Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
+                        HSLogger.debug(() => `Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
                     } else {
                         HSLogger.warn(`Main UI view ${view} not found`, self.context);
                         return;
@@ -227,7 +227,7 @@ export class HSGameState extends HSModule {
         const viewProperties = HSGlobal.HSGameState.viewProperties.get(mainViewId);
 
         if (!viewProperties) {
-            HSLogger.debug(`No view properties found for main view ID ${mainViewId}`, this.context);
+            HSLogger.debug(() => `No view properties found for main view ID ${mainViewId}`, this.context);
             return;
         }
 

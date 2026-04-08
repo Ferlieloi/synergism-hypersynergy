@@ -43,10 +43,10 @@ export class HSUtils {
         if (remaining > 0) {
             await Promise.all([
                 HSUtils.sleep(remaining),
-                HSLogger.debug(`    Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, context ?? HSUtils.#context),
+                HSLogger.debug(() => `    Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, context ?? HSUtils.#context),
             ]);
         } else {
-            HSLogger.debug(`    No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, context ?? HSUtils.#context);
+            HSLogger.debug(() => `    No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, context ?? HSUtils.#context);
         }
     }
 
@@ -511,10 +511,32 @@ export class HSUtils {
         });
     }
 
+    static waitForClassCondition(element: Element, condition: () => boolean, timeoutMs: number): Promise<void> {
+        if (condition()) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+            let finished = false;
+            const cleanup = (): void => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve();
+            };
+            const observer = new MutationObserver(() => { if (condition()) cleanup(); });
+            const timeoutId = window.setTimeout(() => cleanup(), timeoutMs);
+            observer.observe(element, { attributes: true, attributeFilter: ['class'] });
+            if (condition()) cleanup();
+        });
+    }
+
     static async click(button: HTMLButtonElement): Promise<void> {
         button.click();
         await HSUtils.sleep(HSUtils.sleepTime);
         return Promise.resolve();
+    }
+
+    static clickWithoutSleep(button: HTMLButtonElement): void {
+        button.click();
     }
 
     static async DblClick(element: HTMLElement): Promise<void> {
@@ -636,7 +658,7 @@ export class HSUtils {
                         this.#dialogWatcherInterval = null;
                     }
 
-                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
+                    HSLogger.debug(() => 'Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
             }, HSUtils.sleepTime);

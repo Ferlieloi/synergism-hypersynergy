@@ -22,7 +22,7 @@ export class HSGithub {
         const latestTag = await this.#getLatestRemoteTag();
         if (!latestTag) {
             HSGlobal.Release.isLatestVersion = true;
-            HSLogger.debug(`No latest tag available; assuming current version is latest.`, HSGithub.#context);
+            HSLogger.debug(() => `No latest tag available; assuming current version is latest.`, HSGithub.#context);
             return true;
         }
 
@@ -47,20 +47,20 @@ export class HSGithub {
             const ghResp = await fetch(githubUrl);
             if (!ghResp.ok) {
                 if (ghResp.status === 403) {
-                    HSLogger.debug(`GitHub API returned 403 Forbidden. You may be rate-limited.`, HSGithub.#context);
+                    HSLogger.debug(() => `GitHub API returned 403 Forbidden. You may be rate-limited.`, HSGithub.#context);
                 } else {
-                    HSLogger.debug(`GitHub API request failed: HTTP ${ghResp.status} ${ghResp.statusText}`, HSGithub.#context);
+                    HSLogger.debug(() => `GitHub API request failed: HTTP ${ghResp.status} ${ghResp.statusText}`, HSGithub.#context);
                 }
                 return null;
             }
             const ghJson = await ghResp.json();
             if (Array.isArray(ghJson) && ghJson.length > 0 && ghJson[0].name) {
-                HSLogger.debug(`Latest tag from GitHub API: ${ghJson[0].name}`, HSGithub.#context);
+                HSLogger.debug(() => `Latest tag from GitHub API: ${ghJson[0].name}`, HSGithub.#context);
                 return ghJson[0].name;
             }
             return null;
         } catch (err) {
-            HSLogger.debug(`GitHub API request threw an error: ${err}`, HSGithub.#context);
+            HSLogger.debug(() => `GitHub API request threw an error: ${err}`, HSGithub.#context);
             return null;
         }
     }

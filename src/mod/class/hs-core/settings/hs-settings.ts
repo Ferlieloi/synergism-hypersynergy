@@ -172,6 +172,7 @@ export class HSSettings extends HSModule {
             }
             HSSettings.saveSettingsToStorage();
             HSSettings.#settingsParsed = true;
+            HSLogger.updateDebugEnabled();
         } catch (e) {
             HSLogger.error(`Error parsing mod settings ${e}`, this.context);
             HSSettings.#settingsParsed = false;
@@ -281,7 +282,7 @@ export class HSSettings extends HSModule {
                 if (!saved) {
                     HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
                 } else {
-                    HSLogger.debug(`<green>Settings saved to localStorage</green>`, this.#staticContext);
+                    HSLogger.debug(() => `<green>Settings saved to localStorage</green>`, this.#staticContext);
                 }
             }
             this.#saveTimeout = undefined;

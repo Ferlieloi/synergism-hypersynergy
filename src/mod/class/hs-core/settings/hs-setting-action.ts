@@ -53,6 +53,10 @@ export class HSSettingActions {
             }
         },
 
+        showDebugLogs: async (params: HSSettingActionParams) => {
+            HSLogger.updateDebugEnabled();
+        },
+
         reactiveMouseHover: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 

@@ -318,7 +318,7 @@ export class Hypersynergism {
         }
 
         if (exposedPlayer.insideSingularityChallenge === false) {
-            HSLogger.debug('No active Exalt found in DOM or exposed stuff... Are you sure you have a bug?', this.#context);
+            HSLogger.debug(() => 'No active Exalt found in DOM or exposed stuff... Are you sure you have a bug?', this.#context);
             return;
         }
 
