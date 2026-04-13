@@ -1084,7 +1084,7 @@ export class HSAutosing extends HSModule {
                 }
 
                 if (now >= deadline || currentCompletions >= maxPossible) {
-                    if (HSLogger.isDebugEnabled) HSLogger.debug(() => `C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
+                    if (HSLogger.isDebugEnabled) HSLogger.debug(() => `-------> C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
                     return;
                 }
 
@@ -1115,7 +1115,7 @@ export class HSAutosing extends HSModule {
                 }
 
                 if (now >= timeSinceNoMoreCompletion + maxTime || c1to10CurrentCompletions.gte(maxPossible)) {
-                    if (HSLogger.isDebugEnabled) HSLogger.debug(() => `C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
+                    if (HSLogger.isDebugEnabled) HSLogger.debug(() => `-------> C${challengeIndex}: maxed or no more completions after ${maxTime}ms`, this.context);
                     return;
                 }
 
