@@ -112,7 +112,7 @@ export class HSAmbrosia extends HSModule
 
     async init() {
         HSLogger.log(`Initializing HSAmbrosia module`, this.context);
-        HSLogger.debug('init() called', this.context);
+        HSLogger.debug(() => 'init() called', this.context);
 
         await this.#initializeDomRefs();
         this.#ensureDragDropBindings();
@@ -416,7 +416,7 @@ export class HSAmbrosia extends HSModule
 
         // Check if minibarWrapper already exists
         if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
-            HSLogger.debug('Minibar wrapper already exists in group wrapper', this.context);
+            HSLogger.debug(() => 'Minibar wrapper already exists in group wrapper', this.context);
             return;
         }
 
@@ -536,7 +536,7 @@ export class HSAmbrosia extends HSModule
         await this.#syncQuickbarActiveSlot(slotNumber);
         await this.#syncOriginalBarActiveSlot(slotNumber);
 
-        HSLogger.debug('Switched Ambrosia loadout to ' + resolvedSlot, this.context);
+        HSLogger.debug(() => 'Switched Ambrosia loadout to ' + resolvedSlot, this.context);
     }
 
     async #syncQuickbarActiveSlot(slotNumber: number) {
@@ -609,7 +609,7 @@ export class HSAmbrosia extends HSModule
         let bestMatchId: string | undefined;
         let highestScore = 0;
 
-        HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, this.context);
+        HSLogger.debug(() => `Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, this.context);
 
         for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
             if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
@@ -655,12 +655,12 @@ export class HSAmbrosia extends HSModule
         const SIMILARITY_THRESHOLD = 0.8;
 
         if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-            HSLogger.debug(`Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
+            HSLogger.debug(() => `Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
             this.setActiveLoadout(parseInt(bestMatchId, 10), true);
         } else if (bestMatchId) {
-            HSLogger.debug(`Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
+            HSLogger.debug(() => `Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
         } else {
-            HSLogger.debug(`Initial load - No saved loadouts found to match.`, this.context);
+            HSLogger.debug(() => `Initial load - No saved loadouts found to match.`, this.context);
         }
     }
 
@@ -1121,7 +1121,7 @@ export class HSAmbrosia extends HSModule
                 HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, {
                     notificationType: 'warning'
                 });
-                HSLogger.debug(`Quick Import detailed failures: ${failureSummary}`, this.context);
+                HSLogger.debug(() => `Quick Import detailed failures: ${failureSummary}`, this.context);
             } else {
                 HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
                     notificationType: 'success'
@@ -1138,7 +1138,7 @@ export class HSAmbrosia extends HSModule
 
             HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
             // Log detailed error context for debugging
-            HSLogger.debug(`Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
+            HSLogger.debug(() => `Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
             HSUI.Notify('Quick Import failed', {
                 notificationType: 'error'
@@ -1225,7 +1225,7 @@ export class HSAmbrosia extends HSModule
 
         if (gameDataMod && !this.gameDataSubscriptionId) {
             this.gameDataSubscriptionId = gameDataMod.subscribeGameDataChange(this.gameDataCallback.bind(this));
-            HSLogger.debug('Subscribed to game data changes', this.context);
+            HSLogger.debug(() => 'Subscribed to game data changes', this.context);
         }
     }
 
@@ -1237,7 +1237,7 @@ export class HSAmbrosia extends HSModule
             if (!this.#isIdleSwapEnabled && !this.#berryMinibarsEnabled) {
                 gameDataMod.unsubscribeGameDataChange(this.gameDataSubscriptionId);
                 this.gameDataSubscriptionId = undefined;
-                HSLogger.debug('Unsubscribed from game data changes', this.context);
+                HSLogger.debug(() => 'Unsubscribed from game data changes', this.context);
             }
         }
     }

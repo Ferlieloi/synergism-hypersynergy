@@ -203,7 +203,7 @@ export class HSGameData extends HSModule {
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
-        // HSLogger.debug(`Refreshing fetched data`, this.context);
+        // HSLogger.debug(() => `Refreshing fetched data`, this.context);
 
         try {
             const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
@@ -256,7 +256,7 @@ export class HSGameData extends HSModule {
             if (this.#saveData) {
                 callback(this.#saveData);
             } else {
-                HSLogger.debug(`Could not call game data change callback. No save data found`, this.context);
+                HSLogger.debug(() => `Could not call game data change callback. No save data found`, this.context);
             }
         });
 
@@ -333,12 +333,12 @@ export class HSGameData extends HSModule {
             wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
                 url: HSGlobal.Common.eventAPIUrl,
                 onMessage: async (msg) => {
-                    HSLogger.debug(`onMessage received: ${JSON.stringify(msg)}`, this.context);
+                    HSLogger.debug(() => `onMessage received: ${JSON.stringify(msg)}`, this.context);
                     switch (msg?.type) {
                         case GameEventResponseType.INFO_ALL: {
                             self.#resetEventData();
                             if (msg.active && msg.active.length > 0) {
-                                HSLogger.debug(`Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
+                                HSLogger.debug(() => `Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
                                 for (const { internalName, endsAt, name } of msg.active) {
                                     const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
                                     consumable.ends.push(endsAt);
@@ -347,12 +347,12 @@ export class HSGameData extends HSModule {
                                 }
                                 self.#eventDataUpdated();
                             } else {
-                                HSLogger.debug(`Caught INFO_ALL, but no active events`, this.context);
+                                HSLogger.debug(() => `Caught INFO_ALL, but no active events`, this.context);
                             }
                             break;
                         }
                         case GameEventResponseType.CONSUMED: {
-                            HSLogger.debug(`Caught CONSUMED event (Happy Hour)`, this.context);
+                            HSLogger.debug(() => `Caught CONSUMED event (Happy Hour)`, this.context);
                             const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
                             if (consumable) {
                                 consumable.ends.push(msg.startedAt + 3600 * 1000);
@@ -365,7 +365,7 @@ export class HSGameData extends HSModule {
                             break;
                         }
                         case GameEventResponseType.CONSUMABLE_ENDED: {
-                            HSLogger.debug(`Caught CONSUMABLE_ENDED (Happy Hour)`, this.context);
+                            HSLogger.debug(() => `Caught CONSUMABLE_ENDED (Happy Hour)`, this.context);
                             const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
                             if (consumable) {
                                 consumable.ends.shift();
@@ -378,7 +378,7 @@ export class HSGameData extends HSModule {
                         }
 
                         case GameEventResponseType.APPLIED_LOTUS: {
-                            HSLogger.debug(`Caught APPLIED_LOTUS event`, this.context);
+                            HSLogger.debug(() => `Caught APPLIED_LOTUS event`, this.context);
                             const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
                             if (consumable) {
                                 const newEnd = performance.now() + msg.remaining;
@@ -391,7 +391,7 @@ export class HSGameData extends HSModule {
                             break;
                         }
                         case GameEventResponseType.LOTUS_ACTIVE: {
-                            HSLogger.debug(`Caught LOTUS_ACTIVE event`, this.context);
+                            HSLogger.debug(() => `Caught LOTUS_ACTIVE event`, this.context);
                             const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
                             if (consumable) {
                                 consumable.ends[0] = performance.now() + msg.remainingMs;
@@ -403,7 +403,7 @@ export class HSGameData extends HSModule {
                             break;
                         }
                         case GameEventResponseType.LOTUS_ENDED: {
-                            HSLogger.debug(`Caught LOTUS_ENDED event`, this.context);
+                            HSLogger.debug(() => `Caught LOTUS_ENDED event`, this.context);
                             const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
                             if (consumable) {
                                 consumable.ends.shift();
@@ -415,31 +415,31 @@ export class HSGameData extends HSModule {
                             break;
                         }
                         case GameEventResponseType.LOTUS: {
-                            HSLogger.debug(`Caught LOTUS (bought) event`, this.context);
+                            HSLogger.debug(() => `Caught LOTUS (bought) event`, this.context);
                             break;
                         }
                         case GameEventResponseType.TIPS: {
-                            HSLogger.debug(`Caught TIPS (received) event`, this.context);
+                            HSLogger.debug(() => `Caught TIPS (received) event`, this.context);
                             break;
                         }
                         case GameEventResponseType.APPLIED_TIP: {
-                            HSLogger.debug(`Caught APPLIED_TIP event`, this.context);
+                            HSLogger.debug(() => `Caught APPLIED_TIP event`, this.context);
                             break;
                         }
                         case GameEventResponseType.TIP_BACKLOG: {
-                            HSLogger.debug(`Caught TIP_BACKLOG event`, this.context);
+                            HSLogger.debug(() => `Caught TIP_BACKLOG event`, this.context);
                             break;
                         }
                         case GameEventResponseType.TIME_SKIP: {
-                            HSLogger.debug(`Caught TIME_SKIP event`, this.context);
+                            HSLogger.debug(() => `Caught TIME_SKIP event`, this.context);
                             break;
                         }
                         case GameEventResponseType.THANKS: {
-                            HSLogger.debug(`Caught THANKS event`, this.context);
+                            HSLogger.debug(() => `Caught THANKS event`, this.context);
                             break;
                         }
                         case GameEventResponseType.JOIN: {
-                            HSLogger.debug(`Caught JOIN (connection established)`, this.context);
+                            HSLogger.debug(() => `Caught JOIN (connection established)`, this.context);
                             break;
                         }
                         case GameEventResponseType.WARN: {
@@ -452,7 +452,7 @@ export class HSGameData extends HSModule {
                             break;
                         }
                         default: {
-                            HSLogger.debug(`Caught unknown event type: ${msg}`, this.context);
+                            HSLogger.debug(() => `Caught unknown event type: ${msg}`, this.context);
                         }
                     }
                 },
@@ -484,7 +484,7 @@ export class HSGameData extends HSModule {
                 this.#saveData = JSON.parse(atob(saveDataB64)) as PlayerData;
                 this.#saveDataUpdated();
             } catch (error) {
-                HSLogger.debug(`<red>Error processing save data:</red> ${error}`, this.context);
+                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
                 this.#maybeStopSniffOnError();
             }
         }
@@ -505,7 +505,7 @@ export class HSGameData extends HSModule {
                 this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
                 this.#saveDataUpdated();
             } catch (error) {
-                HSLogger.debug(`<red>Error processing save data:</red> ${error}`, this.context);
+                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
                 this.#maybeStopSniffOnError();
             }
         }
@@ -525,11 +525,11 @@ export class HSGameData extends HSModule {
 
         if (useGameDataSetting && stopSniffOnErrorSetting) {
             if (stopSniffOnErrorSetting.isEnabled()) {
-                HSLogger.debug(`Stopped game data sniffing on error`, this.context);
+                HSLogger.debug(() => `Stopped game data sniffing on error`, this.context);
                 useGameDataSetting.disable();
             }
         } else {
-            HSLogger.debug(`maybeStopSniffOnError() - Issue with fetching settings: ${useGameDataSetting}, ${stopSniffOnErrorSetting}`, this.context);
+            HSLogger.debug(() => `maybeStopSniffOnError() - Issue with fetching settings: ${useGameDataSetting}, ${stopSniffOnErrorSetting}`, this.context);
         }
     }
 
@@ -802,17 +802,17 @@ export class HSGameData extends HSModule {
                             HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
                         }
                     } else {
-                        HSLogger.debug(`No captured save data (mitm_atob_data is empty).`, self.context);
+                        HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
                     }
 
                     if (!self.#wasUsingGDS) {
                         // Wait for game state to settle and cleanup to take effect, then restore OFF state
                         setTimeout(() => {
                             self.disableGDS();
-                            HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
+                            HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
                         }, 2000);
                     } else {
-                        HSLogger.debug("GDS remained enabled (Restored state)", self.context);
+                        HSLogger.debug(() => "GDS remained enabled (Restored state)", self.context);
                     }
                 } catch (e) {
                     HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
@@ -928,10 +928,10 @@ export class HSGameData extends HSModule {
                     const gdsSetting = HSSettings.getSetting('useGameData') as HSSetting<boolean>;
 
                     if (gdsSetting && this.#wasUsingGDS && !gdsSetting.isEnabled()) {
-                        HSLogger.debug(`Re-enabled GDS`, this.context);
+                        HSLogger.debug(() => `Re-enabled GDS`, this.context);
                         gdsSetting.enable();
                     } else {
-                        HSLogger.debug(`GDS was already enabled (WoW fast!)`, this.context);
+                        HSLogger.debug(() => `GDS was already enabled (WoW fast!)`, this.context);
                     }
 
                     this.#wasUsingGDS = false;
@@ -945,7 +945,7 @@ export class HSGameData extends HSModule {
      * @returns void
      */
     #refreshCampaignTokens() {
-        // HSLogger.debug(`Refreshing campaign data`, this.context);
+        // HSLogger.debug(() => `Refreshing campaign data`, this.context);
 
         if (!this.#campaignTokenElement) {
             const el = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
@@ -973,7 +973,7 @@ export class HSGameData extends HSModule {
         }
 
         if (this.#campaignData.isAtMaxTokens && this.#campaignTokenRefreshInterval) {
-            HSLogger.debug(`Dynamic clear of campaign token refresh interval, player is at max`, this.context);
+            HSLogger.debug(() => `Dynamic clear of campaign token refresh interval, player is at max`, this.context);
             clearInterval(this.#campaignTokenRefreshInterval);
         }
     }

@@ -86,7 +86,7 @@ export class HSCodes extends HSModule {
                     }
                 }, true);
 
-                HSLogger.debug("Hijacked code redeem panel", this.context);
+                HSLogger.debug(() => "Hijacked code redeem panel", this.context);
             }
         } finally {
             // Need to remember to connect the observer again

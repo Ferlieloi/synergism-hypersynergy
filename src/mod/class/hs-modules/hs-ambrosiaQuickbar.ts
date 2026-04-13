@@ -25,7 +25,7 @@ export class HSAmbrosiaQuickbar {
     #registerQuickbarSection() {
         HSQuickbarManager.getInstance().removeSection("ambrosia");
         HSQuickbarManager.getInstance().registerSection("ambrosia", () => {
-            HSLogger.debug("Ambrosia Quickbar section factory called", this.context);
+            HSLogger.debug(() => "Ambrosia Quickbar section factory called", this.context);
             const pageHeader = this.host.getPageHeader();
             if (!pageHeader) return { element: document.createElement("div") };
             const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
@@ -72,7 +72,7 @@ export class HSAmbrosiaQuickbar {
         if (quickbar) {
             if (quickbarSetting && !quickbarSetting.isEnabled()) {
                 quickbar.style.display = "none";
-                HSLogger.debug("quickbar hidden due to settings", this.context);
+                HSLogger.debug(() => "quickbar hidden due to settings", this.context);
             } else {
                 this.setupQuickbarSectionEvents();
                 await this.refreshQuickbarIcons();
@@ -102,7 +102,7 @@ export class HSAmbrosiaQuickbar {
         }
 
         if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`)) {
-            HSLogger.debug("Quickbar already exists in group wrapper", this.context);
+            HSLogger.debug(() => "Quickbar already exists in group wrapper", this.context);
             return;
         }
 

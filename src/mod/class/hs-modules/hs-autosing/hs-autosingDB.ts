@@ -56,6 +56,7 @@ export class HSAutosingDB {
      * @returns Promise that resolves to the opened IDBDatabase instance.
      */
     public async open(): Promise<IDBDatabase> {
+        if (this.#db) return this.#db;
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.#dbName, 1);
             request.onupgradeneeded = (event) => {

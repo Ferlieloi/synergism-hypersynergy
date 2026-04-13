@@ -29,20 +29,17 @@ export interface PhaseRowDom {
     sdCell: HTMLDivElement;
     lastCell: HTMLDivElement;
     cells: HTMLDivElement[];
-    rowIndex: number;
 }
 
 /**
- * Creates 5 cell divs for a phase row, with a data-row-index for identification.
+ * Creates 5 cell divs for a phase row.
  * @param phaseName
  * @param phaseCount
- * @param rowIndex
  */
-export function createPhaseRowDom(phaseName = '', phaseCount = 0, rowIndex = 0): PhaseRowDom {
+export function createPhaseRowDom(phaseName = '', phaseCount = 0): PhaseRowDom {
     // Name cell
     const nameCell = document.createElement('div');
     nameCell.className = 'hs-phase-name';
-    nameCell.dataset.rowIndex = rowIndex.toString();
     const phaseCountSpan = document.createElement('span');
     phaseCountSpan.className = 'hs-phase-count';
     phaseCountSpan.textContent = phaseCount ? `x${phaseCount} ` : '';
@@ -55,22 +52,18 @@ export function createPhaseRowDom(phaseName = '', phaseCount = 0, rowIndex = 0):
     // Stat cells
     const innerLoopsCell = document.createElement('div');
     innerLoopsCell.className = 'hs-phase-loops';
-    innerLoopsCell.dataset.rowIndex = rowIndex.toString();
 
     const avgCell = document.createElement('div');
     avgCell.className = 'hs-phase-avg';
-    avgCell.dataset.rowIndex = rowIndex.toString();
 
     const sdCell = document.createElement('div');
     sdCell.className = 'hs-phase-sd';
-    sdCell.dataset.rowIndex = rowIndex.toString();
 
     const lastCell = document.createElement('div');
     lastCell.className = 'hs-phase-last';
-    lastCell.dataset.rowIndex = rowIndex.toString();
 
     const cells = [nameCell, innerLoopsCell, avgCell, sdCell, lastCell];
-    return { nameCell, phaseCountSpan, nameTextSpan, innerLoopsCell, avgCell, sdCell, lastCell, cells, rowIndex };
+    return { nameCell, phaseCountSpan, nameTextSpan, innerLoopsCell, avgCell, sdCell, lastCell, cells };
 }
 
 /**

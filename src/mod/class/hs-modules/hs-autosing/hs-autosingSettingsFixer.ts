@@ -1,6 +1,8 @@
 import { HSLogger } from '../../hs-core/hs-logger';
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
+import { HSGameState, MainView } from '../../hs-core/hs-gamestate';
+import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -8,7 +10,7 @@ import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-ty
  * Description: Automates, corrects, and manages game settings for AutoSing.
  */
 export class HSAutosingSettingsFixer {
-    static #context = 'HSAutosingSettingsFixer';
+    static readonly #context = 'HSAutosingSettingsFixer';
 
     /**
      * List of toggle requirements: selector and expected text.
@@ -199,7 +201,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureAllTogglesOn: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureAllTogglesOn: all toggles already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureAllTogglesOn: all toggles already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -238,7 +240,7 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensurePercentSuffixElements: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensurePercentSuffixElements: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensurePercentSuffixElements: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -254,14 +256,15 @@ export class HSAutosingSettingsFixer {
         ];
 
         // Helper to compare current value to expected
-        const valuesMatch = (currentValue: string, expectedValue: any): boolean => {
-            if (typeof expectedValue === 'number') {
-                const numeric = Number(currentValue);
-                return !Number.isNaN(numeric) && numeric === expectedValue;
-            }
-            return currentValue === String(expectedValue);
+        const valuesMatch = (currentValue: string, expected: number): boolean => {
+            const numeric = Number(currentValue);
+            return !Number.isNaN(numeric) && numeric === expected;
         };
 
+        // Save user tab
+        const gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
+        const prevMainView = gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+        
         // Track which selectors were corrected or failed
         const correctedSelectors: string[] = [];
         const failedSelectors: string[] = [];
@@ -274,7 +277,7 @@ export class HSAutosingSettingsFixer {
                 continue;
             }
             if (valuesMatch(inputElement.value, req.expected)) {
-                HSLogger.debug(`ensureNumberInputFields: already correct: ${req.selector}='${inputElement.value}'`, HSAutosingSettingsFixer.#context);
+                HSLogger.debug(() => `ensureNumberInputFields: already correct: ${req.selector}='${inputElement.value}'`, HSAutosingSettingsFixer.#context);
                 continue;
             }
 
@@ -310,12 +313,15 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(req.selector);
             }
         }
+        
+        // Restore user tab
+        prevMainView.goto();
 
         // Log final verification result
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureNumberInputFields: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureNumberInputFields: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureNumberInputFields: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -354,30 +360,31 @@ export class HSAutosingSettingsFixer {
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
             HSLogger.warn(`ensureGreenButtons: failed=${failedSelectors.length}${failedSelectors.length > 0 ? ` [${failedSelectors.join(', ')}]` : ''}, corrected=${correctedSelectors.length}${correctedSelectors.length > 0 ? ` [${correctedSelectors.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureGreenButtons: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureGreenButtons: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
     /**
-     * Ensure challenge auto states for challenge 1-15.
-     * For 1-10: ON, (for 11-15: OFF maybe later if needed). Logs all failures and missing elements.
+     * Ensure challenge auto states for challenge 1-10.
      */
     static async #ensureChallengeAutoStates(): Promise<void> {
         // Track which challenge selectors were corrected or failed
         const correctedChallenges: string[] = [];
         const failedChallenges: string[] = [];
 
+        const toggleElement = document.querySelector('#toggleAutoChallengeIgnore') as HTMLElement | null;
+        if (!toggleElement) {
+            HSLogger.warn(`ensureChallengeAutoStates: #toggleAutoChallengeIgnore not found`, HSAutosingSettingsFixer.#context);
+            return;
+        }
+
         // Loop through challenges 1-10 and ensure correct auto state
         for (let challengeIndex = 1; challengeIndex <= 10; challengeIndex++) {
-            const challengeSelector = `#challenge${challengeIndex}.challenge`;
-            const toggleSelector = '#toggleAutoChallengeIgnore';
             const expectedPrefix = `Automatically Run Chal.${challengeIndex}`;
-            const expectedState = challengeIndex <= 10 ? '[ON]' : '[OFF]';
-            const expectedFullText = `${expectedPrefix} ${expectedState}`;
-            const challengeElement = document.querySelector(challengeSelector) as HTMLElement | null;
-            const toggleElement = document.querySelector(toggleSelector) as HTMLElement | null;
+            const expectedFullText = `${expectedPrefix} [ON]`;
+            const challengeElement = document.querySelector(`#challenge${challengeIndex}.challenge`) as HTMLElement | null;
 
-            if (!challengeElement || !toggleElement) {
+            if (!challengeElement) {
                 failedChallenges.push(`chal${challengeIndex}`);
                 continue;
             }
@@ -411,7 +418,7 @@ export class HSAutosingSettingsFixer {
         if (correctedChallenges.length > 0 || failedChallenges.length > 0) {
             HSLogger.warn(`ensureChallengeAutoStates: failed=${failedChallenges.length}${failedChallenges.length > 0 ? ` [${failedChallenges.join(', ')}]` : ''}, corrected=${correctedChallenges.length}${correctedChallenges.length > 0 ? ` [${correctedChallenges.join(', ')}]` : ''}`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`ensureChallengeAutoStates: all elements already correct`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `ensureChallengeAutoStates: all elements already correct`, HSAutosingSettingsFixer.#context);
         }
     }
 
@@ -436,31 +443,46 @@ export class HSAutosingSettingsFixer {
             if (setting.isEnabled()) {
                 setting.disable();
                 disabledSettings.push(settingKey);
-                HSLogger.log(`disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
+                HSLogger.debug(() => `disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
             }
         }
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.disable();
-                    }
+        // Enable autoConfirmPopups for autosing. Tracked with '+' prefix so restore knows to disable it.
+        const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups');
+        if (autoConfirmSetting) {
+            if (!autoConfirmSetting.isEnabled()) {
+                autoConfirmSetting.enable();
+                disabledSettings.push('+autoConfirmPopups');
+                HSLogger.debug(() => `disableUnwantedSettings: enabled "autoConfirmPopups" for autosing`, HSAutosingSettingsFixer.#context);
+            }
+        } else {
+            HSLogger.warn(`disableUnwantedSettings: setting "autoConfirmPopups" not found`, HSAutosingSettingsFixer.#context);
+        }
+
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, HSAutosingSettingsFixer.#context);
         } else {
-            HSLogger.debug(`disableUnwantedSettings: all performance-impacting settings already disabled`, HSAutosingSettingsFixer.#context);
+            HSLogger.debug(() => `disableUnwantedSettings: all performance-impacting settings already disabled`, HSAutosingSettingsFixer.#context);
         }
         return disabledSettings;
     }
 
-    public static async restoreUnwantedSettings(settingsToRestore: string[]): Promise<void> {
-        // Reverse to re-enable GDS first
+    public static restoreUnwantedSettings(settingsToRestore: string[]): void {
+        // Reverse order to re-enable GDS first.
+        // Keys prefixed with '+' were enabled by autosing and must be disabled on restore.
         for (let i = settingsToRestore.length - 1; i >= 0; i--) {
-            const settingKey = settingsToRestore[i];
+            const raw = settingsToRestore[i];
+            const inverted = raw.startsWith('+');
+            const settingKey = inverted ? raw.slice(1) : raw;
             const setting = HSSettings.getSetting(settingKey as keyof HSSettingsDefinition);
-            if (setting && typeof setting.enable === 'function') {
-                setting.enable();
+            if (setting) {
+                if (inverted) {
+                    setting.disable();
+                } else {
+                    setting.enable();
+                }
                 HSLogger.log(`restoreUnwantedSettings: restored "${settingKey}"`, HSAutosingSettingsFixer.#context);
             } else {
-                HSLogger.warn(`restoreUnwantedSettings: setting "${settingKey}" not found or cannot be re-enabled`, HSAutosingSettingsFixer.#context);
+                HSLogger.warn(`restoreUnwantedSettings: setting "${settingKey}" not found or cannot be restored`, HSAutosingSettingsFixer.#context);
             }
         }
     }

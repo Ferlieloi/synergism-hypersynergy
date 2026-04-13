@@ -18,6 +18,7 @@ export interface HSSettingsDefinition {
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
+    autoConfirmPopups: AutoConfirmPopupsSetting;
 
     // UI Settings
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
@@ -152,6 +153,7 @@ export interface HSSettingBase<T> {
     settingAction?: string;
     patchConfig?: HSPatchConfig;
     usesGameData?: boolean;
+    skipInit?: boolean;
 }
 
 export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
@@ -163,6 +165,7 @@ export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
+export interface AutoConfirmPopupsSetting extends HSSettingBase<boolean> { }
 
 // Log Settings
 export interface LogTimestampSetting extends HSSettingBase<boolean> { }

@@ -66,7 +66,7 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         this.container.appendChild(happyHourSpan);
         this.container.appendChild(lotusSpan);
 
-        HSLogger.debug('Events quickbar DOM created', this.context);
+        HSLogger.debug(() => 'Events quickbar DOM created', this.context);
     }
 
     protected cleanupDOM(): void {
@@ -93,7 +93,7 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
 
         if (typeof gameDataAPI.subscribeEventDataChange === 'function') {
             this.#unsubscribeEventData = gameDataAPI.subscribeEventDataChange(() => { this.#updateDOM(); }) ?? null;
-            HSLogger.debug('Subscribed to event data changes for Events Quickbar', this.context);
+            HSLogger.debug(() => 'Subscribed to event data changes for Events Quickbar', this.context);
         }
     }
 
@@ -102,7 +102,7 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         if (this.#unsubscribeEventData) {
             try { this.#unsubscribeEventData(); } catch (e) { /* ignore */ }
             this.#unsubscribeEventData = null;
-            HSLogger.debug('Unsubscribed from event data changes for Events Quickbar', this.context);
+            HSLogger.debug(() => 'Unsubscribed from event data changes for Events Quickbar', this.context);
         }
     }
 
@@ -133,7 +133,7 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         happyHourSpan.classList.toggle('crazy-happy-hour', happyHourAmount > 4);
         lotusSpan.classList.toggle('hs-hidden', lotusEvent?.ends?.length === 0);
 
-        HSLogger.debug(`Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.context);
+        HSLogger.debug(() => `Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}"`, this.context);
     }
 
     /** Format happy hour event end-times into tooltip text. */

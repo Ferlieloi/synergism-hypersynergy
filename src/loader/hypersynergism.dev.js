@@ -156,7 +156,10 @@
         return true;
     }
 
+
+    // ==================================================================================
     // ─── Phase 1 & 2: Fetch, patch, and inject the game bundle ───────────────
+    // ==================================================================================
 
     async function injectPatchedBundle() {
         if (window.__HS_INJECTED__) return;
@@ -176,11 +179,12 @@
             return;
         }
 
-        // ── Bundle patches ────────────────────────────────────────────────────
+        // ==================================================================================
+        // ───────────────────────────────── BUNDLE PATCHES ─────────────────────────────────
+
         // Strategy: find function headers by pattern, verify a unique anchor
         // string appears near the opening brace, then inject at that point.
         // This avoids brace-counting bugs in minified code.
-
         const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
             const re = new RegExp(headerRegex.source, 'g');
             let m;
@@ -192,7 +196,8 @@
             return null;
         };
 
-        // EXPORT PATCH — inject at the start of exportSynergism's body.
+        // ==================================================================================
+        // ────── EXPORT PATCH ─ Inject at the start of exportSynergism's body.
         // The function is async, takes a bool arg, and contains "Synergysave2".
         const exportResult = findFunctionBodyContaining(
             code,
@@ -210,7 +215,8 @@
             warn('Could not patch exportSynergism — header not found');
         }
 
-        // STAGE PATCH — inject at the entry of loadMiscellaneousStats.
+        // ==================================================================================
+        // ────── STAGE PATCH — inject at the entry of loadMiscellaneousStats.
         // Locate the unique anchor, extract variable names, find the enclosing
         // no-arg arrow function, and inject at its opening brace.
         const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
@@ -240,9 +246,9 @@
             warn('Could not patch stage — "gameStageStatistic" not found in bundle');
         }
 
-        // ── WINDOW DEFINE PLAYER PATCH ─────────────────────────
-        // Detect the call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
-        // and expose the player object  via an obfuscated, non-enumerable Symbol property on window (window.symp)
+        // ==================================================================================
+        // ────── PLAYER PATCH ─ Detect the call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
+        // and expose the player object via an obfuscated, non-enumerable Symbol property on window (window.symp)
         try {
             // Match the full Object.defineProperties(...) call
             const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}[^}]*\}[^)]*\)/;
@@ -258,9 +264,7 @@
                         'Object.defineProperty(' + 
                             'window,window.symp,' +
                             '{enumerable:false,configurable:true,writable:true,value:' + playerVar + '}' +
-                        ')' +
-                        // line below to remove in prod
-                        ',console.log("[HS] \u2705 player exposed via Symbol property")' + 
+                        '),console.log("[HS] \u2705 Symbol exposed.")' + 
                     ' )';
                     code = code.slice(0, insertPos) + expose + code.slice(insertPos);
                 } else {
@@ -272,6 +276,259 @@
         } catch (e) {
             warn('❌ Error while probing for defineProperties player patch', e);
         }
+
+        // ==================================================================================
+        // ── GETMAXCHALLENGES PATCH — expose Challenges.ts getMaxChallenges as window.__HS_getMaxChallenges
+        // Unique anchor: n.cubeUpgrades[29] only appears inside getMaxChallenges (reincarnation cap += 4/level)
+        try {
+            const gmcAnchor = 'n.cubeUpgrades[29]';
+            const gmcAnchorIdx = code.indexOf(gmcAnchor);
+            if (gmcAnchorIdx !== -1) {
+                const backCtx = code.slice(Math.max(0, gmcAnchorIdx - 400), gmcAnchorIdx);
+                // Take the last arrow-function assignment before the anchor — that is getMaxChallenges
+                const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
+                const gmcFn = allFnMatches.at(-1)?.[1];
+                if (gmcFn) {
+                    // Find body start (position right after the opening '{') robustly
+                    const fnHeaderRe = new RegExp(`\\b${gmcFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
+                    let bodyStart = -1, fhm;
+                    const preAnchor = code.slice(0, gmcAnchorIdx);
+                    while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
+                    if (bodyStart !== -1) {
+                        const expose = `\nif(!window.__HS_CHALLENGES_EXPOSED){window.__HS_getMaxChallenges=${gmcFn};window.__HS_CHALLENGES_EXPOSED=true;console.log('[HS] \u2705 getMaxChallenges exposed (fn=${gmcFn})');}\n`;
+                        code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
+                        log(`Patched getMaxChallenges (fn=${gmcFn})`);
+                    } else {
+                        warn(`getMaxChallenges: found fn name '${gmcFn}' but could not locate body start`);
+                    }
+                } else {
+                    warn('getMaxChallenges: could not extract fn name from anchor context');
+                }
+            } else {
+                warn('Could not patch getMaxChallenges — anchor not found in bundle');
+            }
+        } catch (e) {
+            warn('Error while patching getMaxChallenges', e);
+        }
+
+        // ==================================================================================
+        // ── TICK PATCH — wrap tick() to fire registered after-tick hooks
+        // Anchor: the 1-hour lag-compensation cap `Math.min(3600 * 1000, ...)` only appears in tick().
+        // Different bundler versions may emit it as 3600 * 1e3, 3600 * 1000, 3600000, or 36e5 — try all.
+        try {
+            const tickAnchor = [
+                'Math.min(3600 * 1e3', 'Math.min(3600*1e3',
+                'Math.min(3600 * 1000', 'Math.min(3600*1000',
+                'Math.min(3600000', 'Math.min(36e5', 'Math.min(3.6e6'
+            ].find(a => code.includes(a)) ?? null;
+            const tickAnchorIdx = tickAnchor !== null ? code.indexOf(tickAnchor) : -1;
+            if (tickAnchorIdx !== -1) {
+                // Look backward up to 600 chars for tick()'s function header.
+                // tick is assigned as: fnName = () => {
+                const backCtx = code.slice(Math.max(0, tickAnchorIdx - 600), tickAnchorIdx);
+                // Find the last `= () => {` before the anchor — that is tick()'s opening brace
+                const tickHeaderRe = /=\s*\(\s*\)\s*=>\s*\{/g;
+                let tm, lastTickBodyStart = -1;
+                while ((tm = tickHeaderRe.exec(backCtx)) !== null) {
+                    lastTickBodyStart = tm.index + tm[0].length;
+                }
+                if (lastTickBodyStart !== -1) {
+                    // Also capture the variable name assigned just before `= () => {`
+                    const assignRe = /([a-zA-Z_$][\w$]*)\s*=\s*\(\s*\)\s*=>\s*\{/g;
+                    let am2, tickFn = null;
+                    while ((am2 = assignRe.exec(backCtx)) !== null) tickFn = am2[1];
+
+                    const insertAt = Math.max(0, tickAnchorIdx - 600) + lastTickBodyStart;
+                    // Inject at the very start of tick()'s body: set up hook registry once,
+                    // then schedule hooks to fire as a microtask after the tick body runs.
+                    // We use a flag + queueMicrotask to fire once per tick call.
+                    const tickPatch =
+                        `if(!window.__HS_TICK_PATCHED){` +
+                            `window.__HS_TICK_PATCHED=true;` +
+                            `window.__HS_tickHooks=[];` +
+                            `window.__HS_onAfterTick=function(fn){window.__HS_tickHooks.push(fn);};` +
+                            `console.log('[HS] \u2705 tick() patched (fn=${tickFn ?? 'unknown'})');` +
+                        `}` +
+                        `queueMicrotask(()=>{const h=window.__HS_tickHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
+                    code = code.slice(0, insertAt) + tickPatch + code.slice(insertAt);
+                    log(`Patched tick() (fn=${tickFn ?? 'unknown'})`);
+                } else {
+                    warn('tick patch: found anchor but could not locate tick() body start');
+                }
+            } else {
+                warn('tick patch: anchor (3600*1000 lag cap) not found in bundle!!');
+            }
+        } catch (e) {
+            warn('Error while patching tick()', e);
+        }
+
+        // ==================================================================================
+        // ── AUTO-CONFIRM PATCH — make Confirm/Alert auto-resolve when window.__HS_AUTO_CONFIRM is set to true
+        // Confirm resolves true (OK clicked) and Alert resolves void, bypassing all DOM/queue overhead.
+        // 'confirmationBox' appears exactly 3× in the bundle: 1st = Confirm body, 2nd = Alert body, 3rd = Prompt.
+        // We use the 1st for Confirm and 2nd for Alert. Walk back to the `() => {` of the enqueue action.
+        // Toggle: window.__HS_AUTO_CONFIRM = true (no pop-up) / false (normal play with pop-ups).
+        try {
+            const cbRe = /['"]confirmationBox['"]/g;
+            const cbMatch1 = cbRe.exec(code);
+            const cbMatch2 = cbMatch1 ? cbRe.exec(code) : null;
+
+            // Collect both patch sites against the unmodified code, then apply highest-index first
+            // so earlier insertions don't invalidate later indices.
+            const autoConfirmSites = [];
+            if (cbMatch1) {
+                const backCtx = code.slice(Math.max(0, cbMatch1.index - 200), cbMatch1.index);
+                const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
+                if (lastArrow) {
+                    autoConfirmSites.push({
+                        bodyStart: (cbMatch1.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
+                        inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(!0);\n`,
+                        label: 'Confirm'
+                    });
+                } else { warn('autoConfirm: could not find Confirm action body start'); }
+            } else { warn('Could not patch Confirm — confirmationBox anchor not found'); }
+
+            if (cbMatch2) {
+                const backCtx = code.slice(Math.max(0, cbMatch2.index - 200), cbMatch2.index);
+                const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
+                if (lastArrow) {
+                    autoConfirmSites.push({
+                        bodyStart: (cbMatch2.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
+                        inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(void 0);\n`,
+                        label: 'Alert'
+                    });
+                } else { warn('autoConfirm: could not find Alert action body start'); }
+            } else { warn('Could not patch Alert — second confirmationBox anchor not found'); }
+
+            autoConfirmSites.sort((a, b) => b.bodyStart - a.bodyStart);
+            for (const site of autoConfirmSites) {
+                code = code.slice(0, site.bodyStart) + site.inject + code.slice(site.bodyStart);
+                log(`Patched ${site.label} (auto-confirm support)`);
+            }
+            if (autoConfirmSites.length === 2) {
+                window.__HS_AUTO_CONFIRM_PATCHED = true;
+            }
+        } catch (e) {
+            warn('Error while patching Confirm/Alert', e);
+        }
+
+        // ==================================================================================
+        // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
+        // Unique anchor: e.includes('/') only appears inside applyCorruptions (legacy format check)
+        try {
+            const corrAnchor = 'e.includes("/")';
+            const corrAnchorIdx = code.indexOf(corrAnchor);
+            if (corrAnchorIdx !== -1) {
+                const backCtx = code.slice(Math.max(0, corrAnchorIdx - 400), corrAnchorIdx);
+                // applyCorruptions is assigned as: fnName = e => {
+                const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
+                const corrFn = allFnMatches.at(-1)?.[1];
+                if (corrFn) {
+                    const fnHeaderRe = new RegExp(`\\b${corrFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
+                    let bodyStart = -1, fhm;
+                    const preAnchor = code.slice(0, corrAnchorIdx);
+                    while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
+                    if (bodyStart !== -1) {
+                        const expose = `\nif(!window.__HS_CORRUPTIONS_EXPOSED){window.__HS_applyCorruptions=${corrFn};window.__HS_CORRUPTIONS_EXPOSED=true;console.log('[HS] \u2705 applyCorruptions exposed (fn=${corrFn})');}`;
+                        code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
+                        log(`Patched applyCorruptions (fn=${corrFn})`);
+                    } else {
+                        warn(`applyCorruptions: found fn name '${corrFn}' but could not locate body start`);
+                    }
+                } else {
+                    warn('applyCorruptions: could not extract fn name from anchor context');
+                }
+            } else {
+                warn('Could not patch applyCorruptions — anchor not found in bundle');
+            }
+        } catch (e) {
+            warn('Error while patching applyCorruptions', e);
+        }
+
+        // ==================================================================================
+        // ── TELEPORT LOWER PATCH — expose a dialog-free singularityCount setter
+        // When autosing teleports lower, teleportToSingularity only sets player.singularityCount = target,
+        // then calls updateSingularityElevator() (display only) and shows two dialogs.
+        // We bypass all of that with a synchronous one-liner.
+        // Unique anchor: 'singularity.elevator.inEXALTError' appears only inside teleportToSingularity.
+        // We walk backward to find the async arrow fn assigned to eM and inject at body start.
+        try {
+            const tpAnchor = 'singularity.elevator.inEXALTError';
+            const tpAnchorIdx = code.indexOf(tpAnchor);
+            if (tpAnchorIdx !== -1) {
+                const backCtx = code.slice(Math.max(0, tpAnchorIdx - 3500), tpAnchorIdx);
+                const allAsyncFns = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*async\s*\(\s*\)\s*=>\s*\{/g)];
+                const eMMatch = allAsyncFns.at(-1);
+                if (eMMatch) {
+                    const eMFn = eMMatch[1];
+                    const eMBodyStart = (tpAnchorIdx - backCtx.length) + eMMatch.index + eMMatch[0].length;
+                    const expose = `\nif(!window.__HS_TELEPORT_LOWER_EXPOSED){window.__HS_teleportLower=(t)=>{n.singularityCount=t;za();};window.__HS_TELEPORT_LOWER_EXPOSED=true;console.log('[HS] \u2705 teleportLower exposed');}\n`;
+                    code = code.slice(0, eMBodyStart) + expose + code.slice(eMBodyStart);
+                    log(`Patched teleportLower (fn=${eMFn})`);
+                } else {
+                    warn('teleportLower: could not extract async fn from anchor context');
+                }
+            } else {
+                warn('Could not patch teleportLower — anchor not found in bundle');
+            }
+        } catch (e) {
+            warn('Error while patching teleportLower', e);
+        }
+
+        // ==================================================================================
+        // ── ENTER/EXIT EXALT PATCH — dialog-free enableChallenge / exitChallenge wrappers (a little more 'hacky' than the rest...)
+        // enterExalt replicates enableChallenge's state-mutation body (no Confirm/Alert).
+        // exitExalt replicates exitChallenge(success=false) — autosing always exits exalts without completing
+        // (antiquities=0), so we use the failure path: no completion tracking
+        // Unique anchor: 'singularityChallenge.enterChallenge.lowSingularity' is only inside enableChallenge.
+        // We walk backward 400 chars to find 'async enableChallenge() {' and inject at body start.
+        // All closure vars (n=player, b=G, pi=singularity, zr=calculateGoldenQuarks) are in scope here.
+        try {
+            const exaltAnchor = 'singularityChallenge.enterChallenge.lowSingularity';
+            const exaltAnchorIdx = code.indexOf(exaltAnchor);
+            if (exaltAnchorIdx !== -1) {
+                const backCtx = code.slice(Math.max(0, exaltAnchorIdx - 400), exaltAnchorIdx);
+                const ecMatch = /async\s+enableChallenge\s*\(\s*\)\s*\{/.exec(backCtx);
+                if (ecMatch) {
+                    const ecBodyStart = (exaltAnchorIdx - backCtx.length) + ecMatch.index + ecMatch[0].length;
+                    const enterBody =
+                        `const c=n.singularityChallenges.oneChallengeCap;` +
+                        `if(n.insideSingularityChallenge)return;` +
+                        `const r=c.computeSingularityRquirement(),a=n.singularityCounter,o=n.quarkstimer,i=n.goldenQuarksTimer,l=zr(),u=n.goldenQuarks;` +
+                        `c.enabled=true;b.currentSingChallenge=c.HTMLTag;n.insideSingularityChallenge=true;` +
+                        `pi(r);` +
+                        `c.resetTime?(n.singularityCounter=0):(n.singularityCounter=a);` +
+                        `n.goldenQuarks=u+l;n.quarkstimer=o;n.goldenQuarksTimer=i;` +
+                        `c.updateChallengeHTML()`;
+                    // Exalt failed path (success=false): skip completion tracking and timer restoration.
+                    // quarkstimer/goldenQuarksTimer would normally be restored here, but autosing
+                    // calls pi() (singularity) immediately after anyway — resetting them again.
+                    // (And the q/gq gains from the timers are useless anyway)
+                    const exitBody =
+                        `const c=n.singularityChallenges.oneChallengeCap;` +
+                        `c.enabled=false;b.currentSingChallenge=undefined;n.insideSingularityChallenge=false;` +
+                        `const r=n.highestSingularityCount,a=n.singularityCounter;` +
+                        `c.updateIconHTML();pi(r);n.singularityCounter=a`;
+                    const expose =
+                        `\nif(!window.__HS_EXALT_EXPOSED){` +
+                            `window.__HS_EXALT_EXPOSED=true;` +
+                            `window.__HS_enterExalt=()=>{${enterBody};};` +
+                            `window.__HS_exitExalt=()=>{${exitBody};};` +
+                            `console.log('[HS] \u2705 enterExalt/exitExalt exposed');` +
+                        `}\n`;
+                    code = code.slice(0, ecBodyStart) + expose + code.slice(ecBodyStart);
+                    log('Patched enterExalt/exitExalt');
+                } else {
+                    warn('enterExalt: could not find enableChallenge method header in backward context');
+                }
+            } else {
+                warn('Could not patch enterExalt/exitExalt — anchor not found in bundle');
+            }
+        } catch (e) {
+            warn('Error while patching enterExalt/exitExalt', e);
+        }
+
+        // ==================================================================================
 
         log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
 
@@ -285,8 +542,12 @@
             );
         }
         await new Promise(r => setTimeout(r, 100));
+        
 
-        // ── Phase 2: Inject patched bundle ────────────────────────────────────
+        // ==================================================================================
+        // ── Phase 2: Inject patched bundle ────────────────────────────────────────────────
+        // ==================================================================================
+        
         allowCustomElements = true;
         log('Custom Elements unlocked — injecting patched bundle');
 
@@ -307,7 +568,11 @@
         window.fetch = originalFetch;
         log('Bundle injected; interception cleaned up');
 
-        // ── Phase 3: Ensure the game initialises ──────────────────────────────
+
+        // ==================================================================================
+        // ── Phase 3: Ensure the game initialises ──────────────────────────────────────────
+        // ==================================================================================
+
         // The game hooks onto window's "load" event. When we inject the bundle
         // after window.load has already fired, the game never receives it, so
         // the player object is never set up. We fire a synthetic load event to
@@ -331,14 +596,21 @@ window.__HS_BACKDOOR__ = {
             DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,
             i18next:             typeof window.__HS_i18next,
             exportData:          typeof window.__HS_exportData,
-        };
+            getMaxChallenges:    typeof window.__HS_getMaxChallenges,
+            applyCorruptions:    typeof window.__HS_applyCorruptions,
+            teleportLower:       typeof window.__HS_teleportLower,
+            enterExalt:          typeof window.__HS_enterExalt,
+            exitExalt:           typeof window.__HS_exitExalt,
+            tickHooks:           Array.isArray(window.__HS_tickHooks) ? window.__HS_tickHooks.length : 'n/a'};
     }
 };`;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
     }
 
-    // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ──
+    // ==================================================================================
+    // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ───────────
+    // ==================================================================================
 
     async function runPostLoadSequence() {
         try {

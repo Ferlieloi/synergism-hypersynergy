@@ -1,5 +1,18 @@
 export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
 
+export interface SparklineMetric {
+    timestamp: number;
+    duration: number;
+    quarksGained: number;
+    goldenQuarksGained: number;
+    phases: Record<string, number>;
+    c15?: string;
+    runningAvgDuration: number;
+    runningAvgQuarksPerSecond: number;
+    runningAvgGoldenQuarksPerSecond: number;
+    happyHourStackAmount: number;
+}
+
 /**
  * Updates the sparkline chart display for the given DOM and data.
  * single-pass min/max/sum, no intermediate array allocations,
@@ -7,7 +20,7 @@ export type SparklineDataKey = 'time' | 'quarks' | 'goldenQuarks';
  */
 export function updateSparkline(
     dom: SparklineDom | null,
-    data: any[],
+    data: SparklineMetric[],
     computedGraphWidth: number | null,
     formatNumberWithSign: (n: number) => string,
     maxPoints: number
@@ -134,28 +147,34 @@ export function updateSparkline(
     const maxYPos = 30 - ((maxY - minY) / yRange) * 30;
     const minYPos = 30;
 
-    if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMaxY !== maxYPos) {
+    if (widthChanged) {
         const gwStr = `${gw}`;
         const markerXStr = `${markerX}`;
         const maxYStr = `${maxYPos}`;
+        const minYStr = `${minYPos}`;
         dom.maxLine.setAttribute('x1', markerXStr);
         dom.maxLine.setAttribute('x2', gwStr);
         dom.maxLine.setAttribute('y1', maxYStr);
         dom.maxLine.setAttribute('y2', maxYStr);
-        dom.lastMarkerX = markerX;
-        dom.lastMaxY = maxYPos;
-    }
-
-    if (dom.lastMarkerX !== markerX || widthChanged || dom.lastMinY !== minYPos) {
-        const gwStr = `${gw}`;
-        const markerXStr = `${markerX}`;
-        const minYStr = `${minYPos}`;
         dom.minLine.setAttribute('x1', markerXStr);
         dom.minLine.setAttribute('x2', gwStr);
         dom.minLine.setAttribute('y1', minYStr);
         dom.minLine.setAttribute('y2', minYStr);
-        dom.lastMarkerX = markerX;
+        dom.lastMaxY = maxYPos;
         dom.lastMinY = minYPos;
+    } else {
+        if (dom.lastMaxY !== maxYPos) {
+            const maxYStr = `${maxYPos}`;
+            dom.maxLine.setAttribute('y1', maxYStr);
+            dom.maxLine.setAttribute('y2', maxYStr);
+            dom.lastMaxY = maxYPos;
+        }
+        if (dom.lastMinY !== minYPos) {
+            const minYStr = `${minYPos}`;
+            dom.minLine.setAttribute('y1', minYStr);
+            dom.minLine.setAttribute('y2', minYStr);
+            dom.lastMinY = minYPos;
+        }
     }
 
     // Labels
@@ -210,7 +229,6 @@ export interface SparklineDom {
     lastWidth: number;
     lastPoints: string;
     lastPointsSecond: string;
-    lastMarkerX: number;
     lastMaxY: number;
     lastMinY: number;
     lastLabelMax: string;
@@ -253,13 +271,11 @@ export function buildSparklineDom(container: HTMLElement | null, color: string, 
     rawPolyline.setAttribute('stroke-dasharray', '2,2');
 
     // --- Avg polyline (solid, higher opacity) ---
-    let avgPolyline: SVGPolylineElement | null = null;
-    avgPolyline = document.createElementNS(ns, 'polyline');
+    const avgPolyline = document.createElementNS(ns, 'polyline');
     avgPolyline.setAttribute('fill', 'none');
     avgPolyline.setAttribute('stroke', color);
     avgPolyline.setAttribute('stroke-width', '1');
     avgPolyline.setAttribute('stroke-opacity', '0.8');
-    avgPolyline.removeAttribute('stroke-dasharray');
 
     // --- Marker lines for min/max ---
     const maxLine = document.createElementNS(ns, 'line');
@@ -271,7 +287,7 @@ export function buildSparklineDom(container: HTMLElement | null, color: string, 
 
     // --- Assemble SVG ---
     svg.appendChild(rawPolyline);
-    if (avgPolyline) svg.appendChild(avgPolyline);
+    svg.appendChild(avgPolyline);
     svg.appendChild(maxLine);
     svg.appendChild(minLine);
 
@@ -311,7 +327,6 @@ export function buildSparklineDom(container: HTMLElement | null, color: string, 
         lastWidth: 0,
         lastPoints: '',
         lastPointsSecond: '',
-        lastMarkerX: 0,
         lastMaxY: 0,
         lastMinY: 0,
         lastLabelMax: '',

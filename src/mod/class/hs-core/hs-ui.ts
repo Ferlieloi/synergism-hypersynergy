@@ -362,7 +362,7 @@ export class HSUI extends HSModule {
             const toggleBtn = document.getElementById(btnId) as HTMLElement | null;
             if (toggleBtn) {
                 toggleBtn.click();
-                HSLogger.debug(`${label} quickbar toggled via quickbars submenu`, this.context);
+                HSLogger.debug(() => `${label} quickbar toggled via quickbars submenu`, this.context);
             }
         });
         return btn;
@@ -595,7 +595,7 @@ export class HSUI extends HSModule {
         }
 
         tabBody.innerHTML = htmlContent;
-        HSLogger.debug(`Replaced tab ${tabId} content`, this.context);
+        HSLogger.debug(() => `Replaced tab ${tabId} content`, this.context);
     }
 
     updateTitle(newTitle: string) {
@@ -662,9 +662,9 @@ export class HSUI extends HSModule {
         if (this.#injectedStyles.has(styleId)) {
             this.#injectedStyles.delete(styleId);
             this.updateInjectedStyleBlock();
-            HSLogger.debug(`Removed injected CSS`, this.#staticContext);
+            HSLogger.debug(() => `Removed injected CSS`, this.#staticContext);
         } else {
-            HSLogger.debug(`<yellow>Could not find style with id ${styleId}</yellow>`, this.#staticContext);
+            HSLogger.debug(() => `<yellow>Could not find style with id ${styleId}</yellow>`, this.#staticContext);
         }
     }
 
@@ -686,7 +686,7 @@ export class HSUI extends HSModule {
 
             HSUI.#injectedStylesHolder.innerHTML = Array.from(HSUI.#injectedStyles.values()).join('');
 
-            HSLogger.debug(`Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
+            HSLogger.debug(() => `Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
         }, 0);
     }
 

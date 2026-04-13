@@ -182,6 +182,8 @@ export interface AutosingStrategyPhase {
     strat: Challenge[];
 }
 
+export { GameCorruptionLoadout } from '../data-types/hs-player-savedata';
+
 export interface CorruptionLoadoutDefinition {
     name: string;
     loadout: CorruptionLoadout;

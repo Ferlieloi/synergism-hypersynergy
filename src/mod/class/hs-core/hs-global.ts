@@ -555,6 +555,14 @@ export const HSGlobal: IHSGlobal = class {
                 subViewsSelector: ['#switchToCoinBuilding', '#switchToDiamondBuilding', '#switchToMythosBuilding', '#switchToParticleBuilding', '#switchToTesseractBuilding'],
                 viewClassName: 'BuildingView'
             }],
+            [MAIN_VIEW.ACHIEVEMENTS, {
+                subViewIds: [
+                    'toggleAchievementSubTab1',
+                    'toggleAchievementSubTab2'
+                ],
+                subViewsSelector: ['#toggleAchievementSubTab1', '#toggleAchievementSubTab2'],
+                viewClassName: 'AchievementView'
+            }],
             [MAIN_VIEW.RUNES, {
                 subViewIds: [
                     'toggleRuneSubTab1',
@@ -584,16 +592,27 @@ export const HSGlobal: IHSGlobal = class {
             }],
             [MAIN_VIEW.CUBES, {
                 subViewIds: [
-                    'cubeTab1',
-                    'cubeTab2',
-                    'cubeTab3',
-                    'cubeTab4',
-                    'cubeTab5',
-                    'cubeTab6',
-                    'cubeTab7'
+                    'switchCubeSubTab1',
+                    'switchCubeSubTab2',
+                    'switchCubeSubTab3',
+                    'switchCubeSubTab4',
+                    'switchCubeSubTab5',
+                    'switchCubeSubTab6',
+                    'switchCubeSubTab7'
                 ],
-                subViewsSelector: '.cubeTab',
+                subViewsSelector: ['#switchCubeSubTab1', '#switchCubeSubTab2', '#switchCubeSubTab3', '#switchCubeSubTab4', '#switchCubeSubTab5', '#switchCubeSubTab6', '#switchCubeSubTab7'],
                 viewClassName: 'CubeView'
+            }],
+            [MAIN_VIEW.SINGULARITY, {
+                subViewIds: [
+                    'toggleSingularitySubTab1',
+                    'toggleSingularitySubTab2',
+                    'toggleSingularitySubTab3',
+                    'toggleSingularitySubTab4',
+                    'toggleSingularitySubTab5'
+                ],
+                subViewsSelector: ['#toggleSingularitySubTab1', '#toggleSingularitySubTab2', '#toggleSingularitySubTab3', '#toggleSingularitySubTab4', '#toggleSingularitySubTab5'],
+                viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.SETTINGS, {
                 subViewIds: [
@@ -605,27 +624,11 @@ export const HSGlobal: IHSGlobal = class {
                     'switchSettingSubTab6',
                     'switchSettingSubTab7',
                     'switchSettingSubTab8',
-                    'switchSettingSubTab9'
+                    'switchSettingSubTab9',
+                    'switchSettingSubTab10'
                 ],
-                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9'],
+                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9', '#switchSettingSubTab10'],
                 viewClassName: 'SettingsView'
-            }],
-            [MAIN_VIEW.SINGULARITY, {
-                subViewIds: [
-                    'singularityContainer1',
-                    'singularityContainer2',
-                    'singularityContainer3',
-                    'singularityContainer4',
-                    'singularityContainer5',
-                ],
-                subViewsSelector: [
-                    '#singularityContainer1',
-                    '#singularityContainer2',
-                    '#singularityContainer3',
-                    '#singularityContainer4',
-                    '#singularityContainer5',
-                ],
-                viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.PSEUDOCOINS, {
                 subViewIds: [

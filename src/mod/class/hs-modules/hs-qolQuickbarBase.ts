@@ -19,7 +19,7 @@ export abstract class HSQOLQuickbarBase {
 
     public async setup(container: HTMLDivElement): Promise<void> {
         if (this.container) {
-            HSLogger.debug(`${this.context} setup called but already initialized`, this.context);
+            HSLogger.debug(() => `${this.context} setup called but already initialized`, this.context);
             return;
         }
         this.container = container;

@@ -49,7 +49,7 @@ export class HSPatches extends HSModule {
         let patchInstance;
 
         if (this.#instantiatedPatches[patchName]) {
-            HSLogger.debug(`Patch "${patchName}" is already instantiated`, this.context);
+            HSLogger.debug(() => `Patch "${patchName}" is already instantiated`, this.context);
             patchInstance = this.#instantiatedPatches[patchName];
         } else {
             patchInstance = new patchClass(patchName);

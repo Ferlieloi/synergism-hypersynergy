@@ -94,6 +94,20 @@
       "controlEnabledId": "hs-setting-patch-shopnames-btn"
     }
   },
+  "autoConfirmPopups": {
+    "settingName": "autoConfirmPopups",
+    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
+    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "autoConfirmPopups",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "notifications",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-auto-confirm-btn"
+    }
+  },
   "syncNotificationOpacity": {
     "settingName": "syncNotificationOpacity",
     "settingDescription": "Notification opacity",
@@ -572,6 +586,7 @@
     "settingType": "boolean",
     "enabled": false,
     "usesGameData": false,
+    "skipInit": false,
     "settingAction": "startAutosingAction",
     "settingControl": {
       "controlType": "switch",
@@ -1475,6 +1490,7 @@
     "settingHelpText": "Controls whether \u0027debug\u0027 type logs are visible or not in the mod\u0027s log view.",
     "settingType": "boolean",
     "enabled": false,
+    "settingAction": "showDebugLogs",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "debug",

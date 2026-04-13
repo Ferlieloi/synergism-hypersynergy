@@ -166,7 +166,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     toggleElement.classList.add('hs-disabled');
                 }
             } else {
-                HSLogger.debug(`Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl.controlEnabledId})`, this.context);
+                HSLogger.debug(() => `Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl?.controlEnabledId})`, this.context);
             }
         }
 
@@ -174,8 +174,10 @@ export abstract class HSSetting<T extends HSSettingType> {
         HSSettings.saveSettingsToStorage();
     }
 
-    // For settings which have a settingAction defined, this will be called when the setting is initialized
+    // For settings which have a settingAction defined but no skipInit,
+    // this will be called when the setting is initialized
     async initialAction(changeType: 'value' | 'state', initialState?: boolean) {
+        if (this.definition.skipInit) return;
         await this.handleSettingAction(changeType, initialState);
     }
 

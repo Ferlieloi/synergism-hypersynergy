@@ -507,7 +507,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     #checkCache(cacheName: keyof CalculationCache, checkCacheAgainst: number[]): any | undefined {
         if (!(cacheName in this.#calculationCache)) {
-            HSLogger.debug(`Could not find cache for '${cacheName}'`);
+            HSLogger.debug(() => `Could not find cache for '${cacheName}'`);
             return undefined;
         }
 

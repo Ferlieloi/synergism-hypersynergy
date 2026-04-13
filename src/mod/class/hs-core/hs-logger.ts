@@ -36,6 +36,9 @@ export class HSLogger {
     static #oneShotLogHistory: Map<string, { logged: boolean, timestamp: number, level: ELogType, count: number }> = new Map();
     static #oneShotHistoryMaxAge = 15 * 60 * 1000; // 15 minutes
 
+    static #cachedDebugEnabled: boolean = false;
+    static get isDebugEnabled(): boolean { return HSLogger.#cachedDebugEnabled; }
+
 
     // =======================================
     // --- Initialization / UI integration ---
@@ -80,6 +83,11 @@ export class HSLogger {
         HSLogger.scrollToBottom(true);
     }
 
+    static updateDebugEnabled(): void {
+        const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
+        HSLogger.#cachedDebugEnabled = !!(debugLog && debugLog.getValue());
+    }
+    
 
     // =======================================
     // --------- Public logging API ----------
@@ -109,13 +117,11 @@ export class HSLogger {
         this.#logToUi(msg, context, ELogType.ERROR);
     }
 
-    static debug(msg: string, context: string = "HSMain", isImportant: boolean = false) {
-        const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
-
-        if (debugLog && debugLog.getValue()) {
-            console.log(`DBG [${context}]: ${HSUtils.removeColorTags(msg)}`);
-            this.#logToUi(msg, context, ELogType.DEBUG);
-        }
+    static debug(msg: () => string, context: string = "HSMain", isImportant: boolean = false) {
+        if (!HSLogger.#cachedDebugEnabled) return;
+        const resolved = msg();
+        console.log(`DBG [${context}]: ${HSUtils.removeColorTags(resolved)}`);
+        this.#logToUi(resolved, context, ELogType.DEBUG);
     }
 
     static clear() {
