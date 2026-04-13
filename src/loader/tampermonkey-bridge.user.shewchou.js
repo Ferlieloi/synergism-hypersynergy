@@ -18,9 +18,12 @@
 
 (function () {
     'use strict';
-    const base = 'https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.shewchou.js';
+    const repo = 'maenhiir';    // 'Ferlieloi', 'maenhiir'
+    const version = 'latest';   // 'latest', specific commit, (specific tag?)
+    const base = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user.shewchou.js`;
     const url = base + (base.includes('?') ? '&' : '?') + 't=' + Date.now();
-
+    window.__HS_REPO = `${repo}`;
+    window.__HS_VERSION = `${version}`;
     try {
         (async function () {
             const res = await fetch(url, { cache: 'no-cache', credentials: 'omit', mode: 'cors' });
