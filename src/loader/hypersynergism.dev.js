@@ -676,8 +676,8 @@ window.__HS_BACKDOOR__ = {
 
     function loadMod() {
         window.__HS_IS_DEV = true;
-        const repoOwner = 'maenhiir'; // for tests
-        window.__HS_REPO_OWNER = repoOwner;
+        window.__HS_REPO = window.__HS_REPO ? window.__HS_REPO : 'maenhiir';
+        window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'latest';
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
             const url = `http://127.0.0.1:8080/hypersynergism.js?${Date.now()}`;

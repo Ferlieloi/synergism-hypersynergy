@@ -11,7 +11,7 @@ export class HSGithub {
     static #context: string = 'HSGithub';
     static #pollInterval?: number;
 
-    static readonly owner: string | null = ((window as any).__HS_REPO_OWNER ? (window as any).__HS_REPO_OWNER : null);
+    static readonly owner: string | null = ((window as any).__HS_REPO ? (window as any).__HS_REPO : null);
     static readonly currentTag: string = `v${HSGlobal.General.currentModVersion}`;
 
     static async isLatestTag(): Promise<boolean> {

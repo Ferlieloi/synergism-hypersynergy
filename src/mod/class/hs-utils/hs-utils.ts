@@ -474,7 +474,7 @@ export class HSUtils {
         predicate: (text: string) => boolean = t => t.trim().length > 0,
         timeoutMs = 2000
     ): Promise<void> {
-        // Fast path: if already satisfied, don't set up observers/timers.
+        // if already satisfied, don't set up observers/timers.
         if (predicate(el.textContent ?? "")) return;
 
         // Wait until a mutation makes the predicate true.

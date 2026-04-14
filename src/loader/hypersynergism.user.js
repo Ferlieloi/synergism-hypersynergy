@@ -675,11 +675,11 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
-        const repoOwner = 'Ferlieloi';
-        window.__HS_REPO_OWNER = repoOwner;
+        window.__HS_REPO    = window.__HS_REPO    ? window.__HS_REPO    : 'Ferlieloi';
+        window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'latest';
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            const url = `https://cdn.jsdelivr.net/gh/${repoOwner}/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?${Date.now()}`;
+            const url = `https://cdn.jsdelivr.net/gh/${window.__HS_REPO}/synergism-hypersynergy@${window.__HS_VERSION}/release/mod/hypersynergism_release.js?${Date.now()}`;
             s.src = url;
             s.onload = () => {
                 log(`✅ Mod script loaded from CDN: ${url}`);

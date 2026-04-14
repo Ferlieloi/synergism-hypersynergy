@@ -45,6 +45,7 @@ export class HSAutosingModal {
     #stopButton!: HTMLButtonElement;
     #restartButton!: HTMLButtonElement;
     #finishStopBtn!: HTMLButtonElement;
+    #isVisible: boolean = false;
     #isMinimized: boolean = false;
     #isPaused: boolean = false;
     #isDragging: boolean = false;
@@ -58,7 +59,7 @@ export class HSAutosingModal {
     #singTargetSpan: HTMLElement | null = null;
     #singHighestSpan: HTMLElement | null = null;
     #completedSingAmountSpan: HTMLElement | null = null;
-    #completedSingWithHappyHourPercentSpan: HTMLElement | null = null;
+    #completedSingHHPercentSpan: HTMLElement | null = null;
     #c15TopSpan: HTMLElement | null = null;
     #c15SigmaSpan: HTMLElement | null = null;
     #quarksCurrentAmountSpan: HTMLElement | null = null;
@@ -154,34 +155,6 @@ export class HSAutosingModal {
     #logC15Count: number = 0;
     #logC15Mean: number = 0;
     #logC15M2: number = 0;
-    #cachedC15Text: string = '-';
-    #cachedC15TopText: string = 'C15 -';
-    #cachedC15SigmaText: string = '';
-    #cachedCompletedSingWithHappyHourPercentText: string = '(0.00%';
-    #cachedCompletedSingAmountText: string = '-';
-    #cachedAvg1Text: string = '-';
-    #cachedAvgAllCountText: string = '-';
-    #cachedAvgAllAvg: number | null = null;
-    #cachedAvgAllSd: number | null = null;
-    #cachedAvg10Avg: number | null = null;
-    #cachedAvg10Sd: number | null = null;
-    #cachedAvg50Avg: number | null = null;
-    #cachedAvg50Sd: number | null = null;
-    #cachedTotalTimeText: string = '-';
-    #cachedMaxTimeText: string = '-';
-    #cachedMinTimeText: string = '-';
-    #cachedQuarksRateValText: string = '0/s';
-    #cachedQuarksRateHrText: string = '(0/hr)';
-    #cachedQuarksTotalGainsText: string = '-';
-    #cachedQuarksCurrentAmountText: string = '-';
-    #cachedQuarksMaxGainsText: string = '-';
-    #cachedQuarksMinGainsText: string = '-';
-    #cachedGoldenQuarksRateValText: string = '0/s';
-    #cachedGoldenQuarksRateHrText: string = '(0/hr)';
-    #cachedGoldenQuarksTotalGainsText: string = '-';
-    #cachedGoldenQuarksCurrentAmountText: string = '-';
-    #cachedGoldenQuarksMaxGainsText: string = '-';
-    #cachedGoldenQuarksMinGainsText: string = '-';
     #latestQuarksTotal: number = 0;
     #latestGoldenQuarksTotal: number = 0;
     #sparklineQuarks: SparklineDom | null = null;
@@ -197,22 +170,19 @@ export class HSAutosingModal {
     #onMouseUpHandler = () => this.#onMouseUp();
 
     // --- Cached/Computed Data ---
+    #phaseRenderOrder: string[] = [];
     #cachedStrategyOrder: string[] = [];
     #cachedStrategyOrderIndex: Map<string, number> = new Map();
-    #phaseRenderOrder: string[] = [];
 
     // --- Render Batching & Change Tracking ---
     // These flags and version numbers ensure that expensive DOM updates only happen when needed.
-    // This is critical for performance, especially with large or frequently updated tables.
-    #renderPending: boolean = false;
-    #renderGeneralPending: boolean = false;
-    #renderPhasesPending: boolean = false;
-    #renderSparklinesPending: boolean = false;
-    #renderExportPending: boolean = false;
-    #lastRenderedPhaseHistoryVersion: number = -1;
-    #lastRenderedSparklineVersion: number = -1;
-    #phaseHistoryVersion: number = 0;
-    #sparklineVersion: number = 0;
+    #renderPending: boolean              = false;
+    #renderSummaryStatsPending: boolean  = false;
+    #renderDetailedStatsPending: boolean = false;
+    #renderPhasesPending: boolean        = false;
+    #renderPhaseNamePending: boolean     = false;
+    #renderSparklinesPending: boolean    = false;
+    #renderExportPending: boolean        = false;
 
     // --- Sizing & Layout ---
     #autoResized: boolean = false;
@@ -250,14 +220,14 @@ export class HSAutosingModal {
 
         const title = document.createElement('span');
         title.textContent = '⏱️ Autosing';
-        title.className = 'hs-timer-title';
+        title.className   = 'hs-timer-title';
 
         // Pause button
         this.#pauseBtn = document.createElement('button');
-        this.#pauseBtn.id = 'hs-timer-ctrl-pause';
+        this.#pauseBtn.id          = 'hs-timer-ctrl-pause';
         this.#pauseBtn.textContent = '⏸️';
-        this.#pauseBtn.title = "Pause Autosing";
-        this.#pauseBtn.className = 'hs-timer-ctrl-btn';
+        this.#pauseBtn.title       = "Pause Autosing";
+        this.#pauseBtn.className   = 'hs-timer-ctrl-btn';
         this.#pauseBtn.onclick = () => {
             this.#isPaused = !this.#isPaused;
             this.#pauseBtn.textContent = this.#isPaused ? '▶️' : '⏸️';
@@ -265,10 +235,10 @@ export class HSAutosingModal {
         };
         // Restart button
         this.#restartButton = document.createElement('button');
-        this.#restartButton.id = 'hs-timer-ctrl-restart';
+        this.#restartButton.id          = 'hs-timer-ctrl-restart';
         this.#restartButton.textContent = '🔄';
-        this.#restartButton.title = "Restart Singularity from the beginning";
-        this.#restartButton.className = 'hs-timer-ctrl-btn';
+        this.#restartButton.title       = "Restart Singularity from the beginning";
+        this.#restartButton.className   = 'hs-timer-ctrl-btn';
         this.#restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -281,10 +251,10 @@ export class HSAutosingModal {
         };
         // Stop BUTTON
         this.#stopButton = document.createElement('button');
-        this.#stopButton.id = 'hs-timer-ctrl-stop';
+        this.#stopButton.id          = 'hs-timer-ctrl-stop';
         this.#stopButton.textContent = '🔴';
-        this.#stopButton.title = "Stop Autosing NOW";
-        this.#stopButton.className = 'hs-timer-ctrl-btn';
+        this.#stopButton.title       = "Stop Autosing NOW";
+        this.#stopButton.className   = 'hs-timer-ctrl-btn';
         this.#stopButton.onclick = () => {
             if (this.#modalMode === 'review') {
                 const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
@@ -296,10 +266,10 @@ export class HSAutosingModal {
         };
         // Finish & Stop BUTTON
         this.#finishStopBtn = document.createElement('button');
-        this.#finishStopBtn.id = 'hs-timer-ctrl-finish-stop';
+        this.#finishStopBtn.id          = 'hs-timer-ctrl-finish-stop';
         this.#finishStopBtn.textContent = '🟠';
-        this.#finishStopBtn.title = "Stop Autosing at the end of current Singularity";
-        this.#finishStopBtn.className = 'hs-timer-ctrl-btn';
+        this.#finishStopBtn.title       = "Stop Autosing at the end of current Singularity";
+        this.#finishStopBtn.className   = 'hs-timer-ctrl-btn';
         this.#finishStopBtn.onclick = () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
@@ -310,25 +280,24 @@ export class HSAutosingModal {
         };
         // Detailed data toggle button
         this.#chartToggleBtn = document.createElement('button');
-        this.#chartToggleBtn.id = 'hs-timer-ctrl-chart-toggle';
+        this.#chartToggleBtn.id          = 'hs-timer-ctrl-chart-toggle';
         this.#chartToggleBtn.textContent = '📊';
-        this.#chartToggleBtn.title = "Toggle Detailed Data Visibility";
-        this.#chartToggleBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
+        this.#chartToggleBtn.title       = "Toggle Detailed Data Visibility";
+        this.#chartToggleBtn.className   = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.#chartToggleBtn.onclick = () => {
             this.#toggleDetailedDataVisibility(!this.#showDetailedData);
         };
         this.#chartToggleBtn.onmouseenter = () => {
-            if (this.#showDetailedData) {
+            if (this.#showDetailedData)
                 this.#chartToggleBtn!.textContent = '✖️';
-            }
         };
         this.#chartToggleBtn.onmouseleave = () => { this.#chartToggleBtn!.textContent = '📊'; };
         // Minimize button
         this.#minimizeBtn = document.createElement('button');
-        this.#minimizeBtn.id = 'hs-timer-ctrl-minimize';
+        this.#minimizeBtn.id          = 'hs-timer-ctrl-minimize';
         this.#minimizeBtn.textContent = '−';
-        this.#minimizeBtn.title = "Minimize";
-        this.#minimizeBtn.className = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
+        this.#minimizeBtn.title       = "Minimize";
+        this.#minimizeBtn.className   = 'hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary';
         this.#minimizeBtn.onclick = () => this.#toggleMinimize();
 
         this.#timerHeader.appendChild(title);
@@ -487,54 +456,55 @@ export class HSAutosingModal {
         document.body.appendChild(this.#timerDisplay);
 
         // Cache frequently updated nodes (avoid repeated getElementById during renders)
-        this.#cachedDetailedEls = Array.from(document.querySelectorAll('.hs-detailed-data')) as HTMLElement[];
-        this.#farmingGrid = document.getElementById('hs-farming-grid');
-        this.#sectionGrids = Array.from(document.querySelectorAll('.hs-section-grid')) as HTMLElement[];
+        this.#cachedDetailedEls   = Array.from(document.querySelectorAll('.hs-detailed-data')) as HTMLElement[];
+        this.#sectionGrids        = Array.from(document.querySelectorAll('.hs-section-grid')) as HTMLElement[];
+        this.#farmingGrid         = document.getElementById('hs-farming-grid');
         this.#phaseStatsContainer = document.getElementById('hs-phase-stats-container');
 
-        this.#singTargetSpan = document.getElementById('hs-sing-target');
+        this.#singTargetSpan  = document.getElementById('hs-sing-target');
         this.#singHighestSpan = document.getElementById('hs-sing-highest');
-        this.#phaseNameSpan = document.getElementById('hs-phase-name-val');
-        this.#completedSingAmountSpan = document.getElementById('hs-completed-sing-amount');
-        this.#completedSingWithHappyHourPercentSpan = document.getElementById('hs-completed-sing-with-happy-hour-percent');
+        this.#phaseNameSpan   = document.getElementById('hs-phase-name-val');
+        this.#completedSingAmountSpan    = document.getElementById('hs-completed-sing-amount');
+        this.#completedSingHHPercentSpan = document.getElementById('hs-completed-sing-with-happy-hour-percent');
 
-        this.#c15TopSpan = document.getElementById('hs-c15-top');
-        this.#c15SigmaSpan = document.getElementById('hs-c15-sigma');
+        this.#c15TopSpan      = document.getElementById('hs-c15-top');
+        this.#c15SigmaSpan    = document.getElementById('hs-c15-sigma');
 
-        this.#totalTimeSpan = document.getElementById('hs-total-time');
-        this.#maxTimeSpan = document.getElementById('hs-max-time');
-        this.#minTimeSpan = document.getElementById('hs-min-time');
-        this.#avg1Span = document.getElementById('hs-avg-1');
-        this.#avg10Span = document.getElementById('hs-avg-10');
-        this.#avg50Span = document.getElementById('hs-avg-50');
-        this.#avgAllSpan = document.getElementById('hs-avg-all');
+        this.#totalTimeSpan   = document.getElementById('hs-total-time');
+        this.#maxTimeSpan     = document.getElementById('hs-max-time');
+        this.#minTimeSpan     = document.getElementById('hs-min-time');
+        this.#avg1Span        = document.getElementById('hs-avg-1');
+        this.#avg10Span       = document.getElementById('hs-avg-10');
+        this.#avg50Span       = document.getElementById('hs-avg-50');
+        this.#avgAllSpan      = document.getElementById('hs-avg-all');
         this.#avgAllCountSpan = document.getElementById('hs-avg-all-count');
 
-        this.#quarksCurrentAmountSpan = document.getElementById('hs-quarks-current-amount');
-        this.#quarksRateValSpan = document.getElementById('hs-quarks-rate-val');
-        this.#quarksRateHrSpan = document.getElementById('hs-quarks-rate-val-hr');
-        this.#quarksTotalGainsSpan = document.getElementById('hs-quarks-total-gains');
-        this.#quarksMaxGainsSpan = document.getElementById('hs-quarks-max-gains');
-        this.#quarksMinGainsSpan = document.getElementById('hs-quarks-min-gains');
+        this.#quarksCurrentAmountSpan  = document.getElementById('hs-quarks-current-amount');
+        this.#quarksRateValSpan        = document.getElementById('hs-quarks-rate-val');
+        this.#quarksRateHrSpan         = document.getElementById('hs-quarks-rate-val-hr');
+        this.#quarksTotalGainsSpan     = document.getElementById('hs-quarks-total-gains');
+        this.#quarksMaxGainsSpan       = document.getElementById('hs-quarks-max-gains');
+        this.#quarksMinGainsSpan       = document.getElementById('hs-quarks-min-gains');
         this.#gquarksCurrentAmountSpan = document.getElementById('hs-gquarks-current-amount');
-        this.#gquarksRateValSpan = document.getElementById('hs-gquarks-rate-val');
-        this.#gquarksRateHrSpan = document.getElementById('hs-gquarks-rate-val-hr');
-        this.#gquarksTotalGainsSpan = document.getElementById('hs-gquarks-total-gains');
-        this.#gquarksMaxGainsSpan = document.getElementById('hs-gquarks-max-gains');
-        this.#gquarksMinGainsSpan = document.getElementById('hs-gquarks-min-gains');
+        this.#gquarksRateValSpan       = document.getElementById('hs-gquarks-rate-val');
+        this.#gquarksRateHrSpan        = document.getElementById('hs-gquarks-rate-val-hr');
+        this.#gquarksTotalGainsSpan    = document.getElementById('hs-gquarks-total-gains');
+        this.#gquarksMaxGainsSpan      = document.getElementById('hs-gquarks-max-gains');
+        this.#gquarksMinGainsSpan      = document.getElementById('hs-gquarks-min-gains');
 
-        this.#sparklineQuarksContainer = document.getElementById('hs-sparkline-quarks-container');
+        this.#sparklineQuarksContainer       = document.getElementById('hs-sparkline-quarks-container');
         this.#sparklineGoldenQuarksContainer = document.getElementById('hs-sparkline-goldenquarks-container');
-        this.#sparklineTimeContainer = document.getElementById('hs-sparkline-time-container');
+        this.#sparklineTimeContainer         = document.getElementById('hs-sparkline-time-container');
 
-        this.#sparklineQuarks = buildSparklineDom(this.#sparklineQuarksContainer, '#00BCD4', false, 'quarks');
+        this.#sparklineTimes        = buildSparklineDom(this.#sparklineTimeContainer,         '#FF8A80', true,  'time');
+        this.#sparklineQuarks       = buildSparklineDom(this.#sparklineQuarksContainer,       '#00BCD4', false, 'quarks');
         this.#sparklineGoldenQuarks = buildSparklineDom(this.#sparklineGoldenQuarksContainer, '#F1FA8C', false, 'goldenQuarks');
-        this.#sparklineTimes = buildSparklineDom(this.#sparklineTimeContainer, '#FF8A80', true, 'time');
 
-        this.#footerVersionSpan = document.getElementById('hs-footer-version');
+        this.#footerVersionSpan  = document.getElementById('hs-footer-version');
         this.#footerStrategySpan = document.getElementById('hs-footer-strategy');
         this.#footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
 
+        /*
         // Persistent export button
         this.#exportButton = document.createElement('button');
         this.#exportButton.id = 'hs-export-data-btn';
@@ -547,7 +517,6 @@ export class HSAutosingModal {
         };
         this.#timerContent.appendChild(this.#exportButton);
 
-        /*
         // Initialize export manager after exportButton is created
         this.#exportManager = new HSAutosingExportManager({
             db: this.#db,
@@ -565,6 +534,7 @@ export class HSAutosingModal {
         if (!el) return null;
         const cached = this.#avgSpanParts.get(el);
         if (cached) return cached;
+
         el.textContent = '';
         const main = document.createElement('span');
         main.className = 'hs-avg-main';
@@ -604,15 +574,13 @@ export class HSAutosingModal {
     }
 
     #applyControlVisibility(): void {
-        if (!this.#pauseBtn || !this.#restartButton || !this.#stopButton || !this.#finishStopBtn || !this.#chartToggleBtn) {
-            return;
-        }
+        if (!this.#pauseBtn || !this.#restartButton || !this.#stopButton || !this.#finishStopBtn || !this.#chartToggleBtn) return;
 
         const isReview = this.#modalMode === 'review';
 
-        this.#pauseBtn.classList.toggle('hs-hidden', isReview || !this.#showDetailedData);
-        this.#finishStopBtn.classList.toggle('hs-hidden', isReview || this.#isMinimized || !this.#showDetailedData);
-        this.#restartButton.classList.toggle('hs-hidden', this.#isMinimized || !this.#showDetailedData);
+        this.#pauseBtn.classList.toggle('hs-hidden',       isReview || !this.#showDetailedData);
+        this.#finishStopBtn.classList.toggle('hs-hidden',  isReview || this.#isMinimized || !this.#showDetailedData);
+        this.#restartButton.classList.toggle('hs-hidden',  this.#isMinimized || !this.#showDetailedData);
         this.#chartToggleBtn.classList.toggle('hs-hidden', this.#isMinimized);
 
         // In review mode, move the "close" button to the left so it doesn't change place
@@ -627,35 +595,29 @@ export class HSAutosingModal {
         if (!this.#timerDisplay || this.#autoResized) return;
 
         // Hard-coded defaults (adjust as desired)
-        const FIXED_WIDTH = 350; // px
+        const FIXED_WIDTH  = 350; // px
         const FIXED_HEIGHT = 560; // px
 
         // Sparkline SVG width: leave space for the label column on the right.
         const FIXED_GRAPH_WIDTH = 286; // px
-        const LABELS_ESTIMATE = 55; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
+        const LABELS_ESTIMATE   = 55; // px; right-side label column width (based on ~11 chars in a 9px monospaced font-size)
 
         // Respect viewport so the modal doesn't go off-screen by default.
-        const appliedWidth = Math.max(260, Math.min(FIXED_WIDTH, window.innerWidth - 20));
+        const appliedWidth  = Math.max(260, Math.min(FIXED_WIDTH,  window.innerWidth - 20));
         const appliedHeight = Math.max(400, Math.min(FIXED_HEIGHT, window.innerHeight - 6));
 
-        this.#computedMaxWidth = appliedWidth;
+        this.#computedMaxWidth  = appliedWidth;
         this.#computedMaxHeight = appliedHeight + 250;
         // Graph (SVG) width must fit inside the modal
         this.#computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
 
-        this.#timerDisplay.style.width = 'auto';
+        this.#timerDisplay.style.width  = 'auto';
         this.#timerDisplay.style.height = 'auto';
 
         // Sparkline containers also use auto width to allow modal to auto-resize
-        if (this.#sparklineQuarksContainer) {
-            this.#sparklineQuarksContainer.style.width = 'auto';
-        }
-        if (this.#sparklineGoldenQuarksContainer) {
-            this.#sparklineGoldenQuarksContainer.style.width = 'auto';
-        }
-        if (this.#sparklineTimeContainer) {
-            this.#sparklineTimeContainer.style.width = 'auto';
-        }
+        if (this.#sparklineTimeContainer)         this.#sparklineTimeContainer.style.width         = 'auto';
+        if (this.#sparklineQuarksContainer)       this.#sparklineQuarksContainer.style.width       = 'auto';
+        if (this.#sparklineGoldenQuarksContainer) this.#sparklineGoldenQuarksContainer.style.width = 'auto';
 
         this.#autoResized = true;
     }
@@ -670,16 +632,13 @@ export class HSAutosingModal {
             }
         };
         window.addEventListener('mousemove', this.#onMouseMoveHandler);
-        window.addEventListener('mouseup', this.#onMouseUpHandler);
+        window.addEventListener('mouseup',   this.#onMouseUpHandler);
     }
 
     /** Handles mouse move events for dragging and resizing. */
     #onMouseMove(e: MouseEvent): void {
-        if (this.#isDragging) {
-            this.#drag(e);
-        } else if (this.#isResizing) {
-            this.#resize(e);
-        }
+        if (this.#isDragging)      this.#drag(e);
+        else if (this.#isResizing) this.#resize(e);
     }
 
     /** Handles mouse up events to stop dragging or resizing. */
@@ -695,7 +654,7 @@ export class HSAutosingModal {
         const rect = this.#timerDisplay.getBoundingClientRect();
         this.#dragOffset.x = e.clientX - rect.left;
         this.#dragOffset.y = e.clientY - rect.top;
-        this.#dragBounds.width = rect.width;
+        this.#dragBounds.width  = rect.width;
         this.#dragBounds.height = rect.height;
         this.#dragBounds.maxX = Math.max(0, window.innerWidth - rect.width);
         this.#dragBounds.maxY = Math.max(0, window.innerHeight - rect.height);
@@ -708,21 +667,20 @@ export class HSAutosingModal {
         const x = Math.min(Math.max(0, e.clientX - this.#dragOffset.x), this.#dragBounds.maxX);
         const y = Math.min(Math.max(0, e.clientY - this.#dragOffset.y), this.#dragBounds.maxY);
 
-        this.#timerDisplay.style.left = `${x}px`;
-        this.#timerDisplay.style.top = `${y}px`;
-        this.#timerDisplay.style.right = 'auto';
+        this.#timerDisplay.style.left   = `${x}px`;
+        this.#timerDisplay.style.top    = `${y}px`;
+        this.#timerDisplay.style.right  = 'auto';
         this.#timerDisplay.style.bottom = 'auto';
     }
 
     /** Starts resizing the modal. */
     #startResize(e: MouseEvent): void {
-        if (!this.#timerDisplay) return;
-        if (this.#isMinimized) return;
+        if (!this.#timerDisplay || this.#isMinimized) return;
         e.preventDefault();
         this.#isResizing = true;
         const rect = this.#timerDisplay.getBoundingClientRect();
         this.#resizeStart = {
-            width: rect.width,
+            width:  rect.width,
             height: rect.height,
             x: e.clientX,
             y: e.clientY
@@ -757,9 +715,8 @@ export class HSAutosingModal {
         this.#timerContent.classList.toggle('hs-hidden', this.#isMinimized);
         this.#applyControlVisibility();
 
-        if (this.#minimizeBtn) {
+        if (this.#minimizeBtn)
             this.#minimizeBtn.textContent = this.#isMinimized ? '+' : '−';
-        }
 
         if (!this.#isMinimized) {
             this.#timerDisplay.classList.remove('hs-minimized');
@@ -768,8 +725,6 @@ export class HSAutosingModal {
             this.#deleteDetailedDataDom();
         }
 
-        this.#sparklineVersion++;
-        this.#phaseHistoryVersion++;
         this.#requestRenderAll();
     }
 
@@ -784,52 +739,29 @@ export class HSAutosingModal {
         });
 
         this.#farmingGrid?.classList.toggle('hs-grid-2col-auto-auto', visible);
-        this.#farmingGrid?.classList.toggle('hs-grid-1col', !visible);
+        this.#farmingGrid?.classList.toggle('hs-grid-1col',          !visible);
         this.#sectionGrids.forEach(sectionGrid => {
-            sectionGrid.classList.toggle('hs-grid-4col', visible);
+            sectionGrid.classList.toggle('hs-grid-4col',           visible);
             sectionGrid.classList.toggle('hs-grid-2col-min-auto', !visible);
         });
 
         this.#applyControlVisibility();
 
-        if (visible) {
-            this.#rebuildDetailedDataDom();
-        } else {
-            this.#deleteDetailedDataDom();
-        }
+        if (visible) this.#rebuildDetailedDataDom();
+        else         this.#deleteDetailedDataDom();
 
-        this.#sparklineVersion++;
-        this.#phaseHistoryVersion++;
         this.#requestRenderAll();
     }
 
-    /** (Re)build the DOM structure for detailed data sections that can be toggled on/off,
-     *  ensuring a stable structure for efficient updates. */
+    /** (Re)build the DOM structure for detailed data sections that can be toggled on/off */
     #rebuildDetailedDataDom(): void {
-        /*
-        // Times section (Averages/Total/Min/Max)
-        this.ensureAvgSpanStructure(this.avg10Span);
-        this.ensureAvgSpanStructure(this.avg50Span);
-
-        // Phase stats header
-        if (!this.phaseStatsContainer) return;
-        this.phaseStatsContainer.innerHTML = `
-            <div class="hs-phase-stats-header-title">PHASE STATISTICS</div>
-            <div class="hs-phase-stats-header">Loops</div>
-            <div class="hs-phase-stats-header">Avg</div>
-            <div class="hs-phase-stats-header">SD</div>
-            <div class="hs-phase-stats-header">Last</div>
-        `;
-        */
-
         // Sparklines
-        this.#sparklineQuarks = buildSparklineDom(this.#sparklineQuarksContainer, '#00BCD4', false, 'quarks');
+        this.#sparklineTimes        = buildSparklineDom(this.#sparklineTimeContainer,         '#FF8A80', true,  'time');
+        this.#sparklineQuarks       = buildSparklineDom(this.#sparklineQuarksContainer,       '#00BCD4', false, 'quarks');
         this.#sparklineGoldenQuarks = buildSparklineDom(this.#sparklineGoldenQuarksContainer, '#F1FA8C', false, 'goldenQuarks');
-        this.#sparklineTimes = buildSparklineDom(this.#sparklineTimeContainer, '#FF8A80', true, 'time');
     }
 
-    /** Delete the DOM structure for detailed data sections that can be toggled on/off,
-     *  ensuring a stable structure for efficient updates. */
+    /** Delete the DOM structure for detailed data sections that can be toggled on/off */
     #deleteDetailedDataDom(): void {
         // Delete all phase rows (except the 5 column headers)
         if (this.#phaseStatsContainer) {
@@ -840,20 +772,19 @@ export class HSAutosingModal {
         this.#phaseRowMap.clear();
 
         // Clear sparkline containers and release stale DOM references.
-        if (this.#sparklineTimeContainer) { this.#sparklineTimeContainer.innerHTML = ''; }
-        if (this.#sparklineQuarksContainer) { this.#sparklineQuarksContainer.innerHTML = ''; }
-        if (this.#sparklineGoldenQuarksContainer) { this.#sparklineGoldenQuarksContainer.innerHTML = ''; }
-        this.#sparklineQuarks = null;
+        if (this.#sparklineTimeContainer)         this.#sparklineTimeContainer.innerHTML         = '';
+        if (this.#sparklineQuarksContainer)       this.#sparklineQuarksContainer.innerHTML       = '';
+        if (this.#sparklineGoldenQuarksContainer) this.#sparklineGoldenQuarksContainer.innerHTML = '';
+        this.#sparklineQuarks       = null;
         this.#sparklineGoldenQuarks = null;
-        this.#sparklineTimes = null;
+        this.#sparklineTimes        = null;
     }
 
     // =============================
     // Session/Timer Management
     // =============================
 
-    /** Start the live timer for a new singularity.
-     *  Reset phase tracking and update UI. */
+    /** Start the live timer for a new singularity. Reset phase tracking and update UI. */
     #startNewSingTimer(): void {
         this.#clearSingularityInterval();
         this.#lastSingularityTimestamp = performance.now();
@@ -890,19 +821,19 @@ export class HSAutosingModal {
         this.#latestGoldenQuarksTotal = initialGoldenQuarks;
 
         // Cache info at start
-        this.#modVersion = HSGlobal.General.currentModVersion;
-        this.#strategy = strategy;
-        this.#singTarget = this.#getSingularityTarget();
-        this.#singHighest = this.#getSingularityHighest();
-        this.#strategyName = this.#getStrategyName();
+        this.#modVersion    = HSGlobal.General.currentModVersion;
+        this.#strategy      = strategy;
+        this.#singTarget    = this.#getSingularityTarget();
+        this.#singHighest   = this.#getSingularityHighest();
+        this.#strategyName  = this.#getStrategyName();
         this.#loadoutsOrder = this.#getLoadoutsOrder();
-        HSLogger.debug(() => `loadoutsOrder: ${JSON.stringify(this.#loadoutsOrder)}`, this.#context);
         this.#cachedStrategyOrder = this.#strategy.strategy.map((p: { startPhase: string; endPhase: string }) => `${p.startPhase}-${p.endPhase}`);
+        HSLogger.debug(() => `loadoutsOrder: ${JSON.stringify(this.#loadoutsOrder)}`, this.#context);
         HSLogger.debug(() => `cachedStrategyOrder: ${JSON.stringify(this.#cachedStrategyOrder)}`, this.#context);
 
         // Set static stats DOM fields once
-        this.#setTextEl(this.#singTargetSpan, `S${this.#singTarget}`);
-        this.#setTextEl(this.#singHighestSpan, `S${this.#singHighest}`);
+        this.#setTextEl(this.#singTargetSpan,    `S${this.#singTarget}`);
+        this.#setTextEl(this.#singHighestSpan,   `S${this.#singHighest}`);
         this.#setTextEl(this.#footerVersionSpan, `v${this.#modVersion}`);
         this.#setTextEl(this.#footerStrategySpan, this.#strategyName);
         this.#setTextEl(this.#footerLoadoutsSpan, this.#loadoutsOrder.join(', '));
@@ -933,17 +864,13 @@ export class HSAutosingModal {
             this.#cachedStrategyOrderIndex.set(this.#cachedStrategyOrder[i], i);
         }
 
+        /*
         // Check advanced-data-collection once at autosing start (cached).
         this.#advancedDataCollectionEnabled = !!HSSettings.getSetting('advancedDataCollection')?.isEnabled();
         if (this.#advancedDataCollectionEnabled) {
-            // this.db.clearBundles().catch(console.error);
+            this.db.clearBundles().catch(console.error);
         }
-
-        // Reset render versions so next render is a full refresh
-        this.#phaseHistoryVersion = 0;
-        this.#lastRenderedPhaseHistoryVersion = -1;
-        this.#sparklineVersion = 0;
-        this.#lastRenderedSparklineVersion = -1;
+        */
 
         this.#startNewSingTimer();
         this.#requestRenderAll();
@@ -962,8 +889,8 @@ export class HSAutosingModal {
             const next = prev + phaseDuration;
             // Update stats directly
             phaseData.totalTime += phaseDuration;
-            phaseData.sumSq += (next * next) - (prev * prev);
-            phaseData.lastTime = next;
+            phaseData.sumSq     += (next * next) - (prev * prev);
+            phaseData.lastTime  = next;
             phaseData.innerLoopCount++;
             // Update Current Singularity Tracking
             const currentVal = this.#currentSingularityPhases.get(phase) || 0;
@@ -976,9 +903,9 @@ export class HSAutosingModal {
                 this.#insertPhaseRenderName(phase);
             }
             phaseData.phaseCount += 1;
-            phaseData.totalTime += phaseDuration;
-            phaseData.sumSq += phaseDuration * phaseDuration;
-            phaseData.lastTime = phaseDuration;
+            phaseData.totalTime  += phaseDuration;
+            phaseData.sumSq      += phaseDuration * phaseDuration;
+            phaseData.lastTime   = phaseDuration;
             phaseData.innerLoopCount = 1;
             this.#currentSingularityPhases.set(phase, phaseDuration);
             this.#lastRecordedPhaseName = phase;
@@ -987,11 +914,8 @@ export class HSAutosingModal {
         // Prepare for next phase
         this.#currentPhaseStart = now;
 
-        // Phase stats are the only section that changes per phase.
-        this.#phaseHistoryVersion++;
-        if (this.#showDetailedData) {
-            this.#requestRender({ phases: true });
-        }
+        // Phase name is handled on his own
+        this.#requestRender({ phases: true });
     }
 
     /** Records the completion of a singularity, updating metrics and stats.
@@ -1005,7 +929,7 @@ export class HSAutosingModal {
         this.#latestGoldenQuarksTotal = currentGoldenQuarks;
 
         // Handle quarks exactly like golden quarks: use passed totals/gains.
-        const realQuarksGain = gainedQuarks;
+        const realQuarksGain    = gainedQuarks;
         this.#latestQuarksTotal = currentQuarks;
 
         // Add to unified metrics array for charts
@@ -1023,35 +947,35 @@ export class HSAutosingModal {
         this.#allTimeStats.singCompletedWithHappyHour += happyHourStackAmount > 0 ? 1 : 0;
         // Duration
         const deltaDuration = singularityDuration - this.#allTimeStats.meanDuration;
-        this.#allTimeStats.meanDuration += deltaDuration / this.#allTimeStats.singCompleted;
+        this.#allTimeStats.meanDuration  += deltaDuration / this.#allTimeStats.singCompleted;
         this.#allTimeStats.sumSqDuration += deltaDuration * (singularityDuration - this.#allTimeStats.meanDuration);
         this.#allTimeStats.totalDuration += singularityDuration;
         // Quarks
         const deltaQuarks = realQuarksGain - this.#allTimeStats.meanQuarks;
-        this.#allTimeStats.meanQuarks += deltaQuarks / this.#allTimeStats.singCompleted;
+        this.#allTimeStats.meanQuarks  += deltaQuarks / this.#allTimeStats.singCompleted;
         this.#allTimeStats.sumSqQuarks += deltaQuarks * (realQuarksGain - this.#allTimeStats.meanQuarks);
         this.#allTimeStats.totalQuarks += realQuarksGain;
         // Golden Quarks
         const deltaGoldenQuarks = gainedGoldenQuarks - this.#allTimeStats.meanGoldenQuarks;
-        this.#allTimeStats.meanGoldenQuarks += deltaGoldenQuarks / this.#allTimeStats.singCompleted;
+        this.#allTimeStats.meanGoldenQuarks  += deltaGoldenQuarks / this.#allTimeStats.singCompleted;
         this.#allTimeStats.sumSqGoldenQuarks += deltaGoldenQuarks * (gainedGoldenQuarks - this.#allTimeStats.meanGoldenQuarks);
         this.#allTimeStats.totalGoldenQuarks += gainedGoldenQuarks;
         // Min and Max
-        this.#allTimeStats.minDuration = Math.min(this.#allTimeStats.minDuration, singularityDuration);
-        this.#allTimeStats.maxDuration = Math.max(this.#allTimeStats.maxDuration, singularityDuration);
-        this.#allTimeStats.minQuarks = Math.min(this.#allTimeStats.minQuarks, realQuarksGain);
-        this.#allTimeStats.maxQuarks = Math.max(this.#allTimeStats.maxQuarks, realQuarksGain);
+        this.#allTimeStats.minDuration     = Math.min(this.#allTimeStats.minDuration,     singularityDuration);
+        this.#allTimeStats.maxDuration     = Math.max(this.#allTimeStats.maxDuration,     singularityDuration);
+        this.#allTimeStats.minQuarks       = Math.min(this.#allTimeStats.minQuarks,       realQuarksGain);
+        this.#allTimeStats.maxQuarks       = Math.max(this.#allTimeStats.maxQuarks,       realQuarksGain);
         this.#allTimeStats.minGoldenQuarks = Math.min(this.#allTimeStats.minGoldenQuarks, gainedGoldenQuarks);
         this.#allTimeStats.maxGoldenQuarks = Math.max(this.#allTimeStats.maxGoldenQuarks, gainedGoldenQuarks);
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
             // Update C15 online stats (Decimal Welford)
-            const k = this.#c15Count + 1;
-            const delta = c15Score.minus(this.#c15Mean);
+            const k       = this.#c15Count + 1;
+            const delta   = c15Score.minus(this.#c15Mean);
             this.#c15Mean = this.#c15Mean.plus(delta.div(k));
-            const delta2 = c15Score.minus(this.#c15Mean);
-            this.#c15M2 = this.#c15M2.plus(delta.times(delta2));
+            const delta2  = c15Score.minus(this.#c15Mean);
+            this.#c15M2   = this.#c15M2.plus(delta.times(delta2));
             this.#c15Count = k;
 
             // Update online stats for log(C15) using Welford's algorithm (natural log)
@@ -1059,10 +983,10 @@ export class HSAutosingModal {
                 const asNumber = Number(c15Score);
                 if (!Number.isNaN(asNumber) && asNumber > 0) {
                     const logVal = Math.log(asNumber);
-                    const k = this.#logC15Count + 1;
-                    const delta = logVal - this.#logC15Mean;
-                    this.#logC15Mean += delta / k;
-                    this.#logC15M2 += delta * (logVal - this.#logC15Mean);
+                    const k      = this.#logC15Count + 1;
+                    const delta  = logVal - this.#logC15Mean;
+                    this.#logC15Mean  += delta / k;
+                    this.#logC15M2    += delta * (logVal - this.#logC15Mean);
                     this.#logC15Count = k;
                 }
             } catch (e) {
@@ -1090,74 +1014,8 @@ export class HSAutosingModal {
             // this.db.addBundle(bundle, compressToUTF16).catch(console.error);
         }
 
-        // New singularity affects general stats + charts.
-        this.#sparklineVersion++;
-
-        this.#updateAllModalElementValues();
         this.#startNewSingTimer();
-        this.#requestRenderAll();
-    }
-
-    #updateAllModalElementValues(): void {
-        // Summary stats (always visible)
-        const singCompleted = this.#allTimeStats.singCompleted;
-        const singCompletedWithHH = this.#allTimeStats.singCompletedWithHappyHour;
-        this.#cachedCompletedSingWithHappyHourPercentText = singCompleted > 0 && singCompletedWithHH > 0
-            ? `(${((singCompletedWithHH / singCompleted) * 100).toFixed(2)}%`
-            : '(0.00%';
-        this.#cachedCompletedSingAmountText = singCompleted ? `${singCompleted}` : '-';
-
-        const avg1 = this.#getLastDuration();
-        const avgAll = this.#getAllTimeAvgDuration();
-        const sdAll = this.#getAllTimeStdDuration();
-        this.#cachedAvg1Text = avg1 !== null ? `${avg1.toFixed(2)}s` : '-';
-        this.#cachedAvgAllCountText = singCompleted ? `${singCompleted}` : '-';
-        this.#cachedAvgAllAvg = avgAll;
-        this.#cachedAvgAllSd = sdAll;
-
-        const allTimeDuration = this.#allTimeStats.totalDuration;
-        const allTimeQuarks = this.#allTimeStats.totalQuarks;
-        const allTimeQuarksPerSec = allTimeDuration > 0 ? allTimeQuarks / allTimeDuration : 0;
-        const allTimeGoldenQuarks = this.#allTimeStats.totalGoldenQuarks;
-        const allTimeGoldenQuarksPerSec = allTimeDuration > 0 ? allTimeGoldenQuarks / allTimeDuration : 0;
-        this.#cachedQuarksRateValText = `${formatNumber(allTimeQuarksPerSec)}/s`;
-        this.#cachedQuarksRateHrText = `(${formatNumber(allTimeQuarksPerSec * 3600)}/hr)`;
-        this.#cachedQuarksTotalGainsText = allTimeQuarks > 0 ? formatNumber(allTimeQuarks) : '-';
-        this.#cachedGoldenQuarksRateValText = `${formatNumber(allTimeGoldenQuarksPerSec)}/s`;
-        this.#cachedGoldenQuarksRateHrText = `(${formatNumber(allTimeGoldenQuarksPerSec * 3600)}/hr)`;
-        this.#cachedGoldenQuarksTotalGainsText = allTimeGoldenQuarks > 0 ? formatNumber(allTimeGoldenQuarks) : '-';
-
-        // Detailed stats (visible only if detailed data is toggled on)
-        this.#cachedC15Text = formatDecimal(this.#c15Mean);
-        this.#cachedC15TopText = `C15 ${this.#cachedC15Text}`;
-        const sdLogC15 = getLogC15Std(this.#logC15Count, this.#logC15M2);
-        this.#cachedC15SigmaText = sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '';
-
-        const stats10 = getAvgAndStdLast(this.#singularityMetrics, 10);
-        const stats50 = getAvgAndStdLast(this.#singularityMetrics, 50);
-        this.#cachedAvg10Avg = stats10.avg;
-        this.#cachedAvg10Sd = stats10.sd;
-        this.#cachedAvg50Avg = stats50.avg;
-        this.#cachedAvg50Sd = stats50.sd;
-
-        const totalTime = this.#allTimeStats.totalDuration;
-        const maxTime = this.#allTimeStats.maxDuration;
-        const minTime = this.#allTimeStats.minDuration;
-        const currentQuarks = this.#latestQuarksTotal;
-        const maxQuarksGains = this.#allTimeStats.maxQuarks;
-        const minQuarksGains = this.#allTimeStats.minQuarks;
-        const currentGoldenQuarks = this.#latestGoldenQuarksTotal;
-        const maxGoldenQuarksGains = this.#allTimeStats.maxGoldenQuarks;
-        const minGoldenQuarksGains = this.#allTimeStats.minGoldenQuarks;
-        this.#cachedTotalTimeText = totalTime > 0 ? formatTotalTime(totalTime) : '-';
-        this.#cachedMaxTimeText = maxTime !== 0 ? `${maxTime.toFixed(2)}s` : '-';
-        this.#cachedMinTimeText = minTime !== 0 && minTime !== Infinity ? `${minTime.toFixed(2)}s` : '-';
-        this.#cachedQuarksCurrentAmountText = currentQuarks !== 0 ? formatNumber(currentQuarks) : '-';
-        this.#cachedQuarksMaxGainsText = maxQuarksGains !== 0 ? formatNumber(maxQuarksGains) : '-';
-        this.#cachedQuarksMinGainsText = minQuarksGains !== 0 && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-';
-        this.#cachedGoldenQuarksCurrentAmountText = currentGoldenQuarks > 0 ? formatNumber(currentGoldenQuarks) : '-';
-        this.#cachedGoldenQuarksMaxGainsText = maxGoldenQuarksGains !== 0 ? formatNumber(maxGoldenQuarksGains) : '-';
-        this.#cachedGoldenQuarksMinGainsText = minGoldenQuarksGains !== 0 && minGoldenQuarksGains !== Infinity ? formatNumber(minGoldenQuarksGains) : '-';
+        this.#requestRender({ summaryStats: true, detailedStats: true, sparklines: true });
     }
 
 
@@ -1177,21 +1035,21 @@ export class HSAutosingModal {
         // Prune oldest entry first if at capacity, subtracting its values from running sums
         if (this.#singularityMetrics.length >= this.#sparklineMaxPoints) {
             const removed = this.#singularityMetrics.shift()!;
-            this.#metricsSumDuration -= removed.duration;
-            this.#metricsSumQuarks -= removed.quarksGained;
+            this.#metricsSumDuration     -= removed.duration;
+            this.#metricsSumQuarks       -= removed.quarksGained;
             this.#metricsSumGoldenQuarks -= removed.goldenQuarksGained;
         }
 
         // Update running sums with the new entry
-        this.#metricsSumDuration += singularityDuration;
-        this.#metricsSumQuarks += realQuarksGain;
+        this.#metricsSumDuration     += singularityDuration;
+        this.#metricsSumQuarks       += realQuarksGain;
         this.#metricsSumGoldenQuarks += gainedGoldenQuarks;
 
         // Compute running averages from maintained sums (O(1) instead of O(n))
         const n = this.#singularityMetrics.length + 1;
         const runningAvgDuration = this.#metricsSumDuration / n;
-        const totalDuration = this.#metricsSumDuration;
-        const runningAvgQuarksPerSecond = totalDuration > 0 ? this.#metricsSumQuarks / totalDuration : 0;
+        const totalDuration      = this.#metricsSumDuration;
+        const runningAvgQuarksPerSecond       = totalDuration > 0 ? this.#metricsSumQuarks / totalDuration : 0;
         const runningAvgGoldenQuarksPerSecond = totalDuration > 0 ? this.#metricsSumGoldenQuarks / totalDuration : 0;
 
         const phasesObject: Record<string, number> = {};
@@ -1223,9 +1081,10 @@ export class HSAutosingModal {
     /** Public setter to update the current phase name displayed on the timer.
      *  Call this at the START of a phase so the user sees what is happening. */
     public setCurrentPhase(phaseName: string) {
-        this.#currentPhaseName = phaseName;
-        this.#setTextEl(this.#phaseNameSpan, phaseName);
-        // this.#requestRender({ general: true });
+        if (this.#currentPhaseName !== phaseName) {
+            this.#currentPhaseName = phaseName;
+            this.#requestRender({ phaseName: true });
+        }
     }
 
     /** Return true if autosing is currently paused. */
@@ -1251,7 +1110,6 @@ export class HSAutosingModal {
         const value = setting.getValue();
         const definition = setting.getDefinition();
         const option = definition.settingControl?.selectOptions?.find(opt => String(opt.value) === String(value));
-
         return option ? option.text : String(value || 'None');
     }
 
@@ -1276,19 +1134,19 @@ export class HSAutosingModal {
 
     // --- All-Time Stats Helpers ---
     #getAllTimeAvgDuration(): number | null {
-        return this.#allTimeStats.singCompleted ? this.#allTimeStats.totalDuration / this.#allTimeStats.singCompleted : null;
+        return this.#allTimeStats.singCompleted     ? this.#allTimeStats.totalDuration / this.#allTimeStats.singCompleted                : null;
     }
     #getAllTimeStdDuration(): number | null {
-        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqDuration / this.#allTimeStats.singCompleted) : null;
+        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqDuration / this.#allTimeStats.singCompleted)     : null;
     }
     #getAllTimeAvgQuarks(): number | null {
-        return this.#allTimeStats.singCompleted ? this.#allTimeStats.totalQuarks / this.#allTimeStats.singCompleted : null;
+        return this.#allTimeStats.singCompleted     ? this.#allTimeStats.totalQuarks / this.#allTimeStats.singCompleted                  : null;
     }
     #getAllTimeStdQuarks(): number | null {
-        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqQuarks / this.#allTimeStats.singCompleted) : null;
+        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqQuarks / this.#allTimeStats.singCompleted)       : null;
     }
     #getAllTimeAvgGoldenQuarks(): number | null {
-        return this.#allTimeStats.singCompleted ? this.#allTimeStats.totalGoldenQuarks / this.#allTimeStats.singCompleted : null;
+        return this.#allTimeStats.singCompleted     ? this.#allTimeStats.totalGoldenQuarks / this.#allTimeStats.singCompleted            : null;
     }
     #getAllTimeStdGoldenQuarks(): number | null {
         return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqGoldenQuarks / this.#allTimeStats.singCompleted) : null;
@@ -1301,20 +1159,19 @@ export class HSAutosingModal {
 
     /** Request a full render update for all modal sections. */
     #requestRenderAll(): void {
-        // We reset the versions here to ensure that the next render will update all sections
-        this.#lastRenderedPhaseHistoryVersion = -1;
-        this.#lastRenderedSparklineVersion = -1;
-        this.#requestRender({ general: true, phases: true, sparklines: true, exportBtn: true });
+        this.#requestRender({ summaryStats: true, detailedStats: true, phases: true, phaseName: true, sparklines: true, exportBtn: true });
     }
 
     /** Request a render update for specific modal sections. Sets pending flags
      *  and schedules a render via requestAnimationFrame. */
-    #requestRender(opts: { general?: boolean; phases?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
+    #requestRender(opts: { summaryStats?: boolean; detailedStats?: boolean; phases?: boolean; phaseName?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
         if (this.#isMinimized) return;
-        if (opts.general) this.#renderGeneralPending = true;
-        if (opts.phases) this.#renderPhasesPending = true;
-        if (opts.sparklines) this.#renderSparklinesPending = true;
-        if (opts.exportBtn) this.#renderExportPending = true;
+        if (opts.summaryStats)  this.#renderSummaryStatsPending  = true;
+        if (opts.detailedStats) this.#renderDetailedStatsPending = true;
+        if (opts.phases)        this.#renderPhasesPending        = true;
+        if (opts.phaseName)     this.#renderPhaseNamePending     = true;
+        if (opts.sparklines)    this.#renderSparklinesPending    = true;
+        // if (opts.exportBtn)     this.#renderExportPending        = true;
 
         if (this.#renderPending) return;
         this.#renderPending = true;
@@ -1327,40 +1184,41 @@ export class HSAutosingModal {
 
     /** Execute pending render updates for modal sections. Only runs if modal is visible and DOM is ready. */
     #flushRender(): void {
-        if (!this.#timerContent || !this.#timerDisplay
-            || this.#timerDisplay.classList.contains('hs-hidden') || this.#isMinimized) {
-            this.#renderGeneralPending = false;
-            this.#renderPhasesPending = false;
-            this.#renderSparklinesPending = false;
-            this.#renderExportPending = false;
+        if (!this.#timerDisplay || !this.#timerContent || !this.#isVisible || this.#isMinimized) {
+            this.#renderSummaryStatsPending  = false; // Every sing
+            this.#renderDetailedStatsPending = false; // Every sing (if detailed data is visible)
+            this.#renderPhasesPending        = false; // Every phase END
+            this.#renderPhaseNamePending     = false; // Every phase START
+            this.#renderSparklinesPending    = false; // Every sing
+        //  this.#renderExportPending        = false; // Unused for now...
             return;
         }
 
-        // Render the mandatory general stats 
-        if (this.#renderGeneralPending) {
+        if (this.#renderSummaryStatsPending) {
             this.#renderSummaryStats();
+            this.#renderSummaryStatsPending = false;
+        }
+        if (this.#renderDetailedStatsPending){
             this.#renderDetailedStats();
+            this.#renderDetailedStatsPending = false;
         }
-
-        // Only render detailed stats if showDetailedData is true (avoid unnecessary DOM work).
-        if (this.#renderPhasesPending && this.#phaseHistoryVersion !== this.#lastRenderedPhaseHistoryVersion) {
+        if (this.#renderPhasesPending) {
             this.#renderPhaseStatistics();
+            this.#renderPhasesPending = false;
         }
-
+        if (this.#renderPhaseNamePending) {
+            this.#setTextEl(this.#phaseNameSpan, this.#currentPhaseName);
+            this.#renderPhaseNamePending  = false;
+        }
         if (this.#renderSparklinesPending) {
-            if (this.#sparklineVersion !== this.#lastRenderedSparklineVersion) {
-                this.#renderSparklines();
-            }
+            this.#renderSparklines();
+            this.#renderSparklinesPending = false;
         }
-
-        if (this.#renderExportPending) {
-            // this.#exportManager?.updateExportButton();
-        }
-
-        this.#renderGeneralPending = false;
-        this.#renderPhasesPending = false;
-        this.#renderSparklinesPending = false;
-        this.#renderExportPending = false;
+        /*
+        if (this.#renderExportPending) 
+            this.#exportManager?.updateExportButton();
+            this.#renderExportPending = false;
+        */
     }
 
     /** Set the text content of an element if it differs from the current value. */
@@ -1378,14 +1236,14 @@ export class HSAutosingModal {
 
         if (val === null) {
             if (parts.main.textContent !== '-') parts.main.textContent = '-';
-            if (parts.sd.textContent !== '') parts.sd.textContent = '';
+            if (parts.sd.textContent   !== '')  parts.sd.textContent = '';
             return;
         }
 
         const mainText = `${val.toFixed(2)}s`;
         const sdText = sd !== null ? ` (σ ±${sd.toFixed(2)}s)` : '';
         if (parts.main.textContent !== mainText) parts.main.textContent = mainText;
-        if (parts.sd.textContent !== sdText) parts.sd.textContent = sdText;
+        if (parts.sd.textContent   !== sdText)   parts.sd.textContent = sdText;
     }
 
     #insertPhaseRenderName(phaseName: string): void {
@@ -1406,57 +1264,85 @@ export class HSAutosingModal {
     #renderSummaryStats(): void {
         if (this.#isMinimized) return;
 
+        const singCompleted       = this.#allTimeStats.singCompleted;
+        const singCompletedWithHH = this.#allTimeStats.singCompletedWithHappyHour;
+
+        const avg1   = this.#getLastDuration();
+        const avgAll = this.#getAllTimeAvgDuration();
+        const sdAll  = this.#getAllTimeStdDuration();
+
+        const allTimeDuration           = this.#allTimeStats.totalDuration;
+        const allTimeQuarks             = this.#allTimeStats.totalQuarks;
+        const allTimeQuarksPerSec       = allTimeDuration > 0 ? allTimeQuarks / allTimeDuration : 0;
+        const allTimeGoldenQuarks       = this.#allTimeStats.totalGoldenQuarks;
+        const allTimeGoldenQuarksPerSec = allTimeDuration > 0 ? allTimeGoldenQuarks / allTimeDuration : 0;
+
         // Farming section
-        this.#setTextEl(this.#completedSingAmountSpan, this.#cachedCompletedSingAmountText);
+        this.#setTextEl(this.#completedSingAmountSpan, singCompleted ? `${singCompleted}` : '-');
+        this.#setTextEl(this.#completedSingHHPercentSpan, singCompleted > 0 && singCompletedWithHH > 0
+            ? `(${((singCompletedWithHH / singCompleted) * 100).toFixed(2)}%`
+            : '(0.00%');
 
         // Times section
-        this.#setTextEl(this.#avg1Span, this.#cachedAvg1Text);
-        this.#setTextEl(this.#avgAllCountSpan, this.#cachedAvgAllCountText);
-        this.#setAvgEl(this.#avgAllSpan, this.#cachedAvgAllAvg, this.#cachedAvgAllSd);
+        this.#setTextEl(this.#avg1Span,        avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
+        this.#setTextEl(this.#avgAllCountSpan, singCompleted ? `${singCompleted}` : '-');
+        this.#setAvgEl( this.#avgAllSpan,      avgAll, sdAll);
 
         // Quarks section
-        this.#setTextEl(this.#quarksRateValSpan, this.#cachedQuarksRateValText);
-        this.#setTextEl(this.#quarksRateHrSpan, this.#cachedQuarksRateHrText);
-        this.#setTextEl(this.#quarksTotalGainsSpan, this.#cachedQuarksTotalGainsText);
+        this.#setTextEl(this.#quarksRateValSpan,    `${formatNumber(allTimeQuarksPerSec)}/s`);
+        this.#setTextEl(this.#quarksRateHrSpan,     `(${formatNumber(allTimeQuarksPerSec * 3600)}/hr)`);
+        this.#setTextEl(this.#quarksTotalGainsSpan, allTimeQuarks > 0 ? formatNumber(allTimeQuarks) : '-');
 
         // Golden Quarks section
-        this.#setTextEl(this.#gquarksRateValSpan, this.#cachedGoldenQuarksRateValText);
-        this.#setTextEl(this.#gquarksRateHrSpan, this.#cachedGoldenQuarksRateHrText);
-        this.#setTextEl(this.#gquarksTotalGainsSpan, this.#cachedGoldenQuarksTotalGainsText);
+        this.#setTextEl(this.#gquarksRateValSpan,    `${formatNumber(allTimeGoldenQuarksPerSec)}/s`);
+        this.#setTextEl(this.#gquarksRateHrSpan,     `(${formatNumber(allTimeGoldenQuarksPerSec * 3600)}/hr)`);
+        this.#setTextEl(this.#gquarksTotalGainsSpan, allTimeGoldenQuarks > 0 ? formatNumber(allTimeGoldenQuarks) : '-');
     }
 
     /** Render detailed statistics (fields only visible when detailed data visibility is ON) */
     #renderDetailedStats(): void {
-        if (this.#isMinimized || !this.#showDetailedData) { return; }
+        if (this.#isMinimized || !this.#showDetailedData) return;
 
-        // Farming section (Except "Phase", handled in his own render function since it updates more frequently)
-        this.#setTextEl(this.#completedSingWithHappyHourPercentSpan, this.#cachedCompletedSingWithHappyHourPercentText);
-        this.#setTextEl(this.#phaseNameSpan, this.#currentPhaseName);
-        this.#setTextEl(this.#c15TopSpan, this.#cachedC15TopText);
-        this.#setTextEl(this.#c15SigmaSpan, this.#cachedC15SigmaText);
+        const sdLogC15 = getLogC15Std(this.#logC15Count, this.#logC15M2);
+
+        const stats10 = getAvgAndStdLast(this.#singularityMetrics, 10);
+        const stats50 = getAvgAndStdLast(this.#singularityMetrics, 50);
+
+        const totalTime = this.#allTimeStats.totalDuration;
+        const maxTime   = this.#allTimeStats.maxDuration;
+        const minTime   = this.#allTimeStats.minDuration;
+        const currentQuarks  = this.#latestQuarksTotal;
+        const maxQuarksGains = this.#allTimeStats.maxQuarks;
+        const minQuarksGains = this.#allTimeStats.minQuarks;
+        const currentGoldenQuarks  = this.#latestGoldenQuarksTotal;
+        const maxGoldenQuarksGains = this.#allTimeStats.maxGoldenQuarks;
+        const minGoldenQuarksGains = this.#allTimeStats.minGoldenQuarks;
+
+        // Farming section
+        this.#setTextEl(this.#c15TopSpan,    `C15 ${formatDecimal(this.#c15Mean)}`);
+        this.#setTextEl(this.#c15SigmaSpan,  sdLogC15 !== null ? `(σlog ±${sdLogC15.toFixed(3)})` : '');
 
         // Times section
-        this.#setAvgEl(this.#avg10Span, this.#cachedAvg10Avg, this.#cachedAvg10Sd);
-        this.#setAvgEl(this.#avg50Span, this.#cachedAvg50Avg, this.#cachedAvg50Sd);
-        this.#setTextEl(this.#totalTimeSpan, this.#cachedTotalTimeText);
-        this.#setTextEl(this.#maxTimeSpan, this.#cachedMaxTimeText);
-        this.#setTextEl(this.#minTimeSpan, this.#cachedMinTimeText);
+        this.#setAvgEl(this.#avg10Span,      stats10.avg, stats10.sd);
+        this.#setAvgEl(this.#avg50Span,      stats50.avg, stats50.sd);
+        this.#setTextEl(this.#totalTimeSpan, totalTime > 0                         ? formatTotalTime(totalTime) : '-');
+        this.#setTextEl(this.#maxTimeSpan,   maxTime !== 0                         ? `${maxTime.toFixed(2)}s`   : '-');
+        this.#setTextEl(this.#minTimeSpan,   minTime !== 0 && minTime !== Infinity ? `${minTime.toFixed(2)}s`   : '-');
 
         // Quarks section
-        this.#setTextEl(this.#quarksCurrentAmountSpan, this.#cachedQuarksCurrentAmountText);
-        this.#setTextEl(this.#quarksMaxGainsSpan, this.#cachedQuarksMaxGainsText);
-        this.#setTextEl(this.#quarksMinGainsSpan, this.#cachedQuarksMinGainsText);
+        this.#setTextEl(this.#quarksCurrentAmountSpan, currentQuarks  !== 0                                ? formatNumber(currentQuarks)  : '-');
+        this.#setTextEl(this.#quarksMaxGainsSpan,      maxQuarksGains !== 0                                ? formatNumber(maxQuarksGains) : '-');
+        this.#setTextEl(this.#quarksMinGainsSpan,      minQuarksGains !== 0 && minQuarksGains !== Infinity ? formatNumber(minQuarksGains) : '-');
 
         // Golden Quarks section
-        this.#setTextEl(this.#gquarksCurrentAmountSpan, this.#cachedGoldenQuarksCurrentAmountText);
-        this.#setTextEl(this.#gquarksMaxGainsSpan, this.#cachedGoldenQuarksMaxGainsText);
-        this.#setTextEl(this.#gquarksMinGainsSpan, this.#cachedGoldenQuarksMinGainsText);
+        this.#setTextEl(this.#gquarksCurrentAmountSpan, currentGoldenQuarks  > 0                                        ? formatNumber(currentGoldenQuarks)  : '-');
+        this.#setTextEl(this.#gquarksMaxGainsSpan,      maxGoldenQuarksGains !== 0                                      ? formatNumber(maxGoldenQuarksGains) : '-');
+        this.#setTextEl(this.#gquarksMinGainsSpan,      minGoldenQuarksGains !== 0 && minGoldenQuarksGains !== Infinity ? formatNumber(minGoldenQuarksGains) : '-');
     }
 
     /** Render the phase statistics table, sorting and displaying phase data using stateless helpers. */
     #renderPhaseStatistics(): void {
         if (!this.#phaseStatsContainer || !this.#showDetailedData) return;
-        this.#lastRenderedPhaseHistoryVersion = this.#phaseHistoryVersion;
 
         // --- Row management ---
         // Only update/insert rows as needed; do not remove rows except when hiding all
@@ -1499,11 +1385,10 @@ export class HSAutosingModal {
     #renderSparklines(): void {
         // Only render sparklines if detailed data is enabled
         if (this.#showDetailedData) {
-            updateSparkline(this.#sparklineQuarks, this.#singularityMetrics, this.#computedGraphWidth, formatNumberWithSign, this.#sparklineMaxPoints);
+            updateSparkline(this.#sparklineTimes,        this.#singularityMetrics, this.#computedGraphWidth, formatNumberWithSign, this.#sparklineMaxPoints);
+            updateSparkline(this.#sparklineQuarks,       this.#singularityMetrics, this.#computedGraphWidth, formatNumberWithSign, this.#sparklineMaxPoints);
             updateSparkline(this.#sparklineGoldenQuarks, this.#singularityMetrics, this.#computedGraphWidth, formatNumberWithSign, this.#sparklineMaxPoints);
-            updateSparkline(this.#sparklineTimes, this.#singularityMetrics, this.#computedGraphWidth, formatNumberWithSign, this.#sparklineMaxPoints);
         }
-        this.#lastRenderedSparklineVersion = this.#sparklineVersion;
     }
 
 
@@ -1519,16 +1404,15 @@ export class HSAutosingModal {
         // every strategy phase fits on a single line and graphs match.
         if (!this.#autoResized) this.#computeAndApplyAutoWidth();
 
-        // Ensure the timer is visible
         this.#timerDisplay.classList.remove('hs-hidden');
+        this.#isVisible = true;
     }
 
-    /** Hide the modal and stop the live timer. */
+    /** Hide the modal and stop the live timer. (never used...) */
     public hide(): void {
         if (!this.#timerDisplay) return;
-
-        // Ensure the timer is hidden
         this.#timerDisplay.classList.add('hs-hidden');
+        this.#isVisible = false;
         this.#clearSingularityInterval();
     }
 
@@ -1574,9 +1458,6 @@ export class HSAutosingModal {
         this.#lastRecordedPhaseName = null;
         this.#currentPhaseName = '';
         this.#clearSingularityInterval();
-        this.#updateAllModalElementValues();
-        this.#phaseHistoryVersion++;
-        this.#sparklineVersion++;
         this.#requestRenderAll();
     }
 
@@ -1586,18 +1467,15 @@ export class HSAutosingModal {
         window.removeEventListener('mousemove', this.#onMouseMoveHandler);
         window.removeEventListener('mouseup', this.#onMouseUpHandler);
         // Remove drag/resize handlers from timerHeader
-        if (this.#timerHeader) {
-            this.#timerHeader.onmousedown = null;
-        }
+        if (this.#timerHeader) this.#timerHeader.onmousedown = null;
+
         // Remove resize handle event
         const resizeHandle = this.#timerDisplay?.querySelector('.hs-resize-handle');
-        if (resizeHandle) {
+        if (resizeHandle)
             resizeHandle.removeEventListener('mousedown', this.#startResize as any);
-        }
-        if (this.#timerDisplay && this.#timerDisplay.parentNode) {
+        if (this.#timerDisplay && this.#timerDisplay.parentNode)
             this.#timerDisplay.parentNode.removeChild(this.#timerDisplay);
-        }
         this.#timerDisplay = null;
-        this.#timerHeader = null;
+        this.#timerHeader  = null;
     }
 }
