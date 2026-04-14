@@ -148,10 +148,9 @@ export class HSAutosing extends HSModule {
 
     #cacheChallengeElements(): void {
         for (let i = 1; i <= 15; i++) {
-            const btn = document.getElementById(`challenge${i}`) as HTMLButtonElement;
+            const btn = document.getElementById(`challenge${i}`)      as HTMLButtonElement;
+            const el  = document.getElementById(`challenge${i}level`) as HTMLParagraphElement;
             if (btn) this.#challengeButtons[i] = btn;
-
-            const el = document.getElementById(`challenge${i}level`) as HTMLParagraphElement;
             if (el) this.#levelElements[i] = el;
         }
         this.#buildChallengeAccessors();
@@ -208,33 +207,14 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesRuneLockedContainer = document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement;
         this.#gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
         this.#saveType = document.getElementById('saveType') as HTMLInputElement;
-        this.#exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
-        this.#exportBtnClone = this.#exportBtn ? (this.#exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
-
-        if (this.#exportBtnClone && (window as any).__HS_EXPORT_EXPOSED) {
-            this.#setupExportButtonClone();
-        }
-    }
-
-    #setupExportButtonClone(): void {
-        this.#exportBtnClone!.addEventListener(
-            'click',
-            () => {
-                const hasExportHook = Object.prototype.hasOwnProperty.call(window, "__HS_exportData")
-                    && typeof (window as any).__HS_exportData !== "undefined";
-                if (!hasExportHook) return;
-
-                const exportBackup = (window as any).__HS_exportData;
-                (window as any).__HS_exportData = undefined;
-                window.setTimeout(() => {
-                    (window as any).__HS_exportData = exportBackup;
-                }, 100);
-            },
-            true
-        );
     }
 
     async #cacheExposedFunctions(): Promise<void> {        
+        this.#exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
+        this.#exportBtnClone = this.#exportBtn ? (this.#exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
+        if (this.#exportBtnClone && (window as any).__HS_EXPORT_EXPOSED)
+            this.#setupExportButtonClone();
+        
         this.#stageFunc             = (window as any).__HS_synergismStage       ?? null;
         this.#getMaxChallengesFunc  = (window as any).__HS_getMaxChallenges     ?? null;
         this.#exposedPlayer         = HSGlobal.exposedPlayer                    ?? null;
@@ -292,6 +272,22 @@ export class HSAutosing extends HSModule {
         } else {
             HSLogger.warn(exposureMsg, this.context);
         }
+    }
+
+    #setupExportButtonClone(): void {
+        this.#exportBtnClone!.addEventListener(
+            'click',
+            () => {
+                const hasExportHook = Object.prototype.hasOwnProperty.call(window, "__HS_exportData")
+                    && typeof (window as any).__HS_exportData !== "undefined";
+                if (!hasExportHook) return;
+
+                const exportBackup = (window as any).__HS_exportData;
+                (window as any).__HS_exportData = undefined;
+                window.setTimeout(() => { (window as any).__HS_exportData = exportBackup; }, 100);
+            },
+            true
+        );
     }
 
 
@@ -1122,7 +1118,7 @@ export class HSAutosing extends HSModule {
         const isGreen = () => upg81El.classList.contains('green-background');
         if (isGreen()) return;
         const waitStart = performance.now();
-        HSLogger.debug(() => `[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
+        HSLogger.log(`[COIN-FIX] Waiting for #upg81 to be bought (turn green)...`, this.context);
 
         const turned = await new Promise<boolean>(resolve => {
             const timer = window.setTimeout(() => {
@@ -1145,7 +1141,7 @@ export class HSAutosing extends HSModule {
         });
 
         const elapsedStr = (performance.now() - waitStart).toFixed(0);
-        if (turned) HSLogger.debug(() => `[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
+        if (turned) HSLogger.log( `[COIN-FIX] #upg81 turned green after ${elapsedStr}ms`, this.context);
         else        HSLogger.warn(`[COIN-FIX] #upg81 still not green after ${maxWaitMs}ms...`, this.context);
     }
 

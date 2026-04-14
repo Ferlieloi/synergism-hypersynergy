@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader (Shewchou)
-// @namespace    https://github.com/Ferlieloi
+// @namespace    https://github.com/maenhiir
 // @version      1.1
 // @description  Evergreen bridge to official Hypersynergism mod
-// @author       Ferlieloi
+// @author       maenhiir
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
@@ -18,12 +18,12 @@
 
 (function () {
     'use strict';
-    const repo = 'maenhiir';    // 'Ferlieloi', 'maenhiir'
-    const version = 'latest';   // 'latest', specific commit, (specific tag?)
-    const base = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user.shewchou.js`;
+    const repo = 'maenhiir'; // 'Ferlieloi', 'maenhiir'
+    const version = 'latest'; // 'latest', specific commit, (specific tag?)
+    const base = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user${repo==='maenhiir'?'.shewchou':''}.js`;
     const url = base + (base.includes('?') ? '&' : '?') + 't=' + Date.now();
-    window.__HS_REPO = `${repo}`;
-    window.__HS_VERSION = `${version}`;
+    window.__HS_REPO = repo;
+    window.__HS_VERSION = version;
     try {
         (async function () {
             const res = await fetch(url, { cache: 'no-cache', credentials: 'omit', mode: 'cors' });

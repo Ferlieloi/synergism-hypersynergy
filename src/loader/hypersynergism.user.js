@@ -675,7 +675,7 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
-        window.__HS_REPO = window.__HS_REPO ? window.__HS_REPO : 'Ferlieloi';
+        window.__HS_REPO    = window.__HS_REPO    ? window.__HS_REPO    : 'Ferlieloi';
         window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'latest';
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
