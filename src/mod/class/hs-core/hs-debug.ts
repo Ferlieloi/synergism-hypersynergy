@@ -9,15 +9,14 @@ import { HSModule } from "./module/hs-module";
  * Author: Swiffy
  */
 export class HSDebug extends HSModule {
-    static #staticContext: string;
+    static #context: string;
 
     constructor(moduleOptions : HSModuleOptions) {
         super(moduleOptions);
-        HSDebug.#staticContext = moduleOptions.context;
+        HSDebug.#context = moduleOptions.context;
     }
 
     async init() {
-        const self = this;
         this.isInitialized = true;
     }
 }
