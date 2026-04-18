@@ -28,6 +28,7 @@ export interface HSGlobalGeneral {
     modGithubUrl: string;
     modWikiUrl: string;
     modWikiFeaturesUrl: string;
+    modDiscordThreadUrl: string;
     heaterUrl: string;
 }
 

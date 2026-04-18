@@ -21,6 +21,7 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import minibarCSS from "inline:../../resource/css/module/hs-ambrosia-minibars.css";
+import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
 
 /**
  * Class: HSAmbrosia
@@ -923,7 +924,11 @@ export class HSAmbrosia extends HSModule
     }
 
     async #handleQuickImport() {
-        // Quick Import invoked
+        const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups' as keyof HSSettingsDefinition);
+        let restoreAutoConfirm = autoConfirmSetting && autoConfirmSetting.isEnabled();
+        if (autoConfirmSetting) {
+            autoConfirmSetting.disable();
+        }
         let previouslyActiveSlot: HTMLButtonElement | null = null;
         let text: string | undefined;
         let importedCount = 0;
@@ -1061,16 +1066,14 @@ export class HSAmbrosia extends HSModule
                 const isSuccess = (alertText || '').toLowerCase().includes('tree successfully imported');
 
                 if (!isSuccess) {
+                    // record failure for later reporting
                     const reason = alertText || 'Unknown error';
                     failures.push({ index: i + 1, reason });
-                    // record failure for later reporting
 
                     // Clear the file input to avoid residual state
                     try {
                         fileInput.files = new DataTransfer().files;
-                    } catch (e) {
-                        // ignore
-                    }
+                    } catch (e) { /* ignore */ }
 
                     // do not click save on this slot
                     continue;
@@ -1118,16 +1121,11 @@ export class HSAmbrosia extends HSModule
             if (failures.length > 0) {
                 const failureSummary = failures.map(f => `#${f.index}: ${f.reason}`).join('; ');
                 // Short user-facing notification; detailed info logged for debugging
-                HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, {
-                    notificationType: 'warning'
-                });
+                HSUI.Notify(`Imported ${importedCount} loadout(s); ${failures.length} failed (see logs)`, { notificationType: 'warning' });
                 HSLogger.debug(() => `Quick Import detailed failures: ${failureSummary}`, this.context);
             } else {
-                HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, {
-                    notificationType: 'success'
-                });
+                HSUI.Notify(`Imported ${importedCount} loadout(s), skipped ${skippedCount} empty slot(s)`, { notificationType: 'success' });
             }
-
         } catch (err: unknown) {
             const msg =
                 err instanceof Error
@@ -1140,12 +1138,13 @@ export class HSAmbrosia extends HSModule
             // Log detailed error context for debugging
             HSLogger.debug(() => `Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
-            HSUI.Notify('Quick Import failed', {
-                notificationType: 'error'
-            });
+            HSUI.Notify('Quick Import failed', { notificationType: 'error' });
         } finally {
             await HSUtils.stopDialogWatcher();
-            // 🔹 Restore previously active loadout slot
+            if (restoreAutoConfirm) {
+                autoConfirmSetting.enable();
+            }
+            // Restore previously active loadout slot
             if (previouslyActiveSlot) {
                 previouslyActiveSlot.click();
             }

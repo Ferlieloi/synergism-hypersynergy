@@ -33,9 +33,9 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- Release check configuration ---
     static Release = {
-        githubOwner: 'Ferlieloi',   // Can be replaced by an empty string if you prefer
+        githubOwner: 'Ferlieloi',    // Can be removed if you prefer
         isLatestVersion: true,
-        checkIntervalMs: 900000     // 15min
+        checkIntervalMs: 1800000     // 30min
     }
 
     // --- GENERAL ---
@@ -49,6 +49,7 @@ export const HSGlobal: IHSGlobal = class {
         get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
         get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
         get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
+        get modDiscordThreadUrl() { return 'https://discord.com/channels/677271830838640680/1456904896099127367'; },
         heaterUrl: 'https://docs.google.com/spreadsheets/d/1v02fjAeAHtLBMB5-7Spz5OHVb-eEDg7m5ISi5Mk0YAY/edit?usp=sharing'
     };
 

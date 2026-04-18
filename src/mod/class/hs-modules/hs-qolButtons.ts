@@ -195,7 +195,7 @@ export class HSQOLButtons extends HSModule {
             const input = document.getElementById('prompt_text') as HTMLInputElement | null;
             if (!input) return;
             input.value = '10';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('input',  { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
             HSUtils.startDialogWatcher();
             await HSUtils.sleep(3);

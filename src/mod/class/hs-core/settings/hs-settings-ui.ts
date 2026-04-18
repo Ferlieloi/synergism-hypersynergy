@@ -729,13 +729,16 @@ export class HSSettingsUI {
                 parsedStrategy.strategyName = strategyName;
 
                 try {
-                        const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
-                        if (!saved) {
-                            HSUI.Notify("Failed to save strategy", {
-                                notificationType: "error"
-                            });
-                            return;
-                        }
+                    const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
+                    if (!saved) {
+                        HSUI.Notify("Failed to save strategy", {
+                            notificationType: "error"
+                        });
+                        return;
+                    }
+
+                    // Refresh the dropdown list after import
+                    HSSettingsUI.updateStrategyDropdownList();
                     HSSettingsUI.selectAutosingStrategyByName(strategyName);
                     HSLogger.log(`Strategy "${strategyName}" imported and selected.`, "HSSettings");
                     HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {

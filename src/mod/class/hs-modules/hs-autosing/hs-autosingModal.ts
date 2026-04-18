@@ -243,8 +243,7 @@ export class HSAutosingModal {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosingMod) {
                 // Stop autosing, wait a bit, then Re-enable autosing (simulates starting from beginning)
-                autosingMod.stopAutosing();
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await autosingMod.restartAutosing();
                 const toggle = document.getElementById('hs-setting-auto-sing-enabled');
                 if (toggle) toggle.click();
             }
@@ -1092,7 +1091,7 @@ export class HSAutosingModal {
         return this.#isPaused;
     }
 
-    /** Return the target singularity number from settings. */ 
+    /** Return the target singularity number from settings. */
     #getSingularityTarget(): number {
         return Number(HSSettings.getSetting('singularityNumber').getValue()) || 0;
     }
@@ -1198,7 +1197,7 @@ export class HSAutosingModal {
             this.#renderSummaryStats();
             this.#renderSummaryStatsPending = false;
         }
-        if (this.#renderDetailedStatsPending){
+        if (this.#renderDetailedStatsPending) {
             this.#renderDetailedStats();
             this.#renderDetailedStatsPending = false;
         }

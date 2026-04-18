@@ -23,7 +23,7 @@ export class HSUtils {
     static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
     static sleepTime = 5;
 
-    static #_onAfterTick: ((fn: () => void) => void) | null = null;
+    static #_onAfterTack: ((fn: () => void) => void) | null = null;
 
     // Reusable MessageChannel for sub-millisecond event-loop yielding.
     // Queue-based so concurrent yields (if ever) work correctly.
@@ -39,22 +39,20 @@ export class HSUtils {
         HSUtils.#_yieldChannel.port1.postMessage(null);
     });
 
-    static cacheAfterTickHook(): boolean {
-        HSUtils.#_onAfterTick = (window as any).__HS_onAfterTick ?? null;
-        return HSUtils.#_onAfterTick !== null;
+    static cacheAfterTackHook(): boolean {
+        HSUtils.#_onAfterTack = (window as any).__HS_onAfterTack ?? null;
+        return HSUtils.#_onAfterTack !== null;
     }
 
-    static isAfterTickHooked(): boolean {
-        return HSUtils.#_onAfterTick !== null;
+    static isAfterTackHooked(): boolean {
+        return HSUtils.#_onAfterTack !== null;
     }
 
-    // Resolves as a microtask immediately after the next game tick() completes.
-    // Requires initAfterTickHook() to have been called first.
-    static waitForNextTick = (): Promise<void> => {
-        // The game have a tick rate of 5ms (for both data and DOM), even though it can be slower...
-        // (and we also don't know "how far into the current tick" we are)
-        if (!HSUtils.#_onAfterTick) return HSUtils.sleep(5); 
-        return new Promise<void>(resolve => HSUtils.#_onAfterTick!(resolve));
+    // Resolves as a microtask immediately after the next game tack() completes.
+    // Requires cacheAfterTackHook() to have been called first.
+    static waitForNextTack = (): Promise<void> => {
+        if (!HSUtils.#_onAfterTack) return HSUtils.sleep(5);
+        return new Promise<void>(resolve => HSUtils.#_onAfterTack!(resolve));
     };
 
     // Simple promise-based wait/delay utility method

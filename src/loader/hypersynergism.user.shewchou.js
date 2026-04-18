@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.5
+// @version      3.6
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
@@ -15,14 +15,15 @@
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
+    const loaderVersion = '3.6';
     const startTime = performance.now();
-    const log = (...a) => console.log(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
-    const warn = (...a) => console.warn(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
-    const debug = (...a) => console.debug(`%c[HS +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+    const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
+    const debug = (...a) => console.debug(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
 
     const originalFetch = window.fetch.bind(window);
     const isFirefox = navigator.userAgent.includes('Firefox');
-    log(`Browser: ${isFirefox ? 'Firefox' : 'Other'}`);
+    log(`Browser: ${isFirefox ? 'Firefox' : 'Not Firefox'}`);
 
     // ─── State ────────────────────────────────────────────────────────────────
     let gameScriptDetected = false;
@@ -207,8 +208,17 @@
         if (exportResult) {
             const exportFn = exportResult.match[1];
             const expose = exportFn
-                ? `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_exportData=${exportFn};window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u2705 exportSynergism exposed');if(window.__HS_SILENT_EXPORT)return;}\n`
-                : `\nif(!window.__HS_EXPORT_EXPOSED){window.__HS_EXPORT_EXPOSED=true;console.log('[HS] \u26a0\ufe0f exportSynergism found but fn name unknown');if(window.__HS_SILENT_EXPORT)return;}\n`;
+                ? `\nif(!window.__HS_EXPORT_EXPOSED){` +
+                        `window.__HS_exportData=${exportFn};` +
+                        `window.__HS_EXPORT_EXPOSED=true;` +
+                        `console.log('[HS-PATCH] \u2705 exportSynergism exposed');` +
+                        `if(window.__HS_SILENT_EXPORT)return;` +
+                    `}\n`
+                : `\nif(!window.__HS_EXPORT_EXPOSED){` +
+                        `window.__HS_EXPORT_EXPOSED=true;` +
+                        `console.log('[HS-PATCH] \u26a0\ufe0f exportSynergism found but fn name unknown');` +
+                        `if(window.__HS_SILENT_EXPORT)return;` +
+                    `}\n`;
             code = code.slice(0, exportResult.bodyStart) + expose + code.slice(exportResult.bodyStart);
             log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
         } else {
@@ -226,7 +236,15 @@
             const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
             const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
             if (domFn && i18nObj && stageFn) {
-                const expose = `if(!window.__HS_STAGE_EXPOSED){window.DOMCacheGetOrSet=${domFn};window.__HS_synergismStage=${stageFn};window.__HS_i18next=${i18nObj};window.__HS_STAGE_EXPOSED=true;window.__HS_EXPOSED=true;console.log('[HS] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');}\n`;
+                const expose = 
+                    `\nif(!window.__HS_STAGE_EXPOSED){` +
+                        `window.DOMCacheGetOrSet=${domFn};` +
+                        `window.__HS_synergismStage=${stageFn};` +
+                        `window.__HS_i18next=${i18nObj};` +
+                        `window.__HS_STAGE_EXPOSED=true;` +
+                        `window.__HS_EXPOSED=true;` +
+                        `console.log('[HS-PATCH] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');` +
+                    `}\n`;
                 const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
                 const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
                 let am, lastBodyStart = -1;
@@ -259,13 +277,18 @@
                 if (playerVar) {
                     // Expose player using a Symbol property, with Symbol stored globally (symp = symbol player)
                     const expose =
-                    ',(' +
-                        'window.symp=window.symp||Symbol(),' +
-                        'Object.defineProperty(' + 
-                            'window,window.symp,' +
-                            '{enumerable:false,configurable:true,writable:true,value:' + playerVar + '}' +
-                        '),console.log("[HS] \u2705 Symbol exposed.")' + 
-                    ' )';
+                        ',(' +
+                            'window.symp=window.symp||Symbol(),' +
+                            'Object.defineProperty(' + 
+                                'window,window.symp,' +
+                                '{' +
+                                    'enumerable:false,' +
+                                    'configurable:true,' +
+                                    'writable:true,' +
+                                    'value:' + playerVar +
+                                '}' +
+                            '),console.log("[HS-PATCH] \u2705 Symbol exposed")' + 
+                        ')';
                     code = code.slice(0, insertPos) + expose + code.slice(insertPos);
                 } else {
                     warn('❌ Error in defineProperties player patch: anchor found but symbol extraction failed');
@@ -295,7 +318,12 @@
                     const preAnchor = code.slice(0, gmcAnchorIdx);
                     while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
                     if (bodyStart !== -1) {
-                        const expose = `\nif(!window.__HS_CHALLENGES_EXPOSED){window.__HS_getMaxChallenges=${gmcFn};window.__HS_CHALLENGES_EXPOSED=true;console.log('[HS] \u2705 getMaxChallenges exposed (fn=${gmcFn})');}\n`;
+                        const expose = 
+                            `\nif(!window.__HS_CHALLENGES_EXPOSED){` +
+                                `window.__HS_getMaxChallenges=${gmcFn};` +
+                                `window.__HS_CHALLENGES_EXPOSED=true;` +
+                                `console.log('[HS-PATCH] \u2705 getMaxChallenges exposed (fn=${gmcFn})');` +
+                            `}\n`;
                         code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
                         log(`Patched getMaxChallenges (fn=${gmcFn})`);
                     } else {
@@ -312,60 +340,49 @@
         }
 
         // ==================================================================================
-        // ── TICK PATCH — wrap tick() to fire registered after-tick hooks
-        // Anchor: the 1-hour lag-compensation cap `Math.min(3600 * 1000, ...)` only appears in tick().
-        // Different bundler versions may emit it as 3600 * 1e3, 3600 * 1000, 3600000, or 36e5 — try all.
+        // ── TACK PATCH — wrap tack() to fire registered after-tack hooks
+        // Unique anchor: ("autoPotion", with optional whitespace and either quote style)
         try {
-            const tickAnchor = [
-                'Math.min(3600 * 1e3', 'Math.min(3600*1e3',
-                'Math.min(3600 * 1000', 'Math.min(3600*1000',
-                'Math.min(3600000', 'Math.min(36e5', 'Math.min(3.6e6'
-            ].find(a => code.includes(a)) ?? null;
-            const tickAnchorIdx = tickAnchor !== null ? code.indexOf(tickAnchor) : -1;
-            if (tickAnchorIdx !== -1) {
-                // Look backward up to 600 chars for tick()'s function header.
-                // tick is assigned as: fnName = () => {
-                const backCtx = code.slice(Math.max(0, tickAnchorIdx - 600), tickAnchorIdx);
-                // Find the last `= () => {` before the anchor — that is tick()'s opening brace
-                const tickHeaderRe = /=\s*\(\s*\)\s*=>\s*\{/g;
-                let tm, lastTickBodyStart = -1;
-                while ((tm = tickHeaderRe.exec(backCtx)) !== null) {
-                    lastTickBodyStart = tm.index + tm[0].length;
+            const tackAnchorRe = /\(\s*["']autoPotion["']\s*,/;
+            const tackAnchorMatch = tackAnchorRe.exec(code);
+            const tackAnchorIdx = tackAnchorMatch ? tackAnchorMatch.index : -1;
+            if (tackAnchorIdx !== -1) {
+                const backCtx = code.slice(Math.max(0, tackAnchorIdx - 600), tackAnchorIdx);
+                const tackHeaderRe = /=>\s*\{/g;
+                let tm, lastTackBodyStart = -1;
+                while ((tm = tackHeaderRe.exec(backCtx)) !== null) {
+                    lastTackBodyStart = tm.index + tm[0].length;
                 }
-                if (lastTickBodyStart !== -1) {
-                    // Also capture the variable name assigned just before `= () => {`
-                    const assignRe = /([a-zA-Z_$][\w$]*)\s*=\s*\(\s*\)\s*=>\s*\{/g;
-                    let am2, tickFn = null;
-                    while ((am2 = assignRe.exec(backCtx)) !== null) tickFn = am2[1];
+                if (lastTackBodyStart !== -1) {
+                    const assignRe = /([a-zA-Z_$][\w$]*)\s*=\s*(?:\(\s*[a-zA-Z_$][\w$]*\s*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g;
+                    let am2, tackFn = null;
+                    while ((am2 = assignRe.exec(backCtx)) !== null) tackFn = am2[1];
 
-                    const insertAt = Math.max(0, tickAnchorIdx - 600) + lastTickBodyStart;
-                    // Inject at the very start of tick()'s body: set up hook registry once,
-                    // then schedule hooks to fire as a microtask after the tick body runs.
-                    // We use a flag + queueMicrotask to fire once per tick call.
-                    const tickPatch =
-                        `if(!window.__HS_TICK_PATCHED){` +
-                            `window.__HS_TICK_PATCHED=true;` +
-                            `window.__HS_tickHooks=[];` +
-                            `window.__HS_onAfterTick=function(fn){window.__HS_tickHooks.push(fn);};` +
-                            `console.log('[HS] \u2705 tick() patched (fn=${tickFn ?? 'unknown'})');` +
+                    const insertAt = Math.max(0, tackAnchorIdx - 600) + lastTackBodyStart;
+                    const tackPatch =
+                        `if(!window.__HS_TACK_PATCHED){` +
+                            `window.__HS_TACK_PATCHED=true;` +
+                            `window.__HS_tackHooks=[];` +
+                            `window.__HS_onAfterTack=function(fn){window.__HS_tackHooks.push(fn);};` +
+                            `console.log('[HS-PATCH] \u2705 tack() patched (fn=${tackFn ?? 'unknown'})');` +
                         `}` +
-                        `queueMicrotask(()=>{const h=window.__HS_tickHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
-                    code = code.slice(0, insertAt) + tickPatch + code.slice(insertAt);
-                    log(`Patched tick() (fn=${tickFn ?? 'unknown'})`);
+                        `queueMicrotask(()=>{const h=window.__HS_tackHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
+                    code = code.slice(0, insertAt) + tackPatch + code.slice(insertAt);
+                    log(`Patched tack() (fn=${tackFn ?? 'unknown'})`);
                 } else {
-                    warn('tick patch: found anchor but could not locate tick() body start');
+                    warn('tack patch: found anchor but could not locate tack() body start');
                 }
             } else {
-                warn('tick patch: anchor (3600*1000 lag cap) not found in bundle!!');
+                warn('tack patch: anchor not found in bundle!!');
             }
         } catch (e) {
-            warn('Error while patching tick()', e);
+            warn('Error while patching tack()', e);
         }
 
         // ==================================================================================
         // ── AUTO-CONFIRM PATCH — make Confirm/Alert auto-resolve when window.__HS_AUTO_CONFIRM is set to true
         // Confirm resolves true (OK clicked) and Alert resolves void, bypassing all DOM/queue overhead.
-        // 'confirmationBox' appears exactly 3× in the bundle: 1st = Confirm body, 2nd = Alert body, 3rd = Prompt.
+        // 'Unique' anchors: 'confirmationBox' appears exactly 3× in the bundle: 1st = Confirm body, 2nd = Alert body, 3rd = Prompt.
         // We use the 1st for Confirm and 2nd for Alert. Walk back to the `() => {` of the enqueue action.
         // Toggle: window.__HS_AUTO_CONFIRM = true (no pop-up) / false (normal play with pop-ups).
         try {
@@ -414,7 +431,7 @@
 
         // ==================================================================================
         // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
-        // Unique anchor: e.includes('/') only appears inside applyCorruptions (legacy format check)
+        // Unique anchor: e.includes('/') only appears inside applyCorruptions (legacy corruption format check)
         try {
             const corrAnchor = 'e.includes("/")';
             const corrAnchorIdx = code.indexOf(corrAnchor);
@@ -429,7 +446,12 @@
                     const preAnchor = code.slice(0, corrAnchorIdx);
                     while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
                     if (bodyStart !== -1) {
-                        const expose = `\nif(!window.__HS_CORRUPTIONS_EXPOSED){window.__HS_applyCorruptions=${corrFn};window.__HS_CORRUPTIONS_EXPOSED=true;console.log('[HS] \u2705 applyCorruptions exposed (fn=${corrFn})');}`;
+                        const expose = 
+                            `\nif(!window.__HS_CORRUPTIONS_EXPOSED){` +
+                                `window.__HS_applyCorruptions=${corrFn};` +
+                                `window.__HS_CORRUPTIONS_EXPOSED=true;` +
+                                `console.log('[HS-PATCH] \u2705 applyCorruptions exposed (fn=${corrFn})');` +
+                            `}\n`;
                         code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
                         log(`Patched applyCorruptions (fn=${corrFn})`);
                     } else {
@@ -462,7 +484,15 @@
                 if (eMMatch) {
                     const eMFn = eMMatch[1];
                     const eMBodyStart = (tpAnchorIdx - backCtx.length) + eMMatch.index + eMMatch[0].length;
-                    const expose = `\nif(!window.__HS_TELEPORT_LOWER_EXPOSED){window.__HS_teleportLower=(t)=>{n.singularityCount=t;za();};window.__HS_TELEPORT_LOWER_EXPOSED=true;console.log('[HS] \u2705 teleportLower exposed');}\n`;
+                    const expose = 
+                        `\nif(!window.__HS_TELEPORT_LOWER_EXPOSED){` +
+                            `window.__HS_teleportLower=(t)=>{` +
+                                `n.singularityCount=t;` +
+                                `za();` +
+                            `};` +
+                            `window.__HS_TELEPORT_LOWER_EXPOSED=true;` +
+                            `console.log('[HS-PATCH] \u2705 teleportLower exposed');` +
+                        `}\n`;
                     code = code.slice(0, eMBodyStart) + expose + code.slice(eMBodyStart);
                     log(`Patched teleportLower (fn=${eMFn})`);
                 } else {
@@ -514,7 +544,7 @@
                             `window.__HS_EXALT_EXPOSED=true;` +
                             `window.__HS_enterExalt=()=>{${enterBody};};` +
                             `window.__HS_exitExalt=()=>{${exitBody};};` +
-                            `console.log('[HS] \u2705 enterExalt/exitExalt exposed');` +
+                            `console.log('[HS-PATCH] \u2705 enterExalt/exitExalt exposed');` +
                         `}\n`;
                     code = code.slice(0, ecBodyStart) + expose + code.slice(ecBodyStart);
                     log('Patched enterExalt/exitExalt');
@@ -530,7 +560,7 @@
 
         // ==================================================================================
 
-        log('v3.5 patch complete — waiting for DOM to be ready before injecting bundle');
+        log(`Patch complete — waiting for DOM to be ready before injecting bundle`);
 
         // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
         // Checking document.body is not enough — the body element can exist while
@@ -601,7 +631,7 @@ window.__HS_BACKDOOR__ = {
             teleportLower:       typeof window.__HS_teleportLower,
             enterExalt:          typeof window.__HS_enterExalt,
             exitExalt:           typeof window.__HS_exitExalt,
-            tickHooks:           Array.isArray(window.__HS_tickHooks) ? window.__HS_tickHooks.length : 'n/a'};
+            tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'};
     }
 };`;
         (document.head || document.documentElement).appendChild(s);
@@ -666,7 +696,6 @@ window.__HS_BACKDOOR__ = {
             await new Promise(r => setTimeout(r, 300));
 
             // Phase 6: Load the mod.
-            log('Phase 6 — loading mod from CDN...');
             await loadMod();
 
         } catch (e) {
@@ -675,14 +704,17 @@ window.__HS_BACKDOOR__ = {
     }
 
     function loadMod() {
+        const modSource = 'CDN';
+        log(`Phase 6 — loading mod from ${modSource}...`);
+        // window.__HS_IS_DEV  = false;
         window.__HS_REPO    = window.__HS_REPO    ? window.__HS_REPO    : 'maenhiir';
-        window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'latest';
+        window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'master';
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            const url = `https://cdn.jsdelivr.net/gh/${window.__HS_REPO}/synergism-hypersynergy@${window.__HS_VERSION}/release/mod/hypersynergism_release.js?${Date.now()}`;
+            const url = `https://cdn.jsdelivr.net/gh/${window.__HS_REPO}/synergism-hypersynergy@${window.__HS_VERSION}/release/mod/hypersynergism_release.js?t=${Date.now()}`;
             s.src = url;
             s.onload = () => {
-                log(`✅ Mod script loaded from CDN: ${url}`);
+                log(`✅ Mod script loaded from ${modSource}: ${url}`);
                 try {
                     window.hypersynergism.init();
                     log('✅ Mod initialised');
@@ -692,13 +724,13 @@ window.__HS_BACKDOOR__ = {
                 resolve();
             };
             s.onerror = () => {
-                warn(`❌ Mod failed to load from CDN: ${url}`);
+                warn(`❌ Mod failed to load from ${modSource}: ${url}`);
                 reject(new Error('Mod load failed'));
             };
             (document.head || document.documentElement).appendChild(s);
         });
     }
 
-    log('HyperSynergism loader v3.5 (Shewchou) initialised');
+    log(`HyperSynergism loader initialised`);
 
 })();

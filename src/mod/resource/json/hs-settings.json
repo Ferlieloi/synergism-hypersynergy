@@ -45,6 +45,20 @@
       "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
     }
   },
+  "autoConfirmPopups": {
+    "settingName": "autoConfirmPopups",
+    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
+    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "autoConfirmPopups",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-auto-confirm-btn"
+    }
+  },
   "hiddenVanillaTabs": {
     "settingName": "hiddenVanillaTabs",
     "settingDescription": "Hide vanilla tabs",
@@ -92,20 +106,6 @@
       "controlGroup": "ui",
       "controlPage": "ui",
       "controlEnabledId": "hs-setting-patch-shopnames-btn"
-    }
-  },
-  "autoConfirmPopups": {
-    "settingName": "autoConfirmPopups",
-    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
-    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
-    "settingType": "boolean",
-    "enabled": false,
-    "settingAction": "autoConfirmPopups",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "notifications",
-      "controlPage": "ui",
-      "controlEnabledId": "hs-setting-auto-confirm-btn"
     }
   },
   "syncNotificationOpacity": {
