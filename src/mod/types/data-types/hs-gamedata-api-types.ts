@@ -305,6 +305,12 @@ export interface AmbrosiaUpgradeCalculationCollection {
 
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig<'ambrosiaTalismanBonusRuneLevel'>
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig<'ambrosiaRuneOOMBonus'>
+
+    ambrosiaBrickOfLead: AmbrosiaUpgradeCalculationConfig<'ambrosiaBrickOfLead'>
+    ambrosiaFreeLuckUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeLuckUpgrades'>
+    ambrosiaFreeGenerationUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeGenerationUpgrades'>
+    ambrosiaFreeRedLuckUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeRedLuckUpgrades'>
+    ambrosiaFreeQuarkUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeQuarkUpgrades'>
 }
 
 export type PseudoCoinUpgradeNames =
@@ -379,6 +385,11 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaSingReduction2: { singularityReduction: number }
     ambrosiaTalismanBonusRuneLevel: { talismanBonusRuneLevel: number }
     ambrosiaRuneOOMBonus: { runeOOMBonus: number; infiniteAscentOOMBonus: number }
+    ambrosiaBrickOfLead: { barRequirementMult: number; additiveLuckMult: number; singularitySpeedMult: number }
+    ambrosiaFreeQuarkUpgrades: { freeQuarkUpgrades: number }
+    ambrosiaFreeLuckUpgrades: { freeLuckUpgrades: number }
+    ambrosiaFreeGenerationUpgrades: { freeGenerationUpgrades: number }
+    ambrosiaFreeRedLuckUpgrades: { freeRedLuckUpgrades: number }
 }
 
 export type AmbrosiaUpgradeNames = keyof AmbrosiaUpgradeRewards
