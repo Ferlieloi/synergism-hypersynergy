@@ -347,7 +347,7 @@ export class HSAmbrosia extends HSModule
         this.activeLoadout = undefined;
     }
 
-    
+
     // ==============================================
     // -------- Ambrosia Minibars (Quickbar) --------
     // ==============================================
@@ -969,19 +969,9 @@ export class HSAmbrosia extends HSModule
                 throw new Error('Import input element not found');
             }
 
-            if (this.#isIdleSwapEnabled) {
-                if (this.#blueAmbrosiaProgressBar && this.#redAmbrosiaProgressBar) {
-                    const idleSwapOcteractSetting = HSSettings.getSetting('ambrosiaIdleSwapOcteractLoadout') as HSSelectStringSetting;
-                    const idleSwapNormalLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapNormalLuckLoadout') as HSSelectStringSetting;
-                    const idleSwapRedLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapRedLuckLoadout') as HSSelectStringSetting;
-
-                    if (idleSwapOcteractSetting && idleSwapNormalLuckSetting && idleSwapRedLuckSetting) {
-                        const octeractLoadoutValue = idleSwapOcteractSetting.getValue();
-                        const normalLuckLoadoutValue = idleSwapNormalLuckSetting.getValue();
-                        const redLuckLoadoutValue = idleSwapRedLuckSetting.getValue();
-
-                        if (!Number.isInteger(parseInt(octeractLoadoutValue, 10)) || !Number.isInteger(parseInt(normalLuckLoadoutValue, 10)) || !Number.isInteger(parseInt(redLuckLoadoutValue, 10))) {
-                            const idleSwapSetting = HSSettings.getSetting("ambrosiaIdleSwap") as HSSetting<boolean>;
+            if (!modeToggle) {
+                throw new Error('Mode toggle button not found');
+            }
 
             // Check if we're in SAVE mode and switch to LOAD mode
             const currentMode = modeToggle.innerText;
@@ -1300,61 +1290,83 @@ export class HSAmbrosia extends HSModule
 
             if (this.#isIdleSwapEnabled) {
                 if (this.#blueAmbrosiaProgressBar && this.#redAmbrosiaProgressBar) {
-                    const idleSwapLoadoutNormalSetting = HSSettings.getSetting('ambrosiaIdleSwapNormalLoadout') as HSSelectStringSetting;
-                    const idleSwapLoadout100Setting = HSSettings.getSetting('ambrosiaIdleSwap100Loadout') as HSSelectStringSetting;
+                    const idleSwapOcteractSetting = HSSettings.getSetting('ambrosiaIdleSwapOcteractLoadout') as HSSelectStringSetting;
+                    const idleSwapNormalLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapNormalLuckLoadout') as HSSelectStringSetting;
+                    const idleSwapRedLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapRedLuckLoadout') as HSSelectStringSetting;
 
-                    if (idleSwapLoadoutNormalSetting && idleSwapLoadout100Setting) {
-                        const normalLoadoutValue = idleSwapLoadoutNormalSetting.getValue();
-                        const loadout100Value = idleSwapLoadout100Setting.getValue();
+                    if (idleSwapOcteractSetting && idleSwapNormalLuckSetting && idleSwapRedLuckSetting) {
+                        const octeractLoadoutValue = idleSwapOcteractSetting.getValue();
+                        const normalLuckLoadoutValue = idleSwapNormalLuckSetting.getValue();
+                        const redLuckLoadoutValue = idleSwapRedLuckSetting.getValue();
 
-                        if (!Number.isInteger(parseInt(normalLoadoutValue, 10)) || !Number.isInteger(parseInt(loadout100Value, 10))) {
+                        if (!Number.isInteger(parseInt(octeractLoadoutValue, 10)) || !Number.isInteger(parseInt(normalLuckLoadoutValue, 10)) || !Number.isInteger(parseInt(redLuckLoadoutValue, 10))) {
                             const idleSwapSetting = HSSettings.getSetting("ambrosiaIdleSwap") as HSSetting<boolean>;
 
                             if (idleSwapSetting) {
                                 idleSwapSetting.disable();
                             }
 
-                            HSLogger.log(`Idle swap was disabled due to unconfigured loadouts`, this.context);
+                            HSLogger.warn(`Idle swap was disabled due to unconfigured loadouts`, this.context);
                             return;
                         }
 
-                        const normalLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(idleSwapLoadoutNormalSetting.getValue());
-                        const loadout100 = HSAmbrosiaHelper.convertSettingLoadoutToSlot(idleSwapLoadout100Setting.getValue());
+                        const octeractLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(octeractLoadoutValue);
+                        const normalLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(normalLuckLoadoutValue);
+                        const redLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(redLuckLoadoutValue);
 
-                        let blueSwapThresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
-                        let blueSwapThresholdNormalMax = blueSwapThresholdNormalMin + bluePercentageSafeThreshold;
+                        let blueSwapTresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
+                        let blueSwapTresholdNormalMax = blueSwapTresholdNormalMin + bluePercentageSafeThreshold;
 
-                        let blueSwapThreshold100Min = 100 - bluePercentageSafeThreshold;
-                        let blueSwapThreshold100Max = 100;
+                        let blueSwapTresholdRedMin = 100 - bluePercentageSafeThreshold;
+                        let blueSwapTresholdRedMax = 100;
 
-                        let redSwapThresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
-                        let redSwapThresholdNormalMax = redSwapThresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
 
-                        let redSwapThreshold100Min = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
-                        let redSwapThreshold100Max = 100;
+                        let redSwapTresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
+                        let redSwapTresholdRedMax = 100;
 
-                        if ((blueAmbrosiaPercent >= blueSwapThreshold100Min && blueAmbrosiaPercent <= blueSwapThreshold100Max) ||
-                            (redAmbrosiaPercent >= redSwapThreshold100Min && redAmbrosiaPercent <= redSwapThreshold100Max)) {
-                            if (this.activeLoadout !== loadout100) {
-                                const loadoutSlot = await HSElementHooker.HookElement(`#${loadout100} `) as HTMLButtonElement;
+                        // Determine target loadout based on current state and thresholds
+                        let targetLoadout: string | undefined;
 
-                                await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
-
-                                await HSUtils.hiddenAction(async () => {
-                                    loadoutSlot.click();
-                                });
+                        // If currently in Red Luck, only exit when red bar has dropped below normal threshold
+                        if (this.activeLoadout === redLuckLoadout) {
+                            if (redAmbrosiaPercent < redSwapTresholdRedMin) {
+                                targetLoadout = normalLuckLoadout;
+                            } else {
+                                targetLoadout = redLuckLoadout; // Stay in Red Luck
                             }
-                        } else if ((blueAmbrosiaPercent >= blueSwapThresholdNormalMin && blueAmbrosiaPercent <= blueSwapThresholdNormalMax) ||
-                            (redAmbrosiaPercent >= redSwapThresholdNormalMin && redAmbrosiaPercent <= redSwapThresholdNormalMax)) {
-                            if (this.activeLoadout !== normalLoadout) {
-                                const loadoutSlot = await HSElementHooker.HookElement(`#${normalLoadout} `) as HTMLButtonElement;
-
-                                await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
-
-                                await HSUtils.hiddenAction(async () => {
-                                    loadoutSlot.click();
-                                });
+                        }
+                        // If currently in Normal Luck, only exit when red bar has dropped below min threshold
+                        else if (this.activeLoadout === normalLuckLoadout) {
+                            if (blueAmbrosiaPercent < blueSwapTresholdRedMin) {
+                                targetLoadout = octeractLoadout;
                             }
+                            else {
+                                targetLoadout = normalLuckLoadout;
+                            }
+                        }
+                        // Check if should swap to Red Luck (highest priority)
+                        else if (redAmbrosiaPercent >= redSwapTresholdRedMin) {
+                            targetLoadout = redLuckLoadout;
+                        }
+                        // Check if should swap to Normal Luck
+                        else if (blueAmbrosiaPercent >= blueSwapTresholdRedMin) {
+                            targetLoadout = normalLuckLoadout;
+                        }
+                        else {
+                            targetLoadout = this.activeLoadout;
+                        }
+
+                        // Perform swap if target loadout differs from current
+                        if (targetLoadout && this.activeLoadout !== targetLoadout) {
+                            const loadoutSlot = await HSElementHooker.HookElement(`#${targetLoadout} `) as HTMLButtonElement;
+
+                            await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
+
+                            await HSUtils.hiddenAction(async () => {
+                                loadoutSlot.click();
+                            });
                         }
                     }
 
