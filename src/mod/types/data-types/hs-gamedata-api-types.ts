@@ -265,8 +265,6 @@ export interface AmbrosiaUpgradeCalculationConfig<
 
 
 export interface AmbrosiaUpgradeCalculationCollection {
-    ambrosiaBrickOfLead: AmbrosiaUpgradeCalculationConfig<'ambrosiaBrickOfLead'>
-    
     ambrosiaTutorial: AmbrosiaUpgradeCalculationConfig<'ambrosiaTutorial'>
 
     ambrosiaQuarks1: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks1'>
@@ -358,7 +356,6 @@ export const PCoinUpgradeEffects: PseudoCoinUpgradeEffects = {
 }
 
 export type AmbrosiaUpgradeRewards = {
-    ambrosiaBrickOfLead: { }
     ambrosiaTutorial: { quarks: number; cubes: number }
     ambrosiaQuarks1: { quarks: number }
     ambrosiaCubes1: { cubes: number }
