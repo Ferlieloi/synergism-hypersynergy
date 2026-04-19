@@ -18,53 +18,53 @@ export class HSAutosingSettingsFixer {
      */
     static readonly #TOGGLE_REQUIREMENTS: Array<{ selector: string, expected: string }> = [
         // Buildings
-        { selector: '#toggle1.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle2.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle3.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle4.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle5.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle6.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle7.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle8.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle10.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle11.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle12.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle13.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle14.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle16.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle17.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle18.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle19.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle20.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle22.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle23.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle24.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle25.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle26.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#tesseractAutoToggle1.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#tesseractAutoToggle2.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#tesseractAutoToggle3.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#tesseractAutoToggle4.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#tesseractAutoToggle5.auto.autobuyerToggleButton', expected: 'Auto [ON]' },
-        { selector: '#toggle15.auto', expected: 'Auto Prestige [OFF]' },
-        { selector: '#toggle21.auto', expected: 'Auto Transcend [OFF]' },
-        { selector: '#toggle27.auto', expected: 'Auto Reincarnate [OFF]' },
-        { selector: '#tesseractautobuytoggle', expected: 'Auto Buy: ON' },
+        { selector: '#toggle1.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle2.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle3.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle4.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle5.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle6.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle7.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle8.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle10.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle11.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle12.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle13.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle14.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle16.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle17.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle18.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle19.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle20.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle22.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle23.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle24.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle25.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle26.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#tesseractAutoToggle1.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#tesseractAutoToggle2.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#tesseractAutoToggle3.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#tesseractAutoToggle4.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#tesseractAutoToggle5.auto.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#toggle15.auto', expected: '2px solid red' },
+        { selector: '#toggle21.auto', expected: '2px solid red' },
+        { selector: '#toggle27.auto', expected: '2px solid red' },
+        { selector: '#tesseractautobuytoggle', expected: '2px solid green' },
         { selector: '#tesseractautobuymode', expected: 'Mode: PERCENTAGE' },
         // Upgrades
-        { selector: '#coinAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
-        { selector: '#prestigeAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
-        { selector: '#transcendAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
-        { selector: '#reincarnateAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
-        { selector: '#generatorsAutoUpgrade.autobuyerToggleButton', expected: 'Auto: ON' },
+        { selector: '#coinAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#prestigeAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#transcendAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#reincarnateAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
+        { selector: '#generatorsAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
         // Runes
-        { selector: '#toggleautosacrifice', expected: 'Auto Rune: ON' },
-        { selector: '#toggleautoBuyFragments', expected: 'Auto Buy: ON' },
-        { selector: '#toggleautofortify', expected: 'Auto Fortify: ON' },
-        { selector: '#toggle36.auto', expected: 'Auto: ON' },
-        { selector: '#toggle37.auto', expected: 'Auto: ON' },
+        { selector: '#toggleautosacrifice', expected: '2px solid green' },
+        { selector: '#toggleautoBuyFragments', expected: '2px solid white' },
+        { selector: '#toggleautofortify', expected: '2px solid green' },
+        { selector: '#toggle36.auto', expected: '2px solid green' },
+        { selector: '#toggle37.auto', expected: '2px solid green' },
         // Challenges
-        { selector: '#toggleAutoChallengeStart', expected: 'Auto Challenge Sweep [OFF]' },
+        { selector: '#toggleAutoChallengeStart', expected: '2px solid red' },
         // Researches
         { selector: '#toggleresearchbuy', expected: 'Upgrade: MAX [if possible]' },
         { selector: '#toggleautoresearch', expected: 'Automatic: ON' },
@@ -72,20 +72,20 @@ export class HSAutosingSettingsFixer {
         // Ants
         { selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: OFF' },
         // Cube
-        { selector: '#toggleAutoCubeUpgrades', expected: 'Auto Upgrades: [ON]' },
-        { selector: '#toggleAutoPlatonicUpgrades', expected: 'Auto Upgrades: [ON]' },
+        { selector: '#toggleAutoCubeUpgrades', expected: '2px solid green' },
+        { selector: '#toggleAutoPlatonicUpgrades', expected: '2px solid green' },
         // Hepteracts
-        { selector: '#chronosHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#hyperrealismHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#quarkHepteractAuto.singularity', expected: 'Auto: OFF' },
-        { selector: '#challengeHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#abyssHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#acceleratorHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#acceleratorBoostHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#multiplierHepteractAuto.singularity', expected: 'Auto: ON' },
-        { selector: '#hepteractToQuarkTradeAuto.singularity', expected: 'Auto: ON' },
+        { selector: '#chronosHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#hyperrealismHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#quarkHepteractAuto.singularity', expected: '2px solid red' },
+        { selector: '#challengeHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#abyssHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#acceleratorHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#acceleratorBoostHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#multiplierHepteractAuto.singularity', expected: '2px solid green' },
+        { selector: '#hepteractToQuarkTradeAuto.singularity', expected: '2px solid green' },
         // Others
-        { selector: '#ascensionAutoEnable', expected: 'Auto Ascend [OFF]' },
+        { selector: '#ascensionAutoEnable', expected: '2px solid red' },
     ];
 
     /**
@@ -182,11 +182,11 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(toggleReq.selector);
                 continue;
             }
-            if ((toggleElement.textContent || '').trim() !== toggleReq.expected) {
+            if ((toggleElement.textContent || '').trim() !== toggleReq.expected && (toggleElement.style.border || '').trim() !== toggleReq.expected) {
                 try {
                     toggleElement.click();
                     await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-                    if ((toggleElement.textContent || '').trim() !== toggleReq.expected) {
+                    if ((toggleElement.textContent || '').trim() !== toggleReq.expected && (toggleElement.style.border || '').trim() !== toggleReq.expected) {
                         failedSelectors.push(toggleReq.selector);
                     } else {
                         correctedSelectors.push(toggleReq.selector);

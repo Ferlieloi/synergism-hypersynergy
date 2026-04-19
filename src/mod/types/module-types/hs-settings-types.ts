@@ -37,8 +37,9 @@ export interface HSSettingsDefinition {
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
-    ambrosiaIdleSwapNormalLoadout: AmbrosiaIdleSwapNormalLoadoutSetting;
-    ambrosiaIdleSwap100Loadout: AmbrosiaIdleSwap100LoadoutSetting;
+    ambrosiaIdleSwapOcteractLoadout: AmbrosiaIdleSwapOcteractLoadoutSetting;
+    ambrosiaIdleSwapNormalLuckLoadout: AmbrosiaIdleSwapNormalLuckLoadoutSetting;
+    ambrosiaIdleSwapRedLuckLoadout: AmbrosiaIdleSwapRedLuckLoadoutSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
 
     // Patch Settings
@@ -183,8 +184,9 @@ export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
 export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> { }
-export interface AmbrosiaIdleSwapNormalLoadoutSetting extends HSSettingBase<string> { }
-export interface AmbrosiaIdleSwap100LoadoutSetting extends HSSettingBase<string> { }
+export interface AmbrosiaIdleSwapOcteractLoadoutSetting extends HSSettingBase<string> { }
+export interface AmbrosiaIdleSwapNormalLuckLoadoutSetting extends HSSettingBase<string> { }
+export interface AmbrosiaIdleSwapRedLuckLoadoutSetting extends HSSettingBase<string> { }
 
 
 // Patch Settings
