@@ -13,7 +13,11 @@ const baseOptions = {
         })
     ],
     legalComments: 'none',
-    logLevel: 'info'
+    logLevel: 'info',
+    // 'node esbuild.config.js dev' needs to be restarted in order to pick up changes to the version
+    define: {
+        HS_BUILD_VERSION: JSON.stringify(require('./package.json').version)
+    }
 };
 
 // Copy loader files to build directory for dev server

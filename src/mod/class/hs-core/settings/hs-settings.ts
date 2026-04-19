@@ -1,40 +1,36 @@
-import { AutosingStrategy, HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
-import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../types/module-types/hs-autosing-types";
+import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
+import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import settings from "inline:../../../resource/json/hs-settings.json";
 import settings_control_groups from "inline:../../../resource/json/hs-settings-control-groups.json";
 import settings_control_pages from "inline:../../../resource/json/hs-settings-control-pages.json";
-import strategies from "inline:../../../resource/json/hs-settings-strategies.json";
-// Import manifest.json as an ES module (requires resolveJsonModule in tsconfig)
-import manifest from '../../../resource/json/strategies/manifest.json';
-import { HSUI } from "../hs-ui";
-import { HSUIC } from "../hs-ui-components";
-import { HSInputType } from "../../../types/module-types/hs-ui-types";
 import { HSSettingActions } from "./hs-setting-action";
-import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
+import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStringSetting, HSSelectStringsSetting, HSSetting, HSStateSetting, HSStringSetting, HSButtonSetting } from "./hs-setting";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
-import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
+import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSSettingsUIDependencies } from "./hs-settings-ui";
 import { HSModuleOptions } from "../../../types/hs-types";
-import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
-import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 
-/*
-    Class: HSSettings
-    IsExplicitHSModule: Yes
-    Description: 
-        Hypersynergism's settings module.
-        Responsibilities include:
-            - Parsing settings from JSON
-            (- Saving and loading settings)
-            - Building the settings panel with setting inputs
-            - Binding appropriate events to setting changes and on/off toggles
-            - Keeping internal settings states in sync with DOM
-    Author: Swiffy
-*/
+type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
+type StringIndexedObject = Record<string, unknown>;
+
+/**
+ * Class: HSSettings
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     Hypersynergism's settings module.
+ *     Responsibilities include:
+ *         - Parsing settings from JSON
+ *         - Saving and loading settings
+ *         - Building the settings panel with setting inputs
+ *         - Binding appropriate events to setting changes and on/off toggles
+ *         - Keeping internal settings states in sync with DOM
+ * Author: Swiffy
+ */
 export class HSSettings extends HSModule {
     static #staticContext = '';
 
@@ -42,11 +38,9 @@ export class HSSettings extends HSModule {
     static #settingsControlGroups: Record<string, HSSettingControlGroup>;
     static #settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
     static #settingsParsed = false;
-    static #settingsSynced = false;
-    static #saveTimeout: any;
+    static #saveTimeout: ReturnType<typeof setTimeout> | undefined;
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
-    static #strategies: HSAutosingStrategy[] = [];
 
     #settingActions: HSSettingActions;
 
@@ -84,8 +78,9 @@ export class HSSettings extends HSModule {
             }
             // Set default values for each setting
             for (const [key, setting] of Object.typedEntries<HSSettingsDefinition>(resolvedSettings)) {
-                if (setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
-                    (setting as any).settingValue = false;
+                const settingDef = setting as HSSettingBaseWithHidden<HSSettingType>;
+                if (settingDef.settingType === 'boolean' || HSUtils.isBoolean(settingDef.settingValue)) {
+                    settingDef.settingValue = false;
                 }
                 // Disable settings that use game data if game data is off
                 if (setting.usesGameData && setting.enabled && !gameDataSettingState) {
@@ -100,60 +95,72 @@ export class HSSettings extends HSModule {
                 // Instantiate the setting as HSSetting objects based on their type
                 switch (setting.settingType) {
                     case 'numeric':
-                        if (!('settingValueMultiplier' in setting as any))
-                            (setting as any).settingValueMultiplier = 1;
-                        (HSSettings.#settings as any)[key] = new HSNumericSetting(
-                            setting as unknown as HSSettingBase<number>,
+                        if (!('settingValueMultiplier' in settingDef)) {
+                            const numericSetting = settingDef as HSSettingBase<number>;
+                            numericSetting.settingValueMultiplier = 1;
+                        }
+                        HSSettings.#settings[key] = new HSNumericSetting(
+                            settingDef as HSSettingBase<number>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'string':
-                        (HSSettings.#settings as any)[key] = new HSStringSetting(
-                            setting as unknown as HSSettingBase<string>,
+                        HSSettings.#settings[key] = new HSStringSetting(
+                            settingDef as HSSettingBase<string>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'boolean':
-                        (HSSettings.#settings as any)[key] = new HSBooleanSetting(
-                            setting as unknown as HSSettingBase<boolean>,
+                        HSSettings.#settings[key] = new HSBooleanSetting(
+                            settingDef as HSSettingBase<boolean>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'selectnumeric':
-                        if (!('settingValueMultiplier' in setting as any))
-                            (setting as any).settingValueMultiplier = 1;
-                        (HSSettings.#settings as any)[key] = new HSSelectNumericSetting(
-                            setting as unknown as HSSettingBase<number>,
+                        if (!('settingValueMultiplier' in settingDef)) {
+                            const numericSetting = settingDef as HSSettingBase<number>;
+                            numericSetting.settingValueMultiplier = 1;
+                        }
+                        HSSettings.#settings[key] = new HSSelectNumericSetting(
+                            settingDef as HSSettingBase<number>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'selectstring':
-                        (HSSettings.#settings as any)[key] = new HSSelectStringSetting(
-                            setting as unknown as HSSettingBase<string>,
+                        HSSettings.#settings[key] = new HSSelectStringSetting(
+                            settingDef as HSSettingBase<string>,
+                            settingAction,
+                            HSSettings.#settingEnabledString,
+                            HSSettings.#settingDisabledString
+                        );
+                        break;
+                    case 'selectstrings':
+                        HSSettings.#settings[key] = new HSSelectStringsSetting(
+                            settingDef as HSSettingBase<string[]>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'state':
-                        (HSSettings.#settings as any)[key] = new HSStateSetting(
-                            setting as unknown as HSSettingBase<string>,
+                        HSSettings.#settings[key] = new HSStateSetting(
+                            settingDef as HSSettingBase<string>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
                         );
                         break;
                     case 'button':
-                        (HSSettings.#settings as any)[key] = new HSButtonSetting(
-                            setting as unknown as HSSettingBase<null>,
+                        HSSettings.#settings[key] = new HSButtonSetting(
+                            settingDef as HSSettingBase<null>,
                             settingAction,
                             HSSettings.#settingEnabledString,
                             HSSettings.#settingDisabledString
@@ -165,6 +172,7 @@ export class HSSettings extends HSModule {
             }
             HSSettings.saveSettingsToStorage();
             HSSettings.#settingsParsed = true;
+            HSLogger.updateDebugEnabled();
         } catch (e) {
             HSLogger.error(`Error parsing mod settings ${e}`, this.context);
             HSSettings.#settingsParsed = false;
@@ -175,521 +183,283 @@ export class HSSettings extends HSModule {
         this.isInitialized = true;
     }
 
-    static async syncSettings() {
-        HSLogger.log(`Syncing mod settings`, HSSettings.#staticContext);
+    
+    // ===============================
+    // --- UI dependency plumbing ----
+    // ===============================
 
-        if (!HSSettings.#settingsParsed) {
-            HSLogger.error(`Could not sync settings - settings not parsed yet`, HSSettings.#staticContext);
-            return;
-        }
-
-        // Update the setting UI controls with the configured values in hs-settings.json
-        for (const [key, settingObj] of Object.typedEntries(HSSettings.#settings)) {
-
-            const setting = settingObj.getDefinition();
-            const controlSettings = settingObj.hasControls() ? setting.settingControl : undefined;
-
-            if (controlSettings) {
-                const controlType = controlSettings.controlType;
-                const controlOptions = controlSettings.controlOptions;
-
-                // Render input for all the text and number settings
-                // NOTE: switch settings do not need any input to be rendered
-                if (controlType === "text" || controlType === "number") {
-                    const valueElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLInputElement;
-
-                    if (valueElement) {
-                        if (controlType === "number" && controlOptions) {
-                            if ('min' in controlOptions) valueElement.setAttribute('min', controlOptions.min!.toString());
-                            if ('max' in controlOptions) valueElement.setAttribute('max', controlOptions.max!.toString());
-                            if ('step' in controlOptions) valueElement.setAttribute('step', controlOptions.step!.toString());
-                        } else if (controlType === "text" && controlOptions) {
-                            if ('placeholder' in controlOptions) valueElement.setAttribute('placeholder', controlOptions.placeholder!);
-                        }
-
-                        // Set the input value to the JSON setting value
-                        valueElement.value = HSUtils.asString(setting.settingValue);
-
-                        // Listen for changes in the UI input to change the setting value
-                        valueElement.addEventListener('change', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
-                    }
-                } else if (controlType === "select") { // Render input for all the select settings
-                    const settingValue = HSUtils.asString(setting.settingValue);
-                    const selectElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement;
-
-                    if (selectElement) {
-                        const optionExists = Array.from(selectElement.options).some(option => option.value === settingValue);
-
-                        if (optionExists) {
-                            // Set the input value to the JSON setting value
-                            selectElement.value = settingValue;
-                        } else {
-                            selectElement.value = ""; // Set to empty string if the value doesn't exist in the options
-                            HSLogger.warn(`Setting value ${settingValue} does not exist in select options for setting ${key}`, HSSettings.#staticContext);
-                        }
-
-                        // Listen for changes in the UI input to change the setting value
-                        selectElement.addEventListener('change', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
-                    }
-                } else if (controlType === "state") { // Render input for all the select settings
-                    const settingValue = HSUtils.parseColorTags(HSUtils.asString(setting.settingValue));
-                    const stateElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement;
-
-                    if (stateElement) {
-                        stateElement.innerHTML = settingValue;
-                    }
-                } else if (controlType === "button") {
-                    // Buttons should invoke the setting's handleChange when clicked
-                    const buttonElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLButtonElement;
-
-                    if (buttonElement) {
-                        buttonElement.addEventListener('click', async (e) => { await this.#settingChangeDelegate(e, settingObj); });
-                    }
-                }
-
-                // This sets up the  "✓" / "✗" button next to the setting input (switch type settings just need this one)
-                if (controlSettings.controlEnabledId) {
-                    const toggleElement = document.querySelector(`#${controlSettings.controlEnabledId}`) as HTMLDivElement;
-
-                    if (toggleElement) {
-                        if (setting.enabled) {
-                            toggleElement.innerText = HSSettings.#settingEnabledString;
-                            toggleElement.classList.remove('hs-disabled');
-                        } else {
-                            toggleElement.innerText = HSSettings.#settingDisabledString;
-                            toggleElement.classList.add('hs-disabled');
-                        }
-
-                        // Handle toggling the setting on/off
-                        toggleElement.addEventListener('click', async (e) => { await this.#settingToggleDelegate(e, settingObj); });
-                    }
-                }
-
-                await settingObj.initialAction("state", setting.enabled);
-            }
-        }
-
-        HSLogger.log(`Finished syncing mod settings`, HSSettings.#staticContext);
-        this.#settingsSynced = true;
+    static getUIDependencies(): HSSettingsUIDependencies {
+        return HSSettings.#getUIDependencies();
     }
 
-    // Builds the settings UI in the mod's panel
-    static autoBuildSettingsUI(): { didBuild: boolean, navHTML: string, pagesHTML: string } {
-        const self = this;
-
-        if (!HSSettings.#settingsParsed) {
-            HSLogger.error(`Could not sync settings - settings not parsed yet`, HSSettings.#staticContext);
-            return { didBuild: false, navHTML: '', pagesHTML: '' };
-        }
-
-        const settingsBlocks: string[] = [];
-        let didBuild = true;
-
-        // Sort the settings by their control group
-        const sortedSettings = Object.entries(HSSettings.#settings).sort((a, b) => {
-            const aControlGroup = a[1].getDefinition().settingControl?.controlGroup;
-            const bControlGroup = b[1].getDefinition().settingControl?.controlGroup;
-
-            if (aControlGroup && bControlGroup) {
-                return (HSSettings.#settingsControlGroups[aControlGroup].order || 0) - (HSSettings.#settingsControlGroups[bControlGroup].order || 0);
-            } else if (aControlGroup) {
-                return -1;
-            } else if (bControlGroup) {
-                return 1;
-            } else {
-                return 0;
-            }
-        });
-
-        // Sort the pages
-        const sortedPages = (Object.entries(HSSettings.#settingsControlPages) as [keyof HSSettingControlPage, HSSettingControlPage][]).sort((a, b) => {
-            const aPage = a[1].order;
-            const bPage = b[1].order;
-
-            if (aPage && bPage) {
-                return (aPage || 0) - (bPage || 0);
-            } else if (aPage) {
-                return -1;
-            } else if (bPage) {
-                return 1;
-            } else {
-                return 0;
-            }
-        });
-
-        const subTabs = [];
-
-        for (const [key, page] of sortedPages) {
-            const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
-
-            if (!haveAnySettingsForPage) continue;
-
-            subTabs.push(HSUIC.Div({
-                class: 'hs-panel-subtab',
-                id: `hs-panel-settings-subtab-${key}`,
-                data: new Map([['subtab', key], ['color', page.pageColor || '']]),
-                styles: {
-                    border: page.pageColor ? `1px solid ${page.pageColor}` : `1px solid gray`
-                },
-                html: page.pageName
-            }));
-        }
-
-        let navHTML = HSUIC.Div({
-            class: 'hs-panel-subtabs',
-            html: subTabs
-        });
-
-        let pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
-
-        let currentControlGroup: string | null = null;
-
-        for (const [key, settingObj] of sortedSettings) {
-            const setting = settingObj.getDefinition();
-            // Skip rendering if 'hidden': true is set on the setting
-            if ((setting as any).hidden === true) {
-                continue;
-            }
-            const controls = setting.settingControl;
-            const settingBlockId = setting.settingBlockId || undefined;
-
-            let gameDataIcon = "";
-
-            if (setting.usesGameData) {
-                gameDataIcon = HSUIC.Image({
-                    class: 'hs-panel-setting-block-gamedata-icon',
-                    src: sIconB64,
-                    width: 18,
-                    height: 18,
-                    props: { title: HSGlobal.HSSettings.gameDataRequiredTooltip },
-                });
-            }
-
-            if (controls) {
-                const pageHTMLs = pagesHTML.get(controls.controlPage) || [];
-                let components: string[] = [];
-
-                // Check if the control group is different from the previous one
-                // If so, create a new setting group header
-                if (!currentControlGroup || currentControlGroup !== controls.controlGroup) {
-                    currentControlGroup = controls.controlGroup;
-                    const controlGroup = HSSettings.#settingsControlGroups[currentControlGroup];
-
-                    // Create control group header
-                    pageHTMLs.push(HSUIC.Div({
-                        html: controlGroup.groupName,
-                        styles: {
-                            borderBottom: '1px solid limegreen',
-                            gridColumn: 'span 2',
-                            marginBottom: '15px'
-                        }
-                    }))
-                }
-
-                if (controls.controlType === "switch") {
-                    components = [
-                        HSUIC.Div({
-                            class: 'hs-panel-setting-block-text-wrapper',
-                            styles: {
-                                display: 'flex',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                            },
-                            html: [
-                                HSUIC.P({
-                                    class: 'hs-panel-setting-block-text',
-                                    props: { title: setting.settingHelpText },
-                                    text: setting.settingDescription,
-                                    styles: { margin: '0' }
-                                }),
-                                gameDataIcon
-                            ]
-                        }),
-                    ]
-
-                    if (controls.controlEnabledId) {
-                        components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn hs-panel-settings-block-btn-standalone', id: controls.controlEnabledId, text: "" }));
-                    }
-                } else if (controls.controlType === "button") {
-                    components = [
-                        HSUIC.Button({
-                            id: controls.controlId!,
-                            text: setting.settingDescription || 'Error: No button text'
-                        })
-                    ];
-                } else {
-                    let convertedType: HSInputType | null = null;
-
-                    switch (controls.controlType) {
-                        case "text":
-                            convertedType = HSInputType.TEXT;
-                            break;
-                        case "number":
-                            convertedType = HSInputType.NUMBER;
-                            break;
-                        case "select":
-                            convertedType = HSInputType.SELECT;
-                            break;
-                        case "state":
-                            convertedType = HSInputType.STATE;
-                            break;
-                        default:
-                            convertedType = null;
-                    }
-
-                    if (convertedType) {
-                        // Setting header
-                        components = [
-                            HSUIC.Div({
-                                class: 'hs-panel-setting-block-text-wrapper',
-                                styles: {
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                },
-                                html: [
-                                    HSUIC.P({
-                                        class: 'hs-panel-setting-block-text',
-                                        props: { title: setting.settingHelpText },
-                                        text: setting.settingDescription,
-                                        styles: { margin: '0' }
-                                    }),
-                                    gameDataIcon
-                                ]
-                            })
-                        ];
-
-                        // Setting value input
-                        if (convertedType === HSInputType.NUMBER || convertedType === HSInputType.TEXT) {
-                            components.push(HSUIC.Input({ class: 'hs-panel-setting-block-num-input', id: controls.controlId, type: convertedType }));
-                        } else if (convertedType === HSInputType.SELECT) {
-                            if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
-                                const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
-                                controls.selectOptions.length = 0;
-                                controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-                                HSLogger.log(`[HSSettingsUI] Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`);
-                            }
-                            if (controls.selectOptions) {
-                                components.push(HSUIC.Select(
-                                    { class: 'hs-panel-setting-block-select-input', id: controls.controlId, type: convertedType },
-                                    controls.selectOptions
-                                ));
-                            } else {
-                                HSLogger.error(`Error autobuilding settings UI, ${setting.settingName} does not have selectOptions defined`, self.#staticContext);
-                                didBuild = false;
-                                break;
-                            }
-                        } else if (convertedType === HSInputType.STATE) {
-                            components.push(HSUIC.P({ class: 'hs-panel-setting-block-state', id: controls.controlId, text: "" }));
-                        }
-
-                        // Create setting on/off toggle
-                        if (controls.controlEnabledId) {
-                            components.push(HSUIC.Button({ class: 'hs-panel-setting-block-btn', id: controls.controlEnabledId, text: "" }))
-                        }
-                    } else {
-                        HSLogger.error(`Error autobuilding settings UI, control type resolution failed (how??)`, self.#staticContext);
-                        didBuild = false;
-                        break;
-                    }
-                }
-
-                // Create setting block which contains the setting header, value input and on/off toggle
-
-                // Add special class for inline button layout in strategy rows
-                let blockClass = 'hs-panel-setting-block';
-                if (controls.controlType === "button" &&
-                    (controls.controlGroup === "auto-sing-strategy-controls")) {
-                    blockClass += ' hs-inline-button';
-                }
-
-                pageHTMLs.push(HSUIC.Div({
-                    id: settingBlockId,
-                    class: blockClass,
-                    html: components
-                }));
-
-                pagesHTML.set(controls.controlPage, pageHTMLs);
-            } else {
-                HSLogger.error(`Error autobuilding settings UI, controls not defined for setting ${key}`, self.#staticContext);
-                didBuild = false;
-                break;
-            }
-        }
-
-        for (const [pageName, pages] of pagesHTML.entries()) {
-            pagesHTML.set(pageName, [HSUIC.Div({
-                class: 'hs-panel-settings-grid',
-                id: `settings-grid-${pageName}`,
-                html: pages
-            })]);
-        }
-
-        const flatPages = [];
-
-        for (const [pageName, pages] of pagesHTML.entries()) {
-            flatPages.push(pages.join(''));
-        }
-
+    static #getUIDependencies(): HSSettingsUIDependencies {
         return {
-            didBuild,
-            navHTML: navHTML,
-            pagesHTML: flatPages.join('')
+            settingsParsed: HSSettings.#settingsParsed,
+            settings: HSSettings.#settings,
+            settingsControlGroups: HSSettings.#settingsControlGroups,
+            settingsControlPages: HSSettings.#settingsControlPages,
+            settingEnabledString: HSSettings.#settingEnabledString,
+            settingDisabledString: HSSettings.#settingDisabledString,
+            settingChangeDelegate: HSSettings.#settingChangeDelegate,
+            settingToggleDelegate: HSSettings.#settingToggleDelegate,
         };
     }
 
+
+    // ===============================
+    // ----- Settings accessors ------
+    // ===============================
+
+    static getSetting = <K extends keyof HSSettingsDefinition>(settingName: K): HSSetting<HSSettingType> => {
+        return HSSettings.#settings[settingName];
+    };
+
+    static getSettings = (): HSSettingRecord => {
+        return HSSettings.#settings;
+    };
+
+    static getStrategies(): HSAutosingStrategy[] {
+        return HSStrategyManager.getStrategies();
+    }
+
+    static getMergedStrategyOptions() {
+        return HSStrategyManager.getMergedStrategyOptions();
+    }
+
+    static getDefaultStrategyNames(): string[] {
+        return HSStrategyManager.getDefaultStrategyNames();
+    }
+
+    static async loadDefaultStrategyByName(name: string): Promise<HSAutosingStrategy | null> {
+        try {
+            // Dynamic import using the name
+            const data = await import(`../../../resource/json/strategies/${name}.json`);
+            return data.default || data;
+        } catch (e) {
+            HSLogger.error(`Failed to load strategy '${name}': ${e}`, this.#staticContext);
+            return null;
+        }
+    }
+
+
+    // ===============================
+    // ------ Strategy helpers -------
+    // ===============================
+
     static validateStrategy(strategy: HSAutosingStrategy) {
-        let normalized = HSSettings.ensureAoagPhase(strategy);
-        normalized = HSSettings.ensureCorruptionLoadouts(normalized);
-        strategy = normalized;
-
-        if (!strategy) throw new Error('Strategy is undefined');
-        if (!('strategyName' in strategy)) throw new Error('Strategy is missing strategyName property');
-        if (!('strategy' in strategy)) throw new Error('Strategy is missing strategy property');
-        if (!Array.isArray(strategy.strategy)) throw new Error('Strategy.strategy must be an array');
-        const components = strategy.strategy as AutosingStrategyPhase[];
-        if (components.length === 0) {
-            throw new Error('Strategy has no components');
-        }
-        const aoagPhase = strategy.aoagPhase;
-        if (!aoagPhase) {
-            throw new Error(`Strategy is missing "${AOAG_PHASE_NAME}" phase`);
-        }
-        if (!aoagPhase.corruptions) {
-            throw new Error(`"${AOAG_PHASE_NAME}" phase has no corruptions defined`);
-        }
-        if (!Array.isArray(aoagPhase.strat) || aoagPhase.strat.length === 0) {
-            throw new Error(`"${AOAG_PHASE_NAME}" phase must have at least one action`);
-        }
-
-        const loadouts = strategy.corruptionLoadouts ?? [];
-        const loadoutNames = loadouts.map(l => l.name);
-        const uniqueNames = new Set(loadoutNames);
-        if (uniqueNames.size !== loadoutNames.length) {
-            throw new Error('Corruption loadout names must be unique.');
-        }
-
-        let remainingPhases = [...phases];
-
-        for (let i = 0; i < components.length; i++) {
-            const component = components[i];
-            const { startPhase, endPhase, corruptions, strat: challenges } = component;
-
-            if (!corruptions) {
-                throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) has no corruptions defined`,
-                );
-            }
-
-            if (component.corruptionLoadoutName && !loadoutNames.includes(component.corruptionLoadoutName)) {
-                throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) references missing corruption loadout "${component.corruptionLoadoutName}"`,
-                );
-            }
-
-            if (!Array.isArray(challenges) || challenges.length === 0) {
-                throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) must have at least one challenge`,
-                );
-            }
-
-            // Rule: must start at leftmost remaining phase
-            if (remainingPhases[0] !== startPhase) {
-                throw new Error(
-                    `Component ${i + 1} must start at "${remainingPhases[0]}", got "${startPhase}"`,
-                );
-            }
-
-            const endIndex = remainingPhases.indexOf(endPhase);
-
-            if (endIndex === -1) {
-                throw new Error(
-                    `Component ${i + 1} ends at "${endPhase}", which is not valid or already consumed`,
-                );
-            }
-
-            // Consume phases from the left
-            remainingPhases = remainingPhases.slice(endIndex);
-        }
-        // all phases must be consumed
-        if (remainingPhases.length > 1) {
-            throw new Error(
-                `Uncovered phases: ${remainingPhases.join(', ')}`,
-            );
-        }
-
-        if (aoagPhase?.corruptionLoadoutName && !loadoutNames.includes(aoagPhase.corruptionLoadoutName)) {
-            throw new Error(
-                `"${AOAG_PHASE_NAME}" phase references missing corruption loadout "${aoagPhase.corruptionLoadoutName}"`,
-            );
-        }
+        return HSStrategyManager.validateStrategy(strategy, HSSettings.#staticContext);
     }
 
     static ensureAoagPhase(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        if (!strategy) return strategy;
-
-        const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
-
-        if (!Array.isArray(cloned.strategy)) cloned.strategy = [];
-
-        if (!cloned.aoagPhase) {
-            const aoagIndex = cloned.strategy.findIndex(p => p.phaseId === AOAG_PHASE_ID);
-            if (aoagIndex !== -1) {
-                const [aoagFromList] = cloned.strategy.splice(aoagIndex, 1);
-                cloned.aoagPhase = aoagFromList;
-            } else {
-                cloned.aoagPhase = createDefaultAoagPhase();
-            }
-        }
-
-        if (cloned.aoagPhase && cloned.aoagPhase.phaseId !== AOAG_PHASE_ID) {
-            cloned.aoagPhase.phaseId = AOAG_PHASE_ID;
-        }
-
-        return cloned;
+        return HSStrategyManager.ensureAoagPhase(strategy);
     }
 
     static ensureCorruptionLoadouts(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        if (!strategy) return strategy;
+        return HSStrategyManager.ensureCorruptionLoadouts(strategy);
+    }
 
-        const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
-        if (!Array.isArray(cloned.corruptionLoadouts)) cloned.corruptionLoadouts = [];
+    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld'): HSAutosingStrategy {
+        return HSStrategyManager.migrateStrategyActionIdsAuto(strategy, target, HSSettings.#staticContext);
+    }
 
-        const loadouts = cloned.corruptionLoadouts as CorruptionLoadoutDefinition[];
-        const usedNames = new Set(loadouts.map(l => l.name));
 
-        const makeUniqueName = (baseName: string): string => {
-            let name = baseName;
-            let counter = 2;
-            while (usedNames.has(name)) {
-                name = `${baseName} (${counter})`;
-                counter++;
+    // ===============================
+    // --------- Persistence ---------
+    // ===============================
+
+    static saveSettingsToStorage() {
+        if (this.#saveTimeout) {
+            clearTimeout(this.#saveTimeout);
+        }
+
+        this.#saveTimeout = setTimeout(() => {
+            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+
+            if (storageMod) {
+                const serializedSettings = this.#serializeSettings();
+                const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
+
+                if (!saved) {
+                    HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
+                } else {
+                    HSLogger.debug(() => `<green>Settings saved to localStorage</green>`, this.#staticContext);
+                }
             }
-            usedNames.add(name);
-            return name;
-        };
+            this.#saveTimeout = undefined;
+        }, 250);
+    }
 
-        const ensureLoadoutForPhase = (phase: AutosingStrategyPhase | undefined) => {
-            if (!phase) return;
-            if (phase.corruptionLoadoutName === undefined) {
-                const isAoag = phase.phaseId === AOAG_PHASE_ID;
-                const baseName = isAoag ? `Loadout ${AOAG_PHASE_NAME}` : `Loadout ${phase.startPhase}-${phase.endPhase}`;
-                const name = makeUniqueName(baseName);
-                loadouts.push({ name, loadout: { ...phase.corruptions } });
-                phase.corruptionLoadoutName = name;
-                return;
+    static #serializeSettings(): string {
+        const serializeableSettings: Record<string, Partial<HSSettingBase<HSSettingType>>> = {};
+
+        for (const [key, setting] of Object.typedEntries(this.#settings)) {
+            const definition = { ...setting.getDefinition() } as Partial<HSSettingBase<HSSettingType>> & StringIndexedObject;
+
+            // Remove properties that should not be saved into localStorage
+            const blackList = HSGlobal.HSSettings.serializationBlackList;
+
+            for (const blackListKey of blackList) {
+                if (definition[blackListKey]) delete definition[blackListKey];
             }
 
-            if (phase.corruptionLoadoutName && !usedNames.has(phase.corruptionLoadoutName)) {
-                usedNames.add(phase.corruptionLoadoutName);
-                loadouts.push({ name: phase.corruptionLoadoutName, loadout: { ...phase.corruptions } });
+            serializeableSettings[key.toString()] = definition;
+        }
+
+        return JSON.stringify(serializeableSettings);
+    }
+
+
+    // ===============================
+    // ------- Storage parsing -------
+    // ===============================
+
+    #parseDefaultSettings(): HSSettingsDefinition {
+        const defaultSettings = JSON.parse(settings) as Partial<HSSettingsDefinition>;
+
+        for (const [key, setting] of Object.typedEntries<Partial<HSSettingsDefinition>>(defaultSettings)) {
+            if (!setting) continue;
+            const settingDef = setting as HSSettingBaseWithHidden<HSSettingType>;
+
+            if (settingDef.settingType === 'boolean' || HSUtils.isBoolean(settingDef.settingValue)) {
+                settingDef.settingValue = false;
             }
-        };
 
-        cloned.strategy?.forEach(phase => ensureLoadoutForPhase(phase));
-        ensureLoadoutForPhase(cloned.aoagPhase);
+            // Try fixing select type settings if they're missing some things
+            if (setting.settingType === 'selectnumeric' || setting.settingType === 'selectstring') {
+                // If there is no (default) value defined, define it as empty string
+                if (!("settingValue" in setting)) {
+                    const selectSetting = settingDef as HSSettingBase<string>;
+                    selectSetting.settingValue = "";
+                }
 
-        return cloned;
+                // Make sure that the selectOptions contains a default option with value ""
+                if ("settingControl" in setting && setting.settingControl) {
+                    const settingControl = setting.settingControl;
+
+                    if ("selectOptions" in settingControl && settingControl.selectOptions) {
+                        const hasDefaultOption = settingControl.selectOptions.find(option => {
+                            return option.value === "";
+                        });
+
+                        if (!hasDefaultOption) {
+                            settingControl.selectOptions.unshift({
+                                text: "None",
+                                value: ""
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (settingDef.settingType === 'numeric' || settingDef.settingType === 'selectnumeric' || HSUtils.isNumeric(settingDef.settingValue)) {
+                if (!('settingValueMultiplier' in settingDef)) {
+                    const numericSetting = settingDef as HSSettingBase<number>;
+                    numericSetting.settingValueMultiplier = 1;
+                }
+            }
+
+            if (settingDef.settingType === 'state') {
+                if (!("settingValue" in settingDef)) {
+                    const stateSetting = settingDef as HSSettingBase<string>;
+                    stateSetting.settingValue = "<red>null</red>";
+                }
+            }
+
+            this.#validateSetting(setting, HSSettings.#settingsControlGroups);
+        }
+
+        return defaultSettings as HSSettingsDefinition;
+    }
+
+    #parseStoredSettings(): Partial<HSSettingsDefinition> | null {
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+
+        if (storageMod) {
+            const loaded = storageMod.getData<string>(HSGlobal.HSSettings.storageKey);
+
+            if (loaded) {
+                return JSON.parse(loaded) as Partial<HSSettingsDefinition>;
+            } else {
+                HSLogger.warn(`Could not load settings from localStorage`, this.context);
+                return null;
+            }
+        } else {
+            HSLogger.warn(`Could not find HSStorage module`, this.context);
+            return null;
+        }
+    }
+
+    #resolveSettings(): HSSettingsDefinition {
+        const defaultSettings = this.#parseDefaultSettings();
+
+        try {
+            const loadedSettings = this.#parseStoredSettings();
+            const loadedStrategies = HSStrategyManager.parseStoredStrategies(this.context);
+
+            if (loadedStrategies) {
+                HSStrategyManager.setStrategies(loadedStrategies);
+            }
+            const resolved = JSON.parse(JSON.stringify(defaultSettings)) as unknown as Record<string, unknown>;
+
+            if (loadedSettings) {
+                HSLogger.log(`<green>Found settings from localStorage!</green>`, this.context);
+
+                // Process each top-level key that exists in defaultSettings (A)
+                (Object.keys(defaultSettings) as Array<keyof HSSettingsDefinition>).forEach(topLevelKey => {
+                    // Skip if this top-level key doesn't exist in loadedSettings (B)
+                    if (!(topLevelKey in loadedSettings)) return;
+
+                    // For each property in the top-level object in loadedSettings (B)
+                    // If it exists in defaultSettings (A), use B's value
+                    // This preserves new properties in A that don't exist in B
+                    const loadedTopLevel = loadedSettings[topLevelKey] as unknown as Record<string, unknown> | undefined;
+                    const defaultTopLevel = defaultSettings[topLevelKey] as unknown as Record<string, unknown> | undefined;
+                    if (!loadedTopLevel || !defaultTopLevel) return;
+
+                Object.keys(loadedTopLevel).forEach(nestedKey => {
+                    if (nestedKey in defaultTopLevel) {
+                        const bValue = loadedTopLevel[nestedKey];
+                        const defaultValue = defaultTopLevel[nestedKey];
+
+                        // If this is a nested object (but not an array), recursively merge
+                        if (
+                            bValue !== null &&
+                            typeof bValue === 'object' &&
+                            !Array.isArray(bValue) &&
+                            typeof defaultValue === 'object' &&
+                            !Array.isArray(defaultValue)
+                        ) {
+                            const mergedNestedObj = {
+                                ...(defaultValue as Record<string, unknown>),
+                            };
+
+                            // Override with B's values where they exist
+                            Object.keys(bValue as Record<string, unknown>).forEach(deepKey => {
+                                if (deepKey in mergedNestedObj) {
+                                    mergedNestedObj[deepKey] = (bValue as Record<string, unknown>)[deepKey];
+                                }
+                            });
+
+                            // Update the resolved object
+                            const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
+                            resolvedTopLevel[nestedKey] = mergedNestedObj;
+                        } else {
+                            const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
+                            resolvedTopLevel[nestedKey] = bValue;
+                        }
+                    }
+                    // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
+                });
+                });
+                return resolved as unknown as HSSettingsDefinition;
+            } else {
+                return defaultSettings;
+            }
+        } catch (err) {
+            HSLogger.error(`Error while resolving settings`, this.context);
+            console.log(err);
+            return defaultSettings;
+        }
     }
 
     #validateSetting(setting: HSSettingBase<HSSettingType>, controlGroups: Record<string, HSSettingControlGroup>) {
@@ -699,7 +469,7 @@ export class HSSettings extends HSModule {
         const validControlTypes = ['text', 'number', 'switch', 'select', 'state', 'button'];
 
         // These should be the same as HSSettingJSONType in hs-settings-types.ts
-        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'state', 'button'];
+        const validSettingTypes = ['numeric', 'string', 'boolean', 'selectnumeric', 'selectstring', 'selectstrings', 'state', 'button'];
 
         // Check the name first so we can use it in the error messages
         if (!('settingName' in setting)) throw new Error(`Setting is missing settingName property`);
@@ -763,1035 +533,10 @@ export class HSSettings extends HSModule {
         }
     }
 
-    static getSetting<K extends keyof HSSettingsDefinition>(settingName: K): HSSetting<HSSettingType> {
-        return this.#settings[settingName];
-    }
 
-    static getSettings(): HSSettingRecord {
-        return this.#settings;
-    }
-
-    static getStrategies(): HSAutosingStrategy[] {
-        return this.#strategies;
-    }
-
-
-    // Serializes all current settings into a JSON string
-    static #serializeSettings(): string {
-        const serializeableSettings: Partial<HSSettingBase<HSSettingType>> = {}
-
-        for (const [key, setting] of Object.typedEntries(this.#settings)) {
-            const definition = { ...setting.getDefinition() as Partial<HSSettingBase<HSSettingType>> };
-
-            // Remove properties that should not be saved into localStorage
-            const blackList = HSGlobal.HSSettings.serializationBlackList;
-
-            for (const blackListKey of blackList) {
-                if ((definition as any)[blackListKey]) delete (definition as any)[blackListKey];
-            }
-
-            (serializeableSettings as any)[key] = definition;
-        }
-
-        return JSON.stringify(serializeableSettings);
-    }
-
-    /**
-     * Updates the autosing strategy dropdown options and selection after create/import/delete.
-     * Handles both manifest and user strategies.
-     */
-    static updateStrategyDropdownList() {
-        const setting = HSSettings.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        // Use merged options from getMergedStrategyOptions
-        const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
-        control.selectOptions.length = 0;
-        control.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-
-        // Retrieve saved strategy from localStorage
-        let savedStrategy = undefined;
-        const storageMod = HSModuleManager.getModule("HSStorage") as any;
-        if (storageMod && typeof storageMod.getData === "function") {
-            let settingsData = storageMod.getData(HSGlobal.HSSettings.storageKey);
-            if (settingsData) {
-                const parsed = typeof settingsData === "string" ? JSON.parse(settingsData) : settingsData;
-                if (parsed && parsed.autosingStrategy && parsed.autosingStrategy.settingValue) {
-                    savedStrategy = parsed.autosingStrategy.settingValue;
-                }
-            }
-        }
-
-        // Update the actual HTML select element to match the new options, using optgroups
-        const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
-        if (selectEl) {
-            selectEl.innerHTML = "";
-            // Create optgroups
-            if (defaultStrategiesOptions.length > 0) {
-                const optgroupDefault = document.createElement('optgroup');
-                optgroupDefault.label = 'Default Strategies';
-                for (const opt of defaultStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'true');
-                    optgroupDefault.appendChild(option);
-                }
-                selectEl.appendChild(optgroupDefault);
-            }
-            if (userStrategiesOptions.length > 0) {
-                const optgroupUser = document.createElement('optgroup');
-                optgroupUser.label = 'User Strategies';
-                for (const opt of userStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'false');
-                    optgroupUser.appendChild(option);
-                }
-                selectEl.appendChild(optgroupUser);
-            }
-
-            // Select the saved strategy if available, else default to first option
-            let toSelect = savedStrategy;
-            if (!toSelect || !Array.from(selectEl.options).some(opt => opt.value === toSelect)) {
-                // Default to first available option
-                if (selectEl.options.length > 0) {
-                    toSelect = selectEl.options[0].value;
-                }
-            }
-            if (toSelect) {
-                selectEl.value = toSelect;
-                setting.setValue(toSelect);
-            }
-            HSLogger.log(`[HSAutosing] Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${toSelect}`);
-        }
-    }
-
-    /**
-     * Loads and returns the merged list of default and user strategies.
-     * Returns: { defaultStrategiesOptions, userStrategiesOptions }
-     */
-    static getMergedStrategyOptions() {
-        // Add manifest strategies first (default, undeletable)
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const manifestSet = new Set(defaultNames);
-        const defaultStrategiesOptions = [];
-        for (const name of defaultNames) {
-            defaultStrategiesOptions.push({ text: name, value: name, isDefault: true });
-        }
-        // Add user strategies after (from localStorage)
-        const userStrategies = HSSettings.getStrategies().filter(s => !manifestSet.has(s.strategyName));
-        const userStrategiesOptions = [];
-        for (const s of userStrategies) {
-            userStrategiesOptions.push({ text: s.strategyName, value: s.strategyName, isDefault: false });
-        }
-        return { defaultStrategiesOptions, userStrategiesOptions };
-    }
-
-    /**
-     * Handles creation and edition of a strategy. For deletion, use deleteStrategyFromStorage.
-     */
-    static saveStrategyToStorage(
-        strategy: HSAutosingStrategy,
-        strategyName?: string // If provided, this is an update (edit)
-    ) {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) {
-            throw new Error("Could not find Storage Module");
-        }
-
-        let strategies: HSAutosingStrategy[] | null = storageMod.getData(HSGlobal.HSSettings.strategiesKey);
-        if (!Array.isArray(strategies)) {
-            strategies = [];
-        }
-
-        let normalizedStrategy = HSSettings.ensureAoagPhase(strategy);
-        normalizedStrategy = HSSettings.ensureCorruptionLoadouts(normalizedStrategy);
-
-        // Always persist strategies with OLD special action IDs so they remain
-        // usable by other mod versions or by players without this mod.
-        const beforeNormalize = JSON.stringify(normalizedStrategy);
-        HSSettings.migrateStrategyActionIdsAuto(normalizedStrategy, 'toOld');
-        if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" back to old special action IDs`, HSSettings.#staticContext);
-        } else {
-            HSLogger.log(`[HSSettings] saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses old special action IDs — no change needed`, HSSettings.#staticContext);
-        }
-
-        this.validateStrategy(normalizedStrategy);
-        const isUpdate = !!strategyName;
-        const nameExists = strategies.some(s => {
-            if (s.strategyName !== normalizedStrategy.strategyName) return false;
-            if (!isUpdate) return true;
-            return s.strategyName !== strategyName;
-        });
-
-        if (nameExists) {
-            throw new Error(`Strategy with name "${normalizedStrategy.strategyName}" already exists.`);
-        }
-
-        let updatedStrategies = strategies;
-
-        if (isUpdate) {
-            updatedStrategies = strategies.filter(
-                s => s.strategyName !== strategyName
-            );
-
-            // Remove from memory
-            HSSettings.#strategies = HSSettings.#strategies.filter(
-                s => s.strategyName !== strategyName
-            );
-        }
-
-        updatedStrategies = updatedStrategies.concat(normalizedStrategy);
-
-        // Add to memory instead of replacing
-        HSSettings.#strategies.push(normalizedStrategy);
-
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const saved = storageMod.setData(
-            HSGlobal.HSSettings.strategiesKey,
-            updatedStrategies.filter(s => !defaultNames.includes(s.strategyName))
-        );
-        if (!saved) {
-            HSLogger.warn(`Could not save Strategy to localStorage`, this.#staticContext);
-        } else {
-            HSLogger.debug(`<green>Strategy ${isUpdate ? "updated" : "saved"} to localStorage</green>`, this.#staticContext);
-        }
-
-        HSSettings.updateStrategyDropdownList();
-        HSSettings.selectAutosingStrategyByName(normalizedStrategy.strategyName);
-        HSLogger.log(`[HSAutosing] Strategy "${normalizedStrategy.strategyName}" "${isUpdate ? "updated" : "saved"}."`, 'HSAutosingStrategyModal');
-    }
-
-    /**
-     * Handles deletion of a strategy by name.
-     */
-    static deleteStrategyFromStorage(strategyName: string) {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) {
-            throw new Error("Could not find Storage Module");
-        }
-        let strategies: HSAutosingStrategy[] | null = storageMod.getData(HSGlobal.HSSettings.strategiesKey);
-        if (!Array.isArray(strategies)) {
-            strategies = [];
-        }
-        // Remove from both storage and memory
-        const updatedStrategies = strategies.filter(s => s.strategyName !== strategyName);
-        HSSettings.#strategies = HSSettings.#strategies.filter(s => s.strategyName !== strategyName);
-        storageMod.setData(HSGlobal.HSSettings.strategiesKey, updatedStrategies);
-        HSLogger.log(`[HSAutosing] Strategy "${strategyName}" deleted.`, this.name ?? 'HSSettings');
-    }
-
-    static async deleteSelectedStrategy() {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to delete", { notificationType: "warning" });
-            return;
-        }
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
-            return;
-        }
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
-            return;
-        }
-        const strategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        if (defaultNames.includes(strategyName)) {
-            HSUI.Notify("You cannot delete default strategies.", { notificationType: "warning" });
-            return;
-        }
-        if (!confirm(`Are you sure you want to delete strategy "${strategyName}"?`)) {
-            return;
-        }
-        HSSettings.deleteStrategyFromStorage(strategyName);
-        // After deletion, update dropdown and select default
-        HSSettings.updateStrategyDropdownList();
-        const firstDefault = defaultNames[0];
-        if (firstDefault) {
-            HSSettings.selectAutosingStrategyByName(firstDefault);
-        }
-        HSUI.Notify(`Strategy "${strategyName}" deleted. Defaulted to ${firstDefault ? '"' + firstDefault + '"' : 'none'}.`, { notificationType: "success" });
-    }
-
-    static async exportSelectedStrategy() {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to export", { notificationType: "warning" });
-            return;
-        }
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
-            return;
-        }
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
-            return;
-        }
-        const strategyName = selectedOption.value.toString();
-
-        // First try to find the strategy in memory (including defaults),
-        // then try loading from storage if it's a default strategy that isn't in memory yet
-        let strategy = HSSettings.getStrategies().find(s => s.strategyName === strategyName);
-        if (!strategy && HSSettings.getDefaultStrategyNames().includes(strategyName)) {
-            strategy = await HSSettings.loadDefaultStrategyByName(strategyName) || undefined;
-        }
-        if (!strategy) {
-            HSUI.Notify("Strategy not found - cannot export", { notificationType: "error" });
-            return;
-        }
-        try {
-            const strategyJson = JSON.stringify(strategy, null, 2);
-            await navigator.clipboard.writeText(strategyJson);
-            HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, { notificationType: "success" });
-        } catch {
-            HSUI.Notify("Failed to copy strategy to clipboard", { notificationType: "error" });
-        }
-    }
-
-    /**
-     * Selects the given strategy in the dropdown and updates the autosingStrategy setting.
-     */
-    static selectAutosingStrategyByName(strategyName: string) {
-        const setting = HSSettings.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (control?.selectOptions) {
-            const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
-            if (selectEl) {
-                selectEl.value = strategyName;
-            }
-            setting.setValue(strategyName);
-        }
-    }
-
-    static async importStrategy() {
-        const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
-        if (uiMod) {
-            const modalId = await uiMod.Modal({
-                title: 'Import Strategy',
-                htmlContent: `
-            <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
-                <div>
-                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy Name:</label>
-                    <input type="text" id="import-strategy-name" placeholder="Enter strategy name" style="width: 100%; padding: 8px; box-sizing: border-box;" />
-                </div>
-                <div>
-                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy JSON:</label>
-                    <textarea id="import-strategy-json" placeholder="Paste strategy JSON here" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button id="import-strategy-cancel" data-close="${'modal-will-be-replaced'}" style="padding: 8px 16px; cursor: pointer;">Cancel</button>
-                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">Import</button>
-                </div>
-            </div>
-        `
-            });
-
-            // Update the cancel button's data-close attribute with the actual modal ID
-            const cancelBtn = document.querySelector(`#${modalId} #import-strategy-cancel`) as HTMLButtonElement;
-            if (cancelBtn) {
-                cancelBtn.dataset.close = modalId;
-            }
-
-            const submitBtn = document.querySelector(`#${modalId} #import-strategy-submit`) as HTMLButtonElement;
-            const nameInput = document.querySelector(`#${modalId} #import-strategy-name`) as HTMLInputElement;
-            const jsonInput = document.querySelector(`#${modalId} #import-strategy-json`) as HTMLTextAreaElement;
-
-            jsonInput.addEventListener('input', () => {
-                // Do not overwrite a name the user already typed
-                if (nameInput.value.trim()) {
-                    return;
-                }
-
-                try {
-                    const parsed = JSON.parse(jsonInput.value) as Partial<HSAutosingStrategy>;
-
-                    if (
-                        parsed &&
-                        typeof parsed.strategyName === 'string' &&
-                        parsed.strategyName.trim()
-                    ) {
-                        nameInput.value = parsed.strategyName.trim();
-                    }
-                } catch {
-                    // Ignore invalid JSON while typing
-                }
-            });
-
-            if (!submitBtn || !nameInput || !jsonInput) {
-                HSUI.Notify("Failed to create import modal", {
-                    notificationType: "error"
-                });
-                return;
-            }
-
-            submitBtn.addEventListener('click', async () => {
-                const strategyName = nameInput.value.trim();
-                const strategyJson = jsonInput.value.trim();
-
-                // Validate name
-                if (!strategyName) {
-                    HSUI.Notify("Please enter a strategy name", {
-                        notificationType: "warning"
-                    });
-                    return;
-                }
-
-                // Check if name already exists
-                const existingStrategies = HSSettings.getStrategies();
-                if (existingStrategies.some(s => s.strategyName === strategyName)) {
-                    HSUI.Notify(`Strategy "${strategyName}" already exists`, {
-                        notificationType: "warning"
-                    });
-                    return;
-                }
-
-                // Validate JSON
-                let parsedStrategy: HSAutosingStrategy;
-                try {
-                    parsedStrategy = JSON.parse(strategyJson);
-                } catch (error) {
-                    HSUI.Notify("Invalid JSON format", {
-                        notificationType: "error"
-                    });
-                    return;
-                }
-
-                this.validateStrategy(parsedStrategy);
-
-                // Update the strategy name to the user's input
-                parsedStrategy.strategyName = strategyName;
-
-                // Save the strategy
-                try {
-                    HSSettings.saveStrategyToStorage(parsedStrategy);
-                    HSSettings.updateStrategyDropdownList();
-                    HSSettings.selectAutosingStrategyByName(strategyName);
-                    HSLogger.log(`[HSAutosing] Strategy "${strategyName}" imported and selected.`, this.name ?? 'HSSettings');
-                    HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
-                        notificationType: "success"
-                    });
-
-                    // Close the modal
-                    const modal = document.querySelector(`#${modalId}`) as HTMLDivElement;
-                    if (modal) {
-                        await modal.transition({ opacity: 0 });
-                        modal.parentElement?.removeChild(modal);
-                    }
-                } catch (error) {
-                    HSUI.Notify("Failed to save strategy", {
-                        notificationType: "error"
-                    });
-                    HSLogger.log(`Import failed: ${error}`, 'HSAutosing');
-                }
-            });
-        } else {
-            HSUI.Notify("Failed to find HSUI", {
-                notificationType: "error"
-            });
-        }
-    }
-
-    static async editSelectedStrategy() {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
-
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to edit", {
-                notificationType: "warning"
-            });
-            return;
-        }
-
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) return;
-
-        const selectedStrategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const isDefaultStrategy = defaultNames.includes(selectedStrategyName);
-
-        const strategies = HSSettings.getStrategies();
-        let strategy = strategies.find(s => s.strategyName === selectedStrategyName);
-
-        if (!strategy && isDefaultStrategy) {
-            strategy = await HSSettings.loadDefaultStrategyByName(selectedStrategyName) || undefined;
-        }
-
-        if (!strategy) {
-            HSUI.Notify("Strategy not found - Cannot edit", {
-                notificationType: "error"
-            });
-            return;
-        }
-
-        if (isDefaultStrategy) {
-            await HSAutosingStrategyModal.open(strategy, {
-                duplicateFromDefault: true,
-                suggestedName: `${strategy.strategyName}_copy`
-            });
-        } else {
-            await HSAutosingStrategyModal.open(strategy);
-        }
-    }
-
-    static saveSettingsToStorage() {
-        if (this.#saveTimeout) {
-            clearTimeout(this.#saveTimeout);
-        }
-
-        this.#saveTimeout = setTimeout(() => {
-            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-
-            if (storageMod) {
-                const serializedSettings = this.#serializeSettings();
-                const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
-
-                if (!saved) {
-                    HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
-                } else {
-                    HSLogger.debug(`<green>Settings saved to localStorage</green>`, this.#staticContext);
-                }
-            }
-            this.#saveTimeout = undefined;
-        }, 250);
-    }
-
-    // Parses the default strategies names from the manifest file in the strategies folder
-    static getDefaultStrategyNames(): string[] {
-        // Remove .json extension for display and lookup
-        const manifestArr: string[] = Array.isArray(manifest) ? manifest : JSON.parse(manifest);
-        return manifestArr.map((filename: string) => filename.replace(/\.json$/, ""));
-    }
-
-    // Loads a strategy JSON from the strategies folder by name using the manifest
-    static async loadDefaultStrategyByName(name: string): Promise<HSAutosingStrategy | null> {
-        try {
-            // Dynamic import using the name
-            // @ts-ignore
-            const data = await import(`../../../resource/json/strategies/${name}.json`);
-            return data.default || data;
-        } catch (e) {
-            HSLogger.error(`Failed to load strategy '${name}': ${e}`);
-            return null;
-        }
-    }
-
-    // Parses the default settings read from settings.json
-    #parseDefaultSettings(): HSSettingsDefinition {
-        const defaultSettings = JSON.parse(settings) as Partial<HSSettingsDefinition>;
-
-        for (const [key, setting] of Object.typedEntries<Partial<HSSettingsDefinition>>(defaultSettings)) {
-            if (!setting) continue;
-
-            if (setting.settingType === 'boolean' || HSUtils.isBoolean(setting.settingValue)) {
-                (setting as any).settingValue = false;
-            }
-
-            // Try fixing select type settings if they're missing some things
-            if (setting.settingType === 'selectnumeric' || setting.settingType === 'selectstring') {
-                // If there is no (default) value defined, define it as empty string
-                if (!("settingValue" in setting))
-                    (setting as any).settingValue = "";
-
-                // Make sure that the selectOptions contains a default option with value ""
-                if ("settingControl" in setting && setting.settingControl) {
-                    const settingControl = setting.settingControl;
-
-                    if ("selectOptions" in settingControl && settingControl.selectOptions) {
-                        const hasDefaultOption = settingControl.selectOptions.find(option => {
-                            return option.value === "";
-                        });
-
-                        if (!hasDefaultOption) {
-                            settingControl.selectOptions.unshift({
-                                text: "None",
-                                value: ""
-                            });
-                        }
-                    }
-                }
-            }
-
-            if (setting.settingType === 'numeric' || setting.settingType === 'selectnumeric' || HSUtils.isNumeric(setting.settingValue)) {
-                if (!('settingValueMultiplier' in setting as any))
-                    (setting as any).settingValueMultiplier = 1;
-            }
-
-            if (setting.settingType === 'state') {
-                if (!("settingValue" in setting))
-                    (setting as any).settingValue = "<red>null</red>";
-            }
-
-            this.#validateSetting(setting, HSSettings.#settingsControlGroups);
-        }
-
-        return defaultSettings as HSSettingsDefinition;
-    }
-
-    // Loads and parses stored autosingStrategies
-    #parseStoredStrategies(): HSAutosingStrategy[] | null {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-
-        if (!storageMod) {
-            HSLogger.warn(`Could not find HSStorage module`, this.context);
-            return null;
-        }
-        const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
-
-        if (loaded) {
-            const list = Array.isArray(loaded) ? loaded : [loaded];
-            const defaultStrategyNames = new Set(HSSettings.getDefaultStrategyNames());
-            const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
-            const didDropDefaults = userStrategies.length !== list.length;
-
-            // Normalize all user strategies to OLD special action IDs so that
-            // localStorage is always mod-version-agnostic (usable without this mod).
-            // Any strategies that were previously saved with new IDs get converted back.
-            let didNormalize = false;
-            for (const strategy of userStrategies) {
-                const before = JSON.stringify(strategy);
-                HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
-                if (before !== JSON.stringify(strategy)) {
-                    didNormalize = true;
-                }
-            }
-
-            // Save back if defaults were dropped or any ID normalization occurred
-            if (didDropDefaults || didNormalize) {
-                storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
-            }
-
-            return userStrategies.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
-        }
-
-        return null;
-    }
-
-    static async migrateAndSaveAllUserStrategies() {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) {
-            HSUI.Notify("Could not find Storage Module", { notificationType: "error" });
-            return;
-        }
-
-        const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
-        const list = loaded ? (Array.isArray(loaded) ? loaded : [loaded]) : [];
-
-        const defaultNames = new Set(HSSettings.getDefaultStrategyNames());
-        const userStrategies = list.filter(strategy => !defaultNames.has(strategy.strategyName));
-        const droppedDefaults = list.length - userStrategies.length;
-
-        const invalidStrategies: string[] = [];
-        for (const strategy of userStrategies) {
-            const state = HSSettings.#resolveStrategyActionIdState(strategy);
-            if (state.state === 'invalid') {
-                invalidStrategies.push(`${strategy.strategyName} (${state.reason})`);
-            }
-        }
-
-        if (invalidStrategies.length > 0) {
-            const firstFew = invalidStrategies.slice(0, 3).join(', ');
-            const more = invalidStrategies.length > 3 ? ` (+${invalidStrategies.length - 3} more)` : '';
-
-            HSUI.Notify(
-                `Migrate&Save aborted: some strategies are not strictly old/new ID state. Fix and retry. ${firstFew}${more}`,
-                { notificationType: "error" }
-            );
-
-            HSLogger.warn(
-                `[HSSettings] Migrate&Save aborted due to invalid strategy ID states: ${invalidStrategies.join(', ')}`,
-                HSSettings.#staticContext
-            );
-            return;
-        }
-
-        let migratedStrategies = 0;
-        for (const strategy of userStrategies) {
-            const before = JSON.stringify(strategy);
-            HSSettings.migrateStrategyActionIdsAuto(strategy, 'toOld');
-            if (before !== JSON.stringify(strategy)) {
-                migratedStrategies++;
-            }
-        }
-
-        const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
-
-        if (!saved) {
-            HSUI.Notify("Failed to save migrated strategies to localStorage", { notificationType: "error" });
-            HSLogger.warn(
-                `[HSSettings] Migrate&Save failed: could not persist ${userStrategies.length} user strategies`,
-                HSSettings.#staticContext
-            );
-            return;
-        }
-
-        HSSettings.#strategies = userStrategies.map(s => HSSettings.ensureCorruptionLoadouts(HSSettings.ensureAoagPhase(s)));
-        HSSettings.updateStrategyDropdownList();
-
-        HSUI.Notify(
-            `Migrate&Save done: scanned ${list.length}, saved ${userStrategies.length} user strategies, migrated ${migratedStrategies}, dropped ${droppedDefaults} defaults from localStorage.`,
-            { notificationType: "success" }
-        );
-
-        HSLogger.log(
-            `[HSSettings] Migrate&Save completed (scanned=${list.length}, saved=${userStrategies.length}, migrated=${migratedStrategies}, droppedDefaults=${droppedDefaults})`,
-            HSSettings.#staticContext
-        );
-    }
-
-    static #resolveStrategyActionIdState(strategy: HSAutosingStrategy): {
-        state: 'old' | 'new' | 'none' | 'invalid';
-        reason: 'old-only' | 'new-only' | 'none' | 'mixed' | 'shared-only' | 'unknown-only' | 'shared-and-unknown-only';
-        oldOnlyCount: number;
-        newOnlyCount: number;
-        sharedCount: number;
-        unknownCount: number;
-    } {
-        const oldToNewActionIds: Record<number, number> = {
-            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
-            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
-            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
-            200: 200, 202: 202,
-            // New-only IDs added after migration era — no old equivalent
-            154: 154, 155: 155,
-            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
-            903: 903
-        };
-
-        const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
-        const newIdSet = new Set<number>(Object.values(oldToNewActionIds));
-
-        const allIds: number[] = [];
-        const collectIds = (challenge: any) => {
-            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
-        };
-        strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
-        strategy.aoagPhase?.strat?.forEach(collectIds);
-
-        let oldOnlyCount = 0;
-        let newOnlyCount = 0;
-        let sharedCount = 0;
-        let unknownCount = 0;
-
-        for (const id of allIds) {
-            const isOld = oldIdSet.has(id);
-            const isNew = newIdSet.has(id);
-
-            if (isOld && isNew) {
-                sharedCount++;
-            } else if (isOld) {
-                oldOnlyCount++;
-            } else if (isNew) {
-                newOnlyCount++;
-            } else {
-                unknownCount++;
-            }
-        }
-
-        const hasOldOnly = oldOnlyCount > 0;
-        const hasNewOnly = newOnlyCount > 0;
-
-        if (hasOldOnly && !hasNewOnly) {
-            return { state: 'old', reason: 'old-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        if (hasNewOnly && !hasOldOnly) {
-            return { state: 'new', reason: 'new-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        if (allIds.length === 0) {
-            return { state: 'none', reason: 'none', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        if (hasOldOnly && hasNewOnly) {
-            return { state: 'invalid', reason: 'mixed', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        if (sharedCount > 0 && unknownCount === 0) {
-            return { state: 'invalid', reason: 'shared-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        if (sharedCount === 0 && unknownCount > 0) {
-            return { state: 'invalid', reason: 'unknown-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-        }
-
-        return { state: 'invalid', reason: 'shared-and-unknown-only', oldOnlyCount, newOnlyCount, sharedCount, unknownCount };
-    }
-
-    // Migrates strategy special action IDs either entirely to new IDs ('toNew') or entirely to old IDs ('toOld').
-    // Skips without mutating if the strategy is already in the target state.
-    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld'): HSAutosingStrategy {
-        const oldToNewActionIds: Record<number, number> = {
-            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
-            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
-            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
-            // New-only IDs added after migration era — no old equivalent, pass through unchanged
-            154: 154, 155: 155, 200: 200, 202: 202,
-            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
-            903: 903
-        };
-        const newToOldActionIds = Object.fromEntries(
-            Object.entries(oldToNewActionIds).map(([oldId, newId]) => [newId, Number(oldId)])
-        );
-        const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
-        const newIdSet = new Set<number>(Object.values(oldToNewActionIds));
-        const oldOnlyIdSet = new Set<number>([...oldIdSet].filter(id => !newIdSet.has(id)));
-        const newOnlyIdSet = new Set<number>([...newIdSet].filter(id => !oldIdSet.has(id)));
-
-        // Gather all special action challengeNumbers (>= 100) in the strategy
-        const allIds: number[] = [];
-        const collectIds = (challenge: any) => {
-            if (challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
-        };
-        strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
-        strategy.aoagPhase?.strat?.forEach(collectIds);
-
-        // Count old and new IDs
-        let oldCount = 0, newCount = 0;
-        for (const id of allIds) {
-            if (oldToNewActionIds[id]) oldCount++;
-            if (newToOldActionIds[id]) newCount++;
-        }
-
-        let oldOnlyCount = 0;
-        let newOnlyCount = 0;
-        let sharedCount = 0;
-        let unknownCount = 0;
-        const unknownIds: number[] = [];
-
-        for (const id of allIds) {
-            const isOld = oldIdSet.has(id);
-            const isNew = newIdSet.has(id);
-
-            if (isOld && isNew) {
-                sharedCount++;
-            } else if (isOld) {
-                oldOnlyCount++;
-            } else if (isNew) {
-                newOnlyCount++;
-            } else {
-                unknownCount++;
-                unknownIds.push(id);
-            }
-        }
-
-        const hasOldOnly = oldOnlyCount > 0;
-        const hasNewOnly = newOnlyCount > 0;
-        const allMatchOldState = hasOldOnly && !hasNewOnly;
-        const allMatchNewState = hasNewOnly && !hasOldOnly;
-        const allShared = !hasOldOnly && !hasNewOnly && sharedCount > 0;
-        const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
-
-        if (allMatchOldState) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
-        } else if (allMatchNewState) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
-        } else if (allShared) {
-            HSLogger.debug(
-                `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
-        } else {
-            HSLogger.warn(
-                `Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`,
-                'HSSettings'
-            );
-        }
-
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`,
-            'HSSettings'
-        );
-
-        // Decide direction based on explicit target — caller always knows which state they want.
-        let map: Record<number, number> | null = null;
-        let direction: 'old->new' | 'new->old' | 'none' = 'none';
-
-        if (target === 'toNew') {
-            if (hasNewOnly && !hasOldOnly) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, 'HSSettings');
-                return strategy;
-            } else if (hasOldOnly && !hasNewOnly) {
-                map = oldToNewActionIds;
-                direction = 'old->new';
-            }
-        } else { // target === 'toOld'
-            if (hasOldOnly && !hasNewOnly) {
-                HSLogger.debug(`Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, 'HSSettings');
-                return strategy;
-            } else if (hasNewOnly && !hasOldOnly) {
-                map = newToOldActionIds;
-                direction = 'new->old';
-            }
-        }
-
-        if (!map) {
-            if (hasOldOnly && hasNewOnly) {
-                HSLogger.warn(
-                    `Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`,
-                    'HSSettings'
-                );
-            } else {
-                let reason = 'no-exclusive-ids';
-                if (sharedCount > 0 && unknownCount === 0) {
-                    reason = 'shared-only';
-                } else if (sharedCount === 0 && unknownCount > 0) {
-                    reason = 'unknown-only';
-                } else if (sharedCount > 0 && unknownCount > 0) {
-                    reason = 'shared-and-unknown-only';
-                }
-
-                HSLogger.debug(
-                    `Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`,
-                    'HSSettings'
-                );
-            }
-            return strategy;
-        }
-
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": selected migration direction=${direction}`,
-            'HSSettings'
-        );
-
-        // Migrate
-        let migratedCount = 0;
-        const migrateChallenge = (challenge: any) => {
-            const challengeId = challenge.challengeNumber;
-
-            if (!challengeId) {
-                return;
-            }
-
-            const isMigrateCandidate =
-                (direction === 'old->new' && oldOnlyIdSet.has(challengeId)) ||
-                (direction === 'new->old' && newOnlyIdSet.has(challengeId));
-
-            if (isMigrateCandidate && map![challengeId]) {
-                challenge.challengeNumber = map![challenge.challengeNumber];
-                migratedCount++;
-            }
-        };
-        strategy.strategy?.forEach(phase => phase.strat?.forEach(migrateChallenge));
-        strategy.aoagPhase?.strat?.forEach(migrateChallenge);
-
-        HSLogger.debug(
-            `Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`,
-            'HSSettings'
-        );
-
-        return strategy;
-    }
-
-    // Loads and parses settings from local storage as JSON
-    #parseStoredSettings(): Partial<HSSettingsDefinition> | null {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-
-        if (storageMod) {
-            const loaded = storageMod.getData<string>(HSGlobal.HSSettings.storageKey);
-
-            if (loaded) {
-                return JSON.parse(loaded) as Partial<HSSettingsDefinition>;
-            } else {
-                HSLogger.warn(`Could not load settings from localStorage`, this.context);
-                return null;
-            }
-        } else {
-            HSLogger.warn(`Could not find HSStorage module`, this.context);
-            return null;
-        }
-    }
-
-
-    #resolveSettings(): HSSettingsDefinition {
-        const defaultSettings = this.#parseDefaultSettings();
-
-        try {
-            const loadedSettings = this.#parseStoredSettings();
-            const loadedStrategies = this.#parseStoredStrategies();
-
-            if (loadedStrategies) {
-                HSSettings.#strategies.push(...loadedStrategies);
-            }
-            const resolved = JSON.parse(JSON.stringify(defaultSettings));
-
-            if (loadedSettings) {
-                HSLogger.log(`<green>Found settings from localStorage!</green>`, this.context);
-
-                // Process each top-level key that exists in defaultSettings (A)
-                Object.keys(defaultSettings).forEach(topLevelKey => {
-                    // Skip if this top-level key doesn't exist in loadedSettings (B)
-                    if (!(topLevelKey in loadedSettings)) return;
-
-                    // For each property in the top-level object in loadedSettings (B)
-                    // If it exists in defaultSettings (A), use B's value
-                    // This preserves new properties in A that don't exist in B
-                    Object.keys((loadedSettings as any)[topLevelKey]).forEach(nestedKey => {
-                        if (nestedKey in (defaultSettings as any)[topLevelKey]) {
-                            const bValue = (loadedSettings as any)[topLevelKey][nestedKey];
-
-                            // If this is a nested object (but not an array), recursively merge
-                            if (
-                                bValue !== null &&
-                                typeof bValue === 'object' &&
-                                !Array.isArray(bValue) &&
-                                typeof (defaultSettings as any)[topLevelKey][nestedKey] === 'object' &&
-                                !Array.isArray((defaultSettings as any)[topLevelKey][nestedKey])
-                            ) {
-                                // For nested objects, preserve structure from A but override with values from B
-                                // where the keys exist in both
-                                const mergedNestedObj = {
-                                    ...((defaultSettings as any)[topLevelKey][nestedKey]), // Start with all properties from A
-                                };
-
-                                // Override with B's values where they exist
-                                Object.keys(bValue).forEach(deepKey => {
-                                    if (deepKey in mergedNestedObj) {
-                                        mergedNestedObj[deepKey] = bValue[deepKey];
-                                    }
-                                });
-
-                                // Update the resolved object
-                                (resolved as any)[topLevelKey][nestedKey] = mergedNestedObj;
-                            } else {
-                                // For primitive values or arrays, just use B's value directly
-                                (resolved as any)[topLevelKey][nestedKey] = bValue;
-                            }
-                        }
-                        // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
-                    });
-                });
-                return resolved as HSSettingsDefinition;
-            } else {
-                return defaultSettings;
-            }
-        } catch (err) {
-            HSLogger.error(`Error while resolving settings`, this.context);
-            console.log(err);
-            return defaultSettings;
-        }
-    }
+    // ===============================
+    // ------- Event delegates -------
+    // ===============================
 
     static async #settingChangeDelegate(e: Event, settingObj: HSSetting<HSSettingType>) {
         await settingObj.handleChange(e);
@@ -1800,6 +545,11 @@ export class HSSettings extends HSModule {
     static async #settingToggleDelegate(e: MouseEvent, settingObj: HSSetting<HSSettingType>) {
         await settingObj.handleToggle(e);
     }
+
+
+    // ===============================
+    // ------------ Misc. ------------
+    // ===============================
 
     static dumpToConsole() {
         console.log('------------------ HYPERSYNERGISM CURRENT SETTINGS DUMP START ------------------');

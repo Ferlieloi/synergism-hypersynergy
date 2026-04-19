@@ -1,6 +1,6 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { Achievement, AchievementGroups, AchievementRewards, AntProducers, AntUpgrades, CachedValue, CalculationCache, GoldenQuarkUpgradeKey, HepteractType, ISingularityChallengeData, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, RedAmbrosiaUpgradeCalculationCollection, RedAmbrosiaUpgradeCalculationConfig, SingularityChallengeDataKeys, SingularityDebuffs, AntUpgradeTypeMap, RuneType, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, PCoinUpgradeEffects, NumberStatLine, RedAmbrosiaUpgradeRewards, RedAmbrosiaNames, RuneTypeMap, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanCraftItems, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
-import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, Runes, CorruptionLoadout, SingularityChallenges, goldenQuarkUpgrades, PlayerData } from "../../../types/data-types/hs-player-savedata";
+import { RedAmbrosiaUpgrades, AmbrosiaUpgrades, SingularityChallengeStatus, Runes, CorruptionLevels, SingularityChallenges, goldenQuarkUpgrades, PlayerData } from "../../../types/data-types/hs-player-savedata";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
@@ -12,25 +12,28 @@ import { HSGameDataAPIPartial } from "./hs-gamedata-api-partial";
 import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, CASH_GRAB_ULTRA_BLUEBERRY, challenge15Rewards, hepteractEffectiveValues, SINGULARITY_CHALLENGE_DATA, TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, regularCostProgressionString, exponentialCostProgressionString } from "./stored-vars-and-calculations";
 import Decimal from "break_infinity.js";
 
-/*
-    If this looks silly, check details in hs-gamedata-api-partial.ts
-
-    This class, even though the name is HSGameDataAPI, contains only
-    calculation functions which use game data
-
-    The main game data API class is HSGameDataAPIPartial.
-    Yes, they are basically wrong way around but it is what it is.
-
-    --
-
-    This file is also very long and will most likely get a lot longer still.
-    This is because this file mostly contains functions ripped from the game's code
-    and modified to work with the mod's own cache etc. (*) The big idea in the end is that
-    I'll try to expose everything in here in some sane way so nobody needs to look in here.
-
-    --
-
-    (*) All of the R_ methods are ripped from the game's code
+/**
+ * Class: HSGameDataAPI
+ * IsExplicitHSModule: Yes
+ * Description:
+ *   If this looks silly, check details in hs-gamedata-api-partial.ts
+ *
+ *   This class, even though the name is HSGameDataAPI, contains only
+ *   calculation functions which use game data
+ *
+ *   The main game data API class is HSGameDataAPIPartial.
+ *   Yes, they are basically wrong way around but it is what it is.
+ *
+ *   --
+ *
+ *   This file is also very long and will most likely get a lot longer still.
+ *   This is because this file mostly contains functions ripped from the game's code
+ *   and modified to work with the mod's own cache etc. (*) The big idea in the end is that
+ *   I'll try to expose everything in here in some sane way so nobody needs to look in here.
+ *
+ *   --
+ *
+ *   (*) All of the R_ methods are ripped from the game's code
 */
 export class HSGameDataAPI extends HSGameDataAPIPartial {
 
@@ -504,7 +507,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     #checkCache(cacheName: keyof CalculationCache, checkCacheAgainst: number[]): any | undefined {
         if (!(cacheName in this.#calculationCache)) {
-            HSLogger.debug(`Could not find cache for '${cacheName}'`);
+            HSLogger.debug(() => `Could not find cache for '${cacheName}'`);
             return undefined;
         }
 
@@ -5310,7 +5313,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (!this.gameData) return 0;
         const data = this.gameData;
         const cacheName = 'R_RequiredBlueberryTime' as keyof CalculationCache;
-        const timePerAmbrosia = HSGlobal.HSAmbrosia.R_TIME_PER_AMBROSIA // Currently 30
+        const timePerAmbrosia = HSGlobal.HSAmbrosia.R_TIME_PER_AMBROSIA // Currently 45
 
         const calculationVars: number[] = [
             data.lifetimeAmbrosia
@@ -6054,7 +6057,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         recessionPower: [1, 0.9, 0.7, 0.6, 0.5, 0.37, 0.30, 0.23, 0.18, 0.15, 0.12, 0.09, 0.03, 0.01, 0.007, 0.0007, 0.00007]
     };
 
-    R_calculateCorruptionEffect(loadout: CorruptionLoadout, corruption: string): number {
+    R_calculateCorruptionEffect(loadout: CorruptionLevels, corruption: string): number {
         if (!this.gameData) return 0;
 
         const data = this.gameData;
@@ -6081,46 +6084,46 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         }
     }
 
-    #viscosityEffect(loadout: CorruptionLoadout, data: any): number {
-        const base = this.#corruptionData.viscosityPower[loadout.levels.viscosity];
+    #viscosityEffect(loadout: CorruptionLevels, data: any): number {
+        const base = this.#corruptionData.viscosityPower[loadout.viscosity];
         const multiplier = 1 + data.platonicUpgrades[6] / 30;
         return Math.min(base * multiplier, 1);
     }
 
-    #droughtEffect(loadout: CorruptionLoadout, data: any): number {
-        let baseSalvageReduction = this.#corruptionData.droughtSalvage[loadout.levels.drought];
+    #droughtEffect(loadout: CorruptionLevels, data: any): number {
+        let baseSalvageReduction = this.#corruptionData.droughtSalvage[loadout.drought];
         if (data.platonicUpgrades[13] > 0) {
             baseSalvageReduction *= 0.5;
         }
         return baseSalvageReduction;
     }
 
-    #deflationEffect(loadout: CorruptionLoadout): number {
-        return this.#corruptionData.deflationMultiplier[loadout.levels.deflation];
+    #deflationEffect(loadout: CorruptionLevels): number {
+        return this.#corruptionData.deflationMultiplier[loadout.deflation];
     }
 
-    #extinctionEffect(loadout: CorruptionLoadout): number {
-        return this.#corruptionData.extinctionDivisor[loadout.levels.extinction];
+    #extinctionEffect(loadout: CorruptionLevels): number {
+        return this.#corruptionData.extinctionDivisor[loadout.extinction];
     }
 
-    #illiteracyEffect(loadout: CorruptionLoadout, data: any): number {
-        const base = this.#corruptionData.illiteracyPower[loadout.levels.illiteracy];
+    #illiteracyEffect(loadout: CorruptionLevels, data: any): number {
+        const base = this.#corruptionData.illiteracyPower[loadout.illiteracy];
         const multiplier = (data.obtainium && data.obtainium > 0)
             ? 1 + (1 / 100) * data.platonicUpgrades[9] * Math.min(100, Math.log10(data.obtainium))
             : 1;
         return Math.min(base * multiplier, 1);
     }
 
-    #recessionEffect(loadout: CorruptionLoadout): number {
-        return this.#corruptionData.recessionPower[loadout.levels.recession];
+    #recessionEffect(loadout: CorruptionLevels): number {
+        return this.#corruptionData.recessionPower[loadout.recession];
     }
 
-    #dilationEffect(loadout: CorruptionLoadout): number {
-        return this.#corruptionData.dilationMultiplier[loadout.levels.dilation];
+    #dilationEffect(loadout: CorruptionLevels): number {
+        return this.#corruptionData.dilationMultiplier[loadout.dilation];
     }
 
-    #hyperchallengeEffect(loadout: CorruptionLoadout, data: any): number {
-        const baseEffect = this.#corruptionData.hyperchallengeMultiplier[loadout.levels.hyperchallenge];
+    #hyperchallengeEffect(loadout: CorruptionLevels, data: any): number {
+        const baseEffect = this.#corruptionData.hyperchallengeMultiplier[loadout.hyperchallenge];
         let divisor = 1;
         divisor *= 1 + 2 / 5 * data.platonicUpgrades[8];
         return Math.max(1, baseEffect / divisor);

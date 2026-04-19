@@ -1,28 +1,59 @@
 import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
-import { HSGithub } from "../hs-core/github/hs-github";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 
-/*
-    Class: HSUtils
-    IsExplicitHSModule: No
-    Description: 
-        Static utility module for Hypersynergism.
-        Functionalities include:
-            - wait() method to wait for an arbitrary amount of time
-            - uuidv4() for generating UUIDs
-            - domid() method for generating DOM-compliant unique ids
-            - hashCode() for calculating a unique hash for arbitrary string
-            - N() for pertty printing numbers
-    Author: Swiffy
-*/
+/**
+ * Class: HSUtils
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Static utility module for Hypersynergism.
+ *     Functionalities include:
+ *         - wait() method to wait for an arbitrary amount of time
+ *         - uuidv4() for generating UUIDs
+ *         - domid() method for generating DOM-compliant unique ids
+ *         - hashCode() for calculating a unique hash for arbitrary string
+ *         - N() for pretty printing numbers
+ * Author: Swiffy
+ */
 export class HSUtils {
+    static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
-    static sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
     static sleepTime = 5;
+
+    static #_onAfterTack: ((fn: () => void) => void) | null = null;
+
+    // Reusable MessageChannel for sub-millisecond event-loop yielding.
+    // Queue-based so concurrent yields (if ever) work correctly.
+    static readonly #_yieldChannel = (() => {
+        const resolvers: (() => void)[] = [];
+        const { port1, port2 } = new MessageChannel();
+        port2.onmessage = () => resolvers.shift()?.();
+        return { port1, resolvers };
+    })();
+
+    static yield = (): Promise<void> => new Promise<void>(resolve => {
+        HSUtils.#_yieldChannel.resolvers.push(resolve);
+        HSUtils.#_yieldChannel.port1.postMessage(null);
+    });
+
+    static cacheAfterTackHook(): boolean {
+        HSUtils.#_onAfterTack = (window as any).__HS_onAfterTack ?? null;
+        return HSUtils.#_onAfterTack !== null;
+    }
+
+    static isAfterTackHooked(): boolean {
+        return HSUtils.#_onAfterTack !== null;
+    }
+
+    // Resolves as a microtask immediately after the next game tack() completes.
+    // Requires cacheAfterTackHook() to have been called first.
+    static waitForNextTack = (): Promise<void> => {
+        if (!HSUtils.#_onAfterTack) return HSUtils.sleep(5);
+        return new Promise<void>(resolve => HSUtils.#_onAfterTack!(resolve));
+    };
 
     // Simple promise-based wait/delay utility method
     static wait(delay: number) {
@@ -33,7 +64,8 @@ export class HSUtils {
 
     static async sleepUntilElapsed(
         prevTime: number,
-        delayMs: number
+        delayMs: number,
+        context?: string
     ): Promise<void> {
         if (delayMs <= 0) return;
 
@@ -41,12 +73,10 @@ export class HSUtils {
         const remaining = delayMs - elapsed;
 
         if (remaining > 0) {
-            await Promise.all([
-                HSUtils.sleep(remaining),
-                HSLogger.debug(`Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, 'HSUtils'),
-            ]);
+            if (HSLogger.isDebugEnabled) HSLogger.debug(() => `-------> Sleeping for ${remaining.toFixed(2)} ms to enforce delay of ${delayMs} ms`, context ?? HSUtils.#context);
+            await HSUtils.sleep(remaining);
         } else {
-            HSLogger.debug(`No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, 'HSUtils');
+            if (HSLogger.isDebugEnabled) HSLogger.debug(() => `-------> No need to sleep, elapsed time ${elapsed.toFixed(2)} ms already exceeds delay of ${delayMs} ms`, context ?? HSUtils.#context);
         }
     }
 
@@ -108,7 +138,7 @@ export class HSUtils {
                 numString = tempNum.toFixed(precision);
             }
         } catch (e) {
-            console.error(`[HS]: HSUtil.N FAILED FOR ${num}`);
+            HSLogger.error(`HSUtils.N FAILED FOR ${num}`, HSUtils.#context);
             return numString;
         }
 
@@ -192,11 +222,11 @@ export class HSUtils {
     static nullProxy<T>(proxyName: string): T {
         const nullProxy = new Proxy({}, {
             get: () => {
-                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Get operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return nullProxy;
             },
             set: () => {
-                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, 'Proxy');
+                HSLogger.warn(`Set operation intercepted by Null Proxy '${proxyName}', something is not right`, this.#context);
                 return true;
             }
         });
@@ -432,18 +462,6 @@ export class HSUtils {
         return reverse[buff];
     }
 
-    static async isLatestVersion() {
-        const latestRelease = await HSGithub.getLatestRelease();
-
-        if (latestRelease) {
-            if (latestRelease.version !== HSGlobal.General.currentModVersion) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     static asString(settingValue: HSSettingType): string {
         if (settingValue === null) return '';
         return String(settingValue);
@@ -454,7 +472,7 @@ export class HSUtils {
         predicate: (text: string) => boolean = t => t.trim().length > 0,
         timeoutMs = 2000
     ): Promise<void> {
-        // Fast-path: if already satisfied, don't set up observers/timers.
+        // if already satisfied, don't set up observers/timers.
         if (predicate(el.textContent ?? "")) return;
 
         // Wait until a mutation makes the predicate true.
@@ -520,6 +538,27 @@ export class HSUtils {
                 subtree: true,
                 characterData: true
             });
+        });
+    }
+
+    static waitForClassCondition(
+        element: Element, condition: () => boolean,
+        timeoutMs: number
+    ): Promise<boolean> {
+        if (condition()) return Promise.resolve(true);
+        return new Promise<boolean>((resolve) => {
+            let finished = false;
+            const cleanup = (success: boolean): void => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve(success);
+            };
+            const observer = new MutationObserver(() => { if (condition()) cleanup(true); });
+            const timeoutId = window.setTimeout(() => cleanup(false), timeoutMs);
+            observer.observe(element, { attributes: true, attributeFilter: ['class'] });
+            if (condition()) cleanup(true);
         });
     }
 
@@ -648,7 +687,7 @@ export class HSUtils {
                         this.#dialogWatcherInterval = null;
                     }
 
-                    HSLogger.debug('Dialog watcher stopped after clearing all dialogs');
+                    HSLogger.debug(() => 'Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
             }, HSUtils.sleepTime);

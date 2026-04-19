@@ -212,10 +212,15 @@
     margin-left: 8px;
 }
 
+#hs-completed-sing-full-div {
+    display: flex;
+    align-items: flex-end;
+}
+
 #hs-completed-sing-amount {
     color: var(--timer-color-progress);
     font-weight: bold;
-    margin-left: 6px;
+    margin: 0 6px;
 }
 
 #hs-phase-name-val {
@@ -555,7 +560,6 @@
     gap: 2px;
 }
 
-.hs-hidden { display: none !important; }
 .hs-grid-4col { grid-template-columns: min-content auto min-content auto !important; }
 .hs-grid-2col-min-auto { grid-template-columns: min-content auto !important; }
 .hs-grid-2col-auto-auto { grid-template-columns: auto auto !important; }

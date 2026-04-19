@@ -4,14 +4,14 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSSettings } from "./hs-settings";
 
-
-/* 
-    Class: HSSetting
-    IsExplicitHSModule: No
-    Description: 
-        Abstract class for all Hypersynergism settings
-        Contains the setting's definition and the action to be performed when the setting is changed
-*/
+/**
+ * Class: HSSetting
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Abstract class for all Hypersynergism settings
+ *     Contains the setting's definition and the action to be performed when the setting is changed
+ * Author: Swiffy
+ */
 export abstract class HSSetting<T extends HSSettingType> {
     protected context = 'HSSetting';
 
@@ -71,7 +71,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {
-                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`);
+                    HSLogger.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`, this.context);
                     return;
                 }
             }
@@ -166,7 +166,7 @@ export abstract class HSSetting<T extends HSSettingType> {
                     toggleElement.classList.add('hs-disabled');
                 }
             } else {
-                HSLogger.debug(`Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl.controlEnabledId})`, this.context);
+                HSLogger.debug(() => `Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl?.controlEnabledId})`, this.context);
             }
         }
 
@@ -174,8 +174,10 @@ export abstract class HSSetting<T extends HSSettingType> {
         HSSettings.saveSettingsToStorage();
     }
 
-    // For settings which have a settingAction defined, this will be called when the setting is initialized
+    // For settings which have a settingAction defined but no skipInit,
+    // this will be called when the setting is initialized
     async initialAction(changeType: 'value' | 'state', initialState?: boolean) {
+        if (this.definition.skipInit) return;
         await this.handleSettingAction(changeType, initialState);
     }
 
@@ -426,6 +428,39 @@ export class HSSelectStringSetting extends HSSetting<string> {
         const newValue = (e.target as HTMLSelectElement).value;
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${newValue}`, this.context);
+
+        this.definition.settingValue = newValue;
+        this.definition.calculatedSettingValue = newValue;
+        await super.handleSettingAction("value");
+
+        // Persist the updated value to storage after handling any actions
+        HSSettings.saveSettingsToStorage();
+    }
+}
+
+export class HSSelectStringsSetting extends HSSetting<string[]> {
+    constructor(
+        settingDefinition: HSSettingBase<string[]>,
+        settingAction: ((params: HSSettingActionParams) => any) | null,
+        enabledString: string,
+        disabledString: string) {
+        super(settingDefinition, settingAction, enabledString, disabledString);
+    }
+
+    getValue() {
+        return this.definition.settingValue;
+    }
+
+    setValue(value: string[]) {
+        this.definition.settingValue = value;
+        HSSettings.saveSettingsToStorage();
+    }
+
+    async handleChange(e: Event) {
+        const selectElement = e.target as HTMLSelectElement;
+        const newValue = Array.from(selectElement.selectedOptions).map((option) => option.value);
+
+        HSLogger.log(`${this.definition.settingName}: ${JSON.stringify(this.definition.settingValue)} -> ${JSON.stringify(newValue)}`, this.context);
 
         this.definition.settingValue = newValue;
         this.definition.calculatedSettingValue = newValue;

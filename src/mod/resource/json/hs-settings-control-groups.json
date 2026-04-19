@@ -3,12 +3,12 @@
     "groupName": "Hepteract settings",
     "order": 1
   },
-  "notifications": {
-    "groupName": "Notification settings",
-    "order": 2
-  },
   "ui": {
     "groupName": "UI settings",
+    "order": 2
+  },
+  "notifications": {
+    "groupName": "Notification settings",
     "order": 3
   },
   "log": {

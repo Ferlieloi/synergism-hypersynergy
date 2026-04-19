@@ -2,6 +2,7 @@ import { HSAmbrosiaLoadoutIconMapping } from "./hs-ambrosia-types";
 import { HSWatcherOptions } from "./hs-elementhooker-types";
 import { HSViewProperties, MAIN_VIEW } from "./hs-gamestate-types";
 import { ELogLevel } from "./hs-logger-types";
+import { PlayerData } from "../data-types/hs-player-savedata";
 
 interface IStoreable {
     storageKey: string;
@@ -14,20 +15,20 @@ export interface HSGlobalDebug {
     calculationCacheDebugMode: boolean;
 }
 
-export interface HSGlobalPrivateAPI {
-    base: string;
-    latestRelease: string;
+export interface HSGlobalRelease {
+    githubOwner: string;
+    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 
 export interface HSGlobalGeneral {
     currentModVersion: string;
-    isLatestVersion: boolean;
     isModFullyLoaded: boolean;
+    isDev: boolean;
     modGithubUrl: string;
     modWikiUrl: string;
     modWikiFeaturesUrl: string;
-    modWebsiteUrl: string;
+    modDiscordThreadUrl: string;
     heaterUrl: string;
 }
 
@@ -82,11 +83,11 @@ export interface HSGlobalAmbrosia extends IStoreable {
 
     idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
     idleSwapIndicatorId: string;
-    idleSwapMaxBlueTreshold: number;
-    idleSwapMinBlueTreshold: number;
+    idleSwapMaxBlueThreshold: number;
+    idleSwapMinBlueThreshold: number;
 
-    idleSwapMaxRedTreshold: number;
-    idleSwapMinRedTreshold: number;
+    idleSwapMaxRedThreshold: number;
+    idleSwapMinRedThreshold: number;
 
     R_TIME_PER_AMBROSIA: number;
     R_TIME_PER_RED_AMBROSIA: number;
@@ -100,6 +101,24 @@ export interface HSGlobalAmbrosia extends IStoreable {
     redBarProgressTextId: string;
     barWrapperId: string;
 }
+
+export interface HSGlobalCorruptionQuickbar extends IStoreable {
+    quickBarId: string;
+    quickBarLoadoutIdPrefix: string;
+    corruptionLoadoutIcons: HSAmbrosiaLoadoutIconMapping; // TYPE
+}
+
+export interface HSGlobalAutomationQuickbar extends IStoreable {
+    // automationLoadoutIcons: HSAmbrosiaLoadoutIconMapping; // TYPE
+    quickBarId: string;
+    quickBarLoadoutIdPrefix: string;
+}
+
+export interface HSGlobalEventsQuickbar extends IStoreable {
+    quickBarId: string;
+    quickBarLoadoutIdPrefix: string;
+}
+
 
 export interface HSGlobalGameState {
     viewProperties: Map<MAIN_VIEW, HSViewProperties>;
@@ -124,8 +143,9 @@ export interface HSGlobalHSUIC {
 }
 
 export interface IHSGlobal {
+    exposedPlayer: PlayerData | null;
     Debug: HSGlobalDebug;
-    PrivateAPI: HSGlobalPrivateAPI;
+    Release: HSGlobalRelease;
     General: HSGlobalGeneral;
     Common: HSGlobalCommon;
     HSPrototypes: HSGlobalPrototypes;

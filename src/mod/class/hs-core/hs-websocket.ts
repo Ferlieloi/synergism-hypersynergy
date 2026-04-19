@@ -4,6 +4,13 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSWebSocket
+ * Description: Hypersynergism module for managing WebSocket connections with automatic reconnection and message handling.
+ *   - Provides an interface for registering multiple WebSockets with custom handlers and reconnection logic.
+ *   - Uses exponential backoff for reconnection attempts and allows for custom behavior on connection events.
+ * Author: Swiffy
+ */
 export class HSWebSocket extends HSModule {
 
     #webSockets: Map<string, HSWebSocketObject<any>> = new Map();
@@ -34,7 +41,7 @@ export class HSWebSocket extends HSModule {
         const self = this;
 
         if (this.#webSockets.has(name)) {
-            HSLogger.debug(`Tried to register websocket ${name} again`, this.context);
+            HSLogger.debug(() => `Tried to register websocket ${name} again`, this.context);
             return;
         }
 
@@ -71,7 +78,7 @@ export class HSWebSocket extends HSModule {
                     self.#reconnectWebSocket(name);
                 }, delay);
             } else {
-                HSLogger.warn(`WebSocket ${name} failed to reconnect after ${webSocketObject.reconnectionTries} tries`);
+                HSLogger.warn(`WebSocket ${name} failed to reconnect after ${webSocketObject.reconnectionTries} tries`, self.context);
                 await (webSocketObject.onRetriesFailed ?? HSUtils.Noop)();
             }
 
@@ -91,7 +98,7 @@ export class HSWebSocket extends HSModule {
             try {
                 parsedData = JSON.parse(event.data) as T | undefined;
             } catch (error) {
-                HSLogger.warn(`Failed to parse WebSocket message for ${name}: ${error}`, this.context);
+                HSLogger.warn(`Failed to parse WebSocket message for ${name}: ${error}`, self.context);
                 parsedData = undefined;
             }
 
@@ -134,7 +141,7 @@ export class HSWebSocket extends HSModule {
 
             HSLogger.log(`Unregistered websocket ${name}`, this.context);
         } else {
-            HSLogger.debug(`Could not unregister websocket (Maybe you're not logged in?) ${name}`, this.context);
+            HSLogger.debug(() => `Could not unregister websocket (Maybe you're not logged in?) ${name}`, this.context);
         }
     }
 

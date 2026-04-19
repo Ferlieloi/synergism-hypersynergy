@@ -3,13 +3,13 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 
-/*
-    Class: HSElementHooker
-    IsExplicitHSModule: No
-    Description: 
-        Contains static methods to await for element(s) to exist in the DOM
-        or to watch DOM elements and value changes to them
-    Author: Swiffy
+/**
+ * Class: HSElementHooker
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Contains static methods to await for element(s) to exist in the DOM
+ *     or to watch DOM elements and value changes to them
+ * Author: Swiffy
 */
 export class HSElementHooker {
     // Class context, mainly for HSLogger
@@ -19,7 +19,7 @@ export class HSElementHooker {
 
     // Uses setInterval to "watch" for when an element is found in DOM
     // Returns a promise which can be awaited and resolves with reference to the element when the element is found in DOM
-    static HookElement(selector: string, parent?: HTMLElement) : Promise<HTMLElement> {
+    static HookElement(selector: string, parent?: HTMLElement, timeoutMs?: number) : Promise<HTMLElement> {
         const self = this;
 
         return new Promise((resolve, reject) => {
@@ -28,6 +28,7 @@ export class HSElementHooker {
 
             if(initialCheck) {
                 resolve(initialCheck);
+                return;
             }
 
             const ivl = setInterval(() => {
@@ -40,14 +41,14 @@ export class HSElementHooker {
                 }
             }, HSGlobal.HSElementHooker.elementHookUpdateMS)
 
-            // Setup timeout for the hook if enabled
-            if(HSGlobal.HSElementHooker.elementHookTimeout) {
+            // Use the provided timeoutMs if given, otherwise fall back to the global default
+            const effectiveTimeout = typeof timeoutMs === 'number' ? timeoutMs : HSGlobal.HSElementHooker.elementHookTimeout;
+            if(effectiveTimeout) {
                 timeout = setTimeout(() => {
                     HSLogger.warn('Hook timed out', self.#context);
                     clearInterval(ivl);
-                      
                     resolve(HSUtils.nullProxy<HTMLElement>('ElementHookTimeout'));
-                }, HSGlobal.HSElementHooker.elementHookTimeout)
+                }, effectiveTimeout);
             }
         });
     }
@@ -217,7 +218,7 @@ export class HSElementHooker {
             return true;
         }
 
-        HSLogger.warn(`No watcher found for uuid: ${id}`);
+        HSLogger.warn(`No watcher found for uuid: ${id}`, this.#context);
         return false;
     }
 

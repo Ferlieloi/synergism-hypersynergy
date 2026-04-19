@@ -1,32 +1,36 @@
 // ==UserScript==
-// @name         Hypersynergism Bridge (Local Dev)
+// @name         HyperSynergism Bridge Loader (Local Dev)
 // @namespace    https://github.com/Ferlieloi
-// @version      1.1-dev
+// @version      1.2
 // @description  Local development bridge - loads from dev server (never cached)
 // @author       Developer
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
+// @updateURL    https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
 // ==/UserScript==
 
-// Local Development Bridge.
-// Fetches hypersynergism.dev.js fresh on every page load via synchronous XHR
-// with a cache-busting timestamp — Tampermonkey's @require cache is bypassed entirely.
-(() => {
-    const url = `http://127.0.0.1:8080/src/loader/hypersynergism.dev.js?t=${Date.now()}`;
+(function () {
+    'use strict';
+    const repo = 'maenhiir'; // 'Ferlieloi', 'maenhiir'
+    const version = 'master'; // 'master', specific tag (e.g. 'v2.11.0-dev13'), specific commit (e.g. '0611b83')
+    const baseUrl = `http://127.0.0.1:8080/src/loader/hypersynergism.dev.js`;
+    const url = baseUrl + '?t=' + Date.now();
+    window.__HS_REPO = repo;
+    window.__HS_VERSION = version;
     try {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', url, false); // synchronous — same timing as @require
         xhr.send();
         if (xhr.status === 200) {
-            const s = document.createElement('script');
-            s.textContent = xhr.responseText;
-            document.documentElement.appendChild(s);
-            console.log(`%c[HS-BRIDGE] Loaded dev loader fresh from ${url}`, 'color:#4af');
+            const fn = new Function(xhr.responseText + '\n//# sourceURL=' + url);
+            fn();
+            console.log(`%c[HS-BRIDGE] HS loader loaded fresh from ${url}`, 'color:#4af');
         } else {
-            console.error(`[HS-BRIDGE] Dev server returned ${xhr.status} — is it running?`);
+            console.error(`%c[HS-BRIDGE] Dev server returned ${xhr.status} — ${xhr.statusText} — ${url} — is it running? ${url}`, 'color:#b02');
         }
     } catch (e) {
-        console.error('[HS-BRIDGE] Failed to reach dev server:', e);
+        console.error(`%c[HS-BRIDGE] Loader error: ${e}`, 'color:#b02');
     }
 })();

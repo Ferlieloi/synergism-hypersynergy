@@ -1,20 +1,22 @@
 import { HSModuleOptions } from "../../types/hs-types";
-import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSDebug
+ * IsExplicitHSModule: Yes
+ * Description:
+ *     A simple module to help with debugging. Currently does not have any functionality, but serves as a template for future modules.
+ * Author: Swiffy
+ */
 export class HSDebug extends HSModule {
-
-    static #staticContext: string;
+    static #context: string;
 
     constructor(moduleOptions : HSModuleOptions) {
         super(moduleOptions);
-        HSDebug.#staticContext = moduleOptions.context;
+        HSDebug.#context = moduleOptions.context;
     }
 
     async init() {
-        const self = this;
-        
-        
         this.isInitialized = true;
     }
 }

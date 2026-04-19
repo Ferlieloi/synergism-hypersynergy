@@ -1,7 +1,5 @@
 import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
-
-// Explicit imports required because I don't know better...
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
@@ -23,13 +21,13 @@ import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 
-/*
-    Class: HSModuleManager
-    IsExplicitHSModule: No
-    Description: 
-        Hypersynergism module manager.
-        Handles enabling and initialization of Hypersynergism's modules
-    Author: Swiffy
+/**
+ * Class: HSModuleManager
+ * IsExplicitHSModule: No
+ * Description: 
+ *   Hypersynergism module manager.
+ *   Handles enabling and initialization of Hypersynergism's modules
+ * Author: Swiffy
 */
 export class HSModuleManager {
     #context = "HSModuleManager";

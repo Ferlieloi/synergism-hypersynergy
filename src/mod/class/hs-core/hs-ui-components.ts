@@ -18,14 +18,13 @@ import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSUI } from "./hs-ui";
 
-/*
-    Class: HSUIC
-    IsExplicitHSModule: No
-    Description: 
-        Hypesynergism UI Component module.
-        Contains static methods for creating different UI components.
-    Author: Swiffy
-*/
+/**
+ *   Class: HSUIC
+ *   IsExplicitHSModule: No
+ *   Description: Hypesynergism UI Component module.
+ *     - Contains static methods for creating different UI components.
+ *   Author: Swiffy
+ */
 export class HSUIC {
     static #staticContext = 'HSUIC';
 

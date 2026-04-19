@@ -1,38 +1,36 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader (Shewchou)
-// @namespace    https://github.com/Ferlieloi
-// @version      1.1
-// @description  Evergreen bridge to official Hypersynergism mod
-// @author       Ferlieloi
+// @namespace    https://github.com/maenhiir
+// @version      1.2
+// @description  Bridge to the official HyperSynergism mod
+// @author       maenhiir
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
-// @updateURL    https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/tampermonkey-bridge.user.shewchou.js
-// @downloadURL  https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/tampermonkey-bridge.user.shewchou.js
+// @updateURL    https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.shewchou.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.shewchou.js
 // ==/UserScript==
-
-// Production Evergreen Bridge.
-// Install once - auto-updates.
-// Loads the full "true" loader (hypersynergism.user.shewchou.js) using a cache-busting fetch
-// so the latest version is used instead of a stale cached copy.
 
 (function () {
     'use strict';
-    const base = 'https://cdn.jsdelivr.net/gh/maenhiir/synergism-hypersynergy@latest/src/loader/hypersynergism.user.shewchou.js';
-    const url = base + (base.includes('?') ? '&' : '?') + 't=' + Date.now();
-
+    const repo = 'maenhiir'; // 'Ferlieloi', 'maenhiir'
+    const version = 'master'; // 'master', specific tag (e.g. 'v2.11.0-dev13'), specific commit (e.g. '0611b83')
+    const baseUrl = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user${repo==='maenhiir'?'.shewchou':''}.js`;
+    const url = baseUrl + '?t=' + Date.now();
+    window.__HS_REPO = repo;
+    window.__HS_VERSION = version;
     try {
-        (async function () {
-            const res = await fetch(url, { cache: 'no-cache', credentials: 'omit', mode: 'cors' });
-            if (!res.ok) {
-                console.error('Hypersynergism bridge: failed to fetch loader', res.status, res.statusText, url);
-                return;
-            }
-            const code = await res.text();
-            const fn = new Function(code + '\n//# sourceURL=' + url);
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // synchronous — same timing as @require
+        xhr.send();
+        if (xhr.status === 200) {
+            const fn = new Function(xhr.responseText + '\n//# sourceURL=' + url);
             fn();
-        })();
+            console.log(`%c[HS-BRIDGE] HS loader loaded fresh from ${url}`, 'color:#4af');
+        } else {
+            console.error(`%c[HS-BRIDGE] Failed to fetch loader: ${xhr.status} — ${xhr.statusText} — ${url}`, 'color:#b02');
+        }
     } catch (e) {
-        console.error('Hypersynergism bridge loader error', e);
+        console.error(`%c[HS-BRIDGE] Loader error: ${e}`, 'color:#b02');
     }
 })();

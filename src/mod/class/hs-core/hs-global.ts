@@ -3,10 +3,24 @@ import { HSViewProperties, MAIN_VIEW } from "../../types/module-types/hs-gamesta
 import { IHSGlobal } from "../../types/module-types/hs-global-types";
 import { ELogLevel } from "../../types/module-types/hs-logger-types";
 
+// Build-time injected by esbuild via `define`.
+declare const HS_BUILD_VERSION: string;
+
+/**
+ * Class: HSGlobal
+ * IsExplicitHSModule: No
+ * Description:
+ *     Static class containing global configuration and constants for the Hypersynergism mod.
+ * Author: Swiffy
+ */
 export const HSGlobal: IHSGlobal = class {
 
-    private constructor() {
+    constructor() {
         throw new Error("Cannot instantiate a static class");
+    }
+
+    static get exposedPlayer() {
+        return (window as any)[(window as any).symp] || null;
     }
 
     // --- DEBUG ---
@@ -17,31 +31,29 @@ export const HSGlobal: IHSGlobal = class {
         calculationCacheDebugMode: false,
     }
 
-    // --- PrivateAPI ---
-
-    static PrivateAPI = {
-        base: 'https://jonah.fi',
-        latestRelease: '/hs-version',
-
-        checkIntervalMs: 900000 // 15min
+    // --- Release check configuration ---
+    static Release = {
+        githubOwner: 'Ferlieloi',    // Can be removed if you prefer
+        isLatestVersion: true,
+        checkIntervalMs: 1800000     // 30min
     }
 
     // --- GENERAL ---
-
     static General = {
-        currentModVersion: '2.11.2',
-        isLatestVersion: true,
+        // Version number bumping should be done in package.json.version
+        currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isModFullyLoaded: false,
+        isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
-        modGithubUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/',
-        modWikiUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/',
-        modWikiFeaturesUrl: 'https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features',
-        modWebsiteUrl: 'https://ahvonenj.github.io/synergism-hypersynergy/',
+        // Wiki needs to be cloned !
+        get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
+        get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
+        get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
+        get modDiscordThreadUrl() { return 'https://discord.com/channels/677271830838640680/1456904896099127367'; },
         heaterUrl: 'https://docs.google.com/spreadsheets/d/1v02fjAeAHtLBMB5-7Spz5OHVb-eEDg7m5ISi5Mk0YAY/edit?usp=sharing'
     };
 
     // --- COMMON ---
-
     static Common = {
         eventAPIUrl: 'wss://synergism.cc/consumables/connect',
         pseudoAPIurl: 'https://synergism.cc/stripe/upgrades',
@@ -51,15 +63,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSPrototypes ---
-
-    // Default CSS transition timing 100ms
     static HSPrototypes = {
+        // Default CSS transition timing 100ms
         defaultTransitionTiming: 100
     }
 
-
     // --- HSElementHooker ---
-
     // watchElement's MutationObserver can fire max 20 times / second
     static HSElementHooker = {
         // HookElement / HookElements
@@ -83,22 +92,18 @@ export const HSGlobal: IHSGlobal = class {
         }
     }
 
-
     // --- HSLogger ---
-
     static HSLogger = {
         logLevel: ELogLevel.ALL,
         logSize: 5000
     }
 
     // --- HSStorage ---
-
     static HSStorage = {
         storagePrefix: 'hs-',
     }
 
     // --- HSUI ---
-
     static HSUI = {
         injectedStylesDomId: 'hs-injected-styles',
         notifyClassName: 'hs-notification',
@@ -106,14 +111,12 @@ export const HSGlobal: IHSGlobal = class {
     }
 
     // --- HSUIC ---
-
     static HSUIC = {
         defaultImageWidth: 32,
         defaultImageHeight: 32,
     }
 
     // --- HSSettings ---
-
     static HSSettings = {
         storageKey: 'settings',
         strategiesKey: 'strategies',
@@ -134,17 +137,12 @@ export const HSGlobal: IHSGlobal = class {
         gameDataCheckBlacklist: [
             'useGameData',
             'stopSniffOnError',
-            // These three settings auto-enable GDS when toggled on,
+            // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            'startAutosing',
             'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
-
-    /*static HSSettingAction = {
-        
-    }*/
 
     static HSMouse = {
         autoClickIgnoredElements: [
@@ -248,8 +246,12 @@ export const HSGlobal: IHSGlobal = class {
     // HSAmbrosia
     static HSAmbrosia = {
         storageKey: 'ambrosia-loadouts',
-        quickBarId: 'hs-ambrosia-quick-loadout-container',
+        quickBarId: 'hs-ambrosia-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
+
+        // Almost all of this below could be removed if I implement the same image-picking logic
+        // as the corruption quickbar (Alt+Click a slot, then click on any image to choose it)
+        // It would also avoid setting up drag & drop...
         ambrosiaLoadoutIcons: new Map<AMBROSIA_ICON, HSAmbrosiaLoadoutIcon>([
             // First set
             [AMBROSIA_ICON.TUTORIAL, {
@@ -500,13 +502,13 @@ export const HSGlobal: IHSGlobal = class {
 
         idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
         idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
-        idleSwapMaxBlueTreshold: 97,
-        idleSwapMinBlueTreshold: 3,
-        idleSwapMaxRedTreshold: 99,
-        idleSwapMinRedTreshold: 1,
+        idleSwapMaxBlueThreshold: 97,
+        idleSwapMinBlueThreshold: 3,
+        idleSwapMaxRedThreshold: 99,
+        idleSwapMinRedThreshold: 1,
 
         // Constants ripped from the game code
-        R_TIME_PER_AMBROSIA: 30,
+        R_TIME_PER_AMBROSIA: 45,
         R_TIME_PER_RED_AMBROSIA: 100000,
         R_digitReduction: 4,
 
@@ -517,6 +519,27 @@ export const HSGlobal: IHSGlobal = class {
         redBarProgressId: 'hs-red-progress',
         redBarProgressTextId: 'hs-red-progress-text',
         barWrapperId: 'hs-minibars-wrapper',
+    }
+
+    // HSCorruptionQuickbar
+    static HSCorruptionQuickbar = {
+        storageKey: 'corruption-loadouts',
+        quickBarId: 'hs-corruption-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-corruption-quickbar',
+        corruptionLoadoutIcons: new Map<string, HSAmbrosiaLoadoutIcon>(),
+    }
+
+    // HSQOLAutomationQuickbar
+    static HSQOLAutomationQuickbar = {
+        quickBarId: 'hs-automation-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-automation-quickbar',
+        automationLoadoutIcons: new Map<string, HSAmbrosiaLoadoutIcon>(),
+    }
+
+    // HSQOLEventsQuickbar
+    static HSQOLEventsQuickbar = {
+        quickBarId: 'hs-events-slots-wrapper',
+        quickBarLoadoutIdPrefix: 'hs-events-quickbar',
     }
 
     // HSGameState
@@ -532,6 +555,14 @@ export const HSGlobal: IHSGlobal = class {
                 ],
                 subViewsSelector: ['#switchToCoinBuilding', '#switchToDiamondBuilding', '#switchToMythosBuilding', '#switchToParticleBuilding', '#switchToTesseractBuilding'],
                 viewClassName: 'BuildingView'
+            }],
+            [MAIN_VIEW.ACHIEVEMENTS, {
+                subViewIds: [
+                    'toggleAchievementSubTab1',
+                    'toggleAchievementSubTab2'
+                ],
+                subViewsSelector: ['#toggleAchievementSubTab1', '#toggleAchievementSubTab2'],
+                viewClassName: 'AchievementView'
             }],
             [MAIN_VIEW.RUNES, {
                 subViewIds: [
@@ -562,16 +593,27 @@ export const HSGlobal: IHSGlobal = class {
             }],
             [MAIN_VIEW.CUBES, {
                 subViewIds: [
-                    'cubeTab1',
-                    'cubeTab2',
-                    'cubeTab3',
-                    'cubeTab4',
-                    'cubeTab5',
-                    'cubeTab6',
-                    'cubeTab7'
+                    'switchCubeSubTab1',
+                    'switchCubeSubTab2',
+                    'switchCubeSubTab3',
+                    'switchCubeSubTab4',
+                    'switchCubeSubTab5',
+                    'switchCubeSubTab6',
+                    'switchCubeSubTab7'
                 ],
-                subViewsSelector: '.cubeTab',
+                subViewsSelector: ['#switchCubeSubTab1', '#switchCubeSubTab2', '#switchCubeSubTab3', '#switchCubeSubTab4', '#switchCubeSubTab5', '#switchCubeSubTab6', '#switchCubeSubTab7'],
                 viewClassName: 'CubeView'
+            }],
+            [MAIN_VIEW.SINGULARITY, {
+                subViewIds: [
+                    'toggleSingularitySubTab1',
+                    'toggleSingularitySubTab2',
+                    'toggleSingularitySubTab3',
+                    'toggleSingularitySubTab4',
+                    'toggleSingularitySubTab5'
+                ],
+                subViewsSelector: ['#toggleSingularitySubTab1', '#toggleSingularitySubTab2', '#toggleSingularitySubTab3', '#toggleSingularitySubTab4', '#toggleSingularitySubTab5'],
+                viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.SETTINGS, {
                 subViewIds: [
@@ -583,27 +625,11 @@ export const HSGlobal: IHSGlobal = class {
                     'switchSettingSubTab6',
                     'switchSettingSubTab7',
                     'switchSettingSubTab8',
-                    'switchSettingSubTab9'
+                    'switchSettingSubTab9',
+                    'switchSettingSubTab10'
                 ],
-                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9'],
+                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9', '#switchSettingSubTab10'],
                 viewClassName: 'SettingsView'
-            }],
-            [MAIN_VIEW.SINGULARITY, {
-                subViewIds: [
-                    'singularityContainer1',
-                    'singularityContainer2',
-                    'singularityContainer3',
-                    'singularityContainer4',
-                    'singularityContainer5',
-                ],
-                subViewsSelector: [
-                    '#singularityContainer1',
-                    '#singularityContainer2',
-                    '#singularityContainer3',
-                    '#singularityContainer4',
-                    '#singularityContainer5',
-                ],
-                viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.PSEUDOCOINS, {
                 subViewIds: [

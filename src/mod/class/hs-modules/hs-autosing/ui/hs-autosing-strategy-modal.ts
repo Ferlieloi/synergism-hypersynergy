@@ -3,10 +3,20 @@ import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NA
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettings } from "../../../hs-core/settings/hs-settings";
+import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
+import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
 
+/**
+ * Class: HSAutosingStrategyModal
+ * Description: Modal for creating and editing autosing strategies, which consist of sequential phases with defined start/end points and optional AoAG phase.
+ *   - Supports strategy duplication from defaults, with safeguards to prevent overwriting default strategies.
+ *   - Provides UI for adding/editing/deleting phases, including a special AoAG phase that can be toggled on/off.
+ *   - Integrates with corruption loadout management for phase-specific loadout assignment.
+ * Author: XxMolkxX
+ */
 export class HSAutosingStrategyModal {
     static async open(
         existingStrategy?: HSAutosingStrategy,
@@ -16,6 +26,7 @@ export class HSAutosingStrategyModal {
             parentModalId?: string;
         }
     ): Promise<void> {
+        const context = 'HSAutosingStrategyModal';
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
 
@@ -183,18 +194,24 @@ export class HSAutosingStrategyModal {
                     strategyDraft.strategyName = nameInput?.value || "Unnamed Strategy";
                     try {
                         if (isEditMode) {
-                            HSSettings.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName);
-                            HSSettings.selectAutosingStrategyByName(existingStrategy!.strategyName);
-                            HSLogger.log(`[HSAutosing] Strategy "${strategyDraft.strategyName}" updated.`, 'HSAutosingStrategyModal');
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, {
-                                notificationType: "success"
-                            });
+                            const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, existingStrategy!.strategyName, context);
+                            if (!saved) {
+                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                return;
+                            }
+                            HSSettingsUI.updateStrategyDropdownList();
+                            HSSettingsUI.selectAutosingStrategyByName(existingStrategy!.strategyName);
+                            HSLogger.log(`Strategy "${strategyDraft.strategyName}" updated.`, context);
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" updated`, { notificationType: "success" });
                         } else {
-                            HSSettings.saveStrategyToStorage(strategyDraft);
-                            HSSettings.selectAutosingStrategyByName(strategyDraft.strategyName);
-                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, {
-                                notificationType: "success"
-                            });
+                            const { saved } = HSStrategyManager.saveStrategyToStorage(strategyDraft, undefined, context);
+                            if (!saved) {
+                                HSUI.Notify("Failed to save strategy", { notificationType: "error" });
+                                return;
+                            }
+                            HSSettingsUI.updateStrategyDropdownList();
+                            HSSettingsUI.selectAutosingStrategyByName(strategyDraft.strategyName);
+                            HSUI.Notify(`Strategy "${strategyDraft.strategyName}" ${isDuplicateMode ? 'saved as new and selected' : 'created and selected'}.`, { notificationType: "success" });
                         }
                         uiMod.CloseModal(modalID);
                     } catch (err) {

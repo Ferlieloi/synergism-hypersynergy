@@ -94,4 +94,3 @@ export enum AMBROSIA_ICON {
 
 export type HSAmbrosiaLoadoutIconMapping = Map<AMBROSIA_ICON, HSAmbrosiaLoadoutIcon>;
 export type HSAmbrosiaLoadoutState = Map<AMBROSIA_LOADOUT_SLOT, AMBROSIA_ICON>;
-

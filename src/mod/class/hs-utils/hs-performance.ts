@@ -1,13 +1,13 @@
 import { HSLogger } from "../hs-core/hs-logger";
 
-/*
-    Class: HSPerformance
-    IsExplicitHSModule: No
-    Description: 
-        Hypersynergism module for performance monitoring and optimization.
-        Provides methods to measure and log performance metrics.
-    Author: Swiffy
-*/
+/**
+ * Class: HSPerformance
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Hypersynergism module for performance monitoring and optimization.
+ *     Provides methods to measure and log performance metrics.
+ * Author: Swiffy
+ */
 export class HSPerformance {
     
     static #measurements: Map<string, HSPerformanceMeasurement> = new Map<string, HSPerformanceMeasurement>();

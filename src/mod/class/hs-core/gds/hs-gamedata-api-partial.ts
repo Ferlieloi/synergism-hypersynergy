@@ -7,28 +7,35 @@ import { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
+import { HSModuleManager } from "../module/hs-module-manager";
 import { HSCalculationDefinitions } from "./hs-calculation-definition";
+import { HSGameData } from "./hs-gamedata";
 
-/*
-    The implementation here is a bit silly.
-    I wanted a separate file for the GameDataAPI itself, which is this file
-    and a separate file for calculation functions which use game data
-
-    However, the only "sane" way to do this is to have one class extends another,
-    but the order we need to do in is a bit silly.
-
-    We will have two classes: HSGameDataAPIPartial and HSGameDataAPI
-
-    The silly thing here is that HSGameDataAPI will be the class which contains the calculations
-    and HSGameDataAPIPartial will be the actual API class, so these classes are sort of the wrong way
-
-    We need HSGameDataAPI to be the main class so that we can give it to module manager with a good name
-    and this means that HSGameDataAPI needs to be the class which extends from HSGameDataAPIPartial,
-    which means that HSGameDataAPIPartial needs to contain the main HSGameDataAPI definitions,
-    forcing HSGameDataAPI to contain the calculations.
-    
-*/
+/**
+ * Class: HSGameDataAPIPartial
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *   The implementation here is a bit silly.
+ *   I wanted a separate file for the GameDataAPI itself, which is this file
+ *   and a separate file for calculation functions which use game data
+ *
+ *   However, the only "sane" way to do this is to have one class extends another,
+ *   but the order we need to do in is a bit silly.
+ *
+ *   We will have two classes: HSGameDataAPIPartial and HSGameDataAPI
+ *
+ *   The silly thing here is that HSGameDataAPI will be the class which contains the calculations
+ *   and HSGameDataAPIPartial will be the actual API class, so these classes are sort of the wrong way
+ *
+ *   We need HSGameDataAPI to be the main class so that we can give it to module manager with a good name
+ *   and this means that HSGameDataAPI needs to be the class which extends from HSGameDataAPIPartial,
+ *   which means that HSGameDataAPIPartial needs to contain the main HSGameDataAPI definitions,
+ *   forcing HSGameDataAPI to contain the calculations.
+ *    
+ */
 export abstract class HSGameDataAPIPartial extends HSModule {
+
+    protected gameDataModule: HSGameData | undefined;
 
     protected gameData: PlayerData | undefined;
     protected meData: MeData | undefined;
@@ -36,6 +43,9 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     protected campaignData: CampaignData | undefined;
     protected eventData: ConsumableGameEvents | undefined;
     protected isEvent: boolean = false;
+
+    // Subscribers for event data changes
+    #eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
 
     static readonly Calculations: HSCalculationDefinition[] = HSCalculationDefinitions;
 
@@ -46,6 +56,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     async init() {
         const self = this;
         HSLogger.log(`Initializing HSGameDataAPI module`, this.context);
+        this.gameDataModule = HSModuleManager.getModule<HSGameData>('HSGameData');
 
         this.isInitialized = true;
     }
@@ -74,6 +85,15 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         if (this.eventData) {
             if ("HAPPY_HOUR_BELL" in this.eventData) {
                 this.isEvent = this.eventData.HAPPY_HOUR_BELL.amount > 0;
+            }
+        }
+
+        // Notify subscribers
+        for (const cb of this.#eventDataSubscribers) {
+            try {
+                cb(this.eventData);
+            } catch (e) {
+                HSLogger.error("EventData subscriber error: " + e, this.context);
             }
         }
     }
@@ -107,6 +127,35 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     getEventData(): ConsumableGameEvents | undefined {
         return this.eventData;
+    }
+
+    async getForcedGameData(): Promise<PlayerData | undefined> {
+        if (this.gameDataModule) {
+            await this.gameDataModule.forceUpdateAllData();
+            // HSGameData will call _updateGameData internally
+            return this.gameData;
+        }
+        return undefined;
+    }
+
+    async prepareForAutosing() {
+        await this.gameDataModule?.prepareForAutosing();
+    }
+
+    async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number; } | null> {
+        return await this.gameDataModule?.getLatestAutosingData() || null;
+    }
+
+    /**
+     * Subscribe to event data changes. Returns an unsubscribe function.
+     */
+    public subscribeEventDataChange(cb: (eventData: ConsumableGameEvents | undefined) => void): () => void {
+        this.#eventDataSubscribers.add(cb);
+        // Immediately call with current data
+        cb(this.eventData);
+        return () => {
+            this.#eventDataSubscribers.delete(cb);
+        };
     }
 
     static getCalculationDefinitions(filter?: {

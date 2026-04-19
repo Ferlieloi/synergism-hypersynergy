@@ -5,9 +5,9 @@
 */
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
-import { HSUICSelectOption } from "./hs-ui-types";
+import { HSUICSelectOption, HTMLProps } from "./hs-ui-types";
 
-export type HSSettingType = number | string | boolean | null;
+export type HSSettingType = number | string | string[] | boolean | null;
 export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSettingType>>;
 
 export interface HSSettingsDefinition {
@@ -18,6 +18,10 @@ export interface HSSettingsDefinition {
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
+    autoConfirmPopups: AutoConfirmPopupsSetting;
+
+    // UI Settings
+    hiddenVanillaTabs: HiddenVanillaTabsSetting;
 
     // Log Settings
     logTimestamp: LogTimestampSetting;
@@ -29,8 +33,7 @@ export interface HSSettingsDefinition {
     autoClickIgnoreElements: AutoClickIgnoreElementsSetting;
 
     // Ambrosia Settings
-    autoLoadout: AutoLoadoutSetting;
-    autoLoadoutState: AutoLoadoutStateSetting;
+    addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
@@ -73,7 +76,9 @@ export interface HSSettingsDefinition {
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
+    enableCorruptionQuickBar: QOLButtonsEnableCorruptionQuickBarSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
+    enableEventsQuickBar: QOLButtonsEnableEventsQuickBarSetting;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
@@ -98,7 +103,7 @@ export interface HSSettingControlOptions {
 }
 
 export type HSSettingsControlType = "text" | "number" | "switch" | "select" | "state" | "button";
-export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "state" | "button";
+export type HSSettingJSONType = "numeric" | "string" | "boolean" | "selectnumeric" | "selectstring" | "selectstrings" | "state" | "button";
 
 export interface HSSettingActionParams {
     contextName?: string,
@@ -120,6 +125,7 @@ export interface HSSettingControl {
     controlEnabledId?: string;
     controlOptions?: HSSettingControlOptions;
     selectOptions?: HSUICSelectOption[];
+    props?: HTMLProps;
 }
 
 export interface HSSettingControlPage {
@@ -148,7 +154,10 @@ export interface HSSettingBase<T> {
     settingAction?: string;
     patchConfig?: HSPatchConfig;
     usesGameData?: boolean;
+    skipInit?: boolean;
 }
+
+export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
 
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
@@ -157,6 +166,7 @@ export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
+export interface AutoConfirmPopupsSetting extends HSSettingBase<boolean> { }
 
 // Log Settings
 export interface LogTimestampSetting extends HSSettingBase<boolean> { }
@@ -166,10 +176,10 @@ export interface ShowDebugLogsSetting extends HSSettingBase<boolean> { }
 export interface ReactiveMouseHoverSetting extends HSSettingBase<number> { }
 export interface AutoclickSetting extends HSSettingBase<number> { }
 export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
+export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
 
 // Ambrosia Settings
-export interface AutoLoadoutSetting extends HSSettingBase<boolean> { }
-export interface AutoLoadoutStateSetting extends HSSettingBase<string> { }
+export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
@@ -213,7 +223,9 @@ export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsEnableCorruptionQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsEnableEventsQuickBarSetting extends HSSettingBase<boolean> { }
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
@@ -227,4 +239,3 @@ export interface GQDistributorRatio5Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio6Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio7Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio8Setting extends HSSettingBase<number> { }
-

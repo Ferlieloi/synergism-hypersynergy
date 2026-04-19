@@ -1,11 +1,14 @@
-// Challenge Modal Builder for Autosing
-// This file builds and manages the modal UI for configuring autosing challenge strategies.
-// It supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
-// Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
 import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_ACTION_VALUE } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
+
+/** Challenge Modal Builder for Autosing
+ * Description: Builds and manages the modal UI for configuring autosing challenge strategies.
+ *   - Supports adding, editing, deleting, and reordering challenges, including special actions and IF jump logic.
+ *   - Major features: drag-and-drop, jump targets, input state management, and modal lifecycle.
+ * Author: XxMolkxX
+ */
 
 // Helper type for mapping IF jump targets in the challenge list
 type JumpTargetInfo = {
@@ -134,7 +137,8 @@ export async function openAutosingChallengesModal(
     const renderSeparator = () => {
         return `
         <div class="hs-challenge-separator" data-separator-index="${separatorIndex}" style="position: relative; display: flex; align-items: center; margin: 4px 0; cursor: grab;">
-            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin-right: 8px; display: flex; align-items: center; height: 18px;">⋮⋮ Insert here</span>
+            <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
+            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin: 0px 8px; display: flex; align-items: center; height: 18px;">⋮⋮ Add Here ⋮⋮</span>
             <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
         </div>`;
     };
@@ -419,7 +423,7 @@ export async function openAutosingChallengesModal(
                 const originalHeight = target.getBoundingClientRect().height;
                 // Style dragged element
                 target.style.position = "fixed";
-                target.style.zIndex = "1000";
+                target.style.zIndex = "10000";
                 target.style.cursor = "grabbing";
                 target.style.pointerEvents = "none";
                 target.style.width = originalWidth + "px";
@@ -497,7 +501,7 @@ export async function openAutosingChallengesModal(
                                             placeholder.style.pointerEvents = "none";
 
                                             newDraggedElement.style.position = "fixed";
-                                            newDraggedElement.style.zIndex = "1000";
+                                            newDraggedElement.style.zIndex = "10000";
                                             newDraggedElement.style.cursor = "grabbing";
                                             newDraggedElement.style.pointerEvents = "none";
                                             newDraggedElement.style.width = newDraggedElement.offsetWidth + "px";
@@ -539,7 +543,7 @@ export async function openAutosingChallengesModal(
                                             placeholder.style.pointerEvents = "none";
 
                                             newDraggedElement.style.position = "fixed";
-                                            newDraggedElement.style.zIndex = "1000";
+                                            newDraggedElement.style.zIndex = "10000";
                                             newDraggedElement.style.cursor = "grabbing";
                                             newDraggedElement.style.pointerEvents = "none";
                                             newDraggedElement.style.width = newDraggedElement.offsetWidth + "px";
@@ -606,10 +610,12 @@ export async function openAutosingChallengesModal(
             e.preventDefault();
             const originalWidth = activeSeparator.offsetWidth;
             const originalHeight = activeSeparator.offsetHeight;
+            const offsetX = e.clientX - activeSeparator.getBoundingClientRect().left;
+            const offsetY = e.clientY - activeSeparator.getBoundingClientRect().top;
 
             const applySeparatorDragStyles = (el: HTMLElement) => {
                 el.style.position = 'fixed';
-                el.style.zIndex = '1000';
+                el.style.zIndex = '10000';
                 el.style.cursor = 'grabbing';
                 el.style.width = originalWidth + 'px';
                 el.style.height = originalHeight + 'px';
@@ -621,23 +627,25 @@ export async function openAutosingChallengesModal(
             applySeparatorDragStyles(activeSeparator);
 
             const moveAt = (clientX: number, clientY: number) => {
-                activeSeparator.style.left = clientX - originalWidth / 2 + 'px';
-                activeSeparator.style.top = clientY - originalHeight / 2 + 'px';
+                activeSeparator.style.left = clientX - offsetX + 'px';
+                activeSeparator.style.top = clientY - offsetY + 'px';
             };
             moveAt(e.clientX, e.clientY);
 
             const onMouseMove = throttle((e: MouseEvent) => {
                 moveAt(e.clientX, e.clientY);
-
+                                
                 const container = document.getElementById('hs-challenge-list-container');
                 if (!container) return;
                 const allItems = Array.from(container.querySelectorAll('.hs-challenge-item'));
-                let newIndex = allItems.length;
+                let newIndex = 0;
                 for (let i = 0; i < allItems.length; i++) {
                     const rect = allItems[i].getBoundingClientRect();
                     if (e.clientY < rect.top + rect.height / 2) {
-                        newIndex = i;
                         break;
+                    }
+                    if (!allItems[i].classList.contains('hs-if-target')) {
+                        newIndex++;
                     }
                 }
                 if (newIndex === separatorIndex) return;
@@ -662,7 +670,7 @@ export async function openAutosingChallengesModal(
             const onMouseUp = () => {
                 activeSeparator.style.position = '';
                 activeSeparator.style.zIndex = '';
-                activeSeparator.style.cursor = '';
+                activeSeparator.style.cursor = 'grab';
                 activeSeparator.style.width = '';
                 activeSeparator.style.height = '';
                 activeSeparator.style.boxShadow = '';
@@ -868,7 +876,7 @@ export async function openAutosingChallengesModal(
                             ifJumpMultiplier: isChallengesMode
                                 ? 0 // Not used in challenges mode
                                 : Number((document.getElementById("hs-if-jump-challenge") as HTMLInputElement).value),
-                            ifJumpIndex: existingEntry?.ifJump?.ifJumpIndex ?? workingChallenges.length + 1
+                            ifJumpIndex: existingEntry?.ifJump?.ifJumpIndex ?? separatorIndex + 1
 
                         }
                     } as Challenge & any;
@@ -901,6 +909,16 @@ export async function openAutosingChallengesModal(
                     workingChallenges[editingIndex] = newEntry;
                 } else {
                     workingChallenges.splice(separatorIndex, 0, newEntry);
+                    // Increment jump-target indices for existing IF jumps at or after the insertion point
+                    for (let i = 0; i < workingChallenges.length; i++) {
+                        if (i === separatorIndex) continue;
+                        const entry = workingChallenges[i];
+                        if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
+                            if (entry.ifJump.ifJumpIndex >= separatorIndex) {
+                                entry.ifJump.ifJumpIndex++;
+                            }
+                        }
+                    }
                     separatorIndex = separatorIndex + 1;
                 }
                 updateUI();
@@ -968,6 +986,15 @@ export async function openAutosingChallengesModal(
             if (id.startsWith("hs-challenge-delete-")) {
                 const deleteIndex = Number(el.dataset.index);
                 workingChallenges.splice(deleteIndex, 1);
+                // Decrement jump-target indices for IF jumps at or after the deleted index
+                for (let i = 0; i < workingChallenges.length; i++) {
+                    const entry = workingChallenges[i];
+                    if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
+                        if (entry.ifJump.ifJumpIndex >= deleteIndex) {
+                            entry.ifJump.ifJumpIndex--;
+                        }
+                    }
+                }
                 if (deleteIndex < separatorIndex) {
                     separatorIndex = Math.max(0, separatorIndex - 1);
                 }

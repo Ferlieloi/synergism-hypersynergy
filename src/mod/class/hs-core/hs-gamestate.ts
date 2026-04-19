@@ -1,17 +1,37 @@
+import { 
+    MAIN_VIEW, MAIN_VIEW_BUTTON_IDS, 
+    BUILDING_VIEW, BUILDING_VIEW_BUTTON_IDS, 
+    ACHIEVEMENT_VIEW, ACHIEVEMENT_VIEW_BUTTON_IDS, 
+    RUNE_VIEW, RUNE_VIEW_BUTTON_IDS, 
+    CHALLENGE_VIEW, CHALLENGE_VIEW_BUTTON_IDS, 
+    ANT_VIEW, ANT_VIEW_BUTTON_IDS, 
+    CUBE_VIEW, CUBE_VIEW_BUTTON_IDS, 
+    SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS, 
+    SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS, 
+    PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS,
+    VIEW_KEY, VIEW_TYPE, HSViewStateRecord,
+} from "../../types/module-types/hs-gamestate-types";
 import { HSModuleOptions } from "../../types/hs-types";
-import { ANT_VIEW, ANT_VIEW_BUTTON_IDS, BUILDING_VIEW, BUILDING_VIEW_BUTTON_IDS, CHALLENGE_VIEW, CHALLENGE_VIEW_BUTTON_IDS, CUBE_VIEW, CUBE_VIEW_BUTTON_IDS, GAME_STATE_CHANGE, HSViewState, HSViewStateRecord, MAIN_VIEW, MAIN_VIEW_BUTTON_IDS, PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS, RUNE_VIEW, RUNE_VIEW_BUTTON_IDS, SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS, SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS, View, VIEW_KEY, VIEW_TYPE } from "../../types/module-types/hs-gamestate-types";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSModule } from "./module/hs-module";
 
+/**
+ * Class: HSGameState
+ * IsExplicitHSModule: Yes
+ * Description:
+ *     Manages the game state, including views and their transitions.
+ * Author: Swiffy
+ */
 export class HSGameState extends HSModule {
 
     #UNKNOWN_VIEW = -1;
 
     #viewClasses: Record<string, new (name: string) => GameView<VIEW_TYPE>> = {
         "BuildingView": BuildingView,
+        "AchievementView": AchievementView,
         "RuneView": RuneView,
         "ChallengeView": ChallengeView,
         "AntView": AntView,
@@ -26,12 +46,13 @@ export class HSGameState extends HSModule {
         // And all subtabs to their default/first ones (allow to avoid a warning...)
         MAIN_VIEW: { currentView: new MainView('buildings'), previousView: new MainView('buildings'), viewChangeSubscribers: new Map() },
         BUILDING_VIEW: { currentView: new BuildingView('switchToCoinBuilding'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
+        ACHIEVEMENT_VIEW: { currentView: new AchievementView('toggleAchievementSubTab1'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
         RUNE_VIEW: { currentView: new RuneView('toggleRuneSubTab1'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
         CHALLENGE_VIEW: { currentView: new ChallengeView('toggleChallengesSubTab1'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
         ANT_VIEW: { currentView: new AntView('toggleAntSubtab1'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
         CUBE_VIEW: { currentView: new CubeView('switchCubeSubTab1'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
-        SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
         SINGULARITY_VIEW: { currentView: new SingularityView('toggleSingularitySubTab1'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
+        SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
         PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
     };
 
@@ -65,18 +86,26 @@ export class HSGameState extends HSModule {
         for (const view of this.#mainUIViews) {
             const viewElement = document.querySelector(`#${view}`) as HTMLDivElement;
 
-            HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string }) => {
-                const { view, state } = viewState;
-
-                if (state !== 'none') {
-                    const uiView = new MainView(view);
+            HSElementHooker.watchElement(viewElement, async (display: string) => {
+                /*
+                // TODO: there seem to be some issues with tab monitoring...
+                HSLogger.debug(() => `DIAG: Main view watcher fired for #${viewElement.id}, display='${display}'. Current state: ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
+                // Log all main tab display values
+                const allDisplays = self.#mainUIViews.map(tabId => {
+                    const el = document.getElementById(tabId);
+                    return `${tabId}: '${el ? el.style.display : 'N/A'}'`;
+                }).join(', ');
+                HSLogger.debug(() => `DIAG: All main tab displays: ${allDisplays}`, self.context);
+                */
+                if (display && display !== 'none') {
+                    const uiView = new MainView(viewElement.id);
 
                     if (uiView.getId() !== MAIN_VIEW.UNKNOWN) {
                         self.#viewStates.MAIN_VIEW.previousView = self.#viewStates.MAIN_VIEW.currentView;
                         self.#viewStates.MAIN_VIEW.currentView = uiView;
-                        HSLogger.debug(`Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
+                        HSLogger.debug(() => `Main UI view changed ${self.#viewStates.MAIN_VIEW.previousView.getName()} -> ${self.#viewStates.MAIN_VIEW.currentView.getName()}`, self.context);
                     } else {
-                        HSLogger.warn(`Main UI view ${view} not found`, self.context);
+                        HSLogger.warn(`Main UI view ${viewElement.id} not found`, self.context);
                         return;
                     }
 
@@ -95,103 +124,77 @@ export class HSGameState extends HSModule {
                     this.#resolveSubViewChanges(uiView.getId());
                 }
             },
+            {
+                characterData: false,
+                childList: false,
+                subtree: false,
+                attributes: true,
+                attributeOldValue: false,
+                attributeFilter: ['style'],
+                valueParser: (element) => {
+                    return (element as HTMLElement).style.getPropertyValue('display');
+                }
+            });
+        }
+
+        HSGlobal.HSGameState.viewProperties.forEach(async (viewProperties, mainViewId) => {
+            for (const subViewId of viewProperties.subViewIds) {
+                const subviewElement = document.querySelector(`#${subViewId}`) as HTMLElement | null;
+                if (!subviewElement) {
+                    HSLogger.warn(`Subview element not found: ${subViewId}`, self.context);
+                    continue;
+                }
+
+                HSElementHooker.watchElement(subviewElement, async () => {
+                    if (!subviewElement.classList.contains('active-subtab')) return;
+
+                    let subViewInstance: GameView<VIEW_TYPE> | undefined;
+
+                    try {
+                        const ViewClass = this.#viewClasses[viewProperties.viewClassName];
+                        if (!ViewClass) {
+                            throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
+                        }
+                        subViewInstance = new ViewClass(subViewId);
+                    } catch (error) {
+                        HSLogger.warn(`Failed to instantiate sub-view ${viewProperties.viewClassName}: ${error}`, self.context);
+                        return;
+                    }
+
+                    const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
+                    if (subViewInstance.getId() === self.#UNKNOWN_VIEW) {
+                        HSLogger.warn(`Sub-view ${subViewId} resolved to UNKNOWN or failed to initialize.`, self.context);
+                        return;
+                    }
+
+                    self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
+                    self.#viewStates[viewKey].currentView = subViewInstance;
+
+                    const previousView = self.#viewStates[viewKey].previousView;
+                    const currentView = self.#viewStates[viewKey].currentView;
+
+                    if (previousView.getName() === currentView.getName()) return;
+
+                    HSLogger.debug(() => `Subtab UI view changed ${previousView.getName()} -> ${currentView.getName()}`, self.context);
+                    self.#viewStates[viewKey].viewChangeSubscribers.forEach((callback) => {
+                        try {
+                            callback(previousView, currentView);
+                        } catch (e) {
+                            HSLogger.error(`Error when trying to call subtab VIEW change subscriber callback: ${e}`, self.context);
+                        }
+                    });
+                },
                 {
                     characterData: false,
                     childList: false,
                     subtree: false,
                     attributes: true,
                     attributeOldValue: false,
-                    attributeFilter: ['style'],
-                    valueParser: (element, mutations) => {
-                        for (const mutation of mutations) {
-                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                                const target = mutation.target as HTMLElement;
-                                const display = target.style.getPropertyValue('display');
-                                return {
-                                    view: target.id,
-                                    state: display
-                                }
-                            }
-                        }
-                    }
+                    attributeFilter: ['class'],
+                    valueParser: (element) => (element as HTMLElement).className
                 });
-        }
-
-        HSGlobal.HSGameState.viewProperties.forEach(async (viewProperties, mainViewId) => {
-            for (const subViewId of viewProperties.subViewIds) {
-                const viewElement = document.querySelector(`#${subViewId}`) as HTMLElement;
-
-                HSElementHooker.watchElement(viewElement, async (viewState: { view: string, state: string }) => {
-                    const { view, state } = viewState;
-
-                    if (state !== 'none') {
-                        let subViewInstance: GameView<VIEW_TYPE> | undefined = undefined;
-
-                        try {
-                            const ViewClass = this.#viewClasses[viewProperties.viewClassName];
-
-                            if (!ViewClass) {
-                                throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
-                            }
-
-                            subViewInstance = new ViewClass(subViewId);
-
-                        } catch (error) {
-                            HSLogger.warn(`Failed to instantiate sub-view ${viewProperties.viewClassName}: ${error}`, self.context);
-                            return;
-                        }
-
-                        const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
-
-                        //console.log(subViewId, viewElement, state, viewKey, subViewInstance, subViewInstance.getId())
-
-                        if (subViewInstance.getId() !== self.#UNKNOWN_VIEW) {
-
-                            self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
-                            self.#viewStates[viewKey].currentView = subViewInstance;
-
-                            const previousView = self.#viewStates[viewKey].previousView;
-                            const currentView = self.#viewStates[viewKey].currentView;
-
-                            if (previousView.getName() === currentView.getName()) {
-                                return;
-                            }
-
-                            // Notify subscribers of the main view change
-                            self.#viewStates[viewKey].viewChangeSubscribers.forEach((callback) => {
-                                try {
-                                    callback(previousView, currentView);
-                                } catch (e) {
-                                    HSLogger.error(`Error when trying to call CUBE VIEW change subscriber callback: ${e}`, self.context);
-                                }
-                            });
-                        }
-                    }
-                },
-                    {
-                        characterData: false,
-                        childList: false,
-                        subtree: false,
-                        attributes: true,
-                        attributeOldValue: false,
-                        attributeFilter: ['style'],
-                        valueParser: (element, mutations) => {
-                            for (const mutation of mutations) {
-                                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                                    const target = mutation.target as HTMLElement;
-                                    const display = target.style.getPropertyValue('display');
-                                    return {
-                                        view: target.id,
-                                        state: display
-                                    }
-                                }
-                            }
-                        }
-                    });
             }
         });
-        // Setup watchers and handling for when cube tab changes
-
 
         this.isInitialized = true;
     }
@@ -222,7 +225,7 @@ export class HSGameState extends HSModule {
         const viewProperties = HSGlobal.HSGameState.viewProperties.get(mainViewId);
 
         if (!viewProperties) {
-            HSLogger.debug(`No view properties found for main view ID ${mainViewId}`, this.context);
+            HSLogger.debug(() => `No view properties found for main view ID ${mainViewId}`, this.context);
             return;
         }
 
@@ -230,46 +233,43 @@ export class HSGameState extends HSModule {
 
         tabs.forEach(async (tab) => {
             const tabId = tab.id;
-            const tabState = tab.style.getPropertyValue('display');
+            const tabElement = tab as HTMLElement;
+            if (!tabElement.classList.contains('active-subtab')) return;
 
-            if (tabState !== 'none') {
-                let subViewInstance: GameView<VIEW_TYPE> | undefined = undefined;
+            let subViewInstance: GameView<VIEW_TYPE> | undefined;
 
-                try {
-                    const ViewClass = this.#viewClasses[viewProperties.viewClassName];
-
-                    if (!ViewClass) {
-                        throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
-                    }
-
-                    subViewInstance = new ViewClass(tabId);
-
-                } catch (error) {
-                    HSLogger.warn(`Failed to instantiate sub-view ${viewProperties.viewClassName} for tab ${tabId}: ${error}`, self.context);
-                    return;
+            try {
+                const ViewClass = this.#viewClasses[viewProperties.viewClassName];
+                if (!ViewClass) {
+                    throw new Error(`Class "${viewProperties.viewClassName}" not found in viewClasses for mainViewId ${mainViewId}`);
                 }
-
-                const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
-
-                if (subViewInstance && subViewInstance.getId() !== this.#UNKNOWN_VIEW) {
-                    self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
-                    self.#viewStates[viewKey].currentView = subViewInstance;
-
-                    const previousView = (self.#viewStates as any)[viewKey].previousView;
-                    const currentView = (self.#viewStates as any)[viewKey].currentView;
-
-                    // Notify subscribers of the main view change
-                    self.#viewStates[viewKey].viewChangeSubscribers.forEach((callback) => {
-                        try {
-                            callback(previousView, currentView);
-                        } catch (e) {
-                            HSLogger.error(`Error when trying to call VIEW change subscriber callback: ${e}`, self.context);
-                        }
-                    });
-                } else {
-                    HSLogger.warn(`Sub-view tab ${tabId} (for ${viewProperties.viewClassName}) resolved to UNKNOWN or failed to initialize.`, self.context);
-                }
+                subViewInstance = new ViewClass(tabId);
+            } catch (error) {
+                HSLogger.warn(`Failed to instantiate sub-view ${viewProperties.viewClassName} for tab ${tabId}: ${error}`, self.context);
+                return;
             }
+
+            const viewKey = subViewInstance.getViewKey() as VIEW_KEY;
+            if (subViewInstance.getId() === this.#UNKNOWN_VIEW) {
+                HSLogger.warn(`Sub-view tab ${tabId} (for ${viewProperties.viewClassName}) resolved to UNKNOWN or failed to initialize.`, self.context);
+                return;
+            }
+
+            self.#viewStates[viewKey].previousView = self.#viewStates[viewKey].currentView;
+            self.#viewStates[viewKey].currentView = subViewInstance;
+
+            const previousView = (self.#viewStates as any)[viewKey].previousView;
+            const currentView = (self.#viewStates as any)[viewKey].currentView;
+
+            if (previousView.getName() === currentView.getName()) return;
+
+            self.#viewStates[viewKey].viewChangeSubscribers.forEach((callback) => {
+                try {
+                    callback(previousView, currentView);
+                } catch (e) {
+                    HSLogger.error(`Error when trying to call VIEW change subscriber callback: ${e}`, self.context);
+                }
+            });
         });
     }
 
@@ -277,19 +277,18 @@ export class HSGameState extends HSModule {
         return this.#viewStates[viewKey].currentView as T;
     }
 
-    /**
-     * Get the previous sub-view (if any) for a given main view
-     */
+    /** Get the previous sub-view (if any) for a given main view */
     getPreviousSubViewForMainView(mainView: MainView): GameView<VIEW_TYPE> | undefined {
         const mainViewId = mainView.getId();
 
         const subViewMap: Record<number, VIEW_KEY> = {
-            [MAIN_VIEW.CUBES]: 'CUBE_VIEW',
-            [MAIN_VIEW.SINGULARITY]: 'SINGULARITY_VIEW',
             [MAIN_VIEW.BUILDINGS]: 'BUILDING_VIEW',
+            [MAIN_VIEW.ACHIEVEMENTS]: 'ACHIEVEMENT_VIEW',
             [MAIN_VIEW.RUNES]: 'RUNE_VIEW',
             [MAIN_VIEW.CHALLENGES]: 'CHALLENGE_VIEW',
             [MAIN_VIEW.ANTS]: 'ANT_VIEW',
+            [MAIN_VIEW.CUBES]: 'CUBE_VIEW',
+            [MAIN_VIEW.SINGULARITY]: 'SINGULARITY_VIEW',
             [MAIN_VIEW.SETTINGS]: 'SETTINGS_VIEW',
             [MAIN_VIEW.PSEUDOCOINS]: 'PSEUDOCOIN_VIEW',
         };
@@ -319,10 +318,9 @@ export abstract class GameView<T extends VIEW_TYPE> {
     abstract getId(): T
     abstract getViewEnum(view: string): T
 
-    /**
-     * Navigate to this view by clicking its associated button
-     */
+    /** Navigate to this view by clicking its associated button */
     goto(): void {
+        const context = 'HSGameState';
         const id = this.getId();
         let buttonId = '';
 
@@ -331,6 +329,8 @@ export abstract class GameView<T extends VIEW_TYPE> {
             buttonId = MAIN_VIEW_BUTTON_IDS[id as MAIN_VIEW];
         } else if (id in BUILDING_VIEW_BUTTON_IDS) {
             buttonId = BUILDING_VIEW_BUTTON_IDS[id as BUILDING_VIEW];
+        } else if (id in ACHIEVEMENT_VIEW_BUTTON_IDS) {
+            buttonId = ACHIEVEMENT_VIEW_BUTTON_IDS[id as ACHIEVEMENT_VIEW];
         } else if (id in RUNE_VIEW_BUTTON_IDS) {
             buttonId = RUNE_VIEW_BUTTON_IDS[id as RUNE_VIEW];
         } else if (id in CHALLENGE_VIEW_BUTTON_IDS) {
@@ -348,17 +348,18 @@ export abstract class GameView<T extends VIEW_TYPE> {
         }
 
         if (!buttonId) {
-            HSLogger.warn(`No button ID mapping found for view: ${this.getName()}`);
+            HSLogger.warn(`No button ID mapping found for view: ${this.getName()}`, context);
             return;
         }
 
         const button = document.getElementById(buttonId);
         if (!button) {
-            HSLogger.warn(`Button element not found for ID: ${buttonId} (view: ${this.getName()})`);
+            HSLogger.warn(`Button element not found for ID: ${buttonId} (view: ${this.getName()})`, context);
             return;
         }
 
         button.click();
+        HSLogger.debug(() => `Main UI view changed (via goto): -> ${this.getName()}`, context);
     }
 }
 
@@ -374,7 +375,7 @@ export class MainView extends GameView<MAIN_VIEW> {
         switch (view) {
             case 'buildings': return MAIN_VIEW.BUILDINGS;
             case 'upgrades': return MAIN_VIEW.UPGRADES;
-            case 'statistics': return MAIN_VIEW.STATISTICS;
+            case 'statistics': return MAIN_VIEW.ACHIEVEMENTS;
             case 'runes': return MAIN_VIEW.RUNES;
             case 'challenges': return MAIN_VIEW.CHALLENGES;
             case 'research': return MAIN_VIEW.RESEARCH;
@@ -392,56 +393,6 @@ export class MainView extends GameView<MAIN_VIEW> {
     }
 
     getId(): MAIN_VIEW {
-        return this.#id;
-    }
-}
-
-export class CubeView extends GameView<CUBE_VIEW> {
-    #id: CUBE_VIEW
-
-    constructor(name: string) {
-        super(name, 'CUBE_VIEW');
-        this.#id = this.getViewEnum(name);
-    }
-
-    getViewEnum(tab: string): CUBE_VIEW {
-        switch (tab) {
-            case 'cubeTab1': return CUBE_VIEW.CUBE_TRIBUTES;
-            case 'cubeTab2': return CUBE_VIEW.TESSERACT_GIFTS;
-            case 'cubeTab3': return CUBE_VIEW.HYPERCUBE_BENEDICTIONS;
-            case 'cubeTab4': return CUBE_VIEW.PLATONIC_STATUES;
-            case 'cubeTab5': return CUBE_VIEW.CUBE_UPGRADES;
-            case 'cubeTab6': return CUBE_VIEW.PLATONIC_UPGRADES;
-            case 'cubeTab7': return CUBE_VIEW.HEPTERACT_FORGE;
-        }
-        return CUBE_VIEW.UNKNOWN;
-    }
-
-    getId(): CUBE_VIEW {
-        return this.#id;
-    }
-}
-
-export class SingularityView extends GameView<SINGULARITY_VIEW> {
-    #id: SINGULARITY_VIEW;
-
-    constructor(name: string) {
-        super(name, 'SINGULARITY_VIEW');
-        this.#id = this.getViewEnum(name);
-    }
-
-    getViewEnum(tab: string): SINGULARITY_VIEW {
-        switch (tab) {
-            case 'singularityContainer1': return SINGULARITY_VIEW.ELEVATOR;
-            case 'singularityContainer2': return SINGULARITY_VIEW.SHOP;
-            case 'singularityContainer3': return SINGULARITY_VIEW.PERKS;
-            case 'singularityContainer4': return SINGULARITY_VIEW.OCTERACTS;
-            case 'singularityContainer5': return SINGULARITY_VIEW.AMBROSIA;
-        }
-        return SINGULARITY_VIEW.UNKNOWN;
-    }
-
-    getId(): SINGULARITY_VIEW {
         return this.#id;
     }
 }
@@ -470,6 +421,27 @@ export class BuildingView extends GameView<BUILDING_VIEW> {
     }
 }
 
+export class AchievementView extends GameView<ACHIEVEMENT_VIEW> {
+    #id: ACHIEVEMENT_VIEW;
+
+    constructor(name: string) {
+        super(name, 'ACHIEVEMENT_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): ACHIEVEMENT_VIEW {
+        switch (tab) {
+            case 'toggleAchievementSubTab1': return ACHIEVEMENT_VIEW.ACHIEVEMENTS;
+            case 'toggleAchievementSubTab2': return ACHIEVEMENT_VIEW.REWARDS;
+        }
+        return ACHIEVEMENT_VIEW.UNKNOWN;
+    }
+
+    getId(): ACHIEVEMENT_VIEW {
+        return this.#id;
+    }
+}
+
 export class RuneView extends GameView<RUNE_VIEW> {
     #id: RUNE_VIEW;
 
@@ -480,10 +452,10 @@ export class RuneView extends GameView<RUNE_VIEW> {
 
     getViewEnum(tab: string): RUNE_VIEW {
         switch (tab) {
-            case 'toggleRuneSubTab1': return RUNE_VIEW.RUNE_1;
-            case 'toggleRuneSubTab2': return RUNE_VIEW.RUNE_2;
-            case 'toggleRuneSubTab3': return RUNE_VIEW.RUNE_3;
-            case 'toggleRuneSubTab4': return RUNE_VIEW.RUNE_4;
+            case 'toggleRuneSubTab1': return RUNE_VIEW.RUNES;
+            case 'toggleRuneSubTab2': return RUNE_VIEW.TALISMANS;
+            case 'toggleRuneSubTab3': return RUNE_VIEW.BLESSINGS;
+            case 'toggleRuneSubTab4': return RUNE_VIEW.SPIRITS;
         }
         return RUNE_VIEW.UNKNOWN;
     }
@@ -503,8 +475,8 @@ export class ChallengeView extends GameView<CHALLENGE_VIEW> {
 
     getViewEnum(tab: string): CHALLENGE_VIEW {
         switch (tab) {
-            case 'toggleChallengesSubTab1': return CHALLENGE_VIEW.CHALLENGE_1;
-            case 'toggleChallengesSubTab2': return CHALLENGE_VIEW.CHALLENGE_2;
+            case 'toggleChallengesSubTab1': return CHALLENGE_VIEW.NORMAL;
+            case 'toggleChallengesSubTab2': return CHALLENGE_VIEW.EXALT;
         }
         return CHALLENGE_VIEW.UNKNOWN;
     }
@@ -524,14 +496,64 @@ export class AntView extends GameView<ANT_VIEW> {
 
     getViewEnum(tab: string): ANT_VIEW {
         switch (tab) {
-            case 'toggleAntSubtab1': return ANT_VIEW.ANT_1;
-            case 'toggleAntSubtab2': return ANT_VIEW.ANT_2;
-            case 'toggleAntSubtab3': return ANT_VIEW.ANT_3;
+            case 'toggleAntSubtab1': return ANT_VIEW.THE_ANTHILL;
+            case 'toggleAntSubtab2': return ANT_VIEW.THE_ALTAR;
+            case 'toggleAntSubtab3': return ANT_VIEW.QUARK_CORNER;
         }
         return ANT_VIEW.UNKNOWN;
     }
 
     getId(): ANT_VIEW {
+        return this.#id;
+    }
+}
+
+export class CubeView extends GameView<CUBE_VIEW> {
+    #id: CUBE_VIEW
+
+    constructor(name: string) {
+        super(name, 'CUBE_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): CUBE_VIEW {
+        switch (tab) {
+            case 'switchCubeSubTab1': return CUBE_VIEW.CUBE_TRIBUTES;
+            case 'switchCubeSubTab2': return CUBE_VIEW.TESSERACT_GIFTS;
+            case 'switchCubeSubTab3': return CUBE_VIEW.HYPERCUBE_BENEDICTIONS;
+            case 'switchCubeSubTab4': return CUBE_VIEW.PLATONIC_STATUES;
+            case 'switchCubeSubTab5': return CUBE_VIEW.CUBE_UPGRADES;
+            case 'switchCubeSubTab6': return CUBE_VIEW.PLATONIC_UPGRADES;
+            case 'switchCubeSubTab7': return CUBE_VIEW.HEPTERACT_FORGE;
+        }
+        return CUBE_VIEW.UNKNOWN;
+    }
+
+    getId(): CUBE_VIEW {
+        return this.#id;
+    }
+}
+
+export class SingularityView extends GameView<SINGULARITY_VIEW> {
+    #id: SINGULARITY_VIEW;
+
+    constructor(name: string) {
+        super(name, 'SINGULARITY_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): SINGULARITY_VIEW {
+        switch (tab) {
+            case 'toggleSingularitySubTab1': return SINGULARITY_VIEW.ELEVATOR;
+            case 'toggleSingularitySubTab2': return SINGULARITY_VIEW.SHOP;
+            case 'toggleSingularitySubTab3': return SINGULARITY_VIEW.PERKS;
+            case 'toggleSingularitySubTab4': return SINGULARITY_VIEW.OCTERACTS;
+            case 'toggleSingularitySubTab5': return SINGULARITY_VIEW.AMBROSIA;
+        }
+        return SINGULARITY_VIEW.UNKNOWN;
+    }
+
+    getId(): SINGULARITY_VIEW {
         return this.#id;
     }
 }
@@ -546,15 +568,16 @@ export class SettingsView extends GameView<SETTINGS_VIEW> {
 
     getViewEnum(tab: string): SETTINGS_VIEW {
         switch (tab) {
-            case 'switchSettingSubTab1': return SETTINGS_VIEW.HEPTERACTS;
-            case 'switchSettingSubTab2': return SETTINGS_VIEW.UI;
-            case 'switchSettingSubTab3': return SETTINGS_VIEW.LOGGING;
-            case 'switchSettingSubTab4': return SETTINGS_VIEW.INPUT;
-            case 'switchSettingSubTab5': return SETTINGS_VIEW.AMBROSIA;
-            case 'switchSettingSubTab6': return SETTINGS_VIEW.PATCH;
-            case 'switchSettingSubTab7': return SETTINGS_VIEW.GAMEDATA;
-            case 'switchSettingSubTab8': return SETTINGS_VIEW.SHOP;
-            case 'switchSettingSubTab9': return SETTINGS_VIEW.DEBUGGING;
+            case 'switchSettingSubTab1': return SETTINGS_VIEW.SETTINGS;
+            case 'switchSettingSubTab2': return SETTINGS_VIEW.LANGUAGES;
+            case 'switchSettingSubTab3': return SETTINGS_VIEW.CREDITS;
+            case 'switchSettingSubTab4': return SETTINGS_VIEW.STATS_FOR_NERDS;
+            case 'switchSettingSubTab5': return SETTINGS_VIEW.RESET_HISTORY;
+            case 'switchSettingSubTab6': return SETTINGS_VIEW.ASCEND_HISTORY;
+            case 'switchSettingSubTab7': return SETTINGS_VIEW.SINGULARITY_HISTORY;
+            case 'switchSettingSubTab8': return SETTINGS_VIEW.HOTKEYS;
+            case 'switchSettingSubTab9': return SETTINGS_VIEW.ACCOUNT;
+            case 'switchSettingSubTab10': return SETTINGS_VIEW.MESSAGES;
         }
         return SETTINGS_VIEW.UNKNOWN;
     }

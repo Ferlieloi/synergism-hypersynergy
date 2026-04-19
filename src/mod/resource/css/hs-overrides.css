@@ -1,88 +1,37 @@
-#hs-ambrosia-group-wrapper {
-   margin-left: 50px;
+/* New 'Add 10' button in Settings tab */
+#hs-add-10-btn {
+   border: 2px solid green;
+   border-right: none;
 }
 
-#hs-ambrosia-quick-loadout-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 0px;
-    width: auto;
-    gap: 4px;
-    flex-direction: row;
-    align-self: flex-end;
-    border: 0px solid #4f86f7;
- }
-
- #hs-ambrosia-extra-btn {
-    border: 2px solid orange;
- }
-
- #hs-add-10-btn {
-    border: 2px solid green;
-    border-right: none;
- }
-
-/* Quickbar container styles */
-#quickbarsRow {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 0px 4px;
-    margin: 0px 4% 10px 0px;
-    width: 100%;
-    box-sizing: border-box;
+/* Quick import button in Ambrosia subtab */
+#hs-ambrosia-extra-btn {
+   border: 2px solid orange;
 }
 
-/* syn UI quickbar styles*/
-#automationQuickBar {
-   display: flex;
-   flex-wrap: wrap;
-   align-items: flex-end;
-   justify-content: center;
-   background: none;
-   padding: 0px;
-   border-radius: 0px;
-   box-shadow: none;
-   width: auto;
-   max-width: 100%;
-   gap: 4px;
-   margin-left: 50px;
-   box-sizing: border-box;
+/* AFK Swapper toggle button in Ambrosia subtab */
+#hs-ambrosia-loadout-idle-swap-toggle {
+    font-size: 1.0em;
+    font-family: fantasy;
+    letter-spacing: 3px;
+    border: 2px solid;
+    border-color: #0190cd;
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    background: #774ed1;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-#automationQuickBar .left,
-#automationQuickBar .center,
-#automationQuickBar .right {
-   display: flex;
-   align-items: center;
-   gap: 4px;
-   flex: 0 0 auto;
-}
-
-#automationQuickBar .center:empty,
-#automationQuickBar .right:empty {
+/* Always hide the visually-useless ambrosia minibars numbers to avoid a 'jump' when enabling them. */
+#hs-blue-progress-text,
+#hs-red-progress-text {
    display: none;
 }
 
-#automationQuickBar button.autoToggle {
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   width: 32px;
-   height: 32px;
-   padding: 0;
-   border-radius: 0px;
-   background: transparent;
-   border: 1px solid #4f86f7;
-}
-
-#automationQuickBar button.autoToggle.enabled { border-color: #006500; }
-#automationQuickBar button.autoToggle.disabled { border-color: #bb0000; background-color: rgba(255, 0, 0, 0.2); }
-#automationQuickBar button.autoToggle.mixed { border-color: #dd8e01; background-color: rgba(220, 140, 0, 0.2); }
-
-#automationQuickBar button.autoToggle img {
-   height: 18px;
-   width: 18px;
-   display: block;
+/* Add some empty space at the bottom of the game to avoid having elements too close to it */
+body {
+   margin-bottom: 150px;
 }

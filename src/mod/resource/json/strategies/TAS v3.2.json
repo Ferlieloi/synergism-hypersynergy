@@ -1,5 +1,5 @@
 {
-  "strategyName": "Quark_Molker_v1.1",
+  "strategyName": "TAS v3.2",
   "strategy": [
     {
       "startPhase": "start",
@@ -25,10 +25,10 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 200,
           "challengeNumber": 6,
           "challengeCompletions": 0,
-          "challengeWaitTime": 150,
-          "challengeWaitBefore": 100,
+          "challengeWaitTime": 200,
           "challengeMaxTime": 99999
         },
         {
@@ -48,8 +48,8 @@
         {
           "challengeNumber": 7,
           "challengeCompletions": 0,
-          "challengeWaitTime": 150,
-          "challengeWaitBefore": 100,
+          "challengeWaitTime": 200,
+          "challengeWaitBefore": 0,
           "challengeMaxTime": 99999
         },
         {
@@ -101,17 +101,17 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 5,
           "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 20,
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 300007
         },
         {
@@ -142,10 +142,10 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 400007
         },
         {
@@ -176,10 +176,10 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 99999
         },
         {
@@ -197,10 +197,10 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 400007
         },
         {
@@ -225,25 +225,17 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 202,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "loadoutName": "Loadout challenge14-w5x10max"
-        },
-        {
+          "challengeWaitBefore": 5,
           "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 5,
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 300,
           "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 50,
           "challengeMaxTime": 0
         },
         {
@@ -262,17 +254,11 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 10,
+          "comment": "==> 10ms Wait to avoid wrong phase read",
+          "challengeNumber": 151,
           "challengeCompletions": 0,
-          "challengeWaitTime": 250,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 1000000
-        },
-        {
-          "challengeNumber": 104,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 20,
-          "challengeWaitBefore": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 10,
           "challengeMaxTime": 0
         }
       ]
@@ -293,25 +279,52 @@
       "corruptionLoadoutName": "Loadout challenge14-w5x10max",
       "strat": [
         {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 200,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 100,
+          "challengeMaxTime": 400007
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "10c2fb27-4f74-4fef-9c9f-31a6280f0512",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 0
+          }
+        },
+        {
           "challengeNumber": 15,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
-          "challengeMaxTime": 1000000
+          "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 8,
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
           "challengeCompletions": 0,
-          "challengeWaitTime": 150,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 1000000
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 10,
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
           "challengeCompletions": 0,
-          "challengeWaitTime": 250,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 1000000
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
         },
         {
           "challengeNumber": 102,
@@ -321,25 +334,55 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 5,
           "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 20,
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 103,
+          "challengeWaitBefore": 250,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout w5x10max-p2x1x10"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
-          "challengeWaitTime": 250,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 10000
+          "challengeWaitTime": 100,
+          "challengeMaxTime": 400077777
         },
         {
           "challengeNumber": 200,
@@ -347,14 +390,320 @@
           "challengeWaitTime": 0,
           "challengeMaxTime": 0,
           "ifJump": {
-            "id": "768f5edc-1e97-46ae-836d-e6eed2f0bbd3",
-            "ifJumpMode": "stored_c15",
+            "id": "88c2fb27-58ec-4fb4-915b-5e40e56c0faa",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 12
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout beta-1e15-expo"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 400077777
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "161d36b3-19ca-477f-9896-78e8b89baacd",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 24
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 80,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 350,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout 1e15-expo-omega"
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "70aa378d-f038-4547-8c68-1cacf431343d",
+            "ifJumpMode": "challenges",
             "ifJumpChallenge": 15,
             "ifJumpOperator": "<",
-            "ifJumpValue": 0,
-            "ifJumpMultiplier": 1,
-            "ifJumpIndex": 0
+            "ifJumpValue": 1000000000000000,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 24
           }
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 300077777
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "4e660243-8fb1-444b-9553-56e61fe97b91",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1,
+            "ifJumpIndex": 38
+          }
+        },
+        {
+          "challengeNumber": 15,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 6,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 100,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 5,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 250,
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "comment": "==> Rune Auto-buy (waitBefore in next step)",
+          "challengeNumber": 3,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
+        },
+        {
+          "challengeNumber": 202,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "loadoutName": "Loadout omega-singularity"
+        },
+        {
+          "challengeWaitBefore": 60,
+          "challengeNumber": 103,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 152,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeWaitBefore": 100,
+          "challengeNumber": 10,
+          "challengeCompletions": 1,
+          "challengeWaitTime": 120,
+          "challengeMaxTime": 300077777
+        },
+        {
+          "challengeNumber": 102,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "ifJump": {
+            "id": "ec104602-247f-426a-83e0-d4809924143a",
+            "ifJumpMode": "challenges",
+            "ifJumpChallenge": 10,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 999,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 49
+          },
+          "comment": "Loop until AOAG unlocked"
         }
       ]
     },
@@ -374,6 +723,7 @@
       "corruptionLoadoutName": "Loadout beginning post-AOAG",
       "strat": [
         {
+          "comment": "=> Post-AOAG ldt",
           "challengeNumber": 302,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -381,10 +731,10 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 100,
           "challengeNumber": 10,
           "challengeCompletions": 1,
           "challengeWaitTime": 100,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 99999
         },
         {
@@ -396,11 +746,11 @@
           "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 50,
           "challengeNumber": 610,
           "challengeCompletions": 0,
           "challengeWaitTime": 30,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
+          "challengeMaxTime": 50
         },
         {
           "challengeNumber": 102,
@@ -417,22 +767,29 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 152,
+          "challengeNumber": 6,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 70,
-          "challengeMaxTime": 0
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 99999
         },
         {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 2nd c15",
           "challengeNumber": 104,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 30,
-          "challengeMaxTime": 0,
-          "comment": "==> start of 2nd c15"
+          "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 50,
           "challengeNumber": 610,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 60
+        },
+        {
+          "challengeNumber": 102,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -460,19 +817,12 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 152,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 70,
-          "challengeMaxTime": 0
-        },
-        {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 3rd c15",
           "challengeNumber": 104,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 30,
-          "challengeMaxTime": 0,
-          "comment": "==> start of 3rd c15"
+          "challengeMaxTime": 0
         },
         {
           "challengeNumber": 152,
@@ -480,6 +830,13 @@
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 605,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
         },
         {
           "challengeNumber": 610,
@@ -489,33 +846,40 @@
           "challengeMaxTime": 30
         },
         {
-          "challengeNumber": 606,
+          "challengeNumber": 6,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
+          "challengeMaxTime": 99999
         },
         {
-          "challengeNumber": 152,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 70,
-          "challengeMaxTime": 0
-        },
-        {
+          "challengeWaitBefore": 100,
+          "comment": "==> start of 4th c15",
           "challengeNumber": 104,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 30,
-          "challengeMaxTime": 0,
-          "comment": "==> start of 4th c15"
+          "challengeMaxTime": 0
         },
         {
+          "challengeWaitBefore": 5,
           "challengeNumber": 152,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 0
+        },
+        {
+          "challengeNumber": 605,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 50,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 30
+        },
+        {
+          "challengeWaitBefore": 50,
+          "challengeNumber": 610,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 30,
+          "challengeMaxTime": 50
         },
         {
           "challengeNumber": 609,
@@ -539,13 +903,6 @@
           "challengeMaxTime": 50
         },
         {
-          "challengeWaitBefore": 50,
-          "challengeNumber": 610,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 30,
-          "challengeMaxTime": 50
-        },
-        {
           "challengeNumber": 6,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -553,33 +910,11 @@
           "challengeMaxTime": 99999
         },
         {
-          "challengeNumber": 605,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 50,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 30
-        },
-        {
           "challengeWaitBefore": 100,
           "challengeNumber": 104,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 200,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeMaxTime": 0,
-          "ifJump": {
-            "id": "b92e497d-1d9c-4fed-a9ef-3e2643e3e836",
-            "ifJumpMode": "challenges",
-            "ifJumpChallenge": 15,
-            "ifJumpOperator": "<",
-            "ifJumpValue": 1e+110,
-            "ifJumpMultiplier": 0,
-            "ifJumpIndex": 20
-          }
         },
         {
           "comment": "=> Auto-Chall ON",
@@ -590,12 +925,12 @@
           "challengeMaxTime": 0
         },
         {
+          "comment": "=>DO YOU WANT ANTS??",
           "challengeNumber": 402,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "comment": "=>DO YOU WANT ANTS??"
+          "challengeMaxTime": 0
         },
         {
           "challengeNumber": 103,
@@ -764,38 +1099,10 @@
           "challengeMaxTime": 99999
         },
         {
-          "challengeNumber": 102,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 152,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 100,
-          "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 151,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 50,
-          "challengeMaxTime": 0
-        },
-        {
           "challengeWaitBefore": 100,
           "challengeNumber": 103,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
-          "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 303,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
           "challengeMaxTime": 0
         },
         {
@@ -804,35 +1111,6 @@
           "challengeWaitTime": 50,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 50
-        },
-        {
-          "challengeNumber": 202,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "loadoutName": "Loadout singularity-end"
-        },
-        {
-          "challengeNumber": 104,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 104,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
-        },
-        {
-          "challengeNumber": 104,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
         }
       ]
     }
@@ -863,8 +1141,8 @@
         "challengeNumber": 151,
         "challengeCompletions": 0,
         "challengeWaitTime": 0,
-        "challengeWaitBefore": 20,
-        "challengeMaxTime": 0
+        "challengeMaxTime": 0,
+        "challengeWaitBefore": 100
       },
       {
         "challengeNumber": 152,
@@ -912,7 +1190,7 @@
         "deflation": 4,
         "extinction": 11,
         "illiteracy": 0,
-        "recession": 12,
+        "recession": 14,
         "dilation": 4,
         "hyperchallenge": 2
       }

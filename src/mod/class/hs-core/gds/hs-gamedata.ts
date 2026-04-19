@@ -10,92 +10,91 @@ import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
+import { HSSettingsUI } from "../settings/hs-settings-ui";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
-import { GameEventResponse, GameEventType, ConsumableGameEvent, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
+import { GameEventResponse, GameEventResponseType, ConsumableGameEvents, GameEventID } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../../types/data-types/hs-gamedata-api-types";
-import { HSAutosingStrategyModal } from '../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal';
 
+/**
+ * Class: HSGameData
+ * IsExplicitHSModule: Yes
+ * Description: 
+ *     Core module responsible for fetching, processing, and providing game data to other modules.
+ *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages campaign tokens, pseudo/me data,
+ *     and subscribes to consumable game events via WebSocket. Provides APIs for other modules to access game data.
+ */
 export class HSGameData extends HSModule {
+    // --- Save Data & State ---
     #saveDataLocalStorageKey = 'Synergysave2';
-
     #saveDataCheckInterval?: number;
     #saveData?: PlayerData;
+    #lastB64Save?: string;
+    #wasUsingGDS = false;
+    #hasPerformedInitialLoadoutMatch = false;
 
+    // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
     #mitm_atob_data: string | undefined;
     #btoaHacked = false;
     #atobHacked = false;
-
     #nativeBtoa?: typeof window.btoa;
     #nativeAtob?: typeof window.atob;
-    // Turbo mode
-    #turboEnabled = false;
-    #manualSaveButton?: HTMLButtonElement;
-    #saveinfoElement?: HTMLParagraphElement;
 
+    // --- Turbo Mode & Intervals ---
+    #turboEnabled = false;
     #turboCSS = `
         #savegame {
             display: none !important;
         }
-
         #saveinfo {
             display: none !important;
         }
     `;
-
     #saveInterval?: number;
+    #fetchedDataRefreshInterval?: number;
 
+    // --- DOM Elements ---
+    #manualSaveButton?: HTMLButtonElement;
+    #saveinfoElement?: HTMLParagraphElement;
     #gameDataDebugElement?: HTMLDivElement;
-
-    #gameDataSubscribers: Map<string, (data: PlayerData) => void> = new Map<string, (data: PlayerData) => void>();
-
     #singularityButton?: HTMLImageElement;
     #importSaveButton?: HTMLLabelElement;
     #singularityChallengeButtons?: HTMLDivElement[];
+    #campaignTokenElement?: HTMLHeadingElement;
+
+    // --- Event Handlers ---
     #singularityEventHandler?: (e: MouseEvent) => Promise<void>;
     #loadFromFileEventHandler?: (e: MouseEvent) => Promise<void>;
 
-    // These are not used
-    #wasUsingGDS = false;
+    // --- Data APIs & Subscribers ---
+    #gameDataSubscribers: Map<string, (data: PlayerData) => void> = new Map();
+    #gameDataAPI?: HSGameDataAPI;
 
+    // --- Player/Me/Campaign Data ---
     #playerPseudoUpgrades?: PseudoGameData;
     #meBonuses?: MeData;
-
-    #gameDataAPI?: HSGameDataAPI;
-    #fetchedDataRefreshInterval?: number;
-
-    #lastB64Save?: string;
-
-    #campaignTokenElement?: HTMLHeadingElement;
     #campaignTokenRefreshInterval?: number;
-
     #campaignData: CampaignData = {
         tokens: 0,
         maxTokens: 0,
         isAtMaxTokens: false,
-    }
-
-    #gameEvents: ConsumableGameEvents = {
-        HAPPY_HOUR_BELL: {
-            amount: 0,
-            ends: [],
-            displayName: "Happy Hour Bell",
-        },
     };
 
+    // --- Game Events ---
+    #gameEvents: ConsumableGameEvents = {
+        HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: "Happy Hour Bell" },
+        LOTUS_OF_REJUVENATION: { amount: 0, ends: [], displayName: "Lotus of Rejuvenation" }
+    };
 
-
+    // --- Miscellaneous ---
     #saveTriggerEvent: Event;
-
     #lastForceFetch = 0;
     #ForceFetchCooldown = 5000;
-
-    #hasPerformedInitialLoadoutMatch = false;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
@@ -104,6 +103,11 @@ export class HSGameData extends HSModule {
         this.#saveTriggerEvent = new Event('click');
     }
 
+    /**
+     * Initializes the HSGameData module, sets up DOM elements, fetches pseudo and me data,
+     * registers the WebSocket, and hooks the import button for save file interception.
+     * @returns Promise<void>
+     */
     async init() {
         const self = this;
         HSLogger.log(`Initializing HSGameData module`, this.context);
@@ -119,7 +123,7 @@ export class HSGameData extends HSModule {
             this.#playerPseudoUpgrades = data;
             this.#pseudoDataUpdated();
         } catch (err) {
-            HSLogger.error(`Could not fetch pseudo data`, this.context);
+            HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
         }
 
         try {
@@ -129,7 +133,7 @@ export class HSGameData extends HSModule {
             this.#meBonuses = data;
             this.#meDataUpdated();
         } catch (err) {
-            HSLogger.error(`Could not fetch me data`, this.context);
+            HSLogger.error(`Could not fetch me data: ${err}`, this.context);
         }
 
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
@@ -154,6 +158,14 @@ export class HSGameData extends HSModule {
         })();
     }
 
+
+    // --- Core Data Fetch/Update ---
+
+    /**
+     * Forces a refresh of all game data, including fetched data, campaign tokens, and save data.
+     * Applies cooldown to prevent excessive refreshes.
+     * @returns Promise<void>
+     */
     async forceUpdateAllData() {
         const now = Date.now();
 
@@ -166,6 +178,7 @@ export class HSGameData extends HSModule {
 
         await this.#refreshFetchedData();
         await this.#refreshCampaignTokens();
+        // Do we need this redundant call ?!
         await this.#refreshFetchedData();
         this.#hackJSNativebtoa();
         this.#hackJSNativeAtob();
@@ -185,55 +198,38 @@ export class HSGameData extends HSModule {
         this.#saveDataUpdated();
     }
 
-    #registerWebSocket() {
-        const self = this;
-        const wsMod = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
+    /**
+     * Fetches pseudo and me data from remote APIs and updates internal state.
+     * @returns Promise<void>
+     */
+    async #refreshFetchedData() {
+        // HSLogger.debug(() => `Refreshing fetched data`, this.context);
 
-        if (wsMod) {
-            wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
-                url: HSGlobal.Common.eventAPIUrl,
-                onMessage: async (msg) => {
-                    if (msg?.type === GameEventType.INFO_ALL) {
-                        self.#resetEventData();
+        try {
+            const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
+            const data = await upgradesQuery.json() as PseudoGameData;
 
-                        if (msg.active && msg.active.length > 0) {
-                            HSLogger.debug(`Caught WS event: ${msg.type} - event count: ${msg.active.length}}`, 'WebSocket');
+            this.#playerPseudoUpgrades = data;
+            this.#pseudoDataUpdated();
+        } catch (err) {
+            HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
+        }
 
-                            for (const { internalName, endsAt, name } of msg.active) {
-                                const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
+        try {
+            const meQuery = await fetch('https://synergism.cc/api/v1/users/me');
+            const data = await meQuery.json() as MeData;
 
-                                consumable.ends.push(endsAt);
-                                consumable.amount++;
-                                consumable.displayName = name;
-                            }
-
-                            self.#eventDataUpdated();
-                        } else {
-                            HSLogger.debug(`Caught INFO_ALL, but no active events`, this.context);
-                        }
-                    } else if (msg?.type === GameEventType.ERROR) {
-                        HSLogger.debug(`Caught ERROR`, this.context);
-                        self.#resetEventData();
-                    } else if (msg?.type === GameEventType.EVENT_ENDED) {
-                        HSLogger.debug(`Caught EVENT_ENDED`, this.context);
-                        const consumable = self.#gameEvents[msg?.consumable as keyof ConsumableGameEvents];
-                        consumable.ends.shift();
-                        consumable.amount--;
-                        self.#eventDataUpdated();
-                    } else if (msg?.type === GameEventType.JOIN) {
-                        HSLogger.debug(`Caught JOIN (connection established)`, this.context);
-                    }
-
-                },
-
-                onRetriesFailed: async () => {
-                    self.#resetEventData();
-                    self.#eventDataUpdated();
-                }
-            })
+            this.#meBonuses = data;
+            this.#meDataUpdated();
+        } catch (err) {
+            HSLogger.error(`Could not fetch me data: ${err}`, this.context);
         }
     }
 
+    /**
+     * Resets all game event data to default values and triggers event data update.
+     * @returns void
+     */
     #resetEventData() {
         for (const key of Object.keys(this.#gameEvents)) {
             this.#gameEvents[key as keyof ConsumableGameEvents] = {
@@ -246,30 +242,236 @@ export class HSGameData extends HSModule {
         this.#eventDataUpdated();
     }
 
-    async #refreshFetchedData() {
-        HSLogger.debug(`Refreshing fetched data`, this.context);
-
-        try {
-            const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
-            const data = await upgradesQuery.json() as PseudoGameData;
-
-            this.#playerPseudoUpgrades = data;
-            this.#pseudoDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch pseudo data`, this.context);
+    /**
+     * Updates game data and notifies all subscribers.
+     * Also triggers initial loadout match if needed.
+     * @returns void
+     */
+    #saveDataUpdated() {
+        if (this.#gameDataAPI && this.#saveData) {
+            this.#gameDataAPI._updateGameData(this.#saveData);
         }
 
-        try {
-            const meQuery = await fetch('https://synergism.cc/api/v1/users/me');
-            const data = await meQuery.json() as MeData;
+        this.#gameDataSubscribers.forEach((callback) => {
+            if (this.#saveData) {
+                callback(this.#saveData);
+            } else {
+                HSLogger.debug(() => `Could not call game data change callback. No save data found`, this.context);
+            }
+        });
 
-            this.#meBonuses = data;
-            this.#meDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch me data`, this.context);
+        if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
+            // There's probably a better place to put this...
+            HSSettingsUI.updateStrategyDropdownList();
+            const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+            if (ambrosiaModule) {
+                ambrosiaModule.performInitialActiveLoadoutMatch(this.#saveData);
+            }
+            this.#hasPerformedInitialLoadoutMatch = true;
         }
     }
 
+    /**
+     * Updates pseudo data in the game data API.
+     * @returns void
+     */
+    #pseudoDataUpdated() {
+        if (this.#gameDataAPI && this.#playerPseudoUpgrades) {
+            this.#gameDataAPI._updatePseudoData(this.#playerPseudoUpgrades);
+        }
+    }
+
+    /**
+     * Updates me bonuses in the game data API.
+     * @returns void
+     */
+    #meDataUpdated() {
+        if (this.#gameDataAPI && this.#meBonuses) {
+            this.#gameDataAPI._updateMeData(this.#meBonuses);
+        }
+    }
+
+    /**
+     * Updates campaign data in the game data API.
+     * @returns void
+     */
+    #campaignDataUpdated() {
+        if (this.#gameDataAPI && this.#campaignData) {
+            this.#gameDataAPI._updateCampaignData(this.#campaignData);
+        }
+    }
+
+    /**
+     * Updates event data in the game data API.
+     * @returns void
+     */
+    #eventDataUpdated() {
+        if (this.#gameDataAPI && this.#gameEvents) {
+            this.#gameDataAPI._updateEventData(this.#gameEvents);
+        }
+    }
+
+
+    // --- WebSocket/Event Handling ---
+
+    /**
+     * Sets up the WebSocket connection for consumable game events.
+     * Registers a handler for incoming messages that updates internal event state based on event type:
+     * - INFO_ALL: Resets event data, then processes active events, updating their end times, amounts, and display names. Unknown events are logged as warnings.
+     * - CONSUMED: Updates Happy Hour event, setting end time, amount, and display name.
+     * - CONSUMABLE_ENDED: Removes ended Happy Hour event and decrements amount.
+     * - APPLIED_LOTUS, LOTUS_ACTIVE, LOTUS_ENDED: Updates Lotus event end times and amounts.
+     * - Other event types: Not used.
+     * Handles retry failures by resetting event data and triggering an update.
+     * @returns void
+     */
+    #registerWebSocket() {
+        const self = this;
+        const wsMod = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
+
+        if (wsMod) {
+            wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
+                url: HSGlobal.Common.eventAPIUrl,
+                onMessage: async (msg) => {
+                    HSLogger.debug(() => `onMessage received: ${JSON.stringify(msg)}`, this.context);
+                    switch (msg?.type) {
+                        case GameEventResponseType.INFO_ALL: {
+                            self.#resetEventData();
+                            if (msg.active && msg.active.length > 0) {
+                                HSLogger.debug(() => `Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
+                                for (const { internalName, endsAt, name } of msg.active) {
+                                    const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
+                                    consumable.ends.push(endsAt);
+                                    consumable.amount++;
+                                    consumable.displayName = name;
+                                }
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.debug(() => `Caught INFO_ALL, but no active events`, this.context);
+                            }
+                            break;
+                        }
+                        case GameEventResponseType.CONSUMED: {
+                            HSLogger.debug(() => `Caught CONSUMED event (Happy Hour)`, this.context);
+                            const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
+                            if (consumable) {
+                                consumable.ends.push(msg.startedAt + 3600 * 1000);
+                                consumable.amount++;
+                                consumable.displayName = msg.displayName;
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.warn(`Unknown event: ${msg.consumable}`, this.context);
+                            }
+                            break;
+                        }
+                        case GameEventResponseType.CONSUMABLE_ENDED: {
+                            HSLogger.debug(() => `Caught CONSUMABLE_ENDED (Happy Hour)`, this.context);
+                            const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
+                            if (consumable) {
+                                consumable.ends.shift();
+                                consumable.amount--;
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.warn(`Unknown event: ${msg.consumable}`, this.context);
+                            }
+                            break;
+                        }
+
+                        case GameEventResponseType.APPLIED_LOTUS: {
+                            HSLogger.debug(() => `Caught APPLIED_LOTUS event`, this.context);
+                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
+                            if (consumable) {
+                                const newEnd = performance.now() + msg.remaining;
+                                consumable.ends[0] = newEnd;
+                                consumable.amount = 1;
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
+                            }
+                            break;
+                        }
+                        case GameEventResponseType.LOTUS_ACTIVE: {
+                            HSLogger.debug(() => `Caught LOTUS_ACTIVE event`, this.context);
+                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
+                            if (consumable) {
+                                consumable.ends[0] = performance.now() + msg.remainingMs;
+                                consumable.amount = 1;
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
+                            }
+                            break;
+                        }
+                        case GameEventResponseType.LOTUS_ENDED: {
+                            HSLogger.debug(() => `Caught LOTUS_ENDED event`, this.context);
+                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
+                            if (consumable) {
+                                consumable.ends.shift();
+                                consumable.amount = 0;
+                                self.#eventDataUpdated();
+                            } else {
+                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
+                            }
+                            break;
+                        }
+                        case GameEventResponseType.LOTUS: {
+                            HSLogger.debug(() => `Caught LOTUS (bought) event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.TIPS: {
+                            HSLogger.debug(() => `Caught TIPS (received) event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.APPLIED_TIP: {
+                            HSLogger.debug(() => `Caught APPLIED_TIP event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.TIP_BACKLOG: {
+                            HSLogger.debug(() => `Caught TIP_BACKLOG event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.TIME_SKIP: {
+                            HSLogger.debug(() => `Caught TIME_SKIP event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.THANKS: {
+                            HSLogger.debug(() => `Caught THANKS event`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.JOIN: {
+                            HSLogger.debug(() => `Caught JOIN (connection established)`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.WARN: {
+                            HSLogger.warn(`Caught WARNING: ${msg.message}`, this.context);
+                            break;
+                        }
+                        case GameEventResponseType.ERROR: {
+                            HSLogger.warn(`Caught ERROR`, this.context);
+                            self.#resetEventData();
+                            break;
+                        }
+                        default: {
+                            HSLogger.debug(() => `Caught unknown event type: ${msg}`, this.context);
+                        }
+                    }
+                },
+                onRetriesFailed: async () => {
+                    self.#resetEventData();
+                    self.#eventDataUpdated();
+                }
+            })
+        }
+    }
+
+
+    // --- Save Data Processing ---
+
+    /**
+     * Processes save data from localStorage using requestAnimationFrame loop.
+     * Updates internal save data and handles errors.
+     * @returns void
+     */
     #processSaveDataWithRAF = () => {
         if (!this.#turboEnabled) return;
 
@@ -282,7 +484,7 @@ export class HSGameData extends HSModule {
                 this.#saveData = JSON.parse(atob(saveDataB64)) as PlayerData;
                 this.#saveDataUpdated();
             } catch (error) {
-                HSLogger.debug(`<red>Error processing save data:</red> ${error}`, this.context);
+                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
                 this.#maybeStopSniffOnError();
             }
         }
@@ -290,6 +492,11 @@ export class HSGameData extends HSModule {
         requestAnimationFrame(this.#processSaveDataWithRAF);
     }
 
+    /**
+     * Processes save data from MITM using requestAnimationFrame loop.
+     * Updates internal save data and handles errors.
+     * @returns void
+     */
     #processSaveDataWithRAFExperimental = () => {
         if (!this.#turboEnabled) return;
 
@@ -298,7 +505,7 @@ export class HSGameData extends HSModule {
                 this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
                 this.#saveDataUpdated();
             } catch (error) {
-                HSLogger.debug(`<red>Error processing save data:</red> ${error}`, this.context);
+                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
                 this.#maybeStopSniffOnError();
             }
         }
@@ -306,6 +513,10 @@ export class HSGameData extends HSModule {
         requestAnimationFrame(this.#processSaveDataWithRAFExperimental);
     }
 
+    /**
+     * Stops game data sniffing if error is detected and settings allow it.
+     * @returns void
+     */
     #maybeStopSniffOnError() {
         if (!this.#saveDataCheckInterval) return;
 
@@ -314,14 +525,22 @@ export class HSGameData extends HSModule {
 
         if (useGameDataSetting && stopSniffOnErrorSetting) {
             if (stopSniffOnErrorSetting.isEnabled()) {
-                HSLogger.debug(`Stopped game data sniffing on error`, this.context);
+                HSLogger.debug(() => `Stopped game data sniffing on error`, this.context);
                 useGameDataSetting.disable();
             }
         } else {
-            HSLogger.debug(`maybeStopSniffOnError() - Issue with fetching settings: ${useGameDataSetting}, ${stopSniffOnErrorSetting}`, this.context);
+            HSLogger.debug(() => `maybeStopSniffOnError() - Issue with fetching settings: ${useGameDataSetting}, ${stopSniffOnErrorSetting}`, this.context);
         }
     }
 
+
+    // --- GDS (Game Data Sniffing) Control ---
+
+    /**
+     * Enables Game Data Sniffing (GDS) mode, sets up intervals, hooks DOM elements,
+     * and starts save processing. Handles turbo mode and experimental GDS.
+     * @returns Promise<void>
+     */
     async enableGDS() {
         const self = this;
 
@@ -381,7 +600,94 @@ export class HSGameData extends HSModule {
         }
     }
 
+    /**
+     * Disables Game Data Sniffing (GDS) mode, clears intervals,
+     * removes injected styles, and detaches event handlers.
+     * @returns Promise<void>
+     */
+    async disableGDS() {
+        const self = this;
 
+        if (this.#saveInterval) {
+            clearInterval(this.#saveInterval);
+            this.#saveInterval = undefined;
+        }
+
+        if (this.#fetchedDataRefreshInterval)
+            clearInterval(this.#fetchedDataRefreshInterval);
+
+        if (this.#campaignTokenRefreshInterval)
+            clearInterval(this.#campaignTokenRefreshInterval);
+
+        HSUI.removeInjectedStyle(HSGlobal.HSGameData.turboCSSId);
+
+        if (!this.#singularityButton)
+            this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
+
+        if (!this.#singularityChallengeButtons)
+            this.#singularityChallengeButtons = await HSElementHooker.HookElements('#singularityChallenges > div.singularityChallenges > div') as HTMLDivElement[];
+
+        if (!this.#importSaveButton)
+            this.#importSaveButton = await HSElementHooker.HookElement('#importFileButton') as HTMLLabelElement;
+
+        if (this.#singularityEventHandler) {
+            this.#singularityButton.removeEventListener('click', this.#singularityEventHandler, { capture: true });
+
+            this.#singularityChallengeButtons.forEach((btn) => {
+                btn.removeEventListener('click', self.#singularityEventHandler!, { capture: true });
+            });
+
+            this.#singularityEventHandler = undefined;
+        }
+
+        // We do NOT remove the loadFromFileEventHandler here.
+        // It must remain active to intercept save loads even when GDS is disabled.
+        // if (this.#loadFromFileEventHandler) {
+        //    this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
+        //    this.#loadFromFileEventHandler = undefined;
+        // }
+
+        HSLogger.info(`GDS turbo = OFF`, this.context);
+        this.#turboEnabled = false;
+    }
+
+    /**
+     * Prepares for autosing by hacking native btoa and atob functions.
+     * @returns Promise<void>
+     */
+    async prepareForAutosing() {
+        this.#hackJSNativebtoa();
+        this.#hackJSNativeAtob();
+    }
+
+    /**
+     * Dispatches a save event and extracts quarks and goldenQuarks from the latest save data.
+     * @returns Promise<{ quarks: number; goldenQuarks: number } | null>
+     */
+    async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number } | null> {
+        const saveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
+        
+        saveButton.dispatchEvent(this.#saveTriggerEvent);
+        
+        if (this.#mitm_gamedata) {
+            try {
+                // Parse only the needed fields
+                const parsed = JSON.parse(this.#mitm_gamedata);
+                const quarks = typeof parsed.worlds === 'number' ? parsed.worlds : 0;
+                const goldenQuarks = typeof parsed.goldenQuarks === 'number' ? parsed.goldenQuarks : 0;
+                return { quarks, goldenQuarks };
+            } catch (e) {
+                HSLogger.error(`Failed to parse mitm_gamedata for autosing: ${e}`, this.context);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Hacks the native atob function to capture decoded save data.
+     * @returns void
+     */
     #hackJSNativeAtob() {
         if (this.#atobHacked) return;
 
@@ -402,6 +708,10 @@ export class HSGameData extends HSModule {
         this.#atobHacked = true;
     }
 
+    /**
+     * Hacks the native btoa function to capture encoded save data.
+     * @returns void
+     */
     #hackJSNativebtoa() {
         if (this.#btoaHacked)
             return;
@@ -427,6 +737,13 @@ export class HSGameData extends HSModule {
         this.#btoaHacked = true;
     }
 
+    /**
+     * Handles save file import, disables GDS and autosing if active,
+     * watches for offline container visibility, restores active ambrosia loadout,
+     * and restores GDS state after import.
+     * @param e MouseEvent from the import button click.
+     * @returns Promise<void>
+     */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
         const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
@@ -478,36 +795,24 @@ export class HSGameData extends HSModule {
                     if (self.#mitm_atob_data) {
                         try {
                             const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
-                            const { id: bestMatchId, score: highestScore } = self.#findBestMatchingAmbrosiaLoadout(saveData);
-
-                            const SIMILARITY_THRESHOLD = 0.8;
-
-                            if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-                                HSLogger.debug(` -> BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, self.context);
-                                if (ambrosiaModule) {
-                                    // AWAIT the activation to ensure it completes before any other logic runs
-                                    await ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
-                                }
-                            } else if (bestMatchId) {
-                                HSLogger.debug(`No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, self.context);
-                            } else {
-                                HSLogger.debug(`No saved loadouts found to match.`, self.context);
+                            if (ambrosiaModule) {
+                                ambrosiaModule.performInitialActiveLoadoutMatch(saveData);
                             }
                         } catch (e) {
                             HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);
                         }
                     } else {
-                        HSLogger.debug(`No captured save data (mitm_atob_data is empty).`, self.context);
+                        HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
                     }
 
                     if (!self.#wasUsingGDS) {
                         // Wait for game state to settle and cleanup to take effect, then restore OFF state
                         setTimeout(() => {
                             self.disableGDS();
-                            HSLogger.debug("Cleanup done. GDS disabled (Restored state)", self.context);
+                            HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
                         }, 2000);
                     } else {
-                        HSLogger.debug("GDS remained enabled (Restored state)", self.context);
+                        HSLogger.debug(() => "GDS remained enabled (Restored state)", self.context);
                     }
                 } catch (e) {
                     HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
@@ -546,7 +851,15 @@ export class HSGameData extends HSModule {
         window.addEventListener('focus', focusHandler);
     }
 
-
+    // Not used anymore ? Useful to keep ?
+    /**
+     * Ensures that GDS is temporarily disabled during a singularity action
+     * (to avoid data sync issues or conflicts), then re-enabled after a short delay.
+     * It also prevents users from performing a singularity while a challenge is active
+     * or when the button is disabled.
+     * @param e MouseEvent from the singularity button or challenge button click.
+     * @returns Promise<void>
+     */
     async #singularityHandler(e: MouseEvent) {
         const target = e.target as HTMLElement;
 
@@ -615,10 +928,10 @@ export class HSGameData extends HSModule {
                     const gdsSetting = HSSettings.getSetting('useGameData') as HSSetting<boolean>;
 
                     if (gdsSetting && this.#wasUsingGDS && !gdsSetting.isEnabled()) {
-                        HSLogger.debug(`Re-enabled GDS`, this.context);
+                        HSLogger.debug(() => `Re-enabled GDS`, this.context);
                         gdsSetting.enable();
                     } else {
-                        HSLogger.debug(`GDS was already enabled (WoW fast!)`, this.context);
+                        HSLogger.debug(() => `GDS was already enabled (WoW fast!)`, this.context);
                     }
 
                     this.#wasUsingGDS = false;
@@ -627,113 +940,12 @@ export class HSGameData extends HSModule {
         }
     }
 
-    async disableGDS() {
-        const self = this;
-
-        if (this.#saveInterval) {
-            clearInterval(this.#saveInterval);
-            this.#saveInterval = undefined;
-        }
-
-        if (this.#fetchedDataRefreshInterval)
-            clearInterval(this.#fetchedDataRefreshInterval);
-
-        if (this.#campaignTokenRefreshInterval)
-            clearInterval(this.#campaignTokenRefreshInterval);
-
-        HSUI.removeInjectedStyle(HSGlobal.HSGameData.turboCSSId);
-
-        if (!this.#singularityButton)
-            this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
-
-        if (!this.#singularityChallengeButtons)
-            this.#singularityChallengeButtons = await HSElementHooker.HookElements('#singularityChallenges > div.singularityChallenges > div') as HTMLDivElement[];
-
-        if (!this.#importSaveButton)
-            this.#importSaveButton = await HSElementHooker.HookElement('#importFileButton') as HTMLLabelElement;
-
-        if (this.#singularityEventHandler) {
-            this.#singularityButton.removeEventListener('click', this.#singularityEventHandler, { capture: true });
-
-            this.#singularityChallengeButtons.forEach((btn) => {
-                btn.removeEventListener('click', self.#singularityEventHandler!, { capture: true });
-            });
-
-            this.#singularityEventHandler = undefined;
-        }
-
-        // We do NOT remove the loadFromFileEventHandler here.
-        // It must remain active to intercept save loads even when GDS is disabled.
-        // if (this.#loadFromFileEventHandler) {
-        //    this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
-        //    this.#loadFromFileEventHandler = undefined;
-        // }
-
-        HSLogger.info(`GDS turbo = OFF`, this.context);
-        this.#turboEnabled = false;
-    }
-
-    subscribeGameDataChange(callback: (data: PlayerData) => void): string | undefined {
-        const id = HSUtils.uuidv4();
-        this.#gameDataSubscribers.set(id, callback);
-        return id;
-    }
-
-    unsubscribeGameDataChange(id: string) {
-        if (this.#gameDataSubscribers.has(id)) {
-            this.#gameDataSubscribers.delete(id);
-        } else {
-            HSLogger.warn(`Could not unsubscribe from game data change. ID ${id} not found`, this.context);
-        }
-    }
-
-    #saveDataUpdated() {
-        if (this.#gameDataAPI && this.#saveData) {
-            this.#gameDataAPI._updateGameData(this.#saveData);
-        }
-
-        this.#gameDataSubscribers.forEach((callback) => {
-            if (this.#saveData) {
-                callback(this.#saveData);
-            } else {
-                HSLogger.debug(`Could not call game data change callback. No save data found`, this.context);
-            }
-        });
-
-        if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
-            // There's probably a better place to put this...
-            HSSettings.updateStrategyDropdownList();
-            this.#performInitialLoadoutMatch();
-            this.#hasPerformedInitialLoadoutMatch = true;
-        }
-    }
-
-    #pseudoDataUpdated() {
-        if (this.#gameDataAPI && this.#playerPseudoUpgrades) {
-            this.#gameDataAPI._updatePseudoData(this.#playerPseudoUpgrades);
-        }
-    }
-
-    #meDataUpdated() {
-        if (this.#gameDataAPI && this.#meBonuses) {
-            this.#gameDataAPI._updateMeData(this.#meBonuses);
-        }
-    }
-
-    #campaignDataUpdated() {
-        if (this.#gameDataAPI && this.#campaignData) {
-            this.#gameDataAPI._updateCampaignData(this.#campaignData);
-        }
-    }
-
-    #eventDataUpdated() {
-        if (this.#gameDataAPI && this.#gameEvents) {
-            this.#gameDataAPI._updateEventData(this.#gameEvents);
-        }
-    }
-
+    /**
+     * Refreshes campaign token data from the DOM and updates campaign state.
+     * @returns void
+     */
     #refreshCampaignTokens() {
-        HSLogger.debug(`Refreshing campaign data`, this.context);
+        // HSLogger.debug(() => `Refreshing campaign data`, this.context);
 
         if (!this.#campaignTokenElement) {
             const el = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
@@ -761,18 +973,55 @@ export class HSGameData extends HSModule {
         }
 
         if (this.#campaignData.isAtMaxTokens && this.#campaignTokenRefreshInterval) {
-            HSLogger.debug(`Dynamic clear of campaign token refresh interval, player is at max`, this.context);
+            HSLogger.debug(() => `Dynamic clear of campaign token refresh interval, player is at max`, this.context);
             clearInterval(this.#campaignTokenRefreshInterval);
         }
     }
 
-    #calculateLevelFromSave(upgradeName: keyof AmbrosiaUpgrades, invested: number, saveData: PlayerData): number {
+
+    // --- Subscription Management ---
+
+    /**
+     * Subscribes a callback to game data changes.
+     * @param callback Function to call when game data changes.
+     * @returns Subscription ID string or undefined.
+     */
+    subscribeGameDataChange(callback: (data: PlayerData) => void): string | undefined {
+        const id = HSUtils.uuidv4();
+        this.#gameDataSubscribers.set(id, callback);
+        return id;
+    }
+
+    /**
+     * Unsubscribes a callback from game data changes by ID.
+     * @param id Subscription ID to remove.
+     * @returns void
+     */
+    unsubscribeGameDataChange(id: string) {
+        if (this.#gameDataSubscribers.has(id)) {
+            this.#gameDataSubscribers.delete(id);
+        } else {
+            HSLogger.warn(`Could not unsubscribe from game data change. ID ${id} not found`, this.context);
+        }
+    }
+
+
+    // --- Ambrosia Loadouts Logic ---
+
+    /**
+     * Calculates the effective level of an Ambrosia upgrade based on invested amount and save data.
+     * @param upgradeName Name of the Ambrosia upgrade.
+     * @param invested Amount invested in the upgrade.
+     * @param saveData Player save data.
+     * @returns Calculated upgrade level as a number.
+     */
+    #calculateAmbUpgradeLevelFromSave(upgradeName: keyof AmbrosiaUpgrades, invested: number, saveData: PlayerData): number {
         if (!this.#gameDataAPI) return 0;
 
         const investmentParameters = ((this.#gameDataAPI.R_ambrosiaUpgradeCalculationCollection as AmbrosiaUpgradeCalculationCollection)[upgradeName]) as AmbrosiaUpgradeCalculationConfig<any>;
         if (!investmentParameters) return 0;
 
-        // Calculate purchased levels only; free levels are handled separately below.
+        // Calculate purchased levels only; free levels are handled separately.
         const level = this.#gameDataAPI.investToAmbrosiaUpgrade(
             0,
             invested,
@@ -781,76 +1030,5 @@ export class HSGameData extends HSModule {
             investmentParameters.costFunction
         );
         return level;
-    }
-
-    /* This function performs the initial loadout matching when the game is first loaded. */
-    #performInitialLoadoutMatch() {
-        const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-        if (ambrosiaModule && this.#saveData) {
-            // Reset active loadout
-            ambrosiaModule.resetActiveLoadout();
-
-            const { id: bestMatchId, score: highestScore } = this.#findBestMatchingAmbrosiaLoadout(this.#saveData);
-
-            const SIMILARITY_THRESHOLD = 0.8;
-
-            if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-                HSLogger.debug(`Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
-                ambrosiaModule.setActiveLoadout(parseInt(bestMatchId!), true);
-            } else if (bestMatchId) {
-                HSLogger.debug(`Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
-            } else {
-                HSLogger.debug(`Initial load - No saved loadouts found to match.`, this.context);
-            }
-        }
-    }
-
-    /* This function attempts to find the best matching saved Ambrosia loadout based on the player's current save data.
-       It compares the player's current Ambrosia upgrades with each saved loadout and calculates a similarity score.
-       The loadout with the highest similarity score is returned as the best match. */
-    #findBestMatchingAmbrosiaLoadout(saveData: PlayerData): { id: string | undefined, score: number } {
-        const currentUpgrades = saveData.ambrosiaUpgrades;
-        const savedLoadouts = saveData.blueberryLoadouts;
-
-        if (!currentUpgrades || !savedLoadouts) {
-            return { id: undefined, score: 0 };
-        }
-
-        let bestMatchId: string | undefined;
-        let highestScore = 0;
-
-        HSLogger.debug(`Analyzing save data... Found ${Object.keys(savedLoadouts).length} saved loadouts.`, this.context);
-
-        for (const [loadoutId, loadoutDef] of Object.entries(savedLoadouts)) {
-            if (!loadoutDef || Object.keys(loadoutDef).length === 0) continue;
-
-            let matches = 0;
-            let totalUpgrades = 0;
-            const upgrades = Object.entries(loadoutDef);
-
-            for (const [upgradeKey, savedLevel] of upgrades) {
-                if (upgradeKey === 'ambrosiaTutorial' || upgradeKey === 'ambrosiaPatreon') continue;
-
-                totalUpgrades++;
-
-                const currentLevelData = currentUpgrades[upgradeKey as keyof AmbrosiaUpgrades] as AmbrosiaUpgradeData;
-                const totalLevel = currentLevelData ? this.#calculateLevelFromSave(upgradeKey as keyof AmbrosiaUpgrades, currentLevelData.ambrosiaInvested, saveData) : 0;
-
-                if (totalLevel === savedLevel) {
-                    matches++;
-                }
-            }
-
-            const score = totalUpgrades > 0 ? (matches / totalUpgrades) : 0;
-
-            if (score > highestScore) {
-                highestScore = score;
-                bestMatchId = loadoutId;
-            }
-
-            if (score === 1) break;
-        }
-
-        return { id: bestMatchId, score: highestScore };
     }
 }

@@ -6,20 +6,21 @@ import { HSLogger } from "../hs-logger";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
-import { } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
+import { HSSettingsUI } from "./hs-settings-ui";
+import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSUI } from "../hs-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
-import { HSUI } from "../hs-ui";
-import { HSQuickbarManager } from '../../hs-modules/hs-quickbarManager';
-/*
-    Class: HSSettingActions
-    IsExplicitHSModule: No
-    Description: 
-        Helper wrapper for HSSettings.
-        Encapsulates SettingActions and their functionality.
-    Author: Swiffy
+
+/**
+ * Class: HSSettingActions
+ * IsExplicitHSModule: No
+ * Description: 
+ *     Helper wrapper for HSSettings.
+ *     Encapsulates SettingActions and their functionality.
+ * Author: Swiffy
 */
 export class HSSettingActions {
     // Record for SettingActions
@@ -44,12 +45,25 @@ export class HSSettingActions {
             }
         },
 
+        autoConfirmPopups: async (params: HSSettingActionParams) => {
+            if (params.disable && params.disable === true) {
+                (window as any).__HS_AUTO_CONFIRM = false;
+            } else {
+                // Auto validate pop-ups
+                (window as any).__HS_AUTO_CONFIRM = true;
+            }
+        },
+
         logTimestamp: async (params: HSSettingActionParams) => {
             if (params.disable && params.disable === true) {
                 HSLogger.setTimestampDisplay(false);
             } else {
                 HSLogger.setTimestampDisplay(true);
             }
+        },
+
+        showDebugLogs: async (params: HSSettingActionParams) => {
+            HSLogger.updateDebugEnabled();
         },
 
         reactiveMouseHover: async (params: HSSettingActionParams) => {
@@ -101,6 +115,10 @@ export class HSSettingActions {
             }
         },
 
+        hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
+            HSSettingsUI.applyHiddenVanillaTabsSetting();
+        },
+
         patch: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
@@ -136,7 +154,7 @@ export class HSSettingActions {
             }
         },
 
-        autoLoadout: async (params: HSSettingActionParams) => {
+        addTimeAutoLoadoutsAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
@@ -169,7 +187,6 @@ export class HSSettingActions {
                     await ambrosiaMod.enableIdleSwap();
                     newState = true;
                 }
-
             }
         },
 
@@ -188,11 +205,6 @@ export class HSSettingActions {
                     // Review mode: we stop autosing process but keep the modal visible
                     autosingMod.stopAutosing({ showReviewModal: true });
                 } else {
-                    // Auto-enable GDS if not already enabled, and start autosing
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
-                    }
                     await autosingMod.enableAutoSing();
                 }
             }
@@ -205,33 +217,48 @@ export class HSSettingActions {
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.editSelectedStrategy();
+            await HSSettingsUI.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.deleteSelectedStrategy();
+            await HSSettingsUI.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.exportSelectedStrategy();
+            await HSSettingsUI.exportSelectedStrategy();
         },
 
         migrateAndSaveAllUserStrategies: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.migrateAndSaveAllUserStrategies();
+            const result = HSStrategyManager.migrateAndSaveAllUserStrategies(context);
+            if (!result.success) {
+                if (result.invalidStrategies.length > 0) {
+                    const firstFew = result.invalidStrategies.slice(0, 3).join(', ');
+                    const more = result.invalidStrategies.length > 3 ? ` (+${result.invalidStrategies.length - 3} more)` : '';
+                    HSUI.Notify( `Migrate&Save aborted: some strategies are not strictly old/new ID state. Fix and retry. ${firstFew}${more}`, { notificationType: "error" } );
+                } else {
+                    HSUI.Notify("Failed to save migrated strategies to localStorage", { notificationType: "error" });
+                }
+                HSLogger.warn(`Migrate&Save failed`, context);
+                return;
+            }
+
+            HSSettingsUI.updateStrategyDropdownList();
+            HSUI.Notify(`Migrate&Save done: scanned ${result.totalStrategies}, saved ${result.userStrategies.length} user strategies, migrated ${result.migratedStrategies} to OLD ids, dropped ${result.droppedDefaults} defaults from localStorage.`, { notificationType: "success" });
+            HSLogger.log(`Migrate&Save completed (scanned=${result.totalStrategies}, saved=${result.userStrategies.length}, migrated=${result.migratedStrategies} to OLD ids, dropped ${result.droppedDefaults} defaults from localStorage.`, context);
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
-            await HSSettings.importStrategy();
+            await HSSettingsUI.importStrategy();
         },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
-                qolButtonsMod.setGQButtonsVisibility();
+                qolButtonsMod.setMaxedGQUpgradesVisibility();
             }
         },
 
@@ -239,7 +266,7 @@ export class HSSettingActions {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
-                qolButtonsMod.setOctButtonsVisibility();
+                qolButtonsMod.setMaxedOctUpgradesVisibility();
             }
         },
 
@@ -267,8 +294,28 @@ export class HSSettingActions {
             }
         },
 
-        eventQuickBarAction: async (params: HSSettingActionParams) => {
-            /* to  do */
+        enableEventsQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.disableEventsQuickbar();
+            } else {
+                qolButtonsMod.enableEventsQuickbar();
+            }
+        },
+
+        enableCorruptionQuickBarAction: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
+            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
+            if (!qolButtonsMod) return;
+
+            if (params.disable && params.disable === true) {
+                qolButtonsMod.disableCorruptionQuickbar();
+            } else {
+                qolButtonsMod.enableCorruptionQuickbar();
+            }
         }
     }
 

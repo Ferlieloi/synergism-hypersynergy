@@ -1,7 +1,3 @@
-// HSAutosingExportManager.ts
-// Handles export logic for autosing data (CSV, etc.)
-// To be filled in next steps
-
 import { decompressFromUTF16 } from 'lz-string';
 import type { HSAutosingDB } from './hs-autosingDB';
 
@@ -16,15 +12,21 @@ export interface SingularityBundle {
 }
 
 /**
- * Handles export logic for autosing data (CSV, etc.).
- * Encapsulates all export-related UI and data operations.
+ * Class: HSAutosingExportManager
+ * IsExplicitHSModule: No
+ * Description:
+ *     Manages the export of autosing data, including UI state and CSV generation.
+ *     - Updates export button state based on data availability and settings.
+ *     - Exports all autosing data as a CSV file, including dynamic phase columns.
+ *     - Handles batch flushing and bundle decompression for export.
+ * Author: XxMolkxX
  */
 export class HSAutosingExportManager {
-    private db: HSAutosingDB;
-    private getCompressedBundles: () => string[];
-    private exportButton: HTMLButtonElement | null;
-    private getAdvancedDataCollectionEnabled: () => boolean;
-    private getSingularityBundlesCount: () => number;
+    #db: HSAutosingDB;
+    #getCompressedBundles: () => string[];
+    #exportButton: HTMLButtonElement | null;
+    #getAdvancedDataCollectionEnabled: () => boolean;
+    #getSingularityBundlesCount: () => number;
 
     /**
      * Constructs a new export manager.
@@ -37,11 +39,11 @@ export class HSAutosingExportManager {
         getAdvancedDataCollectionEnabled: () => boolean,
         getSingularityBundlesCount: () => number
     }) {
-        this.db = options.db;
-        this.getCompressedBundles = options.getCompressedBundles;
-        this.exportButton = options.exportButton;
-        this.getAdvancedDataCollectionEnabled = options.getAdvancedDataCollectionEnabled;
-        this.getSingularityBundlesCount = options.getSingularityBundlesCount;
+        this.#db = options.db;
+        this.#getCompressedBundles = options.getCompressedBundles;
+        this.#exportButton = options.exportButton;
+        this.#getAdvancedDataCollectionEnabled = options.getAdvancedDataCollectionEnabled;
+        this.#getSingularityBundlesCount = options.getSingularityBundlesCount;
     }
 
     /**
@@ -49,16 +51,16 @@ export class HSAutosingExportManager {
      * Disables or hides the button if export is not possible.
      */
     public updateExportButton(): void {
-        if (!this.exportButton) return;
-        const isEnabled = this.getAdvancedDataCollectionEnabled();
-        const hasData = this.getCompressedBundles().length > 0;
+        if (!this.#exportButton) return;
+        const isEnabled = this.#getAdvancedDataCollectionEnabled();
+        const hasData = this.#getCompressedBundles().length > 0;
         const visible = isEnabled;
-        this.exportButton.style.display = visible ? 'block' : 'none';
+        this.#exportButton.style.display = visible ? 'block' : 'none';
         if (visible) {
-            this.exportButton.disabled = !hasData;
-            this.exportButton.style.opacity = hasData ? '1' : '0.5';
-            this.exportButton.textContent = hasData
-                ? `📊 Export Data (${this.getSingularityBundlesCount()} singularities)`
+            this.#exportButton.disabled = !hasData;
+            this.#exportButton.style.opacity = hasData ? '1' : '0.5';
+            this.#exportButton.textContent = hasData
+                ? `📊 Export Data (${this.#getSingularityBundlesCount()} singularities)`
                 : '📊 No Data to Export';
         }
     }
@@ -73,12 +75,12 @@ export class HSAutosingExportManager {
         compressToUTF16: (input: string) => string,
         decompressFromUTF16: (input: string) => string
     ): void {
-        if (!this.getAdvancedDataCollectionEnabled()) {
+        if (!this.#getAdvancedDataCollectionEnabled()) {
             alert('No data to export');
             return;
         }
-        this.db.flushBatch(compressToUTF16).then(() => {
-            const compressedBundles = this.getCompressedBundles();
+        this.#db.flushBatch(compressToUTF16).then(() => {
+            const compressedBundles = this.#getCompressedBundles();
             const localBundles: SingularityBundle[] = [];
             for (const compressed of compressedBundles) {
                 const batch: SingularityBundle[] = JSON.parse(decompressFromUTF16(compressed));
@@ -121,6 +123,7 @@ export class HSAutosingExportManager {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         });
     }
 }

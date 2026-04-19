@@ -1,13 +1,13 @@
 import { HSExternalModuleKind, HSExternalModuleOptions, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
 import { HSLogger } from "../hs-logger";
 
-/*
-    Class: HSModule
-    IsExplicitHSModule: No
-    Description: 
-        Abstract class which all (explicit) Hypersynergism modules should extend
-    Author: Swiffy
-*/
+/**
+ * Class: HSModule
+ * IsExplicitHSModule: No
+ * Description:
+ *     Abstract class which all (explicit) Hypersynergism modules should extend
+ * Author: Swiffy
+ */
 export abstract class HSModule {
     protected moduleName : string;
     protected context : string;
@@ -53,7 +53,7 @@ export class HSExternalModule extends HSModule {
 
     async #loadScript() {
         if(!this.#moduleScriptUrl) {
-            HSLogger.error(`Could not load script for ext module ${this.moduleName} - script url missing`);
+            HSLogger.error(`Could not load script for ext module ${this.moduleName} - script url missing`, this.context);
             return;
         }
 
@@ -71,7 +71,7 @@ export class HSExternalModule extends HSModule {
 
     async #loadCSS() {
         if(!this.#moduleCSSUrl) {
-            HSLogger.error(`Could not load CSS for ext module ${this.moduleName} - css url missing`);
+            HSLogger.error(`Could not load CSS for ext module ${this.moduleName} - css url missing`, this.context);
             return;
         }
 
@@ -89,7 +89,7 @@ export class HSExternalModule extends HSModule {
 
     async init() : Promise<void> {
         if(this.#scriptContext in window) {
-            HSLogger.error(`Could not load ext module ${this.getName} - import conflict in window`);
+            HSLogger.error(`Could not load ext module ${this.getName} - import conflict in window`, this.context);
             return;
         }
         

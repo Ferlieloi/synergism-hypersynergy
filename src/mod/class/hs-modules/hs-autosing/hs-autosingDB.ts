@@ -1,13 +1,15 @@
 /**
- * HSAutosingDB
- * Dedicated class for handling IndexedDB operations for the autosing module.
+ * Class: HSAutosingDB
+ * IsExplicitHSModule: No
+ * Description: Dedicated class for handling IndexedDB operations for the autosing module.
+ * Author: XxMolkxX
  */
 export class HSAutosingDB {
-    private dbName: string;
-    private storeName: string;
-    private db: IDBDatabase | null = null;
-    private batchSize: number;
-    private currentBatch: any[] = [];
+    #dbName: string;
+    #storeName: string;
+    #db: IDBDatabase | null = null;
+    #batchSize: number;
+    #currentBatch: any[] = [];
 
     /**
      * Create a new HSAutosingDB instance.
@@ -16,9 +18,9 @@ export class HSAutosingDB {
      * @param batchSize Number of bundles per batch (default 10)
      */
     constructor(dbName: string, storeName: string, batchSize: number = 10) {
-        this.dbName = dbName;
-        this.storeName = storeName;
-        this.batchSize = batchSize;
+        this.#dbName = dbName;
+        this.#storeName = storeName;
+        this.#batchSize = batchSize;
     }
 
     /**
@@ -28,11 +30,11 @@ export class HSAutosingDB {
      * @returns Promise that resolves when the batch is flushed (if needed)
      */
     public async addBundle(bundle: any, compressFn: (input: string) => string): Promise<void> {
-        this.currentBatch.push(bundle);
-        if (this.currentBatch.length >= this.batchSize) {
-            const compressed = compressFn(JSON.stringify(this.currentBatch));
+        this.#currentBatch.push(bundle);
+        if (this.#currentBatch.length >= this.#batchSize) {
+            const compressed = compressFn(JSON.stringify(this.#currentBatch));
             await this.storeBundle(compressed);
-            this.currentBatch = [];
+            this.#currentBatch = [];
         }
     }
 
@@ -42,10 +44,10 @@ export class HSAutosingDB {
      * @returns Promise that resolves when the batch is flushed
      */
     public async flushBatch(compressFn: (input: string) => string): Promise<void> {
-        if (this.currentBatch.length > 0) {
-            const compressed = compressFn(JSON.stringify(this.currentBatch));
+        if (this.#currentBatch.length > 0) {
+            const compressed = compressFn(JSON.stringify(this.#currentBatch));
             await this.storeBundle(compressed);
-            this.currentBatch = [];
+            this.#currentBatch = [];
         }
     }
 
@@ -54,20 +56,21 @@ export class HSAutosingDB {
      * @returns Promise that resolves to the opened IDBDatabase instance.
      */
     public async open(): Promise<IDBDatabase> {
+        if (this.#db) return this.#db;
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, 1);
+            const request = indexedDB.open(this.#dbName, 1);
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                if (!db.objectStoreNames.contains(this.#storeName)) {
+                    db.createObjectStore(this.#storeName, { keyPath: 'id', autoIncrement: true });
                 }
             };
             request.onsuccess = (event) => {
-                this.db = (event.target as IDBOpenDBRequest).result;
-                resolve(this.db);
+                this.#db = (event.target as IDBOpenDBRequest).result;
+                resolve(this.#db);
             };
             request.onerror = (event) => {
-                reject(event.target);
+                reject((event.target as IDBOpenDBRequest).error);
             };
         });
     }
@@ -79,8 +82,8 @@ export class HSAutosingDB {
      */
     public async storeBundle(compressedBundle: string): Promise<void> {
         const db = await this.open();
-        const transaction = db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
+        const transaction = db.transaction([this.#storeName], 'readwrite');
+        const store = transaction.objectStore(this.#storeName);
         store.add({ data: compressedBundle, timestamp: Date.now() });
         return new Promise((resolve, reject) => {
             transaction.oncomplete = () => resolve();
@@ -94,8 +97,8 @@ export class HSAutosingDB {
      */
     public async loadBundles(): Promise<string[]> {
         const db = await this.open();
-        const transaction = db.transaction([this.storeName], 'readonly');
-        const store = transaction.objectStore(this.storeName);
+        const transaction = db.transaction([this.#storeName], 'readonly');
+        const store = transaction.objectStore(this.#storeName);
         const request = store.getAll();
         return new Promise((resolve, reject) => {
             request.onsuccess = () => {
@@ -112,8 +115,8 @@ export class HSAutosingDB {
      */
     public async clearBundles(): Promise<void> {
         const db = await this.open();
-        const transaction = db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
+        const transaction = db.transaction([this.#storeName], 'readwrite');
+        const store = transaction.objectStore(this.#storeName);
         store.clear();
         return new Promise((resolve, reject) => {
             transaction.oncomplete = () => resolve();

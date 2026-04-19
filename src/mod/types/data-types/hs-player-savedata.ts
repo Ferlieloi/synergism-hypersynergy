@@ -385,7 +385,7 @@ export class CorruptionLoadout {
         illiteracy: 0,
         recession: 0,
         dilation: 0,
-        hyperchallenge: 0
+        hyperchallenge: 0,
     }
 }
 
@@ -405,8 +405,8 @@ export interface CorruptionSaves {
  * Contains the current, next, and saved corruption states.
  */
 export interface Corruptions {
-    used: CorruptionLoadout;
-    next: CorruptionLoadout;
+    used: CorruptionLevels;
+    next: CorruptionLevels;
     saves: CorruptionSaves;
     showStats: boolean;
 }

@@ -31,8 +31,3 @@
     border-radius: 0px;
     transition: width 0.4s ease;
 }
-
-#hs-blue-progress-text,
-#hs-red-progress-text {
-    display: none;
-}

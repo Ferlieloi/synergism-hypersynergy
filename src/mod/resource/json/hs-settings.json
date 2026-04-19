@@ -37,12 +37,75 @@
     "settingDescription": "Suppress cost protection logs",
     "settingHelpText": "Check this if you want to suppress the rather spammy cost protection notifications in the log",
     "settingType": "boolean",
-    "enabled": false,
+    "enabled": true,
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "hepteracts",
       "controlPage": "hepteract",
       "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
+    }
+  },
+  "autoConfirmPopups": {
+    "settingName": "autoConfirmPopups",
+    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
+    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "autoConfirmPopups",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-auto-confirm-btn"
+    }
+  },
+  "hiddenVanillaTabs": {
+    "settingName": "hiddenVanillaTabs",
+    "settingDescription": "Hide vanilla tabs",
+    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row (Ctrl+click to select multiple).",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": [],
+    "settingAction": "hiddenVanillaTabsAction",
+    "settingControl": {
+      "controlId": "hs-setting-hidden-vanilla-tabs",
+      "controlType": "select",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "props": {
+        "multiple": "multiple",
+        "size": "8"
+      },
+      "selectOptions": [
+        { "text": "(none)", "value": "" },
+        { "text": "Buildings", "value": "buildingstab" },
+        { "text": "Upgrades", "value": "upgradestab" },
+        { "text": "Achievements", "value": "achievementstab" },
+        { "text": "Runes", "value": "runestab" },
+        { "text": "Research", "value": "researchtab" },
+        { "text": "Ant Hill", "value": "anttab" },
+        { "text": "Campaign", "value": "campaigntab" },
+        { "text": "Shop", "value": "shoptab" },
+        { "text": "Events", "value": "eventtab" },
+        { "text": "PseudoCoins", "value": "pseudoCoinstab" }
+      ]
+    }
+  },
+  "patch_shopItemNameMapping": {
+    "settingName": "patch_shopItemNameMapping",
+    "settingDescription": "Display shop item names",
+    "settingHelpText": "Populates the shop items with their names.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "ShopItemNameMapping"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-patch-shopnames-btn"
     }
   },
   "syncNotificationOpacity": {
@@ -64,23 +127,6 @@
         "max": 1,
         "step": 0.05
       }
-    }
-  },
-  "patch_shopItemNameMapping": {
-    "settingName": "patch_shopItemNameMapping",
-    "settingDescription": "Display shop item names",
-    "settingHelpText": "Populates the shop items with their names.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "patch",
-    "patchConfig": {
-      "patchName": "ShopItemNameMapping"
-    },
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ui",
-      "controlPage": "ui",
-      "controlEnabledId": "hs-setting-patch-shopnames-btn"
     }
   },
   "reactiveMouseHover": {
@@ -160,7 +206,7 @@
     "settingDescription": "Auto disable on error",
     "settingHelpText": "When enabled, the mod will automatically disable game data sniffing if an error occurs. Recommended to be enabled as reading game data is not always reliable.",
     "settingType": "boolean",
-    "enabled": true,
+    "enabled": false,
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "gamedata",
@@ -168,38 +214,24 @@
       "controlEnabledId": "hs-setting-stop-sniff-on-error-btn"
     }
   },
-  "autoLoadout": {
-    "settingName": "autoLoadout",
+  "addTimeAutoLoadouts": {
+    "settingName": "addTimeAutoLoadouts",
     "settingDescription": "Add+Time Amb loadouts auto-switch",
     "settingHelpText": "When enabled, the mod will automatically switch to configured ambrosia loadouts when ADD or TIME buttons are clicked.",
     "settingType": "boolean",
     "enabled": false,
-    "settingAction": "autoLoadout",
+    "settingAction": "addTimeAutoLoadoutsAction",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "ambrosia",
       "controlPage": "ambrosia",
-      "controlEnabledId": "hs-setting-auto-loadout-btn"
-    }
-  },
-  "autoLoadoutState": {
-    "settingName": "autoLoadoutState",
-    "settingDescription": "Current loadout state",
-    "settingHelpText": "This shows if the mod is aware of your current loadout state. If the state is Unknown, auto loadout switch will not work. To fix this, open the ambrosia menu and switch to any loadout.",
-    "settingType": "state",
-    "settingValue": "\u003cred\u003eUnknown\u003c/red\u003e",
-    "enabled": true,
-    "settingControl": {
-      "controlId": "hs-setting-auto-loadout-state-value",
-      "controlType": "state",
-      "controlGroup": "ambrosia",
-      "controlPage": "ambrosia"
+      "controlEnabledId": "hs-setting-add-time-auto-loadouts-btn"
     }
   },
   "autoLoadoutAdd": {
     "settingName": "autoLoadoutAdd",
     "settingDescription": "ADD Loadout",
-    "settingHelpText": "Configures to loadout to use when ADD button is clicked.",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the ADD button is clicked.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -283,7 +315,7 @@
   "autoLoadoutTime": {
     "settingName": "autoLoadoutTime",
     "settingDescription": "TIME loadout",
-    "settingHelpText": "Configures to loadout to use when TIME button is clicked.",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the TIME button is clicked.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -637,7 +669,8 @@
     "settingHelpText": "When enabled, the mod will automatically perform singularities.",
     "settingType": "boolean",
     "enabled": false,
-    "usesGameData": true,
+    "usesGameData": false,
+    "skipInit": false,
     "settingAction": "startAutosingAction",
     "settingControl": {
       "controlType": "switch",
@@ -1331,18 +1364,32 @@
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
     }
   },
-  "eventQuickBar": {
-    "settingName": "eventQuickBar",
-    "settingDescription": "Event quick bar",
-    "settingHelpText": "When enabled, shows a bell icon in the header during events.",
+  "enableCorruptionQuickBar": {
+    "settingName": "enableCorruptionQuickBar",
+    "settingDescription": "Corruption quick bar",
+    "settingHelpText": "When enabled, shows corruption loadout buttons in the header for quick loading.",
     "settingType": "boolean",
-    "enabled": false,
-    "settingAction": "eventQuickBarAction",
+    "enabled": true,
+    "settingAction": "enableCorruptionQuickBarAction",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-enable-event-quickbar-btn"
+      "controlEnabledId": "hs-setting-qol-enable-corruption-quickbar-btn"
+    }
+  },
+  "enableEventsQuickBar": {
+    "settingName": "enableEventsQuickBar",
+    "settingDescription": "Events quick bar",
+    "settingHelpText": "When enabled, shows HH/Lotus in the header during events.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableEventsQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
     }
   },
   "hideMaxedGQUpgrades": {
@@ -1527,6 +1574,7 @@
     "settingHelpText": "Controls whether \u0027debug\u0027 type logs are visible or not in the mod\u0027s log view.",
     "settingType": "boolean",
     "enabled": false,
+    "settingAction": "showDebugLogs",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "debug",
@@ -1651,7 +1699,7 @@
       "controlOptions": {
         "min": 0,
         "max": 1000000,
-        "step": 0.001
+        "step": 0.01
       }
     }
   },
@@ -1670,7 +1718,7 @@
       "controlOptions": {
         "min": 0,
         "max": 1000000,
-        "step": 0.001
+        "step": 0.01
       }
     }
   },
@@ -1689,7 +1737,7 @@
       "controlOptions": {
         "min": 0,
         "max": 1000000,
-        "step": 0.001
+        "step": 0.01
       }
     }
   }

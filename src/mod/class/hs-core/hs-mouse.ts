@@ -7,6 +7,12 @@ import { HSModule } from "./module/hs-module";
 import { HSSetting } from "./settings/hs-setting";
 import { HSSettings } from "./settings/hs-settings";
 
+/**
+ *  Class: HSMouse
+ *  IsExplicitHSModule: Yes
+ *  Description: Module for capturing and handling mouse events.
+ *  Author: Swiffy
+ */
 export class HSMouse extends HSModule {
 
     static #staticContext = '';
