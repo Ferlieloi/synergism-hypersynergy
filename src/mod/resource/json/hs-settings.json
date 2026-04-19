@@ -379,15 +379,15 @@
       "controlEnabledId": "hs-setting-ambrosia-idle-swap-btn"
     }
   },
-  "ambrosiaIdleSwapNormalLoadout": {
-    "settingName": "ambrosiaIdleSwapNormalLoadout",
-    "settingDescription": "Normal loadout",
-    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when ambrosia bar is not full.",
+  "ambrosiaIdleSwapOcteractLoadout": {
+    "settingName": "ambrosiaIdleSwapOcteractLoadout",
+    "settingDescription": "Octeract + Bar Points loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when ambrosia bars are not close to full.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
     "settingControl": {
-      "controlId": "hs-setting-idle-swap-normal-loadout-value",
+      "controlId": "hs-setting-idle-swap-octeract-loadout-value",
       "controlType": "select",
       "controlGroup": "ambrosia2",
       "controlPage": "ambrosia",
@@ -463,15 +463,99 @@
       ]
     }
   },
-  "ambrosiaIdleSwap100Loadout": {
-    "settingName": "ambrosiaIdleSwap100Loadout",
-    "settingDescription": "100% loadout",
-    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when ambrosia bar is about to hit 100%.",
+  "ambrosiaIdleSwapNormalLuckLoadout": {
+    "settingName": "ambrosiaIdleSwapNormalLuckLoadout",
+    "settingDescription": "Normal Luck loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when normal ambrosia bar is about to hit 100%.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
     "settingControl": {
-      "controlId": "hs-setting-idle-swap-100-loadout-value",
+      "controlId": "hs-setting-idle-swap-normal-luck-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia2",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "ambrosiaIdleSwapRedLuckLoadout": {
+    "settingName": "ambrosiaIdleSwapRedLuckLoadout",
+    "settingDescription": "Red Luck loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when red ambrosia bar is about to hit 100%.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-idle-swap-red-luck-loadout-value",
       "controlType": "select",
       "controlGroup": "ambrosia2",
       "controlPage": "ambrosia",
