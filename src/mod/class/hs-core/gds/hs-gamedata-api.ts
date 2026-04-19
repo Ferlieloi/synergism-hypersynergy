@@ -5260,18 +5260,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions
         const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
+        const brickOfLeadMult = 1 / (1 - (data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested / 10) ** (1 / 3) / 50)
 
         val *= acceleratorMult;
-        val = Math.ceil(val);
+        val *= brickOfLeadMult;
+        if (data.lifetimeAmbrosia >= 10000) {
+        const extraScalingPower = Math.log10(4)
+          val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower)
+          val = Math.ceil(val);
+        }
 
-        const thresholds = this.R_calculateNumberOfThresholds();
-        const thresholdBase = 2;
+        this.#updateCache(cacheName, { value: val, cachedBy: calculationVars });
 
-        const reduced = Math.pow(thresholdBase, thresholds) * val;
-
-        this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
-
-        return reduced;
+        return val;
     }
 
     // https://github.com/Pseudo-Corp/SynergismOfficial/blob/0ffbd184938677cf8137a404cffb2f4b5b5d3ab9/src/Calculate.ts
