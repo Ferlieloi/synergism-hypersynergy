@@ -969,9 +969,19 @@ export class HSAmbrosia extends HSModule
                 throw new Error('Import input element not found');
             }
 
-            if (!modeToggle) {
-                throw new Error('Mode toggle button not found');
-            }
+            if (this.#isIdleSwapEnabled) {
+                if (this.#blueAmbrosiaProgressBar && this.#redAmbrosiaProgressBar) {
+                    const idleSwapOcteractSetting = HSSettings.getSetting('ambrosiaIdleSwapOcteractLoadout') as HSSelectStringSetting;
+                    const idleSwapNormalLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapNormalLuckLoadout') as HSSelectStringSetting;
+                    const idleSwapRedLuckSetting = HSSettings.getSetting('ambrosiaIdleSwapRedLuckLoadout') as HSSelectStringSetting;
+
+                    if (idleSwapOcteractSetting && idleSwapNormalLuckSetting && idleSwapRedLuckSetting) {
+                        const octeractLoadoutValue = idleSwapOcteractSetting.getValue();
+                        const normalLuckLoadoutValue = idleSwapNormalLuckSetting.getValue();
+                        const redLuckLoadoutValue = idleSwapRedLuckSetting.getValue();
+
+                        if (!Number.isInteger(parseInt(octeractLoadoutValue, 10)) || !Number.isInteger(parseInt(normalLuckLoadoutValue, 10)) || !Number.isInteger(parseInt(redLuckLoadoutValue, 10))) {
+                            const idleSwapSetting = HSSettings.getSetting("ambrosiaIdleSwap") as HSSetting<boolean>;
 
             // Check if we're in SAVE mode and switch to LOAD mode
             const currentMode = modeToggle.innerText;

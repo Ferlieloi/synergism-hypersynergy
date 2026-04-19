@@ -2116,6 +2116,74 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             },
             extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
 
+        },
+
+        ambrosiaBrickOfLead: {
+            costPerLevel: 10,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 3) - Math.pow(n, 3)),
+            effects: (n: number) => {
+                return {
+                    barRequirementMult: 1 / (1 - n / 50),
+                    additiveLuckMult: n / 50,
+                    singularitySpeedMult: 1 - n / 100
+                }
+            },
+            extraLevelCalc: () => 0,
+
+        },
+        ambrosiaFreeLuckUpgrades: {
+            costPerLevel: 5000,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n: number) => {
+                return {
+                    freeLuckUpgrades: n
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+
+        },
+        ambrosiaFreeGenerationUpgrades: {
+            costPerLevel: 5000,
+            maxLevel: 3,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(10, n + 1) - Math.pow(10, n)),
+            effects: (n: number) => {
+                return {
+                    freeGenerationUpgrades: n
+                }
+            },
+            extraLevelCalc: () => 0,
+
+        },
+        ambrosiaFreeRedLuckUpgrades: {
+            costPerLevel: 20000,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n: number) => {
+                return {
+                    freeRedLuckUpgrades: n
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+
+        },
+        ambrosiaFreeQuarkUpgrades: {
+            costPerLevel: 25000,
+            maxLevel: 10,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 3) - Math.pow(n, 3)),
+            effects: (n: number) => {
+                return {
+                    freeQuarkUpgrades: n / 10
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+
         }
     }
 
@@ -5256,22 +5324,22 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (cached !== undefined) return cached;
 
         let val = timePerAmbrosia;
-        val += Math.floor(data.lifetimeAmbrosia / 300)
+        val += Math.floor((data.lifetimeAmbrosia / 300))
 
-        const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions
-        const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
+        const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions;
+        const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator;
+        const brickOfLeadMult = this.R_getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
 
         val *= acceleratorMult;
-        val = Math.ceil(val);
+        val *= brickOfLeadMult;
 
-        const thresholds = this.R_calculateNumberOfThresholds();
-        const thresholdBase = 2;
-
-        const reduced = Math.pow(thresholdBase, thresholds) * val;
-
-        this.#updateCache(cacheName, { value: reduced, cachedBy: calculationVars });
-
-        return reduced;
+        if (data.lifetimeAmbrosia >= 10000) {
+            const extraScalingPower = Math.log10(4)
+            val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower)
+            return Math.ceil(val)
+        } else {
+            return val
+        }
     }
 
     // https://github.com/Pseudo-Corp/SynergismOfficial/blob/0ffbd184938677cf8137a404cffb2f4b5b5d3ab9/src/Calculate.ts
