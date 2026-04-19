@@ -466,7 +466,7 @@
         } catch (e) {
             warn('Error while patching applyCorruptions', e);
         }
-
+/*
         // ==================================================================================
         // ── TELEPORT LOWER PATCH — expose a dialog-free singularityCount setter
         // When autosing teleports lower, teleportToSingularity only sets player.singularityCount = target,
@@ -488,7 +488,7 @@
                         `\nif(!window.__HS_TELEPORT_LOWER_EXPOSED){` +
                             `window.__HS_teleportLower=(t)=>{` +
                                 `n.singularityCount=t;` +
-                                `za();` +
+                                `Va();` +
                             `};` +
                             `window.__HS_TELEPORT_LOWER_EXPOSED=true;` +
                             `console.log('[HS-PATCH] \u2705 teleportLower exposed');` +
@@ -557,7 +557,7 @@
         } catch (e) {
             warn('Error while patching enterExalt/exitExalt', e);
         }
-
+*/
         // ==================================================================================
 
         log(`Patch complete — waiting for DOM to be ready before injecting bundle`);
@@ -618,22 +618,23 @@
     // ─── Phase 3 helper: expose __HS_BACKDOOR__ for external diagnostics ──────
     function initBackdoor() {
         const s = document.createElement('script');
-        s.textContent = `
-window.__HS_BACKDOOR__ = {
-    get exposed() {
-        return {
-            synergismStage:      typeof window.__HS_synergismStage,
-            DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,
-            i18next:             typeof window.__HS_i18next,
-            exportData:          typeof window.__HS_exportData,
-            getMaxChallenges:    typeof window.__HS_getMaxChallenges,
-            applyCorruptions:    typeof window.__HS_applyCorruptions,
-            teleportLower:       typeof window.__HS_teleportLower,
-            enterExalt:          typeof window.__HS_enterExalt,
-            exitExalt:           typeof window.__HS_exitExalt,
-            tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'};
-    }
-};`;
+        s.textContent = 
+            `window.__HS_BACKDOOR__ = {` +
+                `get exposed() {` +
+                    `return {` +
+                        `synergismStage:      typeof window.__HS_synergismStage,` +
+                        `DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,` +
+                        `i18next:             typeof window.__HS_i18next,` +
+                        `exportData:          typeof window.__HS_exportData,` +
+                        `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
+                        `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
+                    //  `teleportLower:       typeof window.__HS_teleportLower,` +
+                    //  `enterExalt:          typeof window.__HS_enterExalt,` +
+                    //  `exitExalt:           typeof window.__HS_exitExalt,` +
+                        `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
+                    `};` +
+                `}` +
+            `};`;
         (document.head || document.documentElement).appendChild(s);
         log('Backdoor ready');
     }

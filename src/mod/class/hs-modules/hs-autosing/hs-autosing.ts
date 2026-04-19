@@ -148,9 +148,9 @@ export class HSAutosing extends HSModule {
     #stageFunc?: (arg0: number) => any;
     #getMaxChallengesFunc?: (i: number) => number;
     #applyCorruptionsFunc?: (json: string) => boolean;
-    #enterExaltFunc?: () => void;
-    #exitExaltFunc?: () => void;
-    #teleportLowerFunc?: (target: number) => void;
+//  #enterExaltFunc?: () => void;
+//  #exitExaltFunc?: () => void;
+//  #teleportLowerFunc?: (target: number) => void;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -425,22 +425,24 @@ export class HSAutosing extends HSModule {
         this.#exportBtnClone = this.#exportBtn ? (this.#exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
         if (this.#exportBtnClone && (window as any).__HS_EXPORT_EXPOSED)
             this.#setupExportButtonClone();
-        
+
+        this.#exposedPlayer         = HSGlobal.exposedPlayer                    ?? null;
         this.#stageFunc             = (window as any).__HS_synergismStage       ?? null;
         this.#getMaxChallengesFunc  = (window as any).__HS_getMaxChallenges     ?? null;
-        this.#exposedPlayer         = HSGlobal.exposedPlayer                    ?? null;
         const isAutoConfirmPatched  = (window as any).__HS_AUTO_CONFIRM_PATCHED ?? false;
         const isAfterTackHooked     = HSUtils.cacheAfterTackHook();
-        
-        // Slow path if __HS_AUTO_CONFIRM is not available
+
+        // We need either __HS_AUTO_CONFIRM or startDialogWatcher
         if (!isAutoConfirmPatched) HSUtils.startDialogWatcher();
 
+        /*
         const needsCorruptions = !this.#applyCorruptionsFunc;
         const needsTeleport    = !this.#teleportLowerFunc;
         const needsExalt       = !this.#enterExaltFunc || !this.#exitExaltFunc;
 
+        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsTeleport: ${needsTeleport}, needsExalt: ${needsExalt}`, this.context);
         if (needsCorruptions || needsTeleport || needsExalt) {
-            HSLogger.debug(() => 'Triggering late-exposed patches...', this.context);
+            HSLogger.debug(() => 'Triggering late patches...', this.context);
             const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
 
             // Calling applyCorruptions via setCorruptions exposes window.__HS_applyCorruptions.
@@ -453,22 +455,26 @@ export class HSAutosing extends HSModule {
             // Clicking the elevator teleport button calls teleportToSingularity, which exposes
             // window.__HS_teleportLower at the start of its body before any dialog.
             if (needsTeleport) {
-                this.#elevatorInput.value = this.#targetSingularity.toString();
-                this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
                 this.#elevatorTeleportButton.click();
             }
             prevMainView.goto();
         }
+        */
+
+        // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
+        await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
         // Read all four: they should now be set on window.
+    //  this.#teleportLowerFunc    = (window as any).__HS_teleportLower    ?? null;
+    //  this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
+    //  this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
         this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
-        this.#teleportLowerFunc    = (window as any).__HS_teleportLower    ?? null;
-        this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
-        this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
         this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
 
-        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked
-                                    && this.#applyCorruptionsFunc && this.#teleportLowerFunc && this.#enterExaltFunc && this.#exitExaltFunc);
+        this.#isExposureReady = 
+            !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc 
+                // && this.#teleportLowerFunc && this.#enterExaltFunc && this.#exitExaltFunc
+            );
 
         const exposureMsg = `Exposure status:
             stageFunc: ${!!this.#stageFunc},
@@ -476,11 +482,12 @@ export class HSAutosing extends HSModule {
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
-            teleportLowerFunc: ${!!this.#teleportLowerFunc},
-            enterExaltFunc: ${!!this.#enterExaltFunc},
-            exitExaltFunc: ${!!this.#exitExaltFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
-            ? isExposureReady: ${this.#isExposureReady}.`;
+            ` +
+            // teleportLowerFunc: ${!!this.#teleportLowerFunc},
+            // enterExaltFunc: ${!!this.#enterExaltFunc},
+            // exitExaltFunc: ${!!this.#exitExaltFunc},
+            `? isExposureReady: ${this.#isExposureReady}.`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
@@ -501,7 +508,7 @@ export class HSAutosing extends HSModule {
         );
     }
 
-    async cacheEverything(): Promise<boolean> {
+    async cacheAlmostEverything(): Promise<boolean> {
         if (!this.#cacheSettingsElements()) return false;
         if (!this.#cacheChallengeElements()) return false;
         if (!this.#cacheButtonElements()) return false;
@@ -518,7 +525,7 @@ export class HSAutosing extends HSModule {
     // ============================================================================
 
     async enableAutoSing(): Promise<void> {
-        if (!await this.cacheEverything()) { this.stopAutosing(); return; }
+        if (!await this.cacheAlmostEverything()) { this.stopAutosing(); return; }
 
         this.#autosingModal?.destroy();
         this.#autosingModal = new HSAutosingModal();
@@ -547,7 +554,6 @@ export class HSAutosing extends HSModule {
 
         if (!await this.#validateAutosingSetupAndRequirements()) { this.stopAutosing(); return; }
 
-        HSLogger.log(`Autosing enabled for target singularity: ${this.#targetSingularity}`, this.context);
         this.#performAutosingLogic();
     }
 
@@ -664,6 +670,11 @@ export class HSAutosing extends HSModule {
             HSLogger.debug(() => `Target singularity bigger than highest. Going to highest.`);
             this.#targetSingularity = gameData.highestSingularityCount;
         }
+
+        this.#elevatorInput.value = this.#targetSingularity.toString();
+        this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        HSLogger.log(`Autosing requirements checked for target singularity: ${this.#targetSingularity}`, this.context);
+
         return true;
     }
 
@@ -1382,8 +1393,10 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesObserverActivated = false;
 
         if (this.#isExposureReady) {
-            // BUGGY FAST PATH: the function seem to fail after last update. Quickfix: we click the button instead
-            // I don't think this function is really useful anyway (thanks _HS_AUTO_CONFIRM), so it may even be better to remove it...
+            // The vanilla Teleport function is simply doing some checks (everything true for us wanting to go lower),
+            // then it updates singularityCount, then call a function to update the UI...
+            // So maybe we can skip everything except singularityCount update...
+            // this.#exposedPlayer!.singularityCount = this.#targetSingularity;
             // this.#teleportLowerFunc!(this.#targetSingularity); 
             this.#elevatorTeleportButton.click();
         } else {

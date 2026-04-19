@@ -154,7 +154,7 @@ export class Hypersynergism {
                 html: [
                     this.#buildGridSectionHeader('Export tools'),
                     this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater.</a>`),
-                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Ambrosia Heater' }),
+                    HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Export Heater' }),
                     this.#buildGridSectionHeader('References'),
                     HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: 'Corruption Ref.' }),
                     HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: 'Crpt. Onemind' }),

@@ -508,7 +508,7 @@ export const HSGlobal: IHSGlobal = class {
         idleSwapMinRedThreshold: 1,
 
         // Constants ripped from the game code
-        R_TIME_PER_AMBROSIA: 30,
+        R_TIME_PER_AMBROSIA: 45,
         R_TIME_PER_RED_AMBROSIA: 100000,
         R_digitReduction: 4,
 

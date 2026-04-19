@@ -389,13 +389,6 @@ export class CorruptionLoadout {
     }
 }
 
-export class GameCorruptionLoadout {
-    totalScoreMult = 1
-    corruptionScoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35]
-    getLevel(_corr: keyof CorruptionLevels): number { return 0; }
-    get loadout(): CorruptionLevels { return {} as CorruptionLevels; }
-}
-
 /**
  * Represents saved loadouts for corruptions.
  * Keys are the names of the saved loadouts.
@@ -412,8 +405,8 @@ export interface CorruptionSaves {
  * Contains the current, next, and saved corruption states.
  */
 export interface Corruptions {
-    used: GameCorruptionLoadout;
-    next: GameCorruptionLoadout;
+    used: CorruptionLevels;
+    next: CorruptionLevels;
     saves: CorruptionSaves;
     showStats: boolean;
 }

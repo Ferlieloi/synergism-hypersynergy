@@ -24,14 +24,8 @@
         xhr.open('GET', url, false); // synchronous — same timing as @require
         xhr.send();
         if (xhr.status === 200) {
-            const s = document.createElement('script');
-            s.textContent = xhr.responseText;
-            document.documentElement.appendChild(s);
-            /* 
-            Do you have a preference betwen that above, or this below ?
             const fn = new Function(xhr.responseText + '\n//# sourceURL=' + url);
             fn();
-            */
             console.log(`%c[HS-BRIDGE] HS loader loaded fresh from ${url}`, 'color:#4af');
         } else {
             console.error(`%c[HS-BRIDGE] Dev server returned ${xhr.status} — ${xhr.statusText} — ${url} — is it running? ${url}`, 'color:#b02');
