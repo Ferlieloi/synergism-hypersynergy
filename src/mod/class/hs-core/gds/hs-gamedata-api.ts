@@ -2117,18 +2117,73 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
 
         },
-        
         ambrosiaBrickOfLead: {
             costPerLevel: 10,
             maxLevel: 25,
             costFunction: (n: number, cpl: number): number =>
-                cpl * ((n + 1) ** 3 - n ** 3),
+                cpl * (Math.pow(n + 1, 3) - Math.pow(n, 3)),
             effects: (n: number) => {
-                return {}
+                return {
+                    barRequirementMult: 1 / (1 - n / 50),
+                    additiveLuckMult: n / 50,
+                    singularitySpeedMult: 1 - n / 100
+                }
             },
             extraLevelCalc: () => 0,
-        },
 
+        },
+        ambrosiaFreeLuckUpgrades: {
+            costPerLevel: 5000,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n: number) => {
+                return {
+                    freeLuckUpgrades: n
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+
+        },
+        ambrosiaFreeGenerationUpgrades: {
+            costPerLevel: 5000,
+            maxLevel: 3,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(10, n + 1) - Math.pow(10, n)),
+            effects: (n: number) => {
+                return {
+                    freeGenerationUpgrades: n
+                }
+            },
+            extraLevelCalc: () => 0,
+
+        },
+        ambrosiaFreeRedLuckUpgrades: {
+            costPerLevel: 20000,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n: number) => {
+                return {
+                    freeRedLuckUpgrades: n
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+
+        },
+        ambrosiaFreeQuarkUpgrades: {
+            costPerLevel: 25000,
+            maxLevel: 10,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * (Math.pow(n + 1, 3) - Math.pow(n, 3)),
+            effects: (n: number) => {
+                return {
+                    freeQuarkUpgrades: n / 10
+                }
+            },
+            extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+
+        }
     }
 
     R_antUpgradeData = {
@@ -5268,17 +5323,18 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (cached !== undefined) return cached;
 
         let val = timePerAmbrosia;
-        val += Math.floor(data.lifetimeAmbrosia / 300)
+        val += Math.floor((data.lifetimeAmbrosia / 300))
 
-        const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions
-        const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator
-        const brickOfLeadMult = 1 / (1 - (data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested / 10) ** (1 / 3) / 50)
+        const exalt5Comps = data.singularityChallenges.noAmbrosiaUpgrades.completions;
+        const acceleratorMult = 1 - 0.006 * exalt5Comps * data.shopUpgrades.shopAmbrosiaAccelerator;
+        const brickOfLeadMult = this.R_getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
 
         val *= acceleratorMult;
         val *= brickOfLeadMult;
+
         if (data.lifetimeAmbrosia >= 10000) {
-        const extraScalingPower = Math.log10(4)
-          val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower)
+            const extraScalingPower = Math.log10(4)
+            val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower)
           val = Math.ceil(val);
         }
 

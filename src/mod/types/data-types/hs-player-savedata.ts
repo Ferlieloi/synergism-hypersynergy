@@ -738,7 +738,11 @@ export interface AmbrosiaUpgrades {
     ambrosiaSingReduction2: AmbrosiaUpgradeData;
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeData;
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeData;
-
+    ambrosiaBrickOfLead: AmbrosiaUpgradeData;
+    ambrosiaFreeQuarkUpgrades: AmbrosiaUpgradeData;
+    ambrosiaFreeLuckUpgrades: AmbrosiaUpgradeData;
+    ambrosiaFreeGenerationUpgrades: AmbrosiaUpgradeData;
+    ambrosiaFreeRedLuckUpgrades: AmbrosiaUpgradeData;
 }
 /**
  * Represents a single saved blueberry loadout.
