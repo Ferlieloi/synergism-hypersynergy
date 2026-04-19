@@ -67,7 +67,7 @@ export class HSAutosingCorruption {
         const next = HSGlobal.exposedPlayer!.corruptions?.next;
         if (!next) return false;
         for (const name of CORRUPTION_NAMES) {
-            if (next.getLevel(name) !== target[name]) return false;
+            if (next[name] !== target[name]) return false;
         }
         return true;
     }

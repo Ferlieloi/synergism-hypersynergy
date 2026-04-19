@@ -1394,15 +1394,17 @@ export class HSAutosing extends HSModule {
 
         if (this.#isExposureReady) {
             // The vanilla Teleport function is simply doing some checks (everything true for us wanting to go lower),
-            // then it updates singularityCount, then call a function to update the UI...
+            // then it updates singularityCount, then calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
-            // this.#exposedPlayer!.singularityCount = this.#targetSingularity;
-            // this.#teleportLowerFunc!(this.#targetSingularity); 
-            this.#elevatorTeleportButton.click();
+            // this.#teleportLowerFunc!(this.#targetSingularity);  <== Useless ?
+            HSLogger.debug(() => `Patch: teleport button "clicked"`, this.context);
+            this.#exposedPlayer!.singularityCount = this.#targetSingularity;
+            // this.#elevatorTeleportButton.click();
         } else {
             // This two lines are probably not needed...
             // this.#elevatorInput.value = this.#targetSingularity.toString();
             // this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
+            HSLogger.debug(() => `No patch: teleport button clicked`, this.context);
             this.#elevatorTeleportButton.click();
         }
 
