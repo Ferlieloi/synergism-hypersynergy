@@ -706,6 +706,7 @@ export interface AmbrosiaUpgradeData extends UpgradeData {
  * Contains the state of all Ambrosia/Blueberry upgrades. Keys are internal upgrade names.
  */
 export interface AmbrosiaUpgrades {
+    ambrosiaBrickOfLead: AmbrosiaUpgradeData;
     ambrosiaTutorial: AmbrosiaUpgradeData;
     ambrosiaQuarks1: AmbrosiaUpgradeData;
     ambrosiaCubes1: AmbrosiaUpgradeData;

@@ -2116,7 +2116,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             },
             extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
 
-        }
+        },
+        
+        ambrosiaBrickOfLead: {
+            costPerLevel: 10,
+            maxLevel: 25,
+            costFunction: (n: number, cpl: number): number =>
+                cpl * ((n + 1) ** 3 - n ** 3),
+            effects: (n: number) => {
+                return {}
+            },
+            extraLevelCalc: () => 0,
+        },
+
     }
 
     R_antUpgradeData = {

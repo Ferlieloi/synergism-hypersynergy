@@ -56,6 +56,8 @@ export interface CalculationCache {
     AMB_ambrosiaTalismanBonusRuneLevel: CachedValue;
     AMB_ambrosiaRuneOOMBonus: CachedValue;
 
+    AMB_ambrosiaBrickOfLead: CachedValue;
+
     REDAMB_blueberryGenerationSpeed: CachedValue;
     REDAMB_blueberryGenerationSpeed2: CachedValue;
     REDAMB_freeLevelsRow2: CachedValue;
@@ -263,6 +265,8 @@ export interface AmbrosiaUpgradeCalculationConfig<
 
 
 export interface AmbrosiaUpgradeCalculationCollection {
+    ambrosiaBrickOfLead: AmbrosiaUpgradeCalculationConfig<'ambrosiaBrickOfLead'>
+    
     ambrosiaTutorial: AmbrosiaUpgradeCalculationConfig<'ambrosiaTutorial'>
 
     ambrosiaQuarks1: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks1'>
@@ -348,6 +352,7 @@ export const PCoinUpgradeEffects: PseudoCoinUpgradeEffects = {
 }
 
 export type AmbrosiaUpgradeRewards = {
+    ambrosiaBrickOfLead: { }
     ambrosiaTutorial: { quarks: number; cubes: number }
     ambrosiaQuarks1: { quarks: number }
     ambrosiaCubes1: { cubes: number }
