@@ -5240,7 +5240,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
-    // https://github.com/Pseudo-Corp/SynergismOfficial/blob/0ffbd184938677cf8137a404cffb2f4b5b5d3ab9/src/Calculate.ts
+    // https://github.com/Pseudo-Corp/SynergismOfficial/blob/d387b1b4ba4b54a735d09b5fa68ca48705a770e8/src/Calculate.ts
     R_calculateRequiredBlueberryTime = () => {
         if (!this.gameData) return 0;
         const data = this.gameData;
