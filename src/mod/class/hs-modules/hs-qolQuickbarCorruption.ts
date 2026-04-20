@@ -27,6 +27,9 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #slots: HTMLButtonElement[] = [];
     #loadouts: HSCorruptionUserLoadout[] = [];
     #corruptionObserverUnsubscribe: (() => void) | null = null;
+    #corruptionCleanseQuickButton: HTMLButtonElement | null = null;
+    #corruptionCleanseVanillaButton: HTMLElement | null = null;
+    #corruptionCleanseButtonHandler: ((event: MouseEvent) => void) | null = null;
 
     #isPickingIcon = false;
     #pickTargetSlotIndex: number | null = null;
@@ -79,6 +82,28 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.container.appendChild(infobox);
     }
 
+    /** Create the immutable corruption cleanse button. */
+    #createCorruptionCleanseButton(): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hs-corruption-slot hs-corruption-cleanse-button';
+        button.title = 'Cleanse';
+
+        this.#corruptionCleanseButtonHandler = (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const confirmButton = this.#getCachedCorruptionCleanseConfirmButton();
+            if (confirmButton) {
+                confirmButton.click();
+            } else {
+                HSLogger.warn('Could not find #corruptionCleanseConfirm to trigger', this.context);
+            }
+        };
+
+        button.addEventListener('click', this.#corruptionCleanseButtonHandler);
+        return button;
+    }
+
     /** Cleans up quickbar DOM content from the container. */
     protected cleanupDOM(): void {
         if (this.container) this.container.innerHTML = '';
@@ -96,6 +121,12 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         HSCorruption.loadCorruptionLoadoutIcons();
         await this.#buildSlots();
 
+        if (!this.#corruptionCleanseQuickButton && this.#slotsWrapper) {
+            const cleanseButton = this.#createCorruptionCleanseButton();
+            this.#slotsWrapper.appendChild(cleanseButton);
+            this.#corruptionCleanseQuickButton = cleanseButton;
+        }
+
         this.#setupCorruptionObserver();
         await HSCorruption.startCorruptionObservationContainer('#corruptionStatsLoadouts');
     }
@@ -104,8 +135,29 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     protected onTeardown(): void {
         this.#cleanupCorruptionObserver();
         this.#cleanupSlotEventHandlers();
+        this.#cleanupCorruptionCleanseButton();
         this.#reset();
         HSCorruption.clearCache();
+    }
+
+    /** Remove event listeners from the corruption cleanse button. */
+    #cleanupCorruptionCleanseButton(): void {
+        if (this.#corruptionCleanseQuickButton && this.#corruptionCleanseButtonHandler) {
+            this.#corruptionCleanseQuickButton.removeEventListener('click', this.#corruptionCleanseButtonHandler);
+        }
+        this.#corruptionCleanseQuickButton = null;
+        this.#corruptionCleanseVanillaButton = null;
+        this.#corruptionCleanseButtonHandler = null;
+    }
+
+    #getCachedCorruptionCleanseConfirmButton(): HTMLElement | null {
+        if (this.#corruptionCleanseVanillaButton) {
+            return this.#corruptionCleanseVanillaButton;
+        }
+
+        const confirmButton = document.getElementById('corruptionCleanseConfirm') as HTMLElement | null;
+        this.#corruptionCleanseVanillaButton = confirmButton;
+        return confirmButton;
     }
 
     /** Reset instance state and DOM references to defaults. */
@@ -117,6 +169,9 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#slotsWrapper = null;
         this.#loadouts = [];
         this.#slots = [];
+        this.#corruptionCleanseQuickButton = null;
+        this.#corruptionCleanseVanillaButton = null;
+        this.#corruptionCleanseButtonHandler = null;
         this.#isPickingIcon = false;
         this.#pickTargetSlotIndex = null;
     }
