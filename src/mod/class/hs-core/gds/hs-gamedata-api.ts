@@ -97,6 +97,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         AMB_ambrosiaTalismanBonusRuneLevel: { value: undefined, cachedBy: [] },
         AMB_ambrosiaRuneOOMBonus: { value: undefined, cachedBy: [] },
 
+        AMB_ambrosiaBrickOfLead: { value: undefined, cachedBy: [] },
 
         REDAMB_blueberryGenerationSpeed: { value: undefined, cachedBy: [] },
         REDAMB_blueberryGenerationSpeed2: { value: undefined, cachedBy: [] },
