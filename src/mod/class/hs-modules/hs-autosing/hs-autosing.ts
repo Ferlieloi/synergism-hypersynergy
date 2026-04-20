@@ -114,6 +114,7 @@ export class HSAutosing extends HSModule {
     #upg81Observer?: MutationObserver;
     #upg81Promise?: Promise<boolean>;
     #upg81PromiseResolve?: (value: boolean) => void;
+    #upg81ClickTimerId?: number;
     #exaltStateObserver?: MutationObserver;
     #waitForExaltStateActive?: {
         targetState: boolean;
@@ -150,7 +151,6 @@ export class HSAutosing extends HSModule {
     #applyCorruptionsFunc?: (json: string) => boolean;
 //  #enterExaltFunc?: () => void;
 //  #exitExaltFunc?: () => void;
-//  #teleportLowerFunc?: (target: number) => void;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -350,11 +350,12 @@ export class HSAutosing extends HSModule {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                         const isGreen = this.#upg81Btn.classList.contains('green-background');
                         if (isGreen && this.#upg81PromiseResolve) {
-                            HSLogger.debug(() => `[COIN-FIX] #upg81 turned green o/`, this.context);
+                            HSLogger.debug(() => `-------> #upg81 turned green o/`, this.context);
+                            this.#stopUpg81Clicking();
                             this.#upg81PromiseResolve(true);
                             this.#upg81PromiseResolve = undefined;
                             this.#upg81Observer?.disconnect();
-                        } else { HSLogger.debug(() => `[COIN-FIX] #upg81 mutated but still not green`, this.context); }
+                        }
                     }
                 }
             });
@@ -437,11 +438,10 @@ export class HSAutosing extends HSModule {
 
         /*
         const needsCorruptions = !this.#applyCorruptionsFunc;
-        const needsTeleport    = !this.#teleportLowerFunc;
         const needsExalt       = !this.#enterExaltFunc || !this.#exitExaltFunc;
 
-        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsTeleport: ${needsTeleport}, needsExalt: ${needsExalt}`, this.context);
-        if (needsCorruptions || needsTeleport || needsExalt) {
+        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsExalt: ${needsExalt}`, this.context);
+        if (needsCorruptions || needsExalt) {
             HSLogger.debug(() => 'Triggering late patches...', this.context);
             const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
 
@@ -452,11 +452,6 @@ export class HSAutosing extends HSModule {
             // window.__HS_enterExalt and window.__HS_exitExalt.
             if (needsExalt) { await this.#enterAndLeaveExalt(); }
 
-            // Clicking the elevator teleport button calls teleportToSingularity, which exposes
-            // window.__HS_teleportLower at the start of its body before any dialog.
-            if (needsTeleport) {
-                this.#elevatorTeleportButton.click();
-            }
             prevMainView.goto();
         }
         */
@@ -465,7 +460,6 @@ export class HSAutosing extends HSModule {
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
         // Read all four: they should now be set on window.
-    //  this.#teleportLowerFunc    = (window as any).__HS_teleportLower    ?? null;
     //  this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
     //  this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
         this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
@@ -473,7 +467,7 @@ export class HSAutosing extends HSModule {
 
         this.#isExposureReady = 
             !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc 
-                // && this.#teleportLowerFunc && this.#enterExaltFunc && this.#exitExaltFunc
+                // && this.#enterExaltFunc && this.#exitExaltFunc
             );
 
         const exposureMsg = `Exposure status:
@@ -484,7 +478,6 @@ export class HSAutosing extends HSModule {
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
             ` +
-            // teleportLowerFunc: ${!!this.#teleportLowerFunc},
             // enterExaltFunc: ${!!this.#enterExaltFunc},
             // exitExaltFunc: ${!!this.#exitExaltFunc},
             `? isExposureReady: ${this.#isExposureReady}.`;
@@ -584,6 +577,7 @@ export class HSAutosing extends HSModule {
 
         this.#upg81Observer?.disconnect();
         this.#upg81Observer = undefined;
+        this.#stopUpg81Clicking();
         this.#upg81PromiseResolve = undefined;
         this.#upg81Promise = undefined;
 
@@ -1360,7 +1354,7 @@ export class HSAutosing extends HSModule {
         HSLogger.debug(() => "Performing Singularity...", this.context);
         const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
         // TODO: investigate tab switching / not restoring...
-        // HSLogger.debug(() => `saving prevMainView: ${prevMainView.getName()}`, this.context);
+        HSLogger.debug(() => `saving prevMainView: ${prevMainView.getName()}`, this.context);
 
         let q: number;
         let gq: number;
@@ -1382,8 +1376,7 @@ export class HSAutosing extends HSModule {
         this.#previousQuarkAmount = q;
         this.#previousGoldenQuarkAmount = gq;
 
-        // antiBuyCoinBug setup
-        HSLogger.debug(() => `[COIN-FIX] #upg81 observer starting before sing reset...`, this.context);
+        // antiBuyCoinBug setup (hard-coded inserted first step of the strategy should ensure this promise is resolved)
         this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
         this.#upg81Observer?.observe(this.#upg81Btn, { attributes: true, attributeFilter: ['class'] });
 
@@ -1396,15 +1389,8 @@ export class HSAutosing extends HSModule {
             // The vanilla Teleport function is simply doing some checks (everything true for us wanting to go lower),
             // then it updates singularityCount, then calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
-            // this.#teleportLowerFunc!(this.#targetSingularity);  <== Useless ?
-            HSLogger.debug(() => `Patch: teleport button "clicked"`, this.context);
             this.#exposedPlayer!.singularityCount = this.#targetSingularity;
-            // this.#elevatorTeleportButton.click();
         } else {
-            // This two lines are probably not needed...
-            // this.#elevatorInput.value = this.#targetSingularity.toString();
-            // this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
-            HSLogger.debug(() => `No patch: teleport button clicked`, this.context);
             this.#elevatorTeleportButton.click();
         }
 
@@ -1413,16 +1399,21 @@ export class HSAutosing extends HSModule {
         }
 
         // HSLogger.debug(() => `restoring prevMainView: ${prevMainView.getName()}`, this.context);
-        HSLogger.debug(() => "Singularity performed", this.context);
+        HSLogger.debug(() => "===== Singularity performed =====", this.context);
         prevMainView.goto();
 
+        // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)
+        this.#startUpg81Clicking();
+
+        // Obt switch so we start producing Obt ASAP every sing
+        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
+        
         let stage;
         do {
             // Yield before checking if the stage is allowed
             await HSUtils.yield();
             stage = await this.#getStage();
         } while (!this.#isAllowedStage(stage));
-
         HSLogger.debug(() => `Reached allowed stage: ${stage}`, this.context);
 
         this.#observeAntiquitiesRune();
@@ -1486,7 +1477,6 @@ export class HSAutosing extends HSModule {
                 this.stopAutosing();
                 return;
             }
-            await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
             await this.#performSingularity();
         }
 
@@ -1591,7 +1581,6 @@ export class HSAutosing extends HSModule {
         if (this.#addCodeAllBtn) this.#addCodeAllBtn.click();
         if (this.#timeCodeBtn) this.#timeCodeBtn.click();
         await HSUtils.waitForNextTack();
-        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
     }
 
 
@@ -1734,19 +1723,34 @@ export class HSAutosing extends HSModule {
         );
     }
 
-    async #waitForGreenUpg81(): Promise<void> {
-        const isGreen = () => this.#upg81Btn.classList.contains('green-background');
-        if (!this.#upg81Promise) { HSLogger.warn(`[COIN-FIX] upg81Promise missing, aborting.`, this.context); return; }
+    #startUpg81Clicking(initialTimeout = 0, intervalMs = 5): void {
+        if (this.#upg81ClickTimerId !== undefined || !this.#upg81Btn) return;
 
-        HSLogger.debug(() => `[COIN-FIX] Clicking upg81 until it turns green`, this.context);
-        while (this.#autosingEnabled && !isGreen()) {
+        const tick = (): void => {
+            if (!this.#autosingEnabled || !this.#upg81Promise) {
+                this.#stopUpg81Clicking();
+                return;
+            }
+
             this.#upg81Btn.click();
-            await Promise.race([
-                this.#upg81Promise,
-                HSUtils.yield()
-            ]);
-        }
+            this.#upg81ClickTimerId = window.setTimeout(tick, intervalMs);
+        };
+        this.#upg81ClickTimerId = window.setTimeout(tick, initialTimeout);
+    }
 
+    #stopUpg81Clicking(): void {
+        if (this.#upg81ClickTimerId !== undefined) {
+            window.clearTimeout(this.#upg81ClickTimerId);
+            this.#upg81ClickTimerId = undefined;
+        }
+    }
+
+    async #waitForGreenUpg81(): Promise<void> {
+        if (!this.#upg81Promise) return;
+        
+        await this.#upg81Promise;
+
+        this.#stopUpg81Clicking();
         this.#upg81Observer?.disconnect();
         this.#upg81PromiseResolve = undefined;
         this.#upg81Promise = undefined;

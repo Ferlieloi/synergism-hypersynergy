@@ -77,6 +77,8 @@ export class HSAmbrosiaHelper {
             const currentMode = modeButton.innerText;
 
             // If we're in SAVE mode, toggle to LOAD mode.
+            // TODO: exposedPlayer.blueberryLoadoutMode = 'saveTree' / 'loadTree'
+            // TODO: update HSAmbrosiaHelper.ensureLoadoutModeIsLoad to handle either save or load with a parameter
             if (currentMode.includes('SAVE')) {
                 modeButton.click();
             }

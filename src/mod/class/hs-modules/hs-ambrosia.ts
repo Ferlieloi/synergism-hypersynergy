@@ -512,27 +512,18 @@ export class HSAmbrosia extends HSModule
     }
 
     async #updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
-        if (!slotEnum) {
-            HSLogger.warn('No slot specified to #updateActiveLoadout', this.context);
-            return;
-        }
+        if (!slotEnum) { HSLogger.warn('No slot specified to #updateActiveLoadout', this.context); return; }
 
         // Normalize & validate incoming slot value using helper.
         const resolvedSlot = HSAmbrosiaHelper.resolveAmbrosiaLoadout(slotEnum);
-        if (!resolvedSlot) {
-            HSLogger.warn('Invalid or unknown slot passed to #updateActiveLoadout: ' + slotEnum, this.context);
-            return;
-        }
+        if (!resolvedSlot) { HSLogger.warn('Invalid or unknown slot passed to #updateActiveLoadout: ' + slotEnum, this.context); return; }
 
         this.activeLoadout = resolvedSlot;
 
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
         const slotNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(resolvedSlot);
-        if (!slotNumber) {
-            HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context);
-            return;
-        }
+        if (!slotNumber) { HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context); return; }
 
         await this.#syncQuickbarActiveSlot(slotNumber);
         await this.#syncOriginalBarActiveSlot(slotNumber);
@@ -542,15 +533,9 @@ export class HSAmbrosia extends HSModule
 
     async #syncQuickbarActiveSlot(slotNumber: number) {
         const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for quickbar', this.context);
-            return;
-        }
+        if (!groupWrapper) { HSLogger.warn('Could not find group wrapper for quickbar', this.context); return; }
         const quickBar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-        if (!quickBar) {
-            HSLogger.warn('Could not find quickbar element', this.context);
-            return;
-        }
+        if (!quickBar) { HSLogger.warn('Could not find quickbar element', this.context); return; }
 
         const slots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
         slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
@@ -566,10 +551,7 @@ export class HSAmbrosia extends HSModule
 
     async #syncOriginalBarActiveSlot(slotNumber: number) {
         const originalQuickBar = document.querySelector('#bbLoadoutContainer');
-        if (!originalQuickBar) {
-            HSLogger.warn('Could not find original quickbar container', this.context);
-            return;
-        }
+        if (!originalQuickBar) { HSLogger.warn('Could not find original quickbar container', this.context); return; }
 
         const slots = originalQuickBar.querySelectorAll('.blueberryLoadoutSlot');
         slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
@@ -973,14 +955,12 @@ export class HSAmbrosia extends HSModule
                 throw new Error('Mode toggle button not found');
             }
 
-            // Check if we're in SAVE mode and switch to LOAD mode
+            // If the current mode is LOAD, we need to switch to SAVE mode
+            // TODO: exposedPlayer.blueberryLoadoutMode = 'saveTree' / 'loadTree'
+            // TODO: update HSAmbrosiaHelper.ensureLoadoutModeIsLoad to handle either save or load with a parameter
             const currentMode = modeToggle.innerText;
-            // blueberry toggle state
-
-            // If the current mode is SAVE, we need to switch to LOAD mode
-            // This is so that the user never accidentally saves a loadout when using the quickbar
             if (currentMode.includes('LOAD ')) {
-                // switched blueberry mode to LOAD
+                // switch blueberry mode to SAVE
                 modeToggle.click();
             }
 
