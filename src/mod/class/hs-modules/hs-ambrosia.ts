@@ -1149,12 +1149,7 @@ export class HSAmbrosia extends HSModule
 
             this.#gameStateSubViewSubscriptionId = gameStateMod.subscribeGameStateChange('SINGULARITY_VIEW', async (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => {
                 if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
-                    this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
-                    this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
-                    this.#isIdleSwapEnabled = true;
-                    this.#maybeInsertIdleLoadoutIndicator();
-                    this.subscribeGameDataChanges();
-
+                    await this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
                 } else {
                     this.#isIdleSwapEnabled = false;
                     this.#removeIdleLoadoutIndicator();
@@ -1162,14 +1157,9 @@ export class HSAmbrosia extends HSModule
                 }
             });
 
-            // If we're already in the ambrosia view
-            if (gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() === SINGULARITY_VIEW.AMBROSIA &&
-                gameStateMod.getCurrentUIView("MAIN_VIEW").getId() === MAIN_VIEW.SINGULARITY) {
-                this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
-                this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
-                this.#isIdleSwapEnabled = true;
-                this.#maybeInsertIdleLoadoutIndicator();
-                this.subscribeGameDataChanges();
+            // If we're already in the ambrosia view, activate idle swap immediately.
+            if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() === MAIN_VIEW.SINGULARITY) {
+                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
             }
         } else {
             HSLogger.warn('HSAmbrosia.enableIdleSwap() - gameStateMod==undefined', 'hs-enable-idleswap-gamestate');
@@ -1177,6 +1167,27 @@ export class HSAmbrosia extends HSModule
 
         if (!this.#debugElement)
             this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
+    }
+
+    async #activateIdleSwapForCurrentSingularityAmbrosiaView(): Promise<void> {
+        if (this.#isIdleSwapEnabled) return;
+
+        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (!gameStateMod) {
+            HSLogger.warnOnce('HSAmbrosia.#activateIdleSwapForCurrentSingularityAmbrosiaView() - gameStateMod==undefined', 'hs-amb-gamestate-activate');
+            return;
+        }
+
+        if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() !== MAIN_VIEW.SINGULARITY ||
+            gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() !== SINGULARITY_VIEW.AMBROSIA) {
+            return;
+        }
+
+        this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
+        this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
+        this.#isIdleSwapEnabled = true;
+        this.#maybeInsertIdleLoadoutIndicator();
+        this.subscribeGameDataChanges();
     }
 
     disableIdleSwap() {
@@ -1409,6 +1420,10 @@ export class HSAmbrosia extends HSModule
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
         if (gameStateMod) {
+            if (currentView.getId() === MAIN_VIEW.SINGULARITY) {
+                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
+            }
+
             if (previousView.getId() === MAIN_VIEW.SINGULARITY &&
                 currentView.getId() !== MAIN_VIEW.SINGULARITY &&
                 gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() === SINGULARITY_VIEW.AMBROSIA
