@@ -286,14 +286,6 @@ export class HSStrategyManager {
         let normalizedStrategy = HSStrategyManager.ensureAoagPhase(strategy);
         normalizedStrategy = HSStrategyManager.ensureCorruptionLoadouts(normalizedStrategy);
 
-        const beforeNormalize = JSON.stringify(normalizedStrategy);
-        HSStrategyManager.migrateStrategyActionIdsAuto(normalizedStrategy, 'toNew', context);
-        if (beforeNormalize !== JSON.stringify(normalizedStrategy)) {
-            HSLogger.log(`saveStrategyToStorage: normalized strategy "${normalizedStrategy.strategyName}" to new special action IDs`, context);
-        } else {
-            HSLogger.log(`saveStrategyToStorage: strategy "${normalizedStrategy.strategyName}" already uses new special action IDs — no change needed`, context);
-        }
-
         HSStrategyManager.validateStrategy(normalizedStrategy, context);
         const isUpdate = !!strategyName;
         const nameExists = strategies.some(s => {
@@ -354,233 +346,22 @@ export class HSStrategyManager {
         return saved;
     }
 
-    static migrateAndSaveAllUserStrategies(context = ''): {
-        success: boolean;
-        saved: boolean;
-        migratedStrategies: number;
-        droppedDefaults: number;
-        totalStrategies: number;
-        userStrategies: HSAutosingStrategy[];
-        invalidStrategies: string[];
-    } {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) {
-            throw new Error("Could not find Storage Module");
-        }
-
-        const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
-        const list = loaded ? (Array.isArray(loaded) ? loaded : [loaded]) : [];
-
-        const defaultNames = new Set(HSStrategyManager.getDefaultStrategyNames());
-        const userStrategies = list.filter(strategy => !defaultNames.has(strategy.strategyName));
-        const droppedDefaults = list.length - userStrategies.length;
-
-        const invalidStrategies: string[] = [];
-        for (const strategy of userStrategies) {
-            const state = HSStrategyManager.resolveStrategyActionIdState(strategy);
-            if (state.state === 'invalid') {
-                invalidStrategies.push(`${strategy.strategyName} (${state.reason})`);
-            }
-        }
-
-        if (invalidStrategies.length > 0) {
-            return {
-                success: false,
-                saved: false,
-                migratedStrategies: 0,
-                droppedDefaults,
-                totalStrategies: list.length,
-                userStrategies,
-                invalidStrategies
-            };
-        }
-
-        let migratedStrategies = 0;
-        for (const strategy of userStrategies) {
-            const before = JSON.stringify(strategy);
-            HSStrategyManager.migrateStrategyActionIdsAuto(strategy, 'toOld', context);
-            if (before !== JSON.stringify(strategy)) {
-                migratedStrategies++;
-            }
-        }
-
-        const saved = storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
-        if (saved) {
-            HSStrategyManager.setStrategies(userStrategies.map(s => HSStrategyManager.ensureCorruptionLoadouts(HSStrategyManager.ensureAoagPhase(s))));
-        }
-
-        return {
-            success: saved,
-            saved,
-            migratedStrategies,
-            droppedDefaults,
-            totalStrategies: list.length,
-            userStrategies,
-            invalidStrategies
-        };
-    }
-
     static parseStoredStrategies(context = ''): HSAutosingStrategy[] | null {
         const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) {
-            HSLogger.warn(`Could not find HSStorage module`, context);
-            return null;
-        }
+        if (!storageMod) { HSLogger.warn(`Could not find HSStorage module`, context); return null; }
 
         const loaded = storageMod.getData<HSAutosingStrategy[]>(HSGlobal.HSSettings.strategiesKey);
-        if (!loaded) {
-            return null;
-        }
+        if (!loaded) return null;
 
         const list = Array.isArray(loaded) ? loaded : [loaded];
         const defaultStrategyNames = new Set(HSStrategyManager.getDefaultStrategyNames());
         const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
         const didDropDefaults = userStrategies.length !== list.length;
 
-        let didNormalize = false;
-        for (const strategy of userStrategies) {
-            const before = JSON.stringify(strategy);
-            HSStrategyManager.migrateStrategyActionIdsAuto(strategy, 'toNew', context);
-            if (before !== JSON.stringify(strategy)) {
-                HSLogger.log(`Normalized strategy "${strategy.strategyName}" to new special action IDs during load`, context);
-                didNormalize = true;
-            } else {
-                HSLogger.log(`Strategy "${strategy.strategyName}" did not require normalization`, context);
-            }
-        }
-
-        if (didDropDefaults || didNormalize) {
+        if (didDropDefaults) {
             storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
         }
 
         return userStrategies.map(s => HSStrategyManager.ensureCorruptionLoadouts(HSStrategyManager.ensureAoagPhase(s)));
-    }
-
-    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld', context = ''): HSAutosingStrategy {
-        const oldToNewActionIds: Record<number, number> = {
-            101: 101, 102: 102, 103: 103, 104: 104, 105: 301, 106: 302, 107: 303, 108: 152, 109: 402,
-            110: 400, 111: 151, 112: 304, 113: 305, 114: 306, 115: 153, 116: 215, 117: 211, 118: 212,
-            119: 213, 120: 214, 121: 901, 201: 401, 301: 601, 302: 602, 303: 603, 304: 604, 305: 605,
-            306: 606, 307: 607, 308: 608, 309: 609, 310: 610, 999: 902,
-            200: 200, 202: 202,
-            154: 154, 155: 155,
-            701: 701, 702: 702, 703: 703, 704: 704, 705: 705, 706: 706, 707: 707, 708: 708, 709: 709,
-            903: 903
-        };
-        const newToOldActionIds = Object.fromEntries(
-            Object.entries(oldToNewActionIds).map(([oldId, newId]) => [newId, Number(oldId)])
-        );
-        const oldIdSet = new Set<number>(Object.keys(oldToNewActionIds).map(Number));
-        const newIdSet = new Set<number>(Object.values(oldToNewActionIds));
-        const oldOnlyIdSet = new Set<number>([...oldIdSet].filter(id => !newIdSet.has(id)));
-        const newOnlyIdSet = new Set<number>([...newIdSet].filter(id => !oldIdSet.has(id)));
-
-        const allIds: number[] = [];
-        const collectIds = (challenge: { challengeNumber?: number }) => {
-            if (challenge.challengeNumber !== undefined && challenge.challengeNumber >= 100) allIds.push(challenge.challengeNumber);
-        };
-        strategy.strategy?.forEach(phase => phase.strat?.forEach(collectIds));
-        strategy.aoagPhase?.strat?.forEach(collectIds);
-
-        let oldCount = 0, newCount = 0;
-        for (const id of allIds) {
-            if (oldToNewActionIds[id]) oldCount++;
-            if (newToOldActionIds[id]) newCount++;
-        }
-
-        let oldOnlyCount = 0, newOnlyCount = 0, sharedCount = 0, unknownCount = 0;
-        const unknownIds: number[] = [];
-
-        for (const id of allIds) {
-            const isOld = oldIdSet.has(id);
-            const isNew = newIdSet.has(id);
-
-            if (isOld && isNew) {
-                sharedCount++;
-            } else if (isOld) {
-                oldOnlyCount++;
-            } else if (isNew) {
-                newOnlyCount++;
-            } else {
-                unknownCount++;
-                unknownIds.push(id);
-            }
-        }
-
-        const allMatchOldState = oldOnlyCount > 0 && newOnlyCount === 0;
-        const allMatchNewState = newOnlyCount > 0 && oldOnlyCount === 0;
-        const allShared = !allMatchOldState && !allMatchNewState && sharedCount > 0;
-        const unknownSuffix = unknownIds.length > 0 ? ` [${unknownIds.join(', ')}]` : '';
-
-        if (allMatchOldState) {
-            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all special action IDs match OLD state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
-        } else if (allMatchNewState) {
-            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all special action IDs match NEW state (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
-        } else if (allShared) {
-            HSLogger.debug(() => `Strategy "${strategy.strategyName}": all detected special action IDs are shared between OLD and NEW mappings (shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
-        } else {
-            HSLogger.warn(`Strategy "${strategy.strategyName}": mixed special action ID states detected (oldOnly=${oldOnlyCount}, newOnly=${newOnlyCount}, shared=${sharedCount}, unknown=${unknownCount}${unknownSuffix})`, context);
-        }
-
-        HSLogger.debug(() => `Strategy "${strategy.strategyName}": migrateStrategyActionIdsAuto stats totalIds=${allIds.length}, oldCount=${oldCount}, newCount=${newCount}, target=${target}`, context);
-
-        let map: Record<number, number> | null = null;
-        let direction: 'old->new' | 'new->old' | 'none' = 'none';
-
-        if (target === 'toNew') {
-            if (newOnlyCount > 0 && oldOnlyCount === 0) {
-                HSLogger.debug(() => `Strategy "${strategy.strategyName}": already uses new SA IDs, skipping.`, context);
-                return strategy;
-            }
-            if (oldOnlyCount > 0 && newOnlyCount === 0) {
-                map = oldToNewActionIds;
-                direction = 'old->new';
-            }
-        } else {
-            if (oldOnlyCount > 0 && newOnlyCount === 0) {
-                HSLogger.debug(() => `Strategy "${strategy.strategyName}": already uses old SA IDs, skipping.`, context);
-                return strategy;
-            }
-            if (newOnlyCount > 0 && oldOnlyCount === 0) {
-                map = newToOldActionIds;
-                direction = 'new->old';
-            }
-        }
-
-        if (!map) {
-            if (oldOnlyCount > 0 && newOnlyCount > 0) {
-                HSLogger.warn(`Strategy "${strategy.strategyName}": skipping migration (reason=mixed) because IDs are mixed between OLD and NEW states.`, context);
-            } else {
-                let reason = 'no-exclusive-ids';
-                if (sharedCount > 0 && unknownCount === 0) {
-                    reason = 'shared-only';
-                } else if (sharedCount === 0 && unknownCount > 0) {
-                    reason = 'unknown-only';
-                } else if (sharedCount > 0 && unknownCount > 0) {
-                    reason = 'shared-and-unknown-only';
-                }
-                HSLogger.debug(() => `Strategy "${strategy.strategyName}": no exclusive old/new IDs detected, skipping migration (reason=${reason}).`, context);
-            }
-            return strategy;
-        }
-
-        let migratedCount = 0;
-        const migrateChallenge = (challenge: { challengeNumber?: number }) => {
-            const challengeId = challenge.challengeNumber;
-            if (!challengeId) return;
-            const isMigrateCandidate =
-                (direction === 'old->new' && oldOnlyIdSet.has(challengeId)) ||
-                (direction === 'new->old' && newOnlyIdSet.has(challengeId));
-            if (isMigrateCandidate && map![challengeId]) {
-                challenge.challengeNumber = map![challengeId];
-                migratedCount++;
-            }
-        };
-
-        strategy.strategy?.forEach(phase => phase.strat?.forEach(migrateChallenge));
-        strategy.aoagPhase?.strat?.forEach(migrateChallenge);
-
-        HSLogger.debug(() => `Strategy "${strategy.strategyName}": migrated ${migratedCount} unambiguous special action IDs (${direction})`, context);
-        return strategy;
     }
 }

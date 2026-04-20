@@ -698,18 +698,15 @@ export class HSAutosing extends HSModule {
             : (HSSettings.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
 
         if (!strategy) {
-            HSLogger.warn(`Strategy "${selectedRawName}" not found or failed to load.`, this.context);
-            HSUI.Notify("Could not find or load strategy - Autosing stopped.", { notificationType: "warning" });
+            HSUI.Notify(`Could not find or load strategy "${selectedRawName}" - Autosing stopped.`, { notificationType: "warning" });
             return null;
         }
 
         const runtimeStrategy: HSAutosingStrategy = JSON.parse(JSON.stringify(strategy));
-        // MIGRATION NEXT STEP - This should not be needed anymore (except if users click the migrate button). To be removed.
-        // Migrate to new IDs in-memory only, this copy is never persisted.
-        HSSettings.migrateStrategyActionIdsAuto(runtimeStrategy, 'toNew');
+
         // Insert special steps at the start of the first phase
         this.#insertAntiBuyCoinBugStep(runtimeStrategy);
-        HSLogger.log(`Loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory, AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
+        HSLogger.log(`Loaded strategy "${selectedRawName}" (AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
 
         return runtimeStrategy;
     }

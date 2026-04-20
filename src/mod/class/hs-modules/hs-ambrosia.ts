@@ -101,6 +101,8 @@ export class HSAmbrosia extends HSModule
     #blueProgressMinibarElement?: HTMLDivElement;
     #redProgressMinibarElement?: HTMLDivElement;
 
+    #hasPerformedInitialLoadoutMatch = false;
+
 
     // ==============================================
     // -------------------- Init --------------------
@@ -127,8 +129,8 @@ export class HSAmbrosia extends HSModule
         await this.#injectImportFromClipboardButton();
         this.#setupLoadoutContainerEvents();
 
-        this.isInitialized = true;
         HSSettingsUI.refreshAmbrosiaLoadoutDropdowns();
+        this.isInitialized = true;
     }
 
     async #initializeDomRefs() {
@@ -142,6 +144,22 @@ export class HSAmbrosia extends HSModule
         this.#loadoutsSlots = loadoutsSlots;
         this.#loadoutContainer = loadoutContainer;
         this.#pageHeader = pageHeader;
+    }
+
+    public async initializeActiveLoadoutFromGameData(): Promise<void> {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+
+        let gameData = gameDataAPI.getGameData();
+        if (!gameData) {
+            gameData = await gameDataAPI.getForcedGameData();
+        }
+
+        if (gameData) {
+            await this.#performInitialActiveLoadoutMatchOnce(gameData);
+        } else {
+            HSLogger.warn('Could not retrieve game data to perform the initial ambrosia loadout match', this.context);
+        }
     }
 
     #setupAmbrosiaIconsDragDrop() {
@@ -483,32 +501,6 @@ export class HSAmbrosia extends HSModule
                 });
             }
         });
-
-        HSLogger.log('Ambrosia loadout state reset (Storage Updated)', this.context);
-    }
-
-    async setActiveLoadout(slotNumber: number, forceUpdate: boolean = false) {
-        // Ensure quickbar section is injected before manipulating DOM
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        // Dynamically resolve slot id
-        const slotId = `blueberryLoadout${slotNumber}`;
-        const slotElement = this.#loadoutsSlots.find(slot => slot.id === slotId);
-        if (!slotElement) {
-            HSLogger.warn(`Invalid loadout slot sent to setActiveLoadout: ${slotNumber}`, this.context);
-            return;
-        }
-        const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
-        if (!slotEnum) {
-            HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context);
-            return;
-        }
-        // Only update if the slot is not already active, or if forceUpdate is true
-        if (this.activeLoadout !== slotEnum || forceUpdate) {
-            this.activeLoadout = slotEnum;
-            // Update Visuals
-            await this.#updateActiveLoadout(slotEnum);
-            HSLogger.log(`Programmatically set active loadout to ${slotNumber}`, this.context);
-        }
     }
 
     async #updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
@@ -629,21 +621,32 @@ export class HSAmbrosia extends HSModule
         return { id: bestMatchId, score: highestScore };
     }
 
-    public performInitialActiveLoadoutMatch(saveData: PlayerData): void {
+    public async performInitialActiveLoadoutMatch(saveData: PlayerData): Promise<void> {
         if (!saveData) return;
 
         this.resetActiveLoadout();
-
         const { id: bestMatchId, score: highestScore } = this.findBestMatchingAmbrosiaLoadout(saveData);
         const SIMILARITY_THRESHOLD = 0.8;
 
         if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-            HSLogger.debug(() => `Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
-            this.setActiveLoadout(parseInt(bestMatchId, 10), true);
+            // Ensure quickbar section is injected before manipulating DOM
+            await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+
+            const slotNumber = parseInt(bestMatchId, 10);
+            const slotId = `blueberryLoadout${slotNumber}`;
+            const slotElement = this.#loadoutsSlots.find(slot => slot.id === slotId);
+            if (!slotElement) { HSLogger.warn(`Invalid loadout slot: ${slotNumber}`, this.context); return; }
+            const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
+            if (!slotEnum) { HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context); return; }
+
+            this.activeLoadout = slotEnum;
+            await this.#updateActiveLoadout(slotEnum);
+
+            HSLogger.debug(() => `Initial load - Ambrosia loadout best match: ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant. `, this.context);
         } else if (bestMatchId) {
-            HSLogger.debug(() => `Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
+            HSLogger.debug(() => `Initial load - No compliant Ambrosia loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
         } else {
-            HSLogger.debug(() => `Initial load - No saved loadouts found to match.`, this.context);
+            HSLogger.debug(() => `Initial load - No saved Ambrosia loadouts found to match.`, this.context);
         }
     }
 
@@ -1221,14 +1224,22 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    async #performInitialActiveLoadoutMatchOnce(gameData: PlayerData): Promise<void> {
+        if (this.#hasPerformedInitialLoadoutMatch) return;
+
+        await this.performInitialActiveLoadoutMatch(gameData);
+        this.#hasPerformedInitialLoadoutMatch = true;
+    }
+
     async gameDataCallback() {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-
         if (!gameDataAPI) return;
-
         const gameData = gameDataAPI.getGameData();
-
         if (!gameData) return;
+
+        if (!this.#hasPerformedInitialLoadoutMatch) {
+            await this.#performInitialActiveLoadoutMatchOnce(gameData);
+        }
 
         if (gameData.blueberryTime != null && gameData.redAmbrosiaTime != null) {
 

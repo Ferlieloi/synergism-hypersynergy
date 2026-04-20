@@ -788,21 +788,6 @@
       "controlPage": "auto-sing"
     }
   },
-  "migrateAndSaveAllUserStrategies": {
-    "settingName": "migrateAndSaveAllUserStrategies",
-    "settingDescription": "Migrate&SaveAll",
-    "settingHelpText": "Migrates all non-default local strategies (old<=>new IDs) and saves them to localStorage",
-    "settingType": "button",
-    "enabled": true,
-    "settingValue": "",
-    "settingAction": "migrateAndSaveAllUserStrategies",
-    "settingControl": {
-      "controlId": "hs-setting-auto-sing-strategy-migrator-button",
-      "controlType": "button",
-      "controlGroup": "auto-sing-strategy-controls",
-      "controlPage": "auto-sing"
-    }
-  },
   "autosingEarlyCubeLoadout": {
     "settingName": "autosingEarlyCubeLoadout",
     "settingDescription": "Pre-AOAG Cube Loadout",
