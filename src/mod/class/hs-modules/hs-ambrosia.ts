@@ -1314,24 +1314,24 @@ export class HSAmbrosia extends HSModule
                         const normalLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(normalLuckLoadoutValue);
                         const redLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(redLuckLoadoutValue);
 
-                        let blueSwapTresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
-                        let blueSwapTresholdNormalMax = blueSwapTresholdNormalMin + bluePercentageSafeThreshold;
+                        let blueSwapThresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
+                        let blueSwapThresholdNormalMax = blueSwapThresholdNormalMin + bluePercentageSafeThreshold;
 
-                        let blueSwapTresholdRedMin = 100 - bluePercentageSafeThreshold;
-                        let blueSwapTresholdRedMax = 100;
+                        let blueSwapThresholdRedMin = 100 - bluePercentageSafeThreshold;
+                        let blueSwapThresholdRedMax = 100;
 
-                        let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
-                        let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapThresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapThresholdNormalMax = redSwapThresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
 
-                        let redSwapTresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
-                        let redSwapTresholdRedMax = 100;
+                        let redSwapThresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
+                        let redSwapThresholdRedMax = 100;
 
                         // Determine target loadout based on current state and thresholds
                         let targetLoadout: string | undefined;
 
                         // If currently in Red Luck, only exit when red bar has dropped below normal threshold
                         if (this.activeLoadout === redLuckLoadout) {
-                            if (redAmbrosiaPercent < redSwapTresholdRedMin) {
+                            if (redAmbrosiaPercent < redSwapThresholdRedMin) {
                                 targetLoadout = normalLuckLoadout;
                             } else {
                                 targetLoadout = redLuckLoadout; // Stay in Red Luck
@@ -1339,7 +1339,7 @@ export class HSAmbrosia extends HSModule
                         }
                         // If currently in Normal Luck, only exit when red bar has dropped below min threshold
                         else if (this.activeLoadout === normalLuckLoadout) {
-                            if (blueAmbrosiaPercent < blueSwapTresholdRedMin) {
+                            if (blueAmbrosiaPercent < blueSwapThresholdRedMin) {
                                 targetLoadout = octeractLoadout;
                             }
                             else {
@@ -1347,11 +1347,11 @@ export class HSAmbrosia extends HSModule
                             }
                         }
                         // Check if should swap to Red Luck (highest priority)
-                        else if (redAmbrosiaPercent >= redSwapTresholdRedMin) {
+                        else if (redAmbrosiaPercent >= redSwapThresholdRedMin) {
                             targetLoadout = redLuckLoadout;
                         }
                         // Check if should swap to Normal Luck
-                        else if (blueAmbrosiaPercent >= blueSwapTresholdRedMin) {
+                        else if (blueAmbrosiaPercent >= blueSwapThresholdRedMin) {
                             targetLoadout = normalLuckLoadout;
                         }
                         else {
