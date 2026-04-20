@@ -508,7 +508,7 @@ export interface PromoCodeTiming {
 export interface UpgradeData {
     level: number;
     toggleBuy: number; // Often 1, could potentially be boolean
-    freeLevels: number;
+    freeLevel: number;
 }
 
 /**

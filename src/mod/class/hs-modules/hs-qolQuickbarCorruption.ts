@@ -1,8 +1,11 @@
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSSettings } from "../hs-core/settings/hs-settings";
+import { HSGameData } from "../hs-core/gds/hs-gamedata";
+import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "./hs-corruption";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 
@@ -30,6 +33,11 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #corruptionCleanseQuickButton: HTMLButtonElement | null = null;
     #corruptionCleanseVanillaButton: HTMLElement | null = null;
     #corruptionCleanseButtonHandler: ((event: MouseEvent) => void) | null = null;
+    #maxCorruptionLevel = 0;
+    #lastRefreshCurrent: HSCorruptionLevels | null = null;
+    #lastRefreshNext: HSCorruptionLevels | null = null;
+    #lastRefreshMaxCorruptionLevel = 0;
+    #gameDataSubscriptionId: string | undefined = undefined;
 
     #isPickingIcon = false;
     #pickTargetSlotIndex: number | null = null;
@@ -117,6 +125,13 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             return;
         }
 
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (gameDataAPI) {
+            this.#maxCorruptionLevel = gameDataAPI.getMaxCorruptionLevel();
+        }
+
+        this.#subscribeGameDataChanges();
+
         await HSCorruption.cacheCorruptionElements();
         HSCorruption.loadCorruptionLoadoutIcons();
         await this.#buildSlots();
@@ -136,6 +151,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#cleanupCorruptionObserver();
         this.#cleanupSlotEventHandlers();
         this.#cleanupCorruptionCleanseButton();
+        this.#unsubscribeGameDataChanges();
         this.#reset();
         HSCorruption.clearCache();
     }
@@ -172,6 +188,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#corruptionCleanseQuickButton = null;
         this.#corruptionCleanseVanillaButton = null;
         this.#corruptionCleanseButtonHandler = null;
+        this.#maxCorruptionLevel = 0;
         this.#isPickingIcon = false;
         this.#pickTargetSlotIndex = null;
     }
@@ -191,6 +208,38 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             this.#corruptionObserverUnsubscribe();
             this.#corruptionObserverUnsubscribe = null;
         }
+    }
+
+    #subscribeGameDataChanges(): void {
+        const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
+        if (gameDataMod && !this.#gameDataSubscriptionId) {
+            this.#gameDataSubscriptionId = gameDataMod.subscribeGameDataChange(this.#onGameDataUpdated.bind(this));
+            HSLogger.debug(() => 'HSQOLCorruptionQuickbar subscribed to game data changes', this.context);
+        }
+    }
+
+    #unsubscribeGameDataChanges(): void {
+        const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
+        if (gameDataMod && this.#gameDataSubscriptionId) {
+            gameDataMod.unsubscribeGameDataChange(this.#gameDataSubscriptionId);
+            this.#gameDataSubscriptionId = undefined;
+            HSLogger.debug(() => 'HSQOLCorruptionQuickbar unsubscribed from game data changes', this.context);
+        }
+    }
+
+    #onGameDataUpdated(): void {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+
+        this.#maxCorruptionLevel = gameDataAPI.getMaxCorruptionLevel();
+        void this.#refreshCurrentLoadedCorruptions();
+    }
+
+    async #refreshCurrentLoadedCorruptions(): Promise<void> {
+        if (!this.container) return;
+
+        const { current, next } = await HSCorruption.getBothLoadedCorruptions();
+        this.#refreshActive(current, next);
     }
 
     /** Build each corruption loadout slot button and apply saved icons. */
@@ -264,10 +313,38 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         return slot;
     }
 
-    /** Update slot border and status based on current/next corruption match state. */
-    #refreshActive(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
+    /** Normalize a saved loadout's levels for comparison against currently loaded corruption values. */
+    #normalizeLoadoutLevels(levels: HSCorruptionLevels): HSCorruptionLevels {
+        if (this.#maxCorruptionLevel <= 0) {
+            return levels;
+        }
 
+        return HSCorruption.corruptionNames.reduce((normalized, key) => {
+            normalized[key] = Math.min(levels[key], this.#maxCorruptionLevel);
+            return normalized;
+        }, {} as HSCorruptionLevels);
+    }
+
+    /** Update slot border and status based on current/next corruption match state. */
+    #levelsEqual(a: HSCorruptionLevels | null, b: HSCorruptionLevels | null): boolean {
+        if (!a || !b) return false;
+        return HSCorruption.corruptionNames.every((key) => a[key] === b[key]);
+    }
+
+    #refreshActive(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
         if (!this.container) return;
+
+        const currentIsSame = this.#levelsEqual(current, this.#lastRefreshCurrent);
+        const nextIsSame = this.#levelsEqual(next, this.#lastRefreshNext);
+        const maxCapIsSame = this.#maxCorruptionLevel === this.#lastRefreshMaxCorruptionLevel;
+
+        if (currentIsSame && nextIsSame && maxCapIsSame) {
+            return;
+        }
+
+        this.#lastRefreshCurrent = { ...current };
+        this.#lastRefreshNext = { ...next };
+        this.#lastRefreshMaxCorruptionLevel = this.#maxCorruptionLevel;
 
         this.#displayCorruptionStrings(current, next);
 
@@ -283,10 +360,14 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             const slot = this.#slots[index];
             if (!slot) return;
 
-            if (HSCorruption.matches(loadout.levels, current)) {
+            const normalizedLevels = this.#normalizeLoadoutLevels(loadout.levels);
+            const currentMatch = HSCorruption.matches(normalizedLevels, current);
+            const nextMatch = !currentMatch && HSCorruption.matches(normalizedLevels, next);
+
+            if (currentMatch) {
                 slot.classList.add('hs-rainbow-border');
                 matchedCurrent = true;
-            } else if (HSCorruption.matches(loadout.levels, next)) {
+            } else if (nextMatch) {
                 slot.classList.add('hs-silver-border');
                 matchedNext = true;
             }
