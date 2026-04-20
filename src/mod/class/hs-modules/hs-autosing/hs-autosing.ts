@@ -1402,7 +1402,6 @@ export class HSAutosing extends HSModule {
 
         // HSLogger.debug(() => `restoring prevMainView: ${prevMainView.getName()}`, this.context);
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
-        prevMainView.goto();
 
         // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)
         this.#startUpg81Clicking();
@@ -1417,7 +1416,8 @@ export class HSAutosing extends HSModule {
             stage = await this.#getStage();
         } while (!this.#isAllowedStage(stage));
         HSLogger.debug(() => `Reached allowed stage: ${stage}`, this.context);
-
+        
+        window.setTimeout(() => prevMainView.goto(), 20);
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
     }

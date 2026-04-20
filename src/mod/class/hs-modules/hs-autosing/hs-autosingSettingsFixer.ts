@@ -315,7 +315,7 @@ export class HSAutosingSettingsFixer {
         }
         
         // Restore user tab
-        prevMainView.goto();
+        window.setTimeout(() => prevMainView.goto(), 20);
 
         // Log final verification result
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {
