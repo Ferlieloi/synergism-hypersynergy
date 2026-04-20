@@ -34,6 +34,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #corruptionCleanseVanillaButton: HTMLElement | null = null;
     #corruptionCleanseButtonHandler: ((event: MouseEvent) => void) | null = null;
     #maxCorruptionLevel = 0;
+    #zeroCorruption: HSCorruptionLevels = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 };
     #lastRefreshCurrent: HSCorruptionLevels | null = null;
     #lastRefreshNext: HSCorruptionLevels | null = null;
     #lastRefreshMaxCorruptionLevel = 0;
@@ -352,9 +353,10 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             slot.classList.remove('hs-rainbow-border');
             slot.classList.remove('hs-silver-border');
         });
-
-        let matchedCurrent = false;
-        let matchedNext = false;
+        if (this.#corruptionCleanseQuickButton) {
+            this.#corruptionCleanseQuickButton.classList.remove('hs-rainbow-border');
+            this.#corruptionCleanseQuickButton.classList.remove('hs-silver-border');
+        }
 
         this.#loadouts.forEach((loadout, index) => {
             const slot = this.#slots[index];
@@ -363,18 +365,23 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             const normalizedLevels = this.#normalizeLoadoutLevels(loadout.levels);
             const currentMatch = HSCorruption.matches(normalizedLevels, current);
             const nextMatch = !currentMatch && HSCorruption.matches(normalizedLevels, next);
-
             if (currentMatch) {
                 slot.classList.add('hs-rainbow-border');
-                matchedCurrent = true;
             } else if (nextMatch) {
                 slot.classList.add('hs-silver-border');
-                matchedNext = true;
             }
         });
 
-        this.container.classList.toggle('hs-corruption-current-unknown', !matchedCurrent);
-        this.container.classList.toggle('hs-corruption-next-unknown', !matchedNext);
+        const cleanseCurrentMatch = HSCorruption.matches(this.#zeroCorruption, current);
+        const cleanseNextMatch = HSCorruption.matches(this.#zeroCorruption, next);
+        if (this.#corruptionCleanseQuickButton) {
+            if (cleanseCurrentMatch) {
+                this.#corruptionCleanseQuickButton.classList.add('hs-rainbow-border');
+            }
+            if (cleanseNextMatch) {
+                this.#corruptionCleanseQuickButton.classList.add('hs-silver-border');
+            }
+        }
     }
 
     /** Display current and next corruption level strings under summary. */
