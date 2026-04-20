@@ -56,6 +56,8 @@ export interface CalculationCache {
     AMB_ambrosiaTalismanBonusRuneLevel: CachedValue;
     AMB_ambrosiaRuneOOMBonus: CachedValue;
 
+    AMB_ambrosiaBrickOfLead: CachedValue;
+
     REDAMB_blueberryGenerationSpeed: CachedValue;
     REDAMB_blueberryGenerationSpeed2: CachedValue;
     REDAMB_freeLevelsRow2: CachedValue;
@@ -305,6 +307,12 @@ export interface AmbrosiaUpgradeCalculationCollection {
 
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig<'ambrosiaTalismanBonusRuneLevel'>
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig<'ambrosiaRuneOOMBonus'>
+
+    ambrosiaBrickOfLead: AmbrosiaUpgradeCalculationConfig<'ambrosiaBrickOfLead'>
+    ambrosiaFreeLuckUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeLuckUpgrades'>
+    ambrosiaFreeGenerationUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeGenerationUpgrades'>
+    ambrosiaFreeRedLuckUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeRedLuckUpgrades'>
+    ambrosiaFreeQuarkUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeQuarkUpgrades'>
 }
 
 export type PseudoCoinUpgradeNames =
@@ -379,6 +387,11 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaSingReduction2: { singularityReduction: number }
     ambrosiaTalismanBonusRuneLevel: { talismanBonusRuneLevel: number }
     ambrosiaRuneOOMBonus: { runeOOMBonus: number; infiniteAscentOOMBonus: number }
+    ambrosiaBrickOfLead: { barRequirementMult: number; additiveLuckMult: number; singularitySpeedMult: number }
+    ambrosiaFreeQuarkUpgrades: { freeQuarkUpgrades: number }
+    ambrosiaFreeLuckUpgrades: { freeLuckUpgrades: number }
+    ambrosiaFreeGenerationUpgrades: { freeGenerationUpgrades: number }
+    ambrosiaFreeRedLuckUpgrades: { freeRedLuckUpgrades: number }
 }
 
 export type AmbrosiaUpgradeNames = keyof AmbrosiaUpgradeRewards
