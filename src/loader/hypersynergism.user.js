@@ -468,44 +468,6 @@
         }
 /*
         // ==================================================================================
-        // ── TELEPORT LOWER PATCH — expose a dialog-free singularityCount setter
-        // When autosing teleports lower, teleportToSingularity only sets player.singularityCount = target,
-        // then calls updateSingularityElevator() (display only) and shows two dialogs.
-        // We bypass all of that with a synchronous one-liner.
-        // Unique anchor: 'singularity.elevator.inEXALTError' appears only inside teleportToSingularity.
-        // We walk backward to find the async arrow fn assigned to eM and inject at body start.
-        try {
-            const tpAnchor = 'singularity.elevator.inEXALTError';
-            const tpAnchorIdx = code.indexOf(tpAnchor);
-            if (tpAnchorIdx !== -1) {
-                const backCtx = code.slice(Math.max(0, tpAnchorIdx - 3500), tpAnchorIdx);
-                const allAsyncFns = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*async\s*\(\s*\)\s*=>\s*\{/g)];
-                const eMMatch = allAsyncFns.at(-1);
-                if (eMMatch) {
-                    const eMFn = eMMatch[1];
-                    const eMBodyStart = (tpAnchorIdx - backCtx.length) + eMMatch.index + eMMatch[0].length;
-                    const expose = 
-                        `\nif(!window.__HS_TELEPORT_LOWER_EXPOSED){` +
-                            `window.__HS_teleportLower=(t)=>{` +
-                                `n.singularityCount=t;` +
-                                `Va();` +
-                            `};` +
-                            `window.__HS_TELEPORT_LOWER_EXPOSED=true;` +
-                            `console.log('[HS-PATCH] \u2705 teleportLower exposed');` +
-                        `}\n`;
-                    code = code.slice(0, eMBodyStart) + expose + code.slice(eMBodyStart);
-                    log(`Patched teleportLower (fn=${eMFn})`);
-                } else {
-                    warn('teleportLower: could not extract async fn from anchor context');
-                }
-            } else {
-                warn('Could not patch teleportLower — anchor not found in bundle');
-            }
-        } catch (e) {
-            warn('Error while patching teleportLower', e);
-        }
-
-        // ==================================================================================
         // ── ENTER/EXIT EXALT PATCH — dialog-free enableChallenge / exitChallenge wrappers (a little more 'hacky' than the rest...)
         // enterExalt replicates enableChallenge's state-mutation body (no Confirm/Alert).
         // exitExalt replicates exitChallenge(success=false) — autosing always exits exalts without completing
@@ -628,7 +590,6 @@
                         `exportData:          typeof window.__HS_exportData,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
-                    //  `teleportLower:       typeof window.__HS_teleportLower,` +
                     //  `enterExalt:          typeof window.__HS_enterExalt,` +
                     //  `exitExalt:           typeof window.__HS_exitExalt,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +

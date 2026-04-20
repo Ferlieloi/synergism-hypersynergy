@@ -150,7 +150,6 @@ export class HSAutosing extends HSModule {
     #applyCorruptionsFunc?: (json: string) => boolean;
 //  #enterExaltFunc?: () => void;
 //  #exitExaltFunc?: () => void;
-//  #teleportLowerFunc?: (target: number) => void;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -437,11 +436,10 @@ export class HSAutosing extends HSModule {
 
         /*
         const needsCorruptions = !this.#applyCorruptionsFunc;
-        const needsTeleport    = !this.#teleportLowerFunc;
         const needsExalt       = !this.#enterExaltFunc || !this.#exitExaltFunc;
 
-        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsTeleport: ${needsTeleport}, needsExalt: ${needsExalt}`, this.context);
-        if (needsCorruptions || needsTeleport || needsExalt) {
+        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsExalt: ${needsExalt}`, this.context);
+        if (needsCorruptions || needsExalt) {
             HSLogger.debug(() => 'Triggering late patches...', this.context);
             const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
 
@@ -452,11 +450,6 @@ export class HSAutosing extends HSModule {
             // window.__HS_enterExalt and window.__HS_exitExalt.
             if (needsExalt) { await this.#enterAndLeaveExalt(); }
 
-            // Clicking the elevator teleport button calls teleportToSingularity, which exposes
-            // window.__HS_teleportLower at the start of its body before any dialog.
-            if (needsTeleport) {
-                this.#elevatorTeleportButton.click();
-            }
             prevMainView.goto();
         }
         */
@@ -465,7 +458,6 @@ export class HSAutosing extends HSModule {
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
         // Read all four: they should now be set on window.
-    //  this.#teleportLowerFunc    = (window as any).__HS_teleportLower    ?? null;
     //  this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
     //  this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
         this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
@@ -473,7 +465,7 @@ export class HSAutosing extends HSModule {
 
         this.#isExposureReady = 
             !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc 
-                // && this.#teleportLowerFunc && this.#enterExaltFunc && this.#exitExaltFunc
+                // && this.#enterExaltFunc && this.#exitExaltFunc
             );
 
         const exposureMsg = `Exposure status:
@@ -484,7 +476,6 @@ export class HSAutosing extends HSModule {
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
             ` +
-            // teleportLowerFunc: ${!!this.#teleportLowerFunc},
             // enterExaltFunc: ${!!this.#enterExaltFunc},
             // exitExaltFunc: ${!!this.#exitExaltFunc},
             `? isExposureReady: ${this.#isExposureReady}.`;
@@ -1393,18 +1384,11 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesObserverActivated = false;
 
         if (this.#isExposureReady) {
-            // The vanilla Teleport function is simply doing some checks (everything true for us wanting to go lower),
-            // then it updates singularityCount, then calls a function to update the UI...
+            // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
+            // 2) updates singularityCount, 3) calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
-            // this.#teleportLowerFunc!(this.#targetSingularity);  <== Useless ?
-            HSLogger.debug(() => `Patch: teleport button "clicked"`, this.context);
             this.#exposedPlayer!.singularityCount = this.#targetSingularity;
-            // this.#elevatorTeleportButton.click();
         } else {
-            // This two lines are probably not needed...
-            // this.#elevatorInput.value = this.#targetSingularity.toString();
-            // this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
-            HSLogger.debug(() => `No patch: teleport button clicked`, this.context);
             this.#elevatorTeleportButton.click();
         }
 

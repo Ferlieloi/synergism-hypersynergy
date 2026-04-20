@@ -13,15 +13,15 @@
 
 (function () {
     'use strict';
-    const repo = 'Ferlieloi'; // 'Ferlieloi', 'maenhiir'
+    const repo = 'Ferlieloi'; // Stable: 'Ferlieloi', Dev: 'maenhiir'
     const version = 'master'; // 'master', specific tag (e.g. 'v2.11.0-dev13'), specific commit (e.g. '0611b83')
-    const baseUrl = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user${repo==='maenhiir'?'.shewchou':''}.js`;
+    const baseUrl = `https://cdn.jsdelivr.net/gh/${repo}/synergism-hypersynergy@${version}/src/loader/hypersynergism.user.js`;
     const url = baseUrl + '?t=' + Date.now();
     window.__HS_REPO = repo;
     window.__HS_VERSION = version;
     try {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, false); // synchronous — same timing as @require
+        xhr.open('GET', url, false);
         xhr.send();
         if (xhr.status === 200) {
             const fn = new Function(xhr.responseText + '\n//# sourceURL=' + url);
