@@ -551,8 +551,9 @@ export class HSAutosing extends HSModule {
     }
 
     public async restartAutosing(): Promise<void> {
-        if (!this.#autosingEnabled) return;
-        this.stopAutosing();
+        if (this.#autosingEnabled) {
+            this.stopAutosing();
+        }
         window.setTimeout(() => this.enableAutoSing(), 500);
     }
 
@@ -1105,16 +1106,20 @@ export class HSAutosing extends HSModule {
             const p2 = this.#exposedPlayer!;
             const isC15 = challengeIndex === 15;
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
+            let current = 0;
 
             while (true) {
                 const now = performance.now();
-                if (now >= endTime) break;
+                if (now >= endTime) {
+                    if (challengeIndex <= 10 && minCompletions !== 0) {
+                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
+                    }
+                    return;
+                }
                 if (!this.#autosingEnabled) return;
 
-                const current = isC15 ? p2.challenge15Exponent : p2.challengecompletions[challengeIndex];
-                if (current >= maxPossible) return;
-
-                if (current >= minCompletions) {
+                current = isC15 ? p2.challenge15Exponent : p2.challengecompletions[challengeIndex];
+                if (current >= maxPossible || current >= minCompletions) {
                     if (waitTime > 0) await HSUtils.sleep(waitTime);
                     HSLogger.debug(() => `-------> C${challengeIndex}: ${current} ${isC15 ? 'exponent' : 'completions'} reached`, this.context);
                     return;
@@ -1134,7 +1139,12 @@ export class HSAutosing extends HSModule {
 
             while (true) {
                 const now = performance.now();
-                if (now >= endTime) break;
+                if (now >= endTime) { 
+                    if (challengeIndex <= 10 && minCompletions !== 0) {
+                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
+                    }
+                    return;
+                }
                 if (!this.#autosingEnabled) return;
 
                 const rawText = getLevelText();
@@ -1152,11 +1162,6 @@ export class HSAutosing extends HSModule {
                 const remaining = endTime - now;
                 await HSUtils.sleep(remaining < sleepInterval ? remaining : sleepInterval);
             }
-        }
-
-        // No warning if minCompletions = 0 because it's ok strategy-wise
-        if (challengeIndex <= 10 && minCompletions !== 0) {
-            HSLogger.warn(`-------> Timeout: C${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
         }
     }
 
