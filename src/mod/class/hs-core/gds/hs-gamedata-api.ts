@@ -5423,41 +5423,44 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (!this.gameData) return 0;
         const data = this.gameData;
 
-        const challenge11 = data.challengecompletions?.[11] ?? 0;
-        const challenge12 = data.challengecompletions?.[12] ?? 0;
-        const challenge13 = data.challengecompletions?.[13] ?? 0;
-        const challenge14 = data.challengecompletions?.[14] ?? 0;
         const platonicTauApplies = (data.goldenQuarkUpgrades?.platonicTau?.level ?? 0) > 0;
         const corruptionFourteenApplies = (data.goldenQuarkUpgrades?.corruptionFourteen?.level ?? 0) > 0;
         const octeractCorruptionEffect = this.R_actualOcteractUpgradeTotalLevels('octeractCorruption');
 
         let max = 0;
-        if (challenge11 > 0) {
-            max += 5;
-        }
-        if (challenge12 > 0) {
-            max += 2;
-        }
-        if (challenge13 > 0) {
-            max += 2;
-        }
-        if (challenge14 > 0) {
-            max += 2;
-        }
-        if ((data.platonicUpgrades?.[5] ?? 0) > 0) {
-            max += 1;
-        }
-        if ((data.platonicUpgrades?.[10] ?? 0) > 0) {
-            max += 1;
-        }
         if (platonicTauApplies) {
-            max = Math.max(13, max);
+            max = 13;
+        } else {
+            const challenge11 = data.challengecompletions?.[11] ?? 0;
+            const challenge12 = data.challengecompletions?.[12] ?? 0;
+            const challenge13 = data.challengecompletions?.[13] ?? 0;
+            const challenge14 = data.challengecompletions?.[14] ?? 0;
+
+            if (challenge11 > 0) {
+                max += 5;
+            }
+            if (challenge12 > 0) {
+                max += 2;
+            }
+            if (challenge13 > 0) {
+                max += 2;
+            }
+            if (challenge14 > 0) {
+                max += 2;
+            }
+            if ((data.platonicUpgrades?.[5] ?? 0) > 0) {
+                max += 1;
+            }
+            if ((data.platonicUpgrades?.[10] ?? 0) > 0) {
+                max += 1;
+            }
         }
         if (corruptionFourteenApplies) {
             max += 1;
         }
         max += octeractCorruptionEffect;
 
+        HSLogger.log(`Calculated max corruption level: ${max}, Platonic Tau: ${platonicTauApplies}, Corruption XIV: ${corruptionFourteenApplies}, Octeract Corruption Effect: ${octeractCorruptionEffect})`);
         return max;
     }
 
