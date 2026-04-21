@@ -38,6 +38,7 @@ export class HSAutosing extends HSModule {
     static readonly #DECIMAL_INFINITY = new Decimal(Infinity);
     static readonly #DECIMAL_9999 = new Decimal(9999);
     static readonly #DECIMAL_0 = new Decimal(0);
+    static readonly #BACKGROUND_COLOR_REGEX = /background-color/i;
     #gameDataAPI?: HSGameDataAPI;
 
     #corruptionManager!: HSAutosingCorruption;
@@ -156,9 +157,6 @@ export class HSAutosing extends HSModule {
     #gamestate!: HSGameState;
 
     #autosingModal?: HSAutosingModal;
-    #pausePromise?: Promise<void>;
-    #pausePromiseResolve?: () => void;
-    #pauseListenerAttached = false;
 
     // Strategy Caches
     readonly #phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
@@ -418,7 +416,6 @@ export class HSAutosing extends HSModule {
                 }
             });
         }
-
     }
 
     async #cacheExposedFunctions(): Promise<void> {
@@ -478,8 +475,8 @@ export class HSAutosing extends HSModule {
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
             ` +
-            // enterExaltFunc: ${!!this.#enterExaltFunc},
-            // exitExaltFunc: ${!!this.#exitExaltFunc},
+        //  enterExaltFunc: ${!!this.#enterExaltFunc},
+        //  exitExaltFunc: ${!!this.#exitExaltFunc},
             `? isExposureReady: ${this.#isExposureReady}.`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
@@ -604,11 +601,6 @@ export class HSAutosing extends HSModule {
             try { this.#endStagePromiseResolve(); } catch (e) { /* ignore */ }
             this.#endStagePromiseResolve = undefined;
         }
-        if (this.#pausePromiseResolve) {
-            try { this.#pausePromiseResolve(); } catch (e) { /* ignore */ }
-            this.#pausePromiseResolve = undefined;
-            this.#pausePromise = undefined;
-        }
         this.#endStagePromise = undefined;
 
         if (this.#autosingModal) {
@@ -617,7 +609,6 @@ export class HSAutosing extends HSModule {
             } else {
                 this.#autosingModal.destroy();
                 this.#autosingModal = undefined;
-                this.#pauseListenerAttached = false;
             }
         }
         await HSUtils.stopDialogWatcher();
@@ -627,7 +618,6 @@ export class HSAutosing extends HSModule {
         if (this.#autosingModal) {
             this.#autosingModal.destroy();
             this.#autosingModal = undefined;
-            this.#pauseListenerAttached = false;
         }
     }
 
@@ -1092,7 +1082,16 @@ export class HSAutosing extends HSModule {
             while (!isChallengeActive()) await HSUtils.yield();
         } else {
             const isActive = accessor.isActive;
-            await this.#waitForClassCondition(challengeBtn!, () => !isActive());
+            const exitButton = challengeIndex <= 5
+                ? this.#exitTranscBtn
+                : challengeIndex <= 10
+                    ? this.#exitReincBtn
+                    : this.#exitAscBtn;
+            const skipInactiveWait = !HSAutosing.#BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
+            // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
+            if (!skipInactiveWait) {
+                await this.#waitForClassCondition(challengeBtn!, () => !isActive());
+            }
             this.#fastDoubleClick(challengeBtn!);
             await this.#waitForClassCondition(challengeBtn!, () => isActive());
         }
@@ -1355,8 +1354,6 @@ export class HSAutosing extends HSModule {
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
         const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-        // TODO: investigate tab switching / not restoring...
-        HSLogger.debug(() => `saving prevMainView: ${prevMainView.getName()}`, this.context);
 
         let q: number;
         let gq: number;
@@ -1408,7 +1405,7 @@ export class HSAutosing extends HSModule {
 
         // Obt switch so we start producing Obt ASAP every sing
         await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
-        
+
         let stage;
         do {
             // Yield before checking if the stage is allowed
@@ -1416,7 +1413,7 @@ export class HSAutosing extends HSModule {
             stage = await this.#getStage();
         } while (!this.#isAllowedStage(stage));
         HSLogger.debug(() => `Reached allowed stage: ${stage}`, this.context);
-        
+
         window.setTimeout(() => prevMainView.goto(), 20);
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
@@ -1424,7 +1421,7 @@ export class HSAutosing extends HSModule {
 
     async #enterAndLeaveExalt(): Promise<void> {
         /*
-        // Those two functions are 'less clean', and may not be needed with the auto-confirm...
+        // Those two functions are less clean, and may not be needed with the auto-confirm...
         // Fast path: 
         if (this.#isExposureReady) {
             this.#enterExaltFunc!();

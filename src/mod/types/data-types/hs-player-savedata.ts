@@ -686,8 +686,8 @@ export interface SingularityChallengeRewards {
 export interface SingularityChallenges {
     noSingularityUpgrades: SingularityChallengeStatus;
     oneChallengeCap: SingularityChallengeStatus;
-    noOcteracts: SingularityChallengeStatus;
     limitedAscensions: SingularityChallengeStatus;
+    noOcteracts: SingularityChallengeStatus;
     noAmbrosiaUpgrades: SingularityChallengeStatus;
     limitedTime: SingularityChallengeStatus;
     sadisticPrequel: SingularityChallengeStatus;
