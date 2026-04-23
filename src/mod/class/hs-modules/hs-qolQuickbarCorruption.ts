@@ -4,10 +4,14 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "./hs-corruption";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
+
+type HSQOLCorruptionStatusTarget = 'noSingularityUpgrades' | 'noOcteracts' | 'sadisticPrequel';
+type HSQOLCorruptionPlatonicTarget = 'platUpg5' | 'platUpg10';
+type HSQOLCorruptionChallengeLevelTarget = 'challenge11level' | 'challenge12level' | 'challenge13level' | 'challenge14level';
+type HSQOLCorruptionDomTarget = HSQOLCorruptionStatusTarget | HSQOLCorruptionPlatonicTarget | HSQOLCorruptionChallengeLevelTarget;
 
 /**
  * Class: HSQOLCorruptionQuickbar
@@ -23,39 +27,60 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     protected readonly sectionIdInternal = 'corruptionQuickBar';
     protected readonly sectionIdCss = 'corruptionQuickBar';
 
+    // DOM elements
     #corruptionSummaryWrapper: HTMLDivElement | null = null;
     #currentCorruptionsTextEl: HTMLDivElement | null = null;
-    #nextCorruptionTextEl: HTMLDivElement | null = null;
+    #nextCorruptionTextEl:     HTMLDivElement | null = null;
+    #corruptionCleanseQuickButton:   HTMLButtonElement | null = null;
+    #corruptionCleanseVanillaButton: HTMLButtonElement | null = null;
     #slotsWrapper: HTMLDivElement | null = null;
     #slots: HTMLButtonElement[] = [];
-    #loadouts: HSCorruptionUserLoadout[] = [];
-    #corruptionObserverUnsubscribe: (() => void) | null = null;
-    #corruptionCleanseQuickButton: HTMLButtonElement | null = null;
-    #corruptionCleanseVanillaButton: HTMLElement | null = null;
-    #corruptionCleanseButtonHandler: ((event: MouseEvent) => void) | null = null;
-    #maxCorruptionLevel = 0;
-    #zeroCorruption: HSCorruptionLevels = { viscosity: 0, drought: 0, deflation: 0, extinction: 0, illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0 };
-    #lastRefreshCurrent: HSCorruptionLevels | null = null;
-    #lastRefreshNext: HSCorruptionLevels | null = null;
-    #lastRefreshMaxCorruptionLevel = 0;
-    #gameDataSubscriptionId: string | undefined = undefined;
 
+    // Loadouts stuff
+    #loadouts: HSCorruptionUserLoadout[] = [];
+    #lastRefreshCurrent: HSCorruptionLevels | null = null;
+    #lastRefreshNext:    HSCorruptionLevels | null = null;
+
+    // Icon persistence
+    readonly #CORRUPTION_ICON_STORAGE_KEY = 'hs-corruption-loadout-icons';
+    #corruptionLoadoutIcons: Map<number, string> = new Map();
+
+    // Corruption cap calculations
+    readonly #statusTargets: readonly HSQOLCorruptionStatusTarget[] = ['noSingularityUpgrades', 'noOcteracts', 'sadisticPrequel'];
+    readonly #platonicTargets: readonly HSQOLCorruptionPlatonicTarget[] = ['platUpg5', 'platUpg10'];
+    readonly #challengeLevelTargets: readonly HSQOLCorruptionChallengeLevelTarget[] = ['challenge11level', 'challenge12level', 'challenge13level', 'challenge14level'];
+    #maxCorruptionLevel = 0;
+    #lastRefreshMaxCorruptionLevel = 0;
+    #cachedPlatonicTau = false;
+    #cachedPlatonicAlpha = false;
+    #cachedPlatonicBeta = false;
+    #cachedCorruptionFourteenAmount = 0;
+    #cachedOcteractCorruptionAmount = 0;
+    #cachedNoSingularityUpgradesActive = false;
+    #cachedNoOcteractsActive = false;
+    #cachedSadisticPrequelActive = false;
+    #cachedHighestCompletedChallengeLevel = 0;
+
+    #domMutationObservers: Array<{ id: string; observer: MutationObserver }> = [];
+    #cachedDomElements: Map<string, HTMLElement> = new Map();
+
+    // Icon picking
     #isPickingIcon = false;
     #pickTargetSlotIndex: number | null = null;
     #pickDocClickListener: ((event: MouseEvent) => void) | null = null;
     #wasGdsEnabled: boolean | null = null;
 
+    // Event handlers
     #slotEventHandlers: Map<HTMLButtonElement, { click: (event: MouseEvent) => Promise<void>; contextmenu: (event: MouseEvent) => void }> = new Map();
+    #corruptionCleanseButtonHandler: ((event: MouseEvent) => Promise<void>) | null = null;
+    #corruptionObserverUnsubscribe: (() => void) | null = null;
 
-    /** Subscribe to corruption state updates and track active loadout matching. */
-    #setupCorruptionObserver(): void {
-        if (this.#corruptionObserverUnsubscribe) return;
 
-        this.#corruptionObserverUnsubscribe = HSCorruption.observeCorruptions((current, next) => {
-            this.#refreshActive(current, next);
-        });
-    }
+    // ======================================================
+    // ------------- Lifecycle / DOM management -------------
+    // ======================================================
 
+    /** Create DOM elements for the corruption quickbar section. */
     protected createDOM(): void {
         if (!this.container) return;
 
@@ -98,12 +123,14 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         button.className = 'hs-corruption-slot hs-corruption-cleanse-button';
         button.title = 'Cleanse';
 
-        this.#corruptionCleanseButtonHandler = (event: MouseEvent) => {
+        this.#corruptionCleanseButtonHandler = async (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
             const confirmButton = this.#getCachedCorruptionCleanseConfirmButton();
             if (confirmButton) {
                 confirmButton.click();
+                // The import zero is only for when we are in C15 and cleanse is 'badly handled' by vanilla
+                await HSCorruption.importCorruptionLoadout(HSCorruption.ZERO_CORRUPTIONS);
             } else {
                 HSLogger.warn('Could not find #corruptionCleanseConfirm to trigger', this.context);
             }
@@ -121,20 +148,20 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     /** Initialize quickbar: load corruption data + build slots + subscribe to updates. */
     protected async onSetup(): Promise<void> {
         const corruptionContainer = await HSElementHooker.HookElement('#corruptionLoadouts');
-        if (!corruptionContainer || !(corruptionContainer instanceof HTMLElement)) {
-            HSLogger.warn('Corruption quickbar setup: #corruptionLoadouts not found', this.context);
-            return;
-        }
+        if (!corruptionContainer || !(corruptionContainer instanceof HTMLElement)) { HSLogger.warn('Corruption quickbar setup: #corruptionLoadouts not found', this.context); return; }
 
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (gameDataAPI) {
-            this.#maxCorruptionLevel = gameDataAPI.getMaxCorruptionLevel();
+        // Oct and GQ upgrades are a pain to get with DOM, and GDS is a bit heavy
+        // So I'm only checking their values once on setup via GameData
+        // (and if players buy them, they need to disable/re-enable the quickbar)
+        await this.#cacheForcedGameData();
+        if (!this.#cachedPlatonicTau) {
+            this.#refreshPlatonicUpgradeFlagsFromDOM();
         }
-
-        this.#subscribeGameDataChanges();
+        this.#refreshChallengeAndStatusFlagsFromDOM();
+        this.#maxCorruptionLevel = this.#calculateMaxCorruptionLevel();
 
         await HSCorruption.cacheCorruptionElements();
-        HSCorruption.loadCorruptionLoadoutIcons();
+        this.#loadCorruptionIcons();
         await this.#buildSlots();
 
         if (!this.#corruptionCleanseQuickButton && this.#slotsWrapper) {
@@ -144,17 +171,183 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         }
 
         this.#setupCorruptionObserver();
-        await HSCorruption.startCorruptionObservationContainer('#corruptionStatsLoadouts');
+        await HSCorruption.startCorruptionObservation('#corruptionStatsLoadouts');
+        await this.#setupDomObservers();
     }
 
     /** Tear down quickbar and release resources/observers. */
     protected onTeardown(): void {
+        this.#endPickupMode();
         this.#cleanupCorruptionObserver();
         this.#cleanupSlotEventHandlers();
         this.#cleanupCorruptionCleanseButton();
-        this.#unsubscribeGameDataChanges();
+        this.#cleanupDomObservers();
         this.#reset();
         HSCorruption.clearCache();
+    }
+
+
+    // ======================================================
+    // -------------- Setup / teardown helpers --------------
+    // ======================================================
+
+    /** Subscribe to corruption state updates and track active loadout matching. */
+    #setupCorruptionObserver(): void {
+        if (this.#corruptionObserverUnsubscribe) return;
+
+        this.#corruptionObserverUnsubscribe = HSCorruption.observeCorruption((current, next) => {
+            this.#refreshActive(current, next);
+        });
+    }
+
+    /** Cache forced game data on initial setup to avoid repeated runtime lookups. */
+    async #cacheForcedGameData(): Promise<void> {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+        let gameData = gameDataAPI.getGameData();
+        if (!gameData) gameData = await gameDataAPI.getForcedGameData();
+        if (!gameData) return;
+
+        this.#cachedPlatonicTau = (gameData.goldenQuarkUpgrades?.platonicTau?.level ?? 0) > 0;
+        this.#cachedCorruptionFourteenAmount = gameData.goldenQuarkUpgrades?.corruptionFourteen?.level ?? 0;
+        this.#cachedOcteractCorruptionAmount = gameData.octUpgrades?.octeractCorruption?.level ?? 0;
+    }
+
+    /** Observe relevant DOM state changes that affect max corruption calculations. */
+    async #setupDomObservers(): Promise<void> {
+        this.#cleanupDomObservers();
+
+        const targetIds: HSQOLCorruptionDomTarget[] = [...this.#statusTargets];
+
+        if (!this.#cachedPlatonicTau) {
+            // Those are only needed when Tau is not bought
+            targetIds.push(...this.#platonicTargets); // Alpha + Beta
+            targetIds.push(...this.#challengeLevelTargets); // C11-14
+        }
+
+        for (const id of targetIds) {
+            await HSElementHooker.HookElement(`#${id}`);
+            const element = document.getElementById(id);
+            if (!element) {
+                HSLogger.debug(() => `HSQOLCorruptionQuickbar DOM observer target not found: ${id}`, this.context);
+                continue;
+            }
+            this.#cachedDomElements.set(id, element);
+
+            const observer = new MutationObserver(() => {
+                if (this.#processDomMutationTarget(id)) return;
+
+                const newMax = this.#calculateMaxCorruptionLevel();
+                if (newMax !== this.#maxCorruptionLevel) {
+                    this.#maxCorruptionLevel = newMax;
+                    void this.#refreshCurrentLoadedCorruptions();
+                }
+            });
+
+            const isClassOnlyTarget = this.#isPlatonicTarget(id);
+            const isChallengeLevelTarget = this.#isChallengeLevelTarget(id);
+            const observerOptions: MutationObserverInit = {
+                attributes: true,
+                attributeFilter: isClassOnlyTarget ? ['class'] : ['style'],
+                childList: isChallengeLevelTarget,
+                characterData: isChallengeLevelTarget,
+                subtree: isChallengeLevelTarget,
+            };
+            observer.observe(element, observerOptions);
+
+            this.#domMutationObservers.push({ id, observer });
+        }
+    }
+
+    /** Route DOM mutation updates for the observed target into a handler. */
+    #processDomMutationTarget(id: HSQOLCorruptionDomTarget): boolean {
+        if (this.#isPlatonicTarget(id)) {
+            return this.#handlePlatonicTargetMutation();
+        }
+        if (this.#isChallengeLevelTarget(id)) {
+            return this.#handleChallengeLevelTargetMutation();
+        }
+        if (this.#isStatusTarget(id)) {
+            return this.#handleStatusTargetMutation();
+        }
+        return false;
+    }
+
+    /** Refresh cached platonic upgrade flags and update max corruption if needed. */
+    #handlePlatonicTargetMutation(): boolean {
+        const previousAlpha = this.#cachedPlatonicAlpha;
+        const previousBeta = this.#cachedPlatonicBeta;
+        this.#refreshPlatonicUpgradeFlagsFromDOM();
+
+        if (this.#cachedPlatonicAlpha !== previousAlpha || this.#cachedPlatonicBeta !== previousBeta) {
+            return this.#maybeRefreshMaxCorruptionLevel();
+        }
+        return false;
+    }
+
+    /** Refresh highest completed challenge data and update max corruption if needed. */
+    #handleChallengeLevelTargetMutation(): boolean {
+        const previousHighestChallenge = this.#cachedHighestCompletedChallengeLevel;
+        this.#cachedHighestCompletedChallengeLevel = this.#calculateHighestCompletedChallengeLevel();
+
+        if (this.#cachedHighestCompletedChallengeLevel !== previousHighestChallenge) {
+            return this.#maybeRefreshMaxCorruptionLevel();
+        }
+        return false;
+    }
+
+    /** Refresh cached singularity/status flags and update max corruption if needed. */
+    #handleStatusTargetMutation(): boolean {
+        const previousNoSingularityUpgradesActive = this.#cachedNoSingularityUpgradesActive;
+        const previousNoOcteractsActive = this.#cachedNoOcteractsActive;
+        const previousSadisticPrequelActive = this.#cachedSadisticPrequelActive;
+
+        this.#cachedNoSingularityUpgradesActive = this.#isSingularityChallengeActive('noSingularityUpgrades');
+        this.#cachedNoOcteractsActive = this.#isSingularityChallengeActive('noOcteracts');
+        this.#cachedSadisticPrequelActive = this.#isSingularityChallengeActive('sadisticPrequel');
+
+        if (this.#cachedNoSingularityUpgradesActive !== previousNoSingularityUpgradesActive ||
+            this.#cachedNoOcteractsActive !== previousNoOcteractsActive ||
+            this.#cachedSadisticPrequelActive !== previousSadisticPrequelActive) {
+            return this.#maybeRefreshMaxCorruptionLevel();
+        }
+        return false;
+    }
+
+    /** Recalculate the max corruption cap and refresh loaded corruptions if it changed. */
+    #maybeRefreshMaxCorruptionLevel(): boolean {
+        const newMax = this.#calculateMaxCorruptionLevel();
+        if (newMax !== this.#maxCorruptionLevel) {
+            this.#maxCorruptionLevel = newMax;
+            void this.#refreshCurrentLoadedCorruptions();
+            return true;
+        }
+        return false;
+    }
+
+    /** Disconnect and clear any DOM mutation observers used by this quickbar. */
+    #cleanupDomObservers(): void {
+        for (const entry of this.#domMutationObservers) {
+            entry.observer.disconnect();
+        }
+        this.#domMutationObservers = [];
+    }
+
+    /** Unsubscribe corruption state observer if subscribed. */
+    #cleanupCorruptionObserver(): void {
+        if (this.#corruptionObserverUnsubscribe) {
+            this.#corruptionObserverUnsubscribe();
+            this.#corruptionObserverUnsubscribe = null;
+        }
+    }
+
+    /** Remove click/context menu event listeners from saved slot buttons. */
+    #cleanupSlotEventHandlers(): void {
+        for (const [slot, handlers] of this.#slotEventHandlers.entries()) {
+            slot.removeEventListener('click', handlers.click);
+            slot.removeEventListener('contextmenu', handlers.contextmenu);
+        }
+        this.#slotEventHandlers.clear();
     }
 
     /** Remove event listeners from the corruption cleanse button. */
@@ -165,16 +358,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#corruptionCleanseQuickButton = null;
         this.#corruptionCleanseVanillaButton = null;
         this.#corruptionCleanseButtonHandler = null;
-    }
-
-    #getCachedCorruptionCleanseConfirmButton(): HTMLElement | null {
-        if (this.#corruptionCleanseVanillaButton) {
-            return this.#corruptionCleanseVanillaButton;
-        }
-
-        const confirmButton = document.getElementById('corruptionCleanseConfirm') as HTMLElement | null;
-        this.#corruptionCleanseVanillaButton = confirmButton;
-        return confirmButton;
     }
 
     /** Reset instance state and DOM references to defaults. */
@@ -190,58 +373,96 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#corruptionCleanseVanillaButton = null;
         this.#corruptionCleanseButtonHandler = null;
         this.#maxCorruptionLevel = 0;
+        this.#cachedPlatonicTau = false;
+        this.#cachedPlatonicAlpha = false;
+        this.#cachedPlatonicBeta = false;
+        this.#cachedCorruptionFourteenAmount = 0;
+        this.#cachedOcteractCorruptionAmount = 0;
+        this.#cachedNoSingularityUpgradesActive = false;
+        this.#cachedNoOcteractsActive = false;
+        this.#cachedSadisticPrequelActive = false;
+        this.#cachedHighestCompletedChallengeLevel = 0;
+        this.#cachedDomElements.clear();
         this.#isPickingIcon = false;
         this.#pickTargetSlotIndex = null;
     }
 
-    /** Remove click/context menu event listeners from saved slot buttons. */
-    #cleanupSlotEventHandlers(): void {
-        for (const [slot, handlers] of this.#slotEventHandlers.entries()) {
-            slot.removeEventListener('click', handlers.click);
-            slot.removeEventListener('contextmenu', handlers.contextmenu);
-        }
-        this.#slotEventHandlers.clear();
+
+    // ======================================================
+    // ----------------- DOM/cache helpers ------------------
+    // ======================================================
+
+    /** Get a cached DOM element or query and cache it lazily. */
+    #getCachedElement(id: string): HTMLElement | null {
+        const cached = this.#cachedDomElements.get(id);
+        if (cached)
+            return cached;
+
+        const element = document.getElementById(id);
+        if (element)
+            this.#cachedDomElements.set(id, element);
+        return element;
     }
 
-    /** Unsubscribe corruption state observer if subscribed. */
-    #cleanupCorruptionObserver(): void {
-        if (this.#corruptionObserverUnsubscribe) {
-            this.#corruptionObserverUnsubscribe();
-            this.#corruptionObserverUnsubscribe = null;
-        }
+    /** Refresh cached platonic alpha/beta upgrade flags from the DOM. */
+    #refreshPlatonicUpgradeFlagsFromDOM(): void {
+        this.#cachedPlatonicAlpha = this.#isPlatonicUpgradeBought('platUpg5');
+        this.#cachedPlatonicBeta  = this.#isPlatonicUpgradeBought('platUpg10');
     }
 
-    #subscribeGameDataChanges(): void {
-        const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
-        if (gameDataMod && !this.#gameDataSubscriptionId) {
-            this.#gameDataSubscriptionId = gameDataMod.subscribeGameDataChange(this.#onGameDataUpdated.bind(this));
-            HSLogger.debug(() => 'HSQOLCorruptionQuickbar subscribed to game data changes', this.context);
-        }
+    /** Refresh cached challenge and status state from DOM elements. */
+    #refreshChallengeAndStatusFlagsFromDOM(): void {
+        this.#cachedNoSingularityUpgradesActive = this.#isSingularityChallengeActive('noSingularityUpgrades');
+        this.#cachedNoOcteractsActive           = this.#isSingularityChallengeActive('noOcteracts');
+        this.#cachedSadisticPrequelActive       = this.#isSingularityChallengeActive('sadisticPrequel');
+        this.#cachedHighestCompletedChallengeLevel = this.#calculateHighestCompletedChallengeLevel();
     }
 
-    #unsubscribeGameDataChanges(): void {
-        const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
-        if (gameDataMod && this.#gameDataSubscriptionId) {
-            gameDataMod.unsubscribeGameDataChange(this.#gameDataSubscriptionId);
-            this.#gameDataSubscriptionId = undefined;
-            HSLogger.debug(() => 'HSQOLCorruptionQuickbar unsubscribed from game data changes', this.context);
-        }
+    /** Determine the highest completed challenge level from the challenge UI. */
+    #calculateHighestCompletedChallengeLevel(): number {
+        if (this.#hasCompletedChallenge('challenge14level')) return 14;
+        if (this.#hasCompletedChallenge('challenge13level')) return 13;
+        if (this.#hasCompletedChallenge('challenge12level')) return 12;
+        if (this.#hasCompletedChallenge('challenge11level')) return 11;
+        return 0;
     }
 
-    #onGameDataUpdated(): void {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!gameDataAPI) return;
-
-        this.#maxCorruptionLevel = gameDataAPI.getMaxCorruptionLevel();
-        void this.#refreshCurrentLoadedCorruptions();
+    /** Check whether the DOM target is a platonic upgrade element. */
+    #isPlatonicTarget(id: HSQOLCorruptionDomTarget): boolean {
+        return this.#platonicTargets.includes(id as HSQOLCorruptionPlatonicTarget);
     }
 
-    async #refreshCurrentLoadedCorruptions(): Promise<void> {
-        if (!this.container) return;
-
-        const { current, next } = await HSCorruption.getBothLoadedCorruptions();
-        this.#refreshActive(current, next);
+    /** Check whether the DOM target is a challenge level element. */
+    #isChallengeLevelTarget(id: HSQOLCorruptionDomTarget): boolean {
+        return this.#challengeLevelTargets.includes(id as HSQOLCorruptionChallengeLevelTarget);
     }
+
+    /** Check whether the DOM target is a status/challenge toggle element. */
+    #isStatusTarget(id: HSQOLCorruptionDomTarget): boolean {
+        return this.#statusTargets.includes(id as HSQOLCorruptionStatusTarget);
+    }
+
+    /** Check whether a platonic upgrade button is marked as bought. */
+    #isPlatonicUpgradeBought(id: string): boolean {
+        const element = this.#getCachedElement(id);
+        if (!element) return false;
+        return element.classList.contains('green-background');
+    }
+
+    /** Get and cache the vanilla corruption cleanse confirmation button. */
+    #getCachedCorruptionCleanseConfirmButton(): HTMLButtonElement | null {
+        if (this.#corruptionCleanseVanillaButton)
+            return this.#corruptionCleanseVanillaButton;
+
+        const confirmButton = document.getElementById('corruptionCleanseConfirm') as HTMLButtonElement | null;
+        this.#corruptionCleanseVanillaButton = confirmButton;
+        return confirmButton;
+    }
+
+
+    // ======================================================
+    // --------- Corruption loadout / slot creation ---------
+    // ======================================================
 
     /** Build each corruption loadout slot button and apply saved icons. */
     async #buildSlots(): Promise<void> {
@@ -249,15 +470,10 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (this.#slots.length > 0) return;
 
         await HSElementHooker.HookElement('#corruptionStatsLoadouts');
-
         const loadouts = await HSCorruption.getUserLoadouts();
-        if (!loadouts.length) {
-            HSLogger.warn('No corruption loadouts found.', this.context);
-            return;
-        }
+        if (!loadouts.length) { HSLogger.warn('No corruption loadouts found.', this.context); return; }
 
         this.#loadouts = loadouts;
-
         loadouts.forEach((loadout, index) => {
             const slot = this.#createSlotButton(loadout, index);
             this.#slotsWrapper?.appendChild(slot);
@@ -310,38 +526,91 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         slot.addEventListener('click', clickHandler);
         slot.addEventListener('contextmenu', contextMenuHandler);
         this.#slotEventHandlers.set(slot, { click: clickHandler, contextmenu: contextMenuHandler });
-
         return slot;
     }
 
-    /** Normalize a saved loadout's levels for comparison against currently loaded corruption values. */
-    #normalizeLoadoutLevels(levels: HSCorruptionLevels): HSCorruptionLevels {
-        if (this.#maxCorruptionLevel <= 0) {
-            return levels;
+
+    // ======================================================
+    // ---------- Max corruption / challenge state ----------
+    // ======================================================
+
+    /** Calculate the current maximum allowed corruption level for the quickbar. */
+    #calculateMaxCorruptionLevel(): number {
+        const noSingularityUpgradesActive = this.#cachedNoSingularityUpgradesActive;
+        const noOcteractsActive = this.#cachedNoOcteractsActive;
+        const sadisticPrequelActive = this.#cachedSadisticPrequelActive;
+        const noCorruptionFourteen = sadisticPrequelActive || noSingularityUpgradesActive;
+        const noCorruptionOcteract = sadisticPrequelActive || noOcteractsActive;
+        let max = 0;
+
+        if (this.#cachedPlatonicTau) {
+            max = 13;
+        } else {
+            const highest = this.#cachedHighestCompletedChallengeLevel;
+            if (highest >= 14)
+                max = 11;
+            else if (highest >= 13)
+                max = 9;
+            else if (highest >= 12)
+                max = 7;
+            else if (highest >= 11)
+                max = 5;
+            if (this.#cachedPlatonicAlpha)
+                max += 1;
+            if (this.#cachedPlatonicBeta)
+                max += 1;
         }
-
-        return HSCorruption.corruptionNames.reduce((normalized, key) => {
-            normalized[key] = Math.min(levels[key], this.#maxCorruptionLevel);
-            return normalized;
-        }, {} as HSCorruptionLevels);
+        if (!noCorruptionFourteen)
+            max += this.#cachedCorruptionFourteenAmount;
+        if (!noCorruptionOcteract)
+            max += this.#cachedOcteractCorruptionAmount;
+        HSLogger.debug(() => `Calculated max corruption level: ${max} (NoSingUpg: ${noSingularityUpgradesActive}, NoOcts: ${noOcteractsActive}, Sadistic: ${sadisticPrequelActive}, PlatTau: ${this.#cachedPlatonicTau}, PlatAlpha: ${this.#cachedPlatonicAlpha}, PlatBeta: ${this.#cachedPlatonicBeta}, C11-14: ${this.#cachedHighestCompletedChallengeLevel}, Cor14: ${this.#cachedCorruptionFourteenAmount}, OctCor: ${this.#cachedOcteractCorruptionAmount})`, this.context);
+        return max;
     }
 
-    /** Update slot border and status based on current/next corruption match state. */
-    #levelsEqual(a: HSCorruptionLevels | null, b: HSCorruptionLevels | null): boolean {
-        if (!a || !b) return false;
-        return HSCorruption.corruptionNames.every((key) => a[key] === b[key]);
+    /** Detect whether a given challenge completion target is considered complete. */
+    #hasCompletedChallenge(id: string): boolean {
+        const element = this.#getCachedElement(id);
+        if (!element) return false;
+        const text = element.textContent?.trim();
+        if (!text) return false;
+
+        const raw = text.split('/')[0].trim();
+        return raw.length > 0 && raw[0] !== '0';
     }
 
+    /** Determine if a singularity challenge is currently active by style. */
+    #isSingularityChallengeActive(id: string): boolean {
+        const element = this.#getCachedElement(id);
+        if (!element) return false;
+
+        const styleValue = element.getAttribute('style') ?? '';
+        if (styleValue.includes('orchid')) {
+            return true;
+        }
+        return (element as HTMLElement).style.backgroundColor === 'orchid';
+    }
+
+    /** Refresh current corruption values and update quickbar active state. */
+    async #refreshCurrentLoadedCorruptions(): Promise<void> {
+        if (!this.container) return;
+        const { current, next } = await HSCorruption.getBothLoadedCorruptions();
+        this.#refreshActive(current, next);
+    }
+
+    
+    // ======================================================
+    // ---------- Active refresh / display update -----------
+    // ======================================================
+
+    /** Refresh active loadout highlight and current/next corruption status display. */
     #refreshActive(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
         if (!this.container) return;
 
-        const currentIsSame = this.#levelsEqual(current, this.#lastRefreshCurrent);
-        const nextIsSame = this.#levelsEqual(next, this.#lastRefreshNext);
+        const currentIsSame = HSCorruption.equals(current, this.#lastRefreshCurrent);
+        const nextIsSame = HSCorruption.equals(next, this.#lastRefreshNext);
         const maxCapIsSame = this.#maxCorruptionLevel === this.#lastRefreshMaxCorruptionLevel;
-
-        if (currentIsSame && nextIsSame && maxCapIsSame) {
-            return;
-        }
+        if (currentIsSame && nextIsSame && maxCapIsSame) return;
 
         this.#lastRefreshCurrent = { ...current };
         this.#lastRefreshNext = { ...next };
@@ -358,13 +627,15 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             this.#corruptionCleanseQuickButton.classList.remove('hs-silver-border');
         }
 
+        const visibleCorruptionKeys = this.#getVisibleCorruptionKeys();
+
         this.#loadouts.forEach((loadout, index) => {
             const slot = this.#slots[index];
             if (!slot) return;
 
-            const normalizedLevels = this.#normalizeLoadoutLevels(loadout.levels);
-            const currentMatch = HSCorruption.matches(normalizedLevels, current);
-            const nextMatch = !currentMatch && HSCorruption.matches(normalizedLevels, next);
+            const normalizedLevels = HSCorruption.normalizeLevels(loadout.levels, this.#maxCorruptionLevel);
+            const currentMatch = this.#levelsMatchOnKeys(normalizedLevels, current, visibleCorruptionKeys);
+            const nextMatch = !currentMatch && this.#levelsMatchOnKeys(normalizedLevels, next, visibleCorruptionKeys);
             if (currentMatch) {
                 slot.classList.add('hs-rainbow-border');
             } else if (nextMatch) {
@@ -372,8 +643,8 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
         });
 
-        const cleanseCurrentMatch = HSCorruption.matches(this.#zeroCorruption, current);
-        const cleanseNextMatch = HSCorruption.matches(this.#zeroCorruption, next);
+        const cleanseCurrentMatch = HSCorruption.isZeroCorruption(current);
+        const cleanseNextMatch = HSCorruption.isZeroCorruption(next);
         if (this.#corruptionCleanseQuickButton) {
             if (cleanseCurrentMatch) {
                 this.#corruptionCleanseQuickButton.classList.add('hs-rainbow-border');
@@ -386,20 +657,12 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
 
     /** Display current and next corruption level strings under summary. */
     #displayCorruptionStrings(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
-        const formatLevels = (levels: HSCorruptionLevels) =>
-            HSCorruption.corruptionNames
-                .map((name) => String(levels[name] ?? 0))
-                .join('/');
-
-        const currentText = formatLevels(current);
-        const nextText = formatLevels(next);
-
+        const currentText = HSCorruption.formatLevels(current);
+        const nextText = HSCorruption.formatLevels(next);
         if (this.#currentCorruptionsTextEl) {
             this.#currentCorruptionsTextEl.textContent = currentText;
         }
-
         const nextIsDifferent = nextText !== currentText;
-
         if (this.#nextCorruptionTextEl) {
             this.#nextCorruptionTextEl.classList.toggle('hs-hidden', !nextIsDifferent);
             if (nextIsDifferent) {
@@ -408,10 +671,36 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         }
     }
 
+    #getVisibleCorruptionKeys(): (keyof HSCorruptionLevels)[] {
+        const names = HSCorruption.corruptionNames;
+        if (this.#cachedPlatonicTau) {
+            return names;
+        }
 
-    // =================================
-    // ------- Icons management --------
-    // =================================
+        const highestChallenge = this.#cachedHighestCompletedChallengeLevel;
+        if (highestChallenge >= 14) {
+            return names;
+        }
+        if (highestChallenge >= 13) {
+            return names.slice(0, 6);
+        }
+        if (highestChallenge >= 12) {
+            return names.slice(0, 4);
+        }
+        if (highestChallenge >= 11) {
+            return names.slice(0, 2);
+        }
+        return [];
+    }
+
+    #levelsMatchOnKeys(a: HSCorruptionLevels, b: HSCorruptionLevels, keys: (keyof HSCorruptionLevels)[]): boolean {
+        return keys.every((key) => a[key] === b[key]);
+    }
+
+
+    // ======================================================
+    // ----------------- Icons management -------------------
+    // ======================================================
 
     /** Apply stored icon class/style to a quickbar slot based on loaded metadata. */
     #applySlotIcon(slot: HTMLButtonElement): void {
@@ -419,7 +708,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (!slotKey) return;
         const slotNumber = Number(slotKey);
         if (Number.isNaN(slotNumber)) return;
-        const url = HSCorruption.getCorruptionLoadoutIcon(slotNumber);
+        const url = this.#getCorruptionLoadoutIcon(slotNumber);
 
         this.#updateSlotIcon(slot, url ?? null);
         if (url) {
@@ -432,7 +721,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     /** Assign given icon URL to a slot and persist in corruption storage. */
     #setIconForSlot(slotIndex: number, iconUrl: string): void {
         const key = slotIndex + 1;
-        HSCorruption.setCorruptionLoadoutIcon(key, iconUrl);
+        this.#setCorruptionLoadoutIcon(key, iconUrl);
 
         const slot = this.#slots[slotIndex];
         if (slot) {
@@ -443,12 +732,52 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     /** Clear stored icon for a slot and update UI. */
     #clearIconForSlot(slotIndex: number): void {
         const key = slotIndex + 1;
-        HSCorruption.clearCorruptionLoadoutIcon(key);
-
+        this.#clearCorruptionLoadoutIcon(key);
         const slot = this.#slots[slotIndex];
         if (slot) {
             this.#updateSlotIcon(slot, null);
         }
+    }
+
+    #loadCorruptionIcons(): void {
+        try {
+            const raw = localStorage.getItem(this.#CORRUPTION_ICON_STORAGE_KEY);
+            if (!raw) {
+                this.#corruptionLoadoutIcons = new Map();
+                return;
+            }
+            const parsed = JSON.parse(raw) as Record<string, string>;
+            this.#corruptionLoadoutIcons = new Map(Object.entries(parsed).map(([k, v]) => [Number(k), v] as [number, string]));
+        } catch (error) {
+            HSLogger.warn(`HSQOLCorruptionQuickbar.loadCorruptionIcons failed: ${String(error)}`, this.context);
+            this.#corruptionLoadoutIcons = new Map();
+        }
+    }
+
+    #saveCorruptionIcons(): void {
+        try {
+            const obj: Record<string, string> = {};
+            this.#corruptionLoadoutIcons.forEach((url, key) => {
+                obj[String(key)] = url;
+            });
+            localStorage.setItem(this.#CORRUPTION_ICON_STORAGE_KEY, JSON.stringify(obj));
+        } catch (error) {
+            HSLogger.warn(`HSQOLCorruptionQuickbar.saveCorruptionIcons failed: ${String(error)}`, this.context);
+        }
+    }
+
+    #getCorruptionLoadoutIcon(slotKey: number): string | undefined {
+        return this.#corruptionLoadoutIcons.get(slotKey);
+    }
+
+    #setCorruptionLoadoutIcon(slotKey: number, iconUrl: string): void {
+        this.#corruptionLoadoutIcons.set(slotKey, iconUrl);
+        this.#saveCorruptionIcons();
+    }
+
+    #clearCorruptionLoadoutIcon(slotKey: number): void {
+        this.#corruptionLoadoutIcons.delete(slotKey);
+        this.#saveCorruptionIcons();
     }
 
     /** Apply icon URL to button element and toggle visual class. */
@@ -496,11 +825,54 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         return null;
     }
 
+    /** Enter slot icon pick mode to select an icon from page elements. */
+    #startPickupMode(slotIndex: number): void {
+        if (this.#isPickingIcon) { HSLogger.debug(() => 'Icon pickup mode already active; request ignored.', this.context); return; }
+
+        this.#wasGdsEnabled = HSSettings.getSetting('useGameData')?.isEnabled() ?? null;
+        if (this.#wasGdsEnabled) {
+            HSSettings.getSetting('useGameData')?.disable();
+        }
+
+        this.#isPickingIcon = true;
+        this.#pickTargetSlotIndex = slotIndex;
+        this.#slots.forEach((slot, idx) => {
+            if (idx === slotIndex) {
+                slot.classList.add('hs-corruption-slot-pickmode');
+            } else {
+                slot.classList.remove('hs-corruption-slot-pickmode');
+            }
+        });
+
+        HSUI.Notify('Icon picker active: click an in-game icon/image to assign to this slot. Any click ends mode.', { notificationType: 'default' });
+
+        this.#pickDocClickListener = (event: MouseEvent) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (!target || !this.container || this.container.contains(target)) { this.#endPickupMode(); return; }
+            if (this.#pickTargetSlotIndex === null) { this.#endPickupMode(); return; }
+
+            const iconUrl = this.#findIconUrlFromEventTarget(target);
+            if (!iconUrl) {
+                HSUI.Notify('No usable icon found on the clicked element.', { notificationType: 'warning' });
+                this.#endPickupMode();
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            this.#setIconForSlot(this.#pickTargetSlotIndex, iconUrl);
+            HSUI.Notify('Corruption slot icon set successfully', { notificationType: 'success' });
+            this.#endPickupMode();
+        };
+
+        document.addEventListener('click', this.#pickDocClickListener, true);
+    }
+
     /** End slot icon pick mode and restore previous game data settings. */
     #endPickupMode(): void {
         this.#isPickingIcon = false;
         this.#pickTargetSlotIndex = null;
-
         if (this.#pickDocClickListener) {
             document.removeEventListener('click', this.#pickDocClickListener, true);
             this.#pickDocClickListener = null;
@@ -519,62 +891,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
             this.#wasGdsEnabled = null;
         }
-
         this.#slots.forEach((slot) => slot.classList.remove('hs-corruption-slot-pickmode'));
-    }
-
-    /** Enter slot icon pick mode to select an icon from page elements. */
-    #startPickupMode(slotIndex: number): void {
-        if (this.#isPickingIcon) {
-            // this.#cancelPickupMode('Already in pick mode');
-            // return;
-        }
-
-        this.#wasGdsEnabled = HSSettings.getSetting('useGameData')?.isEnabled() ?? null;
-        if (this.#wasGdsEnabled) {
-            HSSettings.getSetting('useGameData')?.disable();
-        }
-
-        this.#isPickingIcon = true;
-        this.#pickTargetSlotIndex = slotIndex;
-
-        this.#slots.forEach((slot, idx) => {
-            if (idx === slotIndex) {
-                slot.classList.add('hs-corruption-slot-pickmode');
-            } else {
-                slot.classList.remove('hs-corruption-slot-pickmode');
-            }
-        });
-
-        HSUI.Notify('Icon picker active: click an in-game icon/image to assign to this slot. Any click ends mode.', { notificationType: 'default' });
-
-        this.#pickDocClickListener = (event: MouseEvent) => {
-            const target = event.target instanceof Element ? event.target : null;
-            if (!target || !this.container) {
-                this.#endPickupMode();
-                return;
-            }
-
-            if (this.#pickTargetSlotIndex === null) {
-                this.#endPickupMode();
-                return;
-            }
-
-            const iconUrl = this.#findIconUrlFromEventTarget(event.target);
-            if (!iconUrl) {
-                HSUI.Notify('No usable icon found on the clicked element.', { notificationType: 'warning' });
-                this.#endPickupMode();
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            this.#setIconForSlot(this.#pickTargetSlotIndex, iconUrl);
-            HSUI.Notify('Corruption slot icon set successfully', { notificationType: 'success' });
-            this.#endPickupMode();
-        };
-
-        document.addEventListener('click', this.#pickDocClickListener, true);
     }
 }

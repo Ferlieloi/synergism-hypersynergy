@@ -171,21 +171,37 @@ export class HSGameData extends HSModule {
 
         await this.#refreshFetchedData();
         this.#refreshCampaignTokens();
-        // Do we need this redundant call ?!
-        await this.#refreshFetchedData();
-        this.#hackJSNativebtoa();
-        this.#hackJSNativeAtob();
-
-        const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
-        if (saveBtn)
-            saveBtn.dispatchEvent(this.#saveTriggerEvent);
-
-        if (this.#mitm_gamedata)
-            this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
+        await this.forceRefreshGameData();
 
         this.#pseudoDataUpdated();
         this.#meDataUpdated();
         this.#campaignDataUpdated();
+    }
+
+    /**
+     * Forces a refresh of save-derived game data only, without updating fetched pseudo/me/campaign data.
+     * @returns Promise<void>
+     */
+    async forceRefreshGameData(): Promise<void> {
+        const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
+        // Both have an early return if already patched...
+        this.#hackJSNativebtoa(); 
+        this.#hackJSNativeAtob();
+
+        if (saveBtn) {
+            saveBtn.dispatchEvent(this.#saveTriggerEvent);
+        } else {
+            HSLogger.warn('Could not find #savegame to force refresh game data', this.context);
+        }
+
+        if (this.#mitm_gamedata) {
+            try {
+                this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
+            } catch (err) {
+                HSLogger.error(`Failed to parse save data during forceRefreshGameData: ${err}`, this.context);
+            }
+        }
+
         this.#saveDataUpdated();
     }
 

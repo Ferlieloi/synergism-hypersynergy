@@ -1082,13 +1082,14 @@ export class HSAutosing extends HSModule {
             while (!isChallengeActive()) await HSUtils.yield();
         } else {
             const isActive = accessor.isActive;
+            // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
+            // I think we could even skip the 'not inside' check and go directly to the double click...?
             const exitButton = challengeIndex <= 5
                 ? this.#exitTranscBtn
                 : challengeIndex <= 10
                     ? this.#exitReincBtn
                     : this.#exitAscBtn;
             const skipInactiveWait = !HSAutosing.#BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
-            // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
             if (!skipInactiveWait) {
                 await this.#waitForClassCondition(challengeBtn!, () => !isActive());
             }
@@ -1397,7 +1398,6 @@ export class HSAutosing extends HSModule {
             this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
 
-        // HSLogger.debug(() => `restoring prevMainView: ${prevMainView.getName()}`, this.context);
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
 
         // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)

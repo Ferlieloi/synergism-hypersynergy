@@ -149,17 +149,11 @@ export class HSAmbrosia extends HSModule
     public async initializeActiveLoadoutFromGameData(): Promise<void> {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         if (!gameDataAPI) return;
-
         let gameData = gameDataAPI.getGameData();
-        if (!gameData) {
-            gameData = await gameDataAPI.getForcedGameData();
-        }
+        if (!gameData) gameData = await gameDataAPI.getForcedGameData();
+        if (!gameData) { HSLogger.warn('Could not retrieve game data to perform the initial ambrosia loadout match', this.context); return; }
 
-        if (gameData) {
-            await this.#performInitialActiveLoadoutMatchOnce(gameData);
-        } else {
-            HSLogger.warn('Could not retrieve game data to perform the initial ambrosia loadout match', this.context);
-        }
+        await this.#performInitialActiveLoadoutMatchOnce(gameData);
     }
 
     #setupAmbrosiaIconsDragDrop() {
