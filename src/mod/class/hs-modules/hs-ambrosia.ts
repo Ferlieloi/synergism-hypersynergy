@@ -1302,7 +1302,7 @@ export class HSAmbrosia extends HSModule
                                 idleSwapSetting.disable();
                             }
 
-                            HSLogger.warn(`Idle swap was disabled due to unconfigured loadouts`, this.context);
+                            HSUI.Notify(`Idle swap was disabled due to unconfigured loadouts`);
                             return;
                         }
 
