@@ -94,15 +94,6 @@ export class HSCorruption {
         return HSCorruption.#match(a, b);
     }
 
-    static equals(a: HSCorruptionLevels | null, b: HSCorruptionLevels | null): boolean {
-        if (!a || !b) return false;
-        return HSCorruption.matches(a, b);
-    }
-
-    static isZeroCorruption(levels: HSCorruptionLevels): boolean {
-        return HSCorruption.corruptionNames.every((key) => levels[key] === 0);
-    }
-
     static normalizeLevels(levels: HSCorruptionLevels, maxCap: number): HSCorruptionLevels {
         return HSCorruption.corruptionNames.reduce((normalized, key) => {
             normalized[key] = Math.min(levels[key] ?? 0, maxCap);

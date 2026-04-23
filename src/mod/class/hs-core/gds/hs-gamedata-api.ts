@@ -1286,10 +1286,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_computeGQUpgradeFreeLevelSoftcap(upgradeKey: GoldenQuarkUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>computeGQUpgradeFreeLevelSoftcap() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const upgrade = data.goldenQuarkUpgrades[upgradeKey]
@@ -1304,18 +1301,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey): number => {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const upgrade = octeractUpgradeMaxLevels[upgradeKey]
         const totalLevels = this.R_actualOcteractUpgradeTotalLevels(upgradeKey)
 
-        if (!Number.isFinite(totalLevels)) {
-            HSLogger.errorOnce(`<red>R_getOcteractUpgradeEffect() totalLevels invalid for ${upgradeKey}: ${totalLevels}</red>`, this.context);
-            return 0;
-        }
+        if (!Number.isFinite(totalLevels)) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() totalLevels invalid for ${upgradeKey}: ${totalLevels}</red>`, this.context); return 0; }
 
         return upgrade.effect ? upgrade.effect(totalLevels) : 0
     }
@@ -1325,47 +1316,30 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_computeOcteractFreeLevelSoftcap = (upgradeKey: OcteractUpgradeKey): number => {
-        if (!this.gameData) {
-            HSLogger.error(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>computeOcteractFreeLevelSoftcap() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const freeLevelMult = this.R_computeFreeLevelMultiplierOCT()
         const upgrade = data.octUpgrades[upgradeKey];
 
-        if (!upgrade) {
-            HSLogger.error(`<red>R_computeOcteractFreeLevelSoftcap() missing octeract upgrade ${upgradeKey}</red>`, this.context);
-            return 0;
-        }
+        if (!upgrade) { HSLogger.errorOnce(`<red>computeOcteractFreeLevelSoftcap() missing octeract upgrade ${upgradeKey}</red>`, this.context); return 0; }
 
         return this.R_getSavedUpgradeFreeLevel(upgrade) * freeLevelMult
     }
 
     R_actualOcteractUpgradeTotalLevels(upgradeKey: OcteractUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.error(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>actualOcteractUpgradeTotalLevels() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const upgrade = data.octUpgrades[upgradeKey];
 
-        if (!upgrade) {
-            HSLogger.error(`<red>R_actualOcteractUpgradeTotalLevels() missing octeract upgrade ${upgradeKey}</red>`, this.context);
-            return 0;
-        }
-
-        if (data.singularityChallenges.noOcteracts.enabled || data.singularityChallenges.sadisticPrequel.enabled) {
-            return 0;
-        }
+        if (!upgrade) { HSLogger.errorOnce(`<red>actualOcteractUpgradeTotalLevels() missing octeract upgrade ${upgradeKey}</red>`, this.context); return 0; }
+        if (data.singularityChallenges.noOcteracts.enabled || data.singularityChallenges.sadisticPrequel.enabled) { return 0; }
 
         const level = Number(upgrade.level ?? 0)
         const actualFreeLevels = this.R_computeOcteractFreeLevelSoftcap(upgradeKey)
 
-        if (!Number.isFinite(level) || !Number.isFinite(actualFreeLevels)) {
-            return 0;
-        }
+        if (!Number.isFinite(level) || !Number.isFinite(actualFreeLevels)) return 0;
 
         if (level >= actualFreeLevels) {
             return actualFreeLevels + level
@@ -1375,17 +1349,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>actualGQUpgradeTotalLevels() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey]
 
-        if ( (data.singularityChallenges.noSingularityUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled) && !upgrade.qualityOfLife ) {
-            return 0
-        }
+        if ( (data.singularityChallenges.noSingularityUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled) && !upgrade.qualityOfLife ) { return 0 }
 
         const actualFreeLevels = this.R_computeGQUpgradeFreeLevelSoftcap(upgradeKey)
         const level = Number(data.goldenQuarkUpgrades[upgradeKey].level ?? 0)
@@ -5417,43 +5386,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const corruptions = data.corruptions.used;
         const sum = Object.values(corruptions).reduce((a, b) => a + b, 0);
         return sum;
-    }
-
-    getMaxCorruptionLevel(): number {
-        if (!this.gameData) return 0;
-        const data = this.gameData;
-
-        const noCorruptionFourteen = data.singularityChallenges.noSingularityUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled;
-        const noCorruptionOcteract = noCorruptionFourteen || data.singularityChallenges.noOcteracts.enabled;
-
-        const platonicTauApplies = (data.goldenQuarkUpgrades?.platonicTau?.level ?? 0) > 0;
-        const corruptionFourteenAmount = noCorruptionFourteen ? 0 : data.goldenQuarkUpgrades?.corruptionFourteen?.level ?? 0;
-        const octeractCorruptionAmount = noCorruptionOcteract ? 0 : data.octUpgrades.octeractCorruption?.level ?? 0;
-
-        let max = 0;
-        if (platonicTauApplies) {
-            max = 13;
-        } else {
-            if ((data.challengecompletions?.[14] ?? 0) > 0) {
-                max = 11;
-            } else if ((data.challengecompletions?.[13] ?? 0) > 0) {
-                max = 9;
-            } else if ((data.challengecompletions?.[12] ?? 0) > 0) {
-                max = 7;
-            } else if ((data.challengecompletions?.[11] ?? 0) > 0) {
-                max = 5;
-            }
-            if ((data.platonicUpgrades?.[5] ?? 0) > 0) {
-                max += 1; // Alpha
-            }
-            if ((data.platonicUpgrades?.[10] ?? 0) > 0) {
-                max += 1; // Beta
-            }
-        }
-        max += corruptionFourteenAmount + octeractCorruptionAmount;
-
-        // HSLogger.log(`Calculated max corruption level: ${max}, Platonic Tau: ${platonicTauApplies}, Corruption XIV: ${corruptionFourteenAmount}, Octeract Corruption Effect: ${octeractCorruptionAmount})`);
-        return max;
     }
 
     R_calculateHepteractEffective = (heptType: HepteractType) => {

@@ -564,7 +564,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             max += this.#cachedCorruptionFourteenAmount;
         if (!noCorruptionOcteract)
             max += this.#cachedOcteractCorruptionAmount;
-        HSLogger.debug(() => `Calculated max corruption level: ${max} (NoSingUpg: ${noSingularityUpgradesActive}, NoOcts: ${noOcteractsActive}, Sadistic: ${sadisticPrequelActive}, PlatTau: ${this.#cachedPlatonicTau}, PlatAlpha: ${this.#cachedPlatonicAlpha}, PlatBeta: ${this.#cachedPlatonicBeta}, C11-14: ${this.#cachedHighestCompletedChallengeLevel}, Cor14: ${this.#cachedCorruptionFourteenAmount}, OctCor: ${this.#cachedOcteractCorruptionAmount})`, this.context);
         return max;
     }
 
@@ -591,13 +590,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         return (element as HTMLElement).style.backgroundColor === 'orchid';
     }
 
-    /** Refresh current corruption values and update quickbar active state. */
-    async #refreshCurrentLoadedCorruptions(): Promise<void> {
-        if (!this.container) return;
-        const { current, next } = await HSCorruption.getBothLoadedCorruptions();
-        this.#refreshActive(current, next);
-    }
-
     
     // ======================================================
     // ---------- Active refresh / display update -----------
@@ -607,8 +599,8 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
     #refreshActive(current: HSCorruptionLevels, next: HSCorruptionLevels): void {
         if (!this.container) return;
 
-        const currentIsSame = HSCorruption.equals(current, this.#lastRefreshCurrent);
-        const nextIsSame = HSCorruption.equals(next, this.#lastRefreshNext);
+        const currentIsSame = this.#lastRefreshCurrent ? HSCorruption.matches(current, this.#lastRefreshCurrent) : false;
+        const nextIsSame = this.#lastRefreshNext ? HSCorruption.matches(next, this.#lastRefreshNext) : false;
         const maxCapIsSame = this.#maxCorruptionLevel === this.#lastRefreshMaxCorruptionLevel;
         if (currentIsSame && nextIsSame && maxCapIsSame) return;
 
@@ -643,8 +635,8 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
         });
 
-        const cleanseCurrentMatch = HSCorruption.isZeroCorruption(current);
-        const cleanseNextMatch = HSCorruption.isZeroCorruption(next);
+        const cleanseCurrentMatch = this.#levelsMatchOnKeys(current, HSCorruption.ZERO_CORRUPTIONS, visibleCorruptionKeys);
+        const cleanseNextMatch = this.#levelsMatchOnKeys(next, HSCorruption.ZERO_CORRUPTIONS, visibleCorruptionKeys);
         if (this.#corruptionCleanseQuickButton) {
             if (cleanseCurrentMatch) {
                 this.#corruptionCleanseQuickButton.classList.add('hs-rainbow-border');
@@ -653,6 +645,13 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
                 this.#corruptionCleanseQuickButton.classList.add('hs-silver-border');
             }
         }
+    }
+
+    /** Refresh current corruption values and update quickbar active state. */
+    async #refreshCurrentLoadedCorruptions(): Promise<void> {
+        if (!this.container) return;
+        const { current, next } = await HSCorruption.getBothLoadedCorruptions();
+        this.#refreshActive(current, next);
     }
 
     /** Display current and next corruption level strings under summary. */
