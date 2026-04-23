@@ -48,10 +48,12 @@ export class HSUtils {
         return HSUtils.#_onAfterTack !== null;
     }
 
-    // Resolves as a microtask immediately after the next game tack() completes.
-    // Requires cacheAfterTackHook() to have been called first.
+    // Resolves as a microtask immediately after the next game tack() completes (or wait 5ms if no tack patch)
     static waitForNextTack = (): Promise<void> => {
-        if (!HSUtils.#_onAfterTack) return HSUtils.sleep(5);
+        if (!HSUtils.#_onAfterTack) {
+            HSUtils.cacheAfterTackHook();
+            if (!HSUtils.#_onAfterTack) return HSUtils.sleep(5);
+        }
         return new Promise<void>(resolve => HSUtils.#_onAfterTack!(resolve));
     };
 

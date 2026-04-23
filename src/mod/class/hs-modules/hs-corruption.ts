@@ -69,7 +69,7 @@ export class HSCorruption {
     static #corruptionPromptInput: HTMLInputElement | null = null;
     static #corruptionPromptOkBtn: HTMLButtonElement | null = null;
     static #importBtn: HTMLButtonElement | null = null;
-    static #importSleepTime = 10;
+
 
     // =================================
     // ------- Helpers & Getters -------
@@ -214,9 +214,10 @@ export class HSCorruption {
 
     /** Cache corruption import dialog DOM elements for later operations. */
     static async #cacheImportCorruptionElements(): Promise<void> {
+        await HSElementHooker.HookElement('#corruptionLoadoutTable');
         HSCorruption.#importBtn = document.querySelector<HTMLButtonElement>('#corruptionLoadoutTable button.corrImport');
-        HSCorruption.#corruptionPromptInput = document.getElementById('prompt_text') as HTMLInputElement | null;
-        HSCorruption.#corruptionPromptOkBtn = document.getElementById('ok_prompt') as HTMLButtonElement | null;
+        HSCorruption.#corruptionPromptInput = await HSElementHooker.HookElement('#prompt_text') as HTMLInputElement;
+        HSCorruption.#corruptionPromptOkBtn = await HSElementHooker.HookElement('#ok_prompt') as HTMLButtonElement;
     }
 
     /** Cache corruption table DOM elements for current/next corruption values. */

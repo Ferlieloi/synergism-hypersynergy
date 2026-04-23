@@ -509,7 +509,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
 
             if (loadButton) {
                 loadButton.click();
-                await HSUtils.sleep(50);
+                await HSUtils.waitForNextTack();
                 await HSCorruption.refreshLoadedCorruptions();
                 const { current, next } = await HSCorruption.getBothLoadedCorruptions();
                 this.#refreshActive(current, next);
@@ -687,10 +687,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (highestChallenge >= 12) {
             return names.slice(0, 4);
         }
-        if (highestChallenge >= 11) {
-            return names.slice(0, 2);
-        }
-        return [];
+        return names.slice(0, 2);
     }
 
     #levelsMatchOnKeys(a: HSCorruptionLevels, b: HSCorruptionLevels, keys: (keyof HSCorruptionLevels)[]): boolean {
