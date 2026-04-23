@@ -258,10 +258,6 @@ export class HSSettings extends HSModule {
         return HSStrategyManager.ensureCorruptionLoadouts(strategy);
     }
 
-    static migrateStrategyActionIdsAuto(strategy: HSAutosingStrategy, target: 'toNew' | 'toOld'): HSAutosingStrategy {
-        return HSStrategyManager.migrateStrategyActionIdsAuto(strategy, target, HSSettings.#staticContext);
-    }
-
 
     // ===============================
     // --------- Persistence ---------

@@ -14,6 +14,7 @@ import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
 import { HSInputType, HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
+import { HSAmbrosia } from "./hs-modules/hs-ambrosia";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
 
@@ -66,6 +67,13 @@ export class Hypersynergism {
         // Do this after UI Panel stuff is ready, because
         // syncing basically means syncing the UI with the settings
         await HSSettingsUI.syncSettings(HSSettings.getUIDependencies());
+        HSSettingsUI.updateStrategyDropdownList();
+
+        const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+        if (ambrosiaMod) {
+            await ambrosiaMod.initializeActiveLoadoutFromGameData();
+        }
+
         // Mod fully loaded, so we show HS icon, and update the flag
         const hsui = HSModuleManager.getModule<HSUI>('HSUI');
         hsui?.setPanelControlVisible(true);

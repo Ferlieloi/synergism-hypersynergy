@@ -242,7 +242,12 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   cookies4: { maxLevel: 1 },
   cookies5: { maxLevel: 1 },
   ascensions: { maxLevel: -1 },
-  corruptionFourteen: { maxLevel: 1 },
+  corruptionFourteen: {
+    maxLevel: 1,
+    effect: (n: number) => {
+      return n > 0 ? 1 : 0
+    },
+  },
   corruptionFifteen: { maxLevel: 1 },
   singOfferings1: { maxLevel: -1 },
   singOfferings2: { maxLevel: 25 },
@@ -280,7 +285,13 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   singOcteractGain3: { maxLevel: 50 },
   singOcteractGain4: { maxLevel: 100 },
   singOcteractGain5: { maxLevel: 200 },
-  platonicTau: { maxLevel: 1 },
+  platonicTau: {
+    maxLevel: 1,
+    qualityOfLife: true,
+    effect: (n: number) => {
+      return n > 0 ? 1 : 0
+    },
+  },
   platonicAlpha: { maxLevel: 1 },
   platonicDelta: { maxLevel: 1 },
   platonicPhi: { maxLevel: 1 },
@@ -339,7 +350,7 @@ export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgrad
   octeractGain2: { maxLevel: -1 },
   octeractQuarkGain: { maxLevel: 20000 },
   octeractQuarkGain2: { maxLevel: 5 },
-  octeractCorruption: { maxLevel: 2 },
+  octeractCorruption: { maxLevel: 2, effect: (n: number) => n },
   octeractGQCostReduce: { maxLevel: 50 },
   octeractExportQuarks: { maxLevel: 100 },
   octeractImprovedDaily: { maxLevel: 50 },
@@ -393,15 +404,16 @@ export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgrad
   octeractBonusTokens4: { maxLevel: 50 },
   octeractBlueberries: { maxLevel: 6 },
   octeractInfiniteShopUpgrades: { maxLevel: 80 },
-  octeractTalismanLevelCap1: { maxLevel: 25 },
-  octeractTalismanLevelCap2: { maxLevel: 35 },
-  octeractTalismanLevelCap3: { maxLevel: 40 },
-  octeractTalismanLevelCap4: { maxLevel: -1 },
+  octeractTalismanLevelCap1: { maxLevel: 25, effect: (n: number) => n },
+  octeractTalismanLevelCap2: { maxLevel: 35, effect: (n: number) => n },
+  octeractTalismanLevelCap3: { maxLevel: 40, effect: (n: number) => n },
+  octeractTalismanLevelCap4: { maxLevel: -1, effect: (n: number) => n },
 };
 
 type GoldenQuarkUpgradeDef = {
   maxLevel: number
   effect?: (n: number) => number
+  qualityOfLife?: boolean
 }
 
 type OcteractUpgradeDef = {

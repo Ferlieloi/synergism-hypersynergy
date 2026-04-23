@@ -131,7 +131,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     async getForcedGameData(): Promise<PlayerData | undefined> {
         if (this.gameDataModule) {
-            await this.gameDataModule.forceUpdateAllData();
+            await this.gameDataModule.forceRefreshGameData();
             // HSGameData will call _updateGameData internally
             return this.gameData;
         }

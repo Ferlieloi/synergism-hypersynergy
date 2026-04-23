@@ -139,8 +139,6 @@ export class HSUI extends HSModule {
 
         this.uiReady = true;
         this.isInitialized = true;
-
-        this.#deferAutoSingStrategyOptGroupUpdate();
     }
 
     async #initializePanelMarkup(): Promise<void> {
@@ -273,19 +271,6 @@ export class HSUI extends HSModule {
         });
 
         document.body.appendChild(this.#uiPanelOpenBtn);
-    }
-
-    #deferAutoSingStrategyOptGroupUpdate(): void {
-        setTimeout(() => {
-            try {
-                const dropdown = document.getElementById('autosingStrategy');
-                if (dropdown) {
-                    HSSettingsUI.updateStrategyDropdownList();
-                }
-            } catch (e) {
-                console.error('Failed to update autosingStrategy dropdown:', e);
-            }
-        }, 0);
     }
 
 

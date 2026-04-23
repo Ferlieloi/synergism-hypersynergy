@@ -241,12 +241,7 @@ export class HSAutosingModal {
         this.#restartButton.className   = 'hs-timer-ctrl-btn';
         this.#restartButton.onclick = async () => {
             const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
-            if (autosingMod) {
-                // Stop autosing, wait a bit, then Re-enable autosing (simulates starting from beginning)
-                await autosingMod.restartAutosing();
-                const toggle = document.getElementById('hs-setting-auto-sing-enabled');
-                if (toggle) toggle.click();
-            }
+            await autosingMod?.restartAutosing();
         };
         // Stop BUTTON
         this.#stopButton = document.createElement('button');
@@ -255,13 +250,13 @@ export class HSAutosingModal {
         this.#stopButton.title       = "Stop Autosing NOW";
         this.#stopButton.className   = 'hs-timer-ctrl-btn';
         this.#stopButton.onclick = () => {
+            const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (this.#modalMode === 'review') {
-                const autosingMod = HSModuleManager.getModule<HSAutosing>('HSAutosing');
                 autosingMod?.closeAutosingModalAfterReview();
-                return;
             }
-            const toggle = document.getElementById('hs-setting-auto-sing-enabled');
-            if (toggle) toggle.click();
+            else {
+                autosingMod?.stopAutosing({ showReviewModal: true });
+            }
         };
         // Finish & Stop BUTTON
         this.#finishStopBtn = document.createElement('button');

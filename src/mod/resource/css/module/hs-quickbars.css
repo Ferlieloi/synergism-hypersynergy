@@ -164,6 +164,14 @@
    filter: brightness(130%);
    box-shadow: 0 0 8px rgba(255, 0, 0, 0.35);
 }
+.hs-corruption-cleanse-button {
+   background-color: #000000;
+   border-color: #dc7d0b;
+   background-image: url(https://synergism.cc/Pictures/Default/CorruptExit.png);
+   background-repeat: no-repeat;
+   background-position: center;
+   background-size: 110%;
+}
 .hs-corruption-slot::before {
    content: attr(data-quickbar-index);
    position: absolute;

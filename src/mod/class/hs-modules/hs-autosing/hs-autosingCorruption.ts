@@ -25,14 +25,6 @@ export class HSAutosingCorruption {
     readonly #importBtn: HTMLButtonElement;
     #applyCorruptionsFunc: ((json: string) => boolean) | null;
 
-    #corruptionObserver?: MutationObserver;
-    #corruptionObserverActive?: {
-        target: CorruptionLoadout;
-        resolve: (value: boolean) => void;
-        timeoutId: number;
-        finished: boolean;
-    };
-
     #loadoutByName: Map<string, CorruptionLoadout> = new Map();
 
     constructor(
@@ -56,18 +48,9 @@ export class HSAutosingCorruption {
 
     #corruptionsMatchDOM(target: CorruptionLoadout): boolean {
         for (const name of CORRUPTION_NAMES) {
-            const el = this.#corrNext[name];
+            const el = this.#corrNext[`corrNext${name}`] ?? this.#corrNext[name];
             if (!el) return false;
             if (parseInt(el.textContent || '0', 10) !== target[name]) return false;
-        }
-        return true;
-    }
-
-    #corruptionsMatchExposedPlayer(target: CorruptionLoadout): boolean {
-        const next = HSGlobal.exposedPlayer!.corruptions?.next;
-        if (!next) return false;
-        for (const name of CORRUPTION_NAMES) {
-            if (next[name] !== target[name]) return false;
         }
         return true;
     }
@@ -78,77 +61,22 @@ export class HSAutosingCorruption {
         // Fast path: call applyCorruptions directly — no UI clicks, no prompt, synchronous.
         if (this.#applyCorruptionsFunc) {
             this.#applyCorruptionsFunc(jsonString);
-            HSLogger.debug(() => `Corruptions set (fast): ${jsonString}`, this.#context);
-            // while(!await this.#waitForCorruptionMatch(corruptions, 500));    // Should not be needed...
+            HSLogger.debug(() => `Corruptions set: ${jsonString}`, this.#context);
+            await HSUtils.yield(); // Should not be needed...
             return;
         }
 
-        // Fallback: click-based flow with DOM observer.
-        this.#importBtn.click();
-        this.#corruptionPromptInput.value = jsonString;
-        this.#corruptionPromptOkBtn.click();
-        while(!await this.#waitForCorruptionMatch(corruptions, 500));
-        HSLogger.debug(() => `Corruptions set: ${jsonString}`, this.#context);
-        return;
-    }
-
-    #cleanupCorruptionObserver(result: boolean): void {
-        if (!this.#corruptionObserverActive || this.#corruptionObserverActive.finished) return;
-        this.#corruptionObserverActive.finished = true;
-        clearTimeout(this.#corruptionObserverActive.timeoutId);
-        const resolve = this.#corruptionObserverActive.resolve;
-        this.#corruptionObserverActive = undefined;
-        this.#corruptionObserver?.disconnect();
-        resolve(result);
-    }
-
-    async #waitForCorruptionMatch(targetCorruptions: CorruptionLoadout, timeoutMs = 500): Promise<boolean> {
-        // Fast path: player.corruptions.next is updated synchronously by the game's click handler.
-        // This one should not be needed since setCorruptions should handle it, and we're already supposed to be on the fall-back path...
-        if (HSGlobal.exposedPlayer) {
-            if (this.#corruptionsMatchExposedPlayer(targetCorruptions)) return true;
-            const endTime = performance.now() + timeoutMs;
-            while (performance.now() < endTime) {
-                await HSUtils.waitForNextTack();
-                if (this.#corruptionsMatchExposedPlayer(targetCorruptions)) return true;
+        // DOM Fallback
+        while (true) {
+            this.#importBtn.click();
+            this.#corruptionPromptInput.value = jsonString;
+            this.#corruptionPromptOkBtn.click();
+            await HSUtils.yield();
+            if (this.#corruptionsMatchDOM(corruptions)) {
+                HSLogger.debug(() => `Corruptions DOM match: ${jsonString}`, this.#context);
+                break;
             }
-            return false;
         }
-
-        // Fallback: DOM observer
-        if (this.#corruptionsMatchDOM(targetCorruptions)) return true;
-
-        const container = this.#corruptionStatsContainer;
-        if (!container) return false;
-
-        if (!this.#corruptionObserver) {
-            this.#corruptionObserver = new MutationObserver(() => {
-                if (!this.#corruptionObserverActive) return;
-                if (this.#corruptionsMatchDOM(this.#corruptionObserverActive.target)) {
-                    this.#cleanupCorruptionObserver(true);
-                }
-            });
-        }
-
-        return await new Promise<boolean>((resolve) => {
-            if (this.#corruptionObserverActive) {
-                this.#cleanupCorruptionObserver(false);
-            }
-
-            const timeoutId = window.setTimeout(() => { this.#cleanupCorruptionObserver(false); }, timeoutMs);
-            this.#corruptionObserverActive = {
-                target: targetCorruptions,
-                resolve,
-                timeoutId,
-                finished: false,
-            };
-
-            this.#corruptionObserver?.disconnect();
-            this.#corruptionObserver?.observe(container, { childList: true, characterData: true, subtree: true });
-            if (this.#corruptionsMatchDOM(targetCorruptions)) {
-                this.#cleanupCorruptionObserver(true);
-            }
-        });
     }
 
     getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
