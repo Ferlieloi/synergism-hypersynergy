@@ -7,11 +7,14 @@ import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
+import { HSAutosing } from "./hs-autosing/hs-autosing";
+import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 
 export class HSAmbrosiaQuickbar {
     readonly context = 'HSAmbrosiaQuickbar';
     readonly host: HSAmbrosia;
     #quickBarClickHandlers: Map<HTMLButtonElement, (e: Event) => Promise<void>> = new Map();
+    #originalQuickBarButtons: Map<string, HTMLButtonElement> = new Map();
 
     constructor(host: HSAmbrosia) {
         this.host = host;
@@ -121,6 +124,8 @@ export class HSAmbrosiaQuickbar {
                 button.dataset.originalId = buttonId;
                 button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
 
+                this.#cacheOriginalLoadoutButton(buttonId);
+
                 const buttonHandler = async (e: Event) => {
                     await this.onQuickBarClick(e, buttonId);
                 };
@@ -142,9 +147,6 @@ export class HSAmbrosiaQuickbar {
             } else {
                 groupWrapper.appendChild(clone);
             }
-
-            await this.refreshQuickbarIcons();
-            await this.host.refreshActiveLoadoutFromState();
         }
     }
 
@@ -181,17 +183,19 @@ export class HSAmbrosiaQuickbar {
 
         quickbar.querySelectorAll(".blueberryLoadoutSlot").forEach((button: Element) => {
             const btn = button as HTMLButtonElement;
-            btn.replaceWith(btn.cloneNode(true));
-        });
+            const clone = btn.cloneNode(true) as HTMLButtonElement;
+            btn.replaceWith(clone);
 
-        quickbar.querySelectorAll(".blueberryLoadoutSlot").forEach((button: Element) => {
-            const btn = button as HTMLButtonElement;
-            const buttonId = btn.dataset.originalId || "";
+            const buttonId = clone.dataset.originalId || "";
+            if (buttonId) {
+                this.#cacheOriginalLoadoutButton(buttonId);
+            }
+
             const buttonHandler = async (e: Event) => {
                 await this.onQuickBarClick(e, buttonId);
             };
-            btn.addEventListener("click", buttonHandler);
-            this.#quickBarClickHandlers.set(btn, buttonHandler);
+            clone.addEventListener("click", buttonHandler);
+            this.#quickBarClickHandlers.set(clone, buttonHandler);
         });
     }
 
@@ -200,6 +204,16 @@ export class HSAmbrosiaQuickbar {
             button.removeEventListener("click", handler);
         }
         this.#quickBarClickHandlers.clear();
+        this.#originalQuickBarButtons.clear();
+    }
+
+    #cacheOriginalLoadoutButton(buttonId: string) {
+        if (!buttonId || this.#originalQuickBarButtons.has(buttonId)) return;
+
+        const originalButton = document.getElementById(buttonId) as HTMLButtonElement | null;
+        if (originalButton) {
+            this.#originalQuickBarButtons.set(buttonId, originalButton);
+        }
     }
 
     async refreshQuickbarIcons() {
@@ -272,16 +286,12 @@ export class HSAmbrosiaQuickbar {
     }
 
     async onQuickBarClick(e: Event, buttonId: string) {
-        const realButton = document.querySelector(`#${buttonId} `) as HTMLButtonElement;
+        const realButton = this.#originalQuickBarButtons.get(buttonId)
+            ?? document.getElementById(buttonId) as HTMLButtonElement | null;
+        if (!realButton) { HSLogger.warn(`Could not find real button for ${buttonId}`, this.context); return; }
 
-        if (realButton) {
-            await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
-            await HSUtils.hiddenAction(async () => {
-                realButton.click();
-            });
-        } else {
-            HSLogger.warn(`Could not find real button for ${buttonId}`, this.context);
-        }
+        await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
+        await HSUtils.hiddenAction(async () => { realButton.click(); });
     }
 
     async showQuickBar() {

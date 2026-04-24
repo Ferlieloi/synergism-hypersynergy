@@ -14,6 +14,7 @@ import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
+import { HSAmbrosiaHelper } from "../hs-ambrosiaHelper";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -301,14 +302,13 @@ export class HSAutosing extends HSModule {
         const offVal       = HSSettings.getSetting("autosingOffLoadout").getValue();
         const ambrosiaVal  = HSSettings.getSetting("autosingAmbrosiaLoadout").getValue();
 
-        const ambPrefix = HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix;
         const elements = {
-            earlyCube: document.getElementById(`${ambPrefix}-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement | null,
-            lateCube:  document.getElementById(`${ambPrefix}-blueberryLoadout${lateCubeVal}`)  as HTMLButtonElement | null,
-            quark:     document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`)     as HTMLButtonElement | null,
-            obt:       document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`)       as HTMLButtonElement | null,
-            off:       document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`)       as HTMLButtonElement | null,
-            luck:      document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`)  as HTMLButtonElement | null,
+            earlyCube: document.getElementById(`blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement | null,
+            lateCube:  document.getElementById(`blueberryLoadout${lateCubeVal}`)  as HTMLButtonElement | null,
+            quark:     document.getElementById(`blueberryLoadout${quarkVal}`)     as HTMLButtonElement | null,
+            obt:       document.getElementById(`blueberryLoadout${obtVal}`)       as HTMLButtonElement | null,
+            off:       document.getElementById(`blueberryLoadout${offVal}`)       as HTMLButtonElement | null,
+            luck:      document.getElementById(`blueberryLoadout${ambrosiaVal}`)  as HTMLButtonElement | null,
         };
         if (!this.#ensureElements(elements)) return false;
 
@@ -533,6 +533,7 @@ export class HSAutosing extends HSModule {
         this.#hsSettingsToRestore = await HSAutosingSettingsFixer.fixAllSettings();
         this.#cacheObservers();
         await this.#cacheExposedFunctions();
+        await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
 
         this.#autosingEnabled = true;
         this.#stopAtSingularitysEnd = false;
