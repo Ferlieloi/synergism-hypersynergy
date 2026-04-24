@@ -7,8 +7,6 @@ import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
-import { HSAutosing } from "./hs-autosing/hs-autosing";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 
 export class HSAmbrosiaQuickbar {
     readonly context = 'HSAmbrosiaQuickbar';
@@ -286,8 +284,7 @@ export class HSAmbrosiaQuickbar {
     }
 
     async onQuickBarClick(e: Event, buttonId: string) {
-        const realButton = this.#originalQuickBarButtons.get(buttonId)
-            ?? document.getElementById(buttonId) as HTMLButtonElement | null;
+        const realButton = this.#originalQuickBarButtons.get(buttonId) ?? document.getElementById(buttonId) as HTMLButtonElement | null;
         if (!realButton) { HSLogger.warn(`Could not find real button for ${buttonId}`, this.context); return; }
 
         await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();

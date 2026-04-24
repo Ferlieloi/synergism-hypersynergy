@@ -3,6 +3,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
 import { HSGameState, MainView } from '../../hs-core/hs-gamestate';
 import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
+import { HSAmbrosiaHelper } from '../hs-ambrosiaHelper';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -124,6 +125,7 @@ export class HSAutosingSettingsFixer {
      * reconstructing the fixer instance.
      */
     public static async fixAllSettings(): Promise<string[]> {
+        await HSAmbrosiaHelper.ensureLoadoutModeIsLoad();
         await HSAutosingSettingsFixer.#ensureAllTogglesOn();
         await HSAutosingSettingsFixer.#ensurePercentSuffixElements();
         await HSAutosingSettingsFixer.#ensureGreenButtons();
