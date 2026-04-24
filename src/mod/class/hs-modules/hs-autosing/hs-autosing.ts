@@ -18,6 +18,7 @@ import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
+const BACKGROUND_COLOR_REGEX = /background-color/i;
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -38,7 +39,6 @@ export class HSAutosing extends HSModule {
     static readonly #DECIMAL_INFINITY = new Decimal(Infinity);
     static readonly #DECIMAL_9999 = new Decimal(9999);
     static readonly #DECIMAL_0 = new Decimal(0);
-    static readonly #BACKGROUND_COLOR_REGEX = /background-color/i;
     #gameDataAPI?: HSGameDataAPI;
 
     #corruptionManager!: HSAutosingCorruption;
@@ -150,8 +150,6 @@ export class HSAutosing extends HSModule {
     #stageFunc?: (arg0: number) => any;
     #getMaxChallengesFunc?: (i: number) => number;
     #applyCorruptionsFunc?: (json: string) => boolean;
-//  #enterExaltFunc?: () => void;
-//  #exitExaltFunc?: () => void;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -432,39 +430,14 @@ export class HSAutosing extends HSModule {
         // We need either __HS_AUTO_CONFIRM or startDialogWatcher
         if (!isAutoConfirmPatched) HSUtils.startDialogWatcher();
 
-        /*
-        const needsCorruptions = !this.#applyCorruptionsFunc;
-        const needsExalt       = !this.#enterExaltFunc || !this.#exitExaltFunc;
-
-        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsExalt: ${needsExalt}`, this.context);
-        if (needsCorruptions || needsExalt) {
-            HSLogger.debug(() => 'Triggering late patches...', this.context);
-            const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-
-            // Calling applyCorruptions via setCorruptions exposes window.__HS_applyCorruptions.
-            if (needsCorruptions) await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-                
-            // #enterAndLeaveExalt calls enableChallenge then exitChallenge, exposing both
-            // window.__HS_enterExalt and window.__HS_exitExalt.
-            if (needsExalt) { await this.#enterAndLeaveExalt(); }
-
-            prevMainView.goto();
-        }
-        */
-
         // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
-        // Read all four: they should now be set on window.
-    //  this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
-    //  this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
+        // Read again, __HS_applyCorruptions should now be set on window.
         this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
         this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
 
-        this.#isExposureReady = 
-            !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc 
-                // && this.#enterExaltFunc && this.#exitExaltFunc
-            );
+        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc);
 
         const exposureMsg = `Exposure status:
             stageFunc: ${!!this.#stageFunc},
@@ -473,10 +446,7 @@ export class HSAutosing extends HSModule {
             onAfterTackHook: ${isAfterTackHooked},
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
-            ` +
-        //  enterExaltFunc: ${!!this.#enterExaltFunc},
-        //  exitExaltFunc: ${!!this.#exitExaltFunc},
-            `? isExposureReady: ${this.#isExposureReady}.`;
+            ? isExposureReady: ${this.#isExposureReady}.`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
@@ -1088,7 +1058,7 @@ export class HSAutosing extends HSModule {
                 : challengeIndex <= 10
                     ? this.#exitReincBtn
                     : this.#exitAscBtn;
-            const skipInactiveWait = !HSAutosing.#BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
+            const skipInactiveWait = !BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
             if (!skipInactiveWait) {
                 await this.#waitForClassCondition(challengeBtn!, () => !isActive());
             }
@@ -1115,7 +1085,6 @@ export class HSAutosing extends HSModule {
                     }
                     return;
                 }
-                if (!this.#autosingEnabled) return;
 
                 current = isC15 ? p2.challenge15Exponent : p2.challengecompletions[challengeIndex];
                 if (current >= maxPossible || current >= minCompletions) {
@@ -1144,7 +1113,6 @@ export class HSAutosing extends HSModule {
                     }
                     return;
                 }
-                if (!this.#autosingEnabled) return;
 
                 const rawText = getLevelText();
                 if (rawText !== lastText) {
@@ -1228,9 +1196,7 @@ export class HSAutosing extends HSModule {
             let timeSinceNoMoreCompletion = performance.now();
             let deadline = timeSinceNoMoreCompletion + maxTime;
 
-            while (true) {
-                if (!this.#autosingEnabled) return;
-
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 const newCompletions = p.challengecompletions[challengeIndex];
                 if (newCompletions !== currentCompletions) {
@@ -1256,9 +1222,7 @@ export class HSAutosing extends HSModule {
             let timeSinceNoMoreCompletion = performance.now();
             let lastRawText = getLevelText();
 
-            while (true) {
-                if (!this.#autosingEnabled) return;
-
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 const rawText = getLevelText();
                 if (rawText !== lastRawText) {
@@ -1419,16 +1383,6 @@ export class HSAutosing extends HSModule {
     }
 
     async #enterAndLeaveExalt(): Promise<void> {
-        /*
-        // Those two functions are less clean, and may not be needed with the auto-confirm...
-        // Fast path: 
-        if (this.#isExposureReady) {
-            this.#enterExaltFunc!();
-            this.#exitExaltFunc!();
-            return;
-        }
-        */
-
         this.#exalt2Btn.click();
         await this.#waitForExaltState(true);
 
@@ -1457,26 +1411,24 @@ export class HSAutosing extends HSModule {
         this.#prevActionTime = performance.now();
         await this.#matchStageToStrategy('final');
 
-        if (this.#autosingEnabled) {
-            // Export to gather a few quarks... (maybe not worth anymore...??? Or maybe for lower sing players...)
-            await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
-            const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
-            if (exportBtn) {
-                this.#saveType.checked = true;
-                exportBtn.click();
-            }
-
-            this.#ascendBtn.click();
-
-            if (this.#stopAtSingularitysEnd) {
-                HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
-                await this.#pushSingularityBeforeStop();
-                HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
-                this.stopAutosing();
-                return;
-            }
-            await this.#performSingularity();
+        // Export to gather a few quarks... (maybe not worth anymore...??? Or maybe for lower sing players...)
+        await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
+        const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
+        if (exportBtn) {
+            this.#saveType.checked = true;
+            exportBtn.click();
         }
+
+        this.#ascendBtn.click();
+
+        if (this.#stopAtSingularitysEnd) {
+            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+            await this.#pushSingularityBeforeStop();
+            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+            this.stopAutosing();
+            return;
+        }
+        await this.#performSingularity();
 
         this.#endStagePromiseResolve?.();
         this.#endStagePromise = undefined;
@@ -1673,7 +1625,8 @@ export class HSAutosing extends HSModule {
             .filter(([, element]) => !element)
             .map(([name]) => name);
 
-        if (missing.length === 0) return true;
+        if (missing.length === 0)
+            return true;
 
         for (const name of missing) { HSLogger.warn(`Required element missing: ${name}`, this.context); }
         if (this.#autosingEnabled) this.stopAutosing();

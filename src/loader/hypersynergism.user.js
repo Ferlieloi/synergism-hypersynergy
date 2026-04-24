@@ -466,60 +466,7 @@
         } catch (e) {
             warn('Error while patching applyCorruptions', e);
         }
-/*
-        // ==================================================================================
-        // ── ENTER/EXIT EXALT PATCH — dialog-free enableChallenge / exitChallenge wrappers (a little more 'hacky' than the rest...)
-        // enterExalt replicates enableChallenge's state-mutation body (no Confirm/Alert).
-        // exitExalt replicates exitChallenge(success=false) — autosing always exits exalts without completing
-        // (antiquities=0), so we use the failure path: no completion tracking
-        // Unique anchor: 'singularityChallenge.enterChallenge.lowSingularity' is only inside enableChallenge.
-        // We walk backward 400 chars to find 'async enableChallenge() {' and inject at body start.
-        // All closure vars (n=player, b=G, pi=singularity, zr=calculateGoldenQuarks) are in scope here.
-        try {
-            const exaltAnchor = 'singularityChallenge.enterChallenge.lowSingularity';
-            const exaltAnchorIdx = code.indexOf(exaltAnchor);
-            if (exaltAnchorIdx !== -1) {
-                const backCtx = code.slice(Math.max(0, exaltAnchorIdx - 400), exaltAnchorIdx);
-                const ecMatch = /async\s+enableChallenge\s*\(\s*\)\s*\{/.exec(backCtx);
-                if (ecMatch) {
-                    const ecBodyStart = (exaltAnchorIdx - backCtx.length) + ecMatch.index + ecMatch[0].length;
-                    const enterBody =
-                        `const c=n.singularityChallenges.oneChallengeCap;` +
-                        `if(n.insideSingularityChallenge)return;` +
-                        `const r=c.computeSingularityRquirement(),a=n.singularityCounter,o=n.quarkstimer,i=n.goldenQuarksTimer,l=zr(),u=n.goldenQuarks;` +
-                        `c.enabled=true;b.currentSingChallenge=c.HTMLTag;n.insideSingularityChallenge=true;` +
-                        `pi(r);` +
-                        `c.resetTime?(n.singularityCounter=0):(n.singularityCounter=a);` +
-                        `n.goldenQuarks=u+l;n.quarkstimer=o;n.goldenQuarksTimer=i;` +
-                        `c.updateChallengeHTML()`;
-                    // Exalt failed path (success=false): skip completion tracking and timer restoration.
-                    // quarkstimer/goldenQuarksTimer would normally be restored here, but autosing
-                    // calls pi() (singularity) immediately after anyway — resetting them again.
-                    // (And the q/gq gains from the timers are useless anyway)
-                    const exitBody =
-                        `const c=n.singularityChallenges.oneChallengeCap;` +
-                        `c.enabled=false;b.currentSingChallenge=undefined;n.insideSingularityChallenge=false;` +
-                        `const r=n.highestSingularityCount,a=n.singularityCounter;` +
-                        `c.updateIconHTML();pi(r);n.singularityCounter=a`;
-                    const expose =
-                        `\nif(!window.__HS_EXALT_EXPOSED){` +
-                            `window.__HS_EXALT_EXPOSED=true;` +
-                            `window.__HS_enterExalt=()=>{${enterBody};};` +
-                            `window.__HS_exitExalt=()=>{${exitBody};};` +
-                            `console.log('[HS-PATCH] \u2705 enterExalt/exitExalt exposed');` +
-                        `}\n`;
-                    code = code.slice(0, ecBodyStart) + expose + code.slice(ecBodyStart);
-                    log('Patched enterExalt/exitExalt');
-                } else {
-                    warn('enterExalt: could not find enableChallenge method header in backward context');
-                }
-            } else {
-                warn('Could not patch enterExalt/exitExalt — anchor not found in bundle');
-            }
-        } catch (e) {
-            warn('Error while patching enterExalt/exitExalt', e);
-        }
-*/
+
         // ==================================================================================
 
         log(`Patch complete — waiting for DOM to be ready before injecting bundle`);
@@ -590,8 +537,6 @@
                         `exportData:          typeof window.__HS_exportData,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
-                    //  `enterExalt:          typeof window.__HS_enterExalt,` +
-                    //  `exitExalt:           typeof window.__HS_exitExalt,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
                     `};` +
                 `}` +
