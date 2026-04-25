@@ -85,11 +85,6 @@ declare global {
             moduleColor: 'gold',
         },
         {
-            className: 'HSAmbrosia',
-            context: 'HSAmbrosia',
-            moduleColor: 'blueviolet',
-        },
-        {
             className: 'HSStats',
             context: 'HSStats',
             moduleColor: 'lawngreen',
@@ -113,6 +108,11 @@ declare global {
             className: 'HSGameDataAPI',
             context: 'HSGameDataAPI',
             moduleColor: '#fbc531',
+        },
+        {
+            className: 'HSAmbrosia',
+            context: 'HSAmbrosia',
+            moduleColor: 'blueviolet',
         },
         {
             className: 'HSAutosing',

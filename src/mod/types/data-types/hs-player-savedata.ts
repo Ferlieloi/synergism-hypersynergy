@@ -508,7 +508,7 @@ export interface PromoCodeTiming {
 export interface UpgradeData {
     level: number;
     toggleBuy: number; // Often 1, could potentially be boolean
-    freeLevels: number;
+    freeLevel: number;
 }
 
 /**
@@ -686,8 +686,8 @@ export interface SingularityChallengeRewards {
 export interface SingularityChallenges {
     noSingularityUpgrades: SingularityChallengeStatus;
     oneChallengeCap: SingularityChallengeStatus;
-    noOcteracts: SingularityChallengeStatus;
     limitedAscensions: SingularityChallengeStatus;
+    noOcteracts: SingularityChallengeStatus;
     noAmbrosiaUpgrades: SingularityChallengeStatus;
     limitedTime: SingularityChallengeStatus;
     sadisticPrequel: SingularityChallengeStatus;

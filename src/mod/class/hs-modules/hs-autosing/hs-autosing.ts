@@ -18,6 +18,7 @@ import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
+const BACKGROUND_COLOR_REGEX = /background-color/i;
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -114,6 +115,7 @@ export class HSAutosing extends HSModule {
     #upg81Observer?: MutationObserver;
     #upg81Promise?: Promise<boolean>;
     #upg81PromiseResolve?: (value: boolean) => void;
+    #upg81ClickTimerId?: number;
     #exaltStateObserver?: MutationObserver;
     #waitForExaltStateActive?: {
         targetState: boolean;
@@ -148,17 +150,11 @@ export class HSAutosing extends HSModule {
     #stageFunc?: (arg0: number) => any;
     #getMaxChallengesFunc?: (i: number) => number;
     #applyCorruptionsFunc?: (json: string) => boolean;
-//  #enterExaltFunc?: () => void;
-//  #exitExaltFunc?: () => void;
-//  #teleportLowerFunc?: (target: number) => void;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
 
     #autosingModal?: HSAutosingModal;
-    #pausePromise?: Promise<void>;
-    #pausePromiseResolve?: () => void;
-    #pauseListenerAttached = false;
 
     // Strategy Caches
     readonly #phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
@@ -303,14 +299,13 @@ export class HSAutosing extends HSModule {
         const offVal       = HSSettings.getSetting("autosingOffLoadout").getValue();
         const ambrosiaVal  = HSSettings.getSetting("autosingAmbrosiaLoadout").getValue();
 
-        const ambPrefix = HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix;
         const elements = {
-            earlyCube: document.getElementById(`${ambPrefix}-blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement | null,
-            lateCube:  document.getElementById(`${ambPrefix}-blueberryLoadout${lateCubeVal}`)  as HTMLButtonElement | null,
-            quark:     document.getElementById(`${ambPrefix}-blueberryLoadout${quarkVal}`)     as HTMLButtonElement | null,
-            obt:       document.getElementById(`${ambPrefix}-blueberryLoadout${obtVal}`)       as HTMLButtonElement | null,
-            off:       document.getElementById(`${ambPrefix}-blueberryLoadout${offVal}`)       as HTMLButtonElement | null,
-            luck:      document.getElementById(`${ambPrefix}-blueberryLoadout${ambrosiaVal}`)  as HTMLButtonElement | null,
+            earlyCube: document.getElementById(`blueberryLoadout${earlyCubeVal}`) as HTMLButtonElement | null,
+            lateCube:  document.getElementById(`blueberryLoadout${lateCubeVal}`)  as HTMLButtonElement | null,
+            quark:     document.getElementById(`blueberryLoadout${quarkVal}`)     as HTMLButtonElement | null,
+            obt:       document.getElementById(`blueberryLoadout${obtVal}`)       as HTMLButtonElement | null,
+            off:       document.getElementById(`blueberryLoadout${offVal}`)       as HTMLButtonElement | null,
+            luck:      document.getElementById(`blueberryLoadout${ambrosiaVal}`)  as HTMLButtonElement | null,
         };
         if (!this.#ensureElements(elements)) return false;
 
@@ -350,11 +345,12 @@ export class HSAutosing extends HSModule {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                         const isGreen = this.#upg81Btn.classList.contains('green-background');
                         if (isGreen && this.#upg81PromiseResolve) {
-                            HSLogger.debug(() => `[COIN-FIX] #upg81 turned green o/`, this.context);
+                            HSLogger.debug(() => `-------> #upg81 turned green o/`, this.context);
+                            this.#stopUpg81Clicking();
                             this.#upg81PromiseResolve(true);
                             this.#upg81PromiseResolve = undefined;
                             this.#upg81Observer?.disconnect();
-                        } else { HSLogger.debug(() => `[COIN-FIX] #upg81 mutated but still not green`, this.context); }
+                        }
                     }
                 }
             });
@@ -417,7 +413,6 @@ export class HSAutosing extends HSModule {
                 }
             });
         }
-
     }
 
     async #cacheExposedFunctions(): Promise<void> {
@@ -435,46 +430,14 @@ export class HSAutosing extends HSModule {
         // We need either __HS_AUTO_CONFIRM or startDialogWatcher
         if (!isAutoConfirmPatched) HSUtils.startDialogWatcher();
 
-        /*
-        const needsCorruptions = !this.#applyCorruptionsFunc;
-        const needsTeleport    = !this.#teleportLowerFunc;
-        const needsExalt       = !this.#enterExaltFunc || !this.#exitExaltFunc;
-
-        HSLogger.debug(() => `Late patchs needed? Corruptions: ${needsCorruptions}, needsTeleport: ${needsTeleport}, needsExalt: ${needsExalt}`, this.context);
-        if (needsCorruptions || needsTeleport || needsExalt) {
-            HSLogger.debug(() => 'Triggering late patches...', this.context);
-            const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-
-            // Calling applyCorruptions via setCorruptions exposes window.__HS_applyCorruptions.
-            if (needsCorruptions) await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-                
-            // #enterAndLeaveExalt calls enableChallenge then exitChallenge, exposing both
-            // window.__HS_enterExalt and window.__HS_exitExalt.
-            if (needsExalt) { await this.#enterAndLeaveExalt(); }
-
-            // Clicking the elevator teleport button calls teleportToSingularity, which exposes
-            // window.__HS_teleportLower at the start of its body before any dialog.
-            if (needsTeleport) {
-                this.#elevatorTeleportButton.click();
-            }
-            prevMainView.goto();
-        }
-        */
-
         // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
-        // Read all four: they should now be set on window.
-    //  this.#teleportLowerFunc    = (window as any).__HS_teleportLower    ?? null;
-    //  this.#enterExaltFunc       = (window as any).__HS_enterExalt       ?? null;
-    //  this.#exitExaltFunc        = (window as any).__HS_exitExalt        ?? null;
+        // Read again, __HS_applyCorruptions should now be set on window.
         this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
         this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
 
-        this.#isExposureReady = 
-            !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc 
-                // && this.#teleportLowerFunc && this.#enterExaltFunc && this.#exitExaltFunc
-            );
+        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc);
 
         const exposureMsg = `Exposure status:
             stageFunc: ${!!this.#stageFunc},
@@ -483,11 +446,7 @@ export class HSAutosing extends HSModule {
             onAfterTackHook: ${isAfterTackHooked},
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             autoConfirmPatched: ${isAutoConfirmPatched},
-            ` +
-            // teleportLowerFunc: ${!!this.#teleportLowerFunc},
-            // enterExaltFunc: ${!!this.#enterExaltFunc},
-            // exitExaltFunc: ${!!this.#exitExaltFunc},
-            `? isExposureReady: ${this.#isExposureReady}.`;
+            ? isExposureReady: ${this.#isExposureReady}.`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
@@ -558,8 +517,9 @@ export class HSAutosing extends HSModule {
     }
 
     public async restartAutosing(): Promise<void> {
-        if (!this.#autosingEnabled) return;
-        this.stopAutosing();
+        if (this.#autosingEnabled) {
+            this.stopAutosing();
+        }
         window.setTimeout(() => this.enableAutoSing(), 500);
     }
 
@@ -584,6 +544,7 @@ export class HSAutosing extends HSModule {
 
         this.#upg81Observer?.disconnect();
         this.#upg81Observer = undefined;
+        this.#stopUpg81Clicking();
         this.#upg81PromiseResolve = undefined;
         this.#upg81Promise = undefined;
 
@@ -609,11 +570,6 @@ export class HSAutosing extends HSModule {
             try { this.#endStagePromiseResolve(); } catch (e) { /* ignore */ }
             this.#endStagePromiseResolve = undefined;
         }
-        if (this.#pausePromiseResolve) {
-            try { this.#pausePromiseResolve(); } catch (e) { /* ignore */ }
-            this.#pausePromiseResolve = undefined;
-            this.#pausePromise = undefined;
-        }
         this.#endStagePromise = undefined;
 
         if (this.#autosingModal) {
@@ -622,7 +578,6 @@ export class HSAutosing extends HSModule {
             } else {
                 this.#autosingModal.destroy();
                 this.#autosingModal = undefined;
-                this.#pauseListenerAttached = false;
             }
         }
         await HSUtils.stopDialogWatcher();
@@ -632,7 +587,6 @@ export class HSAutosing extends HSModule {
         if (this.#autosingModal) {
             this.#autosingModal.destroy();
             this.#autosingModal = undefined;
-            this.#pauseListenerAttached = false;
         }
     }
 
@@ -704,18 +658,15 @@ export class HSAutosing extends HSModule {
             : (HSSettings.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
 
         if (!strategy) {
-            HSLogger.warn(`Strategy "${selectedRawName}" not found or failed to load.`, this.context);
-            HSUI.Notify("Could not find or load strategy - Autosing stopped.", { notificationType: "warning" });
+            HSUI.Notify(`Could not find or load strategy "${selectedRawName}" - Autosing stopped.`, { notificationType: "warning" });
             return null;
         }
 
         const runtimeStrategy: HSAutosingStrategy = JSON.parse(JSON.stringify(strategy));
-        // MIGRATION NEXT STEP - This should not be needed anymore (except if users click the migrate button). To be removed.
-        // Migrate to new IDs in-memory only, this copy is never persisted.
-        HSSettings.migrateStrategyActionIdsAuto(runtimeStrategy, 'toNew');
+
         // Insert special steps at the start of the first phase
         this.#insertAntiBuyCoinBugStep(runtimeStrategy);
-        HSLogger.log(`Loaded strategy "${selectedRawName}" (migrated to runtime IDs in-memory, AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
+        HSLogger.log(`Loaded strategy "${selectedRawName}" (AntiBuyCoinBug step inserted as first step, and potential obt-switch step removed)`, this.context);
 
         return runtimeStrategy;
     }
@@ -1100,7 +1051,17 @@ export class HSAutosing extends HSModule {
             while (!isChallengeActive()) await HSUtils.yield();
         } else {
             const isActive = accessor.isActive;
-            await this.#waitForClassCondition(challengeBtn!, () => !isActive());
+            // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
+            // I think we could even skip the 'not inside' check and go directly to the double click...?
+            const exitButton = challengeIndex <= 5
+                ? this.#exitTranscBtn
+                : challengeIndex <= 10
+                    ? this.#exitReincBtn
+                    : this.#exitAscBtn;
+            const skipInactiveWait = !BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
+            if (!skipInactiveWait) {
+                await this.#waitForClassCondition(challengeBtn!, () => !isActive());
+            }
             this.#fastDoubleClick(challengeBtn!);
             await this.#waitForClassCondition(challengeBtn!, () => isActive());
         }
@@ -1114,16 +1075,19 @@ export class HSAutosing extends HSModule {
             const p2 = this.#exposedPlayer!;
             const isC15 = challengeIndex === 15;
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
+            let current = 0;
 
             while (true) {
                 const now = performance.now();
-                if (now >= endTime) break;
-                if (!this.#autosingEnabled) return;
+                if (now >= endTime) {
+                    if (challengeIndex <= 10 && minCompletions !== 0) {
+                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
+                    }
+                    return;
+                }
 
-                const current = isC15 ? p2.challenge15Exponent : p2.challengecompletions[challengeIndex];
-                if (current >= maxPossible) return;
-
-                if (current >= minCompletions) {
+                current = isC15 ? p2.challenge15Exponent : p2.challengecompletions[challengeIndex];
+                if (current >= maxPossible || current >= minCompletions) {
                     if (waitTime > 0) await HSUtils.sleep(waitTime);
                     HSLogger.debug(() => `-------> C${challengeIndex}: ${current} ${isC15 ? 'exponent' : 'completions'} reached`, this.context);
                     return;
@@ -1143,8 +1107,12 @@ export class HSAutosing extends HSModule {
 
             while (true) {
                 const now = performance.now();
-                if (now >= endTime) break;
-                if (!this.#autosingEnabled) return;
+                if (now >= endTime) { 
+                    if (challengeIndex <= 10 && minCompletions !== 0) {
+                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
+                    }
+                    return;
+                }
 
                 const rawText = getLevelText();
                 if (rawText !== lastText) {
@@ -1161,11 +1129,6 @@ export class HSAutosing extends HSModule {
                 const remaining = endTime - now;
                 await HSUtils.sleep(remaining < sleepInterval ? remaining : sleepInterval);
             }
-        }
-
-        // No warning if minCompletions = 0 because it's ok strategy-wise
-        if (challengeIndex <= 10 && minCompletions !== 0) {
-            HSLogger.warn(`-------> Timeout: C${challengeIndex} failed to reach ${minCompletions} completions within ${maxTime} ms`, this.context);
         }
     }
 
@@ -1233,9 +1196,7 @@ export class HSAutosing extends HSModule {
             let timeSinceNoMoreCompletion = performance.now();
             let deadline = timeSinceNoMoreCompletion + maxTime;
 
-            while (true) {
-                if (!this.#autosingEnabled) return;
-
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 const newCompletions = p.challengecompletions[challengeIndex];
                 if (newCompletions !== currentCompletions) {
@@ -1261,9 +1222,7 @@ export class HSAutosing extends HSModule {
             let timeSinceNoMoreCompletion = performance.now();
             let lastRawText = getLevelText();
 
-            while (true) {
-                if (!this.#autosingEnabled) return;
-
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 const rawText = getLevelText();
                 if (rawText !== lastRawText) {
@@ -1359,8 +1318,6 @@ export class HSAutosing extends HSModule {
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
         const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-        // TODO: investigate tab switching / not restoring...
-        // HSLogger.debug(() => `saving prevMainView: ${prevMainView.getName()}`, this.context);
 
         let q: number;
         let gq: number;
@@ -1382,8 +1339,7 @@ export class HSAutosing extends HSModule {
         this.#previousQuarkAmount = q;
         this.#previousGoldenQuarkAmount = gq;
 
-        // antiBuyCoinBug setup
-        HSLogger.debug(() => `[COIN-FIX] #upg81 observer starting before sing reset...`, this.context);
+        // antiBuyCoinBug setup (hard-coded inserted first step of the strategy should ensure this promise is resolved)
         this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
         this.#upg81Observer?.observe(this.#upg81Btn, { attributes: true, attributeFilter: ['class'] });
 
@@ -1393,16 +1349,11 @@ export class HSAutosing extends HSModule {
         this.#antiquitiesObserverActivated = false;
 
         if (this.#isExposureReady) {
-            // The vanilla Teleport function is simply doing some checks (everything true for us wanting to go lower),
-            // then it updates singularityCount, then call a function to update the UI...
+            // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
+            // 2) updates singularityCount, 3) calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
-            // this.#exposedPlayer!.singularityCount = this.#targetSingularity;
-            // this.#teleportLowerFunc!(this.#targetSingularity); 
-            this.#elevatorTeleportButton.click();
+            this.#exposedPlayer!.singularityCount = this.#targetSingularity;
         } else {
-            // This two lines are probably not needed...
-            // this.#elevatorInput.value = this.#targetSingularity.toString();
-            // this.#elevatorInput.dispatchEvent(new Event('input', { bubbles: true }));
             this.#elevatorTeleportButton.click();
         }
 
@@ -1410,9 +1361,13 @@ export class HSAutosing extends HSModule {
             this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
 
-        // HSLogger.debug(() => `restoring prevMainView: ${prevMainView.getName()}`, this.context);
-        HSLogger.debug(() => "Singularity performed", this.context);
-        prevMainView.goto();
+        HSLogger.debug(() => "===== Singularity performed =====", this.context);
+
+        // antiBuyCoinBug next step: loop-click upg81 until it turns green (upg81Promise resolved)
+        this.#startUpg81Clicking();
+
+        // Obt switch so we start producing Obt ASAP every sing
+        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
 
         let stage;
         do {
@@ -1420,24 +1375,14 @@ export class HSAutosing extends HSModule {
             await HSUtils.yield();
             stage = await this.#getStage();
         } while (!this.#isAllowedStage(stage));
-
         HSLogger.debug(() => `Reached allowed stage: ${stage}`, this.context);
 
+        window.setTimeout(() => prevMainView.goto(), 20);
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
     }
 
     async #enterAndLeaveExalt(): Promise<void> {
-        /*
-        // Those two functions are 'less clean', and may not be needed with the auto-confirm...
-        // Fast path: 
-        if (this.#isExposureReady) {
-            this.#enterExaltFunc!();
-            this.#exitExaltFunc!();
-            return;
-        }
-        */
-
         this.#exalt2Btn.click();
         await this.#waitForExaltState(true);
 
@@ -1466,27 +1411,24 @@ export class HSAutosing extends HSModule {
         this.#prevActionTime = performance.now();
         await this.#matchStageToStrategy('final');
 
-        if (this.#autosingEnabled) {
-            // Export to gather a few quarks... (maybe not worth anymore...??? Or maybe for lower sing players...)
-            await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
-            const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
-            if (exportBtn) {
-                this.#saveType.checked = true;
-                exportBtn.click();
-            }
-
-            this.#ascendBtn.click();
-
-            if (this.#stopAtSingularitysEnd) {
-                HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
-                await this.#pushSingularityBeforeStop();
-                HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
-                this.stopAutosing();
-                return;
-            }
-            await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
-            await this.#performSingularity();
+        // Export to gather a few quarks... (maybe not worth anymore...??? Or maybe for lower sing players...)
+        await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
+        const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
+        if (exportBtn) {
+            this.#saveType.checked = true;
+            exportBtn.click();
         }
+
+        this.#ascendBtn.click();
+
+        if (this.#stopAtSingularitysEnd) {
+            HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
+            await this.#pushSingularityBeforeStop();
+            HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
+            this.stopAutosing();
+            return;
+        }
+        await this.#performSingularity();
 
         this.#endStagePromiseResolve?.();
         this.#endStagePromise = undefined;
@@ -1589,7 +1531,6 @@ export class HSAutosing extends HSModule {
         if (this.#addCodeAllBtn) this.#addCodeAllBtn.click();
         if (this.#timeCodeBtn) this.#timeCodeBtn.click();
         await HSUtils.waitForNextTack();
-        await this.#setAmbrosiaLoadout(this.#ambrosia_obt);
     }
 
 
@@ -1684,7 +1625,8 @@ export class HSAutosing extends HSModule {
             .filter(([, element]) => !element)
             .map(([name]) => name);
 
-        if (missing.length === 0) return true;
+        if (missing.length === 0)
+            return true;
 
         for (const name of missing) { HSLogger.warn(`Required element missing: ${name}`, this.context); }
         if (this.#autosingEnabled) this.stopAutosing();
@@ -1732,19 +1674,34 @@ export class HSAutosing extends HSModule {
         );
     }
 
-    async #waitForGreenUpg81(): Promise<void> {
-        const isGreen = () => this.#upg81Btn.classList.contains('green-background');
-        if (!this.#upg81Promise) { HSLogger.warn(`[COIN-FIX] upg81Promise missing, aborting.`, this.context); return; }
+    #startUpg81Clicking(initialTimeout = 0, intervalMs = 5): void {
+        if (this.#upg81ClickTimerId !== undefined || !this.#upg81Btn) return;
 
-        HSLogger.debug(() => `[COIN-FIX] Clicking upg81 until it turns green`, this.context);
-        while (this.#autosingEnabled && !isGreen()) {
+        const tick = (): void => {
+            if (!this.#autosingEnabled || !this.#upg81Promise) {
+                this.#stopUpg81Clicking();
+                return;
+            }
+
             this.#upg81Btn.click();
-            await Promise.race([
-                this.#upg81Promise,
-                HSUtils.yield()
-            ]);
-        }
+            this.#upg81ClickTimerId = window.setTimeout(tick, intervalMs);
+        };
+        this.#upg81ClickTimerId = window.setTimeout(tick, initialTimeout);
+    }
 
+    #stopUpg81Clicking(): void {
+        if (this.#upg81ClickTimerId !== undefined) {
+            window.clearTimeout(this.#upg81ClickTimerId);
+            this.#upg81ClickTimerId = undefined;
+        }
+    }
+
+    async #waitForGreenUpg81(): Promise<void> {
+        if (!this.#upg81Promise) return;
+        
+        await this.#upg81Promise;
+
+        this.#stopUpg81Clicking();
         this.#upg81Observer?.disconnect();
         this.#upg81PromiseResolve = undefined;
         this.#upg81Promise = undefined;

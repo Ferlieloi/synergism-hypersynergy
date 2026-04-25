@@ -97,6 +97,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         AMB_ambrosiaTalismanBonusRuneLevel: { value: undefined, cachedBy: [] },
         AMB_ambrosiaRuneOOMBonus: { value: undefined, cachedBy: [] },
 
+        AMB_ambrosiaBrickOfLead: { value: undefined, cachedBy: [] },
 
         REDAMB_blueberryGenerationSpeed: { value: undefined, cachedBy: [] },
         REDAMB_blueberryGenerationSpeed2: { value: undefined, cachedBy: [] },
@@ -1279,16 +1280,20 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return ((this.gameData?.shopUpgrades.shopSingularityPotency ?? 0) > 0 ? 3.66 : 1) + 0.3 / 100 * (this.gameData?.cubeUpgrades[75] ?? 0)
     }
 
+    R_getSavedUpgradeFreeLevel(upgrade?: { freeLevel?: number; freeLevels?: number }): number {
+        const freeLevel = Number(upgrade?.freeLevel ?? upgrade?.freeLevels ?? 0)
+        return Number.isFinite(freeLevel) ? freeLevel : 0
+    }
+
     R_computeGQUpgradeFreeLevelSoftcap(upgradeKey: GoldenQuarkUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>computeGQUpgradeFreeLevelSoftcap() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const upgrade = data.goldenQuarkUpgrades[upgradeKey]
         const freeLevelMult = this.R_computeFreeLevelMultiplierGQ()
-        const baseRealFreeLevels = freeLevelMult * upgrade.freeLevels
+        const freeLevel = this.R_getSavedUpgradeFreeLevel(upgrade)
+
+        const baseRealFreeLevels = freeLevelMult * freeLevel
         return (
             Math.min(upgrade.level, baseRealFreeLevels)
             + Math.sqrt(Math.max(0, baseRealFreeLevels - upgrade.level))
@@ -1296,15 +1301,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey): number => {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
-
-        const data = this.gameData;
+        if (!this.gameData) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const upgrade = octeractUpgradeMaxLevels[upgradeKey]
         const totalLevels = this.R_actualOcteractUpgradeTotalLevels(upgradeKey)
+
+        if (!Number.isFinite(totalLevels)) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() totalLevels invalid for ${upgradeKey}: ${totalLevels}</red>`, this.context); return 0; }
+
         return upgrade.effect ? upgrade.effect(totalLevels) : 0
     }
 
@@ -1313,47 +1316,49 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     R_computeOcteractFreeLevelSoftcap = (upgradeKey: OcteractUpgradeKey): number => {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>computeOcteractFreeLevelSoftcap() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const freeLevelMult = this.R_computeFreeLevelMultiplierOCT()
         const upgrade = data.octUpgrades[upgradeKey];
-        return upgrade.freeLevels * freeLevelMult
+
+        if (!upgrade) { HSLogger.errorOnce(`<red>computeOcteractFreeLevelSoftcap() missing octeract upgrade ${upgradeKey}</red>`, this.context); return 0; }
+
+        return this.R_getSavedUpgradeFreeLevel(upgrade) * freeLevelMult
     }
 
     R_actualOcteractUpgradeTotalLevels(upgradeKey: OcteractUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>actualOcteractUpgradeTotalLevels() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
         const upgrade = data.octUpgrades[upgradeKey];
 
+        if (!upgrade) { HSLogger.errorOnce(`<red>actualOcteractUpgradeTotalLevels() missing octeract upgrade ${upgradeKey}</red>`, this.context); return 0; }
+        if (data.singularityChallenges.noOcteracts.enabled || data.singularityChallenges.sadisticPrequel.enabled) { return 0; }
+
+        const level = Number(upgrade.level ?? 0)
         const actualFreeLevels = this.R_computeOcteractFreeLevelSoftcap(upgradeKey)
 
-        if (upgrade.level >= actualFreeLevels) {
-            return actualFreeLevels + upgrade.level
+        if (!Number.isFinite(level) || !Number.isFinite(actualFreeLevels)) return 0;
+
+        if (level >= actualFreeLevels) {
+            return actualFreeLevels + level
         } else {
-            return 2 * Math.sqrt(actualFreeLevels * upgrade.level)
+            return 2 * Math.sqrt(actualFreeLevels * level)
         }
     }
 
     R_actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
-        if (!this.gameData) {
-            HSLogger.errorOnce(`<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>`, this.context);
-            return 0;
-        }
+        if (!this.gameData) { HSLogger.errorOnce(`<red>actualGQUpgradeTotalLevels() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const data = this.gameData;
-
         const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey]
 
+        if ( (data.singularityChallenges.noSingularityUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled) && !upgrade.qualityOfLife ) { return 0 }
+
         const actualFreeLevels = this.R_computeGQUpgradeFreeLevelSoftcap(upgradeKey)
-        const linearLevels = data.goldenQuarkUpgrades[upgradeKey].level + actualFreeLevels
+        const level = Number(data.goldenQuarkUpgrades[upgradeKey].level ?? 0)
+        const linearLevels = level + actualFreeLevels
         let polynomialLevels = 0
 
         if (this.R_getOcteractUpgradeEffect('octeractImprovedFree')) {
@@ -1361,7 +1366,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree2')
             exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree3')
             exponent += this.R_getOcteractUpgradeEffect('octeractImprovedFree4')
-            polynomialLevels = Math.pow(data.goldenQuarkUpgrades[upgradeKey].level * actualFreeLevels, exponent)
+            polynomialLevels = Math.pow(level * actualFreeLevels, exponent)
         }
 
         return Math.max(linearLevels, polynomialLevels)
@@ -2117,7 +2122,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             extraLevelCalc: () => this.R_getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
 
         },
-
         ambrosiaBrickOfLead: {
             costPerLevel: 10,
             maxLevel: 25,
@@ -5308,7 +5312,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
-    // https://github.com/Pseudo-Corp/SynergismOfficial/blob/0ffbd184938677cf8137a404cffb2f4b5b5d3ab9/src/Calculate.ts
+    // https://github.com/Pseudo-Corp/SynergismOfficial/blob/d387b1b4ba4b54a735d09b5fa68ca48705a770e8/src/Calculate.ts
     R_calculateRequiredBlueberryTime = () => {
         if (!this.gameData) return 0;
         const data = this.gameData;
@@ -5336,10 +5340,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (data.lifetimeAmbrosia >= 10000) {
             const extraScalingPower = Math.log10(4)
             val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower)
-            return Math.ceil(val)
-        } else {
-            return val
+          val = Math.ceil(val);
         }
+
+        this.#updateCache(cacheName, { value: val, cachedBy: calculationVars });
+
+        return val;
     }
 
     // https://github.com/Pseudo-Corp/SynergismOfficial/blob/0ffbd184938677cf8137a404cffb2f4b5b5d3ab9/src/Calculate.ts

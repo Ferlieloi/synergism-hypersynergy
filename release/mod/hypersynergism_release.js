@@ -3490,7 +3490,7 @@ a.hs-link {
     color: #ff3d00;
     text-decoration: none;
 }
-`;var gn=`/* ===== HSAUTOSING TIMER MODAL STYLES ===== */
+`;var Ma=`/* ===== HSAUTOSING TIMER MODAL STYLES ===== */
 
 /* ===== CSS CUSTOM PROPERTIES ===== */
 /* Color scheme variables for consistent theming across timer components */
@@ -4056,13 +4056,15 @@ a.hs-link {
 .hs-grid-2col-min-auto { grid-template-columns: min-content auto !important; }
 .hs-grid-2col-auto-auto { grid-template-columns: auto auto !important; }
 .hs-grid-1col { grid-template-columns: auto !important; }
-`;var hn=`/* ===== ANIMATIONS ===== */
+`;var Ta=`/* ===== ANIMATIONS ===== */
 
+.hs-rainbow-border.hs-silver-border,
+.hs-silver-border.hs-rainbow-border,
 .hs-rainbow-border {
    --angle: 0deg;
    border: 2px solid transparent !important;
    border-image: conic-gradient(from var(--angle), #ff5e00, #ff9a00, #ffcd00, #e5ff00, #a5ff00, #00ffc8, #00c8ff, #00a5ff, #9500ff, #00e1ff, #0095ff, #ff5e00) 1 !important;
-   animation: hue-rotate 6s linear infinite;
+   animation: hue-rotate 6s linear infinite !important;
 }
 
 .hs-silver-border {
@@ -4121,7 +4123,7 @@ a.hs-link {
     initial-value: 0deg;
     inherits: false;
 }
-`;var mn=`/* ===== UTILITY CLASSES ===== */
+`;var Ca=`/* ===== UTILITY CLASSES ===== */
 
 /* Inline button container for horizontal button layouts */
 .hs-inline-button {
@@ -4139,7 +4141,7 @@ a.hs-link {
 }
 
 .hs-hidden { display: none !important; }
-`;var dn=`<div id="hs-panel" class="hs-panel-closed">
+`;var xa=`<div id="hs-panel" class="hs-panel-closed">
     <div class="hs-panel-header">
         <div class="hs-panel-header-left" id="hs-panel-version">HyperSynergism</div>
         <div class="hs-panel-header-right">X</div>
@@ -4170,6 +4172,2615 @@ a.hs-link {
             We (the devs of the mod) are not to be held responsible for any issues caused by the mod. However, if you have a bug report or a suggestion, let us know on the 
             <a href="https://discord.com/channels/677271830838640680/1456904896099127367" target="_blank" rel="noopener noreferrer" class="hs-link">HyperSynergism thread</a> on discord and we will gladly look at it.</br></br>
         </p>
+
+        <h2 class="hs-panel-info-h2">12.5.2025 - Game Data Sniffing (GDS) and Singularity</h2>
+        <p class="hs-panel-info-p">
+            The mod will automatically disable GDS when the player enters a new Singularity or exits or leaves
+            Singularity challenge.</br></br>
+            This is because GDS reads and writes to localStorage heavily, which is fine otherwise,
+            but results in stuttering and other issues if it is enabled when starting a new singularity.</br></br>
+            <span style="color: chartreuse">After a few seconds, the mod will automatically re-enable GDS for the new
+                Singularity.</span>
+        </p>
+    </div>
+    <div class="hs-resizer"></div>
+</div>`;var M=class o extends z{constructor(e){super(e);this.uiReady=!1;this.#b=new Set;this.#y=new Map;this.#S=new Map;this.#v=new Map;this.#A=[];this.#f=[{label:"Ambrosia",btnId:"hs-setting-qol-ambrosia-quickbar-btn"},{label:"Amb minibars",btnId:"hs-setting-ambrosia-minibar-btn"},{label:"Corruption",btnId:"hs-setting-qol-enable-corruption-quickbar-btn"},{label:"Automation",btnId:"hs-setting-qol-enable-syn-ui-btn"},{label:"Events",btnId:"hs-setting-qol-enable-events-quickbar-btn"}];this.#M=[{tabId:1,tabBodySel:".hs-panel-body-1",tabSel:"#hs-panel-tab-1",panelDisplayType:"flex"},{tabId:2,tabBodySel:".hs-panel-body-2",tabSel:"#hs-panel-tab-2",panelDisplayType:"block"},{tabId:3,tabBodySel:".hs-panel-body-3",tabSel:"#hs-panel-tab-3",panelDisplayType:"block"},{tabId:4,tabBodySel:".hs-panel-body-4",tabSel:"#hs-panel-tab-4",panelDisplayType:"block"},{tabId:5,tabBodySel:".hs-panel-body-5",tabSel:"#hs-panel-tab-5",panelDisplayType:"block"}];this.#t=va+Ma+Ta+Ca,this.#a=xa,this.#d=new Map(this.#M.map(a=>[a.tabId,a]))}static#e="HSUI";#a;#t;#o;#n;#i;#s;#r;#l;#m;static#c=!1;static#g=!1;#b;#y;static#h=new Map;static#p;#S;#v;#A;#d;#f;#M;static#E={default:"#192a56",warning:"#cd6133",error:"#b33939",success:"#009432"};static#w={topLeft:{top:"15px"},top:{top:"15px"},topRight:{top:"15px"},right:{right:"15px"},bottomRight:{bottom:"15px"},bottom:{bottom:"15px"},bottomLeft:{bottom:"15px"},left:{left:"15px"}};async init(){u.log("Initialising HSUI module",this.context),await this.#L(),await this.#T(),this.#O(),this.#B(),this.#R(),this.uiReady=!0,this.isInitialized=!0}async#L(){o.#p=document.createElement("style"),o.#p.id=f.HSUI.injectedStylesDomId,document.head.appendChild(o.#p),o.injectStyle(this.#t,"hs-panel-css"),o.injectHTMLString(this.#a)}async#T(){this.#o=await x.HookElement("#hs-panel"),this.#n=await x.HookElement("#hs-panel-version"),this.#i=await x.HookElement(".hs-panel-header-right"),this.#r=await x.HookElement("#hs-ui-log"),this.#l=await x.HookElement("#hs-ui-log-clear"),this.#m=await x.HookElement("#hs-ui-log-copy");let e=await x.HookElement(".hs-panel-header"),a=await x.HookElement(".hs-resizer");this.#J(this.#o,e),this.#k(this.#o,a)}#O(){if(!this.#i)return;this.#i.addEventListener("click",async()=>{o.#c&&this.#o&&(await this.#o.transition({opacity:0}),o.#c=!1,o.#g=!1,this.#o.classList.add("hs-panel-closed"))}),this.#l&&this.#l.addEventListener("click",()=>u.clear()),this.#m&&this.#m.addEventListener("click",async()=>{if(this.#r)try{await navigator.clipboard.writeText(this.#r.textContent||""),o.Notify("Log copied to clipboard!",{notificationType:"success"})}catch{u.error("Failed to copy log to clipboard",this.context)}}),this.#A=Array.from(document.querySelectorAll(".hs-panel-body"));let e=document.querySelectorAll(".hs-panel-tab");e.forEach(a=>{a.addEventListener("click",n=>{this.#V(n.currentTarget,e)})})}#V(e,a){let n=e.dataset.tab?parseInt(e.dataset.tab,10):null;if(!n||e.classList.contains("hs-tab-selected"))return;let i=this.#d.get(n);if(!i){u.error(`Could not find tab config for tabId ${n}`,this.context);return}a.forEach(r=>r.classList.remove("hs-tab-selected")),e.classList.add("hs-tab-selected"),this.#A.forEach(r=>{r.classList.remove("hs-panel-body-open-flex"),r.classList.remove("hs-panel-body-open-block")});let s=this.#P(n);s&&(s.classList.add(i.panelDisplayType==="flex"?"hs-panel-body-open-flex":"hs-panel-body-open-block"),o.#g=n===1,o.#g&&(u.flushPendingLogs(),u.scrollToBottom()))}#B(){this.#o&&(this.#s=document.createElement("div"),this.#s.id="hs-panel-control",this.#s.style.display="none",this.#s.addEventListener("click",async()=>{if(o.#c&&this.#o)await this.#o.transition({opacity:0}),o.#c=!1,o.#g=!1,this.#o.classList.add("hs-panel-closed");else if(this.#o){o.#c=!0;let e=document.querySelector(".hs-panel-tab.hs-tab-selected");o.#g=e?.dataset.tab==="1",this.#o.style.opacity="0",this.#o.classList.remove("hs-panel-closed"),o.#g&&u.flushPendingLogs(),u.scrollToBottom(),await this.#o.transition({opacity:.92})}}),document.body.appendChild(this.#s))}#R(){if(!this.#s)return;let e=this.#C(),a=this.#$(),n=this.#q(),i=this.#j("autosing","\u25B6","Start Auto-Sing (S256+)",()=>this.#Y()),s=this.#j("amb-heater","\u{1F525}","Amb Heater Export",()=>this.#z());e.appendChild(a),e.appendChild(n),e.appendChild(i),e.appendChild(s),document.body.appendChild(e),this.#F(e,n,a)}#C(){let e=document.createElement("div");return e.id="hs-quick-access-menu",e.style.display="none",e}#q(){let e=document.createElement("button");return e.setAttribute("data-type","quickbars"),e.innerHTML=`
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">\u2630</span>
+            <span>Quickbars</span>
+            <span class="quickbars-arrow">&gt;</span>
+        `,e.addEventListener("click",()=>this.#I()),e}#$(){let e=document.createElement("div");return e.id="hs-quickbars-submenu",e.style.display="none",this.#f.forEach(({label:a,btnId:n})=>{e.appendChild(this.#U(a,n))}),e}#j(e,a,n,i){let s=document.createElement("button");return s.innerHTML=`
+            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">${a}</span>
+            <span>${n}</span>
+        `,s.setAttribute("data-type",e),s.addEventListener("click",i),s}#U(e,a){let n=document.createElement("button");return n.textContent=e,n.addEventListener("click",()=>{let i=document.getElementById(a);i&&(i.click(),u.debug(()=>`${e} quickbar toggled via quickbars submenu`,this.context))}),n}#F(e,a,n){let i=null,s=()=>{i&&clearTimeout(i),e.style.display="flex"},r=()=>{i=window.setTimeout(()=>{e.style.display="none"},200)},l=()=>{n.style.display="block"},c=()=>{n.style.display="none"};this.#s?.addEventListener("mouseenter",s),this.#s?.addEventListener("mouseleave",r),e.addEventListener("mouseenter",s),e.addEventListener("mouseleave",r),a.addEventListener("mouseenter",l),a.addEventListener("mouseleave",c),n.addEventListener("mouseenter",l),n.addEventListener("mouseleave",c)}#I(){let a=this.#f.map(({btnId:s})=>s).map(s=>document.getElementById(s)),n=a.map(s=>s?!s.classList.contains("hs-disabled"):!1),i=n.filter(Boolean).length;i>0&&i<n.length?a.forEach((s,r)=>{!n[r]&&s&&s.click()}):a.forEach(s=>{s&&s.click()})}#Y(){let e=document.getElementById("hs-setting-auto-sing-enabled");e&&(e.click(),u.log("Auto-Sing toggled via quick menu",this.context))}#z(){let e=document.getElementById("hs-panel-amb-heater-btn");e&&(e.click(),u.log("Ambrosia Heater exported via quick menu",this.context))}static isModPanelOpen(){return o.#c}static isLogTabActive(){return o.#g}#J(e,a){let n=0,i=0,s=0,r=0,l=h=>{h.preventDefault(),n=s-h.clientX,i=r-h.clientY,s=h.clientX,r=h.clientY;let m=e.offsetTop-i,d=e.offsetLeft-n,b=e.getBoundingClientRect(),y=window.innerWidth,v=window.innerHeight,A=45,T=10;d=Math.max(-(b.width-A),Math.min(d,y-A)),m=Math.max(T,Math.min(m,v-A)),e.style.top=`${m}px`,e.style.left=`${d}px`},c=()=>{document.removeEventListener("mousemove",l),document.removeEventListener("mouseup",c)},g=h=>{h.preventDefault(),s=h.clientX,r=h.clientY,document.addEventListener("mousemove",l),document.addEventListener("mouseup",c)};a.addEventListener("mousedown",g)}#k(e,a){let n=e,i=a,s=!1,r,l,c,g,h=(b,y,v)=>Math.max(y,Math.min(b,v));i.addEventListener("mousedown",b=>{s=!0,r=b.clientX,l=b.clientY,c=n.offsetWidth,g=n.offsetHeight;let y=n.querySelector(".hs-challenges-list-container");y&&(y.style.maxHeight="none"),document.addEventListener("mousemove",m),document.addEventListener("mouseup",d)});function m(b){if(!s)return;let y=h(c+(b.clientX-r),500,2500),v=h(g+(b.clientY-l),400,1500);n.style.width=`${y}px`,n.style.height=`${v}px`}function d(){s=!1,document.removeEventListener("mousemove",m),document.removeEventListener("mouseup",d)}}async getLogElement(){if(this.#r)return this.#r;{let e=await x.HookElement("#hs-ui-log");return this.#r=e,e}}#P(e){if(this.#v.has(e))return this.#v.get(e)||null;let a=this.#d.get(e);if(!a)return null;let n=document.querySelector(a.tabBodySel);return n&&this.#v.set(e,n),n}#K(e){if(this.#S.has(e))return this.#S.get(e)||null;let a=this.#d.get(e);if(!a)return null;let n=document.querySelector(a.tabSel);return n&&this.#S.set(e,n),n}replaceTabContents(e,a){let n=this.#P(e);if(!n){u.warn("Could not find tab to replace contents",this.context);return}n.innerHTML=a,u.debug(()=>`Replaced tab ${e} content`,this.context)}updateTitle(e){this.#n?this.#n.innerText=e:u.warn("Could not update panel title",this.context)}setPanelControlVisible(e){if(!this.#s){u.warn("Could not update panel control visibility",this.context);return}this.#s.style.display=e?"block":"none"}renameTab(e,a){let n=this.#K(e);if(!n){u.warn("Could not find tab to rename",this.context);return}n.innerHTML=a}static#Z(e){if(!p.isString(e))return!0;let a=e.match(/\{([\s\S]*)\}/);return a?a[1].trim().length===0:!0}static injectStyle(e,a){if(e&&!this.#Z(e)){let n=a??"hs-injected-style-"+p.domid();this.#h.has(n)||this.#h.set(n,e),this.updateInjectedStyleBlock()}}static removeInjectedStyle(e){this.#h.has(e)?(this.#h.delete(e),this.updateInjectedStyleBlock(),u.debug(()=>"Removed injected CSS",this.#e)):u.debug(()=>`<yellow>Could not find style with id ${e}</yellow>`,this.#e)}static#H=!1;static updateInjectedStyleBlock(){o.#H||(o.#H=!0,setTimeout(()=>{o.#H=!1,o.#p||(o.#p=document.createElement("style"),o.#p.id=f.HSUI.injectedStylesDomId,document.head.appendChild(o.#p)),o.#p.innerHTML=Array.from(o.#h.values()).join(""),u.debug(()=>`Flushed ${o.#h.size} styles`,o.#e)},0))}static injectHTMLString(e,a){let n=document.createElement("div");for(n.innerHTML=e;n.firstChild;)a?a(n.firstChild):document.body.appendChild(n.firstChild)}static injectHTMLElement(e,a){a(e)}async#G(e){let a=e.querySelectorAll(".hs-modal-body img"),n=Array.from(a).map(i=>new Promise(s=>{i.complete?s():(i.addEventListener("load",()=>s()),i.addEventListener("error",()=>s()))}));await Promise.all(n)}#ue(e,a){let{width:n,height:i}=e.getBoundingClientRect(),s=10,r=window.innerWidth-n-s,l=window.innerHeight-i-s;return{x:Math.max(s,Math.min(a.x,r)),y:Math.max(s,Math.min(a.y,l))}}#be(e,a){a&&this.#J(e,a);let n=e.querySelector(".hs-modal-resizer");n&&this.#k(e,n),e.addEventListener("click",async i=>{let r=i.target?.closest("[data-close]")?.dataset.close;r&&await this.CloseModal(r)})}#X(e=1,a,n){let i={x:0,y:10},s=window.innerWidth/2,r=0;if(a&&(r=a.getBoundingClientRect().width),Number.isInteger(e))switch(e){case 1:let l=null;n&&(l=document.querySelector(`#${n}`)),!l&&o.#c&&(l=document.querySelector("#hs-panel")),l?i.x=l.offsetLeft+50:i.x=s-r/2;break;case 2:i.x=window.innerWidth-25-r;break;case 3:i.x=25;break;default:i.x=s-r/2;break}else{let l=e;i.x=l.x,i.y=l.y}return i}async Modal(e){let a=`hs-dom-${p.uuidv4()}`,n=Y._modal({...e,id:a,title:e.title||"",styles:{opacity:0}});o.injectHTMLString(n);let i=document.getElementById(a);if(!i)return a;let s=i.querySelector(".hs-modal-head");this.#b.add(i),e.parentModalId&&this.#y.set(a,e.parentModalId),e.needsToLoad===!0&&await this.#G(i);let r=this.#ue(i,this.#X(e.position,i,e.parentModalId));return i.style.left=`${r.x}px`,i.style.top=`${r.y}px`,await i.transition({opacity:1}),this.#be(i,s),a}async CloseModal(e){if(e){let a=document.getElementById(e);if(a)await a.transition({opacity:0}),a.remove(),this.#b.delete(a);else{let n=Array.from(this.#b).find(i=>i.id===e);n&&this.#b.delete(n)}this.#y.delete(e)}else{for(let a of Array.from(this.#b))a.isConnected&&(await a.transition({opacity:0}),a.remove()),this.#b.delete(a);this.#y.clear()}}static#ee(e,a,n){return{topLeft:{top:`-${n}px`,left:"15px"},top:{top:`-${n}px`,left:`calc(50vw - ${a/2}px)`},topRight:{top:`-${n}px`,right:"15px"},right:{top:`calc(50vh - ${n/2}px)`,right:`-${a}px`},bottomRight:{bottom:`-${n}px`,right:"15px"},bottom:{bottom:`-${n}px`,left:`calc(50vw - ${a/2}px)`},bottomLeft:{bottom:`-${n}px`,left:"15px"},left:{top:`calc(50vh - ${n/2}px)`,left:`-${a}px`}}[e]||{bottom:`-${n}px`,right:"15px"}}static#te(e){return{...o.#ee(e.position,e.width,e.height),opacity:"1",backgroundColor:o.#E[e.notificationType],width:`${e.width}px`,height:`${e.height}px`}}static async Notify(e,a){u.log(`${e}`,"Notify");let n={position:a?.position??"bottomRight",popDuration:a?.popDuration??400,displayDuration:a?.displayDuration??4e3,hideDuration:a?.hideDuration??2300,notificationType:a?.notificationType??"default",width:a?.width??300,height:a?.height??50},i=document.createElement("div"),s=document.createElement("div");i.className=f.HSUI.notifyClassName,s.className=f.HSUI.notifyTextClassName,i.style.cssText=p.objectToCSS(o.#te(n)),s.innerText=e,i.appendChild(s),document.body.querySelectorAll(`.${f.HSUI.notifyClassName}`).forEach(r=>{r.clearTransitions(),r.remove()}),document.body.appendChild(i),await i.transition({...o.#w[n.position]},n.popDuration,"linear(0, 0.408 26.7%, 0.882 50.9%, 0.999 57.7%, 0.913 65.3%, 0.893 68.8%, 0.886 72.4%, 0.903 78.5%, 0.986 92.3%, 1)"),await p.wait(n.displayDuration),await i.transition({opacity:"0"},n.hideDuration,"linear"),s.remove(),i.remove()}};var st=class extends z{#e;#a;#t;#o;#n="white-space: nowrap; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all;";constructor(t){super(t),this.#t={attributes:!1,childList:!0,subtree:!0},this.#o=new MutationObserver((e,a)=>{this.#r(e,a)})}async init(){u.log("Initialising HSCodes module",this.context);let t=this;this.#a=await x.HookElement("#promocodes"),this.#a.addEventListener("click",function(e){t.#e=document.querySelector("#promptWrapper > #prompt > label"),t.#e&&(t.#s(),t.#e.innerHTML="",t.#i())},{capture:!0}),this.#e=await x.HookElement("#promptWrapper > #prompt > label"),this.#i(),this.isInitialized=!0}#i(){this.#o?.disconnect(),this.#o?.observe(this.#e,this.#t)}#s(){this.#o?.disconnect()}#r(t,e){let a=this;try{if(this.#s(),this.#e&&this.#e.innerText.includes("synergism2021")){let n=this.#e.innerText;this.#e.innerHTML=`<div id="hs-hijack-codes-wrapper">
+                    [HSCodes] Hypersynergism has hijacked this modal to offer you all the reusable codes conveniently (click code to auto input it):</br>
+                    <span style="${this.#n}" data-code="synergism2021">synergism2021</span>
+                    <span style="${this.#n}" data-code="Khafra">Khafra</span>
+                    <span style="${this.#n}" data-code=":unsmith:">:unsmith:</span>
+                    <span style="${this.#n}" data-code=":antismith:">:antismith:</span>
+                </div>`,document.delegateEventListener("click","#hs-hijack-codes-wrapper > span",function(i){let s=this.dataset.code,r=document.querySelector("#prompt_text");s&&r?r.value=s:u.warn("Could not inject code to code input",a.context)},!0),u.debug(()=>"Hijacked code redeem panel",this.context)}}finally{this.#i()}}};var Ea=`{
+  "expandCostProtection": {
+    "settingName": "expandCostProtection",
+    "settingDescription": "Hept. expand cost protection",
+    "settingHelpText": "When enabled, makes clicking hepteract icons in the hepteract view (quick expand and max feature) not do anything if it would cost \\u003e= settingValue percentage hepteracts",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.5,
+    "settingControl": {
+      "controlId": "hs-setting-expand-cost-protection-value",
+      "controlType": "number",
+      "controlGroup": "hepteracts",
+      "controlPage": "hepteract",
+      "controlEnabledId": "hs-setting-expand-cost-protection-btn",
+      "controlOptions": {
+        "min": 0,
+        "max": 1,
+        "step": 0.1
+      }
+    }
+  },
+  "expandCostProtectionDoubleCap": {
+    "settingName": "expandCostProtectionDoubleCap",
+    "settingDescription": "Hepteract double capacity unlocked?",
+    "settingHelpText": "Check this if you have the double capacity upgrade unlocked for hepteracts. This will make the expand cost protection setting work correctly.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "hepteracts",
+      "controlPage": "hepteract",
+      "controlEnabledId": "hs-setting-hepteract-double-cap-btn"
+    }
+  },
+  "expandCostProtectionNotifications": {
+    "settingName": "expandCostProtectionNotifications",
+    "settingDescription": "Suppress cost protection logs",
+    "settingHelpText": "Check this if you want to suppress the rather spammy cost protection notifications in the log",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "hepteracts",
+      "controlPage": "hepteract",
+      "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
+    }
+  },
+  "autoConfirmPopups": {
+    "settingName": "autoConfirmPopups",
+    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
+    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "autoConfirmPopups",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-auto-confirm-btn"
+    }
+  },
+  "hiddenVanillaTabs": {
+    "settingName": "hiddenVanillaTabs",
+    "settingDescription": "Hide vanilla tabs",
+    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row (Ctrl+click to select multiple).",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": [],
+    "settingAction": "hiddenVanillaTabsAction",
+    "settingControl": {
+      "controlId": "hs-setting-hidden-vanilla-tabs",
+      "controlType": "select",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "props": {
+        "multiple": "multiple",
+        "size": "8"
+      },
+      "selectOptions": [
+        { "text": "(none)", "value": "" },
+        { "text": "Buildings", "value": "buildingstab" },
+        { "text": "Upgrades", "value": "upgradestab" },
+        { "text": "Achievements", "value": "achievementstab" },
+        { "text": "Runes", "value": "runestab" },
+        { "text": "Research", "value": "researchtab" },
+        { "text": "Ant Hill", "value": "anttab" },
+        { "text": "Campaign", "value": "campaigntab" },
+        { "text": "Shop", "value": "shoptab" },
+        { "text": "Events", "value": "eventtab" },
+        { "text": "PseudoCoins", "value": "pseudoCoinstab" }
+      ]
+    }
+  },
+  "patch_shopItemNameMapping": {
+    "settingName": "patch_shopItemNameMapping",
+    "settingDescription": "Display shop item names",
+    "settingHelpText": "Populates the shop items with their names.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "ShopItemNameMapping"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-patch-shopnames-btn"
+    }
+  },
+  "syncNotificationOpacity": {
+    "settingName": "syncNotificationOpacity",
+    "settingDescription": "Notification opacity",
+    "settingHelpText": "Controls in-game notification opacity. Achievement notifications are one example of in-game notifications.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.6,
+    "settingAction": "syncNotificationOpacity",
+    "settingControl": {
+      "controlId": "hs-setting-notification-opacity-value",
+      "controlType": "number",
+      "controlGroup": "notifications",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-notification-opacity-btn",
+      "controlOptions": {
+        "min": 0,
+        "max": 1,
+        "step": 0.05
+      }
+    }
+  },
+  "reactiveMouseHover": {
+    "settingName": "reactiveMouseHover",
+    "settingDescription": "Reactive mouse hover (when SHIFT is held)",
+    "settingHelpText": "When enabled, mouse will emit hover events at current mouse position when SHIFT is held. Setting value is event interval in seconds (0.1 = 100ms).",
+    "settingType": "numeric",
+    "enabled": false,
+    "settingValue": 0.2,
+    "settingValueMultiplier": 1000,
+    "settingAction": "reactiveMouseHover",
+    "settingControl": {
+      "controlId": "hs-setting-reactive-mouse-hover-value",
+      "controlType": "number",
+      "controlGroup": "mouse",
+      "controlPage": "input",
+      "controlEnabledId": "hs-setting-reactive-mouse-hover-btn",
+      "controlOptions": {
+        "min": 0,
+        "max": 1,
+        "step": 0.05
+      }
+    }
+  },
+  "autoClick": {
+    "settingName": "autoClick",
+    "settingDescription": "Auto click (when CTRL is held)",
+    "settingHelpText": "When enabled, mouse will click automatically at current mouse position when CTRL is held. Setting value is click interval in seconds (0.1 = 100ms)",
+    "settingType": "numeric",
+    "enabled": false,
+    "settingValue": 0.15,
+    "settingValueMultiplier": 1000,
+    "settingAction": "autoClick",
+    "settingControl": {
+      "controlId": "hs-setting-auto-click-value",
+      "controlType": "number",
+      "controlGroup": "mouse",
+      "controlPage": "input",
+      "controlEnabledId": "hs-setting-auto-click-btn",
+      "controlOptions": {
+        "min": 0,
+        "max": 1,
+        "step": 0.05
+      }
+    }
+  },
+  "autoClickIgnoreElements": {
+    "settingName": "autoClickIgnoreElements",
+    "settingDescription": "Auto click ignores certain elements",
+    "settingHelpText": "When enabled, auto click will ignore (not click on) certain elements such as some buttons which there should be no need to auto click. This is to prevent accidental clicks.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "mouse",
+      "controlPage": "input",
+      "controlEnabledId": "hs-setting-autoclick-ignore-btn"
+    }
+  },
+  "useGameData": {
+    "settingBlockId": "hs-setting-block-gamedata",
+    "settingName": "useGameData",
+    "settingDescription": "Game Data Sniffing (GDS)",
+    "settingHelpText": "Enables game data sniffing by continuously scanning localStorage save data in the background. Enabling this gives the mod vastly enhanced functionality, but may cause performance issues on some systems.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "useGameData",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "gamedata",
+      "controlPage": "gamedata",
+      "controlEnabledId": "hs-setting-use-game-data-btn"
+    }
+  },
+  "stopSniffOnError": {
+    "settingName": "stopSniffOnError",
+    "settingDescription": "Auto disable on error",
+    "settingHelpText": "When enabled, the mod will automatically disable game data sniffing if an error occurs. Recommended to be enabled as reading game data is not always reliable.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "gamedata",
+      "controlPage": "gamedata",
+      "controlEnabledId": "hs-setting-stop-sniff-on-error-btn"
+    }
+  },
+  "addTimeAutoLoadouts": {
+    "settingName": "addTimeAutoLoadouts",
+    "settingDescription": "Add+Time Amb loadouts auto-switch",
+    "settingHelpText": "When enabled, the mod will automatically switch to configured ambrosia loadouts when ADD or TIME buttons are clicked.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "addTimeAutoLoadoutsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ambrosia",
+      "controlPage": "ambrosia",
+      "controlEnabledId": "hs-setting-add-time-auto-loadouts-btn"
+    }
+  },
+  "autoLoadoutAdd": {
+    "settingName": "autoLoadoutAdd",
+    "settingDescription": "ADD Loadout",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the ADD button is clicked.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-add-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autoLoadoutTime": {
+    "settingName": "autoLoadoutTime",
+    "settingDescription": "TIME loadout",
+    "settingHelpText": "Configures the Ambrosia loadout to use when the TIME button is clicked.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-time-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "ambrosiaIdleSwap": {
+    "settingName": "ambrosiaIdleSwap",
+    "settingDescription": "Ambrosia AFK swapper",
+    "settingHelpText": "When enabled, automatically switches ambrosia loadouts depending on the ambrosia bar progress. IMPORTANT: BY DESIGN, THE AUTO SWAPPER WILL ONLY WORK WHEN IN THE AMBROSIA VIEW, SO NO \\u0027SWAPPING IN THE BACKGROUND\\u0027",
+    "settingType": "boolean",
+    "enabled": true,
+    "usesGameData": true,
+    "settingAction": "ambrosiaIdleSwapAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ambrosia2",
+      "controlPage": "ambrosia",
+      "controlEnabledId": "hs-setting-ambrosia-idle-swap-btn"
+    }
+  },
+  "ambrosiaIdleSwapOcteractLoadout": {
+    "settingName": "ambrosiaIdleSwapOcteractLoadout",
+    "settingDescription": "Octeract + Bar Points loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when ambrosia bars are not close to full.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-idle-swap-octeract-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia2",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "ambrosiaIdleSwapNormalLuckLoadout": {
+    "settingName": "ambrosiaIdleSwapNormalLuckLoadout",
+    "settingDescription": "Normal Luck loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when normal ambrosia bar is about to hit 100%.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-idle-swap-normal-luck-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia2",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "ambrosiaIdleSwapRedLuckLoadout": {
+    "settingName": "ambrosiaIdleSwapRedLuckLoadout",
+    "settingDescription": "Red Luck loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when red ambrosia bar is about to hit 100%.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-idle-swap-red-luck-loadout-value",
+      "controlType": "select",
+      "controlGroup": "ambrosia2",
+      "controlPage": "ambrosia",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "startAutosing": {
+    "settingName": "startAutosing",
+    "settingDescription": "Start/Stop Auto-Sing (S256+)",
+    "settingHelpText": "When enabled, the mod will automatically perform singularities.",
+    "settingType": "boolean",
+    "enabled": false,
+    "usesGameData": false,
+    "skipInit": false,
+    "settingAction": "startAutosingAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "auto-sing",
+      "controlPage": "auto-sing",
+      "controlEnabledId": "hs-setting-auto-sing-enabled"
+    }
+  },
+  "singularityNumber": {
+    "settingName": "singularityNumber",
+    "settingDescription": "Singularity to farm",
+    "settingHelpText": "Controls at what singularity you will auto-sing.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 200,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-number",
+      "controlType": "number",
+      "controlGroup": "auto-sing",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 300,
+        "step": 1
+      }
+    }
+  },
+  "autosingStrategy": {
+    "settingName": "autosingStrategy",
+    "settingDescription": "Auto-Sing Strategy",
+    "settingHelpText": "This is the strategy that the autosinger will follow",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "1.TAS_v3.2",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy",
+      "controlType": "select",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing",
+      "selectOptions": []
+    }
+  },
+  "editAutosingStrategy": {
+    "settingName": "editAutosingStrategy",
+    "settingDescription": "\\u270F\\ufe0f Edit",
+    "settingHelpText": "Opens a new window where you can edit the selected autosing strategy",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "editAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-editor-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "createAutosingStrategy": {
+    "settingName": "createAutosingStrategy",
+    "settingDescription": "\\u2795 Create",
+    "settingHelpText": "Opens a new window where you can create your own autosing strategy",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "createAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-maker-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "deleteAutosingStrategy": {
+    "settingName": "deleteAutosingStrategy",
+    "settingDescription": "\\ud83d\\uddd1\\ufe0f Delete",
+    "settingHelpText": "deletes the selected strategy",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "deleteAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-deleter-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "importAutosingStrategy": {
+    "settingName": "importAutosingStrategy",
+    "settingDescription": "\\ud83d\\udce5 Import",
+    "settingHelpText": "Opens a Modal where you can paste a strategy that you want to import",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "importAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-importer-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "exportAutosingStrategy": {
+    "settingName": "exportAutosingStrategy",
+    "settingDescription": "\\ud83d\\udce4 Export",
+    "settingHelpText": "exports the selected strategy to your clipboard",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "exportAutosingStrategy",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-strategy-exporter-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-strategy-controls",
+      "controlPage": "auto-sing"
+    }
+  },
+  "autosingEarlyCubeLoadout": {
+    "settingName": "autosingEarlyCubeLoadout",
+    "settingDescription": "Pre-AOAG Cube Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the early game",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-early-cube-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autosingLateCubeLoadout": {
+    "settingName": "autosingLateCubeLoadout",
+    "settingDescription": "Post-AOAG Cube Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most cubes in the late game",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-late-cube-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autosingQuarkLoadout": {
+    "settingName": "autosingQuarkLoadout",
+    "settingDescription": "Quark Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most quarks. Note: this loadout is automatically selected right before the autosing presses the singularity button, the ascension button is also clicked so you gain the extra quarks.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-quark-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autosingObtLoadout": {
+    "settingName": "autosingObtLoadout",
+    "settingDescription": "Obtainium Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most obtainium.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-obt-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autosingOffLoadout": {
+    "settingName": "autosingOffLoadout",
+    "settingDescription": "Offerings Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most offerings.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-off-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "autosingAmbrosiaLoadout": {
+    "settingName": "autosingAmbrosiaLoadout",
+    "settingDescription": "Luck Loadout",
+    "settingHelpText": "This is the ambrosia loadout that gives you the most ambrosia.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-ambrosia-loadout-value",
+      "controlType": "select",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
+  "advancedDataCollection": {
+    "hidden": true,
+    "settingName": "advancedDataCollection",
+    "settingDescription": "Advanced Data Collection",
+    "settingHelpText": "When enabled, collects advanced autosing data for debugging purposes.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlEnabledId": "hs-setting-auto-sing-advanced-data"
+    }
+  },
+    "ambrosiaQuickBar": {
+      "settingName": "ambrosiaQuickBar",
+      "settingDescription": "Ambrosia quick bar (S25+)",
+      "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
+      "settingType": "boolean",
+      "enabled": true,
+      "settingAction": "ambrosiaQuickBarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
+      }
+    },
+    "ambrosiaMinibars": {
+      "settingName": "ambrosiaMinibars",
+      "settingDescription": "Ambrosia minibars (S25+)",
+      "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
+      "settingType": "boolean",
+      "enabled": true,
+      "usesGameData": true,
+      "settingAction": "ambrosiaMinibarAction",
+      "settingControl": {
+        "controlType": "switch",
+        "controlGroup": "quickbar-qol",
+        "controlPage": "qol-buttons",
+        "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
+      }
+    },
+  "enableAutomationQuickBar": {
+    "settingName": "enableAutomationQuickBar",
+    "settingDescription": "Automation quick bar",
+    "settingHelpText": "When enabled, shows a compact automation status bar in the header (adapted from the syn UI userscript).",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableAutomationQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
+    }
+  },
+  "enableCorruptionQuickBar": {
+    "settingName": "enableCorruptionQuickBar",
+    "settingDescription": "Corruption quick bar",
+    "settingHelpText": "When enabled, shows corruption loadout buttons in the header for quick loading.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableCorruptionQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-corruption-quickbar-btn"
+    }
+  },
+  "enableEventsQuickBar": {
+    "settingName": "enableEventsQuickBar",
+    "settingDescription": "Events quick bar",
+    "settingHelpText": "When enabled, shows HH/Lotus in the header during events.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableEventsQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
+    }
+  },
+  "hideMaxedGQUpgrades": {
+    "settingName": "hideMaxedGQUpgrades",
+    "settingDescription": "Hide maxed GQ upgrades",
+    "settingHelpText": "When enabled, hides maxed Golden Quark upgrades in the quick bar.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "hideMaxedGQUpgradesAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-hide-maxed-gq-upgrades-btn"
+    }
+  },
+  "enableGQDistributor": {
+    "settingName": "enableGQDistributor",
+    "settingDescription": "Enable GQ Distributor",
+    "settingHelpText": "When enabled, adds a GQ Distributor to the GQ page to distribute Golden Quarks among infinite upgrades.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableGQDistributorAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
+    }
+  },
+  "gqDistributorRatio1": {
+    "settingName": "gqDistributorRatio1",
+    "settingDescription": "GQ Distributor Ratio 1",
+    "settingHelpText": "Ratio for GQ distributor input 1.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-1",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio2": {
+    "settingName": "gqDistributorRatio2",
+    "settingDescription": "GQ Distributor Ratio 2",
+    "settingHelpText": "Ratio for GQ distributor input 2.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-2",
+      "controlType": "number",
+    "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio3": {
+    "settingName": "gqDistributorRatio3",
+    "settingDescription": "GQ Distributor Ratio 3",
+    "settingHelpText": "Ratio for GQ distributor input 3.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-3",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio4": {
+    "settingName": "gqDistributorRatio4",
+    "settingDescription": "GQ Distributor Ratio 4",
+    "settingHelpText": "Ratio for GQ distributor input 4.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-4",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio5": {
+    "settingName": "gqDistributorRatio5",
+    "settingDescription": "GQ Distributor Ratio 5",
+    "settingHelpText": "Ratio for GQ distributor input 5.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-5",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio6": {
+    "settingName": "gqDistributorRatio6",
+    "settingDescription": "GQ Distributor Ratio 6",
+    "settingHelpText": "Ratio for GQ distributor input 6.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-6",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio7": {
+    "settingName": "gqDistributorRatio7",
+    "settingDescription": "GQ Distributor Ratio 7",
+    "settingHelpText": "Ratio for GQ distributor input 7.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-7",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "gqDistributorRatio8": {
+    "settingName": "gqDistributorRatio8",
+    "settingDescription": "GQ Distributor Ratio 8",
+    "settingHelpText": "Ratio for GQ distributor input 8.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-gq-distributor-ratio-8",
+      "controlType": "number",
+      "controlGroup": "Golden-quarks-qol-settings",
+      "controlPage": "qolbuttons",
+      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+    }
+  },
+  "hideMaxedOctUpgrades": {
+    "settingName": "hideMaxedOctUpgrades",
+    "settingDescription": "Hide maxed Octeract upgrades",
+    "settingHelpText": "When enabled, hides maxed Octeract upgrades in the quick bar.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "hideMaxedOctUpgradesAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "Octeracts-qol-settings",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-hide-maxed-oct-upgrades-btn"
+    }
+  },
+  "logTimestamp": {
+    "settingName": "logTimestamp",
+    "settingDescription": "Display timestamps in log",
+    "settingHelpText": "Controls whether timestamps are visible or not in the mod\\u0027s log view",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "logTimestamp",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "debug",
+      "controlPage": "debug",
+      "controlEnabledId": "hs-setting-display-timestamp-btn"
+    }
+  },
+  "showDebugLogs": {
+    "settingName": "showDebugLogs",
+    "settingDescription": "Show debug logs",
+    "settingHelpText": "Controls whether \\u0027debug\\u0027 type logs are visible or not in the mod\\u0027s log view.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "showDebugLogs",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "debug",
+      "controlPage": "debug",
+      "controlEnabledId": "hs-setting-display-debug-logs-btn"
+    }
+  },
+  "patch_testPatch": {
+    "settingName": "patch_testPatch",
+    "settingDescription": "Test patch",
+    "settingHelpText": "Test patch (makes the Buildings button color red)",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "TestPatch"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "patch",
+      "controlPage": "debug",
+      "controlEnabledId": "hs-setting-patch-test-btn"
+    }
+  },
+  "patch_ambrosiaViewOverflow": {
+    "settingName": "patch_ambrosiaViewOverflow",
+    "settingDescription": "Fix ambrosia view overflow",
+    "settingHelpText": "This patch fixes an overflow issue in the ambrosia view which makes the page jump around when hovering over ambrosia upgrades.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "AmbrosiaViewOverflow"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "patch",
+      "controlPage": "debug",
+      "controlEnabledId": "hs-setting-patch-ambrosia-view-overflow-btn"
+    }
+  },
+  "patch_iconSetCaching": {
+    "settingName": "patch_iconSetCaching",
+    "settingDescription": "IconSet Caching",
+    "settingHelpText": "Use an alternative method of caching for certain icons to prevent excessive fetching when using DevTools. This probably doesn\\u0027t matter for most players. Leave it off if you don\\u0027t know what it does.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "patch",
+    "patchConfig": {
+      "patchName": "IconSetCaching"
+    },
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "patch",
+      "controlPage": "debug",
+      "controlEnabledId": "hs-setting-patch-iconsets-btn"
+    }
+  },
+  "enableTalismansModule": {
+    "settingName": "enableTalismansModule",
+    "settingDescription": "Enable the \\"Cycle BUY\\" button (\\"Enhanced BUY ALL\\")",
+    "settingHelpText": "When enabled, add an enhanced 'Cycle BUY' button next to the vanilla one that cycles through fragments.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "talismans",
+      "controlPage": "input",
+      "controlEnabledId": "hs-setting-enable-talismans-btn"
+    }
+  },
+  "autosing3to6DCubeOpeningPercent": {
+    "settingName": "autosing3to6DCubeOpeningPercent",
+    "settingDescription": "3-6D Cube opening percentage",
+    "settingHelpText": "Percentage (1-100) for auto-opening 3-6D cubes.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 80,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-3-6d-cube-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingTessBuildingAutoBuyPercent": {
+    "settingName": "autosingTessBuildingAutoBuyPercent",
+    "settingDescription": "Tesseract building auto-buy percentage",
+    "settingHelpText": "Percentage (1-100) for auto-buying tesseract buildings.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 50,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-tesseract-auto-buy-percentage-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    }
+  },
+  "autosingAutoChallTimerStart": {
+    "settingName": "autosingAutoChallTimerStart",
+    "settingDescription": "Auto-challenge start timers",
+    "settingHelpText": "Timer (positive decimal) for auto-starting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-start-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.01
+      }
+    }
+  },
+  "autosingAutoChallTimerExit": {
+    "settingName": "autosingAutoChallTimerExit",
+    "settingDescription": "Auto-challenge exit timers",
+    "settingHelpText": "Timer (positive decimal) for auto-exiting challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.2,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-exit-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.01
+      }
+    }
+  },
+  "autosingAutoChallTimerEnter": {
+    "settingName": "autosingAutoChallTimerEnter",
+    "settingDescription": "Auto-challenge enter timers",
+    "settingHelpText": "Timer (positive decimal) for auto-entering challenges.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 0.1,
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-challenge-enter-timer-value",
+      "controlType": "number",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing",
+      "controlOptions": {
+        "min": 0,
+        "max": 1000000,
+        "step": 0.01
+      }
+    }
+  }
+}
+`;var wa=`{
+  "hepteracts": {
+    "groupName": "Hepteract settings",
+    "order": 1
+  },
+  "ui": {
+    "groupName": "UI settings",
+    "order": 2
+  },
+  "notifications": {
+    "groupName": "Notification settings",
+    "order": 3
+  },
+  "log": {
+    "groupName": "Log settings",
+    "order": 4
+  },
+  "talismans": {
+    "groupName": "Talisman settings",
+    "order": 5
+  },
+  "mouse": {
+    "groupName": "Mouse settings",
+    "order": 6
+  },
+  "ambrosia": {
+    "groupName": "Add+Time Amb loadouts auto-switch settings",
+    "order": 7
+  },
+  "ambrosia2": {
+    "groupName": "Idle Swapper settings",
+    "order": 8
+  },
+  "ambrosia3": {
+    "groupName": "Minibar settings",
+    "order": 9
+  },
+  "patch": {
+    "groupName": "Old Patch settings",
+    "order": 13
+  },
+  "gamedata": {
+    "groupName": "Game data settings",
+    "order": 11
+  },
+  "shop": {
+    "groupName": "Shop settings",
+    "order": 12
+  },
+  "debug": {
+    "groupName": "Debugging settings",
+    "order": 10
+  },
+  "auto-sing": {
+    "groupName": "Auto-Sing settings",
+    "order": 14
+  },
+  "auto-sing-strategy-controls": {
+    "groupName": "Auto-Sing Strategy settings",
+    "order": 15
+  },
+  "auto-sing-ambrosia": {
+    "groupName": "Auto-Sing Ambrosia Loadouts settings",
+    "order": 16
+  },
+  "auto-sing-timer-modal": {
+    "groupName": "Auto-Sing Advanced settings",
+    "order": 17
+  },
+  "quickbar-qol": {
+    "groupName": "Quickbar QOL settings",
+    "order": 18
+  },
+  "Golden-quarks-qol-settings": {
+    "groupName": "Golden Quarks QOL settings",
+    "order": 19
+  },
+  "Octeracts-qol-settings": {
+    "groupName": "Octeracts QOL settings",
+    "order": 20
+  }
+}
+`;var La=`{
+  "hepteract": {
+    "page": "hepteract",
+    "pageName": "Hepteracts",
+    "pageColor": "mediumpurple",
+    "order": 1
+  },
+  "ui": {
+    "page": "ui",
+    "pageName": "UI",
+    "pageColor": "cyan",
+    "order": 2
+  },
+  "log": {
+    "page": "log",
+    "pageName": "Logging",
+    "pageColor": "orange",
+    "order": 3
+  },
+  "input": {
+    "page": "input",
+    "pageName": "Input",
+    "pageColor": "plum",
+    "order": 4
+  },
+  "gamedata": {
+    "page": "gamedata",
+    "pageName": "Game Data",
+    "pageColor": "crimson",
+    "order": 5
+  },
+  "patch": {
+    "page": "patch",
+    "pageName": "Patch",
+    "pageColor": "fuchsia",
+    "order": 6
+  },
+  "ambrosia": {
+    "page": "ambrosia",
+    "pageName": "Ambrosia",
+    "pageColor": "gold",
+    "order": 7
+  },
+  "shop": {
+    "page": "shop",
+    "pageName": "Shop",
+    "pageColor": "#b300b2",
+    "order": 8
+  },
+  "auto-sing": {
+    "page": "auto-sing",
+    "pageName": "Auto-Sing",
+    "pageColor": "#00ff7f",
+    "order": 9
+  },
+  "qol-buttons": {
+    "page": "qol-buttons",
+    "pageName": "QOL-Buttons",
+    "pageColor": "#c0c0c0",
+    "order": 10
+  },
+  "misc": {
+    "page": "misc",
+    "pageName": "Misc.",
+    "pageColor": "white",
+    "order": 11
+  },
+  "debug": {
+    "page": "debug",
+    "pageName": "Debugging",
+    "pageColor": "maroon",
+    "order": 12
+  }
+}
+`;var Be=class o extends z{static#e="";static#a={x:0,y:0};static#t;static#o;static#n;static#i=[];constructor(t){super(t),o.#e=t.context}async init(){let t=this;u.log("Capturing mouse events",this.context),document.addEventListener("mousemove",o.#s.bind(o)),document.addEventListener("keydown",function(e){let a=S.getSetting("reactiveMouseHover"),n=S.getSetting("autoClick");e.code==="ShiftLeft"&&!o.#o&&a.isEnabled()&&(o.#o=setInterval(()=>{o.#r("mouseover")},a.getCalculatedValue())),e.code==="ControlLeft"&&!o.#n&&n.isEnabled()&&(o.#n=setInterval(()=>{o.#r("click")},n.getCalculatedValue()))}),document.addEventListener("keyup",function(e){e.code==="ShiftLeft"&&o.clearInterval("hover"),e.code==="ControlLeft"&&o.clearInterval("click")}),this.isInitialized=!0}static#s(t){this.#a={x:t.clientX,y:t.clientY},this.#l()}static#r(t){let e=this.#a;if(!e||!Number.isFinite(e.x)||!Number.isFinite(e.y))return;let{x:a,y:n}=e,i=document.elementFromPoint(a,n);if(i){if(t==="click"&&S.getSetting("autoClickIgnoreElements").getValue()){if(i.id&&i.id!==""&&f.HSMouse.autoClickIgnoredElements.includes(`#${i.id}`))return;i.classList.length>0&&i.classList.forEach(l=>{f.HSMouse.autoClickIgnoredElements.includes(`.${l}`)})}let s=new MouseEvent(t,{view:window,bubbles:!0,cancelable:!0});i.dispatchEvent(s)}}static#l(){if(M.isModPanelOpen())if(!this.#t||this.#t===void 0){let t=document.querySelector("#hs-panel-debug-mousepos");t&&(this.#t=t,this.#t.innerHTML=`Mouse: (X: ${this.#a.x}, Y: ${this.#a.y})`)}else this.#t.innerHTML=`Mouse: (X: ${this.#a.x}, Y: ${this.#a.y})`}static clearInterval(t){t==="hover"&&o.#o?(clearInterval(o.#o),o.#o=null):t==="click"&&o.#n&&(clearInterval(o.#n),o.#n=null)}static getPosition(){return this.#a}};var Ia=["start","prestige","transcend","reincarnate","ant","sacrifice","ascension"],Re=["start","prestige","transcend","reincarnate","ant","sacrifice","ascension","challenge10","challenge11","challenge12","challenge13","challenge14","w5x10max","alpha","p2x1x10","p3x1","beta","1e15-expo","omega","singularity","end"],Ae="aoag",pe="AOAG Unlocked Phase",Ye=[{label:"Exit Transcension challenge",value:101},{label:"Exit Reincarnation challenge",value:102},{label:"Exit Ascension challenge",value:103},{label:"Ascend",value:104},{label:"Wait",value:151},{label:"Ant Sacrifice",value:152},{label:"Auto Challenge Toggle",value:153},{label:"Auto Ant-Sac Toggle",value:154},{label:"Auto Ascend Toggle",value:155},{label:"If-jump",value:200},{label:"Max C11",value:211},{label:"Max C12",value:212},{label:"Max C13",value:213},{label:"Max C14",value:214},{label:"Store C15",value:215},{label:"Ambrosia pre-AOAG loadout",value:301},{label:"Ambrosia post-AOAG Cube loadout",value:302},{label:"Ambrosia Quark loadout",value:303},{label:"Ambrosia Obt loadout",value:304},{label:"Ambrosia Off loadout",value:305},{label:"Ambrosia Luck loadout",value:306},{label:"Corrup 0*",value:400},{label:"Corrup from phase (reapply)",value:401},{label:"Corrup Ants",value:402},{label:"C1 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:601},{label:"C2 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:602},{label:"C3 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:603},{label:"C4 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:604},{label:"C5 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:605},{label:"C6 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:606},{label:"C7 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:607},{label:"C8 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:608},{label:"C9 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:609},{label:"C10 until no more completions within maxTime ms (after initially waiting waitTime ms)",value:610},{label:"Forge Auto-Buy Toggle - Chronos Hept",value:701},{label:"Forge Auto-Buy Toggle - Hyperreal Hept",value:702},{label:"Forge Auto-Buy Toggle - Quarks Hept",value:703},{label:"Forge Auto-Buy Toggle - Challenge Hept",value:704},{label:"Forge Auto-Buy Toggle - Abyss Hept",value:705},{label:"Forge Auto-Buy Toggle - Accelerator Hept",value:706},{label:"Forge Auto-Buy Toggle - Boost Hept",value:707},{label:"Forge Auto-Buy Toggle - Multiplier Hept",value:708},{label:"Forge Auto-Buy Toggle - Orbs",value:709},{label:"Click AOAG",value:901},{label:"Restart Autosing",value:902},{label:"Stop Autosing",value:903}],We=()=>({phaseId:Ae,startPhase:"ascension",endPhase:"ascension",corruptions:{viscosity:0,drought:0,deflation:0,extinction:0,illiteracy:0,recession:0,dilation:0,hyperchallenge:0},strat:[{challengeNumber:103,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0},{challengeNumber:400,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0},{challengeNumber:104,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0},{challengeNumber:151,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0,challengeWaitBefore:100},{challengeNumber:152,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0},{challengeNumber:151,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0,challengeWaitBefore:1},{challengeNumber:901,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0}]});async function ka(o,t,e,a){let n="hs-autosing-corruption-modal",i=e.value??"",s=t.length?t.map(g=>{let h=g.name===i?"checked":"";return`
+                <label class="hs-corruption-loadout-item">
+                    <input type="radio" name="hs-corruption-loadout" value="${g.name}" ${h} />
+                    <span class="hs-corruption-loadout-name">${g.name}</span>
+                </label>
+            `}).join(""):'<div class="hs-corruption-empty">No corruption loadouts created yet.</div>',l={htmlContent:`
+            <div id="${n}" class="hs-corruption-modal-container">
+                <div class="hs-corruption-list">
+                    <label class="hs-corruption-loadout-item">
+                        <input type="radio" name="hs-corruption-loadout" value="" ${i===""?"checked":""} />
+                        <span class="hs-corruption-loadout-name">None</span>
+                    </label>
+                    ${s}
+                </div>
+                <div class="hs-corruption-footer">
+                    <div class="hs-corruption-done-btn" id="hs-corruption-save-btn">
+                        Done
+                    </div>
+                </div>
+            </div>
+        `,title:"Select Corruption Loadout"},c=await o.Modal({...l,parentModalId:a?.parentModalId});setTimeout(()=>{document.getElementById("hs-corruption-save-btn")?.addEventListener("click",()=>{let h=document.querySelector('input[name="hs-corruption-loadout"]:checked')?.value??"";e.value=h.length>0?h:null,a?.onDone?.(e.value),M.removeInjectedStyle("hs-corruption-modal-styles"),o.CloseModal(c)})},0)}async function Ba(o,t,e,a,n,i,s){let r="hs-autosing-challenges-modal",l=[...t],c=l.length,g=new Map(Ye.map(H=>[H.value,H.label])),h=H=>H.challengeNumber===202?H.loadoutName?`Load Corruption Loadout: ${H.loadoutName}`:"Load Corruption Loadout":g.get(H.challengeNumber)??null,m=H=>H.challengeNumber===200&&H.ifJump!==void 0,d=H=>`${H.toLocaleString()}ms`,b=(H,W)=>{let w=(H.ifJump.ifJumpMode??"challenges")==="challenges",R;if(w)R=`
+                <strong>IF</strong>
+                challenge ${H.ifJump.ifJumpChallenge}
+                ${H.ifJump.ifJumpOperator}
+                ${H.ifJump.ifJumpValue}
+            `;else{let F=H.ifJump.ifJumpMultiplier??0;R=`
+                <strong>IF</strong>
+                Stored C15${F===0?"":` \xD7 10^${F}`}
+                ${H.ifJump.ifJumpOperator}
+                Current C15
+            `}return`
+    <div class="hs-challenge-item hs-if-block"
+        data-index="${W}"
+        data-if-index="${W}"
+        data-if-id="${H.ifJump.id}">
+        <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
+        
+        <div class="hs-if-content">
+            ${R}
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+
+        <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${W}" data-index="${W}">\u270E</div>
+        <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${W}" data-index="${W}">\xD7</div>
+    </div>
+    `},y=(H,W)=>`
+        <div class="hs-challenge-item hs-if-target"
+            data-jump-for="${H}"
+            data-if-id="${W}">
+            <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
+            \u21B3 Jump here (IF)
+        </div>
+    `,v=(H,W)=>{let Q=h(H),w=!!Q,R=w?`<strong>${Q}</strong>`:`Challenge ${H.challengeNumber}
+     (${H.challengeCompletions} completions)`;return`
+        <div class="hs-challenge-item" data-index="${W}">
+            <div class="hs-challenge-drag-handle">\u22EE\u22EE</div>
+            <div class="hs-challenge-item-text">
+                ${R}
+                <div class="hs-challenge-meta">
+                    Wait before: ${d(H.challengeWaitBefore??0)} 
+                    ${w?"":` | Wait inside: ${d(H.challengeWaitTime)}`}
+                    ${w?"":` | Max: ${d(H.challengeMaxTime??-1)}`}
+                </div>
+                ${H.comment?`<div class="hs-challenge-comment">\u{1F5E8}\uFE0F ${H.comment}</div>`:""}
+            </div>
+            <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${W}" data-index="${W}">\u270E</div>
+            <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${W}" data-index="${W}">\xD7</div>
+        </div>
+        `},A=()=>`
+        <div class="hs-challenge-separator" data-separator-index="${c}" style="position: relative; display: flex; align-items: center; margin: 4px 0; cursor: grab;">
+            <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
+            <span style="font-size: 11px; color: #e2e2e2; background: #030331; padding: 0 4px; border-radius: 3px; pointer-events: none; margin: 0px 8px; display: flex; align-items: center; height: 18px;">\u22EE\u22EE Add Here \u22EE\u22EE</span>
+            <div style="flex: 1 1 auto; height: 2px; background: #1f4889;"></div>
+        </div>`,T=()=>{let H=[],W=new Map;l.forEach((w,R)=>{if(m(w)){let F=w.ifJump.ifJumpIndex;W.has(F)||W.set(F,[]),W.get(F).push({ifIndex:R,ifId:w.ifJump.id})}}),c<=0&&H.push(A()),l.forEach((w,R)=>{W.has(R)&&W.get(R).forEach(F=>{let I=l[F.ifIndex];H.push(y(F.ifIndex,I.ifJump.id))}),m(w)?H.push(b(w,R)):H.push(v(w,R)),c===R+1&&H.push(A())});let Q=l.length;return W.has(Q)&&W.get(Q).forEach(w=>{let R=l[w.ifIndex];H.push(y(w.ifIndex,R.ifJump.id))}),H.join("")},E=()=>{let H=document.getElementById("hs-challenge-list-container");H&&(H.innerHTML=T(),ee(),Z())},k=n.length>0?`
+            <option value="" disabled>-- Corruption Loadouts --</option>
+            ${n.map(H=>`<option value="loadout:${H.name}">Load Corruption Loadout: ${H.name}</option>`).join("")}
+        `:"",B={htmlContent:`
+    <div id="${r}" class="hs-challenges-modal-container">
+        <div class="hs-challenges-input-section">
+            <div class="hs-challenges-input-row" style="grid-column: 1 / -1; grid-template-columns: 120px 1fr;">
+            <div class="hs-challenges-input-label">Special Action:</div>
+                <select id="hs-challenge-action-select" class="hs-challenges-input">
+                    <option value="">None (Standard Challenge)</option>
+                    ${Ye.map(H=>`<option value="${H.value}">${H.label}</option>`).join("")}
+                    ${k}
+                </select>
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Challenge #:</div>
+                <input type="number" id="hs-challenge-num-input" class="hs-challenges-input" min="1" max="15" value="1" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Min Completions:</div>
+                <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait before (ms):</div>
+                <input type="number" id="hs-challenge-wait-before-input" class="hs-challenges-input" min="0" value="0" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Wait inside (ms):</div>
+                <input type="number" id="hs-challenge-wait-inside-input" class="hs-challenges-input" min="0" value="0" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Max Time (ms):</div>
+                <input type="number" id="hs-challenge-max-time-input" class="hs-challenges-input" min="0" value="10000" />
+            </div>
+            <div class="hs-challenges-input-row">
+                <div class="hs-challenges-input-label">Comment:</div>
+                <input type="text" id="hs-challenge-comment-input" class="hs-challenges-input" maxlength="200" placeholder="Add a comment (optional)" />
+            </div>
+            <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
+                <div class="hs-challenges-input-label">If Jump Mode</div>
+                <select id="hs-if-jump-mode" class="hs-challenges-input">
+                    <option value="challenges">Challenges</option>
+                    <option value="stored_c15">Stored C15 value</option>
+                </select>
+            </div>
+
+            <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-challenge-row" style="display:none;">
+                <div class="hs-challenges-input-label">If Challenge</div>
+                <input type="number"
+                    id="hs-if-jump-challenge"
+                    class="hs-challenges-input"
+                    min="1"
+                    max="15"
+                    value="1" />
+            </div>
+
+                <div class="hs-challenges-input-row hs-if-jump-row" style="display:none;">
+                    <div class="hs-challenges-input-label">Condition</div>
+                    <select id="hs-if-jump-operator" class="hs-challenges-input">
+                        <option value=">">&gt;</option>
+                        <option value="<">&lt;</option>
+                    </select>
+                </div>
+
+                <div class="hs-challenges-input-row hs-if-jump-row hs-if-jump-value-row" style="display:none;">
+                    <div class="hs-challenges-input-label">Value</div>
+                    <input type="number"
+                        id="hs-if-jump-value"
+                        class="hs-challenges-input"
+                        value="1" />
+                </div>
+            </div>
+            <div class="hs-challenges-add-btn" id="hs-challenge-add-btn">Add Action/Challenge</div>
+
+        <div class="hs-challenges-list-container">
+            <div id="hs-challenge-list-container">
+                ${T()}
+            </div>
+        </div>
+
+        <div class="hs-challenges-footer">
+            <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" id="hs-challenges-cancel-btn">Cancel</div>
+            <div class="hs-challenges-footer-btn hs-challenges-save-btn" id="hs-challenges-save-btn">Save Strategy</div>
+        </div>
+    </div>`,title:s?`Configure ${s}`:`Configure Strategy Actions (${e}-${a})`},D=await o.Modal({...B,parentModalId:i}),N=null,U=null,P=null,G=null,X=!1,K=null,ie=(H,W)=>{let Q;return function(...w){Q||(H.apply(this,w),Q=!0,setTimeout(()=>Q=!1,W))}},Z=()=>{document.querySelectorAll(".hs-challenge-item").forEach(H=>{let W=H,Q=W.dataset.ifId;Q&&(W.addEventListener("mouseenter",()=>{document.querySelectorAll(`[data-if-id="${Q}"]`).forEach(w=>w.classList.add("hs-jump-highlight"))}),W.addEventListener("mouseleave",()=>{document.querySelectorAll(`[data-if-id="${Q}"]`).forEach(w=>w.classList.remove("hs-jump-highlight"))}))})},J=H=>{let W=document.getElementById("hs-challenge-list-container");return W?Array.from(W.querySelectorAll(".hs-challenge-item")).indexOf(H):0},oe=H=>{let W=document.getElementById("hs-challenge-list-container");if(!W)return 0;let Q=Array.from(W.querySelectorAll(".hs-challenge-item")),w=0;for(let R=0;R<=H&&R<Q.length;R++)if(!Q[R].dataset.jumpFor){if(R===H)return w;w++}return Math.min(w,l.length)},ee=()=>{document.querySelectorAll(".hs-challenge-item").forEach(w=>{let R=w.querySelector(".hs-challenge-drag-handle");R.addEventListener("mousedown",F=>{F.preventDefault();let I=w;if(X=I.dataset.jumpFor!==void 0,X)K=Number(I.dataset.jumpFor),P=null;else if(I.dataset.index!==void 0)P=Number(I.dataset.index),K=null;else return;U=I;let me=I.getBoundingClientRect(),se=F.clientX-me.left,_=F.clientY-me.top;G=I.cloneNode(!0),G.style.opacity="0.3",G.style.pointerEvents="none";let ge=I.getBoundingClientRect().width,ue=I.getBoundingClientRect().height;I.style.position="fixed",I.style.zIndex="10000",I.style.cursor="grabbing",I.style.pointerEvents="none",I.style.width=ge+"px",I.style.height=ue+"px",I.style.boxSizing="border-box",I.style.boxShadow="0 8px 16px rgba(0,0,0,0.3)",I.style.transform="scale(1.03)",I.style.transition="transform 0.15s ease",I.parentNode?.insertBefore(G,I);let V=(le,Oe)=>{U&&(U.style.left=le-se+"px",U.style.top=Oe-_+"px")};V(F.clientX,F.clientY);let ne=ie(le=>{let Oe=document.getElementById("hs-challenge-list-container");if(Oe&&(V(le.clientX,le.clientY),U)){U.style.display="none";let Pe=document.elementFromPoint(le.clientX,le.clientY);if(U.style.display="",!Pe)return;let ye=Pe.closest(".hs-challenge-item"),O=Oe.getBoundingClientRect(),pa=le.clientY>O.bottom-5;if(ye&&ye!==U&&ye!==G||pa){let ba=J(ye),yn=J(U);if(ba===yn)return;if(X&&K!==null){let Fe=pa?l.length:oe(ba),at=l[K];if(m(at)){at.ifJump.ifJumpIndex=Fe;let xe=document.getElementById("hs-challenge-list-container");if(xe){let $t=xe.scrollTop;xe.innerHTML=T(),xe.scrollTop=$t;let $=document.querySelector(`[data-jump-for="${K}"]`);$&&(U=$,G=$.cloneNode(!0),G.style.opacity="0.3",G.style.pointerEvents="none",$.style.position="fixed",$.style.zIndex="10000",$.style.cursor="grabbing",$.style.pointerEvents="none",$.style.width=$.offsetWidth+"px",$.style.boxShadow="0 8px 16px rgba(0,0,0,0.3)",$.style.transform="scale(1.03)",$.parentNode?.insertBefore(G,$),V(le.clientX,le.clientY)),ee(),Z()}}}else if(P!==null&&ye.dataset.index!==void 0){let Fe=Number(ye.dataset.index);if(Fe!==P){let at=l[P];l.splice(P,1),l.splice(Fe,0,at),P=Fe;let xe=document.getElementById("hs-challenge-list-container");if(xe){let $t=xe.scrollTop;xe.innerHTML=T(),xe.scrollTop=$t;let $=document.querySelector(`[data-index="${P}"]`);$&&!$.dataset.jumpFor&&(U=$,G=$.cloneNode(!0),G.style.opacity="0.3",G.style.pointerEvents="none",$.style.position="fixed",$.style.zIndex="10000",$.style.cursor="grabbing",$.style.pointerEvents="none",$.style.width=$.offsetWidth+"px",$.style.boxShadow="0 8px 16px rgba(0,0,0,0.3)",$.style.transform="scale(1.03)",$.parentNode?.insertBefore(G,$),V(le.clientX,le.clientY)),ee(),Z()}}}}}},16),de=()=>{U&&(U.style.position="",U.style.zIndex="",U.style.cursor="",U.style.pointerEvents="",U.style.width="",U.style.boxShadow="",U.style.transform="",U.style.left="",U.style.top="",U.style.transition=""),G&&G.parentNode&&G.parentNode.removeChild(G),U=null,P=null,X=!1,K=null,G=null,document.removeEventListener("mousemove",ne),document.removeEventListener("mouseup",de),ve()};document.addEventListener("mousemove",ne),document.addEventListener("mouseup",de)}),R.style.cursor="grab"});let W=document.querySelector(".hs-challenge-separator");if(!W)return;let Q=W;W.addEventListener("mousedown",w=>{w.preventDefault();let R=Q.offsetWidth,F=Q.offsetHeight,I=w.clientX-Q.getBoundingClientRect().left,me=w.clientY-Q.getBoundingClientRect().top,se=V=>{V.style.position="fixed",V.style.zIndex="10000",V.style.cursor="grabbing",V.style.width=R+"px",V.style.height=F+"px",V.style.boxShadow="0 8px 16px rgba(0,0,0,0.3)",V.style.transform="scale(1.05)",V.style.transition="transform 0.15s ease"};se(Q);let _=(V,ne)=>{Q.style.left=V-I+"px",Q.style.top=ne-me+"px"};_(w.clientX,w.clientY);let ge=ie(V=>{_(V.clientX,V.clientY);let ne=document.getElementById("hs-challenge-list-container");if(!ne)return;let de=Array.from(ne.querySelectorAll(".hs-challenge-item")),le=0;for(let ye=0;ye<de.length;ye++){let O=de[ye].getBoundingClientRect();if(V.clientY<O.top+O.height/2)break;de[ye].classList.contains("hs-if-target")||le++}if(le===c)return;c=le;let Oe=ne.scrollTop;ne.innerHTML=T(),ne.scrollTop=Oe,ee(),Z();let Pe=ne.querySelector(".hs-challenge-separator");Pe&&(Q=Pe,se(Pe)),_(V.clientX,V.clientY)},16),ue=()=>{Q.style.position="",Q.style.zIndex="",Q.style.cursor="grab",Q.style.width="",Q.style.height="",Q.style.boxShadow="",Q.style.transform="",Q.style.left="",Q.style.top="",Q.style.transition="",document.removeEventListener("mousemove",ge),document.removeEventListener("mouseup",ue)};document.addEventListener("mousemove",ge),document.addEventListener("mouseup",ue)}),W.style.cursor="grab"},ae=()=>{let H=document.getElementById("hs-challenge-action-select"),W=document.getElementById("hs-if-jump-mode"),Q=H?.value??"",w=Q!=="",R=Q===String(200),I=(W?.value??"challenges")==="challenges";["hs-challenge-num-input","hs-challenge-completions-input","hs-challenge-max-time-input","hs-challenge-wait-inside-input"].forEach(de=>{let le=document.getElementById(de);le&&(le.disabled=w,le.parentElement.style.opacity=w?"0.4":"1",le.parentElement.style.display=R?"none":"")}),document.querySelectorAll(".hs-if-jump-row").forEach(de=>{de.style.display=R?"":"none"});let se=document.querySelector(".hs-if-jump-challenge-row"),_=document.getElementById("hs-if-jump-challenge"),ge=se?.querySelector(".hs-challenges-input-label"),ue=document.querySelector(".hs-if-jump-value-row"),V=document.getElementById("hs-if-jump-value"),ne=ue?.querySelector(".hs-challenges-input-label");se&&_&&ge&&(R?(se.style.display="",I?(ge.textContent="If Challenge",_.type="number",_.min="1",_.max="15",_.disabled=!1,_.value=_.dataset.lastChallengeValue??"1",_.style.opacity="1",_.style.cursor="",se.style.opacity="1"):(_.max==="15"&&_.value&&(_.dataset.lastChallengeValue=_.value),ge.textContent="Multiplier (10^x)",_.type="number",_.min="",_.max="",_.disabled=!1,_.value===""&&(_.value=_.dataset.lastExponentValue??"0"),_.style.opacity="1",_.style.cursor="",se.style.opacity="1")):se.style.display="none"),ue&&V&&ne&&(R?(ue.style.display="",I?(ne.textContent="Value",V.type="number",V.disabled=!1,V.value=V.dataset.lastValue??"1",V.style.opacity="1",V.style.cursor="",ue.style.opacity="1"):(V.type==="number"&&V.value&&!V.disabled&&(V.dataset.lastValue=V.value),ne.textContent="Compare To",V.type="text",V.disabled=!0,V.value="Current C15 value",V.style.opacity="0.6",V.style.cursor="not-allowed",ue.style.opacity="0.8")):ue.style.display="none")},ve=()=>{document.getElementById("hs-challenge-num-input").value="1",document.getElementById("hs-challenge-completions-input").value="0",document.getElementById("hs-challenge-wait-inside-input").value="0",document.getElementById("hs-challenge-wait-before-input").value="0",document.getElementById("hs-challenge-max-time-input").value="1000000",document.getElementById("hs-challenge-action-select").value="",document.getElementById("hs-if-jump-mode").value="challenges",document.getElementById("hs-challenge-add-btn").textContent="Add Action/Challenge",N=null,ae()};setTimeout(()=>{let H=document.getElementById(r),W=document.getElementById("hs-challenge-action-select"),Q=document.getElementById("hs-if-jump-mode");W?.addEventListener("change",ae),Q?.addEventListener("change",ae),ee(),Z(),H?.addEventListener("click",w=>{let R=w.target,F=R.id;if(F==="hs-challenge-add-btn"){let I=W.value,me=I===String(200),se=I.startsWith("loadout:"),_=I!=="",ge,ue=document.getElementById("hs-challenge-comment-input")?.value?.trim()??"";if(me){let V=N!==null?l[N]:null,ne=Q.value,de=ne==="challenges";ge={challengeNumber:200,challengeCompletions:0,challengeWaitTime:0,challengeMaxTime:0,ifJump:{id:V?.ifJump?.id??p.uuidv4(),ifJumpMode:ne,ifJumpChallenge:de?Number(document.getElementById("hs-if-jump-challenge").value):15,ifJumpOperator:document.getElementById("hs-if-jump-operator").value,ifJumpValue:de?Number(document.getElementById("hs-if-jump-value").value):0,ifJumpMultiplier:de?0:Number(document.getElementById("hs-if-jump-challenge").value),ifJumpIndex:V?.ifJump?.ifJumpIndex??c+1}},ue&&(ge.comment=ue)}else if(se){let V=I.replace("loadout:","");ge={challengeNumber:202,challengeCompletions:0,challengeWaitTime:Number(document.getElementById("hs-challenge-wait-inside-input").value),challengeWaitBefore:Number(document.getElementById("hs-challenge-wait-before-input").value),challengeMaxTime:0,loadoutName:V},ue&&(ge.comment=ue)}else ge={challengeNumber:Number(_?I:document.getElementById("hs-challenge-num-input").value),challengeCompletions:_?0:Number(document.getElementById("hs-challenge-completions-input").value),challengeWaitTime:Number(document.getElementById("hs-challenge-wait-inside-input").value),challengeWaitBefore:Number(document.getElementById("hs-challenge-wait-before-input").value),challengeMaxTime:_?0:Number(document.getElementById("hs-challenge-max-time-input").value)},ue&&(ge.comment=ue);if(N!==null)l[N]=ge;else{l.splice(c,0,ge);for(let V=0;V<l.length;V++){if(V===c)continue;let ne=l[V];typeof ne=="object"&&ne.challengeNumber===200&&ne.ifJump&&typeof ne.ifJump.ifJumpIndex=="number"&&ne.ifJump.ifJumpIndex>=c&&ne.ifJump.ifJumpIndex++}c=c+1}E(),ve()}if(F.startsWith("hs-challenge-edit-")){N=Number(R.dataset.index);let I=l[N],me=h(I);if(document.getElementById("hs-challenge-comment-input").value=I.comment??"",m(I)){W.value=String(200);let se=I.ifJump?.ifJumpMode??"challenges";Q.value=se,se==="challenges"?(document.getElementById("hs-if-jump-challenge").value=String(I.ifJump?.ifJumpChallenge??1),document.getElementById("hs-if-jump-value").value=String(I.ifJump?.ifJumpValue??1)):document.getElementById("hs-if-jump-challenge").value=String(I.ifJump?.ifJumpMultiplier??0),document.getElementById("hs-if-jump-operator").value=I.ifJump?.ifJumpOperator??">",document.getElementById("hs-challenge-wait-inside-input").value=String(I.challengeWaitTime),document.getElementById("hs-challenge-wait-before-input").value=String(I.challengeWaitBefore??0),document.getElementById("hs-challenge-add-btn").textContent="Update Action",ae();return}I.challengeNumber===202?W.value=I.loadoutName?`loadout:${I.loadoutName}`:"":me?W.value=String(I.challengeNumber):(W.value="",document.getElementById("hs-challenge-num-input").value=String(I.challengeNumber),document.getElementById("hs-challenge-completions-input").value=String(I.challengeCompletions),document.getElementById("hs-challenge-max-time-input").value=String(I.challengeMaxTime)),document.getElementById("hs-challenge-wait-inside-input").value=String(I.challengeWaitTime),document.getElementById("hs-challenge-wait-before-input").value=String(I.challengeWaitBefore??0),document.getElementById("hs-challenge-add-btn").textContent="Update Action",ae()}if(F.startsWith("hs-challenge-delete-")){let I=Number(R.dataset.index);l.splice(I,1);for(let me=0;me<l.length;me++){let se=l[me];typeof se=="object"&&se.challengeNumber===200&&se.ifJump&&typeof se.ifJump.ifJumpIndex=="number"&&se.ifJump.ifJumpIndex>=I&&se.ifJump.ifJumpIndex--}I<c&&(c=Math.max(0,c-1)),E(),ve()}F==="hs-challenges-save-btn"&&(t.length=0,t.push(...l),o.CloseModal(D)),F==="hs-challenges-cancel-btn"&&o.CloseModal(D)})},0)}async function rt(o,t,e,a,n,i,s,r){let l=!!i,c=r?.isSpecialPhase??!1,g=r?.displayName??"",h=t.length?t[t.length-1].endPhase:"start",m=r?.forcedStartPhase??i?.startPhase??h,d=i?.corruptions||{viscosity:0,drought:0,deflation:0,extinction:0,illiteracy:0,recession:0,dilation:0,hyperchallenge:0},b=i?.strat||[],y=i?.corruptionLoadoutName??null,v=Re.indexOf(m),T=(c?[r?.forcedEndPhase??i?.endPhase??m]:Re.slice(v+1)).map((B,D)=>`<option value="${B}" ${i?.endPhase===B||D===0?"selected":""}>${B}</option>`).join(""),E={htmlContent:`
+        <div class="hs-phase-modal-container">
+            ${c&&g?`<div class="hs-phase-select-group">
+                    <label class="hs-phase-label">Phase</label>
+                    <div class="hs-phase-select" style="cursor: default;">${g}</div>
+                </div>`:""}
+
+            ${c?"":`<div class="hs-phase-select-group">
+                        <label class="hs-phase-label">Starting Phase</label>
+                        <select class="hs-phase-select" disabled>
+                            <option selected>
+                                ${m}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="hs-phase-select-group">
+                        <label class="hs-phase-label">Ending Phase</label>
+                        <select
+                            id="hs-autosing-end-phase"
+                            class="hs-phase-select"
+                        >
+                            ${T}
+                        </select>
+                    </div>`}
+
+            <div class="hs-phase-select-group">
+                <label class="hs-phase-label">Corruption Loadout</label>
+                <div class="hs-phase-select" id="hs-phase-corruption-selection">
+                    ${y??"None"}
+                </div>
+            </div>
+
+            <div class="hs-phase-config-group">
+                <div class="hs-phase-config-btn" id="hs-autosing-phase-corruptions">
+                    Select Corruption Loadout
+                </div>
+                <div class="hs-phase-config-btn" id="hs-autosing-phase-challenges">
+                    Configure Challenges
+                </div>
+            </div>
+
+            <div class="hs-phase-footer">
+                <div class="hs-phase-done-btn" id="hs-autosing-phase-done">
+                    ${l?"Save":"Create Phase"}
+                </div>
+                <div class="hs-phase-error" id="hs-phase-error" style="display:none;"></div>
+            </div>
+        </div>
+        `,title:l?g?`Edit ${g}`:`Edit Strategy Phase ${i.startPhase}-${i.endPhase}`:g?`Create ${g}`:"Create Strategy Phase",parentModalId:s},k=await o.Modal(E);setTimeout(()=>{let B=document.querySelector(".hs-phase-modal-container");B&&B.addEventListener("click",async D=>{let N=D.target;if(N.id==="hs-autosing-phase-done"){let U=document.getElementById("hs-autosing-end-phase"),P=c?r?.forcedEndPhase??i?.endPhase??m:U?.value;if(!P)return;let G={startPhase:i?i.startPhase:m,endPhase:P,corruptions:{...d},corruptionLoadoutName:y,strat:[...b]};l&&n?n(G):a(G),M.removeInjectedStyle("hs-phase-modal-styles"),o.CloseModal(k)}if(N.id==="hs-autosing-phase-corruptions"&&ka(o,e,{value:y},{parentModalId:k,onDone:P=>{y=P,i&&(i.corruptionLoadoutName=y);let G=y||"None",X=document.getElementById("hs-phase-corruption-selection");X&&(X.textContent=G)}}),N.id==="hs-autosing-phase-challenges"){let U=i?.startPhase??m,P=c?r?.forcedEndPhase??i?.endPhase??m:i?.endPhase??document.getElementById("hs-autosing-end-phase")?.value??"error";await Ba(o,b,U,P,e,k,c?g:void 0)}})},0)}var lt=ke(ga()),he=class o{static#e=[];static getStrategies(){return this.#e}static setStrategies(t){this.#e=t}static addStrategy(t){this.#e.push(t)}static removeStrategyByName(t){this.#e=this.#e.filter(e=>e.strategyName!==t)}static getDefaultStrategyNames(){return(Array.isArray(lt.default)?lt.default:JSON.parse(lt.default)).map(e=>e.replace(/\.json$/,""))}static ensureAoagPhase(t){if(!t)return t;let e=JSON.parse(JSON.stringify(t));if(Array.isArray(e.strategy)||(e.strategy=[]),!e.aoagPhase){let a=e.strategy.findIndex(n=>n.phaseId===Ae);if(a!==-1){let[n]=e.strategy.splice(a,1);e.aoagPhase=n}else e.aoagPhase=We()}return e.aoagPhase&&e.aoagPhase.phaseId!==Ae&&(e.aoagPhase.phaseId=Ae),e}static ensureCorruptionLoadouts(t){if(!t)return t;let e=JSON.parse(JSON.stringify(t));Array.isArray(e.corruptionLoadouts)||(e.corruptionLoadouts=[]);let a=e.corruptionLoadouts,n=new Set(a.map(r=>r.name)),i=r=>{let l=r,c=2;for(;n.has(l);)l=`${r} (${c})`,c++;return n.add(l),l},s=r=>{if(r){if(r.corruptionLoadoutName===void 0){let c=r.phaseId===Ae?`Loadout ${pe}`:`Loadout ${r.startPhase}-${r.endPhase}`,g=i(c);a.push({name:g,loadout:{...r.corruptions}}),r.corruptionLoadoutName=g;return}r.corruptionLoadoutName&&!n.has(r.corruptionLoadoutName)&&(n.add(r.corruptionLoadoutName),a.push({name:r.corruptionLoadoutName,loadout:{...r.corruptions}}))}};return e.strategy?.forEach(r=>s(r)),s(e.aoagPhase),e}static validateStrategy(t,e=""){let a=o.ensureAoagPhase(t);if(a=o.ensureCorruptionLoadouts(a),t=a,!t)throw new Error("Strategy is undefined");if(!("strategyName"in t))throw new Error("Strategy is missing strategyName property");if(!("strategy"in t))throw new Error("Strategy is missing strategy property");if(!Array.isArray(t.strategy))throw new Error("Strategy.strategy must be an array");let n=t.strategy;if(n.length===0)throw new Error("Strategy has no components");let i=t.aoagPhase;if(!i)throw new Error(`Strategy is missing "${pe}" phase`);if(!i.corruptions)throw new Error(`"${pe}" phase has no corruptions defined`);if(!Array.isArray(i.strat)||i.strat.length===0)throw new Error(`"${pe}" phase must have at least one action`);let r=(t.corruptionLoadouts??[]).map(g=>g.name);if(new Set(r).size!==r.length)throw new Error("Corruption loadout names must be unique.");let c=[...Re];for(let g=0;g<n.length;g++){let h=n[g],{startPhase:m,endPhase:d,corruptions:b,strat:y}=h;if(!b)throw new Error(`Component ${g+1} (${m} \u2192 ${d}) has no corruptions defined`);if(h.corruptionLoadoutName&&!r.includes(h.corruptionLoadoutName))throw new Error(`Component ${g+1} (${m} \u2192 ${d}) references missing corruption loadout "${h.corruptionLoadoutName}"`);if(!Array.isArray(y)||y.length===0)throw new Error(`Component ${g+1} (${m} \u2192 ${d}) must have at least one challenge`);if(c[0]!==m)throw new Error(`Component ${g+1} must start at "${c[0]}", got "${m}"`);let v=c.indexOf(d);if(v===-1)throw new Error(`Component ${g+1} ends at "${d}", which is not valid or already consumed`);c=c.slice(v)}if(c.length>1)throw new Error(`Uncovered phases: ${c.join(", ")}`);if(i?.corruptionLoadoutName&&!r.includes(i.corruptionLoadoutName))throw new Error(`"${pe}" phase references missing corruption loadout "${i.corruptionLoadoutName}"`)}static resolveStrategyActionIdState(t){let e={101:101,102:102,103:103,104:104,105:301,106:302,107:303,108:152,109:402,110:400,111:151,112:304,113:305,114:306,115:153,116:215,117:211,118:212,119:213,120:214,121:901,201:401,301:601,302:602,303:603,304:604,305:605,306:606,307:607,308:608,309:609,310:610,999:902,200:200,202:202,154:154,155:155,701:701,702:702,703:703,704:704,705:705,706:706,707:707,708:708,709:709,903:903},a=new Set(Object.keys(e).map(Number)),n=new Set(Object.values(e)),i=[],s=d=>{d.challengeNumber!==void 0&&d.challengeNumber>=100&&i.push(d.challengeNumber)};t.strategy?.forEach(d=>d.strat?.forEach(s)),t.aoagPhase?.strat?.forEach(s);let r=0,l=0,c=0,g=0;for(let d of i){let b=a.has(d),y=n.has(d);b&&y?c++:b?r++:y?l++:g++}let h=r>0,m=l>0;return h&&!m?{state:"old",reason:"old-only",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:m&&!h?{state:"new",reason:"new-only",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:i.length===0?{state:"none",reason:"none",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:h&&m?{state:"invalid",reason:"mixed",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:c>0&&g===0?{state:"invalid",reason:"shared-only",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:c===0&&g>0?{state:"invalid",reason:"unknown-only",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}:{state:"invalid",reason:"shared-and-unknown-only",oldOnlyCount:r,newOnlyCount:l,sharedCount:c,unknownCount:g}}static getMergedStrategyOptions(){let t=o.getDefaultStrategyNames(),e=new Set(t),a=t.map(s=>({text:s,value:s,isDefault:!0})),i=o.getStrategies().filter(s=>!e.has(s.strategyName)).map(s=>({text:s.strategyName,value:s.strategyName,isDefault:!1}));return{defaultStrategiesOptions:a,userStrategiesOptions:i}}static saveStrategyToStorage(t,e,a=""){let n=L.getModule("HSStorage");if(!n)throw new Error("Could not find Storage Module");let i=n.getData(f.HSSettings.strategiesKey);Array.isArray(i)||(i=[]);let s=o.ensureAoagPhase(t);s=o.ensureCorruptionLoadouts(s),o.validateStrategy(s,a);let r=!!e;if(i.some(m=>m.strategyName!==s.strategyName?!1:r?m.strategyName!==e:!0))throw new Error(`Strategy with name "${s.strategyName}" already exists.`);let c=i;r&&(c=i.filter(m=>m.strategyName!==e),o.removeStrategyByName(e)),c=c.concat(s),o.addStrategy(s);let g=o.getDefaultStrategyNames(),h=n.setData(f.HSSettings.strategiesKey,c.filter(m=>!g.includes(m.strategyName)));return h?u.debug(()=>`<green>Strategy ${r?"updated":"saved"} to localStorage</green>`,a):u.warn("Could not save Strategy to localStorage",a),{strategy:s,isUpdate:r,saved:h}}static deleteStrategyFromStorage(t,e=""){let a=L.getModule("HSStorage");if(!a)throw new Error("Could not find Storage Module");let n=a.getData(f.HSSettings.strategiesKey);Array.isArray(n)||(n=[]);let i=n.filter(r=>r.strategyName!==t);o.removeStrategyByName(t);let s=a.setData(f.HSSettings.strategiesKey,i);return s||u.warn("Could not delete Strategy from localStorage",e),u.log(`Strategy "${t}" deleted.`,e),s}static parseStoredStrategies(t=""){let e=L.getModule("HSStorage");if(!e)return u.warn("Could not find HSStorage module",t),null;let a=e.getData(f.HSSettings.strategiesKey);if(!a)return null;let n=Array.isArray(a)?a:[a],i=new Set(o.getDefaultStrategyNames()),s=n.filter(l=>!i.has(l.strategyName));return s.length!==n.length&&e.setData(f.HSSettings.strategiesKey,s),s.map(l=>o.ensureCorruptionLoadouts(o.ensureAoagPhase(l)))}};var Ra="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAE7mlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgOS4xLWMwMDIgNzkuYTZhNjM5NiwgMjAyNC8wMy8xMi0wNzo0ODoyMyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI1LjkgKFdpbmRvd3MpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyNS0wNS0wOVQxMzowODowNyswMzowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjUtMDUtMDlUMTM6MDg6NDUrMDM6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjUtMDUtMDlUMTM6MDg6NDUrMDM6MDAiIGRjOmZvcm1hdD0iaW1hZ2UvcG5nIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjA2N2JkMWIxLTJmMGMtMjk0Ni04ZTJmLTk5MGUyZmU2ZDgyNSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowNjdiZDFiMS0yZjBjLTI5NDYtOGUyZi05OTBlMmZlNmQ4MjUiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDowNjdiZDFiMS0yZjBjLTI5NDYtOGUyZi05OTBlMmZlNmQ4MjUiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjA2N2JkMWIxLTJmMGMtMjk0Ni04ZTJmLTk5MGUyZmU2ZDgyNSIgc3RFdnQ6d2hlbj0iMjAyNS0wNS0wOVQxMzowODowNyswMzowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDI1LjkgKFdpbmRvd3MpIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PiGXppUAAANKSURBVFiF7Zc/TBNRHMe/j1YcLqj1KglaQtKhroYm0BMcJY2pLKYknZycMQYHBhNddOngTNXBxDSxi0AnTaiEwgMSOjhJxYYK0Zi0aYQ0hkL7c7jr9d7d0SNqxIGXvPTev+/383733r1XRkQ4ztRxrO4nAP8DgNtcwRgTyraL9EWD8F17zqjtyz9WEFq5qg6+2yA87WBH0iMiIVvS+zU1N/s/rxMA28wHFonG1XYarxNdP7DImf2Y2bRcZHqF3EeMZbNY3w8DAAJbO8Ruu1Shx3UhAuydGEw+sIjQ2UGGty6LprGf5RXwlEc1C9YAMCr1aoNeNnRzPrCI9CmvKjSizQwHZIYoJ9yEIlAuSMivdQIAIhOin2URqsbA0vQeeMqDckECEgnBvBSNMPO49MgFJoR8dQjlggSe8mBpek/Qbgsg+6tQohV4fV06CLa29Pbe1SGLiABhKDeNvb4uKNEKZH/VGQAAk/uIKdEKAsGaCrKxoTf6AETuV2y/30q0Qvk5CRzAx3E3vL4uBII11Vx995bI2X4HykV1B8n+qm3YGIDI+i2KKGEdRIlWqPmujebarJmmadWy2QX6QjQKBxKjYMmkRYCyMQBAvjaD/FonStu7gjlPeZhBC3Kf6GddA6YO3p8TTPZXkb8zA3plM4PhJNhwEoHOUUSUsGA+eFEMuVnbFsCSTn+BtzGmQvRIthBGkIgS1mf+eXvMUd4ZwLULuHbBUx4dgj9CW5BP3wxj/xjAvYPZ18sAoEOcvyYh/dUDzgG7r7eiAN7hCsG98zcAxFk0IQLBGkpZD9Lxw0HMY23l7SqFreeq4ty9N9Q9f0NfUOWCxGR/lQJaWe4BGIMyOQn+5IlapyiAK/OBAkHJfv81k/l0MueF+jwBoIX6PJU2gWbu3gNKmyAto7QJAAi5Mq3T0ZUBOek7HsfP9qd0QXcVlg5X9sXyw9oDAcBpwo5rYJta58CBBJghzpgC7GO9TpLticwpliPr5WPW/i4/VSRx9nHu7HdkgDhvGrcgZoliOTUbzZuAdnq/DaD9AnF+6JWsXXQOA7DdhqbEYjmiZL9+u2SIc8LlkAp4qdUxObcM3GzdQmM5QrK//S60nIb/Oh37/4ITgGMH+AVvvVIGwD6zyAAAAABJRU5ErkJggg==";var ce=class o{static#e="HSSettingsUI";static async syncSettings(t){if(u.log("Syncing mod settings",this.#e),!t.settingsParsed){u.error("Could not sync settings - settings not parsed yet",this.#e);return}for(let[,e]of Object.typedEntries(t.settings)){let a=e.getDefinition(),n=e.hasControls()?a.settingControl:void 0;if(n){let i=n.controlType,s=n.controlOptions;if(i==="text"||i==="number"){let r=document.querySelector(`#${n.controlId}`);r&&(i==="number"&&s?("min"in s&&r.setAttribute("min",s.min.toString()),"max"in s&&r.setAttribute("max",s.max.toString()),"step"in s&&r.setAttribute("step",s.step.toString())):i==="text"&&s&&"placeholder"in s&&r.setAttribute("placeholder",s.placeholder),r.value=p.asString(a.settingValue),r.addEventListener("change",async l=>{await t.settingChangeDelegate(l,e)}))}else if(i==="select"){let r=p.asString(a.settingValue),l=document.querySelector(`#${n.controlId}`);if(l){if(l.multiple){let c=a.settingValue;if(Array.isArray(c))for(let g of Array.from(l.options))g.selected=c.includes(g.value);else for(let g of Array.from(l.options))g.selected=!1}else Array.from(l.options).some(g=>g.value===r)?l.value=r:(l.value="",u.warn(`Setting value ${r} does not exist in select options for setting ${a.settingName}`,this.#e));l.addEventListener("change",async c=>{await t.settingChangeDelegate(c,e)})}}else if(i==="state"){let r=p.parseColorTags(p.asString(a.settingValue)),l=document.querySelector(`#${n.controlId}`);l&&(l.innerHTML=r)}else if(i==="button"){let r=document.querySelector(`#${n.controlId}`);r&&r.addEventListener("click",async l=>{await t.settingChangeDelegate(l,e)})}if(n.controlEnabledId){let r=document.querySelector(`#${n.controlEnabledId}`);r&&(a.enabled?(r.innerText=t.settingEnabledString,r.classList.remove("hs-disabled")):(r.innerText=t.settingDisabledString,r.classList.add("hs-disabled")),r.addEventListener("click",async l=>{await t.settingToggleDelegate(l,e)}))}await e.initialAction("state",a.enabled)}}u.log("Finished syncing mod settings",this.#e),this.applyHiddenVanillaTabsSetting()}static applyHiddenVanillaTabsSetting(){let t=S.getSetting("hiddenVanillaTabs");if(!t)return;let e=t.getValue();if(!Array.isArray(e))return;let a=document.querySelectorAll("#tabrow > button");for(let n of Array.from(a))n.id&&(n.style.display=e.includes(n.id)?"none":"")}static filterLoadoutSelectOptions(t,e){return t.filter(a=>{let n=a.value;if(n===""||String(n).toLowerCase()==="none")return!0;let i=parseInt(String(n),10);return Number.isInteger(i)?!(i<=0||i>e):!0})}static refreshAmbrosiaLoadoutDropdowns(){let t=S.getSettings,e=L.getModule("HSAmbrosia");if(!e){u.warn("HSAmbrosia module not found. Dropdown lists for Ambrosia loadouts defaulted to 16.",o.#e);return}let a=e.getAmbrosiaLoadoutsAmount(),n=a>0?a:16,i=Object.typedEntries(t());for(let[,s]of i){let r=s.getDefinition().settingControl;if(!r||!r.selectOptions||!r.selectOptions.some(h=>/loadout\s*\d+/i.test(h.text)))continue;let l=this.filterLoadoutSelectOptions(r.selectOptions,n);r.selectOptions=l;let c=s.getValue();c&&c!==""&&!l.some(h=>String(h.value)===String(c))&&s.setValue("");let g=document.querySelector(`#${r.controlId}`);if(g){g.innerHTML="";for(let h of l){let m=document.createElement("option");m.value=String(h.value),m.text=h.text,String(h.value)===String(c)&&(m.selected=!0),g.appendChild(m)}}}}static autoBuildSettingsUI(t){if(!t.settingsParsed)return u.error("Could not build settings UI - settings not parsed yet",this.#e),{didBuild:!1,navHTML:"",pagesHTML:""};let e=this.#a(t.settings,t.settingsControlGroups),a=this.#t(t.settingsControlPages),n=this.#o(a,e),{didBuild:i,pagesHTML:s}=this.#n(e,t.settingsControlGroups);return{didBuild:i,navHTML:n,pagesHTML:Array.from(s.values()).flat().join("")}}static updateStrategyDropdownList(){let t=S.getSetting("autosingStrategy"),e=t.getDefinition().settingControl;if(!e?.selectOptions)return;let{defaultStrategiesOptions:a,userStrategiesOptions:n}=S.getMergedStrategyOptions();e.selectOptions.length=0,e.selectOptions.push(...a,...n);let i,s=L.getModule("HSStorage");if(s&&typeof s.getData=="function"){let l=s.getData(f.HSSettings.storageKey);if(l){let c=typeof l=="string"?JSON.parse(l):l;c&&c.autosingStrategy&&c.autosingStrategy.settingValue&&(i=c.autosingStrategy.settingValue)}}let r=document.querySelector(`#${e.controlId}`);if(r){if(r.innerHTML="",a.length>0){let c=document.createElement("optgroup");c.label="Default Strategies";for(let g of a){let h=document.createElement("option");h.text=g.text,h.value=String(g.value),h.setAttribute("data-default","true"),c.appendChild(h)}r.appendChild(c)}if(n.length>0){let c=document.createElement("optgroup");c.label="User Strategies";for(let g of n){let h=document.createElement("option");h.text=g.text,h.value=String(g.value),h.setAttribute("data-default","false"),c.appendChild(h)}r.appendChild(c)}let l=i;(!l||!Array.from(r.options).some(c=>c.value===l))&&r.options.length>0&&(l=r.options[0].value),l&&(r.value=l,t.setValue(l)),u.log(`Strategy dropdown rebuilt with ${a.length} default and ${n.length} user strategies. Selected: ${l}`,this.#e)}}static selectAutosingStrategyByName(t){let e=S.getSetting("autosingStrategy"),a=e.getDefinition().settingControl;if(a?.selectOptions){let n=document.querySelector(`#${a.controlId}`);n&&(n.value=t),e.setValue(t)}else u.warn(`Could not select autosing strategy '${t}' because control is unavailable`,this.#e)}static#a(t,e){return Object.entries(t).sort((a,n)=>{let i=a[1].getDefinition().settingControl?.controlGroup,s=n[1].getDefinition().settingControl?.controlGroup;return i&&s?(e[i].order||0)-(e[s].order||0):i?-1:s?1:0})}static#t(t){return Object.entries(t).sort((e,a)=>{let n=e[1].order,i=a[1].order;return n&&i?(n||0)-(i||0):n?-1:i?1:0})}static#o(t,e){let a=[];for(let[n,i]of t)e.some(r=>r[1].getDefinition().settingControl?.controlPage===n)&&a.push(Y.Div({class:"hs-panel-subtab",id:`hs-panel-settings-subtab-${n}`,data:new Map([["subtab",n],["color",i.pageColor||""]]),props:{style:i.pageColor?`--hs-panel-subtab-border-color: ${i.pageColor};`:""},html:i.pageName}));return Y.Div({class:"hs-panel-subtabs",html:a})}static#n(t,e){let a=new Map,n=!0,i=null;for(let[s,r]of t){let l=r.getDefinition();if(l.hidden===!0)continue;let c=l.settingControl;if(!c){u.error(`Error autobuilding settings UI, controls not defined for setting ${s}`,this.#e),n=!1;break}let g=a.get(c.controlPage)||[];if(c.controlGroup!==i){i=c.controlGroup;let m=e[c.controlGroup];g.push(Y.Div({class:"hs-panel-grid-section-header",html:m.groupName}))}let h=this.#i(r,l,c);if(!h){n=!1;break}g.push(h),a.set(c.controlPage,g)}for(let[s,r]of a.entries())a.set(s,[Y.Div({class:"hs-panel-settings-grid",id:`settings-grid-${s}`,html:r})]);return{didBuild:n,pagesHTML:a}}static#i(t,e,a){let n="";e.usesGameData&&(n=Y.Image({class:"hs-panel-setting-block-gamedata-icon",src:Ra,width:18,height:18,props:{title:f.HSSettings.gameDataRequiredTooltip}}));let i=[];if(a.controlType==="switch")i.push(this.#r(e,a,n));else if(a.controlType==="button")i.push(Y.Button({id:a.controlId,text:e.settingDescription||"Error: No button text"}));else{let r=this.#s(a.controlType);if(!r)return u.error("Error autobuilding settings UI, control type resolution failed (how??)",this.#e),null;i.push(this.#r(e,a,n));let l=this.#l(a,r,e);if(!l)return null;a.controlEnabledId?i.push(Y.Div({class:"hs-panel-setting-block-input-row",html:l})):i.push(...l)}let s="hs-panel-setting-block";return a.controlType==="button"&&a.controlGroup==="auto-sing-strategy-controls"&&(s+=" hs-inline-button"),Y.Div({id:e.settingBlockId,class:s,html:i})}static#s(t){switch(t){case"text":return 4;case"number":return 3;case"select":return 5;case"state":return 6;default:return null}}static#r(t,e,a){let n=[];return e.controlEnabledId&&n.push(Y.Button({class:"hs-panel-setting-block-btn",id:e.controlEnabledId,text:""})),n.push(Y.P({class:"hs-panel-setting-block-text",props:{title:t.settingHelpText},text:t.settingDescription})),a&&n.push(a),Y.Div({class:"hs-panel-setting-block-text-wrapper",html:n})}static#l(t,e,a){let n=[];if(e===3||e===4)n.push(Y.Input({class:"hs-panel-setting-block-num-input",id:t.controlId,type:e}));else if(e===5){if(t.selectOptions&&t.controlId==="hs-setting-auto-sing-strategy"){let{defaultStrategiesOptions:i,userStrategiesOptions:s}=S.getMergedStrategyOptions();t.selectOptions.length=0,t.selectOptions.push(...i,...s),u.log(`Merged strategy options for select input: ${t.selectOptions.length} total options (${i.length} default, ${s.length} user)`,this.#e)}if(!t.selectOptions)return u.error(`Error autobuilding settings UI, ${a.settingName} does not have selectOptions defined`,this.#e),null;n.push(Y.Select({class:"hs-panel-setting-block-select-input",id:t.controlId,type:e,props:t.props},t.selectOptions))}else e===6&&n.push(Y.P({class:"hs-panel-setting-block-state",id:t.controlId,text:""}));return n}static async deleteSelectedStrategy(){let t=S.getSetting("autosingStrategy"),e=t.getValue();if(!e||e===""){M.Notify("Please select a strategy to delete",{notificationType:"warning"});return}let a=t.getDefinition().settingControl;if(!a?.selectOptions){M.Notify("Strategy dropdown not available",{notificationType:"error"});return}let n=a.selectOptions.find(c=>c.value.toString()===e);if(!n){M.Notify("Selected strategy not found in dropdown",{notificationType:"error"});return}let i=n.value.toString(),s=S.getDefaultStrategyNames();if(s.includes(i)){M.Notify("You cannot delete default strategies.",{notificationType:"warning"});return}if(!confirm(`Are you sure you want to delete strategy "${i}"?`))return;if(!he.deleteStrategyFromStorage(i,"HSSettings")){M.Notify("Failed to delete strategy from localStorage",{notificationType:"error"});return}o.updateStrategyDropdownList();let l=s[0];l&&o.selectAutosingStrategyByName(l),M.Notify(`Strategy "${i}" deleted. Defaulted to ${l?'"'+l+'"':"none"}.`,{notificationType:"success"})}static async exportSelectedStrategy(){let t=S.getSetting("autosingStrategy"),e=t.getValue();if(!e||e===""){M.Notify("Please select a strategy to export",{notificationType:"warning"});return}let a=t.getDefinition().settingControl;if(!a?.selectOptions){M.Notify("Strategy dropdown not available",{notificationType:"error"});return}let n=a.selectOptions.find(r=>r.value.toString()===e);if(!n){M.Notify("Selected strategy not found in dropdown",{notificationType:"error"});return}let i=n.value.toString(),s=S.getStrategies().find(r=>r.strategyName===i);if(!s&&S.getDefaultStrategyNames().includes(i)&&(s=await S.loadDefaultStrategyByName(i)||void 0),!s){M.Notify("Strategy not found - cannot export",{notificationType:"error"});return}try{let r=JSON.stringify(s,null,2);await navigator.clipboard.writeText(r),M.Notify(`Strategy "${i}" copied to clipboard`,{notificationType:"success"})}catch{M.Notify("Failed to copy strategy to clipboard",{notificationType:"error"})}}static async importStrategy(){let t=L.getModule("HSUI");if(t){let e=await t.Modal({title:"Import Strategy",htmlContent:`
+            <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
+                <div>
+                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy Name:</label>
+                    <input type="text" id="import-strategy-name" placeholder="Enter strategy name" style="width: 100%; padding: 8px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy JSON:</label>
+                    <textarea id="import-strategy-json" placeholder="Paste strategy JSON here" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="import-strategy-cancel" data-close="modal-will-be-replaced" style="padding: 8px 16px; cursor: pointer;">Cancel</button>
+                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">Import</button>
+                </div>
+            </div>
+        `}),a=document.querySelector(`#${e} #import-strategy-cancel`);a&&(a.dataset.close=e);let n=document.querySelector(`#${e} #import-strategy-submit`),i=document.querySelector(`#${e} #import-strategy-name`),s=document.querySelector(`#${e} #import-strategy-json`);if(s.addEventListener("input",()=>{if(!i.value.trim())try{let r=JSON.parse(s.value);r&&typeof r.strategyName=="string"&&r.strategyName.trim()&&(i.value=r.strategyName.trim())}catch{}}),!n||!i||!s){M.Notify("Failed to create import modal",{notificationType:"error"});return}n.addEventListener("click",async()=>{let r=i.value.trim(),l=s.value.trim();if(!r){M.Notify("Please enter a strategy name",{notificationType:"warning"});return}if(S.getStrategies().some(h=>h.strategyName===r)){M.Notify(`Strategy "${r}" already exists`,{notificationType:"warning"});return}let g;try{g=JSON.parse(l)}catch{M.Notify("Invalid JSON format",{notificationType:"error"});return}S.validateStrategy(g),g.strategyName=r;try{let{saved:h}=he.saveStrategyToStorage(g,void 0,"HSSettings");if(!h){M.Notify("Failed to save strategy",{notificationType:"error"});return}o.updateStrategyDropdownList(),o.selectAutosingStrategyByName(r),u.log(`Strategy "${r}" imported and selected.`,"HSSettings"),M.Notify(`Strategy "${r}" imported successfully and selected.`,{notificationType:"success"});let m=document.querySelector(`#${e}`);m&&(await m.transition({opacity:0}),m.parentElement?.removeChild(m))}catch(h){M.Notify("Failed to save strategy",{notificationType:"error"}),u.log(`Strategy import failed: ${h}`,"HSSettings")}})}else M.Notify("Failed to find HSUI",{notificationType:"error"})}static async editSelectedStrategy(){let t=S.getSetting("autosingStrategy"),e=t.getValue();if(!e||e===""){M.Notify("Please select a strategy to edit",{notificationType:"warning"});return}let a=t.getDefinition().settingControl;if(!a?.selectOptions)return;let n=a.selectOptions.find(g=>g.value.toString()===e);if(!n)return;let i=n.value.toString(),r=S.getDefaultStrategyNames().includes(i),c=S.getStrategies().find(g=>g.strategyName===i);if(!c&&r&&(c=await S.loadDefaultStrategyByName(i)||void 0),!c){M.Notify("Strategy not found - Cannot edit",{notificationType:"error"});return}r?await He.open(c,{duplicateFromDefault:!0,suggestedName:`${c.strategyName}_copy`}):await He.open(c)}};var Ha="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlFRTlFRTgzMzRENzExRURBOTNGRjlGMjMxMjY1Njg0IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlFRTlFRTg0MzRENzExRURBOTNGRjlGMjMxMjY1Njg0Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUVFOUVFODEzNEQ3MTFFREE5M0ZGOUYyMzEyNjU2ODQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUVFOUVFODIzNEQ3MTFFREE5M0ZGOUYyMzEyNjU2ODQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz598tXoAAANF0lEQVR42pxbfYhdRxWf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";var Da="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlBQjBCNzc0MzRENzExRUQ4ODQ2OUJFMUNFRTNFMzAyIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlBQjBCNzc1MzRENzExRUQ4ODQ2OUJFMUNFRTNFMzAyIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUFCMEI3NzIzNEQ3MTFFRDg4NDY5QkUxQ0VFM0UzMDIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUFCMEI3NzMzNEQ3MTFFRDg4NDY5QkUxQ0VFM0UzMDIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6Zz/0GAAAO5UlEQVR42sRbDZAcRRV+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";var Na="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlDMDZBRjg2MzRENzExRUQ4N0I0RDkzMDZENDJFM0ZFIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlDMDZBRjg3MzRENzExRUQ4N0I0RDkzMDZENDJFM0ZFIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUMwNkFGODQzNEQ3MTFFRDg3QjREOTMwNkQ0MkUzRkUiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUMwNkFGODUzNEQ3MTFFRDg3QjREOTMwNkQ0MkUzRkUiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7QX0wqAAATBElEQVR42qRbC3BdxXnePfcajAxEteglohEdSQbHJGDMQzyaWg3llU7aicHB129gaEkptWw3TTLuQ3UfTEkzgDV5kJRHYsu2oAZnKE0DpJmRZlqCS0jNy7WxdScjalENSmwTsGNb5+/+u/+/++/ecyVBz8y599xzzj1n/+9///+urt57KyillVLmy39Pf4v/Uf9/Td/Q8EzRO8N4wlWY4t3vb8T83zKeunTDEqV1uKUOCoRITzFk+lPRfyTJeB9o8YzkoTyOQsLEw3T9Kfc7uQcke3W4jude/LsBBECHF5qPnYv/VLV85ENq/M3D0bvxHG1rzN5XcN2ep+stZm8uIOGQ2cf5L1Owqtm8o4ffy+8zvzfS796Ca3XjTrebdvxD9DuzVGdguAKe+CLC6cFVBgHP076JB0XXdxORzxPBB8Q+Lh49TvsecSz3Q/TcTbjz+xLANybM2cjHjeh40tCItIJ2MmZVAH98d9EXG6JGL8NtlPb5xGm5IeEjC7+6oTZ09z0j4v5WOq6Yfex9KOt48jt9Hz8LQWgmApslsRIEKSU7b/qC+sx3v2x1walABoUihL9v2nZAPbmsU754hIiqJAPCc62G+Da6RzUYsPp/XhsV75OqpYQUKjE+VLXeOvXQudV5qwIsDinxjPqi7Qf6+Lw5HhaDsNvN2w703bxt/0Ay0LZEaoo2PL+rgLj0HrmP0D5K4KSqU6FruyX3mTb8RtqAmJ6ho4ESpCJfFfpsLfeibcMIQuvOpZ3di7YdGKSX2/2JZZ1VfM5n60Hw27L+NwaW9+8bWGG+V5pvwcW2Aq6OTiIRbbSPEHhP0zh5HxMgWYBQhevUgQEAIQFsaIzYD9A+aMS/yn4Yz+HRzmWd3XzM2w4Ewdy4pH//oOC+37atOM9ez2i/dbMFYVR9sA2B6hJ7a6ISXTSGSqMH5BpslJFZp5zlETqG6G60DXhp0fbhAXbO+Psmx328p7o44fjjy+dU8dal/W8MJu+zItu/8nwjKbn34Ldv3pveV6G9VajHSAObUqQeqcqNib078iSlXIEZil56z+1w4Vd+Vz193V9KvbeGZ1HEZassdATqiWVzuvH4lq37Bw3h9rjav39IuygLsVJbV5zXYcS9pgHs2S0rz2/H+27bvHeYxM/GJBleNcffvPWj7dPgftsHkBYG5hqMH/DHp5/bqF75/NPGBuROAoj4TfKfRtSrMszSZA/w+7Nbragj17tR7KtbPfGWKDxeuWXfMBrbTICH26Or5nZk9DxDPOgkmpts+9JDrwxteOjlISEZU+3S0PrgCY0g0q6X/e0dcEHfjeqFlQ+wT0VLOobctwAo5XU/E2GvtjGtPdZ4rMEFuY6bjmDtQgynTAYSTeFmRlKE8YiTAiDQUCpAffW2C+ok4fMPv1orm2t4XdNYULIyOsbzf37nxQsbGNMRsgvzEAQ8cWX/WvXa3d9XZT2BXiCvCzSQeAJhDdqEm0n3tQfBBfUaOQgaOW5wMMfacT9ztGrtOAzukgMv89Jkb2cJMGC4e3oeeb3G0sTEeaJZdTSI57gx3fPN/xraEEBIY4UKMdcGTrnOe1ACnAo4APpSf4wgGO7b88bVdViiLXFMPA3AgsCi7/TfSQyQjtuQE7Q/B16V0Aoz571EaPCE0nkHHLh3251/g3seS8TfP/jSUKOAVuQfPch0AiCzbxVB0JhEzlr7rY77/7R8TgeLsdRbBsENgrjuCSROm8GVwCLo7tdeSpAYkhq7gyfcvwcYzFgKvIRIcOqsSYVCd956kVYHQEYAlHIOfsaEK6oE4wf6lq02AkSj12F1XEMYGABl7sRlQ2/GIJCe4iEOcgbqguequWafk+PAtQ6qoby0QBB19hZeirwkgVcFfMd933jpMeEOx5LkyxnBkjOCmYkIVO5UQAYNLTdv8+HvLipL6CVb9w9X+9+oOX0XXkF7cccBg/JGjaSCRBTIPpRBecvvuOeMZubspo3PM3K8XgIgqA3bEfYuGV3PvG0CJWKHUREL+FzBihlKQJZ7I9gnQBjHl1Cg0/X48s52w/l2Z7R48AkIwiqTQYtsAnMpt5x2kpB5bkMAktQBgWSiMkk4xNzOovczMKAaBFhjHOpDaYIkYAJtQF5nMXYsd6GtCXQGojiAiSL3loqtBYFiZxJZrZnjNGhn51ASIJIEAaD2dkV4AG8HAKTEBW8g7ERBqr5bAgJGDPUES0A5TyspY2T0qvhQI/bDSr4EAmezUMWiQenAUXAgIFcjYslDBpcYDF5GAGbWZrhnaG9nVGToROAV/me+19x12ZQRJTLdAqDqjWCUfz+2/Dyb6ZlsblhLAp17A+VckfZiSsRk2ltsSwBqTzkPNsGe0w6YEgQCIttAgRUHSwSINZolQbD/j1ZRbbNB7kBGkFRAn0QMoOGNuG1fgZLgUkfO5lxoCxYErw5koVmcFXjVsCAgdiXIvYvEc5iPlK090MRd4QJdrKE12axMJTqfqgQZygabTKr6rBdACcAPKE+oxP21pv/GxCbUXcFabk5mUKG9OgixzoQfL1MMgKJvCYZgtDAkL6vcu83g74Hths6EHZG2JvPqpj0YkyRRXZzx5iQBZfwoMoJFEmGyuY7Vm02C4ziqNUBiGEH/zttv62fOOgvikNepzey39svRwQ/eOxq95KG978HAghZ1yYxfiQTZ+g2Hsdo3a1Zk9HzkCMFITrFVsEACP837MsP8sg2EypAaQC49tYlvtXrL3ppwbdats8vJ2CaY7xvHx/Wzs2ezaqgXa6+qa5tOU0jwBTNsHVatf/VIXANvm2X36k/G1cAC91AGAoWHQHCq51VAx54AvAdoVJeskARYFVDWC5xENziREs9lrEH5MKAiCbsxjPZywjy3oqz1sy0tmPio6wwIR9/co7702mueeMNhS3hKfNH2ubePqa7RUXj6vTGQILgqjsgTfJAkbE8AoTVJjGw+gOV2VHsbCqMXyMt5ynn7ACRtBVV3Vm1xhQ3vxrRzY1Z3RTJyvSH831pm24H/9WEPrOU8cxn3ht0QkoIHz5ppf+MzJAgyBggeIoDxB3/c1V5Ura4riZWcGyyjF6BIMLWYbUzwKixsOIvvMzNrwa0bs2E15Npdx+3oyH8rJh4JOXjihHr9xEm1uImCrPf0pCCkm3vWGHy6qaJDjJFTiytEkcIDjBSkwxHOSLO1AVnuAagk+UCr5pYBWB/L7TWbwCgQ7TyDVBlcG+7Lhw/aYTCxUu95W9wUW2p5/ZwZM5Qi7rMUMICvm2cvARqD8AiZDilzYvVHExA4GRoHlgAbCjsAOFe+htpVasuK86urN+8dsEkHKK7wcInUix+eKjk3Bqjn6Xbfx88sJBaJ4u/0f+gNUBXSrSpqCVq6Sjp+tO+F2m1rrmiXxjuJbWxOwABkKAZ5vQp4SfjOqrnVIHbgih8UB8gYHmwKrNQ/3ni5/d8dc5u8mKPRY8JRnHlHVeBd2gdJPJ/D5+3rmqNlCUwWRhTENYpGLpC/2QbYQEiVJo8DHlk1t/vh1a6Q6QjW3vApwRG0Cd0/+7l++IbLPEcn0/VUFYoMIt/3hQ+do9+cOTOJL4hgrUVOoSaNav3mAThZKAFjBe0o9a3VH+0QhQmIMzHXXkBX9Zs/P6S/ff1lnkAkhKUgJfrQyLt1oCD3U+KtUv/ylzqTCZCSZbHwuyD8HW3kBawKgHODzbSPT9ZRcSmwr8ZCCHkD+gjC1YcO6d86d54ncDpWH+/FmCEC48Md/pm+Ip1LlRQGEaY/ZQRpDrlACIUPify5bvvDb++pybq/zQTNa2XsL8PXrsOH9fbrLvEgoN5LAlH3JfGo58x95vy5R4/p/zGiH9UkNIQcQKqCGc/KtVe2T9JI4Ux3zKbDJxmAkvXZz5P1390ItQwi96NDRQeztbj5wSBceviIfuzaBZGoSzWQkoHg8O+lH+5Ub5420xbcP2JE/+App4CvOXBFWofaoDWI5t5tDzxfEw3UhkaQ4wACAIrigCLxD1mY03+dASdFAEWpKBKw4Mg7+onfdiBgiCulQHIfr9kSfEe7N64HTz3VPvWc48f1/yIIIunRUWAWVCLhPkeCsjI8lksVoFC4j2KB+WkEdZcRffzGjk1APNJBnfFkA1UMwoXvvKN3XnOxl4RGHmAHEs81B9Lzt4j7ZxsQ2O6E2J+jwFBbnITzHO9UlJF6LwHUHd6YTEvxIHz91nntUg3S+htVc2xV6EdnntkQhI/94hf6nz85PwpwmPtoD3a1tuqMkx0VGiS4j82YAZQNaueGfYQqgiITKK27aqpy2LjvDU6UokCot6CKWm8HRH0+ao64dMVKwouTgDD33Xf1v3xyfp0U7Ohw1r7t2LHQQhPije/9mQGBq0+2dK65CgS+7lBQ/YmMX50bRBSgcSDUKh+0/pHXaiH6C1FgyaelSnUZfb/syBH90hlnNAThPAPC4tZOawuQ+87aH/XW/teM0fNpLtf8g7qFDhTE4TB+77j/P2pJHLCrIMYJobBrjvrW2FgysWBXjyHaEf9qTUNoUJREjy6oBqgfn3GGMsRblXj59NPh9VlNak9Tk9pr9n2G4P1mHz6tyV6ffeY5qnp2pzbWXhnibQtt1Oi70XlrV5QWpTEtjZ4Lx3WSnXId0jd47/v3WsM4wAKAJTGUADc/YCO1j+XWten2j1l3YrK9Wux7Q9Mi06JZga0Pap3ZJgdoHyj5DpAOPcGME6wQ4urQcRaNlagnqdXMT30cyuefrY9u+kEYk3YPfjImvC1RbXTzg84GeAnIp5yepqGAeOZOzufC3ICsrnjhytm+ehP8uK4LqV27nXqIsuQeRP74915WE/vegtN6ro1cIkskj7NgSl9rkAAfCYISU1vHBfE+hr73jgsXBsJUlHykg8uSbg0TrdO6v68M6xDQBHdm5w5kbDpATqxw7z3xvVcsLaeuvY76gSBsAqjP/Mkn2pM8oIWrwr4xgnUxygZ7GkxM9Bb1njsuWhgKEGC9Z9qfz1hfQUXzAELfTgDDz0rmDITGCmjZZ5x544Ux2Ob+4w88a0E4Zd31PgZYtP4T7UQ8zmscFMRjpDtqm0AG/cwlQ1FZvLfBdDSvR3/z+waERAKCuFMJHETfPpoVAsJrBLXKlFApn9QAu1dfAUKdP/VTF/nCKAN94v7nXH6z/npD/G/4OOCpi+YPFwREWPCZl2P0y83RnCZIiP5gpaBRYve/+tbuIQ1JL08lMziIAB319aG+3a1Cyc1bcy3nA4Sav0/jDQgz114b7BLZlvz+Z6JZ9pb4gbrJIp2k6r0ovk4CUAXCXOHuZFJBcSCkVcQ5KZZ8rpRKBhYtgKfXCKnQEDdI45klHhT8PvbAc94mn2L0PjRlqUh33zPqKZg17In/11ekQW+WcyGtDchFOkxusLVgUkGLlAYvtqJHKMvSnKwoiFvVJYA4f9d0j+e+jj1LFOGF9xy/P4BQRr1X4BMnC92egyohXqb6B3gavjX8tjs84WeL49yZgYJk6IdSIv7izouXpNlYXQ9f2ABVN7VNVHNYSkR+70FR1AiBJPND6+8Mn6W4tO4Gv1rFgoGE1xM/jySAvUAvApC53mBm580K/cessFv4zzQnGN1w54KF9z74k6F4koIzfmtFb/7rX/vPGoNx592XR0nKo5teqHEs6+cVUrS3rOeq9gET0urIrekIiN/T77aTce5+av0Ng5bz9YSnEtAcFTcmqDmKP8Rs6mqD9QBjwjOMfvFzCxY2aEH7COyuP7q8rcE1dVvPFe3f2fSjGhsxBmHZWpfNVddd3f64BcERvHj91QuLnmO3+XOc6E+9HeKlNhh+ZiYKLnMgJCRggIzhdOfgppXXac/lXd1zZXv/pudrKfG83bLu6oVTPcMYvMEGOl+0+YUTp/+q8xlWBaSfIUkYLFh5MdXKDjVFO8r1GfpeGGK9XmkAWNFzVbv6gNv7IH5cRoEucc9tPcCpgArLZXhFRQHhlQIiK8nEytaCdlTM9TVXIFdHkPPvc7Z39C4T4Q08uv0A9dNap/OcPfE8KO0mSCgCgAkXIPSp+oVKciByfn6rihdFFYEQtaoN5yfr48v/VIpKWzuXdq5RjZfe/ZD+y9ltX/1yOhcJlrNcR4sl5HGy9GysYA5BpSCFrhSoS4UGOz6FrehK7EqlgMhxNfWaQwauN2VunOGiBEBcR03W1vSl50gqKtMYRFqIVMl/5ovvolL8/Ene0azilWLpuXkMtiQ+BSHMFjf6cO4ll3rOyzV26TkaFIpUL6++kIQSaH2TDLxZxatKW0TZujJJPbLRitOicfQWiT3/ZlqdDYCwUPnXzYWfvvTjxqbUodibqEovgWWX2giU++SKTlW/lLazQFpaEoLHC8bQS2F7rySKltmuYaktIlwSzzMY9VfK3wdcRDyddd/p1cmuTG9ld9GqdRcTQMPrRW8qGudkI3DXLv2zKk7fU/YguleuE6LzIMcih8Z1SJ1Alqw49zNKdGyI03f5Uzq+BSCcT1ed141FqeJV5pBgarb/E2AAscDCqBSmRtoAAAAASUVORK5CYII=";var Ua="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlCNTUxMDJDMzRENzExRURBN0MxOTI5QUU5MUExOTQ5IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlCNTUxMDJEMzRENzExRURBN0MxOTI5QUU5MUExOTQ5Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUI1NTEwMkEzNEQ3MTFFREE3QzE5MjlBRTkxQTE5NDkiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUI1NTEwMkIzNEQ3MTFFREE3QzE5MjlBRTkxQTE5NDkiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz69vdT5AAANmElEQVR42qxbb4gdVxW/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";var Oa="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlDQkQ0MzJCMzRENzExRURCQkFFQTREMTUxMzc4ODMwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlDQkQ0MzJDMzRENzExRURCQkFFQTREMTUxMzc4ODMwIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUNCRDQzMjkzNEQ3MTFFREJCQUVBNEQxNTEzNzg4MzAiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUNCRDQzMkEzNEQ3MTFFREJCQUVBNEQxNTEzNzg4MzAiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz69LeAdAAAKiElEQVR42sxbW4scRRSu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";var Pa="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlBMDRCRDgwMzRENzExRURCQ0JGQkU4RjkxNTU1MDM0IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlBMDRCRDgxMzRENzExRURCQ0JGQkU4RjkxNTU1MDM0Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUEwNEJEN0UzNEQ3MTFFREJDQkZCRThGOTE1NTUwMzQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUEwNEJEN0YzNEQ3MTFFREJDQkZCRThGOTE1NTUwMzQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6rEQeOAAAO70lEQVR42qxbf4xcRR2f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";var Ga="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlFMkQ3OTkwMzRENzExRURCNDBEOTk1M0U1RUQ3MTU1IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlFMkQ3OTkxMzRENzExRURCNDBEOTk1M0U1RUQ3MTU1Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUUyRDc5OEUzNEQ3MTFFREI0MEQ5OTUzRTVFRDcxNTUiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUUyRDc5OEYzNEQ3MTFFREI0MEQ5OTUzRTVFRDcxNTUiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4cE+YzAAAPW0lEQVR42tRbe3BVxRnf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";var Wa="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlENzFBMEUwMzRENzExRUQ4NzA5RDRDQzYxNDA4QjUyIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlENzFBMEUxMzRENzExRUQ4NzA5RDRDQzYxNDA4QjUyIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUQ3MUEwREUzNEQ3MTFFRDg3MDlENENDNjE0MDhCNTIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUQ3MUEwREYzNEQ3MTFFRDg3MDlENENDNjE0MDhCNTIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6iNPAIAAAW90lEQVR42qRbC3RU5Z3/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";var qn={viscosity:Ha,drought:Da,deflation:Na,extinction:Ua,illiteracy:Oa,recession:Pa,dilation:Ga,hyperchallenge:Wa},ct={viscosity:{label:"Viscosity"},drought:{label:"Drought"},deflation:{label:"Deflation"},extinction:{label:"Extinction"},illiteracy:{label:"Illiteracy"},recession:{label:"Recession"},dilation:{label:"Dilation"},hyperchallenge:{label:"Hyperchallenged"}},jn=()=>({viscosity:0,drought:0,deflation:0,extinction:0,illiteracy:0,recession:0,dilation:0,hyperchallenge:0}),Kn=(o,t)=>{let e=[];return o.strategy.forEach(a=>{a.corruptionLoadoutName===t&&e.push(`Phase ${a.startPhase}-${a.endPhase}`),a.strat.forEach(n=>{n.loadoutName===t&&e.push(`Action in ${a.startPhase}-${a.endPhase}`)})}),o.aoagPhase&&(o.aoagPhase.corruptionLoadoutName===t&&e.push(pe),o.aoagPhase.strat.forEach(a=>{a.loadoutName===t&&e.push(`Action in ${pe}`)})),e},Zn=(o,t,e)=>{o.strategy.forEach(a=>{a.corruptionLoadoutName===t&&(a.corruptionLoadoutName=e),a.strat.forEach(n=>{n.loadoutName===t&&(n.loadoutName=e)})}),o.aoagPhase&&(o.aoagPhase.corruptionLoadoutName===t&&(o.aoagPhase.corruptionLoadoutName=e),o.aoagPhase.strat.forEach(a=>{a.loadoutName===t&&(a.loadoutName=e)}))},Qa=async(o,t,e,a)=>{let n="hs-autosing-corruption-loadout-editor",i=!!e,s=e?{...e.loadout}:jn(),r=e?.name??"",l=Object.keys(ct).map(h=>`
+        <div class="hs-corruption-item">
+            <img src="${qn[h]}" class="hs-corruption-icon" alt="${ct[h].label}" />
+            <div class="hs-corruption-label">${ct[h].label}</div>
+            <input
+                type="number"
+                id="hs-corruption-${h}"
+                class="hs-corruption-input"
+                min="0"
+                max="16"
+                value="${s[h]??0}"
+            />
+        </div>
+    `).join(""),c={htmlContent:`
+            <div id="${n}" class="hs-corruption-modal-container">
+                <div class="hs-strategy-input-section">
+                    <div class="hs-strategy-input-label">Loadout Name</div>
+                    <input
+                        type="text"
+                        id="hs-corruption-loadout-name"
+                        class="hs-strategy-name-input"
+                        placeholder="Enter loadout name..."
+                        value="${r}"
+                    />
+                </div>
+                <div class="hs-corruption-grid">
+                    ${l}
+                </div>
+                <div class="hs-strategy-error" id="hs-corruption-loadout-editor-error" style="display:none;"></div>
+                <div class="hs-corruption-footer">
+                    <div class="hs-corruption-done-btn" id="hs-corruption-loadout-save-btn">
+                        ${i?"Save":"Create"}
+                    </div>
+                    <div class="hs-corruption-done-btn" id="hs-corruption-loadout-cancel-btn">
+                        Cancel
+                    </div>
+                </div>
+            </div>
+        `,title:i?"Edit Corruption Loadout":"Create Corruption Loadout"},g=await o.Modal({...c,parentModalId:a});return new Promise(h=>{setTimeout(()=>{let m=document.getElementById("hs-corruption-loadout-editor-error"),d=b=>{M.removeInjectedStyle("hs-corruption-modal-styles"),o.CloseModal(g),h(b)};document.getElementById("hs-corruption-loadout-save-btn")?.addEventListener("click",()=>{let y=document.getElementById("hs-corruption-loadout-name")?.value.trim()??"";if(!y){m&&(m.textContent="Loadout name is required.",m.style.display="block");return}if(t.some(A=>A===y&&A!==r)){m&&(m.textContent=`Loadout name "${y}" already exists.`,m.style.display="block");return}Object.keys(ct).forEach(A=>{let T=document.getElementById(`hs-corruption-${A}`),E=Math.max(0,Math.min(16,Number(T?.value)||0));s[A]=E}),d({name:y,loadout:s})}),document.getElementById("hs-corruption-loadout-cancel-btn")?.addEventListener("click",()=>{d(null)})},0)})};async function Va(o,t,e){let a="hs-autosing-corruption-loadouts-modal";Array.isArray(t.corruptionLoadouts)||(t.corruptionLoadouts=[]);let n=t.corruptionLoadouts,i=()=>{let l=document.getElementById("hs-corruption-loadout-list");if(l){if(n.length===0){l.innerHTML='<div class="hs-strategy-empty-state">No corruption loadouts created yet.</div>';return}l.innerHTML=n.map((c,g)=>`
+            <div class="hs-strategy-phase-item">
+                <div class="hs-strategy-phase-text">
+                    <strong>${c.name}</strong>
+                </div>
+                <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-loadout-index="${g}" data-action="edit">
+                    \u270E
+                </div>
+                <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-loadout-index="${g}" data-action="delete">
+                    \xD7
+                </div>
+            </div>
+        `).join("")}},s={htmlContent:`
+            <div class="hs-strategy-modal-container" id="${a}">
+                <div class="hs-strategy-input-section">
+                    <div class="hs-strategy-input-label">Corruption Loadouts</div>
+                    <div id="hs-corruption-loadout-list" class="hs-strategy-phase-list"></div>
+                </div>
+                <div class="hs-strategy-error" id="hs-corruption-loadout-error" style="display:none;"></div>
+                <div class="hs-strategy-btn-group">
+                    <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-corruption-loadout-create">
+                        + Create Loadout
+                    </div>
+                    <div class="hs-strategy-btn hs-strategy-btn-primary" id="hs-corruption-loadout-done">
+                        Done
+                    </div>
+                </div>
+            </div>
+        `,title:"Corruption Loadouts"},r=await o.Modal({...s,parentModalId:e});setTimeout(()=>{let l=document.getElementById(a),c=document.getElementById("hs-corruption-loadout-error"),g=m=>{c&&(c.textContent=m,c.style.display="block")},h=()=>{c&&(c.textContent="",c.style.display="none")};i(),l?.addEventListener("click",async m=>{let d=m.target,b=d.dataset.action,y=d.dataset.loadoutIndex?Number(d.dataset.loadoutIndex):-1;if(d.id==="hs-corruption-loadout-create"){h();let v=await Qa(o,n.map(A=>A.name),void 0,r);v&&(n.push(v),i())}if(b==="edit"&&y>=0){h();let v=n[y],A=await Qa(o,n.map(T=>T.name),v,r);A&&(v.name!==A.name&&Zn(t,v.name,A.name),n[y]=A,i())}if(b==="delete"&&y>=0){h();let v=n[y],A=Kn(t,v.name);if(A.length>0){g(`Cannot delete loadout "${v.name}". In use by: ${A.join(", ")}.`);return}n.splice(y,1),i()}d.id==="hs-corruption-loadout-done"&&(M.removeInjectedStyle("hs-strategy-modal-styles"),o.CloseModal(r))})},0)}var He=class{static async open(t,e){let a="HSAutosingStrategyModal",n=L.getModule("HSUI");if(!n||!n.uiReady)return;let i=!!e?.duplicateFromDefault,s=!!t&&!i,r=y=>JSON.parse(JSON.stringify(y)),l=y=>JSON.parse(JSON.stringify(y)),c=We(),g=t?{strategyName:i?e?.suggestedName??`${t.strategyName}_copy`:t.strategyName,strategy:JSON.parse(JSON.stringify(t.strategy)),aoagPhase:t.aoagPhase?r(t.aoagPhase):r(c),corruptionLoadouts:l(t.corruptionLoadouts??[])}:{strategyName:"",strategy:[],aoagPhase:r(c),corruptionLoadouts:[]};if(g.strategy.length>0){let y=g.strategy.findIndex(v=>v.phaseId===Ae);y!==-1&&(g.aoagPhase||(g.aoagPhase=r(g.strategy[y])),g.strategy.splice(y,1))}g.aoagPhase&&(g.aoagPhase.phaseId=Ae);let h=()=>{for(let y=1;y<g.strategy.length;y++){let v=g.strategy[y-1],A=g.strategy[y];A.startPhase=v.endPhase}},m=()=>{let y=document.getElementById("hs-autosing-phase-list");if(!y)return;let v=g.aoagPhase?`
+                    <div class="hs-strategy-phase-item">
+                        <div class="hs-strategy-phase-text">
+                            <strong>${pe}</strong>
+                        </div>
+                        <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-action="edit-aoag">
+                            \u270E
+                        </div>
+                    </div>
+                `:"",A=g.strategy.length===0?'<div class="hs-strategy-empty-state">No strategy phases added yet.</div>':g.strategy.map((T,E)=>`
+                        <div class="hs-strategy-phase-item">
+                            <div class="hs-strategy-phase-text">
+                                Phase ${E+1}: ${T.startPhase} <span class="hs-strategy-phase-arrow">\u2192</span> <strong>${T.endPhase}</strong>
+                            </div>
+                            <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-phase-index="${E}" data-action="edit">
+                                \u270E
+                            </div>
+                            <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-phase-index="${E}" data-action="delete">
+                                \xD7
+                            </div>
+                        </div>
+                    `).join("");y.innerHTML=`${v}${A}`},d={htmlContent:`
+                <div class="hs-strategy-modal-container" id="hs-strategy-modal-root">
+                    <div class="hs-strategy-input-section">
+                        <div class="hs-strategy-input-label">Strategy Name</div>
+                        <input 
+                            type="text" 
+                            id="hs-autosing-strategy-name" 
+                            class="hs-strategy-name-input"
+                            placeholder="Enter strategy name..."
+                            value="${g.strategyName}"
+                            ${s?'disabled style="background:#000;color:#888;cursor:not-allowed;"':""}
+                        />
+                        ${i?'<div class="hs-strategy-note" style="margin-top: 6px; opacity: 0.8; font-size: 12px;">Default strategies are read-only; saving creates a user copy.</div>':""}
+                    </div>
+
+                    <div class="hs-strategy-input-section">
+                        <div class="hs-strategy-input-label">Strategy Phases</div>
+                        <div id="hs-autosing-phase-list" class="hs-strategy-phase-list">
+                            <div class="hs-strategy-empty-state">No strategy phases added yet.</div>
+                        </div>
+                    </div>
+
+                    <div class="hs-strategy-error" id="hs-strategy-error" style="display: none; color: #ef5350; padding: 10px; background: rgba(239, 83, 80, 0.1); border: 1px solid #ef5350; border-radius: 3px; margin-top: 10px;"></div>
+
+                    <div class="hs-strategy-btn-group">
+                        <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-loadouts-btn">
+                            Create Corruption Loadouts
+                        </div>
+                        <div class="hs-strategy-btn hs-strategy-btn-secondary" id="hs-autosing-add-phase-btn">
+                            + Add Phase
+                        </div>
+                        <div class="hs-strategy-btn hs-strategy-btn-primary" id="hs-autosing-create-btn">
+                            ${s?"Update Strategy":i?"Save as a new Strategy":"Create Strategy"}
+                        </div>
+                    </div>
+                </div>
+            `,title:s?"Edit Autosing Strategy":i?"View / Copy Default Strategy":"Create Autosing Strategy",parentModalId:e?.parentModalId},b=await n.Modal(d);setTimeout(()=>{let y=document.querySelector(".hs-strategy-modal-container");y&&(m(),y.addEventListener("click",async v=>{let A=v.target,T=A.dataset.action,E=A.dataset.phaseIndex;if(A.id==="hs-autosing-add-phase-btn")await rt(n,g.strategy,g.corruptionLoadouts??[],k=>{g.strategy.push(k),h(),m()},void 0,void 0,b);else if(A.id==="hs-autosing-create-btn"){let k=document.getElementById("hs-strategy-error"),B=document.getElementById("hs-autosing-strategy-name");g.strategyName=B?.value||"Unnamed Strategy";try{if(s){let{saved:D}=he.saveStrategyToStorage(g,t.strategyName,a);if(!D){M.Notify("Failed to save strategy",{notificationType:"error"});return}ce.updateStrategyDropdownList(),ce.selectAutosingStrategyByName(t.strategyName),u.log(`Strategy "${g.strategyName}" updated.`,a),M.Notify(`Strategy "${g.strategyName}" updated`,{notificationType:"success"})}else{let{saved:D}=he.saveStrategyToStorage(g,void 0,a);if(!D){M.Notify("Failed to save strategy",{notificationType:"error"});return}ce.updateStrategyDropdownList(),ce.selectAutosingStrategyByName(g.strategyName),M.Notify(`Strategy "${g.strategyName}" ${i?"saved as new and selected":"created and selected"}.`,{notificationType:"success"})}n.CloseModal(b)}catch(D){k&&(k.textContent=D.message,k.style.display="block")}}else if(T==="edit-aoag"){if(!g.aoagPhase)return;await rt(n,[],g.corruptionLoadouts??[],()=>{},k=>{k.phaseId=Ae,g.aoagPhase=k,m()},g.aoagPhase,b,{isSpecialPhase:!0,displayName:pe})}else if(T==="edit"&&E!==void 0){let k=parseInt(E),B=g.strategy[k];await rt(n,g.strategy.slice(0,k),g.corruptionLoadouts??[],()=>{},D=>{g.strategy[k]=D,h(),m()},B,b)}else if(T==="delete"&&E!==void 0){let k=parseInt(E);g.strategy.splice(k,1),h(),m()}else A.id==="hs-autosing-loadouts-btn"&&await Va(n,g,b)}))},0)}};var ut=class{#e={syncNotificationOpacity:async t=>{let e=document.querySelector("#notification"),a=t.contextName??"HSSettings";if(t.disable&&t.disable===!0)e.style.removeProperty("opacity");else{let n=t.value;e&&n&&n>=0&&n<=1&&(e.style.opacity=n.toString())}},autoConfirmPopups:async t=>{t.disable&&t.disable===!0?window.__HS_AUTO_CONFIRM=!1:window.__HS_AUTO_CONFIRM=!0},logTimestamp:async t=>{t.disable&&t.disable===!0?u.setTimestampDisplay(!1):u.setTimestampDisplay(!0)},showDebugLogs:async t=>{u.updateDebugEnabled()},reactiveMouseHover:async t=>{let e=t.contextName??"HSSettings";t.disable&&t.disable===!0&&Be.clearInterval("hover")},autoClick:async t=>{let e=t.contextName??"HSSettings";t.disable&&t.disable===!0&&Be.clearInterval("click")},ambrosiaQuickBarAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSAmbrosia");a&&(t.disable&&t.disable===!0?await a.hideQuickBar():await a.showQuickBar())},ambrosiaMinibarAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSAmbrosia");a&&(t.disable&&t.disable===!0?await a.disableBerryMinibars():(S.getSetting("useGameData")?.isEnabled()||S.getSetting("useGameData")?.enable(),await a.enableBerryMinibars()))},hiddenVanillaTabsAction:async t=>{ce.applyHiddenVanillaTabsSetting()},patch:async t=>{let e=t.contextName??"HSSettings";if(!t.patchConfig||!t.patchConfig.patchName){u.error("No patch config provided for setting action",e);return}let a=L.getModule("HSPatches");a&&(t.disable&&t.disable===!0?(console.log("Disabling patch",t.patchConfig.patchName,e),await a.revertPatch(t.patchConfig.patchName)):(console.log("Enabling patch",t.patchConfig.patchName,e),await a.applyPatch(t.patchConfig.patchName)))},useGameData:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSGameData");a&&(t.disable&&t.disable===!0?a.disableGDS():a.enableGDS())},addTimeAutoLoadoutsAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSAmbrosia");a&&(t.disable&&t.disable===!0?await a.disableAutoLoadout():await a.enableAutoLoadout())},ambrosiaIdleSwapAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSAmbrosia"),n;a&&(t.disable&&t.disable===!0?(a.disableIdleSwap(),n=!1):(S.getSetting("useGameData")?.isEnabled()||S.getSetting("useGameData")?.enable(),await a.enableIdleSwap(),n=!0))},startAutosingAction:async t=>{let e=t.contextName??"HSSettings";if(!t.disable&&!f.General.isModFullyLoaded){u.log("Hypersynergism is still loading. Please wait before starting Auto-Sing.",e),S.getSetting("startAutosing")?.disable();return}let a=L.getModule("HSAutosing");a&&(t.disable&&t.disable===!0?a.stopAutosing({showReviewModal:!0}):await a.enableAutoSing())},createAutosingStrategy:async t=>{let e=t.contextName??"HSSettings";await He.open()},editAutosingStrategy:async t=>{let e=t.contextName??"HSSettings";await ce.editSelectedStrategy()},deleteAutosingStrategy:async t=>{let e=t.contextName??"HSSettings";await ce.deleteSelectedStrategy()},exportAutosingStrategy:async t=>{let e=t.contextName??"HSSettings";await ce.exportSelectedStrategy()},importAutosingStrategy:async t=>{let e=t.contextName??"HSSettings";await ce.importStrategy()},hideMaxedGQUpgradesAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&a.setMaxedGQUpgradesVisibility()},hideMaxedOctUpgradesAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&a.setMaxedOctUpgradesVisibility()},enableGQDistributorAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&(t.disable&&t.disable===!0?a.hideGQDistributor():a.showGQDistributor())},enableAutomationQuickBarAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&(t.disable&&t.disable===!0?a.disableAutomationQuickbar():a.enableAutomationQuickbar())},enableEventsQuickBarAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&(t.disable&&t.disable===!0?a.disableEventsQuickbar():a.enableEventsQuickbar())},enableCorruptionQuickBarAction:async t=>{let e=t.contextName??"HSSettings",a=L.getModule("HSQOLButtons");a&&(t.disable&&t.disable===!0?a.disableCorruptionQuickbar():a.enableCorruptionQuickbar())}};constructor(){}getAction(t){let e=this;return t in this.#e?a=>{e.#e[t](a)}:null}};var Me=class{constructor(t,e,a,n){this.context="HSSetting";this.definition=t,this.settingAction=e,this.#e=a,this.#a=n,this.definition.defaultValue=this.definition.settingValue}#e;#a;getDefinition(){return this.definition}setDefinition(t){this.definition=t}enable(){this.#t(!0)}disable(){this.#t(!1)}async handleToggle(t){let e=!this.definition.enabled,a=this.definition.enabled!==e,n=S.getSetting("useGameData");if(!f.HSSettings.gameDataCheckBlacklist.includes(this.definition.settingName)&&n&&this.definition.usesGameData&&a&&e&&!n.isEnabled()){u.warn(`Enable GDS before enabling ${this.definition.settingDescription}!`,this.context);return}if(this.definition.settingName==="useGameData"&&a&&!e){let s=S.getSettings();for(let[r,l]of Object.entries(s)){let c=l.getDefinition();f.HSSettings.gameDataCheckBlacklist.includes(r)||"usesGameData"in c&&c.usesGameData===!0&&l.isEnabled()&&l.definition.settingName!=="startAutosing"&&l.disable()}}if(u.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${!this.definition.enabled}`,this.context),!a)return;this.definition.enabled=e,this.definition.settingType==="boolean"&&(this.definition.settingValue=e,this.definition.calculatedSettingValue=e);let i=t.target;e?(i.innerText=this.#e,i.classList.remove("hs-disabled")):(i.innerText=this.#a,i.classList.add("hs-disabled")),await this.handleSettingAction("state",e),S.saveSettingsToStorage()}#t(t){let e=this.definition.enabled!==t;if(e){if(this.definition.settingName==="useGameData"&&e&&!t){let a=S.getSettings();for(let[n,i]of Object.entries(a)){let s=i.getDefinition();f.HSSettings.gameDataCheckBlacklist.includes(n)||"usesGameData"in s&&s.usesGameData===!0&&i.isEnabled()&&i.definition.settingName!=="startAutosing"&&i.disable()}}if(u.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${t}`,this.context),this.definition.enabled=t,this.definition.settingType==="boolean"&&(this.definition.settingValue=t,this.definition.calculatedSettingValue=t),this.definition.settingControl?.controlEnabledId){let a=document.getElementById(this.definition.settingControl.controlEnabledId);a?t?(a.innerText=this.#e,a.classList.remove("hs-disabled")):(a.innerText=this.#a,a.classList.add("hs-disabled")):u.debug(()=>`Could not find toggle element for setting ${this.definition.settingName} (ID: ${this.definition.settingControl?.controlEnabledId})`,this.context)}this.handleSettingAction("state",t),S.saveSettingsToStorage()}}async initialAction(t,e){this.definition.skipInit||await this.handleSettingAction(t,e)}async handleSettingAction(t,e){if(this.settingAction){let a=this.settingAction,n={contextName:this.context,value:this.definition.calculatedSettingValue??null};this.definition.patchConfig&&this.definition.patchConfig.patchName&&(n.patchConfig=this.definition.patchConfig),a&&a instanceof Function&&(t==="state"?e?await a({...n,disable:!1}):await a({...n,disable:!0}):await a({...n,disable:!1}))}}hasControls(){return"settingControl"in this.definition}isEnabled(){return this.definition.enabled}getCalculatedValue(){return this.definition.calculatedSettingValue}toString(){return JSON.stringify(this.definition)}},gt=class extends Me{constructor(t,e,a,n){super(t,e,a,n),this.definition.enabled=!0,this.definition.settingValue=null,this.definition.calculatedSettingValue=null}getValue(){return null}setValue(t){S.saveSettingsToStorage()}async handleChange(t){u.log(`Button pressed: ${this.definition.settingName}`,this.context),await this.handleSettingAction("value")}async initialAction(t,e){}enable(){}disable(){}},ht=class extends Me{constructor(t,e,a,n){super(t,e,a,n),this.definition.settingValueMultiplier&&(this.definition.calculatedSettingValue=this.definition.settingValue*this.definition.settingValueMultiplier)}getValue(){return this.definition.settingValue}setValue(t){this.definition.settingValue=t,S.saveSettingsToStorage()}async handleChange(t){let e=parseFloat(t.target.value);u.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${e}`,this.context),this.definition.settingValue=e,this.definition.calculatedSettingValue=e*this.definition.settingValueMultiplier,await super.handleSettingAction("value"),S.saveSettingsToStorage()}},mt=class extends Me{constructor(t,e,a,n){super(t,e,a,n)}getValue(){return this.definition.settingValue}setValue(t){this.definition.settingValue=t,S.saveSettingsToStorage()}async handleChange(t){let e=t.target.value;u.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${e}`,this.context),this.definition.settingValue=e,this.definition.calculatedSettingValue=e,await super.handleSettingAction("value"),S.saveSettingsToStorage()}},dt=class extends Me{constructor(t,e,a,n){super(t,e,a,n)}getValue(){return this.definition.enabled}setValue(t){this.definition.settingValue=t,this.definition.calculatedSettingValue=t,this.definition.enabled=t,S.saveSettingsToStorage()}async handleChange(t){}},pt=class extends Me{constructor(t,e,a,n){super(t,e,a,n),this.definition.settingValueMultiplier&&(this.definition.calculatedSettingValue=this.definition.settingValue*this.definition.settingValueMultiplier)}getValue(){return this.definition.settingValue}setValue(t){this.definition.settingValue=t,S.saveSettingsToStorage()}async handleChange(t){let e=parseFloat(t.target.value);u.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${e}`,this.context),this.definition.settingValue=e,this.definition.calculatedSettingValue=e*this.definition.settingValueMultiplier,await super.handleSettingAction("value"),S.saveSettingsToStorage()}},bt=class extends Me{constructor(t,e,a,n){super(t,e,a,n)}getValue(){return this.definition.settingValue}setValue(t){this.definition.settingValue=t,S.saveSettingsToStorage()}async handleChange(t){let e=t.target.value;u.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${e}`,this.context),this.definition.settingValue=e,this.definition.calculatedSettingValue=e,await super.handleSettingAction("value"),S.saveSettingsToStorage()}},ft=class extends Me{constructor(t,e,a,n){super(t,e,a,n)}getValue(){return this.definition.settingValue}setValue(t){this.definition.settingValue=t,S.saveSettingsToStorage()}async handleChange(t){let e=t.target,a=Array.from(e.selectedOptions).map(n=>n.value);u.log(`${this.definition.settingName}: ${JSON.stringify(this.definition.settingValue)} -> ${JSON.stringify(a)}`,this.context),this.definition.settingValue=a,this.definition.calculatedSettingValue=a,await super.handleSettingAction("value"),S.saveSettingsToStorage()}},At=class extends Me{constructor(t,e,a,n){super(t,e,a,n)}getValue(){return p.removeColorTags(this.definition.settingValue)}getDisplayValue(){return p.parseColorTags(this.definition.settingValue)}setValue(t){this.definition.settingValue=t,this.definition.calculatedSettingValue=t;let e=document.querySelector(`#${this.definition.settingControl?.controlId}`);e&&(e.innerHTML=this.getDisplayValue()),S.saveSettingsToStorage()}async handleChange(t){}};var ti=Aa({"../../../resource/json/strategies/BTMco. Demon King v1.0.json":()=>Promise.resolve().then(()=>ke(Fa())),"../../../resource/json/strategies/BTMco. Quark Factory v2.2.json":()=>Promise.resolve().then(()=>ke(Ya())),"../../../resource/json/strategies/Quark Molker v1.1.json":()=>Promise.resolve().then(()=>ke(Ja())),"../../../resource/json/strategies/TAS v3.2.json":()=>Promise.resolve().then(()=>ke(za())),"../../../resource/json/strategies/manifest.json":()=>Promise.resolve().then(()=>ke(ga()))});var S=class o extends z{static#e="";static#a={};static#t;static#o;static#n=!1;static#i;static#s="\u2713";static#r="\u2717";#l;constructor(t){super(t),o.#e=this.context,this.#l=new ut,u.log("Parsing mod settings",this.context);try{u.log("Parsing settings_control_groups",this.context),o.#t=JSON.parse(wa)}catch(e){u.error(`Error parsing settings_control_groups ${e}`,this.context),o.#n=!1}try{u.log("Parsing settings_control_pages",this.context),o.#o=JSON.parse(La)}catch(e){u.error(`Error parsing settings_control_pages ${e}`,this.context),o.#n=!1}try{u.log("Parsing settings.json",this.context);let e=this.#y(),a=!1;"useGameData"in e&&(a=e.useGameData.enabled);for(let[n,i]of Object.typedEntries(e)){let s=i;(s.settingType==="boolean"||p.isBoolean(s.settingValue))&&(s.settingValue=!1),i.usesGameData&&i.enabled&&!a&&(f.HSSettings.gameDataCheckBlacklist.includes(n)||(u.info(`Disabled ${i.settingDescription} on load because GDS is not on`,this.context),i.enabled=!1)),this.#h(i,o.#t);let r="settingAction"in i?i.settingAction:void 0,l=r?this.#l.getAction(r):null;switch(i.settingType){case"numeric":if(!("settingValueMultiplier"in s)){let c=s;c.settingValueMultiplier=1}o.#a[n]=new ht(s,l,o.#s,o.#r);break;case"string":o.#a[n]=new mt(s,l,o.#s,o.#r);break;case"boolean":o.#a[n]=new dt(s,l,o.#s,o.#r);break;case"selectnumeric":if(!("settingValueMultiplier"in s)){let c=s;c.settingValueMultiplier=1}o.#a[n]=new pt(s,l,o.#s,o.#r);break;case"selectstring":o.#a[n]=new bt(s,l,o.#s,o.#r);break;case"selectstrings":o.#a[n]=new ft(s,l,o.#s,o.#r);break;case"state":o.#a[n]=new At(s,l,o.#s,o.#r);break;case"button":o.#a[n]=new gt(s,l,o.#s,o.#r);break;default:throw new Error(`Could not parse setting ${n.toString()} (settingType: ${i.settingType}, settingValue: ${i.settingValue})`)}}o.saveSettingsToStorage(),o.#n=!0,u.updateDebugEnabled()}catch(e){u.error(`Error parsing mod settings ${e}`,this.context),o.#n=!1}}async init(){this.isInitialized=!0}static getUIDependencies(){return o.#m()}static#m(){return{settingsParsed:o.#n,settings:o.#a,settingsControlGroups:o.#t,settingsControlPages:o.#o,settingEnabledString:o.#s,settingDisabledString:o.#r,settingChangeDelegate:o.#p,settingToggleDelegate:o.#S}}static{this.getSetting=t=>o.#a[t]}static{this.getSettings=()=>o.#a}static getStrategies(){return he.getStrategies()}static getMergedStrategyOptions(){return he.getMergedStrategyOptions()}static getDefaultStrategyNames(){return he.getDefaultStrategyNames()}static async loadDefaultStrategyByName(t){try{let e=await ti(`../../../resource/json/strategies/${t}.json`);return e.default||e}catch(e){return u.error(`Failed to load strategy '${t}': ${e}`,this.#e),null}}static validateStrategy(t){return he.validateStrategy(t,o.#e)}static ensureAoagPhase(t){return he.ensureAoagPhase(t)}static ensureCorruptionLoadouts(t){return he.ensureCorruptionLoadouts(t)}static saveSettingsToStorage(){this.#i&&clearTimeout(this.#i),this.#i=setTimeout(()=>{let t=L.getModule("HSStorage");if(t){let e=this.#c();t.setData(f.HSSettings.storageKey,e)?u.debug(()=>"<green>Settings saved to localStorage</green>",this.#e):u.warn("Could not save settings to localStorage",this.#e)}this.#i=void 0},250)}static#c(){let t={};for(let[e,a]of Object.typedEntries(this.#a)){let n={...a.getDefinition()},i=f.HSSettings.serializationBlackList;for(let s of i)n[s]&&delete n[s];t[e.toString()]=n}return JSON.stringify(t)}#g(){let t=JSON.parse(Ea);for(let[e,a]of Object.typedEntries(t)){if(!a)continue;let n=a;if((n.settingType==="boolean"||p.isBoolean(n.settingValue))&&(n.settingValue=!1),a.settingType==="selectnumeric"||a.settingType==="selectstring"){if(!("settingValue"in a)){let i=n;i.settingValue=""}if("settingControl"in a&&a.settingControl){let i=a.settingControl;"selectOptions"in i&&i.selectOptions&&(i.selectOptions.find(r=>r.value==="")||i.selectOptions.unshift({text:"None",value:""}))}}if((n.settingType==="numeric"||n.settingType==="selectnumeric"||p.isNumeric(n.settingValue))&&!("settingValueMultiplier"in n)){let i=n;i.settingValueMultiplier=1}if(n.settingType==="state"&&!("settingValue"in n)){let i=n;i.settingValue="<red>null</red>"}this.#h(a,o.#t)}return t}#b(){let t=L.getModule("HSStorage");if(t){let e=t.getData(f.HSSettings.storageKey);return e?JSON.parse(e):(u.warn("Could not load settings from localStorage",this.context),null)}else return u.warn("Could not find HSStorage module",this.context),null}#y(){let t=this.#g();try{let e=this.#b(),a=he.parseStoredStrategies(this.context);a&&he.setStrategies(a);let n=JSON.parse(JSON.stringify(t));return e?(u.log("<green>Found settings from localStorage!</green>",this.context),Object.keys(t).forEach(i=>{if(!(i in e))return;let s=e[i],r=t[i];!s||!r||Object.keys(s).forEach(l=>{if(l in r){let c=s[l],g=r[l];if(c!==null&&typeof c=="object"&&!Array.isArray(c)&&typeof g=="object"&&!Array.isArray(g)){let h={...g};Object.keys(c).forEach(d=>{d in h&&(h[d]=c[d])});let m=n[i];m[l]=h}else{let h=n[i];h[l]=c}}})}),n):t}catch(e){return u.error("Error while resolving settings",this.context),console.log(e),t}}#h(t,e){if(!t)throw new Error("Setting is undefined (wtf)");let a=["text","number","switch","select","state","button"],n=["numeric","string","boolean","selectnumeric","selectstring","selectstrings","state","button"];if(!("settingName"in t))throw new Error("Setting is missing settingName property");let i=t.settingName;if(!("enabled"in t))throw new Error(`Setting '${i}' is missing enabled property`);if(!("settingDescription"in t))throw new Error(`Setting '${i}' is missing settingDescription property`);if(!("settingValue"in t))throw new Error(`Setting '${i}' is missing settingValue property`);if(!("settingType"in t))throw new Error(`Setting '${i}' is missing settingType property`);if(!n.includes(t.settingType))throw new Error(`Setting '${i}' has invalid settingType property`);let s=t.settingType;if(s==="numeric"){if(!p.isNumeric(t.settingValue))throw new Error(`Setting '${i}' has invalid settingValue property for settingType ${s}`)}else if(s==="string"){if(!p.isString(t.settingValue))throw new Error(`Setting '${i}' has invalid settingValue property for settingType ${s}`)}else if(s==="boolean"){if(!p.isBoolean(t.settingValue))throw new Error(`Setting '${i}' has invalid settingValue property for settingType ${s}`)}else if(s==="selectnumeric"){if(!p.isString(t.settingValue)&&!p.isNumeric(t.settingValue))throw new Error(`Setting '${i}' has invalid settingValue property for settingType ${s}`)}else if(s==="selectstring"&&!p.isString(t.settingValue)&&!p.isNumeric(t.settingValue))throw new Error(`Setting '${i}' has invalid settingValue property for settingType ${s}`);if("settingControl"in t&&t.settingControl){let r=t.settingControl;if(r.controlType!=="switch"&&!("controlId"in r))throw new Error(`Setting '${i}' has settingControl defined and it is not type'switch', but it is missing controlId property`);if(!("controlType"in r))throw new Error(`Setting '${i}' has settingControl defined, but it is missing controlType property`);if(!("controlGroup"in r))throw new Error(`Setting '${i}' has settingControl defined, but it is missing controlGroup property`);if(!a.includes(r.controlType))throw new Error(`Setting '${i}' has invalid controlType property`);if(!(r.controlGroup in e))throw new Error(`Setting '${i}' has invalid controlGroup property`)}}static async#p(t,e){await e.handleChange(t)}static async#S(t,e){await e.handleToggle(t)}static dumpToConsole(){console.log("------------------ HYPERSYNERGISM CURRENT SETTINGS DUMP START ------------------"),this.#a?console.log(this.#a):console.log("NO SETTINGS FOUND (wtf)"),console.log("------------------ HYPERSYNERGISM CURRENT SETTINGS DUMP END ------------------")}};var St=class extends z{#e;#a;#t=["chronos","hyperrealism","quark","challenge","abyss","accelerator","acceleratorBoost","multiplier"];#o=[];#n=[];#i={chronosHepteract:0,hyperrealismHepteract:0,quarkHepteract:0,challengeHepteract:0,abyssHepteract:0,acceleratorHepteract:0,acceleratorBoostHepteract:0,multiplierHepteract:0};#s={chronosHepteract:null,hyperrealismHepteract:null,quarkHepteract:100,challengeHepteract:null,abyssHepteract:null,acceleratorHepteract:null,acceleratorBoostHepteract:null,multiplierHepteract:null};#r=0;#l=0;#m=0;#c=0;#g=0;#b=`
+        <div id="hs-ratio-container">
+            <div class="hs-ratio" id="hs-ratio-a">CHR/HYP/CHL: 1 / 123 / 123</div>
+            <div class="hs-ratio" id="hs-ratio-b">ACC/BST/MLT: 1 / 123 / 123</div>
+            <div class="hs-ratio" id="hs-ratio-c">CHR/ACC: 1 / 123</div>
+        </div>`;#y=`
+        #hs-ratio-container {
+            width: 100%;
+            display: grid;
+            justify-items: center;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: 1fr;
+            grid-column-gap: 0px;
+            grid-row-gap: 0px;
+        }`;#h;#p;#S;#v;#A;#d;#f;#M=!1;#E=!1;constructor(t){super(t),this.#o=this.#t.map(e=>`${e}Hepteract`),this.#n=this.#t.map(e=>`${e}ProgressBarText`)}async init(){let t=this;u.log("Initialising HSHepteracts module",this.context);let e=L.getModule("HSGameState");e&&(e.subscribeGameStateChange("MAIN_VIEW",(a,n)=>{a.getId()===8&&n.getId()!==8&&e.getCurrentUIView("CUBE_VIEW").getId()===7&&t.#f&&(u.debug(()=>"Hepteract forge view closed, stopping watch",this.context),x.stopWatching(t.#f))}),e.subscribeGameStateChange("CUBE_VIEW",async(a,n)=>{n.getId()===7?(u.debug(()=>"Hepteract forge view opened, starting watch",this.context),t.#A=await x.HookElement("#hepteractQuantity"),t.#f=x.watchElement(t.#A,i=>{try{let s=parseFloat(p.unfuckNumericString(i));t.#d=s}catch{u.error("Failed to parse owned hepteracts",t.context)}t.#E=!1},{greedy:!0,overrideThrottle:!0,valueParser:i=>i.querySelector("span")?.innerText})):a.getId()===7&&t.#f&&(u.debug(()=>"Hepteract forge view closed, stopping watch",this.context),x.stopWatching(t.#f))})),this.#e=await x.HookElement("#heptGrid"),this.#a=await x.HookElement("#hepteractCraftTexts"),this.#e.childNodes.forEach(a=>{if(a.nodeType===1){let n=a,i=n.id;if(t.#o.includes(i)){let s=document.querySelector(`#${i}CraftMax`),r=document.querySelector(`#${i}Cap`),l=document.querySelector(`#${i}Image`);n.addEventListener("mouseenter",async c=>{if(i in t.#s&&i==="quarkHepteract")return;let g=document.querySelector("#hepteractCostText");if(g){let m=g.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(m){let d=m[1];try{if(i in t.#s){let b=p.parseFloat2(d);t.#s[i]=b}}catch{u.warn(`Error while parsing hepteract cost for ${i}`,t.context)}}}}),s&&r&&l&&(l.addEventListener("mouseenter",async c=>{let m=c.target.id.toLowerCase().includes("quark");if(t.#d!==null&&t.#d!==void 0){let d=t.#i[i],b=t.#s[i];if(d===null||b===null)return;let y=S.getSetting("expandCostProtectionDoubleCap"),v=null;if(y.getValue(),v=d*2*b,t.#d===0)t.#L(v,"\u221E",m);else{let A=t.#d>0?v/t.#d:1;t.#L(v,A,m)}}}),l.addEventListener("click",async c=>{let h=c.target.id,m=h.toLowerCase().includes("quark");if(!h||m)return;if(t.#M||t.#E){u.debug(()=>`Quick expand cancelled, another expand was still pending (exp ${t.#M}, wtch: ${t.#E})`,t.context);return}t.#M=!0;let d=null,b=null;if(t.#d!==null&&t.#d!==void 0){if(t.#d===0){u.info("Owned hepteracts is 0",this.context),t.#M=!1;return}let A=t.#i[i],T=t.#s[i];(A===null||T===null)&&u.warn(`Hepteract cost for ${i} not parsed yet`,t.context);let E=S.getSetting("expandCostProtectionDoubleCap"),k=null;E.getValue(),k=A*2,d=A*2*T,b=t.#d>0?d/t.#d:1,u.debug(()=>`
+                                    Current max: ${A},
+                                    Cube cost: ${p.N(T??0)},
+                                    Next hepts: ${p.N(k??0)},
+                                    Buy cost: ${p.N(d??0)},
+                                    Percent owned: ${p.N(b??0)},
+                                    Double Cap: ${E.getValue()}`,this.context);let B=S.getSetting("expandCostProtection"),D=S.getSetting("expandCostProtectionNotifications"),N=!(D&&D.getValue()===!0);if(B.isEnabled()){let U=B.getCalculatedValue();if(U&&b>=U){N&&u.info(`Hept. cost protection: Cost owned ${p.N(b*100)}% >= ${U*100}%`,this.context),t.#M=!1;return}}}else{u.warn("Owned hepteracts not parsed yet",this.context),t.#E=!1,t.#M=!1;return}let y=await x.HookElement("#toggle35");if(y&&y.innerText.includes("ON")&&(u.info("Turned hepteract notification toggle OFF",this.context),y.click()),await p.hiddenAction(async()=>{r.click()},"confirm",!1,25),await p.wait(25),s.click(),d&&b&&t.#L(d,b),await p.wait(5),i!=="quarkHepteract"){let A=document.querySelector("#hepteractCostText");if(A){let E=A.innerText.match(/you\s+(.*?)\s+Hepteracts/i);if(E){let k=E[1];try{if(i in t.#s){let B=p.parseFloat2(k);t.#s[i]=B}}catch{u.warn(`Error while parsing NEW hepteract cost for ${i}`,t.context)}}}}let v=t.#A?t.#A:document.querySelector("#hepteractQuantity");if(v){let A=v.querySelector("span");if(A){let T=A.innerText,E=parseFloat(T);t.#d=E}}t.#M=!1}))}}}),document.querySelectorAll(".heptTypeImage").length>0&&M.injectStyle(`
+                .heptTypeImage:not(#quarkHepteractImage):not(#hepteractToQuarkImage):not(#overfluxPowderImage) {
+                    transform: scale(1);
+                    transform-origin: 50% 50%;
+                }
+
+                .heptTypeImage:not(#quarkHepteractImage):not(#hepteractToQuarkImage):not(#overfluxPowderImage):hover {
+                    transform: scale(1.05);
+                    cursor: pointer;
+                }
+
+                .heptTypeImage:not(#quarkHepteractImage):not(#hepteractToQuarkImage):not(#overfluxPowderImage):active {
+                    transform: scale(0.98);
+                }
+            `),u.log("Hepteract images now serve as 'quick expand and max' buttons",this.context),u.log("Setting up hepteract ratio watch",this.context),M.injectStyle(this.#y),M.injectHTMLString(this.#b,a=>{t.#e?.parentNode?.insertBefore(a,t.#e)}),this.#h=document.querySelector("#hs-ratio-a"),this.#p=document.querySelector("#hs-ratio-b"),this.#S=document.querySelector("#hs-ratio-c"),this.#n.forEach(a=>{let n=document.querySelector(`#${a}`),i=a.substring(0,a.indexOf("ProgressBar"))+"Hepteract";n&&i?x.watchElement(n,s=>{i in t.#i?(t.#i[i]=s,Object.values(t.#i).every(r=>r>0)&&(t.#l=Math.round(t.#i.chronosHepteract/t.#i.challengeHepteract),t.#r=Math.round(t.#i.hyperrealismHepteract/t.#i.challengeHepteract),t.#c=Math.round(t.#i.acceleratorHepteract/t.#i.multiplierHepteract),t.#m=Math.round(t.#i.acceleratorBoostHepteract/t.#i.multiplierHepteract),t.#g=Math.round(t.#i.chronosHepteract/t.#i.acceleratorHepteract),this.#h&&this.#p&&this.#S&&(this.#h.innerText=`CHR/HYP/CHL: ${p.N(t.#l,0)} / ${p.N(t.#r,0)} / 1`,this.#p.innerText=`ACC/BST/MLT: ${p.N(t.#c,0)} / ${p.N(t.#m,0)} / 1`,this.#S.innerText=`CHR/ACC: ${p.N(t.#g,0)} / 1`))):u.warn(`Key ${i} not found in #boxCounts`,t.context)},{valueParser:s=>{let r=s.innerText;if(typeof r=="string"){let l=r.split("/");try{if(l&&l[1])return parseFloat(p.unfuckNumericString(l[1]))}catch{return u.warn(`Parsing failed for ${l}`,t.context),""}}return""}}):u.warn("Invalid meter or boxName",t.context)}),this.isInitialized=!0}#w(t){let e={cost:0,percentOwned:0};if(this.#d!==null&&this.#d!==void 0){if(this.#d===0){u.info("Owned hepteracts is 0",this.context);return}let a=this.#i[t],n=this.#s[t];if(a===null||n===null){u.warn(`Hepteract cost for ${t} not parsed yet`,this.context);return}let i=S.getSetting("expandCostProtectionDoubleCap"),s=null;i.getValue()?s=a*n:s=a*2*n;let r=this.#d>0?s/this.#d:1;return{cost:s,percentOwned:r}}else{u.warn("Owned hepteracts not parsed yet",this.context);return}}#L(t,e,a=!1){if(this.#a){let n=this.#a.querySelector("#hs-costText"),i;if(p.isNumeric(e)?i=p.N(e*100):i=e,n)a?n.innerText=`[${this.context}]: Total QUARK cost to max after next expand: ${p.N(t)} (ESTIMATE!)`:n.innerText=`[${this.context}]: Total HEPT cost to max after next expand: ${p.N(t)} (${i}% of owned)`;else{let s=document.createElement("div");s.id="hs-costText",a?s.innerText=`[${this.context}]: Total QUARK cost to max after next expand: ${p.N(t)} (ESTIMATE!)`:s.innerText=`[${this.context}]: Total HEPT cost to max after next expand: ${p.N(t)} (${i}% of owned)`,this.#a.appendChild(s)}}}};var yt=class extends z{#e=[];#a;#t;#o=3;#n=null;#i=3e3;#s=["Yellow","White","Green","Blue","Purple","Orange","Red"];#r=["#ffff00","#ffffff","#32cd32","#008b8b","#dda0dd","#ffa500","#ed143d"];constructor(t){super(t)}#l(){if(this.#t){let t=this.#s[this.#o],e=this.#r[this.#o];this.#t.innerHTML=`Cycle BUY<br>(Next: <span style="color: ${e};">${t}</span>)`}}async init(){let t=this;u.log("Initialising HSTalismans module",this.context);let e=S.getSetting("enableTalismansModule");if(!e||!e.isEnabled()){u.log("HSTalismans module is disabled via settings",this.context),this.isInitialized=!0;return}this.#a=await x.HookElement("#buyTalismanAll"),this.#e=await x.HookElements(".fragmentBtn");let a=document.createElement("button");a.id="hs-enhanced-buy-talisman-all",this.#t=a,a.className=this.#a.className;let n=window.getComputedStyle(this.#a);a.style.cssText=n.cssText,a.style.verticalAlign="baseline",a.style.border="2px solid white",a.style.padding="4px",this.#l(),this.#a.parentNode?.insertBefore(a,this.#a.nextSibling),a.addEventListener("click",i=>{t.#n&&clearTimeout(t.#n),t.#e.length!==0&&(t.#e[t.#o].click(),t.#o++,t.#o>t.#e.length-1&&(t.#o=0),t.#l(),t.#n=setTimeout(()=>{t.#o=3,t.#l()},t.#i))}),u.log("Fragments 'Cycle BUY' button added next to vanilla button",this.context),this.isInitialized=!0}};var vt=class extends z{constructor(t){super(t)}async init(){u.log("Extending native prototypes with extra functionality",this.context),Element.prototype.delegateEventListener=this.#a(),Document.prototype.delegateEventListener=this.#a(),Element.prototype.removeDelegateEventListener=this.#t(),Document.prototype.removeDelegateEventListener=this.#t(),HTMLElement.prototype.transition=this.#o(),HTMLElement.prototype.clearTransitions=this.#n(),Object.typedEntries=this.#i,String.prototype.colorTag=function(t){return`<${t}>${this}</${t}>`},HTMLElement.prototype.textNodes=function(){return Array.from(this.childNodes).filter(t=>t.nodeType===Node.TEXT_NODE).map(t=>t.textContent??null).filter(t=>t!==null)},this.isInitialized=!0}#e(t,e){return`${t}:${e}`}#a(){let t=this;return function(e,a,n,i){let s=this;s._delegateListeners||(s._delegateListeners=new Map);let r=t.#e(e,a);if(i!==void 0&&i===!0&&s._delegateListeners.has(r)&&s._delegateListeners.get(r).size>0)return this;s._delegateListeners.has(r)||s._delegateListeners.set(r,new Map);let l=function(c){let g=c.target;if(g.matches(a))n.call(g,c);else{let h=s.querySelectorAll(a);for(let m of Array.from(h))if(m.contains(g)){n.call(m,c);break}}};return s._delegateListeners.get(r).set(n,{delegateHandler:l}),this.addEventListener(e,l),this}}#t(){let t=this;return function(e,a,n,i){let s=this;if(!s._delegateListeners)return this;let r=t.#e(e,a),l=s._delegateListeners.get(r);if(!l)return this;let c=l.get(n);return c&&(s.removeEventListener(e,c.delegateHandler),l.delete(n),l.size===0&&s._delegateListeners.delete(r),s._delegateListeners.size===0&&delete s._delegateListeners),this}}#o(){return function(t,e,a="linear"){let n=this,i=n.style;return e=e??f.HSPrototypes.defaultTransitionTiming,new Promise(s=>{if(Object.keys(t).length===0){s();return}let r=i.transition,l=Object.keys(t).join(", ");i.transition=`${l} ${e}ms ${a}`;let c=new Set(Object.keys(t)),g=!1,h=()=>{g||(n.removeEventListener("transitionend",d),delete n._hsTransitionEndHandler,i.transition=r,g=!0,s())},m=()=>{!g&&c.size===0&&h()},d=A=>{if(!(A instanceof TransitionEvent))return;let T=p.kebabToCamel(A.propertyName);c.has(T)&&(c.delete(T),c.size===0&&h())};this._hsTransitionEndHandler=d,n.addEventListener("transitionend",d);let b=setTimeout(()=>{g||h()},e+50);n.offsetHeight;let y=window.getComputedStyle(n),v=!1;if(Object.entries(t).forEach(([A,T])=>{let E=y.getPropertyValue(A.replace(/([A-Z])/g,"-$1").toLowerCase()),k=typeof T=="number"&&A!=="zIndex"&&A!=="opacity"?`${T}px`:String(T);E&&E!=="none"&&E!=="auto"&&E!==k?v=!0:c.delete(A),i[A]=T}),!v||c.size===0){clearTimeout(b),h();return}c.size===0&&h(),m()})}}#n(){return function(){this.style.transition="none",this._hsTransitionEndHandler&&(this.removeEventListener("transitionend",this._hsTransitionEndHandler),delete this._hsTransitionEndHandler)}}#i(t){return Object.entries(t)}};var Mt=class extends z{#e;constructor(t){super(t),this.#e=new Map}async init(){}createShadow(t,e,a=!1){let n=e??p.domid(),i=this.#a(t);if(i)return i;let s=new Tt(t,n,this).create(a);return s&&this.#e.set(n,s),s}getShadow(t){return this.#e.get(t)}destroyShadow(t){let e=t instanceof Tt?t.name:t,a=this.getShadow(e);a&&(a._destroy(),this.#e.delete(e))}#a(t){for(let[e,a]of this.#e.entries())if(t===a.getElement())return a;return null}},Tt=class{#e="HSShadow";#a;#t;#o;#n;#i;#s;#r={position:"absolute",width:"80vw",height:"80vh",left:"1vw",top:"1vh",overflowX:"auto",overflowY:"auto",zIndex:"1",backgroundColor:"rgba(125, 125, 125, 0.8)"};constructor(t,e,a){this.#t=t,this.name=e,this.#a=a,this.#s=document.createElement("div")}getElement(){return this.#t}getContainer(){return this.#s}hide(){this.#t.style.display="none",this.#s.style.display="none"}show(){this.#t.style.display="block",this.#s.style.display="block"}create(t=!1){this.#i=this.#t.style.cssText;let e=this.#t.parentNode;if(this.#n=this.#t.nextSibling,!e)return u.warn("Could not create shadow, parent is null",this.#e),null;this.#o=e;for(let[a,n]of Object.entries(this.#r))this.#s.style[a]=n;return t||this.hide(),document.body.appendChild(this.#s),this.#t.parentNode?.removeChild(this.#t),this.#s.appendChild(this.#t),this}destroySelf(){this._destroy()}_destroy(){this.#o&&(this.#n?this.#o.insertBefore(this.#t,this.#n):this.#o.appendChild(this.#t),this.#i&&(this.#t.style.cssText=this.#i),this.#s?.remove())}};var Ct=class extends z{constructor(t){super(t)}async init(){}setData(t,e){try{let a=JSON.stringify(e);return localStorage.setItem(`${f.HSStorage.storagePrefix}${t}`,a),!0}catch(a){return a instanceof TypeError?u.warn("Data serialization error",this.context):a instanceof DOMException?u.warn("localStorage quota exceeded",this.context):u.warn(`Error saving to localStorage: ${a}`,this.context),!1}}getData(t){try{let e=localStorage.getItem(`${f.HSStorage.storagePrefix}${t}`);return e===null?(u.warn(`localStorage[${t}] is null`,this.context),null):JSON.parse(e)}catch(e){return u.warn(`Error retrieving from localStorage: ${e}`,this.context),null}}clearData(t){try{localStorage.removeItem(`${f.HSStorage.storagePrefix}${t}`)}catch(e){u.warn(`Error clearing localStorage: ${e}`,this.context)}}};var q=class o{#e="HSQuickbarManager";static#a;#t=new Map;#o=new Map;#n=!1;#i=new Map;#s=[];static{this.QUICKBAR_IDS={EVENTS:"events",AUTOMATION:"automation",CORRUPTION:"corruption",AMBROSIA_MINIBARS:"ambrosia-minibars",AMBROSIA:"ambrosia"}}static#r=[o.QUICKBAR_IDS.EVENTS,o.QUICKBAR_IDS.AUTOMATION,o.QUICKBAR_IDS.CORRUPTION,o.QUICKBAR_IDS.AMBROSIA_MINIBARS,o.QUICKBAR_IDS.AMBROSIA];#l=new Map;#m=new Map;#c=new Map;constructor(){}static getInstance(){return o.#a||(o.#a=new o),o.#a}static ensureQuickbarsRow(){let t=document.querySelector("header");if(!t)throw new Error("[HSQuickbarManager] Header element not found");let e=t.querySelector("#quickbarsRow");if(!e){e=document.createElement("div"),e.id="quickbarsRow";let a=t.querySelector(".navbar");a?t.insertBefore(e,a):t.appendChild(e)}return e}static getQuickbarsRow(){let t=document.querySelector("header");if(t)return t.querySelector("#quickbarsRow")||void 0}registerSection(t,e){this.#t.set(t,e),this.#s.includes(t)||this.#s.push(t),this.#n=!1,this.#l.has(t)||this.#l.set(t,new Promise(a=>{this.#m.set(t,a)}))}injectSection(t,e){let a=e||o.ensureQuickbarsRow();if(!a)return;let n=this.#o.get(t);n&&n.parentElement===a&&a.removeChild(n),this.#s=o.#r.filter(d=>this.#t.has(d));let i=this.#s.indexOf(t);if(i===-1)return;let s=this.#t.get(t);if(!s)return;let r=s();if(!r||!r.element)return;let l=r.element,c=r.teardown;typeof c=="function"&&this.#c.set(t,c);let g=null;for(let d=i+1;d<this.#s.length;d++){let b=this.#s[d],y=this.#o.get(b);if(y&&y.parentElement===a){g=y;break}}g?a.insertBefore(l,g):a.appendChild(l),this.#o.set(t,l);let h=this.#i.get(t);if(h)for(let d of h)try{d()}catch{}let m=this.#m.get(t);m&&(m(),this.#m.delete(t))}whenSectionInjected(t){return this.#o.has(t)?Promise.resolve():(this.#l.has(t)||this.#l.set(t,new Promise(e=>{this.#m.set(t,e)})),this.#l.get(t))}onSectionInjected(t,e){if(this.#o.has(t)){u.debug(()=>`section ${t} already injected, calling callback immediately`,this.#e),e();return}this.#i.has(t)||this.#i.set(t,[]),this.#i.get(t).push(e)}getSectionOrder(){return[...this.#s]}isInjected(t){return this.#o.has(t)}injectAll(){let t=o.ensureQuickbarsRow();for(let e of o.#r)this.#t.has(e)&&this.injectSection(e,t)}getSection(t){return this.#o.get(t)}async enableQuickbar(t,e,a,n){this.registerSection(t,e),n?this.#c.set(t,n):this.#c.delete(t),this.injectSection(t),await this.whenSectionInjected(t);let i=this.getSection(t);if(i&&a)try{a(i)}catch{}return u.debug(()=>`Quickbar ${t} enabled`,this.#e),i}disableQuickbar(t,e){if(e)try{e()}catch{}this.removeSection(t)}removeSection(t){let e=this.#c.get(t);if(e){try{e()}catch{}this.#c.delete(t)}this.#t.delete(t),this.#s=this.#s.filter(n=>n!==t);let a=this.#o.get(t);a&&a.parentElement&&a.parentElement.removeChild(a),this.#o.delete(t),this.#n=!1}};var te=class{static#e="HSAmbrosiaHelper";static getIconEnumById(t){return Object.values(it).find(e=>e===t)}static getSlotEnumBySlotId(t){return Object.values(nt).find(e=>e===t)}static getLoadoutNumberFromSlot(t){let e=t.match(/(\d+)$/);if(!e)return;let a=Number(e[1]);return Number.isInteger(a)&&a>0?a:void 0}static resolveAmbrosiaLoadout(t){if(t==null)return;let e=String(t),a=p.removeColorTags(e).trim(),n=this.getSlotEnumBySlotId(a);if(n)return n;let i=a.match(/^(?:Loadout\s*)?(\d+)$/i);if(i)return this.convertSettingLoadoutToSlot(i[1])}static convertSettingLoadoutToSlot(t){let e=Object.values(nt).find(a=>a===`blueberryLoadout${t}`);return e||u.warn(`Could not convert loadout ${t} to slot`,this.#e),e}static async ensureLoadoutModeIsLoad(){let t=await x.HookElement("#blueberryToggleMode");t&&t.innerText.includes("SAVE")&&t.click()}static setQuickbarTopTextVisibility(t){document.querySelectorAll(".hs-quickbar-summary-wrapper").forEach(a=>a.classList.toggle("hs-hidden",!t))}};var xt=class{constructor(t){this.context="HSAmbrosiaQuickbar";this.#e=new Map;this.host=t}#e;async init(){await this.ensureInjectedQuickbar(),await this.setupQuickbar()}#a(){q.getInstance().removeSection("ambrosia"),q.getInstance().registerSection("ambrosia",()=>{if(u.debug(()=>"Ambrosia Quickbar section factory called",this.context),!this.host.getPageHeader())return{element:document.createElement("div")};let e=q.ensureQuickbarsRow(),a=e.querySelector("#hs-ambrosia-group-wrapper");return a||(a=document.createElement("div"),a.id="hs-ambrosia-group-wrapper",a.style.display="flex",a.style.flexDirection="column",a.style.justifyContent="flex-end",e.appendChild(a)),e.lastChild!==a&&e.appendChild(a),{element:a}}),q.getInstance().injectSection("ambrosia")}async ensureInjectedQuickbar(){let t=q.getInstance();t.isInjected("ambrosia")||this.#a(),await t.whenSectionInjected("ambrosia")}async setupQuickbar(){await this.ensureInjectedQuickbar(),await this.createPersistentQuickbarContainer();let t=q.getInstance().getSection("ambrosia");if(!t){u.error("setupQuickbar: group wrapper missing after injection!",this.context,!0);return}let e=S.getSetting("ambrosiaQuickBar"),a=t.querySelector(`#${f.HSAmbrosia.quickBarId}`);a&&(e&&!e.isEnabled()?(a.style.display="none",u.debug(()=>"quickbar hidden due to settings",this.context)):(this.setupQuickbarSectionEvents(),await this.refreshQuickbarIcons(),await this.host.refreshActiveLoadoutFromState(),M.injectStyle(this.host.getQuickbarCSS(),this.host.getQuickbarCSSId())))}async createPersistentQuickbarContainer(){if(!this.host.getPageHeader())return;let e=q.ensureQuickbarsRow(),a=e.querySelector("#hs-ambrosia-group-wrapper");if(a||(a=document.createElement("div"),a.id="hs-ambrosia-group-wrapper",a.style.display="flex",a.style.flexDirection="column",a.style.justifyContent="flex-end",e.appendChild(a)),e.lastChild!==a&&e.appendChild(a),a.querySelector(`#${f.HSAmbrosia.quickBarId}`)){u.debug(()=>"Quickbar already exists in group wrapper",this.context);return}let n=this.host.getLoadoutContainer();if(n){let i=n.cloneNode(!0);i.id=f.HSAmbrosia.quickBarId,i.className="hs-quickbar-slots-wrapper",i.style.display="inline-flex";let s=i.querySelector(".blueberryLoadoutSetting");i.querySelectorAll(".blueberryLoadoutSlot").forEach(l=>{let c=l.id;l.dataset.originalId=c,l.id=`${f.HSAmbrosia.quickBarLoadoutIdPrefix}-${c}`;let g=async h=>{await this.onQuickBarClick(h,c)};this.#e.set(l,g),l.addEventListener("click",g)}),s&&s.remove(),a.childNodes.length>0?a.childNodes.length===1?a.appendChild(i):a.insertBefore(i,a.childNodes[1]):a.appendChild(i),await this.refreshQuickbarIcons(),await this.host.refreshActiveLoadoutFromState()}}getQuickbarSection(){let t=this.host.getLoadoutContainer();if(!t)throw u.error("getQuickbarSection called but loadoutContainer is not initialized",this.context,!0),new Error("Ambrosia loadout container not initialized");let e=t.cloneNode(!0);e.id=f.HSAmbrosia.quickBarId,e.className="hs-quickbar-slots-wrapper",e.style.display="inline-flex";let a=e.querySelector(".blueberryLoadoutSetting");return a&&a.remove(),e.querySelectorAll(".blueberryLoadoutSlot").forEach(i=>{let s=i.id;i.dataset.originalId=s,i.id=s}),e}setupQuickbarSectionEvents(){let t=q.getInstance().getSection("ambrosia");t&&(t.querySelectorAll(".blueberryLoadoutSlot").forEach(e=>{let a=e;a.replaceWith(a.cloneNode(!0))}),t.querySelectorAll(".blueberryLoadoutSlot").forEach(e=>{let a=e,n=a.dataset.originalId||"",i=async s=>{await this.onQuickBarClick(s,n)};a.addEventListener("click",i),this.#e.set(a,i)}))}cleanupQuickbarClickHandlers(){for(let[t,e]of this.#e.entries())t.removeEventListener("click",e);this.#e.clear()}async refreshQuickbarIcons(){let t=this.host.getLoadoutState(),e=this.host.getPageHeader()?.querySelector(`#${f.HSAmbrosia.quickBarId}`);e&&e.querySelectorAll(".blueberryLoadoutSlot").forEach(i=>{let s=i.dataset.originalId;if(!s)return;let r=te.getSlotEnumBySlotId(s);if(!r)return;let l=t.get(r);if(l){let c=f.HSAmbrosia.ambrosiaLoadoutIcons.get(l);c&&(i.classList.add("hs-ambrosia-slot"),i.style.backgroundImage=`url(${c.url})`)}else i.classList.remove("hs-ambrosia-slot"),i.style.backgroundImage=""});let a=document.querySelector("#bbLoadoutContainer");if(a){a.querySelectorAll(".blueberryLoadoutSlot").forEach(s=>{let r=te.getSlotEnumBySlotId(s.id);if(!r)return;let l=t.get(r);if(l){let c=f.HSAmbrosia.ambrosiaLoadoutIcons.get(l);c&&(s.classList.add("hs-ambrosia-slot"),s.style.backgroundImage=`url(${c.url})`)}else s.classList.remove("hs-ambrosia-slot"),s.style.backgroundImage=""});let i=document.getElementById("bbLoadoutIconHint");t.size===0?i||(i=document.createElement("span"),i.id="bbLoadoutIconHint",i.textContent="Drag&drop icons from the grid to the bar! (Right-click on a slot to clear)",i.style.color="#93acc2",i.style.marginTop="5px",a.parentElement?.insertBefore(i,a)):i&&i.remove()}}async updateQuickBar(){await q.getInstance().whenSectionInjected("ambrosia"),S.getSetting("ambrosiaQuickBar").isEnabled()&&await this.refreshQuickbarIcons()}async onQuickBarClick(t,e){let a=document.querySelector(`#${e} `);a?(await te.ensureLoadoutModeIsLoad(),await p.hiddenAction(async()=>{a.click()})):u.warn(`Could not find real button for ${e}`,this.context)}async showQuickBar(){let t=await this.ensureAmbrosiaSection();if(!t){u.warn("Could not find group wrapper for quickbar",this.context);return}let e=t.querySelector(`#${f.HSAmbrosia.quickBarId}`);e?(e.style.display="inline-flex",M.injectStyle(this.host.getQuickbarCSS(),this.host.getQuickbarCSSId()),await this.refreshQuickbarIcons(),await this.host.refreshActiveLoadoutFromState()):u.warn("Could not find quickbar wrapper",this.context)}async hideQuickBar(){let t=await this.ensureAmbrosiaSection();if(!t){u.warn("Could not find group wrapper for quickbar",this.context);return}let e=t.querySelector(`#${f.HSAmbrosia.quickBarId}`);e&&(e.style.display="none",M.removeInjectedStyle(this.host.getQuickbarCSSId()))}async destroy(){this.cleanupQuickbarClickHandlers(),q.getInstance().removeSection("ambrosia"),M.removeInjectedStyle(this.host.getQuickbarCSSId())}async ensureAmbrosiaSection(){return await q.getInstance().whenSectionInjected("ambrosia"),q.getInstance().getSection("ambrosia")??null}};var qa=`#hs-minibars-wrapper {
+    width: 281px;
+    display: flex;
+    padding: 0px;
+    gap: 4px;
+    flex-direction: column;
+    margin-bottom: 5px;
+}
+
+#hs-blue-progress-bar,
+#hs-red-progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: black;
+    border: 1px solid white;
+    border-radius: 0px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+    position: relative;
+}
+
+#hs-blue-progress {
+    height: 100%;
+    background: linear-gradient(to right, navy, darkturquoise);
+    border-radius: 0px;
+    transition: width 0.4s ease;
+}
+
+#hs-red-progress {
+    height: 100%;
+    background: linear-gradient(to right, maroon, red);
+    border-radius: 0px;
+    transition: width 0.4s ease;
+}
+`;var Et=class extends z{#e;#a;#t=null;#o=[];#n=null;#i=null;#s=new Map;#r;#l;#m="hs-ambrosia-quickbar-css";#c=`
+        #${f.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
+            filter: brightness(150%);
+        }
+    `;#g=`
+        #hs-ambrosia-loadout-idle-swap-indicator {
+            margin-bottom: 10px;
+            font-family: fantasy;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, #774ed1 20%, #00affa 30%, #0190cd 70%, #774ed1 80%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 500% auto;
+            animation: hs-loadout-ind-glow 3.5s ease-in-out infinite alternate;
+        }
+        @keyframes hs-loadout-ind-glow {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+        @-webkit-keyframes hs-loadout-ind-glow {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+    `;#b="hs-ambrosia-idle-loadout-css";#y="hs-ambrosia-minibar-css";#h=!1;#p;#S;#v;#A=!1;#d;#f;#M=!1;constructor(t){super(t),this.quickbar=new xt(this)}async init(){u.log("Initializing HSAmbrosia module",this.context),u.debug(()=>"init() called",this.context),await this.#E(),this.#L(),await this.loadState(),await this.quickbar.init(),await this.#$(),await this.#J(),this.#O(),ce.refreshAmbrosiaLoadoutDropdowns(),this.isInitialized=!0}async#E(){let[t,e,a,n]=await Promise.all([x.HookElement("#blueberryUpgradeContainer"),x.HookElements(".blueberryLoadoutSlot"),x.HookElement("#bbLoadoutContainer"),x.HookElement("header")]);this.#t=t,this.#o=e,this.#n=a,this.#i=n}async initializeActiveLoadoutFromGameData(){let t=L.getModule("HSGameDataAPI");if(!t)return;let e=t.getGameData();e||(e=await t.getForcedGameData()),e?await this.#K(e):u.warn("Could not retrieve game data to perform the initial ambrosia loadout match",this.context)}#w(){for(let[t,e]of f.HSAmbrosia.ambrosiaLoadoutIcons.entries()){let a=document.querySelector(`#${e.draggableIconId}`);a&&(a.draggable=!0,a.dataset.hsid=t,a.addEventListener("dragstart",n=>{if(!n.dataTransfer)return;let i=n.currentTarget?.dataset.hsid;i&&(u.log(`Drag start ${i}`,this.context),n.dataTransfer.effectAllowed="move",n.dataTransfer.setData("hs-amb-drag",i))}))}}#L(){this.#w()}async#T(){return await q.getInstance().whenSectionInjected("ambrosia"),q.getInstance().getSection("ambrosia")??null}#O(){this.#n&&(this.#n.delegateEventListener("dragenter",".blueberryLoadoutSlot",this.#V),this.#n.delegateEventListener("dragover",".blueberryLoadoutSlot",this.#B),this.#n.delegateEventListener("drop",".blueberryLoadoutSlot",this.#R.bind(this)),this.#n.delegateEventListener("contextmenu",".blueberryLoadoutSlot",this.#C.bind(this)),this.#n.delegateEventListener("click",".blueberryLoadoutSlot",this.#q.bind(this)))}#V(t){t.dataTransfer&&t.dataTransfer.types.includes("hs-amb-drag")&&(t.preventDefault(),t.stopPropagation(),t.dataTransfer.effectAllowed="move")}#B(t){t.dataTransfer&&t.dataTransfer.types.includes("hs-amb-drag")&&(t.preventDefault(),t.stopPropagation(),t.dataTransfer.effectAllowed="move")}async#R(t){let e=t.target;if(!t.dataTransfer||!t.dataTransfer.types.includes("hs-amb-drag")||!e)return;t.preventDefault(),t.stopPropagation();let a=te.getIconEnumById(t.dataTransfer.getData("hs-amb-drag")),n=e.dataset.originalId||e.id;if(!a){u.warn(`Invalid icon ID: ${a}`,this.context);return}if(!f.HSAmbrosia.ambrosiaLoadoutIcons.has(a)){u.warn(`Could not find loadout slot entry for ${a}`,this.context);return}if(!e.classList.contains("blueberryLoadoutSlot")||!n)return;let i=te.getSlotEnumBySlotId(n);if(!i){u.warn(`Invalid slot ID: ${n}`,this.context);return}if(!f.HSAmbrosia.ambrosiaLoadoutIcons.get(a)){u.warn(`Could not find icon for ${a}`,this.context);return}this.#I(i,a),this.#s.set(i,a),this.saveState(),await this.updateQuickBar()}async#C(t){t.preventDefault();let e=t.target;if(!e)return;let a=e.id,n=te.getSlotEnumBySlotId(a);if(!n){u.warn(`No slot enum found for slot ID: ${a}`,this.context);return}if(!this.#s.get(n)){u.warn(`No icon found for slot ID: ${a}`,this.context);return}e.classList.remove("hs-ambrosia-slot"),e.style.backgroundImage="",this.#s.delete(n),this.saveState(),await this.updateQuickBar()}async#q(t){let e=t.target;if(!e)return;let a=e.id,n=te.getSlotEnumBySlotId(a);if(!n){u.warn(`No slot enum found for slot ID: ${a}`,this.context);return}this.activeLoadout!==n&&await this.#j(n)}getLoadoutContainer(){return this.#n}getPageHeader(){return this.#i}getLoadoutState(){return this.#s}getQuickbarCSS(){return this.#c}getQuickbarCSSId(){return this.#m}async refreshActiveLoadoutFromState(){let t=te.resolveAmbrosiaLoadout(this.activeLoadout);t&&await this.#j(t)}async updateQuickBar(){await this.quickbar.updateQuickBar()}async showQuickBar(){await this.quickbar.showQuickBar()}async hideQuickBar(){await this.quickbar.hideQuickBar()}async destroy(){await this.quickbar.destroy(),await this.disableBerryMinibars(),this.unsubscribeGameDataChanges(),M.removeInjectedStyle(this.#y),M.removeInjectedStyle(this.#b),this.isInitialized=!1,this.activeLoadout=void 0}async disableBerryMinibars(){await q.getInstance().whenSectionInjected("ambrosia");let t=q.getInstance().getSection("ambrosia");if(!t){u.warn("Could not find group wrapper for minibars",this.context);return}let e=t.querySelector(`#${f.HSAmbrosia.barWrapperId}`);e?(e.style.display="none",M.removeInjectedStyle(this.#y)):u.warn("Could not find bar wrapper element",this.context),te.setQuickbarTopTextVisibility(!1),this.#A=!1,this.unsubscribeGameDataChanges()}async enableBerryMinibars(){await q.getInstance().whenSectionInjected("ambrosia");let t=q.getInstance().getSection("ambrosia");if(!t){u.warn("Could not find group wrapper for minibars",this.context);return}let e=t.querySelector(`#${f.HSAmbrosia.barWrapperId}`);e?(e.style.display="block",M.injectStyle(qa,this.#y),this.subscribeGameDataChanges(),this.#A=!0,te.setQuickbarTopTextVisibility(!0)):u.warn("Could not find minibar wrapper",this.context)}async#$(){if(!this.#i)return;let t=q.ensureQuickbarsRow(),e=t.querySelector("#hs-ambrosia-group-wrapper");if(e||(e=document.createElement("div"),e.id="hs-ambrosia-group-wrapper",e.className="hs-quickbar",e.style.display="flex",e.style.flexDirection="column",e.style.justifyContent="flex-end",t.appendChild(e)),t.lastChild!==e&&t.appendChild(e),e.querySelector(`#${f.HSAmbrosia.barWrapperId}`)){u.debug(()=>"Minibar wrapper already exists in group wrapper",this.context);return}let n=(await x.HookElement("#ambrosiaProgressBar")).cloneNode(!0),i=n.querySelector("#ambrosiaProgress"),s=n.querySelector("#ambrosiaProgressText");n.id=f.HSAmbrosia.blueBarId,i.id=f.HSAmbrosia.blueBarProgressId,s.id=f.HSAmbrosia.blueBarProgressTextId;let l=(await x.HookElement("#pixelProgressBar")).cloneNode(!0),c=l.querySelector("#pixelProgress"),g=l.querySelector("#pixelProgressText");l.id=f.HSAmbrosia.redBarId,c.id=f.HSAmbrosia.redBarProgressId,g.id=f.HSAmbrosia.redBarProgressTextId;let h=document.createElement("div");h.id=f.HSAmbrosia.barWrapperId,h.style.display="none",h.appendChild(n),h.appendChild(l),e.firstChild?e.insertBefore(h,e.firstChild):e.appendChild(h),this.#d=i,this.#f=c}async resetActiveLoadout(){await this.#T(),this.activeLoadout=void 0,[this.#i?.querySelector(`#${f.HSAmbrosia.quickBarId}`),document.querySelector("#bbLoadoutContainer"),document.querySelector("#hs-ambrosia-slots-wrapper")].forEach(e=>{e&&e.querySelectorAll(".hs-rainbow-border").forEach(a=>{a.classList.remove("hs-rainbow-border")})})}async#j(t){if(!t){u.warn("No slot specified to #updateActiveLoadout",this.context);return}let e=te.resolveAmbrosiaLoadout(t);if(!e){u.warn("Invalid or unknown slot passed to #updateActiveLoadout: "+t,this.context);return}this.activeLoadout=e,await q.getInstance().whenSectionInjected("ambrosia");let a=te.getLoadoutNumberFromSlot(e);if(!a){u.warn("Could not parse loadout number from resolvedSlot:"+e,this.context);return}await this.#U(a),await this.#F(a),u.debug(()=>"Switched Ambrosia loadout to "+e,this.context)}async#U(t){let e=q.getInstance().getSection("ambrosia");if(!e){u.warn("Could not find group wrapper for quickbar",this.context);return}let a=e.querySelector(`#${f.HSAmbrosia.quickBarId}`);if(!a){u.warn("Could not find quickbar element",this.context);return}a.querySelectorAll(".blueberryLoadoutSlot").forEach(r=>r.classList.remove("hs-rainbow-border"));let i=`hs-ambrosia-quickbar-blueberryLoadout${t}`,s=a.querySelector(`#${i}`);s?s.classList.add("hs-rainbow-border"):u.warn(`No activeSlot found in quickBar for slot ${t}`,this.context)}async#F(t){let e=document.querySelector("#bbLoadoutContainer");if(!e){u.warn("Could not find original quickbar container",this.context);return}e.querySelectorAll(".blueberryLoadoutSlot").forEach(s=>s.classList.remove("hs-rainbow-border"));let n=`blueberryLoadout${t}`,i=e.querySelector(`#${n}`);i?i.classList.add("hs-rainbow-border"):u.warn(`No activeSlot found in originalQuickBar for slot ${t}`,this.context)}calculateAmbUpgradeLevelFromSave(t,e,a){let n=L.getModule("HSGameDataAPI");if(!n)return 0;let i=n.R_ambrosiaUpgradeCalculationCollection[t];return i?n.investToAmbrosiaUpgrade(0,e,i.costPerLevel,i.maxLevel,i.costFunction):0}findBestMatchingAmbrosiaLoadout(t){let e=t.ambrosiaUpgrades,a=t.blueberryLoadouts;if(!e||!a)return{id:void 0,score:0};let n,i=0;u.debug(()=>`Analyzing save data... Found ${Object.keys(a).length} saved loadouts.`,this.context);for(let[s,r]of Object.entries(a)){if(!r||Object.keys(r).length===0)continue;let l=0,c=0,g=Object.entries(r);for(let[m,d]of g){if(m==="ambrosiaTutorial"||m==="ambrosiaPatreon")continue;c++;let b=e[m];(b?this.calculateAmbUpgradeLevelFromSave(m,b.ambrosiaInvested,t):0)===d&&l++}let h=c>0?l/c:0;if(h>i&&(i=h,n=s),h===1)break}return{id:n,score:i}}async performInitialActiveLoadoutMatch(t){if(!t)return;this.resetActiveLoadout();let{id:e,score:a}=this.findBestMatchingAmbrosiaLoadout(t);if(e&&a>=.8){await q.getInstance().whenSectionInjected("ambrosia");let i=parseInt(e,10),s=`blueberryLoadout${i}`;if(!this.#o.find(c=>c.id===s)){u.warn(`Invalid loadout slot: ${i}`,this.context);return}let l=te.getSlotEnumBySlotId(s);if(!l){u.warn(`No slot enum found for slot ID: ${s}`,this.context);return}this.activeLoadout=l,await this.#j(l),u.debug(()=>`Initial load - Ambrosia loadout best match: ${e} is ${(a*100).toFixed(1)}% compliant. `,this.context)}else e?u.debug(()=>`Initial load - No compliant Ambrosia loadout found. Closest was ${e} at ${(a*100).toFixed(1)}% (Threshold: 80%).`,this.context):u.debug(()=>"Initial load - No saved Ambrosia loadouts found to match.",this.context)}getAmbrosiaLoadoutsAmount(){return!this.#o||this.#o.length===0?0:this.#o.filter(t=>!(!t||t.style.display==="none")).length}#I(t,e){let a=document.querySelector(`[id="${t}"]`);if(!a){u.warn(`Could not find slot element for ${t}`,this.context);return}let n=f.HSAmbrosia.ambrosiaLoadoutIcons.get(e);if(!n){u.warn(`Could not find icon for ${e}`,this.context);return}a.classList.add("hs-ambrosia-slot"),a.style.backgroundImage=`url(${n.url})`}async enableAutoLoadout(){let t=this;if(!this.activeLoadout){let c=S.getSetting("addTimeAutoLoadouts");c&&c.isEnabled()&&c.disable(),u.warn("Could not enable auto loadout - current loadout state is not known!",this.context);return}let e=[x.HookElement("#addCode"),x.HookElement("#addCodeAll"),x.HookElement("#addCodeOne"),x.HookElement("#timeCode")],n=(await Promise.allSettled(e)).map((c,g)=>c.status==="fulfilled"?c.value:null);if(n.some(c=>c===null)){u.warn("Problem with enabling auto loadout",this.context);return}let[i,s,r,l]=n;this.#r||(this.#r=async c=>{await t.#Y(c)}),this.#l||(this.#l=async c=>{await t.#z(c)}),i.removeEventListener("click",this.#r,{capture:!0}),i.addEventListener("click",this.#r,{capture:!0}),s.removeEventListener("click",this.#r,{capture:!0}),s.addEventListener("click",this.#r,{capture:!0}),r.removeEventListener("click",this.#r,{capture:!0}),r.addEventListener("click",this.#r,{capture:!0}),l.removeEventListener("click",this.#l,{capture:!0}),l.addEventListener("click",this.#l,{capture:!0}),u.log("Enabled auto loadout",this.context)}async disableAutoLoadout(){let t=[x.HookElement("#addCode"),x.HookElement("#addCodeAll"),x.HookElement("#addCodeOne"),x.HookElement("#timeCode")],a=(await Promise.allSettled(t)).map((l,c)=>l.status==="fulfilled"?l.value:null);if(a.some(l=>l===null)){u.warn("Problem with disabling auto loadout",this.context);return}let[n,i,s,r]=a;this.#r&&(n.removeEventListener("click",this.#r,{capture:!0}),i.removeEventListener("click",this.#r,{capture:!0}),s.removeEventListener("click",this.#r,{capture:!0})),this.#l&&r.removeEventListener("click",this.#l,{capture:!0}),u.log("Disabled auto loadout",this.context)}async#Y(t){let e=this.activeLoadout,a=S.getSetting("autoLoadoutAdd");if(e&&a){let n=te.convertSettingLoadoutToSlot(a.getValue()),i=await x.HookElement(`#${n} `);await te.ensureLoadoutModeIsLoad(),await p.hiddenAction(async()=>{i.click()})}}async#z(t){let e=this.activeLoadout,a=S.getSetting("autoLoadoutTime");if(e&&a){let n=te.convertSettingLoadoutToSlot(a.getValue()),i=await x.HookElement(`#${n} `);await te.ensureLoadoutModeIsLoad(),await p.hiddenAction(async()=>{i.click()})}}async saveState(){let t=L.getModule("HSStorage");if(t){let e={loadoutState:Array.from(this.#s.entries()),activeLoadout:this.activeLoadout??null};t.setData(f.HSAmbrosia.storageKey,JSON.stringify(e))}else u.warn("saveState - Could not find storage module",this.context)}async loadState(){let t=L.getModule("HSStorage");if(t){let e=t.getData(f.HSAmbrosia.storageKey);if(!e){u.warn("loadState - No data found",this.context);return}let a=e;if(typeof e=="string")try{a=JSON.parse(e)}catch{this.activeLoadout=te.resolveAmbrosiaLoadout(e);return}try{Array.isArray(a)?this.#s=new Map(a):a&&typeof a=="object"&&(a.loadoutState&&(this.#s=new Map(a.loadoutState)),a.activeLoadout?this.activeLoadout=te.resolveAmbrosiaLoadout(a.activeLoadout):this.activeLoadout=void 0)}catch{u.warn("loadState - Error parsing data",this.context);return}}else u.warn("loadState - Could not find storage module",this.context)}async#J(){let t=await x.HookElement("#importBlueberriesButton");if(!t||document.getElementById("hs-ambrosia-extra-btn"))return;let e=document.createElement("button");e.id="hs-ambrosia-extra-btn",e.className="ambrosiaLoadoutBtn",e.textContent="Quick Import",t.parentElement?.insertBefore(e,t.nextSibling),e.addEventListener("click",()=>this.#k())}async#k(){let t=S.getSetting("autoConfirmPopups"),e=t&&t.isEnabled();t&&t.disable();let a=null,n,i=0,s=0,r=[];try{if(a=document.querySelector(".blueberryLoadoutSlot.hs-rainbow-border"),n=await navigator.clipboard.readText(),!n||typeof n!="string"){M.Notify("Clipboard does not contain valid loadout data",{notificationType:"warning"});return}let l=n.split(`
+`).map(d=>d.trim());if(l.length===0||l.length>16){M.Notify(`Invalid number of loadouts: ${l.length}. Expected 1 - 16.`,{notificationType:"warning"});return}let c=document.getElementById("importBlueberries"),g=await x.HookElement("#blueberryToggleMode");if(!c)throw new Error("Import input element not found");if(!g)throw new Error("Mode toggle button not found");g.innerText.includes("LOAD ")&&g.click(),i=0,s=0;let m=this.#o;r=[];for(let d=0;d<l.length;d++){let b=l[d];if(!b){s++;continue}let y=m[d];if(!y){u.warn(`Loadout slot element for index ${d} not found`,this.context);continue}let v=new Blob([b],{type:"application/json"}),A=new File([v],"quick-import.json",{type:"application/json"}),T=new DataTransfer;T.items.add(A),c.files=T.files;let E=new Event("change",{bubbles:!0});c.dispatchEvent(E);let k="",B,D;for(let G=0;G<50;G++){if(B=document.getElementById("alertWrapper"),B&&B.style.display==="block"){for(let K=0;K<40;K++){await p.sleep(5);let ie=B.querySelector(".scrollbar"),Z=ie&&ie.textContent?ie.textContent.trim():(B.textContent||"").trim();if(Z.length>0){k=Z;break}}D=document.getElementById("ok_alert"),D&&D.click();let X=!0;for(let K=0;K<20;K++){if(await p.sleep(5),B=document.getElementById("alertWrapper"),!B||B.style.display!=="block"){X=!1;break}D=document.getElementById("ok_alert"),D&&D.click()}break}await p.sleep(5)}if(!(k||"").toLowerCase().includes("tree successfully imported")){let G=k||"Unknown error";r.push({index:d+1,reason:G});try{c.files=new DataTransfer().files}catch{}continue}y.click();let U,P;for(let G=0;G<50;G++){if(U=document.getElementById("confirmWrapper"),U&&U.style.display==="block"){P=document.getElementById("ok_confirm"),P&&P.click();let X=!0;for(let K=0;K<20;K++){if(await p.sleep(5),U=document.getElementById("confirmWrapper"),!U||U.style.display!=="block"){X=!1;break}P=document.getElementById("ok_confirm"),P&&P.click()}break}await p.sleep(5)}i++}if(g.click(),r.length>0){let d=r.map(b=>`#${b.index}: ${b.reason}`).join("; ");M.Notify(`Imported ${i} loadout(s); ${r.length} failed (see logs)`,{notificationType:"warning"}),u.debug(()=>`Quick Import detailed failures: ${d}`,this.context)}else M.Notify(`Imported ${i} loadout(s), skipped ${s} empty slot(s)`,{notificationType:"success"})}catch(l){let c=l instanceof Error?l.message:typeof l=="string"?l:"Unknown error";u.error(`Quick Import failed: ${c} `,this.context,!0),u.debug(()=>`Quick Import exception message: ${c}; clipboardLen=${n?.length??"n/a"}; imported=${i??0}; skipped=${s??0}; failures=${JSON.stringify(r??[])}`,this.context),M.Notify("Quick Import failed",{notificationType:"error"})}finally{await p.stopDialogWatcher(),e&&t.enable(),a&&a.click()}}async enableIdleSwap(){let t=this,e=L.getModule("HSGameState");e?(this.#e=e.subscribeGameStateChange("MAIN_VIEW",this.#Z.bind(this)),this.#a=e.subscribeGameStateChange("SINGULARITY_VIEW",async(a,n)=>{n.getId()===5?await this.#P():(this.#h=!1,this.#G(),this.unsubscribeGameDataChanges())}),e.getCurrentUIView("MAIN_VIEW").getId()===13&&this.#P()):u.warn("HSAmbrosia.enableIdleSwap() - gameStateMod==undefined","hs-enable-idleswap-gamestate"),this.#v||(this.#v=document.querySelector("#hs-panel-debug-gamedata-currentambrosia"))}async#P(){if(this.#h)return;let t=L.getModule("HSGameState");if(!t){u.warnOnce("HSAmbrosia.#activateIdleSwapForCurrentSingularityAmbrosiaView() - gameStateMod==undefined","hs-amb-gamestate-activate");return}t.getCurrentUIView("MAIN_VIEW").getId()!==13||t.getCurrentUIView("SINGULARITY_VIEW").getId()!==5||(this.#p=await x.HookElement("#ambrosiaProgressBar"),this.#S=await x.HookElement("#pixelProgressBar"),this.#h=!0,this.#H(),this.subscribeGameDataChanges())}disableIdleSwap(){this.#h=!1,this.unsubscribeGameDataChanges();let t=L.getModule("HSGameState");t?(this.#e&&(t.unsubscribeGameStateChange("MAIN_VIEW",this.#e),this.#e=void 0),this.#a&&(t.unsubscribeGameStateChange("SINGULARITY_VIEW",this.#a),this.#a=void 0)):u.warnOnce("HSAmbrosia.disableIdleSwap() - gameStateMod==undefined","hs-disable-idleswap-gamestate"),this.#G()}subscribeGameDataChanges(){let t=L.getModule("HSGameData");t&&!this.gameDataSubscriptionId&&(this.gameDataSubscriptionId=t.subscribeGameDataChange(this.gameDataCallback.bind(this)),u.debug(()=>"Subscribed to game data changes",this.context))}unsubscribeGameDataChanges(){let t=L.getModule("HSGameData");t&&this.gameDataSubscriptionId&&!this.#h&&!this.#A&&(t.unsubscribeGameDataChange(this.gameDataSubscriptionId),this.gameDataSubscriptionId=void 0,u.debug(()=>"Unsubscribed from game data changes",this.context))}async#K(t){this.#M||(await this.performInitialActiveLoadoutMatch(t),this.#M=!0)}async gameDataCallback(){let t=L.getModule("HSGameDataAPI");if(!t)return;let e=t.getGameData();if(e&&(this.#M||await this.#K(e),e.blueberryTime!=null&&e.redAmbrosiaTime!=null)){let a=e.blueberryTime,n=e.redAmbrosiaTime,i=t.R_calculateRequiredBlueberryTime(),s=t.R_calculateRequiredRedAmbrosiaTime(),r=a/i*100,l=n/s*100,c=t.calculateAmbrosiaSpeed(),g=t.R_calculateBlueBerries(),h=c*g,m=e.shopUpgrades.shopAmbrosiaAccelerator,d=t.calculateLuck(),b=e.singularityChallenges.noAmbrosiaUpgrades.completions>0?1:0,y=d.total/100+b,v=(d.total-100*Math.floor(d.total/100))/100,A=0,T=0,E=0,k=h/i*100,B=k,D=1/2+(3/5-1/2)*+(e.singularityChallenges.noAmbrosiaUpgrades.completions>=15)+(2/3-3/5)*+(e.singularityChallenges.noAmbrosiaUpgrades.completions>=19)+(3/4-2/3)*+(e.singularityChallenges.noAmbrosiaUpgrades.completions>=20);if(m>0&&h>0){let N=i/h;A=Math.min(N*D,y*.2*m),T=1,E=T/i*100}if(this.#h&&this.#p&&this.#S){let N=S.getSetting("ambrosiaIdleSwapOcteractLoadout"),U=S.getSetting("ambrosiaIdleSwapNormalLuckLoadout"),P=S.getSetting("ambrosiaIdleSwapRedLuckLoadout");if(N&&U&&P){let G=N.getValue(),X=U.getValue(),K=P.getValue();if(!Number.isInteger(parseInt(G,10))||!Number.isInteger(parseInt(X,10))||!Number.isInteger(parseInt(K,10))){let F=S.getSetting("ambrosiaIdleSwap");F&&F.disable(),u.warn("Idle swap was disabled due to unconfigured loadouts",this.context);return}let ie=te.convertSettingLoadoutToSlot(G),Z=te.convertSettingLoadoutToSlot(X),J=te.convertSettingLoadoutToSlot(K),ee=B+E+B,ae=100-B,ve=100,W=f.HSAmbrosia.idleSwapMinRedThreshold+f.HSAmbrosia.idleSwapMinRedThreshold,Q=f.HSAmbrosia.idleSwapMaxRedThreshold,w=100,R;if(this.activeLoadout===J?l<Q?R=Z:R=J:this.activeLoadout===Z?r<ae?R=ie:R=Z:l>=Q?R=J:r>=ae?R=Z:R=this.activeLoadout,R&&this.activeLoadout!==R){let F=await x.HookElement(`#${R} `);await te.ensureLoadoutModeIsLoad(),await p.hiddenAction(async()=>{F.click()})}}if(this.#v&&M.isModPanelOpen()){let G=document.createElement("div");for(G.innerHTML=`
+        BLUE - Value: ${a.toFixed(2)}, Max: ${i}, Percent: ${r.toFixed(2)} <br>
+            RED - Value: ${n.toFixed(2)}, Max: ${s}, Percent: ${l.toFixed(2)} <br>
+                BLUE SPD MLT: ${c.toFixed(2)} <br>
+                    BLUE SPD %: ${k.toFixed(2)} <br>
+                        BERRY: ${g} </br>
+                        TOT BLU: ${(c*g).toFixed(2)} </br>
+        ------------------------</br>
+                        ADD LUK: ${d.additive.toFixed(2)} </br>
+                        RAW LUK: ${d.raw.toFixed(2)} </br>
+                        TOT LUK: ${d.total.toFixed(2)} </br>
+        ------------------------</br>
+                        ACC CNT: ${m} </br>
+                        ACCEL AMOUNT: ${T.toFixed(2)} </br>
+        ACCEL %: ${E.toFixed(2)} </br>
+            `,this.#v.innerHTML="";G.firstChild;)this.#v.appendChild(G.firstChild)}}this.#A?this.#d&&this.#f?(this.#d.style.width=`${r}% `,this.#f.style.width=`${l}% `):u.warnOnce(`
+        HSAmbrosia.gameDataCallback() - minibar element(s) undefined.
+            blue: ${this.#d},
+        red: ${this.#f} `,"hs-minibars-undefined"):u.logOnce("HSAmbrosia.gameDataCallback() - berryMinibarsEnabled was false","hs-minibars-false")}}#Z(t,e){let a=L.getModule("HSGameState");a?(e.getId()===13&&this.#P(),t.getId()===13&&e.getId()!==13&&a.getCurrentUIView("SINGULARITY_VIEW").getId()===5&&(this.#h=!1)):u.warnOnce("HSAmbrosia.gameStateCallbackMain() - gameStateMod==undefined","hs-amb-gamestate-cb")}#H(){if(document.querySelector(`#${f.HSAmbrosia.idleSwapIndicatorId} `))return;let e=document.createElement("div");e.id=f.HSAmbrosia.idleSwapIndicatorId,e.innerText="IDLE SWAP ENABLED WHILE IN THIS VIEW",M.injectHTMLElement(e,a=>{let n=document.querySelector("#singularityAmbrosia"),i=document.querySelector("#ambrosiaProgressBar");n?.insertBefore(a,i)}),M.injectStyle(this.#g,this.#b)}#G(){let t=document.querySelector(`#${f.HSAmbrosia.idleSwapIndicatorId} `);t&&t.remove(),M.removeInjectedStyle(this.#b)}};var wt=class extends z{constructor(t){super(t)}async init(){u.log("Initializing HSStats module",this.context),this.isInitialized=!0}};var Lt=class extends z{#e=-1;#a={BuildingView:qe,AchievementView:It,RuneView:Qe,ChallengeView:je,AntView:Ke,CubeView:Ze,SettingsView:_e,SingularityView:Xe,PseudoCoinView:$e};#t={MAIN_VIEW:{currentView:new ze("buildings"),previousView:new ze("buildings"),viewChangeSubscribers:new Map},BUILDING_VIEW:{currentView:new qe("switchToCoinBuilding"),previousView:new qe("unknown"),viewChangeSubscribers:new Map},ACHIEVEMENT_VIEW:{currentView:new It("toggleAchievementSubTab1"),previousView:new Qe("unknown"),viewChangeSubscribers:new Map},RUNE_VIEW:{currentView:new Qe("toggleRuneSubTab1"),previousView:new Qe("unknown"),viewChangeSubscribers:new Map},CHALLENGE_VIEW:{currentView:new je("toggleChallengesSubTab1"),previousView:new je("unknown"),viewChangeSubscribers:new Map},ANT_VIEW:{currentView:new Ke("toggleAntSubtab1"),previousView:new Ke("unknown"),viewChangeSubscribers:new Map},CUBE_VIEW:{currentView:new Ze("switchCubeSubTab1"),previousView:new Ze("unknown"),viewChangeSubscribers:new Map},SINGULARITY_VIEW:{currentView:new Xe("toggleSingularitySubTab1"),previousView:new Xe("unknown"),viewChangeSubscribers:new Map},SETTINGS_VIEW:{currentView:new _e("switchSettingSubTab1"),previousView:new _e("unknown"),viewChangeSubscribers:new Map},PSEUDOCOIN_VIEW:{currentView:new $e("cartSubTab1"),previousView:new $e("unknown"),viewChangeSubscribers:new Map}};#o=["buildings","upgrades","statistics","runes","challenges","research","ants","cubes","campaigns","traits","settings","shop","singularity","event","pseudoCoins"];constructor(t){super(t)}async init(){let t=this;u.log("Initializing HSGameState module",this.context);for(let e of this.#o){let a=document.querySelector(`#${e}`);x.watchElement(a,async n=>{if(n&&n!=="none"){let i=new ze(a.id);if(i.getId()!==-1)t.#t.MAIN_VIEW.previousView=t.#t.MAIN_VIEW.currentView,t.#t.MAIN_VIEW.currentView=i,u.debug(()=>`Main UI view changed ${t.#t.MAIN_VIEW.previousView.getName()} -> ${t.#t.MAIN_VIEW.currentView.getName()}`,t.context);else{u.warn(`Main UI view ${a.id} not found`,t.context);return}t.#t.MAIN_VIEW.viewChangeSubscribers.forEach(s=>{try{s(t.#t.MAIN_VIEW.previousView,t.#t.MAIN_VIEW.currentView)}catch(r){u.error(`Error when trying to call MAIN VIEW change subscriber callback: ${r}`,t.context)}}),this.#n(i.getId())}},{characterData:!1,childList:!1,subtree:!1,attributes:!0,attributeOldValue:!1,attributeFilter:["style"],valueParser:n=>n.style.getPropertyValue("display")})}f.HSGameState.viewProperties.forEach(async(e,a)=>{for(let n of e.subViewIds){let i=document.querySelector(`#${n}`);if(!i){u.warn(`Subview element not found: ${n}`,t.context);continue}x.watchElement(i,async()=>{if(!i.classList.contains("active-subtab"))return;let s;try{let g=this.#a[e.viewClassName];if(!g)throw new Error(`Class "${e.viewClassName}" not found in viewClasses for mainViewId ${a}`);s=new g(n)}catch(g){u.warn(`Failed to instantiate sub-view ${e.viewClassName}: ${g}`,t.context);return}let r=s.getViewKey();if(s.getId()===t.#e){u.warn(`Sub-view ${n} resolved to UNKNOWN or failed to initialize.`,t.context);return}t.#t[r].previousView=t.#t[r].currentView,t.#t[r].currentView=s;let l=t.#t[r].previousView,c=t.#t[r].currentView;l.getName()!==c.getName()&&(u.debug(()=>`Subtab UI view changed ${l.getName()} -> ${c.getName()}`,t.context),t.#t[r].viewChangeSubscribers.forEach(g=>{try{g(l,c)}catch(h){u.error(`Error when trying to call subtab VIEW change subscriber callback: ${h}`,t.context)}}))},{characterData:!1,childList:!1,subtree:!1,attributes:!0,attributeOldValue:!1,attributeFilter:["class"],valueParser:s=>s.className})}}),this.isInitialized=!0}subscribeGameStateChange(t,e){let a=p.uuidv4();return this.#t[t].viewChangeSubscribers.set(a,e),a}unsubscribeGameStateChange(t,e){this.#t[t].viewChangeSubscribers.has(e)?this.#t[t].viewChangeSubscribers.delete(e):u.warn(`Subscription ID ${e} not found for view key ${t}`,this.context)}async#n(t){let e=this,a=f.HSGameState.viewProperties.get(t);if(!a){u.debug(()=>`No view properties found for main view ID ${t}`,this.context);return}(await x.HookElements(a.subViewsSelector)).forEach(async i=>{let s=i.id;if(!i.classList.contains("active-subtab"))return;let l;try{let m=this.#a[a.viewClassName];if(!m)throw new Error(`Class "${a.viewClassName}" not found in viewClasses for mainViewId ${t}`);l=new m(s)}catch(m){u.warn(`Failed to instantiate sub-view ${a.viewClassName} for tab ${s}: ${m}`,e.context);return}let c=l.getViewKey();if(l.getId()===this.#e){u.warn(`Sub-view tab ${s} (for ${a.viewClassName}) resolved to UNKNOWN or failed to initialize.`,e.context);return}e.#t[c].previousView=e.#t[c].currentView,e.#t[c].currentView=l;let g=e.#t[c].previousView,h=e.#t[c].currentView;g.getName()!==h.getName()&&e.#t[c].viewChangeSubscribers.forEach(m=>{try{m(g,h)}catch(d){u.error(`Error when trying to call VIEW change subscriber callback: ${d}`,e.context)}})})}getCurrentUIView(t){return this.#t[t].currentView}getPreviousSubViewForMainView(t){let e=t.getId(),n={1:"BUILDING_VIEW",3:"ACHIEVEMENT_VIEW",4:"RUNE_VIEW",5:"CHALLENGE_VIEW",7:"ANT_VIEW",8:"CUBE_VIEW",13:"SINGULARITY_VIEW",11:"SETTINGS_VIEW",15:"PSEUDOCOIN_VIEW"}[e];return n?this.getCurrentUIView(n):void 0}},Se=class{#e;#a;constructor(t,e){this.#e=t,this.#a=e}getName(){return this.#e}getViewKey(){return this.#a}goto(){let t="HSGameState",e=this.getId(),a="";if(e in ea?a=ea[e]:e in ta?a=ta[e]:e in aa?a=aa[e]:e in na?a=na[e]:e in ia?a=ia[e]:e in oa?a=oa[e]:e in sa?a=sa[e]:e in la?a=la[e]:e in ra?a=ra[e]:e in ca&&(a=ca[e]),!a){u.warn(`No button ID mapping found for view: ${this.getName()}`,t);return}let n=document.getElementById(a);if(!n){u.warn(`Button element not found for ID: ${a} (view: ${this.getName()})`,t);return}n.click(),u.debug(()=>`Main UI view changed (via goto): -> ${this.getName()}`,t)}},ze=class extends Se{#e;constructor(t){super(t,"MAIN_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"buildings":return 1;case"upgrades":return 2;case"statistics":return 3;case"runes":return 4;case"challenges":return 5;case"research":return 6;case"ants":return 7;case"cubes":return 8;case"campaigns":return 9;case"traits":return 10;case"settings":return 11;case"shop":return 12;case"singularity":return 13;case"event":return 14;case"pseudoCoins":return 15}return-1}getId(){return this.#e}},qe=class extends Se{#e;constructor(t){super(t,"BUILDING_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"switchToCoinBuilding":return 1;case"switchToDiamondBuilding":return 2;case"switchToMythosBuilding":return 3;case"switchToParticleBuilding":return 4;case"switchToTesseractBuilding":return 5}return-1}getId(){return this.#e}},It=class extends Se{#e;constructor(t){super(t,"ACHIEVEMENT_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"toggleAchievementSubTab1":return 1;case"toggleAchievementSubTab2":return 2}return-1}getId(){return this.#e}},Qe=class extends Se{#e;constructor(t){super(t,"RUNE_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"toggleRuneSubTab1":return 1;case"toggleRuneSubTab2":return 2;case"toggleRuneSubTab3":return 3;case"toggleRuneSubTab4":return 4}return-1}getId(){return this.#e}},je=class extends Se{#e;constructor(t){super(t,"CHALLENGE_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"toggleChallengesSubTab1":return 1;case"toggleChallengesSubTab2":return 2}return-1}getId(){return this.#e}},Ke=class extends Se{#e;constructor(t){super(t,"ANT_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"toggleAntSubtab1":return 1;case"toggleAntSubtab2":return 2;case"toggleAntSubtab3":return 3}return-1}getId(){return this.#e}},Ze=class extends Se{#e;constructor(t){super(t,"CUBE_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"switchCubeSubTab1":return 1;case"switchCubeSubTab2":return 2;case"switchCubeSubTab3":return 3;case"switchCubeSubTab4":return 4;case"switchCubeSubTab5":return 5;case"switchCubeSubTab6":return 6;case"switchCubeSubTab7":return 7}return-1}getId(){return this.#e}},Xe=class extends Se{#e;constructor(t){super(t,"SINGULARITY_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"toggleSingularitySubTab1":return 1;case"toggleSingularitySubTab2":return 2;case"toggleSingularitySubTab3":return 3;case"toggleSingularitySubTab4":return 4;case"toggleSingularitySubTab5":return 5}return-1}getId(){return this.#e}},_e=class extends Se{#e;constructor(t){super(t,"SETTINGS_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"switchSettingSubTab1":return 1;case"switchSettingSubTab2":return 2;case"switchSettingSubTab3":return 3;case"switchSettingSubTab4":return 4;case"switchSettingSubTab5":return 5;case"switchSettingSubTab6":return 6;case"switchSettingSubTab7":return 7;case"switchSettingSubTab8":return 8;case"switchSettingSubTab9":return 9;case"switchSettingSubTab10":return 10}return-1}getId(){return this.#e}},$e=class extends Se{#e;constructor(t){super(t,"PSEUDOCOIN_VIEW"),this.#e=this.getViewEnum(t)}getViewEnum(t){switch(t){case"cartSubTab1":return 1;case"cartSubTab2":return 2;case"cartSubTab3":return 3;case"cartSubTab4":return 4;case"cartSubTab5":return 5;case"cartSubTab6":return 6}return-1}getId(){return this.#e}};var Te=class{#e;constructor(t){this.#e=t}get patchName(){return this.#e}};var kt=class extends Te{#e=`
+        #ambrosiaUpgradeValues {
+            overflow-y: auto;
+            height: 25vh;
+        }
+
+        #ambrosiaUpgradeValues::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        #ambrosiaUpgradeValues::-webkit-scrollbar-track {
+            background: #1c1b22;
+            border-radius: 3px;
+        }
+
+        #ambrosiaUpgradeValues::-webkit-scrollbar-thumb {
+            background: #a22a2a;
+            border-radius: 3px;
+        }
+
+        #ambrosiaUpgradeValues::-webkit-scrollbar-corner {
+            background: #1c1b22;
+        }
+
+        @supports not selector(::-webkit-scrollbar) {
+            #ambrosiaUpgradeValues::-webkit-scrollbar {
+                scrollbar-color: #a22a2a #1c1b22;
+            }
+        }`;#a="ambrosiaViewOverflowPatch";async applyPatch(){M.injectStyle(this.#e,this.#a)}async revertPatch(){M.removeInjectedStyle(this.#a)}};var Bt=class extends Te{async applyPatch(){}async revertPatch(){}};var Ka=`{
+    "offeringPotion": "Offering Potion",
+    "obtainiumPotion": "Obtainium Potion",
+    "offeringEX": "Offering EX",
+    "offeringAuto": "Offering Auto",
+    "obtainiumEX": "Obtainium EX",
+    "obtainiumAuto": "Obtainium Auto",
+    "instantChallenge": "Instant Challenge Completions",
+    "antSpeed": "Ant Speed",
+    "cashGrab": "Cash Grab",
+    "shopTalisman": "the Plastic talisman",
+    "seasonPass": "Season Pass",
+    "challengeExtension": "Reincarnation Challenge EX",
+    "challengeTome": "Challenge 10 Requirement Reduce",
+    "cubeToQuark": "Cube Quarks +50%",
+    "tesseractToQuark": "Tesseract Quarks +50%",
+    "hypercubeToQuark": "Hypercube Quarks +50%",
+    "seasonPass2": "Season Pass 2",
+    "seasonPass3": "Season Pass 3",
+    "chronometer": "Chronometer 1",
+    "infiniteAscent": "Infinite Ascent",
+    "calculator": "PL-AT calculator",
+    "calculator2": "PL-AT X calculator",
+    "calculator3": "PL-AT \\u03A9 calculator",
+    "calculator4": "PL-AT \\u03B4 calculator",
+    "calculator5": "PL-AT \\u0393 calculator",
+    "calculator6": "QUAAA-T calculator",
+    "calculator7": "PL-AT \\u03A9\\u03A9 calculator",
+    "constantEX": "Constant EX",
+    "powderEX": "Powder EX",
+    "chronometer2": "Chronometer 2",
+    "chronometer3": "Chronometer 3",
+    "seasonPassY": "Season Pass Y",
+    "seasonPassZ": "Season Pass Z",
+    "challengeTome2": "Challenge 10 Requirement Reduction 2",
+    "instantChallenge2": "Instant Challenge Completions 2",
+    "cubeToQuarkAll": "Quark Gain Cube Improvement 2",
+    "cashGrab2": "Cash Grab 2",
+    "chronometerZ": "Chronometer Z",
+    "obtainiumEX2": "Obtainium EX 2",
+    "offeringEX2": "Offering EX 2",
+    "powderAuto": "Automated Powder",
+    "seasonPassLost": "Season Pass LOST",
+    "challenge15Auto": "Challenge 15 Automation",
+    "extraWarp": "Extra Warp",
+    "autoWarp": "a quack powered Warps?",
+    "improveQuarkHept": "Quark Hepteract 1",
+    "improveQuarkHept2": "Quark Hepteract 2",
+    "improveQuarkHept3": "Quark Hepteract 3",
+    "improveQuarkHept4": "Quack Hepteract 4",
+    "shopImprovedDaily": "Improved Daily Code 1",
+    "shopImprovedDaily2": "Improved Daily Code 2",
+    "shopImprovedDaily3": "Improved Daily Code 3",
+    "shopImprovedDaily4": "Improved Daily Code 4",
+    "offeringEX3": "The final Offering Upgrade",
+    "obtainiumEX3": "The final Obtainium Upgrade",
+    "improveQuarkHept5": "The final Quark Hepteract Improver",
+    "chronometerInfinity": "The final Chronometer",
+    "seasonPassInfinity": "The final Season pass",
+    "shopSingularityPenaltyDebuff": "A Singularity Tenderizer",
+    "shopAmbrosiaLuckMultiplier4": "The Fourth Multiplicative Ambrosia Luck Multiplier",
+    "shopOcteractAmbrosiaLuck": "Octeract-Based Ambrosia Luck Amplifier",
+    "shopAmbrosiaGeneration1": "Ambrosia Generation Speedup",
+    "shopAmbrosiaGeneration2": "Another Ambrosia Generation Speedup",
+    "shopAmbrosiaGeneration3": "A better Ambrosia Generation Speedup",
+    "shopAmbrosiaGeneration4": "A FINAL Ambrosia Generation Speedup",
+    "shopAmbrosiaLuck1": "Ambrosia Luck Increaser",
+    "shopAmbrosiaLuck2": "Another Ambrosia Luck Increaser",
+    "shopAmbrosiaLuck3": "A better Ambrosia Generation Speedup",
+    "shopAmbrosiaLuck4": "A FINAL Ambrosia Luck Increaser",
+    "shopRedLuck1": "Low Class Dice of Asmodeus",
+    "shopRedLuck2": "Dice of Asmodeus",
+    "shopRedLuck3": "High Class Dice of Asmodeus",
+    "shopCashGrabUltra": "It's the FINAL CASHGRAB!",
+    "shopAmbrosiaAccelerator": "An Ambrosial Accelerator!",
+    "shopEXUltra": "It's the FINAL E X!",
+    "shopChronometerS": "The FINAL Chronometer",
+    "shopAmbrosiaUltra": "The FINAL Ambrosia Exaltation... I don't flippin know!",
+    "shopSingularitySpeedup": "Singularity Timed-Perks Speedup",
+    "shopSingularityPotency": "Singularity Passives Potency",
+    "shopSadisticRune": "Sadistic Rune Unlock! Or does it?",
+    "shopInfiniteShopUpgrades": "Blue Infinity Shop Voucher"
+}`;var Rt=class extends Te{#e="PATCH_ShopItemNameMapping";#a;#t;async applyPatch(){let t=this;try{this.#a=JSON.parse(Ka);let e=await x.HookElement("#actualShop");e&&(this.#t||(this.#t=a=>{t.#o(a)}),e.removeDelegateEventListener("mouseover","div",this.#t),e.delegateEventListener("mouseover","div",this.#t))}catch{u.error("Failed to parse shop item map",this.#e),this.#a=void 0}}#o(t){let e;if(t.target instanceof HTMLDivElement)e=t.target;else if(t.target instanceof HTMLImageElement||t.target instanceof HTMLParagraphElement||t.target instanceof HTMLButtonElement)e=t.target.parentElement;else return;if(e.id==="actualShop")return;let a=e.querySelector("img");if(a){let n=a.id,i=this.#a?.[n],s=document.querySelector("#shopHovers"),r=s.querySelector("#hs-shopHoverName");if(r)r.innerText=i||"";else{let l=document.createElement("div");l.id="hs-shopHoverName",l.innerText=i||"",s.insertBefore(l,s.querySelector("p:nth-child(2)"))}}}async revertPatch(){if(this.#t){let e=await x.HookElement("#actualShop");e&&e.removeDelegateEventListener("mouseover","div",this.#t)}let t=document.querySelector("#hs-shopHoverName");t&&t.remove()}};var Ht=class extends Te{async applyPatch(){let t=await x.HookElement("#buildingstab");t.style.color="red"}async revertPatch(){let t=await x.HookElement("#buildingstab");t.style.color=""}};var Dt=class extends z{#e={AmbrosiaViewOverflow:kt,TestPatch:Ht,ShopItemNameMapping:Rt,IconSetCaching:Bt};#a={};constructor(t){super(t)}async init(){u.log("Initializing HSPatches module",this.context),this.isInitialized=!0}async applyPatch(t){let e=this.#e[t];if(!e){u.warn(`Patch "${t}" not found`,this.context);return}let a;this.#a[t]?(u.debug(()=>`Patch "${t}" is already instantiated`,this.context),a=this.#a[t]):(a=new e(t),this.#a[t]=a),await a.applyPatch()}async revertPatch(t){let e=this.#e[t];if(!e){u.warn(`Patch "${t}" not found`,this.context);return}let a;this.#a[t]?a=this.#a[t]:(a=new e(t),this.#a[t]=a),await a.revertPatch()}};var Nt=class extends z{#e="Synergysave2";#a;#t;#o;#n=!1;#i;#s;#r=!1;#l=!1;#m;#c;#g=!1;#b=`
+        #savegame {
+            display: none !important;
+        }
+        #saveinfo {
+            display: none !important;
+        }
+    `;#y;#h;#p;#S;#v;#A;#d;#f;#M;#E;#w;#L=new Map;#T;#O;#V;#B;#R={tokens:0,maxTokens:0,isAtMaxTokens:!1};#C={HAPPY_HOUR_BELL:{amount:0,ends:[],displayName:"Happy Hour Bell"},LOTUS_OF_REJUVENATION:{amount:0,ends:[],displayName:"Lotus of Rejuvenation"}};#q;#$=0;#j=5e3;constructor(t){super(t),this.#M=document.querySelector("#campaignTokenCount"),this.#q=new Event("click")}async init(){let t=this;u.log("Initializing HSGameData module",this.context),this.#A=document.querySelector("#singularitybtn"),this.#f=Array.from(document.querySelectorAll("#singularityChallenges > div.singularityChallenges > div")),this.#d=document.querySelector("#importFileButton");try{let a=await(await fetch(f.Common.pseudoAPIurl)).json();this.#O=a,this.#Y()}catch(e){u.error(`Could not fetch pseudo data: ${e}`,this.context)}try{let a=await(await fetch(f.Common.meAPIurl)).json();this.#V=a,this.#z()}catch(e){u.error(`Could not fetch me data: ${e}`,this.context)}this.#T=L.getModule("HSGameDataAPI"),this.#P(),this.isInitialized=!0,(async()=>{if(!this.#d){let e=await x.HookElement("#importFileButton");e&&(this.#d=e)}this.#d&&!this.#w&&(this.#w=async e=>{t.#be(e)},this.#d.addEventListener("click",this.#w,{capture:!0}),u.log("Save file import interceptor registered",this.context))})()}async forceUpdateAllData(){let t=Date.now();if(t-this.#$<this.#j){u.warn("Forced data refresh on cooldown",this.context);return}this.#$=t,await this.#U(),this.#ee(),await this.#U(),this.#ue(),this.#G();let e=await x.HookElement("#savegame");e&&e.dispatchEvent(this.#q),this.#i&&(this.#t=JSON.parse(this.#i)),this.#Y(),this.#z(),this.#J(),this.#I()}async#U(){try{let e=await(await fetch("https://synergism.cc/stripe/upgrades")).json();this.#O=e,this.#Y()}catch(t){u.error(`Could not fetch pseudo data: ${t}`,this.context)}try{let e=await(await fetch("https://synergism.cc/api/v1/users/me")).json();this.#V=e,this.#z()}catch(t){u.error(`Could not fetch me data: ${t}`,this.context)}}#F(){for(let t of Object.keys(this.#C))this.#C[t]={amount:0,ends:[],displayName:""};this.#k()}#I(){this.#T&&this.#t&&this.#T._updateGameData(this.#t),this.#L.forEach(t=>{this.#t?t(this.#t):u.debug(()=>"Could not call game data change callback. No save data found",this.context)})}#Y(){this.#T&&this.#O&&this.#T._updatePseudoData(this.#O)}#z(){this.#T&&this.#V&&this.#T._updateMeData(this.#V)}#J(){this.#T&&this.#R&&this.#T._updateCampaignData(this.#R)}#k(){this.#T&&this.#C&&this.#T._updateEventData(this.#C)}#P(){let t=this,e=L.getModule("HSWebSocket");e&&e.registerWebSocket("consumable-event-socket",{url:f.Common.eventAPIUrl,onMessage:async a=>{switch(u.debug(()=>`onMessage received: ${JSON.stringify(a)}`,this.context),a?.type){case"info-all":{if(t.#F(),a.active&&a.active.length>0){u.debug(()=>`Caught WS event: ${a.type} - event count: ${a.active.length}`,this.context);for(let{internalName:n,endsAt:i,name:s}of a.active){let r=t.#C[n];r.ends.push(i),r.amount++,r.displayName=s}t.#k()}else u.debug(()=>"Caught INFO_ALL, but no active events",this.context);break}case"consumed":{u.debug(()=>"Caught CONSUMED event (Happy Hour)",this.context);let n=t.#C[a.consumable];n?(n.ends.push(a.startedAt+3600*1e3),n.amount++,n.displayName=a.displayName,t.#k()):u.warn(`Unknown event: ${a.consumable}`,this.context);break}case"consumable-ended":{u.debug(()=>"Caught CONSUMABLE_ENDED (Happy Hour)",this.context);let n=t.#C[a.consumable];n?(n.ends.shift(),n.amount--,t.#k()):u.warn(`Unknown event: ${a.consumable}`,this.context);break}case"applied-lotus":{u.debug(()=>"Caught APPLIED_LOTUS event",this.context);let n=t.#C.LOTUS_OF_REJUVENATION;if(n){let i=performance.now()+a.remaining;n.ends[0]=i,n.amount=1,t.#k()}else u.warn("Unknown event: LOTUS_OF_REJUVENATION",this.context);break}case"lotus-active":{u.debug(()=>"Caught LOTUS_ACTIVE event",this.context);let n=t.#C.LOTUS_OF_REJUVENATION;n?(n.ends[0]=performance.now()+a.remainingMs,n.amount=1,t.#k()):u.warn("Unknown event: LOTUS_OF_REJUVENATION",this.context);break}case"lotus-ended":{u.debug(()=>"Caught LOTUS_ENDED event",this.context);let n=t.#C.LOTUS_OF_REJUVENATION;n?(n.ends.shift(),n.amount=0,t.#k()):u.warn("Unknown event: LOTUS_OF_REJUVENATION",this.context);break}case"lotus":{u.debug(()=>"Caught LOTUS (bought) event",this.context);break}case"tips":{u.debug(()=>"Caught TIPS (received) event",this.context);break}case"applied-tip":{u.debug(()=>"Caught APPLIED_TIP event",this.context);break}case"tip-backlog":{u.debug(()=>"Caught TIP_BACKLOG event",this.context);break}case"time-skip":{u.debug(()=>"Caught TIME_SKIP event",this.context);break}case"thanks":{u.debug(()=>"Caught THANKS event",this.context);break}case"join":{u.debug(()=>"Caught JOIN (connection established)",this.context);break}case"warn":{u.warn(`Caught WARNING: ${a.message}`,this.context);break}case"error":{u.warn("Caught ERROR",this.context),t.#F();break}default:u.debug(()=>`Caught unknown event type: ${a}`,this.context)}},onRetriesFailed:async()=>{t.#F(),t.#k()}})}#K=()=>{if(!this.#g)return;let t=localStorage.getItem(this.#e);if(t&&t!==this.#o){this.#o=t;try{this.#t=JSON.parse(atob(t)),this.#I()}catch(e){u.debug(()=>`<red>Error processing save data:</red> ${e}`,this.context),this.#H()}}requestAnimationFrame(this.#K)};#Z=()=>{if(this.#g){if(this.#i)try{this.#t=JSON.parse(this.#i),this.#I()}catch(t){u.debug(()=>`<red>Error processing save data:</red> ${t}`,this.context),this.#H()}requestAnimationFrame(this.#Z)}};#H(){if(!this.#a)return;let t=S.getSetting("useGameData"),e=S.getSetting("stopSniffOnError");t&&e?e.isEnabled()&&(u.debug(()=>"Stopped game data sniffing on error",this.context),t.disable()):u.debug(()=>`maybeStopSniffOnError() - Issue with fetching settings: ${t}, ${e}`,this.context)}async enableGDS(){let t=this;this.#g||(M.injectStyle(this.#b,f.HSGameData.turboCSSId),this.#y&&clearInterval(this.#y),await this.#U(),this.#h&&clearInterval(this.#h),this.#h=setInterval(()=>{t.#U()},f.HSGameData.fetchedDataRefreshInterval),this.#ee(),this.#B&&clearInterval(this.#B),this.#R.isAtMaxTokens||(this.#B=setInterval(()=>{t.#ee()},f.HSGameData.campaignTokenRefreshInterval)),this.#p||(this.#p=await x.HookElement("#savegame")),this.#S||(this.#S=await x.HookElement("#saveinfo")),this.#y=setInterval(()=>{this.#p&&this.#S&&this.#q&&this.#p.dispatchEvent(this.#q)},f.HSGameData.turboModeSpeedMs),this.#A||(this.#A=await x.HookElement("#singularitybtn")),this.#f||(this.#f=Array.from(document.querySelectorAll("#singularityChallenges > div.singularityChallenges > div"))),u.info("GDS = ON",this.context),this.#g=!0,f.Common.experimentalGDS?(this.#ue(),this.#G(),this.#Z()):this.#K())}async disableGDS(){let t=this;this.#y&&(clearInterval(this.#y),this.#y=void 0),this.#h&&clearInterval(this.#h),this.#B&&clearInterval(this.#B),M.removeInjectedStyle(f.HSGameData.turboCSSId),this.#A||(this.#A=await x.HookElement("#singularitybtn")),this.#f||(this.#f=await x.HookElements("#singularityChallenges > div.singularityChallenges > div")),this.#d||(this.#d=await x.HookElement("#importFileButton")),this.#E&&(this.#A.removeEventListener("click",this.#E,{capture:!0}),this.#f.forEach(e=>{e.removeEventListener("click",t.#E,{capture:!0})}),this.#E=void 0),u.info("GDS turbo = OFF",this.context),this.#g=!1}async prepareForAutosing(){this.#ue(),this.#G()}async getLatestAutosingData(){if((await x.HookElement("#savegame")).dispatchEvent(this.#q),this.#i)try{let e=JSON.parse(this.#i),a=typeof e.worlds=="number"?e.worlds:0,n=typeof e.goldenQuarks=="number"?e.goldenQuarks:0;return{quarks:a,goldenQuarks:n}}catch(e){return u.error(`Failed to parse mitm_gamedata for autosing: ${e}`,this.context),null}return null}#G(){if(this.#l)return;let t=this,e=window.atob;this.#c||(this.#c=e),window.atob=function(a){let n=e(a);return n&&n.trim().startsWith("{")&&(t.#s=n),n},this.#l=!0}#ue(){if(this.#r)return;let t=this,e=window.btoa;this.#m||(this.#m=e),window.btoa=function(a){return a&&a.length>0&&a[0]==="{"&&(t.#i=a),e(a)},this.#r=!0}async#be(t){this.#s=void 0;let e=S.getSetting("useGameData");if(this.#n=e?e.isEnabled():!1,e&&e.isEnabled()){e.disable();let l=L.getModule("HSAutosing");l&&l.isAutosingEnabled()?(u.log("Load from file clicked - Stopping Auto-Sing (GDS)",this.context),l.stopAutosing(),M.Notify("Auto-Sing stopped and GDS disabled for save file import",{position:"top",notificationType:"warning"})):M.Notify("GDS has been disabled for save file import",{position:"top",notificationType:"warning"})}let a=await x.HookElement("#offlineContainer"),n=this,i=!1,s=x.watchElement(a,async l=>{if(l.state!=="none"&&!i){i=!0,s&&x.stopWatching(s);try{u.log("Offline container visible - Save loaded (GDS)",n.context),await n.enableGDS();let c=L.getModule("HSAmbrosia");if(c&&await c.resetActiveLoadout(),n.#s)try{let g=JSON.parse(n.#s);c&&await c.performInitialActiveLoadoutMatch(g)}catch(g){u.warn(`Failed to analyze save data for loadout restoration: ${g}`,n.context)}else u.debug(()=>"No captured save data (mitm_atob_data is empty).",n.context);n.#n?u.debug(()=>"GDS remained enabled (Restored state)",n.context):setTimeout(()=>{n.disableGDS(),u.debug(()=>"Cleanup done. GDS disabled (Restored state)",n.context)},2e3)}catch(c){u.error(`Critical error during GDS save load restoration: ${c}`,n.context)}}},{attributes:!0,attributeFilter:["style"],valueParser:(l,c)=>{for(let g of c)if(g.type==="attributes"&&g.attributeName==="style"){let h=g.target,m=h.style.getPropertyValue("display");return{view:h.id,state:m}}return{view:l.id,state:l.style.getPropertyValue("display")}}}),r=()=>{setTimeout(()=>{s&&!i&&(x.stopWatching(s)&&u.log("GDS Save Load Watcher timed out (User likely cancelled)",n.context),i=!0)},5e3),window.removeEventListener("focus",r)};window.addEventListener("focus",r)}async#X(t){let e=t.target,a=["noSingularityUpgrades","oneChallengeCap","limitedAscensions","noOcteracts","noAmbrosiaUpgrades","limitedTime","sadisticPrequel","taxmanLastStand"];if(e){let n,i=e.getAttribute("style");if(e.id&&a.includes(e.id)?i?.includes("orchid")?n=!0:a.map(r=>document.querySelector(`#${r}`)?.getAttribute("style")?.includes("orchid")).some((r=>r===!0))?n=!1:n=!0:i?.toLowerCase().includes("grayscale")?n=!1:n=!0,n){let s=S.getSetting("useGameData");if(s&&s.isEnabled()){this.#n=!0,s.disable(),await p.wait(4e3);let r=S.getSetting("useGameData");r&&this.#n&&!r.isEnabled()?(u.debug(()=>"Re-enabled GDS",this.context),r.enable()):u.debug(()=>"GDS was already enabled (WoW fast!)",this.context),this.#n=!1}}}}#ee(){if(!this.#M){let e=document.querySelector("#campaignTokenCount");if(e)this.#M=e;else return}let t=this.#M;if(t){let e=t.textContent?.match(/^You have (\d+) \/ (\d+) .+$/);if(e&&e[1]&&e[2]){let a=parseInt(e[1],10),n=parseInt(e[2],10);this.#R.tokens=a,this.#R.maxTokens=n,this.#R.isAtMaxTokens=a>0&&n>0&&a===n,this.#J()}}this.#R.isAtMaxTokens&&this.#B&&(u.debug(()=>"Dynamic clear of campaign token refresh interval, player is at max",this.context),clearInterval(this.#B))}subscribeGameDataChange(t){let e=p.uuidv4();return this.#L.set(e,t),e}unsubscribeGameDataChange(t){this.#L.has(t)?this.#L.delete(t):u.warn(`Could not unsubscribe from game data change. ID ${t} not found`,this.context)}#te(t,e,a){if(!this.#T)return 0;let n=this.#T.R_ambrosiaUpgradeCalculationCollection[t];return n?this.#T.investToAmbrosiaUpgrade(0,e,n.costPerLevel,n.maxLevel,n.costFunction):0}};var Za={INSTANT_UNLOCK_1:0,INSTANT_UNLOCK_2:0,CUBE_BUFF:1,AMBROSIA_LUCK_BUFF:0,AMBROSIA_GENERATION_BUFF:1,GOLDEN_QUARK_BUFF:1,FREE_UPGRADE_PROMOCODE_BUFF:1,CORRUPTION_LOADOUT_SLOT_QOL:0,AMBROSIA_LOADOUT_SLOT_QOL:0,AUTO_POTION_FREE_POTIONS_QOL:0,OFFLINE_TIMER_CAP_BUFF:1,ADD_CODE_CAP_BUFF:1,BASE_OFFERING_BUFF:0,BASE_OBTAINIUM_BUFF:0,RED_GENERATION_BUFF:1,RED_LUCK_BUFF:0};var ha=8;var Xa=[{calculationName:"Consumable Event Buff",fnName:"R_calculateConsumableEventBuff",fnParams:[{paramName:"buff",paramType:"EventBuffType"}],supportsReduce:!1,toolingSupport:!1},{calculationName:"Ambrosia Generation Shop Upgrade",fnName:"R_calculateAmbrosiaGenerationShopUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Ambrosia Generation Singularity Upgrade",fnName:"R_calculateAmbrosiaGenerationSingularityUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Ambrosia Generation Octeract Upgrade",fnName:"R_calculateAmbrosiaGenerationOcteractUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Singularity Milestone Blueberries",fnName:"R_calculateSingularityMilestoneBlueberries",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Dilated Five Leaf Bonus",fnName:"R_calculateDilatedFiveLeafBonus",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Singularity Ambrosia Luck Milestone Bonus",fnName:"R_calculateSingularityAmbrosiaLuckMilestoneBonus",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Ambrosia Luck Shop Upgrade",fnName:"R_calculateAmbrosiaLuckShopUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Ambrosia Luck Singularity Upgrade",fnName:"R_calculateAmbrosiaLuckSingularityUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Ambrosia Luck Octeract Upgrade",fnName:"R_calculateAmbrosiaLuckOcteractUpgrade",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Total Cubes",fnName:"R_calculateTotalCubes",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Red Ambrosia Upgrade Value",fnName:"R_calculateRedAmbrosiaUpgradeValue",fnParams:[{paramName:"upgradeName",paramType:"keyof RedAmbrosiaUpgrades"}],supportsReduce:!1,toolingSupport:!1},{calculationName:"Campaign Ambrosia Speed Bonus",fnName:"R_calculateCampaignAmbrosiaSpeedBonus",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Campaign Luck Bonus",fnName:"R_calculateCampaignLuckBonus",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Cookie Upgrade 29 Luck",fnName:"R_calculateCookieUpgrade29Luck",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Sum Of Exalt Completions",fnName:"R_calculateSumOfExaltCompletions",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Number Of Thresholds",fnName:"R_calculateNumberOfThresholds",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"To Next Threshold",fnName:"R_calculateToNextThreshold",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Required Blueberry Time",fnName:"R_calculateRequiredBlueberryTime",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Required Red Ambrosia Time",fnName:"R_calculateRequiredRedAmbrosiaTime",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Corruption Total Level",fnName:"getCorruptionTotalLevel",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Hepteract Effective",fnName:"R_calculateHepteractEffective",fnParams:[{paramName:"heptType",paramType:"HepteractType"}],supportsReduce:!1,toolingSupport:!1},{calculationName:"Free Shop Infinity Upgrades",fnName:"R_calculateFreeShopInfinityUpgrades",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"All Shop Tablets",fnName:"R_calculateAllShopTablets",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Limited Ascensions Debuff",fnName:"R_calculateLimitedAscensionsDebuff",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Singularity Reductions",fnName:"R_calculateSingularityReductions",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Effective Singularities",fnName:"R_calculateEffectiveSingularities",fnParams:[{paramName:"singularityCount",paramType:"number",defaultValue:-1}],supportsReduce:!1,toolingSupport:!0},{calculationName:"Singularity Debuff",fnName:"R_calculateSingularityDebuff",fnParams:[{paramName:"debuff",paramType:"SingularityDebuffs"},{paramName:"singularityCount",paramType:"number",defaultValue:-1}],supportsReduce:!1,toolingSupport:!1},{calculationName:"Ascension Speed Exponent Spread",fnName:"R_calculateAscensionSpeedExponentSpread",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Challenge 15 Reward",fnName:"R_calculateChallenge15Reward",fnParams:[{paramName:"rewardName",paramType:"keyof typeof challenge15Rewards"}],supportsReduce:!1,toolingSupport:!1},{calculationName:"Raw Ascension Speed Mult",fnName:"R_calculateRawAscensionSpeedMult",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Ascension Speed Mult",fnName:"R_calculateAscensionSpeedMult",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Ambrosia Speed",fnName:"calculateAmbrosiaSpeed",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Blueberries",fnName:"R_calculateBlueBerries",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Luck",fnName:"calculateLuck",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0},{paramName:"true_base",paramType:"boolean",defaultValue:!1}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Luck Conversion",fnName:"R_calculateLuckConversion",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Red Ambrosia Luck",fnName:"R_calculateRedAmbrosiaLuck",fnParams:[{paramName:"reduce_vals",paramType:"boolean",defaultValue:!0}],supportsReduce:!0,toolingSupport:!0},{calculationName:"Golden Revolution",fnName:"calculateGoldenRevolution",fnParams:[],supportsReduce:!1,toolingSupport:!0},{calculationName:"Dump Data For Heater",fnName:"dumpDataForHeater",fnParams:[],supportsReduce:!1,toolingSupport:!1}];var Ut=class extends z{constructor(e){super(e);this.isEvent=!1;this.#e=new Set}#e;static{this.Calculations=Xa}async init(){let e=this;u.log("Initializing HSGameDataAPI module",this.context),this.gameDataModule=L.getModule("HSGameData"),this.isInitialized=!0}_updateGameData(e){this.gameData=e}_updateMeData(e){this.meData=e}_updatePseudoData(e){this.pseudoData=e}_updateCampaignData(e){this.campaignData=e}_updateEventData(e){this.eventData=e,this.eventData&&"HAPPY_HOUR_BELL"in this.eventData&&(this.isEvent=this.eventData.HAPPY_HOUR_BELL.amount>0);for(let a of this.#e)try{a(this.eventData)}catch(n){u.error("EventData subscriber error: "+n,this.context)}}getCampaignData(){return this.campaignData}getGameData(){return this.gameData}getMeData(){return this.meData?this.meData:{bonus:{quarks:0},globalBonus:0,personalBonus:0}}getPseudoData(){return this.pseudoData}getEventData(){return this.eventData}async getForcedGameData(){if(this.gameDataModule)return await this.gameDataModule.forceUpdateAllData(),this.gameData}async prepareForAutosing(){await this.gameDataModule?.prepareForAutosing()}async getLatestAutosingData(){return await this.gameDataModule?.getLatestAutosingData()||null}subscribeEventDataChange(e){return this.#e.add(e),e(this.eventData),()=>{this.#e.delete(e)}}static getCalculationDefinitions(e){let a=r=>{if(r)switch(r){case"true":return l=>l;case"false":return l=>!l;case"both":return(...l)=>!0}return(...l)=>!0},n=a(e?.supportsReduce),i=a(e?.toolingSupport);return this.Calculations.filter(r=>n(r.supportsReduce)&&i(r.toolingSupport))}};var _a=.15;var $a={chronos:{LIMIT:1e3,DR:1/6},hyperrealism:{LIMIT:1e3,DR:.33},quark:{LIMIT:1e3,DR:.5},challenge:{LIMIT:1e3,DR:1/6},abyss:{LIMIT:1,DR:0},accelerator:{LIMIT:1e3,DR:.2},acceleratorBoost:{LIMIT:1e3,DR:.2},multiplier:{LIMIT:1e3,DR:.2}};var we={goldenQuarks1:{maxLevel:15},goldenQuarks2:{maxLevel:75},goldenQuarks3:{maxLevel:1e3},starterPack:{maxLevel:1},wowPass:{maxLevel:1},cookies:{maxLevel:1},cookies2:{maxLevel:1},cookies3:{maxLevel:1},cookies4:{maxLevel:1},cookies5:{maxLevel:1},ascensions:{maxLevel:-1},corruptionFourteen:{maxLevel:1,effect:o=>o>0?1:0},corruptionFifteen:{maxLevel:1},singOfferings1:{maxLevel:-1},singOfferings2:{maxLevel:25},singOfferings3:{maxLevel:40},singObtainium1:{maxLevel:-1},singObtainium2:{maxLevel:25},singObtainium3:{maxLevel:40},singCubes1:{maxLevel:-1},singCubes2:{maxLevel:25},singCubes3:{maxLevel:40},singCitadel:{maxLevel:-1},singCitadel2:{maxLevel:100},octeractUnlock:{maxLevel:1},singOcteractPatreonBonus:{maxLevel:1},offeringAutomatic:{maxLevel:-1},intermediatePack:{maxLevel:1},advancedPack:{maxLevel:1},expertPack:{maxLevel:1},masterPack:{maxLevel:1},divinePack:{maxLevel:1},wowPass2:{maxLevel:1},wowPass3:{maxLevel:1},potionBuff:{maxLevel:10},potionBuff2:{maxLevel:10},potionBuff3:{maxLevel:10},singChallengeExtension:{maxLevel:4},singChallengeExtension2:{maxLevel:3},singChallengeExtension3:{maxLevel:3},singQuarkImprover1:{maxLevel:30},singQuarkHepteract:{maxLevel:10},singQuarkHepteract2:{maxLevel:10},singQuarkHepteract3:{maxLevel:10},singOcteractGain:{maxLevel:-1},singOcteractGain2:{maxLevel:25},singOcteractGain3:{maxLevel:50},singOcteractGain4:{maxLevel:100},singOcteractGain5:{maxLevel:200},platonicTau:{maxLevel:1,qualityOfLife:!0,effect:o=>o>0?1:0},platonicAlpha:{maxLevel:1},platonicDelta:{maxLevel:1},platonicPhi:{maxLevel:1},singFastForward:{maxLevel:1},singFastForward2:{maxLevel:1},singAscensionSpeed:{maxLevel:1},singAscensionSpeed2:{maxLevel:30},ultimatePen:{maxLevel:1},halfMind:{maxLevel:1},oneMind:{maxLevel:1},wowPass4:{maxLevel:1},blueberries:{maxLevel:10},singAmbrosiaLuck:{maxLevel:-1},singAmbrosiaLuck2:{maxLevel:30},singAmbrosiaLuck3:{maxLevel:30},singAmbrosiaLuck4:{maxLevel:50},singAmbrosiaGeneration:{maxLevel:-1},singAmbrosiaGeneration2:{maxLevel:20},singAmbrosiaGeneration3:{maxLevel:35},singAmbrosiaGeneration4:{maxLevel:50},singBonusTokens1:{maxLevel:5},singBonusTokens2:{maxLevel:5},singBonusTokens3:{maxLevel:5},singBonusTokens4:{maxLevel:30},singInfiniteShopUpgrades:{maxLevel:80},singTalismanBonusRunes1:{maxLevel:5,effect:o=>o/100},singTalismanBonusRunes2:{maxLevel:5,effect:o=>o/100},singTalismanBonusRunes3:{maxLevel:5,effect:o=>o/100},singTalismanBonusRunes4:{maxLevel:10,effect:o=>o/100},favoriteUpgrade:{maxLevel:100}},De={octeractStarter:{maxLevel:1},octeractGain:{maxLevel:1e8},octeractGain2:{maxLevel:-1},octeractQuarkGain:{maxLevel:2e4},octeractQuarkGain2:{maxLevel:5},octeractCorruption:{maxLevel:2,effect:o=>o},octeractGQCostReduce:{maxLevel:50},octeractExportQuarks:{maxLevel:100},octeractImprovedDaily:{maxLevel:50},octeractImprovedDaily2:{maxLevel:50},octeractImprovedDaily3:{maxLevel:-1},octeractImprovedQuarkHept:{maxLevel:25},octeractImprovedGlobalSpeed:{maxLevel:1e3},octeractImprovedAscensionSpeed:{maxLevel:100},octeractImprovedAscensionSpeed2:{maxLevel:250},octeractImprovedFree:{maxLevel:1,effect:o=>o},octeractImprovedFree2:{maxLevel:1,effect:o=>.05*o},octeractImprovedFree3:{maxLevel:1,effect:o=>.05*o},octeractImprovedFree4:{maxLevel:40,effect:o=>.001*o+(o>0?.01:0)},octeractSingUpgradeCap:{maxLevel:10},octeractOfferings1:{maxLevel:-1},octeractObtainium1:{maxLevel:-1},octeractAscensions:{maxLevel:1e6},octeractAscensions2:{maxLevel:-1},octeractAscensionsOcteractGain:{maxLevel:-1},octeractFastForward:{maxLevel:2},octeractAutoPotionSpeed:{maxLevel:-1},octeractAutoPotionEfficiency:{maxLevel:100},octeractOneMindImprover:{maxLevel:20},octeractAmbrosiaLuck:{maxLevel:-1},octeractAmbrosiaLuck2:{maxLevel:30},octeractAmbrosiaLuck3:{maxLevel:30},octeractAmbrosiaLuck4:{maxLevel:50},octeractAmbrosiaGeneration:{maxLevel:-1},octeractAmbrosiaGeneration2:{maxLevel:20},octeractAmbrosiaGeneration3:{maxLevel:35},octeractAmbrosiaGeneration4:{maxLevel:50},octeractBonusTokens1:{maxLevel:10},octeractBonusTokens2:{maxLevel:5},octeractBonusTokens3:{maxLevel:5},octeractBonusTokens4:{maxLevel:50},octeractBlueberries:{maxLevel:6},octeractInfiniteShopUpgrades:{maxLevel:80},octeractTalismanLevelCap1:{maxLevel:25,effect:o=>o},octeractTalismanLevelCap2:{maxLevel:35,effect:o=>o},octeractTalismanLevelCap3:{maxLevel:40,effect:o=>o},octeractTalismanLevelCap4:{maxLevel:-1,effect:o=>o}},en={noSingularityUpgrades:{achievementPointValue:o=>5*o+5*Math.max(0,o-15),effect:o=>({cubes:1+.5*o,goldenQuarks:1+.12*+(o>0),blueberries:+(o>0),shopUpgrade:o>=20,luckBonus:o>=30?.05:0,shopUpgrade2:o>=30})},oneChallengeCap:{achievementPointValue:o=>5*o+5*Math.max(0,o-12),effect:o=>({corrScoreIncrease:.03*o,blueberrySpeedMult:1+o/100,capIncrease:3*+(o>0),freeCorruptionLevel:o>=20,shopUpgrade:o>=20,reinCapIncrease2:7*+(o>=25),ascCapIncrease2:2*+(o>=25)})},noOcteracts:{achievementPointValue:o=>10*o+5*Math.max(0,o-7),effect:o=>({octeractPow:o<=10?.02*o:.2+(o-10)/100,offeringBonus:o>0,obtainiumBonus:o>=10,shopUpgrade:o>=10})},limitedAscensions:{achievementPointValue:o=>5*o+5*Math.max(0,o-10),effect:o=>({ascensionSpeedMult:.1*o/100,hepteractCap:o>0,shopUpgrade0:o>=20,shopUpgrade:o>=25})},noAmbrosiaUpgrades:{achievementPointValue:o=>10*o+5*Math.max(0,o-10),effect:o=>({bonusAmbrosia:+(o>0),blueberries:Math.floor(o/10)+ +(o>0),luckBonus:o/200,additiveLuck:15*o,redLuck:4*o,blueberrySpeedMult:1+o/50,redSpeedMult:1+o/100,shopUpgrade:o>=15,shopUpgrade2:o>=20})},limitedTime:{achievementPointValue:o=>10*o+5*Math.max(0,o-10)+5*Math.max(0,o-20)+10*Math.max(0,o-25),effect:o=>({preserveQuarks:+(o>0),quarkMult:1+.01*o,globalSpeed:.06*o,ascensionSpeed:.06*o,barRequirementMultiplier:1-.01*o,tier1Upgrade:o>=15,tier2Upgrade:o>=25})},sadisticPrequel:{achievementPointValue:o=>10*o+5*Math.max(0,o-10)+5*Math.max(0,o-20)+5*Math.max(0,o-25),effect:o=>({extraFree:50*+(o>0),quarkMult:1+.03*o,freeUpgradeMult:.03*o,shopUpgrade:o>=10,shopUpgrade2:o>=20,shopUpgrade3:o>=30})},taxmanLastStand:{achievementPointValue:o=>50*o,effect:o=>({horseShoeUnlock:o>0,shopUpgrade:o>=5,talismanUnlock:o>=10,talismanFreeLevel:25*o,talismanRuneEffect:.03*o,antiquityOOM:1/50*o/10,horseShoeOOM:1/20*o/10})}},oi=(o,t,e)=>1+(o-1)*(1-Math.pow(2,-t/e)),tn={cube1:o=>1+1/50*Math.log2(o/175),ascensions:o=>1+1/20*Math.log2(o/375),coinExponent:o=>1+1/150*Math.log2(o/750),taxes:o=>Math.pow(.98,Math.log(o/1250)/Math.log(2)),obtainium:o=>1+1/4*Math.pow(o/7500,.6),offering:o=>1+1/4*Math.pow(o/7500,.8),accelerator:o=>1+1/20*Math.log(o/2500)/Math.log(2),multiplier:o=>1+1/20*Math.log(o/2500)/Math.log(2),runeExp:o=>1+Math.pow(o/2e4,1.5),runeBonus:o=>1+1/33*Math.log(o/1e4)/Math.log(2),cube2:o=>1+1/100*Math.log(o/15e3)/Math.log(2),transcendChallengeReduction:o=>Math.pow(.98,Math.log(o/25e3)/Math.log(2)),reincarnationChallengeReduction:o=>Math.pow(.98,Math.log(o/25e3)/Math.log(2)),antSpeed:o=>Math.pow(1+Math.log(o/2e5)/Math.log(2),4),bonusAntLevel:o=>1+1/20*Math.log(o/15e4)/Math.log(2),cube3:o=>1+1/150*Math.log(o/25e4)/Math.log(2),talismanBonus:o=>1+1/20*Math.log(o/75e4)/Math.log(2),globalSpeed:o=>1+1/20*Math.log(o/25e5)/Math.log(2),blessingBonus:o=>1+1/5*Math.pow(o/3e7,1/4),constantBonus:o=>1+1/5*Math.pow(o/1e8,2/3),cube4:o=>1+1/200*Math.log(o/125e6)/Math.log(2),spiritBonus:o=>1+1/5*Math.pow(o/2e9,1/4),score:o=>o>=1e20?1+1/4*Math.pow(o/1e10,1/8)*Math.pow(1e10,1/8):1+1/4*Math.pow(o/1e10,1/4),quarks:o=>1+3/400*Math.log2(o*32/1e11),hepteractsUnlocked:o=>o>=1e15?1:0,challengeHepteractUnlocked:o=>o>=2e15?1:0,cube5:o=>1+1/300*Math.log2(o/(4e15/1024)),powder:o=>1+1/50*Math.log2(o/(7e15/32)),abyssHepteractUnlocked:o=>o>=1e16?1:0,exponent:o=>oi(1.05,o,1e18),acceleratorHepteractUnlocked:o=>o>=333e14?1:0,acceleratorBoostHepteractUnlocked:o=>o>=333e14?1:0,multiplierHepteractUnlocked:o=>o>=333e14?1:0,freeOrbs:o=>Math.floor(200*Math.pow(o/2e17,.5)),ascensionSpeed:o=>1+5/100+2*Math.log2(o/15e17)/100},an={0:0,1:1,2:1.2,3:1.5,4:1.8,5:2.1,6:2.5,7:3,8:3.25,9:3.5,10:4},nn={exemption:{speed:0,duplication:1.5,prism:.75,thrift:.75,superiorIntellect:0,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},chronos:{speed:1.5,duplication:0,prism:0,thrift:.75,superiorIntellect:.75,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},midas:{speed:0,duplication:.75,prism:.75,thrift:1.5,superiorIntellect:0,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},metaphysics:{speed:.6,duplication:.6,prism:.6,thrift:.6,superiorIntellect:.6,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},polymath:{speed:.75,duplication:.75,prism:0,thrift:0,superiorIntellect:1.5,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},mortuus:{speed:.6,duplication:.6,prism:.6,thrift:.6,superiorIntellect:.6,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},plastic:{speed:.75,duplication:0,prism:1.5,thrift:0,superiorIntellect:.75,infiniteAscent:.005,antiquities:0,horseShoe:0,finiteDescent:0},wowSquare:{speed:0,duplication:1,prism:1,thrift:0,superiorIntellect:1,infiniteAscent:0,antiquities:0,horseShoe:0,finiteDescent:0},achievement:{speed:1.4,duplication:1.4,prism:1.4,thrift:1.4,superiorIntellect:1.4,infiniteAscent:.01,antiquities:0,horseShoe:0,finiteDescent:0},cookieGrandma:{speed:1,duplication:1,prism:1,thrift:1,superiorIntellect:1,infiniteAscent:.01,antiquities:0,horseShoe:0,finiteDescent:0},horseShoe:{speed:1.2,duplication:1.2,prism:1.2,thrift:1.2,superiorIntellect:1.2,infiniteAscent:0,antiquities:0,horseShoe:.01,finiteDescent:0}},on=(o,t)=>{let a=Math.log10(parseFloat(o.split("e")[0]))+(parseInt(o.split("e")[1])||0);t>=120&&(a+=Math.log10((t-90)/30)),t>=150&&(a+=Math.log10((t-120)/30)),t>=180&&(a+=Math.log10((t-170)/10));let n=(i,s,r)=>i<0?-1/0:Math.log10(Math.pow(i,s)/r+1)+a;return{shard:`1e${n(t,3,8)}`,commonFragment:t>=30?`1e${n(t-30,3,32)}`:"0",uncommonFragment:t>=60?`1e${n(t-60,3,384)}`:"0",rareFragment:t>=90?`1e${n(t-90,3,500)}`:"0",epicFragment:t>=120?`1e${n(t-120,3,375)}`:"0",legendaryFragment:t>=150?`1e${n(t-150,3,192)}`:"0",mythicalFragment:t>=150?`1e${n(t-150,3,1280)}`:"0"}},sn=(o,t,e)=>{let a=Math.log10(parseFloat(o.split("e")[0]))+(parseInt(o.split("e")[1])||0),n=(i,s,r)=>i*Math.log10(s)+a+Math.log10(r);return{shard:`1e${n(t,e,100)}`,commonFragment:t>=30?`1e${n(t-30,e,50)}`:"0",uncommonFragment:t>=60?`1e${n(t-60,e,25)}`:"0",rareFragment:t>=90?`1e${n(t-90,e,20)}`:"0",epicFragment:t>=120?`1e${n(t-120,e,15)}`:"0",legendaryFragment:t>=150?`1e${n(t-150,e,10)}`:"0",mythicalFragment:t>=150?`1e${n(t-150,e,5)}`:"0"}};var Pt=ke(ln()),Ce=9e15,Ot=(function(){for(var o=[],t=-323;t<=308;t++)o.push(+("1e"+t));return function(e){return o[e+323]}})(),C=function(o){return o instanceof Le?o:new Le(o)},be=function(o,t){return new Le().fromMantissaExponent(o,t)},Ne=function(o,t){return new Le().fromMantissaExponent_noNormalize(o,t)};function si(o,t,e,a){var n=t.mul(e.pow(a));return Le.floor(o.div(n).mul(e.sub(1)).add(1).log10()/e.log10())}function ri(o,t,e,a){return t.mul(e.pow(a)).mul(Le.sub(1,e.pow(o))).div(Le.sub(1,e))}var Le=(function(){function o(t){this.mantissa=NaN,this.exponent=NaN,t===void 0?(this.m=0,this.e=0):t instanceof o?this.fromDecimal(t):typeof t=="number"?this.fromNumber(t):this.fromString(t)}return Object.defineProperty(o.prototype,"m",{get:function(){return this.mantissa},set:function(t){this.mantissa=t},enumerable:!1,configurable:!0}),Object.defineProperty(o.prototype,"e",{get:function(){return this.exponent},set:function(t){this.exponent=t},enumerable:!1,configurable:!0}),Object.defineProperty(o.prototype,"s",{get:function(){return this.sign()},set:function(t){if(t===0)return this.e=0,void(this.m=0);this.sgn()!==t&&(this.m=-this.m)},enumerable:!1,configurable:!0}),o.fromMantissaExponent=function(t,e){return new o().fromMantissaExponent(t,e)},o.fromMantissaExponent_noNormalize=function(t,e){return new o().fromMantissaExponent_noNormalize(t,e)},o.fromDecimal=function(t){return new o().fromDecimal(t)},o.fromNumber=function(t){return new o().fromNumber(t)},o.fromString=function(t){return new o().fromString(t)},o.fromValue=function(t){return new o().fromValue(t)},o.fromValue_noAlloc=function(t){return t instanceof o?t:new o(t)},o.abs=function(t){return C(t).abs()},o.neg=function(t){return C(t).neg()},o.negate=function(t){return C(t).neg()},o.negated=function(t){return C(t).neg()},o.sign=function(t){return C(t).sign()},o.sgn=function(t){return C(t).sign()},o.round=function(t){return C(t).round()},o.floor=function(t){return C(t).floor()},o.ceil=function(t){return C(t).ceil()},o.trunc=function(t){return C(t).trunc()},o.add=function(t,e){return C(t).add(e)},o.plus=function(t,e){return C(t).add(e)},o.sub=function(t,e){return C(t).sub(e)},o.subtract=function(t,e){return C(t).sub(e)},o.minus=function(t,e){return C(t).sub(e)},o.mul=function(t,e){return C(t).mul(e)},o.multiply=function(t,e){return C(t).mul(e)},o.times=function(t,e){return C(t).mul(e)},o.div=function(t,e){return C(t).div(e)},o.divide=function(t,e){return C(t).div(e)},o.recip=function(t){return C(t).recip()},o.reciprocal=function(t){return C(t).recip()},o.reciprocate=function(t){return C(t).reciprocate()},o.cmp=function(t,e){return C(t).cmp(e)},o.compare=function(t,e){return C(t).cmp(e)},o.eq=function(t,e){return C(t).eq(e)},o.equals=function(t,e){return C(t).eq(e)},o.neq=function(t,e){return C(t).neq(e)},o.notEquals=function(t,e){return C(t).notEquals(e)},o.lt=function(t,e){return C(t).lt(e)},o.lte=function(t,e){return C(t).lte(e)},o.gt=function(t,e){return C(t).gt(e)},o.gte=function(t,e){return C(t).gte(e)},o.max=function(t,e){return C(t).max(e)},o.min=function(t,e){return C(t).min(e)},o.clamp=function(t,e,a){return C(t).clamp(e,a)},o.clampMin=function(t,e){return C(t).clampMin(e)},o.clampMax=function(t,e){return C(t).clampMax(e)},o.cmp_tolerance=function(t,e,a){return C(t).cmp_tolerance(e,a)},o.compare_tolerance=function(t,e,a){return C(t).cmp_tolerance(e,a)},o.eq_tolerance=function(t,e,a){return C(t).eq_tolerance(e,a)},o.equals_tolerance=function(t,e,a){return C(t).eq_tolerance(e,a)},o.neq_tolerance=function(t,e,a){return C(t).neq_tolerance(e,a)},o.notEquals_tolerance=function(t,e,a){return C(t).notEquals_tolerance(e,a)},o.lt_tolerance=function(t,e,a){return C(t).lt_tolerance(e,a)},o.lte_tolerance=function(t,e,a){return C(t).lte_tolerance(e,a)},o.gt_tolerance=function(t,e,a){return C(t).gt_tolerance(e,a)},o.gte_tolerance=function(t,e,a){return C(t).gte_tolerance(e,a)},o.log10=function(t){return C(t).log10()},o.absLog10=function(t){return C(t).absLog10()},o.pLog10=function(t){return C(t).pLog10()},o.log=function(t,e){return C(t).log(e)},o.log2=function(t){return C(t).log2()},o.ln=function(t){return C(t).ln()},o.logarithm=function(t,e){return C(t).logarithm(e)},o.pow10=function(t){return Number.isInteger(t)?Ne(1,t):be(Math.pow(10,t%1),Math.trunc(t))},o.pow=function(t,e){return typeof t=="number"&&t===10&&typeof e=="number"&&Number.isInteger(e)?Ne(1,e):C(t).pow(e)},o.exp=function(t){return C(t).exp()},o.sqr=function(t){return C(t).sqr()},o.sqrt=function(t){return C(t).sqrt()},o.cube=function(t){return C(t).cube()},o.cbrt=function(t){return C(t).cbrt()},o.dp=function(t){return C(t).dp()},o.decimalPlaces=function(t){return C(t).dp()},o.affordGeometricSeries=function(t,e,a,n){return si(C(t),C(e),C(a),n)},o.sumGeometricSeries=function(t,e,a,n){return ri(t,C(e),C(a),n)},o.affordArithmeticSeries=function(t,e,a,n){return(function(i,s,r,l){var c=s.add(l.mul(r)).sub(r.div(2)),g=c.pow(2);return c.neg().add(g.add(r.mul(i).mul(2)).sqrt()).div(r).floor()})(C(t),C(e),C(a),C(n))},o.sumArithmeticSeries=function(t,e,a,n){return(function(i,s,r,l){var c=s.add(l.mul(r));return i.div(2).mul(c.mul(2).plus(i.sub(1).mul(r)))})(C(t),C(e),C(a),C(n))},o.efficiencyOfPurchase=function(t,e,a){return(function(n,i,s){return n.div(i).add(n.div(s))})(C(t),C(e),C(a))},o.randomDecimalForTesting=function(t){if(20*Math.random()<1)return Ne(0,0);var e=10*Math.random();10*Math.random()<1&&(e=Math.round(e)),e*=Math.sign(2*Math.random()-1);var a=Math.floor(Math.random()*t*2)-t;return be(e,a)},o.prototype.normalize=function(){if(this.m>=1&&this.m<10)return this;if(this.m===0)return this.m=0,this.e=0,this;var t=Math.floor(Math.log10(Math.abs(this.m)));return this.m=t===-324?10*this.m/1e-323:this.m/Ot(t),this.e+=t,this},o.prototype.fromMantissaExponent=function(t,e){return isFinite(t)&&isFinite(e)?(this.m=t,this.e=e,this.normalize(),this):(t=Number.NaN,e=Number.NaN,this)},o.prototype.fromMantissaExponent_noNormalize=function(t,e){return this.m=t,this.e=e,this},o.prototype.fromDecimal=function(t){return this.m=t.m,this.e=t.e,this},o.prototype.fromNumber=function(t){return isNaN(t)?(this.m=Number.NaN,this.e=Number.NaN):t===Number.POSITIVE_INFINITY?(this.m=1,this.e=Ce):t===Number.NEGATIVE_INFINITY?(this.m=-1,this.e=Ce):t===0?(this.m=0,this.e=0):(this.e=Math.floor(Math.log10(Math.abs(t))),this.m=this.e===-324?10*t/1e-323:t/Ot(this.e),this.normalize()),this},o.prototype.fromString=function(t){if(t.indexOf("e")!==-1){var e=t.split("e");this.m=parseFloat(e[0]),this.e=parseFloat(e[1]),this.normalize()}else if(t==="NaN")this.m=Number.NaN,this.e=Number.NaN;else if(this.fromNumber(parseFloat(t)),isNaN(this.m))throw Error("[DecimalError] Invalid argument: "+t);return this},o.prototype.fromValue=function(t){return t instanceof o?this.fromDecimal(t):typeof t=="number"?this.fromNumber(t):typeof t=="string"?this.fromString(t):(this.m=0,this.e=0,this)},o.prototype.toNumber=function(){if(!isFinite(this.e))return Number.NaN;if(this.e>308)return this.m>0?Number.POSITIVE_INFINITY:Number.NEGATIVE_INFINITY;if(this.e<-324)return 0;if(this.e===-324)return this.m>0?5e-324:-5e-324;var t=this.m*Ot(this.e);if(!isFinite(t)||this.e<0)return t;var e=Math.round(t);return Math.abs(e-t)<1e-10?e:t},o.prototype.mantissaWithDecimalPlaces=function(t){if(isNaN(this.m)||isNaN(this.e))return Number.NaN;if(this.m===0)return 0;var e=t+1,a=Math.ceil(Math.log10(Math.abs(this.m))),n=Math.round(this.m*Math.pow(10,e-a))*Math.pow(10,a-e);return parseFloat(n.toFixed(Math.max(e-a,0)))},o.prototype.toString=function(){return isNaN(this.m)||isNaN(this.e)?"NaN":this.e>=Ce?this.m>0?"Infinity":"-Infinity":this.e<=-Ce||this.m===0?"0":this.e<21&&this.e>-7?this.toNumber().toString():this.m+"e"+(this.e>=0?"+":"")+this.e},o.prototype.toExponential=function(t){if(isNaN(this.m)||isNaN(this.e))return"NaN";if(this.e>=Ce)return this.m>0?"Infinity":"-Infinity";if(this.e<=-Ce||this.m===0)return"0"+(t>0?(0,Pt.default)(".",t+1,"0"):"")+"e+0";if(this.e>-324&&this.e<308)return this.toNumber().toExponential(t);isFinite(t)||(t=17);var e=t+1,a=Math.max(1,Math.ceil(Math.log10(Math.abs(this.m))));return(Math.round(this.m*Math.pow(10,e-a))*Math.pow(10,a-e)).toFixed(Math.max(e-a,0))+"e"+(this.e>=0?"+":"")+this.e},o.prototype.toFixed=function(t){return isNaN(this.m)||isNaN(this.e)?"NaN":this.e>=Ce?this.m>0?"Infinity":"-Infinity":this.e<=-Ce||this.m===0?"0"+(t>0?(0,Pt.default)(".",t+1,"0"):""):this.e>=17?this.m.toString().replace(".","").padEnd(this.e+1,"0")+(t>0?(0,Pt.default)(".",t+1,"0"):""):this.toNumber().toFixed(t)},o.prototype.toPrecision=function(t){return this.e<=-7?this.toExponential(t-1):t>this.e?this.toFixed(t-this.e-1):this.toExponential(t-1)},o.prototype.valueOf=function(){return this.toString()},o.prototype.toJSON=function(){return this.toString()},o.prototype.toStringWithDecimalPlaces=function(t){return this.toExponential(t)},o.prototype.abs=function(){return Ne(Math.abs(this.m),this.e)},o.prototype.neg=function(){return Ne(-this.m,this.e)},o.prototype.negate=function(){return this.neg()},o.prototype.negated=function(){return this.neg()},o.prototype.sign=function(){return Math.sign(this.m)},o.prototype.sgn=function(){return this.sign()},o.prototype.round=function(){return this.e<-1?new o(0):this.e<17?new o(Math.round(this.toNumber())):this},o.prototype.floor=function(){return this.e<-1?Math.sign(this.m)>=0?new o(0):new o(-1):this.e<17?new o(Math.floor(this.toNumber())):this},o.prototype.ceil=function(){return this.e<-1?Math.sign(this.m)>0?new o(1):new o(0):this.e<17?new o(Math.ceil(this.toNumber())):this},o.prototype.trunc=function(){return this.e<0?new o(0):this.e<17?new o(Math.trunc(this.toNumber())):this},o.prototype.add=function(t){var e,a,n=C(t);if(this.m===0)return n;if(n.m===0)return this;if(this.e>=n.e?(e=this,a=n):(e=n,a=this),e.e-a.e>17)return e;var i=Math.round(1e14*e.m+1e14*a.m*Ot(a.e-e.e));return be(i,e.e-14)},o.prototype.plus=function(t){return this.add(t)},o.prototype.sub=function(t){return this.add(C(t).neg())},o.prototype.subtract=function(t){return this.sub(t)},o.prototype.minus=function(t){return this.sub(t)},o.prototype.mul=function(t){if(typeof t=="number")return t<1e307&&t>-1e307?be(this.m*t,this.e):be(1e-307*this.m*t,this.e+307);var e=typeof t=="string"?new o(t):t;return be(this.m*e.m,this.e+e.e)},o.prototype.multiply=function(t){return this.mul(t)},o.prototype.times=function(t){return this.mul(t)},o.prototype.div=function(t){return this.mul(C(t).recip())},o.prototype.divide=function(t){return this.div(t)},o.prototype.divideBy=function(t){return this.div(t)},o.prototype.dividedBy=function(t){return this.div(t)},o.prototype.recip=function(){return be(1/this.m,-this.e)},o.prototype.reciprocal=function(){return this.recip()},o.prototype.reciprocate=function(){return this.recip()},o.prototype.cmp=function(t){var e=C(t);if(this.m===0){if(e.m===0)return 0;if(e.m<0)return 1;if(e.m>0)return-1}if(e.m===0){if(this.m<0)return-1;if(this.m>0)return 1}if(this.m>0)return e.m<0||this.e>e.e?1:this.e<e.e?-1:this.m>e.m?1:this.m<e.m?-1:0;if(this.m<0)return e.m>0||this.e>e.e?-1:this.e<e.e||this.m>e.m?1:this.m<e.m?-1:0;throw Error("Unreachable code")},o.prototype.compare=function(t){return this.cmp(t)},o.prototype.eq=function(t){var e=C(t);return this.e===e.e&&this.m===e.m},o.prototype.equals=function(t){return this.eq(t)},o.prototype.neq=function(t){return!this.eq(t)},o.prototype.notEquals=function(t){return this.neq(t)},o.prototype.lt=function(t){var e=C(t);return this.m===0?e.m>0:e.m===0?this.m<=0:this.e===e.e?this.m<e.m:this.m>0?e.m>0&&this.e<e.e:e.m>0||this.e>e.e},o.prototype.lte=function(t){return!this.gt(t)},o.prototype.gt=function(t){var e=C(t);return this.m===0?e.m<0:e.m===0?this.m>0:this.e===e.e?this.m>e.m:this.m>0?e.m<0||this.e>e.e:e.m<0&&this.e<e.e},o.prototype.gte=function(t){return!this.lt(t)},o.prototype.max=function(t){var e=C(t);return this.lt(e)?e:this},o.prototype.min=function(t){var e=C(t);return this.gt(e)?e:this},o.prototype.clamp=function(t,e){return this.max(t).min(e)},o.prototype.clampMin=function(t){return this.max(t)},o.prototype.clampMax=function(t){return this.min(t)},o.prototype.cmp_tolerance=function(t,e){var a=C(t);return this.eq_tolerance(a,e)?0:this.cmp(a)},o.prototype.compare_tolerance=function(t,e){return this.cmp_tolerance(t,e)},o.prototype.eq_tolerance=function(t,e){var a=C(t);return o.lte(this.sub(a).abs(),o.max(this.abs(),a.abs()).mul(e))},o.prototype.equals_tolerance=function(t,e){return this.eq_tolerance(t,e)},o.prototype.neq_tolerance=function(t,e){return!this.eq_tolerance(t,e)},o.prototype.notEquals_tolerance=function(t,e){return this.neq_tolerance(t,e)},o.prototype.lt_tolerance=function(t,e){var a=C(t);return!this.eq_tolerance(a,e)&&this.lt(a)},o.prototype.lte_tolerance=function(t,e){var a=C(t);return this.eq_tolerance(a,e)||this.lt(a)},o.prototype.gt_tolerance=function(t,e){var a=C(t);return!this.eq_tolerance(a,e)&&this.gt(a)},o.prototype.gte_tolerance=function(t,e){var a=C(t);return this.eq_tolerance(a,e)||this.gt(a)},o.prototype.log10=function(){return this.e+Math.log10(this.m)},o.prototype.absLog10=function(){return this.e+Math.log10(Math.abs(this.m))},o.prototype.pLog10=function(){return this.m<=0||this.e<0?0:this.log10()},o.prototype.log=function(t){return Math.LN10/Math.log(t)*this.log10()},o.prototype.log2=function(){return 3.321928094887362*this.log10()},o.prototype.ln=function(){return 2.302585092994045*this.log10()},o.prototype.logarithm=function(t){return this.log(t)},o.prototype.pow=function(t){var e,a=t instanceof o?t.toNumber():t,n=this.e*a;if(Number.isSafeInteger(n)&&(e=Math.pow(this.m,a),isFinite(e)&&e!==0))return be(e,n);var i=Math.trunc(n),s=n-i;if(e=Math.pow(10,a*Math.log10(this.m)+s),isFinite(e)&&e!==0)return be(e,i);var r=o.pow10(a*this.absLog10());return this.sign()===-1?Math.abs(a%2)===1?r.neg():Math.abs(a%2)===0?r:new o(Number.NaN):r},o.prototype.pow_base=function(t){return C(t).pow(this)},o.prototype.factorial=function(){var t=this.toNumber()+1;return o.pow(t/Math.E*Math.sqrt(t*Math.sinh(1/t)+1/(810*Math.pow(t,6))),t).mul(Math.sqrt(2*Math.PI/t))},o.prototype.exp=function(){var t=this.toNumber();return-706<t&&t<709?o.fromNumber(Math.exp(t)):o.pow(Math.E,t)},o.prototype.sqr=function(){return be(Math.pow(this.m,2),2*this.e)},o.prototype.sqrt=function(){return this.m<0?new o(Number.NaN):this.e%2!=0?be(3.16227766016838*Math.sqrt(this.m),Math.floor(this.e/2)):be(Math.sqrt(this.m),Math.floor(this.e/2))},o.prototype.cube=function(){return be(Math.pow(this.m,3),3*this.e)},o.prototype.cbrt=function(){var t=1,e=this.m;e<0&&(t=-1,e=-e);var a=t*Math.pow(e,1/3),n=this.e%3;return be(n===1||n===-1?2.154434690031883*a:n!==0?4.641588833612778*a:a,Math.floor(this.e/3))},o.prototype.sinh=function(){return this.exp().sub(this.negate().exp()).div(2)},o.prototype.cosh=function(){return this.exp().add(this.negate().exp()).div(2)},o.prototype.tanh=function(){return this.sinh().div(this.cosh())},o.prototype.asinh=function(){return o.ln(this.add(this.sqr().add(1).sqrt()))},o.prototype.acosh=function(){return o.ln(this.add(this.sqr().sub(1).sqrt()))},o.prototype.atanh=function(){return this.abs().gte(1)?Number.NaN:o.ln(this.add(1).div(new o(1).sub(this)))/2},o.prototype.ascensionPenalty=function(t){return t===0?this:this.pow(Math.pow(10,-t))},o.prototype.egg=function(){return this.add(9)},o.prototype.lessThanOrEqualTo=function(t){return this.cmp(t)<1},o.prototype.lessThan=function(t){return this.cmp(t)<0},o.prototype.greaterThanOrEqualTo=function(t){return this.cmp(t)>-1},o.prototype.greaterThan=function(t){return this.cmp(t)>0},o.prototype.decimalPlaces=function(){return this.dp()},o.prototype.dp=function(){if(!isFinite(this.mantissa))return NaN;if(this.exponent>=17)return 0;for(var t=this.mantissa,e=-this.exponent,a=1;Math.abs(Math.round(t*a)/a-t)>1e-10;)a*=10,e++;return e>0?e:0},Object.defineProperty(o,"MAX_VALUE",{get:function(){return li},enumerable:!1,configurable:!0}),Object.defineProperty(o,"MIN_VALUE",{get:function(){return ci},enumerable:!1,configurable:!0}),Object.defineProperty(o,"NUMBER_MAX_VALUE",{get:function(){return ui},enumerable:!1,configurable:!0}),Object.defineProperty(o,"NUMBER_MIN_VALUE",{get:function(){return gi},enumerable:!1,configurable:!0}),o})(),li=Ne(1,Ce),ci=Ne(1,-Ce),ui=C(Number.MAX_VALUE),gi=C(Number.MIN_VALUE),j=Le;var Ve=class extends Ut{constructor(e){super(e);this.#e={R_AmbrosiaGenerationShopUpgrade:{value:void 0,cachedBy:[]},R_AmbrosiaGenerationSingularityUpgrade:{value:void 0,cachedBy:[]},R_AmbrosiaGenerationOcteractUpgrade:{value:void 0,cachedBy:[]},R_SingularityMilestoneBlueberries:{value:void 0,cachedBy:[]},R_DilatedFiveLeafBonus:{value:void 0,cachedBy:[]},R_SingularityAmbrosiaLuckMilestoneBonus:{value:void 0,cachedBy:[]},R_AmbrosiaLuckShopUpgrade:{value:void 0,cachedBy:[]},R_AmbrosiaLuckSingularityUpgrade:{value:void 0,cachedBy:[]},R_AmbrosiaLuckOcteractUpgrade:{value:void 0,cachedBy:[]},R_TotalCubes:{value:void 0,cachedBy:[]},AMB_ambrosiaTutorial:{value:void 0,cachedBy:[]},AMB_ambrosiaQuarks1:{value:void 0,cachedBy:[]},AMB_ambrosiaCubes1:{value:void 0,cachedBy:[]},AMB_ambrosiaLuck1:{value:void 0,cachedBy:[]},AMB_ambrosiaQuarkCube1:{value:void 0,cachedBy:[]},AMB_ambrosiaLuckCube1:{value:void 0,cachedBy:[]},AMB_ambrosiaCubeQuark1:{value:void 0,cachedBy:[]},AMB_ambrosiaLuckQuark1:{value:void 0,cachedBy:[]},AMB_ambrosiaCubeLuck1:{value:void 0,cachedBy:[]},AMB_ambrosiaQuarkLuck1:{value:void 0,cachedBy:[]},AMB_ambrosiaQuarks2:{value:void 0,cachedBy:[]},AMB_ambrosiaCubes2:{value:void 0,cachedBy:[]},AMB_ambrosiaLuck2:{value:void 0,cachedBy:[]},AMB_ambrosiaQuarks3:{value:void 0,cachedBy:[]},AMB_ambrosiaCubes3:{value:void 0,cachedBy:[]},AMB_ambrosiaLuck3:{value:void 0,cachedBy:[]},AMB_ambrosiaLuck4:{value:void 0,cachedBy:[]},AMB_ambrosiaPatreon:{value:void 0,cachedBy:[]},AMB_ambrosiaObtainium1:{value:void 0,cachedBy:[]},AMB_ambrosiaOffering1:{value:void 0,cachedBy:[]},AMB_ambrosiaHyperflux:{value:void 0,cachedBy:[]},AMB_ambrosiaBaseOffering1:{value:void 0,cachedBy:[]},AMB_ambrosiaBaseObtainium1:{value:void 0,cachedBy:[]},AMB_ambrosiaBaseOffering2:{value:void 0,cachedBy:[]},AMB_ambrosiaBaseObtainium2:{value:void 0,cachedBy:[]},AMB_ambrosiaSingReduction1:{value:void 0,cachedBy:[]},AMB_ambrosiaSingReduction2:{value:void 0,cachedBy:[]},AMB_ambrosiaInfiniteShopUpgrades1:{value:void 0,cachedBy:[]},AMB_ambrosiaInfiniteShopUpgrades2:{value:void 0,cachedBy:[]},AMB_ambrosiaTalismanBonusRuneLevel:{value:void 0,cachedBy:[]},AMB_ambrosiaRuneOOMBonus:{value:void 0,cachedBy:[]},AMB_ambrosiaBrickOfLead:{value:void 0,cachedBy:[]},REDAMB_blueberryGenerationSpeed:{value:void 0,cachedBy:[]},REDAMB_blueberryGenerationSpeed2:{value:void 0,cachedBy:[]},REDAMB_freeLevelsRow2:{value:void 0,cachedBy:[]},REDAMB_freeLevelsRow3:{value:void 0,cachedBy:[]},REDAMB_freeLevelsRow4:{value:void 0,cachedBy:[]},REDAMB_freeLevelsRow5:{value:void 0,cachedBy:[]},REDAMB_regularLuck:{value:void 0,cachedBy:[]},REDAMB_regularLuck2:{value:void 0,cachedBy:[]},REDAMB_viscount:{value:void 0,cachedBy:[]},REDAMB_tutorial:{value:void 0,cachedBy:[]},REDAMB_conversionImprovement1:{value:void 0,cachedBy:[]},REDAMB_conversionImprovement2:{value:void 0,cachedBy:[]},REDAMB_conversionImprovement3:{value:void 0,cachedBy:[]},REDAMB_freeTutorialLevels:{value:void 0,cachedBy:[]},REDAMB_redGenerationSpeed:{value:void 0,cachedBy:[]},REDAMB_redLuck:{value:void 0,cachedBy:[]},REDAMB_redAmbrosiaCube:{value:void 0,cachedBy:[]},REDAMB_redAmbrosiaObtainium:{value:void 0,cachedBy:[]},REDAMB_redAmbrosiaOffering:{value:void 0,cachedBy:[]},REDAMB_redAmbrosiaCubeImprover:{value:void 0,cachedBy:[]},REDAMB_infiniteShopUpgrades:{value:void 0,cachedBy:[]},REDAMB_redAmbrosiaAccelerator:{value:void 0,cachedBy:[]},REDAMB_salvageYinYang:{value:void 0,cachedBy:[]},REDAMB_blueberries:{value:void 0,cachedBy:[]},R_CampaignAmbrosiaSpeedBonus:{value:void 0,cachedBy:[]},R_CampaignRune6Bonus:{value:void 0,cachedBy:[]},R_CampaignLuckBonus:{value:void 0,cachedBy:[]},R_calculateCampaignRune6Bonus:{value:void 0,cachedBy:[]},R_CookieUpgrade29Luck:{value:void 0,cachedBy:[]},R_SumOfExaltCompletions:{value:void 0,cachedBy:[]},R_NumberOfThresholds:{value:void 0,cachedBy:[]},R_ToNextThreshold:{value:void 0,cachedBy:[]},R_RequiredBlueberryTime:{value:void 0,cachedBy:[]},R_RequiredRedAmbrosiaTime:{value:void 0,cachedBy:[]},EVENTBUFF_Quark:{value:void 0,cachedBy:[]},EVENTBUFF_GoldenQuark:{value:void 0,cachedBy:[]},EVENTBUFF_Cubes:{value:void 0,cachedBy:[]},EVENTBUFF_PowderConversion:{value:void 0,cachedBy:[]},EVENTBUFF_AscensionSpeed:{value:void 0,cachedBy:[]},EVENTBUFF_GlobalSpeed:{value:void 0,cachedBy:[]},EVENTBUFF_AscensionScore:{value:void 0,cachedBy:[]},EVENTBUFF_AntSacrifice:{value:void 0,cachedBy:[]},EVENTBUFF_Offering:{value:void 0,cachedBy:[]},EVENTBUFF_Obtainium:{value:void 0,cachedBy:[]},EVENTBUFF_Octeract:{value:void 0,cachedBy:[]},EVENTBUFF_BlueberryTime:{value:void 0,cachedBy:[]},EVENTBUFF_AmbrosiaLuck:{value:void 0,cachedBy:[]},EVENTBUFF_OneMind:{value:void 0,cachedBy:[]},R_RawAscensionSpeedMult:{value:void 0,cachedBy:[]},R_HepteractEffective:{value:void 0,cachedBy:[]},R_AllShopTablets:{value:void 0,cachedBy:[]},R_LimitedAscensionsDebuff:{value:void 0,cachedBy:[]},R_SingularityDebuff:{value:void 0,cachedBy:[]},R_SingularityReductions:{value:void 0,cachedBy:[]},R_EffectiveSingularities:{value:void 0,cachedBy:[]},R_AscensionSpeedExponentSpread:{value:void 0,cachedBy:[]},R_RedAmbrosiaLuck:{value:void 0,cachedBy:[]},R_LuckConversion:{value:void 0,cachedBy:[]}};this.R_singularityChallengeData=en;this.#o=$a;this.R_getRuneEffects=e=>this.R_runes[e].effects(this.R_getRuneEffectiveLevel(e));this.R_computeEXPToLevel=(e,a)=>{let n=this.R_getLevelsPerOOM(e);return this.R_runes[e].costCoefficient.times(j.pow(10,a/n).minus(1))};this.R_getLevelsPerOOM=e=>this.R_runes[e].levelsPerOOM+this.R_runes[e].levelsPerOOMIncrease();this.R_getRuneEffectiveLevel=e=>{if(!this.gameData)return 0;let a=this.R_runes[e];if(a.isUnlocked&&!a.isUnlocked(this.gameData))return 0;if(this.gameData.currentChallenge.reincarnation===9&&!a.ignoreChal9)return 1;let n=a.effectiveLevelMult();return((this.gameData.runes[e]??0)+a.freeLevels())*n};this.R_redAmbrosiaUpgradeCalculationCollection={blueberryGenerationSpeed:{costPerLevel:1,maxLevel:100,costFunction:(e,a)=>a*(e+1),effects:e=>({blueberryGenerationSpeed:1+e/500})},blueberryGenerationSpeed2:{costPerLevel:8e3,maxLevel:250,costFunction:(e,a)=>a+0*e,effects:e=>({blueberryGenerationSpeed:1+e/1e3})},freeLevelsRow2:{costPerLevel:10,maxLevel:5,costFunction:(e,a)=>a*Math.pow(2,e),effects:e=>({freeLevels:e})},freeLevelsRow3:{costPerLevel:250,maxLevel:5,costFunction:(e,a)=>a*Math.pow(2,e),effects:e=>({freeLevels:e})},freeLevelsRow4:{costPerLevel:5e3,maxLevel:5,costFunction:(e,a)=>a*Math.pow(2,e),effects:e=>({freeLevels:e})},freeLevelsRow5:{costPerLevel:5e4,maxLevel:5,costFunction:(e,a)=>a*Math.pow(2,e),effects:e=>({freeLevels:e})},regularLuck:{costPerLevel:1,maxLevel:100,costFunction:(e,a)=>a*(e+1),effects:e=>({ambrosiaLuck:2*e})},regularLuck2:{costPerLevel:8e3,maxLevel:250,costFunction:(e,a)=>a+0*e,effects:e=>({ambrosiaLuck:2*e})},viscount:{costPerLevel:99999,maxLevel:1,costFunction:(e,a)=>a*(e+1),effects:e=>({roleUnlock:e>0,quarkBonus:1+.1*e,luckBonus:125*e,redLuckBonus:25*e})},tutorial:{costFunction:(e,a)=>a+0*e,maxLevel:100,costPerLevel:1,effects:e=>{let a=Math.pow(1.01,e);return{cubeMult:a,obtainiumMult:a,offeringMult:a}}},conversionImprovement1:{costFunction:(e,a)=>a*Math.pow(2,e),maxLevel:5,costPerLevel:5,effects:e=>({conversionImprovement:-e})},conversionImprovement2:{costFunction:(e,a)=>a*Math.pow(4,e),maxLevel:3,costPerLevel:200,effects:e=>({conversionImprovement:-e})},conversionImprovement3:{costFunction:(e,a)=>a*Math.pow(10,e),maxLevel:2,costPerLevel:1e4,effects:e=>({conversionImprovement:-e})},freeTutorialLevels:{costFunction:(e,a)=>a+e,maxLevel:5,costPerLevel:1,effects:e=>({freeLevels:e})},redGenerationSpeed:{costFunction:(e,a)=>a*(e+1),maxLevel:100,costPerLevel:12,effects:e=>({redAmbrosiaGenerationSpeed:1+3*e/1e3})},redLuck:{costFunction:(e,a)=>a*(e+1),maxLevel:100,costPerLevel:4,effects:e=>({redAmbrosiaLuck:e})},redAmbrosiaCube:{costFunction:(e,a)=>a*(e+1),maxLevel:1,costPerLevel:500,effects:e=>({unlockedRedAmbrosiaCube:e})},redAmbrosiaObtainium:{costFunction:(e,a)=>a*(e+1),maxLevel:1,costPerLevel:1250,effects:e=>({unlockRedAmbrosiaObtainium:e})},redAmbrosiaOffering:{costFunction:(e,a)=>a*(e+1),maxLevel:1,costPerLevel:4e3,effects:e=>({unlockRedAmbrosiaOffering:e})},redAmbrosiaCubeImprover:{costFunction:(e,a)=>a*(e+1),maxLevel:20,costPerLevel:100,effects:e=>({extraExponent:.01*e})},infiniteShopUpgrades:{costFunction:(e,a)=>a+100*e,maxLevel:40,costPerLevel:200,effects:e=>({freeLevels:e})},redAmbrosiaAccelerator:{costFunction:(e,a)=>a+e*0,maxLevel:100,costPerLevel:1e3,effects:e=>({ambrosiaTimePerRedAmbrosia:.02*e+(e>0?1:0)})},salvageYinYang:{costFunction:(e,a)=>a*(e+1),maxLevel:100,costPerLevel:200,effects:e=>this.gameData?.singularityChallenges.taxmanLastStand.enabled?{positiveSalvage:0,negativeSalvage:0}:{positiveSalvage:10*e,negativeSalvage:-10*e}},blueberries:{costFunction:(e,a)=>[1e5,14e5,3e6][e]??0,maxLevel:3,costPerLevel:1e5,effects:e=>({blueberries:e})}};this.R_getRedAmbrosiaUpgradeEffects=e=>{let a=this.R_calculateRedAmbrosiaUpgradeValue(e);return this.R_redAmbrosiaUpgradeCalculationCollection[e].effects(a)};this.R_allTalismanRuneBonusStatsSum=()=>{if(!this.gameData)return 0;let e=this.gameData,a=this.R_singularityChallengeData.taxmanLastStand.effect(e.singularityChallenges.taxmanLastStand.completions);return 1+ +this.R_getAchievementReward("talismanPower")+(this.gameData?.researches[106]??0)/1e3+(this.gameData?.researches[107]??0)/1e3+2*(this.gameData?.researches[118]??0)/1e3+.004*Math.floor((this.gameData?.researches[200]??0)/1e4)+.006*Math.floor((this.gameData?.cubeUpgrades[50]??0)/1e4)+(this.R_calculateChallenge15Reward("talismanBonus")-1)+this.R_getGQUpgradeEffect("singTalismanBonusRunes1")+this.R_getGQUpgradeEffect("singTalismanBonusRunes2")+this.R_getGQUpgradeEffect("singTalismanBonusRunes3")+this.R_getGQUpgradeEffect("singTalismanBonusRunes4")+this.R_getAmbrosiaUpgradeEffects("ambrosiaTalismanBonusRuneLevel").talismanBonusRuneLevel+ +(a.talismanRuneEffect??0)};this.R_firstFiveRuneEffectivenessStats=[{i18n:"Research1x4",stat:()=>1+(this.gameData?.researches[4]??0)/10*(1+this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0))},{i18n:"Research1x21",stat:()=>1+(this.gameData?.researches[21]??0)/100},{i18n:"Research4x15",stat:()=>1+(this.gameData?.researches[90]??0)/100},{i18n:"Research6x6",stat:()=>1+(this.gameData?.researches[131]??0)/200},{i18n:"Research6x21",stat:()=>1+(this.gameData?.researches[146]??0)/200*4/5},{i18n:"Research7x11",stat:()=>1+(this.gameData?.researches[161]??0)/200*3/5},{i18n:"Research8x1",stat:()=>1+(this.gameData?.researches[176]??0)/200*2/5},{i18n:"Research8x16",stat:()=>1+(this.gameData?.researches[191]??0)/200*1/5},{i18n:"ConstantUpgrade9",stat:()=>1+.01*j.log((this.gameData?.talismanShards??new j(0)).add(1),4)*Math.min(1,this.gameData?.constantUpgrades[9]??0)},{i18n:"Challenge15",stat:()=>this.R_calculateChallenge15Reward("runeBonus")},{i18n:"MidasTribute",stat:()=>this.R_calculateRuneEffectivenessCubeBlessing()}];this.R_calculateRuneEffectivenessCubeBlessing=()=>{let a=this.R_calculateRuneEffectivenessTesseractBlessing()/1e4,n=1e3,i=(this.gameData?.cubeUpgrades[44]??0)/1600;if((this.gameData?.cubeBlessings.talismanBonus??0)<n)return Math.pow(1+a*(this.gameData?.cubeBlessings.talismanBonus??0),1+i);{let s=Math.pow(n,.9375+i);return Math.min(1e300,1+s*a*Math.pow(this.gameData?.cubeBlessings.talismanBonus??0,.0625+i))}};this.R_calculateRuneEffectivenessTesseractBlessing=()=>{let a=this.R_calculateRuneEffectivenessHypercubeBlessing()/1e3,n=1e3;if((this.gameData?.tesseractBlessings.talismanBonus??0)<n)return 1+a*(this.gameData?.tesseractBlessings.talismanBonus??0);{let i=Math.pow(n,.96875);return 1+a*i*Math.pow(this.gameData?.tesseractBlessings.talismanBonus??0,.03125)}};this.R_calculateRuneEffectivenessHypercubeBlessing=()=>{let a=this.R_calculateHypercubeBlessingMultiplierPlatonicBlessing()/1e3,n=1e3;if((this.gameData?.hypercubeBlessings.talismanBonus??0)<n)return 1+a*(this.gameData?.hypercubeBlessings.talismanBonus??0);{let i=Math.pow(n,.984375);return 1+a*i*Math.pow(this.gameData?.hypercubeBlessings.talismanBonus??0,.015625)}};this.R_calculateHypercubeBlessingMultiplierPlatonicBlessing=()=>(this.gameData?.platonicBlessings.hypercubeBonus??0)<1e4?1+1e-4*(this.gameData?.platonicBlessings.hypercubeBonus??0):1+1e-4*Math.pow(1e4,.9375)*Math.pow(this.gameData?.platonicBlessings.hypercubeBonus??0,.0625);this.R_firstFiveEffectiveRuneLevelMult=()=>this.R_firstFiveRuneEffectivenessStats.reduce((e,a)=>e*a.stat(),1);this.R_isIARuneUnlocked=()=>this.gameData?this.gameData.shopUpgrades.infiniteAscent>0||!!Za.INSTANT_UNLOCK_2:!1;this.R_runes={speed:{ignoreChal9:!1,costCoefficient:new j(50),levelsPerOOM:150,levelsPerOOMIncrease:()=>this.R_speedRuneOOMIncrease(),effects:e=>{let a=2e-4*e,n=1+e/400,i=2-Math.exp(-Math.cbrt(e)/100);return{acceleratorPower:a,multiplicativeAccelerators:n,globalSpeed:i}},effectiveLevelMult:()=>this.R_firstFiveEffectiveRuneLevelMult(),freeLevels:()=>this.R_firstFiveFreeLevels()+this.R_bonusRuneLevelsSpeed(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>!0},duplication:{ignoreChal9:!1,costCoefficient:new j(2e4),levelsPerOOM:120,levelsPerOOMIncrease:()=>this.R_duplicationRuneOOMIncrease(),effects:e=>{let a=e/5,n=1+e/400,i=.001+.999*Math.exp(-Math.cbrt(e)/5);return{multiplierBoosts:a,multiplicativeMultipliers:n,taxReduction:i}},effectiveLevelMult:()=>this.R_firstFiveEffectiveRuneLevelMult(),freeLevels:()=>this.R_firstFiveFreeLevels()+this.R_bonusRuneLevelsDuplication(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>!!this.R_getAchievementReward("duplicationRuneUnlock")},prism:{ignoreChal9:!1,costCoefficient:new j(5e5),levelsPerOOM:90,levelsPerOOMIncrease:()=>this.R_prismRuneOOMIncrease(),effects:e=>{let a=Math.max(0,2*Math.log10(1+e/2)+e/2*Math.log10(2)-Math.log10(256)),n=Math.floor(e/10);return{productionLog10:a,costDivisorLog10:n}},effectiveLevelMult:()=>this.R_firstFiveEffectiveRuneLevelMult(),freeLevels:()=>this.R_firstFiveFreeLevels()+this.R_bonusRuneLevelsPrism(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>!!this.R_getAchievementReward("prismRuneUnlock")},thrift:{ignoreChal9:!1,costCoefficient:new j(25e6),levelsPerOOM:60,levelsPerOOMIncrease:()=>this.R_thriftRuneOOMIncrease(),effects:e=>{let a=Math.min(1e15,e/125),n=2.5*Math.log(1+e/10),i=.01+.99*Math.exp(-Math.cbrt(e)/10);return{costDelay:a,salvage:n,taxReduction:i}},effectiveLevelMult:()=>this.R_firstFiveEffectiveRuneLevelMult(),freeLevels:()=>this.R_firstFiveFreeLevels()+this.R_bonusRuneLevelsThrift(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>!!this.R_getAchievementReward("thriftRuneUnlock")},superiorIntellect:{ignoreChal9:!1,costCoefficient:new j(1e12),levelsPerOOM:30,levelsPerOOMIncrease:()=>this.R_superiorIntellectOOMIncrease(),effects:e=>{let a=1+e/2e3,n=1+e/200,i=Math.pow(1+e/500,2);return{offeringMult:a,obtainiumMult:n,antSpeed:i}},effectiveLevelMult:()=>this.R_firstFiveEffectiveRuneLevelMult()*this.R_SIEffectiveRuneLevelMult(),freeLevels:()=>this.R_firstFiveFreeLevels()+this.R_bonusRuneLevelsSI(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:e=>e.researches[82]>0},infiniteAscent:{ignoreChal9:!0,costCoefficient:new j(1e75),levelsPerOOM:1/2,levelsPerOOMIncrease:()=>this.R_infiniteAscentOOMIncrease(),effects:e=>{let a=1+e/500+(e>0?.1:0),n=1+e/100,r=.025*[30,40,61,81,111,131,161,191,236,260].filter(l=>l<=(this.gameData?.highestSingularityCount??0)).length*e;return{quarkMult:a,cubeMult:n,salvage:r}},effectiveLevelMult:()=>1,freeLevels:()=>this.R_bonusRuneLevelsIA(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>this.R_isIARuneUnlocked()},antiquities:{ignoreChal9:!0,costCoefficient:new j(1e206),levelsPerOOM:1/50,levelsPerOOMIncrease:()=>this.R_antiquitiesOOMIncrease(),effects:e=>({addCodeCooldownReduction:e>0?.8-.3*(e-1)/(e+10):1,offeringLog10:e,obtainiumLog10:e}),effectiveLevelMult:()=>1,freeLevels:()=>this.R_bonusRuneLevelsAntiquities(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>(this.gameData?.platonicUpgrades[20]??0)>0},horseShoe:{ignoreChal9:!0,costCoefficient:new j(1/0),levelsPerOOM:1/20,levelsPerOOMIncrease:()=>this.R_horseShoeOOMIncrease(),effects:e=>{let a=e,n=e/5,i=-.5*e/(e+50);return{ambrosiaLuck:a,redLuck:n,redLuckConversion:i}},effectiveLevelMult:()=>1,freeLevels:()=>this.R_bonusRuneLevelsHorseShoe(),runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>(this.gameData?.singularityChallenges.taxmanLastStand.completions??0)>0},finiteDescent:{ignoreChal9:!0,costCoefficient:new j(1e-40),levelsPerOOM:.1,levelsPerOOMIncrease:()=>0,effects:e=>{let a=e>=1?1.04+.96*(e-1)/(e+25):1,n=e>=1?.01+.14*(e-1)/(e+16):0,i=Math.floor(e/2);return{ascensionScore:a,corruptionFreeLevels:n,infiniteAscentFreeLevel:i}},effectiveLevelMult:()=>1,freeLevels:()=>0,runeEXPPerOffering:e=>this.R_universalRuneEXPMult(e),isUnlocked:()=>(this.gameData?.shopUpgrades.shopSadisticRune??0)>0}};this.R_getAmbrosiaUpgradeEffects=e=>{let a=this.R_calculateAmbrosiaUpgradeValue(e);return this.R_ambrosiaUpgradeCalculationCollection[e].effects(a)};this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly=e=>{let a=this.R_ambrosiaUpgradeCalculationCollection[e],n=a.extraLevelCalc();return a.effects(n)};this.R_maxAPFromChallenges=Object.entries(this.R_singularityChallengeData).reduce((e,[a,n])=>{let i=this.gameData?.singularityChallenges[a]?.completions??0;return e+n.achievementPointValue(i)},0);this.R_maxGoldenQuarkUpgradeAP=Object.values(we).reduce((e,a)=>a.maxLevel===-1?e:e+5,0);this.R_maxOcteractUpgradeAP=Object.values(De).reduce((e,a)=>a.maxLevel===-1?e:e+8,0);this.R_maxRedAmbrosiaUpgradeAP=Object.values(this.R_redAmbrosiaUpgradeCalculationCollection).reduce((e,a)=>a.maxLevel===-1?e:e+10,0);this.R_maxTalismansRarityAP=550;this.R_getOcteractUpgradeEffect=e=>{if(!this.gameData)return u.errorOnce("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let a=De[e],n=this.R_actualOcteractUpgradeTotalLevels(e);return Number.isFinite(n)?a.effect?a.effect(n):0:(u.errorOnce(`<red>R_getOcteractUpgradeEffect() totalLevels invalid for ${e}: ${n}</red>`,this.context),0)};this.R_computeOcteractFreeLevelSoftcap=e=>{if(!this.gameData)return u.error("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let a=this.gameData,n=this.R_computeFreeLevelMultiplierOCT(),i=a.octUpgrades[e];return i?this.R_getSavedUpgradeFreeLevel(i)*n:(u.error(`<red>R_computeOcteractFreeLevelSoftcap() missing octeract upgrade ${e}</red>`,this.context),0)};this.R_getAntUpgradeEffect=e=>{let a=this.R_calculateTrueAntLevel(e);return this.R_antUpgradeData[e].effect(a)};this.R_firstFiveFreeLevels=()=>this.R_getAntUpgradeEffect(8).freeRuneLevel+7*Math.min(this.gameData?.constantUpgrades[7]??0,1e3);this.R_bonusRuneLevelsPrism=()=>this.R_getRuneBonusFromAllTalismans("prism");this.R_bonusRuneLevelsThrift=()=>this.R_getRuneBonusFromAllTalismans("thrift");this.R_bonusRuneLevelsSI=()=>this.R_getRuneBonusFromAllTalismans("superiorIntellect");this.R_bonusRuneLevelsIA=()=>(this.R_getPCoinUpgradeLevel("INSTANT_UNLOCK_2")?6:0)+(this.gameData?.cubeUpgrades[73]??0)+this.R_calculateCampaignRune6Bonus()+this.R_getRuneBonusFromAllTalismans("infiniteAscent")+this.R_getRuneEffects("finiteDescent").infiniteAscentFreeLevel;this.R_bonusRuneLevelsAntiquities=()=>this.R_getRuneBonusFromAllTalismans("antiquities");this.R_bonusRuneLevelsHorseShoe=()=>this.R_getRuneBonusFromAllTalismans("horseShoe")+((this.gameData?.shopUpgrades.shopHorseShoe??0)>0?3:0);this.R_speedRuneOOMIncrease=()=>(this.gameData?.upgrades[66]??0)*2+(this.gameData?.researches[78]??0)+(this.gameData?.researches[111]??0)+this.R_CalcECC("ascension",this.gameData?.challengecompletions[11]??0)+1.5*this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0)+(this.gameData?.cubeUpgrades[16]??0)+this.R_getTalismanEffects("chronos").speedOOMBonus+this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").runeOOMBonus+this.R_getLevelMilestone("speedRune");this.R_duplicationRuneOOMIncrease=()=>.75*this.R_CalcECC("transcend",this.gameData?.challengecompletions[1]??0)+(this.gameData?.upgrades[66]??0)*2+(this.gameData?.researches[90]??0)+(this.gameData?.researches[112]??0)+this.R_CalcECC("ascension",this.gameData?.challengecompletions[11]??0)+1.5*this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0)+this.R_getTalismanEffects("exemption").duplicationOOMBonus+this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").runeOOMBonus+this.R_getLevelMilestone("duplicationRune");this.R_prismRuneOOMIncrease=()=>(this.gameData?.upgrades[66]??0)*2+(this.gameData?.researches[79]??0)+(this.gameData?.researches[113]??0)+this.R_CalcECC("ascension",this.gameData?.challengecompletions[11]??0)+1.5*this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0)+(this.gameData?.cubeUpgrades[16]??0)+this.R_getTalismanEffects("mortuus").prismOOMBonus+this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").runeOOMBonus+this.R_getLevelMilestone("prismRune");this.R_thriftRuneOOMIncrease=()=>(this.gameData?.upgrades[66]??0)*2+(this.gameData?.researches[77]??0)+(this.gameData?.researches[114]??0)+this.R_CalcECC("ascension",this.gameData?.challengecompletions[11]??0)+1.5*this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0)+(this.gameData?.cubeUpgrades[37]??0)+this.R_getTalismanEffects("midas").thriftOOMBonus+this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").runeOOMBonus+this.R_getLevelMilestone("thriftRune");this.R_superiorIntellectOOMIncrease=()=>(this.gameData?.upgrades[66]??0)*2+(this.gameData?.researches[115]??0)+this.R_CalcECC("ascension",this.gameData?.challengecompletions[11]??0)+1.5*this.R_CalcECC("ascension",this.gameData?.challengecompletions[14]??0)+(this.gameData?.cubeUpgrades[37]??0)+this.R_getTalismanEffects("polymath").SIOOMBonus+this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").runeOOMBonus+this.R_getLevelMilestone("SIRune");this.R_infiniteAscentOOMIncrease=()=>this.R_getAmbrosiaUpgradeEffects("ambrosiaRuneOOMBonus").infiniteAscentOOMBonus;this.R_antiquitiesOOMIncrease=()=>+(1/50*(this.gameData?.singularityChallenges.taxmanLastStand.completions??0)/10);this.R_horseShoeOOMIncrease=()=>+(1/20*(this.gameData?.singularityChallenges.taxmanLastStand.completions??0)/10);this.R_SIEffectiveRuneLevelMult=()=>[].reduce((e,a)=>e*a.stat(),1);this.R_allRuneExpAdditiveMultiplier=()=>1+Math.min(1,this.gameData?.highestchallengecompletions[1]??0)+.4/10*(this.gameData?.highestchallengecompletions[1]??0)+.6*(this.gameData?.researches[22]??0)+.3*(this.gameData?.researches[23]??0)+(this.gameData?.upgrades[71]??0)*(this.gameData?.researches[85]??0)/25;this.R_universalRuneEXPMult=e=>{let a=new j(1);return[1+(this.gameData?.researches[91]??0)/20,1+(this.gameData?.researches[92]??0)/20,1+(this.gameData?.ascensionCounter??0)/1e3*(this.gameData?.cubeUpgrades[32]??0),1+1/10*(this.gameData?.constantUpgrades[8]??0),this.R_calculateChallenge15Reward("runeExp")].reduce((i,s)=>i.times(s),new j("1")).times(this.R_allRuneExpAdditiveMultiplier()).times(a)};this.R_ambrosiaUpgradeCalculationCollection={ambrosiaTutorial:{costPerLevel:1,maxLevel:10,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>{let a=1+.05*e;return{quarks:1+.01*e,cubes:a}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeTutorialLevels").freeLevels},ambrosiaQuarks1:{costPerLevel:1,maxLevel:100,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({quarks:1+.01*e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaCubes1:{costPerLevel:1,maxLevel:100,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({cubes:(1+.05*e)*Math.pow(1.1,Math.floor(e/5))}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaLuck1:{costPerLevel:1,maxLevel:100,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({ambrosiaLuck:2*e+12*Math.floor(e/10)}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaQuarkCube1:{costPerLevel:250,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({cubes:1+.001*e*Math.floor(Math.pow(Math.log10(Number(this.gameData?.worlds)+1)+1,2))}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaLuckCube1:{costPerLevel:250,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>{let a=5e-4*e,n=this.calculateLuck();return{cubes:1+a*n.total}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaCubeQuark1:{costPerLevel:500,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({quarks:1+1e-4*e*(Math.floor(Math.log10(Number(this.gameData?.wowCubes)+1))+Math.floor(Math.log10(Number(this.gameData?.wowTesseracts)+1))+Math.floor(Math.log10(Number(this.gameData?.wowHypercubes)+1))+Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes)+1))+Math.floor(Math.log10((this.gameData?.wowAbyssals??0)+1))+Math.floor(Math.log10((this.gameData?.wowOcteracts??0)+1))+6)}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaLuckQuark1:{costPerLevel:500,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>{let a=1e-4*e,n=this.calculateLuck(),i=Math.min(n.total,Math.pow(1e3,.5)*Math.pow(n.total,.5));return{quarks:1+a*i}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaCubeLuck1:{costPerLevel:100,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({ambrosiaLuck:.02*e*(Math.floor(Math.log10(Number(this.gameData?.wowCubes)+1))+Math.floor(Math.log10(Number(this.gameData?.wowTesseracts)+1))+Math.floor(Math.log10(Number(this.gameData?.wowHypercubes)+1))+Math.floor(Math.log10(Number(this.gameData?.wowPlatonicCubes)+1))+Math.floor(Math.log10((this.gameData?.wowAbyssals??0)+1))+Math.floor(Math.log10((this.gameData?.wowOcteracts??0)+1))+6)}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaQuarkLuck1:{costPerLevel:100,maxLevel:25,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({ambrosiaLuck:.02*e*Math.floor(Math.pow(Math.log10(Number(this.gameData?.worlds??0)+1)+1,2))}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels},ambrosiaQuarks2:{costPerLevel:500,maxLevel:100,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>({quarks:1+(.01+Math.floor(this.R_calculateAmbrosiaUpgradeValue("ambrosiaQuarks1")/10)/1e3)*e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaCubes2:{costPerLevel:500,maxLevel:100,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>({cubes:(1+(.1+10*(Math.floor(this.R_calculateAmbrosiaUpgradeValue("ambrosiaCubes1")/10)/1e3))*e)*Math.pow(1.15,Math.floor(e/5))}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaLuck2:{costPerLevel:250,maxLevel:100,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>({ambrosiaLuck:(3+.3*Math.floor(this.R_calculateAmbrosiaUpgradeValue("ambrosiaLuck1")/10))*e+40*Math.floor(e/10)}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaQuarks3:{costPerLevel:75e4,maxLevel:10,costFunction:(e,a)=>a+5e4*e,effects:e=>{let a=1+this.R_calculateAmbrosiaUpgradeValue("ambrosiaQuarks2")/100;return{quarks:1+.05*e*a}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels},ambrosiaCubes3:{costPerLevel:75e3,maxLevel:100,costFunction:(e,a)=>a+5e3*e,effects:e=>{let a=1+3*this.R_calculateAmbrosiaUpgradeValue("ambrosiaCubes2")/100,n=.2*e,i=Math.pow(1.2,Math.floor(e/5));return{cubes:(1+n*a)*i}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels},ambrosiaLuck3:{costPerLevel:5e4,maxLevel:100,costFunction:(e,a)=>a,effects:e=>({ambrosiaLuck:this.R_calculateBlueBerries()*e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels},ambrosiaLuck4:{costPerLevel:25e4,maxLevel:50,costFunction:(e,a)=>a+2e4*e,effects:e=>{let a=Math.ceil(Math.log10((this.gameData?.lifetimeRedAmbrosia??0)+1))+Math.ceil(Math.log10((this.gameData?.lifetimeAmbrosia??0)+1));return{ambrosiaLuckPercentage:1/1e4*a*e}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels},ambrosiaPatreon:{costPerLevel:1,maxLevel:1,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>({blueberryGeneration:1+e*(this.meData?.bonus.quarks??0)/100}),extraLevelCalc:()=>0},ambrosiaObtainium1:{costPerLevel:5e4,maxLevel:2,costFunction:(e,a)=>a*25**e,effects:e=>{let{total:a}=this.calculateLuck(!0);return{luckMult:e,obtainiumMult:e*a}},extraLevelCalc:()=>0},ambrosiaOffering1:{costPerLevel:5e4,maxLevel:2,costFunction:(e,a)=>a*25**e,effects:e=>{let a=this.calculateLuck();return{luckMult:e,offeringMult:e*a.total}},extraLevelCalc:()=>0},ambrosiaHyperflux:{costPerLevel:33333,maxLevel:7,costFunction:(e,a)=>(a+33333*Math.min(4,e))*Math.max(1,3**(e-4)),effects:e=>{let a=e;return{hyperFlux:Math.pow(1+1/100*a,this.gameData?.platonicUpgrades[19]??0)}},extraLevelCalc:()=>0},ambrosiaBaseOffering1:{costPerLevel:5,maxLevel:40,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({offering:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaBaseObtainium1:{costPerLevel:40,maxLevel:20,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({obtainium:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaBaseOffering2:{costPerLevel:20,maxLevel:60,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({offering:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaBaseObtainium2:{costPerLevel:160,maxLevel:30,costFunction:(e,a)=>a*((e+1)**3-e**3),effects:e=>({obtainium:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaSingReduction1:{costPerLevel:1e5,maxLevel:2,costFunction:(e,a)=>a*99**e,effects:e=>({singularityReduction:this.gameData?.insideSingularityChallenge?0:e}),extraLevelCalc:()=>0},ambrosiaInfiniteShopUpgrades1:{costPerLevel:25e3,maxLevel:20,costFunction:(e,a)=>a,effects:e=>({freeLevels:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaInfiniteShopUpgrades2:{costPerLevel:75e3,maxLevel:20,costFunction:(e,a)=>a,effects:e=>({freeLevels:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels},ambrosiaSingReduction2:{costPerLevel:125e5,maxLevel:2,costFunction:(e,a)=>a*3**e,effects:e=>({singularityReduction:this.gameData?.insideSingularityChallenge?e:0}),extraLevelCalc:()=>0},ambrosiaTalismanBonusRuneLevel:{costPerLevel:100,maxLevel:100,costFunction:(e,a)=>a*((e+1)**2-e**2),effects:e=>({talismanBonusRuneLevel:e/200}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaRuneOOMBonus:{costPerLevel:2500,maxLevel:100,costFunction:(e,a)=>Math.ceil(a*((e+1)**1.5-e**1.5)),effects:e=>{let a=e,n=e/1e3;return{runeOOMBonus:a,infiniteAscentOOMBonus:n}},extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaBrickOfLead:{costPerLevel:10,maxLevel:25,costFunction:(e,a)=>a*(Math.pow(e+1,3)-Math.pow(e,3)),effects:e=>({barRequirementMult:1/(1-e/50),additiveLuckMult:e/50,singularitySpeedMult:1-e/100}),extraLevelCalc:()=>0},ambrosiaFreeLuckUpgrades:{costPerLevel:5e3,maxLevel:25,costFunction:(e,a)=>a*(Math.pow(e+1,2)-Math.pow(e,2)),effects:e=>({freeLuckUpgrades:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels},ambrosiaFreeGenerationUpgrades:{costPerLevel:5e3,maxLevel:3,costFunction:(e,a)=>a*(Math.pow(10,e+1)-Math.pow(10,e)),effects:e=>({freeGenerationUpgrades:e}),extraLevelCalc:()=>0},ambrosiaFreeRedLuckUpgrades:{costPerLevel:2e4,maxLevel:25,costFunction:(e,a)=>a*(Math.pow(e+1,2)-Math.pow(e,2)),effects:e=>({freeRedLuckUpgrades:e}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels},ambrosiaFreeQuarkUpgrades:{costPerLevel:25e3,maxLevel:10,costFunction:(e,a)=>a*(Math.pow(e+1,3)-Math.pow(e,3)),effects:e=>({freeQuarkUpgrades:e/10}),extraLevelCalc:()=>this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels}};this.R_antUpgradeData={0:{exemptFromCorruption:!1,effect:e=>{let a=1.1;return a+=(this.gameData?.researches[101]??0)/1e3,a+=(this.gameData?.researches[162]??0)/1e3,{antSpeed:j.pow(a,e)}}},1:{exemptFromCorruption:!1,effect:e=>{let a=1;this.gameData?.currentChallenge.ascension===15&&(a=100+9900*(1e3+e)/(1e3+e**2));let n=999999+this.R_calculateSigmoidExponential(49000001,e/3e3),i=250*e,s=(n+i)/a,r=j.max(1,j.pow(this.gameData?.ants.crumbs??0,s));return{crumbToCoinExp:s,coinMultiplier:r}}},2:{exemptFromCorruption:!1,effect:e=>({taxReduction:.005+.995*Math.pow(.99,e)})},3:{exemptFromCorruption:!1,effect:e=>({acceleratorBoostMult:this.R_calculateSigmoidExponential(20,e/1e3)})},4:{exemptFromCorruption:!1,effect:e=>({multiplierMult:this.R_calculateSigmoidExponential(40,e/1e3)})},5:{exemptFromCorruption:!1,effect:e=>({offeringMult:Math.pow(1+e/10,.5)})},6:{exemptFromCorruption:!1,effect:e=>{let a=3*e,n=1+e/100;return{buildingCostScale:a/100,buildingPowerMult:n}}},7:{exemptFromCorruption:!1,effect:e=>({salvage:120*(1-Math.pow(.995,e))})},8:{exemptFromCorruption:!1,effect:e=>({freeRuneLevel:3e3*(1-Math.pow(1-1/3e3,e))})},9:{exemptFromCorruption:!1,effect:e=>({obtainiumMult:Math.pow(1+e/10,.5)})},10:{exemptFromCorruption:!1,effect:e=>({antSacrificeMultiplier:Math.pow(1+e/10,.5),elo:Math.round(5*Math.min(200,e))})},11:{exemptFromCorruption:!0,effect:e=>({talismanUnlock:e>0,globalSpeed:2-Math.pow(.99,e)})},12:{exemptFromCorruption:!1,effect:e=>{let a=e+200*Math.min(1,e),n=Math.min(e,+this.R_getAchievementReward("antSpeed2UpgradeImprover"));return{antELO:Math.min(a+n,this.gameData?.ants.antSacrificeCount??0+n),antSacrificeLimitCount:a}}},15:{exemptFromCorruption:!0,effect:e=>{let a=Math.min(1200,Math.floor(e/2)),n=1+.9*(1-Math.pow(.999,e))+.005*Math.min(20,e),i=2-Math.pow(.996,e);return{talismanLevelIncreaser:a,talismanEffectBuff:n,ascensionSpeed:i}}},14:{exemptFromCorruption:!0,effect:e=>{let a=1e5*(1-Math.pow(.999,e));return{cubesBanked:4*Math.min(200,e)+e,ascensionScoreBase:a}}},13:{exemptFromCorruption:!0,effect:e=>({wowCubes:2-Math.pow(.999,e)})}};this.R_achievements=[{pointValue:5,group:"ungrouped"},{pointValue:5,group:"firstOwnedCoin"},{pointValue:10,group:"firstOwnedCoin"},{pointValue:15,group:"firstOwnedCoin",reward:{acceleratorPower:()=>.001}},{pointValue:20,group:"firstOwnedCoin"},{pointValue:25,group:"firstOwnedCoin",reward:{accelerators:()=>Math.floor((this.gameData?.firstOwnedCoin??0)/500)}},{pointValue:30,group:"firstOwnedCoin",reward:{multipliers:()=>Math.floor((this.gameData?.firstOwnedCoin??0)/1e3)}},{pointValue:35,group:"firstOwnedCoin",reward:{accelBoosts:()=>Math.floor((this.gameData?.firstOwnedCoin??0)/2e3)}},{pointValue:5,group:"secondOwnedCoin"},{pointValue:10,group:"secondOwnedCoin"},{pointValue:15,group:"secondOwnedCoin",reward:{acceleratorPower:()=>.0015}},{pointValue:20,group:"secondOwnedCoin"},{pointValue:25,group:"secondOwnedCoin",reward:{accelerators:()=>Math.floor((this.gameData?.secondOwnedCoin??0)/500)}},{pointValue:30,group:"secondOwnedCoin",reward:{multipliers:()=>Math.floor((this.gameData?.secondOwnedCoin??0)/1e3)}},{pointValue:35,group:"secondOwnedCoin",reward:{accelBoosts:()=>Math.floor((this.gameData?.secondOwnedCoin??0)/2e3)}},{pointValue:5,group:"thirdOwnedCoin"},{pointValue:10,group:"thirdOwnedCoin"},{pointValue:15,group:"thirdOwnedCoin",reward:{acceleratorPower:()=>.002}},{pointValue:20,group:"thirdOwnedCoin"},{pointValue:25,group:"thirdOwnedCoin",reward:{accelerators:()=>Math.floor((this.gameData?.thirdOwnedCoin??0)/500)}},{pointValue:30,group:"thirdOwnedCoin",reward:{multipliers:()=>Math.floor((this.gameData?.thirdOwnedCoin??0)/1e3)}},{pointValue:35,group:"thirdOwnedCoin",reward:{accelBoosts:()=>Math.floor((this.gameData?.thirdOwnedCoin??0)/2e3)}},{pointValue:5,group:"fourthOwnedCoin"},{pointValue:10,group:"fourthOwnedCoin"},{pointValue:15,group:"fourthOwnedCoin",reward:{acceleratorPower:()=>.002}},{pointValue:20,group:"fourthOwnedCoin"},{pointValue:25,group:"fourthOwnedCoin",reward:{accelerators:()=>Math.floor((this.gameData?.fourthOwnedCoin??0)/500)}},{pointValue:30,group:"fourthOwnedCoin",reward:{multipliers:()=>Math.floor((this.gameData?.fourthOwnedCoin??0)/1e3)}},{pointValue:35,group:"fourthOwnedCoin",reward:{accelBoosts:()=>Math.floor((this.gameData?.fourthOwnedCoin??0)/2e3)}},{pointValue:5,group:"fifthOwnedCoin"},{pointValue:10,group:"fifthOwnedCoin"},{pointValue:15,group:"fifthOwnedCoin",reward:{acceleratorPower:()=>.003}},{pointValue:20,group:"fifthOwnedCoin"},{pointValue:25,group:"fifthOwnedCoin",reward:{accelerators:()=>Math.floor((this.gameData?.fifthOwnedCoin??0)/500)}},{pointValue:30,group:"fifthOwnedCoin",reward:{multipliers:()=>Math.floor((this.gameData?.fifthOwnedCoin??0)/1e3)}},{pointValue:35,group:"fifthOwnedCoin",reward:{accelBoosts:()=>Math.floor((this.gameData?.fifthOwnedCoin??0)/2e3)}},{pointValue:5,group:"prestigePointGain"},{pointValue:10,group:"prestigePointGain",reward:{crystalMultiplier:()=>Math.max(1,j.log(new j(this.gameData?.prestigePoints??1),Math.E))}},{pointValue:15,group:"prestigePointGain"},{pointValue:20,group:"prestigePointGain"},{pointValue:25,group:"prestigePointGain"},{pointValue:30,group:"prestigePointGain"},{pointValue:35,group:"prestigePointGain"},{pointValue:5,group:"transcendPointGain"},{pointValue:10,group:"transcendPointGain"},{pointValue:15,group:"transcendPointGain",reward:{taxReduction:()=>.95}},{pointValue:20,group:"transcendPointGain"},{pointValue:25,group:"transcendPointGain",reward:{taxReduction:()=>.9}},{pointValue:30,group:"transcendPointGain"},{pointValue:35,group:"transcendPointGain"},{pointValue:5,group:"reincarnationPointGain",reward:{particleGain:()=>2},checkReset:()=>(this.gameData?.highestSingularityCount??0)>=3},{pointValue:10,group:"reincarnationPointGain"},{pointValue:15,group:"reincarnationPointGain"},{pointValue:20,group:"reincarnationPointGain"},{pointValue:25,group:"reincarnationPointGain"},{pointValue:30,group:"reincarnationPointGain"},{pointValue:35,group:"reincarnationPointGain"},{pointValue:5,group:"ungrouped",reward:{multipliers:()=>1}},{pointValue:10,group:"ungrouped",reward:{multipliers:()=>2}},{pointValue:15,group:"ungrouped",reward:{multipliers:()=>4}},{pointValue:20,group:"ungrouped",reward:{accelerators:()=>2}},{pointValue:25,group:"ungrouped",reward:{accelerators:()=>4}},{pointValue:30,group:"ungrouped",reward:{accelerators:()=>8}},{pointValue:35,group:"ungrouped"},{pointValue:5,group:"ungrouped"},{pointValue:10,group:"ungrouped"},{pointValue:15,group:"ungrouped"},{pointValue:15,group:"ungrouped"},{pointValue:20,group:"ungrouped"},{pointValue:30,group:"ungrouped"},{pointValue:40,group:"ungrouped"},{pointValue:10,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:10,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:15,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:20,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:25,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:25,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:50,group:"ungrouped",reward:{conversionExponent:()=>.01}},{pointValue:5,group:"challenge1"},{pointValue:10,group:"challenge1"},{pointValue:15,group:"challenge1"},{pointValue:20,group:"challenge1"},{pointValue:25,group:"challenge1",reward:{taxReduction:()=>.96}},{pointValue:30,group:"challenge1"},{pointValue:35,group:"challenge1"},{pointValue:5,group:"challenge2"},{pointValue:10,group:"challenge2"},{pointValue:15,group:"challenge2"},{pointValue:20,group:"challenge2"},{pointValue:25,group:"challenge2",reward:{taxReduction:()=>.96}},{pointValue:30,group:"challenge2"},{pointValue:35,group:"challenge2"},{pointValue:5,group:"challenge3"},{pointValue:10,group:"challenge3"},{pointValue:15,group:"challenge3"},{pointValue:20,group:"challenge3"},{pointValue:25,group:"challenge3",reward:{taxReduction:()=>.96}},{pointValue:30,group:"challenge3"},{pointValue:35,group:"challenge3"},{pointValue:5,group:"challenge4"},{pointValue:10,group:"challenge4"},{pointValue:15,group:"challenge4"},{pointValue:20,group:"challenge4"},{pointValue:25,group:"challenge4",reward:{taxReduction:()=>.96}},{pointValue:30,group:"challenge4"},{pointValue:35,group:"challenge4"},{pointValue:5,group:"challenge5"},{pointValue:10,group:"challenge5"},{pointValue:15,group:"challenge5"},{pointValue:20,group:"challenge5"},{pointValue:25,group:"challenge5",reward:{taxReduction:()=>.96}},{pointValue:30,group:"challenge5"},{pointValue:35,group:"challenge5"},{pointValue:5,group:"challenge6"},{pointValue:10,group:"challenge6"},{pointValue:15,group:"challenge6"},{pointValue:20,group:"challenge6"},{pointValue:25,group:"challenge6",reward:{taxReduction:()=>.95}},{pointValue:30,group:"challenge6",reward:{quarkGain:()=>1+(this.gameData?.challengecompletions[6]??0)/100}},{pointValue:35,group:"challenge6"},{pointValue:5,group:"challenge7"},{pointValue:10,group:"challenge7"},{pointValue:15,group:"challenge7"},{pointValue:20,group:"challenge7"},{pointValue:25,group:"challenge7",reward:{taxReduction:()=>.95}},{pointValue:30,group:"challenge7"},{pointValue:35,group:"challenge7",reward:{chronosTalisman:()=>1}},{pointValue:5,group:"challenge8"},{pointValue:10,group:"challenge8"},{pointValue:15,group:"challenge8"},{pointValue:20,group:"challenge8"},{pointValue:25,group:"challenge8",reward:{taxReduction:()=>.95}},{pointValue:30,group:"challenge8"},{pointValue:35,group:"challenge8",reward:{midasTalisman:()=>1}},{pointValue:5,group:"challenge9"},{pointValue:10,group:"challenge9",reward:{talismanPower:()=>.02}},{pointValue:15,group:"challenge9",reward:{talismanPower:()=>.02}},{pointValue:20,group:"challenge9",reward:{sacrificeMult:()=>1.25}},{pointValue:25,group:"challenge9"},{pointValue:30,group:"challenge9"},{pointValue:35,group:"challenge9",reward:{metaphysicsTalisman:()=>1}},{pointValue:5,group:"challenge10"},{pointValue:10,group:"challenge10"},{pointValue:15,group:"challenge10"},{pointValue:20,group:"challenge10",reward:{talismanPower:()=>.025}},{pointValue:25,group:"challenge10"},{pointValue:30,group:"challenge10",reward:{talismanPower:()=>.025}},{pointValue:35,group:"challenge10",reward:{talismanPower:()=>.025}},{pointValue:5,group:"accelerators"},{pointValue:10,group:"accelerators",reward:{acceleratorPower:()=>.01}},{pointValue:15,group:"accelerators"},{pointValue:20,group:"accelerators",reward:{accelerators:()=>5}},{pointValue:25,group:"accelerators",reward:{accelerators:()=>12}},{pointValue:30,group:"accelerators",reward:{accelerators:()=>25}},{pointValue:35,group:"accelerators",reward:{accelerators:()=>50}},{pointValue:5,group:"multipliers"},{pointValue:10,group:"multipliers"},{pointValue:15,group:"multipliers"},{pointValue:20,group:"multipliers",reward:{multipliers:()=>1}},{pointValue:25,group:"multipliers",reward:{multipliers:()=>3}},{pointValue:30,group:"multipliers",reward:{multipliers:()=>6}},{pointValue:35,group:"multipliers",reward:{multipliers:()=>10}},{pointValue:5,group:"acceleratorBoosts"},{pointValue:10,group:"acceleratorBoosts"},{pointValue:15,group:"acceleratorBoosts"},{pointValue:20,group:"acceleratorBoosts"},{pointValue:25,group:"acceleratorBoosts"},{pointValue:30,group:"acceleratorBoosts"},{pointValue:35,group:"acceleratorBoosts"},{pointValue:5,group:"antCrumbs",reward:{antSpeed:()=>j.log(this.gameData?.ants.crumbs.plus(10)??0,10)}},{pointValue:10,group:"antCrumbs"},{pointValue:15,group:"antCrumbs",reward:{antSpeed:()=>1.2}},{pointValue:20,group:"antCrumbs",reward:{antSpeed:()=>1.25}},{pointValue:25,group:"antCrumbs",reward:{antSpeed:()=>1.4,antSacrificeUnlock:()=>1,antAutobuyers:()=>1}},{pointValue:30,group:"antCrumbs",reward:{antSpeed:()=>1+(this.gameData?.ants.immortalELO??0)/1e3,scientiaAutobuy:()=>1}},{pointValue:35,group:"antCrumbs"},{pointValue:5,group:"sacMult",reward:{antAutobuyers:()=>1,inceptusAutobuy:()=>1,fortunaeAutobuy:()=>1}},{pointValue:10,group:"sacMult",reward:{antAutobuyers:()=>1,tributumAutobuy:()=>1}},{pointValue:15,group:"sacMult",reward:{antAutobuyers:()=>1,celeritasAutobuy:()=>1,exploratoremAutobuy:()=>1}},{pointValue:20,group:"sacMult",reward:{antAutobuyers:()=>1,sacrificiumAutobuy:()=>1}},{pointValue:25,group:"sacMult",reward:{antAutobuyers:()=>1}},{pointValue:30,group:"sacMult",reward:{antAutobuyers:()=>1}},{pointValue:35,group:"sacMult",reward:{antAutobuyers:()=>1}},{pointValue:5,group:"ascensionCount",reward:{freeAntUpgrades:()=>2}},{pointValue:10,group:"ascensionCount",reward:{preserveAnthillCount:()=>1,antSacrificeCountMultiplier:()=>2}},{pointValue:15,group:"ascensionCount"},{pointValue:20,group:"ascensionCount",reward:{wowSquareTalisman:()=>1}},{pointValue:25,group:"ascensionCount"},{pointValue:30,group:"ascensionCount"},{pointValue:35,group:"ascensionCount"},{pointValue:5,group:"constant"},{pointValue:10,group:"constant"},{pointValue:15,group:"constant"},{pointValue:20,group:"constant",reward:{wowCubeGain:()=>1+j.log(this.gameData?.ascendShards.add(1)??0,10)/400}},{pointValue:25,group:"constant"},{pointValue:30,group:"constant"},{pointValue:35,group:"constant",reward:{wowPlatonicGain:()=>1+19*Math.min(1,j.log(this.gameData?.ascendShards.plus(1)??0,10)/1e5)}},{pointValue:10,group:"challenge11",reward:{statTracker:()=>1}},{pointValue:20,group:"challenge11"},{pointValue:30,group:"challenge11"},{pointValue:40,group:"challenge11"},{pointValue:50,group:"challenge11"},{pointValue:60,group:"challenge11",reward:{ascensionCountAdditive:()=>(this.gameData?.ascensionCounter??0)*2}},{pointValue:70,group:"challenge11",reward:{talismanPower:()=>.01}},{pointValue:10,group:"challenge12",reward:{ascensionRewardScaling:()=>1}},{pointValue:20,group:"challenge12"},{pointValue:30,group:"challenge12"},{pointValue:40,group:"challenge12"},{pointValue:50,group:"challenge12"},{pointValue:60,group:"challenge12",reward:{ascensionCountAdditive:()=>(this.gameData?.ascensionCounter??0)*2}},{pointValue:70,group:"challenge12",reward:{talismanPower:()=>.01}},{pointValue:10,group:"challenge13"},{pointValue:20,group:"challenge13"},{pointValue:30,group:"challenge13"},{pointValue:40,group:"challenge13"},{pointValue:50,group:"challenge13"},{pointValue:60,group:"challenge13",reward:{ascensionCountAdditive:()=>(this.gameData?.ascensionCounter??0)*2}},{pointValue:70,group:"challenge13",reward:{talismanPower:()=>.01}},{pointValue:10,group:"challenge14"},{pointValue:20,group:"challenge14"},{pointValue:30,group:"challenge14"},{pointValue:40,group:"challenge14"},{pointValue:50,group:"challenge14"},{pointValue:60,group:"challenge14"},{pointValue:70,group:"challenge14"},{pointValue:5,group:"ascensionScore"},{pointValue:10,group:"ascensionScore"},{pointValue:15,group:"ascensionScore"},{pointValue:20,group:"ascensionScore"},{pointValue:25,group:"ascensionScore"},{pointValue:30,group:"ascensionScore"},{pointValue:35,group:"ascensionScore"},{pointValue:10,group:"speedBlessing"},{pointValue:20,group:"speedBlessing"},{pointValue:30,group:"speedBlessing"},{pointValue:10,group:"speedSpirit"},{pointValue:20,group:"speedSpirit"},{pointValue:30,group:"speedSpirit"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:100,group:"ungrouped"},{pointValue:150,group:"ungrouped"},{pointValue:50,group:"ungrouped"},{pointValue:40,group:"ascensionScore",reward:{wowHypercubeGain:()=>1.1}},{pointValue:45,group:"ascensionScore",reward:{wowCubeGain:()=>1.1}},{pointValue:50,group:"ascensionScore",reward:{wowTesseractGain:()=>1.1}},{pointValue:55,group:"ascensionScore",reward:{wowPlatonicGain:()=>1.1,overfluxConversionRate:()=>1.05}},{pointValue:60,group:"ascensionScore",reward:{overfluxConversionRate:()=>1.05}},{pointValue:65,group:"ascensionScore",reward:{wowHepteractGain:()=>1.1}},{pointValue:70,group:"ascensionScore",reward:{ascensionScore:()=>Math.pow(1.01,this.gameData?.hepteracts.abyss.TIMES_CAP_EXTENDED??0)}},{pointValue:40,group:"ascensionCount",reward:{ascensionCountMultiplier:()=>1.1}},{pointValue:45,group:"ascensionCount",reward:{ascensionCountMultiplier:()=>1.1}},{pointValue:50,group:"ascensionCount"},{pointValue:55,group:"ascensionCount"},{pointValue:60,group:"ascensionCount"},{pointValue:65,group:"ascensionCount"},{pointValue:70,group:"ascensionCount",reward:{quarkGain:()=>1+.1*Math.min((this.gameData?.ascensionCount??0)/1e15,1)}},{pointValue:40,group:"constant",reward:{ascensionScore:()=>1+Math.min(j.log(this.gameData?.ascendShards.add(1)??0,10)/1e5,1)}},{pointValue:45,group:"constant"},{pointValue:50,group:"constant"},{pointValue:55,group:"constant"},{pointValue:60,group:"constant",reward:{platonicToHypercubes:()=>Math.min(1,j.log(this.gameData?.ascendShards.add(1)??0,10)/1e6)}},{pointValue:65,group:"constant"},{pointValue:70,group:"constant"},{pointValue:10,group:"singularityCount"},{pointValue:20,group:"singularityCount"},{pointValue:30,group:"singularityCount"},{pointValue:40,group:"singularityCount"},{pointValue:50,group:"singularityCount"},{pointValue:60,group:"singularityCount"},{pointValue:70,group:"singularityCount"},{pointValue:40,group:"firstOwnedCoin"},{pointValue:45,group:"firstOwnedCoin"},{pointValue:50,group:"firstOwnedCoin"},{pointValue:40,group:"secondOwnedCoin"},{pointValue:45,group:"secondOwnedCoin"},{pointValue:50,group:"secondOwnedCoin"},{pointValue:40,group:"thirdOwnedCoin"},{pointValue:45,group:"thirdOwnedCoin"},{pointValue:50,group:"thirdOwnedCoin"},{pointValue:40,group:"fourthOwnedCoin"},{pointValue:45,group:"fourthOwnedCoin"},{pointValue:50,group:"fourthOwnedCoin"},{pointValue:40,group:"fifthOwnedCoin"},{pointValue:45,group:"fifthOwnedCoin"},{pointValue:50,group:"fifthOwnedCoin"},{pointValue:40,group:"prestigePointGain"},{pointValue:45,group:"prestigePointGain"},{pointValue:50,group:"prestigePointGain"},{pointValue:40,group:"transcendPointGain"},{pointValue:45,group:"transcendPointGain"},{pointValue:50,group:"transcendPointGain"},{pointValue:40,group:"reincarnationPointGain"},{pointValue:45,group:"reincarnationPointGain"},{pointValue:50,group:"reincarnationPointGain"},{pointValue:40,group:"challenge1"},{pointValue:45,group:"challenge1"},{pointValue:50,group:"challenge1"},{pointValue:40,group:"challenge2"},{pointValue:45,group:"challenge2"},{pointValue:50,group:"challenge2"},{pointValue:40,group:"challenge3"},{pointValue:45,group:"challenge3"},{pointValue:50,group:"challenge3"},{pointValue:40,group:"challenge4"},{pointValue:45,group:"challenge4"},{pointValue:50,group:"challenge4"},{pointValue:40,group:"challenge5"},{pointValue:45,group:"challenge5"},{pointValue:50,group:"challenge5"},{pointValue:40,group:"challenge6"},{pointValue:45,group:"challenge6"},{pointValue:50,group:"challenge6"},{pointValue:40,group:"challenge7"},{pointValue:45,group:"challenge7"},{pointValue:50,group:"challenge7"},{pointValue:40,group:"challenge8"},{pointValue:45,group:"challenge8"},{pointValue:50,group:"challenge8"},{pointValue:40,group:"challenge9"},{pointValue:45,group:"challenge9"},{pointValue:50,group:"challenge9"},{pointValue:40,group:"challenge10"},{pointValue:45,group:"challenge10"},{pointValue:50,group:"challenge10"},{pointValue:40,group:"accelerators"},{pointValue:45,group:"accelerators"},{pointValue:50,group:"accelerators"},{pointValue:40,group:"multipliers"},{pointValue:45,group:"multipliers"},{pointValue:50,group:"multipliers"},{pointValue:40,group:"acceleratorBoosts"},{pointValue:45,group:"acceleratorBoosts"},{pointValue:50,group:"acceleratorBoosts"},{pointValue:40,group:"antCrumbs"},{pointValue:45,group:"antCrumbs"},{pointValue:50,group:"antCrumbs"},{pointValue:40,group:"sacMult"},{pointValue:45,group:"sacMult"},{pointValue:50,group:"sacMult"},{pointValue:75,group:"ascensionCount"},{pointValue:80,group:"ascensionCount"},{pointValue:85,group:"ascensionCount"},{pointValue:90,group:"ascensionCount"},{pointValue:95,group:"ascensionCount"},{pointValue:100,group:"ascensionCount"},{pointValue:75,group:"constant"},{pointValue:80,group:"constant"},{pointValue:85,group:"constant"},{pointValue:90,group:"constant"},{pointValue:95,group:"constant"},{pointValue:100,group:"constant"},{pointValue:80,group:"challenge11"},{pointValue:90,group:"challenge11"},{pointValue:100,group:"challenge11"},{pointValue:110,group:"challenge11"},{pointValue:120,group:"challenge11"},{pointValue:80,group:"challenge12"},{pointValue:90,group:"challenge12"},{pointValue:100,group:"challenge12"},{pointValue:110,group:"challenge12"},{pointValue:120,group:"challenge12"},{pointValue:80,group:"challenge13"},{pointValue:90,group:"challenge13"},{pointValue:100,group:"challenge13"},{pointValue:110,group:"challenge13"},{pointValue:120,group:"challenge13"},{pointValue:80,group:"challenge14"},{pointValue:90,group:"challenge14"},{pointValue:100,group:"challenge14"},{pointValue:110,group:"challenge14"},{pointValue:120,group:"challenge14"},{pointValue:40,group:"speedBlessing"},{pointValue:50,group:"speedBlessing"},{pointValue:60,group:"speedBlessing"},{pointValue:70,group:"speedBlessing"},{pointValue:80,group:"speedBlessing"},{pointValue:90,group:"speedBlessing"},{pointValue:100,group:"speedBlessing"},{pointValue:40,group:"speedSpirit"},{pointValue:50,group:"speedSpirit"},{pointValue:60,group:"speedSpirit"},{pointValue:70,group:"speedSpirit"},{pointValue:80,group:"speedSpirit"},{pointValue:90,group:"speedSpirit"},{pointValue:100,group:"speedSpirit"},{pointValue:2,group:"runeLevel"},{pointValue:4,group:"runeLevel"},{pointValue:6,group:"runeLevel"},{pointValue:8,group:"runeLevel"},{pointValue:10,group:"runeLevel"},{pointValue:12,group:"runeLevel"},{pointValue:14,group:"runeLevel"},{pointValue:16,group:"runeLevel"},{pointValue:18,group:"runeLevel"},{pointValue:20,group:"runeLevel"},{pointValue:22,group:"runeLevel"},{pointValue:24,group:"runeLevel"},{pointValue:26,group:"runeLevel"},{pointValue:28,group:"runeLevel"},{pointValue:30,group:"runeLevel"},{pointValue:2,group:"runeFreeLevel"},{pointValue:4,group:"runeFreeLevel"},{pointValue:6,group:"runeFreeLevel"},{pointValue:8,group:"runeFreeLevel"},{pointValue:10,group:"runeFreeLevel"},{pointValue:12,group:"runeFreeLevel"},{pointValue:14,group:"runeFreeLevel"},{pointValue:16,group:"runeFreeLevel"},{pointValue:18,group:"runeFreeLevel"},{pointValue:20,group:"runeFreeLevel"},{pointValue:22,group:"runeFreeLevel"},{pointValue:24,group:"runeFreeLevel"},{pointValue:26,group:"runeFreeLevel"},{pointValue:28,group:"runeFreeLevel"},{pointValue:30,group:"runeFreeLevel"},{pointValue:5,group:"campaignTokens"},{pointValue:10,group:"campaignTokens"},{pointValue:15,group:"campaignTokens"},{pointValue:20,group:"campaignTokens"},{pointValue:25,group:"campaignTokens"},{pointValue:30,group:"campaignTokens"},{pointValue:35,group:"campaignTokens"},{pointValue:40,group:"campaignTokens"},{pointValue:45,group:"campaignTokens"},{pointValue:50,group:"campaignTokens"},{pointValue:2,group:"prestigeCount"},{pointValue:4,group:"prestigeCount",reward:{prestigeCountMultiplier:()=>Math.max(1,1+Math.floor(Math.log10(this.gameData?.prestigeCount??1)))}},{pointValue:6,group:"prestigeCount",reward:{duplicationRuneUnlock:()=>1}},{pointValue:8,group:"prestigeCount",reward:{offeringBonus:()=>1+.02*Math.max(1,1+Math.floor(Math.log10(this.gameData?.prestigeCount??1)))}},{pointValue:10,group:"prestigeCount"},{pointValue:12,group:"prestigeCount"},{pointValue:14,group:"prestigeCount",reward:{transcendToPrestige:()=>1}},{pointValue:16,group:"prestigeCount"},{pointValue:18,group:"prestigeCount",reward:{transcensionCountMultiplier:()=>Math.min(4,1.25+2.75*Math.floor((this.gameData?.prestigecounter??0)/10))}},{pointValue:20,group:"prestigeCount"},{pointValue:22,group:"prestigeCount"},{pointValue:24,group:"prestigeCount"},{pointValue:26,group:"prestigeCount"},{pointValue:28,group:"prestigeCount"},{pointValue:30,group:"prestigeCount"},{pointValue:3,group:"transcensionCount"},{pointValue:6,group:"transcensionCount",reward:{transcensionCountMultiplier:()=>Math.max(1,1+Math.floor(Math.log10(this.gameData?.transcendCount??1)))}},{pointValue:9,group:"transcensionCount",reward:{salvage:()=>2*Math.max(1,1+Math.floor(Math.log10(this.gameData?.transcendCount??1)))}},{pointValue:12,group:"transcensionCount",reward:{prismRuneUnlock:()=>1}},{pointValue:15,group:"transcensionCount"},{pointValue:18,group:"transcensionCount"},{pointValue:21,group:"transcensionCount",reward:{reincarnationToTranscend:()=>1}},{pointValue:24,group:"transcensionCount"},{pointValue:27,group:"transcensionCount",reward:{reincarnationCountMultiplier:()=>Math.min(4,1.25+2.75*Math.floor((this.gameData?.prestigecounter??0)/1e3))}},{pointValue:30,group:"transcensionCount"},{pointValue:33,group:"transcensionCount"},{pointValue:36,group:"transcensionCount"},{pointValue:39,group:"transcensionCount"},{pointValue:42,group:"transcensionCount"},{pointValue:45,group:"transcensionCount"},{pointValue:4,group:"reincarnationCount"},{pointValue:8,group:"reincarnationCount",reward:{reincarnationCountMultiplier:()=>Math.max(1,1+Math.floor(Math.log10(this.gameData?.reincarnationCount??1)))}},{pointValue:12,group:"reincarnationCount",reward:{obtainiumBonus:()=>1+.02*Math.max(1,1+Math.floor(Math.log10(this.gameData?.reincarnationCount??1)))}},{pointValue:16,group:"reincarnationCount"},{pointValue:20,group:"reincarnationCount",reward:{thriftRuneUnlock:()=>1}},{pointValue:24,group:"reincarnationCount"},{pointValue:28,group:"reincarnationCount"},{pointValue:32,group:"reincarnationCount"},{pointValue:36,group:"reincarnationCount"},{pointValue:40,group:"reincarnationCount"},{pointValue:44,group:"reincarnationCount"},{pointValue:48,group:"reincarnationCount"},{pointValue:52,group:"reincarnationCount"},{pointValue:56,group:"reincarnationCount"},{pointValue:60,group:"reincarnationCount"},{pointValue:3,group:"sacCount",reward:{freeAntUpgrades:()=>1}},{pointValue:6,group:"sacCount",reward:{antSacrificeCountMultiplier:()=>2,hicAutobuy:()=>1}},{pointValue:9,group:"sacCount",reward:{autoAntSacrifice:()=>1}},{pointValue:12,group:"sacCount",reward:{antELOAdditiveMultiplier:()=>.01,praemoenioAutobuy:()=>1}},{pointValue:15,group:"sacCount",reward:{antELOAdditive:()=>25}},{pointValue:17,group:"sacCount",reward:{antSpeed2UpgradeImprover:()=>this.R_calculateSynergismLevel(),phylacteriumAutobuy:()=>1}},{pointValue:19,group:"sacCount"},{pointValue:21,group:"sacCount"},{pointValue:23,group:"sacCount"},{pointValue:25,group:"sacCount",reward:{preserveAnthillCountSingularity:()=>1}},{pointValue:40,group:"sacCount"}];this.R_progressiveAchievements={runeLevel:{maxPointValue:1e3,pointsAwarded:e=>Math.min(200,Math.floor(e/1e3))+Math.min(400,Math.floor(e/2500))+Math.min(400,Math.floor(e/12500)),updateValue:()=>this.gameData?this.gameData.runes.speed+this.gameData.runes.duplication+this.gameData.runes.prism+this.gameData.runes.thrift+this.gameData.runes.superiorIntellect+this.gameData.runes.infiniteAscent+this.gameData.runes.antiquities+this.gameData.runes.horseShoe+this.gameData.runes.finiteDescent:0,useCachedValue:!0,rewardedAP:0,displayOrder:1,displayCondition:()=>(this.gameData?.prestigeCount??0)>0},freeRuneLevel:{maxPointValue:500,pointsAwarded:e=>Math.min(100,Math.floor(e/250))+Math.min(200,Math.floor(e/750))+Math.min(200,Math.floor(e/2500)),updateValue:()=>0,useCachedValue:!0,rewardedAP:0,displayOrder:2,displayCondition:()=>(this.gameData?.prestigeCount??0)>0},antMasteries:{maxPointValue:360,pointsAwarded:e=>{let a=0;if(!this.gameData)return 0;for(let n=0;n<=ha;n++){let i=this.gameData.ants.masteries[n]?.highestMastery??0;a+=3*i,i>=12&&(a+=4)}return a},updateValue:()=>{let e=0;if(!this.gameData)return 0;for(let a=0;a<=ha;a++)e+=this.gameData.ants.masteries[a]?.highestMastery??0;return e},useCachedValue:!1,rewardedAP:0,displayOrder:3,displayCondition:()=>this.gameData?.unlocks.generation??!1},rebornELO:{maxPointValue:1e3,pointsAwarded:e=>{let a=this.R_calculateLeaderboardValue(this.gameData?.ants.highestRebornELOEver??[]);return Math.min(100,Math.floor(a/100))+Math.min(150,Math.floor(a/1e3))+Math.min(150,Math.floor(a/9e3))+Math.min(200,Math.floor(a/75e3))+Math.min(400,Math.floor(a/15e4))},updateValue:()=>this.R_calculateLeaderboardValue(this.gameData?.ants.highestRebornELOEver??[]),useCachedValue:!1,rewardedAP:0,displayOrder:4,displayCondition:()=>this.gameData?.unlocks.generation??!1},singularityCount:{maxPointValue:3600,pointsAwarded:e=>{let a=this.gameData?.highestSingularityCount??0;return 9*a+3*Math.max(0,a-100)+3*Math.max(0,a-200)},updateValue:()=>0,useCachedValue:!1,rewardedAP:0,displayOrder:6,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>0},ambrosiaCount:{maxPointValue:800,pointsAwarded:e=>Math.min(200,Math.floor(e/100))+Math.min(200,Math.floor(e/1e4))+Math.min(400,Math.floor(400*Math.sqrt(e/1e8))),updateValue:()=>this.gameData?.lifetimeAmbrosia??0,useCachedValue:!0,rewardedAP:0,displayOrder:10,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>=25},redAmbrosiaCount:{maxPointValue:1e3,pointsAwarded:e=>Math.min(200,Math.floor(e/25))+Math.min(200,Math.floor(e/2500))+Math.min(400,Math.floor(400*e/5e6))+Math.min(200,Math.floor(200*e/125e5)),updateValue:()=>this.gameData?.lifetimeRedAmbrosia??0,useCachedValue:!0,rewardedAP:0,displayOrder:11,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>=150},exalts:{maxPointValue:this.R_maxAPFromChallenges,pointsAwarded:e=>{let a=0;if(!this.gameData)return 0;for(let n of Object.keys(this.gameData.singularityChallenges))a+=this.getSingChalApReward(n);return a},updateValue:()=>0,useCachedValue:!1,rewardedAP:0,displayOrder:9,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>=25},singularityUpgrades:{maxPointValue:this.R_maxGoldenQuarkUpgradeAP,pointsAwarded:e=>{let a=0;if(!this.gameData)return 0;for(let n of Object.keys(we)){let i=we[n].maxLevel,s=this.gameData.goldenQuarkUpgrades[n]?.level??0;i!==-1&&s>=i&&(a+=5)}return a},updateValue:()=>0,useCachedValue:!1,rewardedAP:0,displayOrder:7,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>0},octeractUpgrades:{maxPointValue:this.R_maxOcteractUpgradeAP,pointsAwarded:e=>{let a=0;if(!this.gameData)return 0;for(let n of Object.keys(De)){let i=De[n].maxLevel,s=this.gameData.octUpgrades[n]?.level??0;i!==-1&&s>=i&&(a+=8)}return a},updateValue:()=>0,useCachedValue:!1,rewardedAP:0,displayOrder:8,displayCondition:()=>(this.gameData?.goldenQuarkUpgrades.octeractUnlock.level??0)>0},redAmbrosiaUpgrades:{maxPointValue:this.R_maxRedAmbrosiaUpgradeAP,pointsAwarded:()=>{let e=0;if(!this.gameData)return 0;for(let a of Object.keys(this.R_redAmbrosiaUpgradeCalculationCollection)){let n=this.R_redAmbrosiaUpgradeCalculationCollection[a].maxLevel,i=this.R_calculateRedAmbrosiaUpgradeValue(a),s=typeof i=="number"?i:i.value;n!==-1&&s>=n&&(e+=10)}return e},updateValue:()=>0,useCachedValue:!1,rewardedAP:0,displayOrder:12,displayCondition:()=>(this.gameData?.highestSingularityCount??0)>=150},talismanRarities:{maxPointValue:this.R_maxTalismansRarityAP,pointsAwarded:e=>5*e,updateValue:()=>(this.gameData,0),useCachedValue:!0,rewardedAP:0,displayOrder:5,displayCondition:()=>this.gameData?.unlocks.rrow2??!1}};this.R_calculateLeaderboardValue=e=>{let a=0,n=[1,.8,.6,.4,.2];for(let i=0;i<Math.min(e.length,n.length);i++)a+=e[i].elo*n[i];return a};this.R_calculateNumberOfThresholds=()=>{if(!this.gameData)return 0;let e=this.gameData,a="R_NumberOfThresholds",n=f.HSAmbrosia.R_digitReduction,i=[e.lifetimeAmbrosia],s=this.#n(a,i);if(s!==void 0)return s;let r=e.lifetimeAmbrosia>0?1+Math.floor(Math.log10(e.lifetimeAmbrosia)):0,c=Math.floor(e.lifetimeAmbrosia/Math.pow(10,r-1))>=3?1:0,g=Math.max(0,2*(r-n)-1+c);return this.#i(a,{value:g,cachedBy:i}),g};this.R_calculateToNextThreshold=()=>{if(!this.gameData)return 0;let e=this.gameData,a="R_ToNextThreshold",n=f.HSAmbrosia.R_digitReduction,i=[e.lifetimeAmbrosia],s=this.#n(a,i);if(s!==void 0)return s;let r=this.R_calculateNumberOfThresholds(),l;r===0?l=1e4-e.lifetimeAmbrosia:r%2===0?l=Math.pow(10,r/2+n)-e.lifetimeAmbrosia:l=3*Math.pow(10,(r-1)/2+n)-e.lifetimeAmbrosia;let c=l;return this.#i(a,{value:c,cachedBy:i}),c};this.R_calculateRequiredBlueberryTime=()=>{if(!this.gameData)return 0;let e=this.gameData,a="R_RequiredBlueberryTime",n=f.HSAmbrosia.R_TIME_PER_AMBROSIA,i=[e.lifetimeAmbrosia],s=this.#n(a,i);if(s!==void 0)return s;let r=n;r+=Math.floor(e.lifetimeAmbrosia/300);let c=1-.006*e.singularityChallenges.noAmbrosiaUpgrades.completions*e.shopUpgrades.shopAmbrosiaAccelerator,g=this.R_getAmbrosiaUpgradeEffects("ambrosiaBrickOfLead").barRequirementMult;if(r*=c,r*=g,e.lifetimeAmbrosia>=1e4){let h=Math.log10(4);r*=Math.pow(e.lifetimeAmbrosia/1e4,h),r=Math.ceil(r)}return this.#i(a,{value:r,cachedBy:i}),r};this.R_calculateRequiredRedAmbrosiaTime=()=>{if(!this.gameData)return 0;let e=this.gameData,a="R_RequiredRedAmbrosiaTime",n=f.HSAmbrosia.R_TIME_PER_RED_AMBROSIA,i=[e.lifetimeRedAmbrosia,e.singularityChallenges.limitedTime.completions],s=this.#n(a,i);if(s!==void 0)return s;let r=1-.02*e.singularityChallenges.limitedTime.completions,l=n;l+=200*e.lifetimeRedAmbrosia;let c=1e6*+r;l*=+r;let g=Math.min(c,l);return this.#i(a,{value:g,cachedBy:i}),g};this.R_calculateHepteractEffective=e=>{if(!this.gameData)return 0;let a=this.gameData,n="R_HepteractEffective",i=[a.hepteracts[e].BAL,a.platonicUpgrades[19],a.goldenQuarkUpgrades.singQuarkHepteract.level,a.goldenQuarkUpgrades.singQuarkHepteract2.level,a.goldenQuarkUpgrades.singQuarkHepteract3.level,a.shopUpgrades.improveQuarkHept,a.shopUpgrades.improveQuarkHept2,a.shopUpgrades.improveQuarkHept3,a.shopUpgrades.improveQuarkHept4,a.shopUpgrades.improveQuarkHept5],s=this.#n(n,i);if(s!==void 0)return s;let r=Math.min(a.hepteracts[e].BAL,this.#o[e].LIMIT),l=0;if(e==="chronos"&&(l+=1/750*a.platonicUpgrades[19]),e==="quark"){l+=+a.goldenQuarkUpgrades.singQuarkHepteract.level/100,l+=+a.goldenQuarkUpgrades.singQuarkHepteract2.level/100,l+=+a.goldenQuarkUpgrades.singQuarkHepteract3.level/100,l+=+a.octUpgrades.octeractImprovedQuarkHept.level/100,l+=a.shopUpgrades.improveQuarkHept/100,l+=a.shopUpgrades.improveQuarkHept2/100,l+=a.shopUpgrades.improveQuarkHept3/100,l+=a.shopUpgrades.improveQuarkHept4/100,l+=a.shopUpgrades.improveQuarkHept5/5e3;let c=a.hepteracts[e].BAL,g;return 1e3<c&&c<=1e3*Math.pow(2,10)?g=r*Math.pow(c/1e3,1/2+l):1e3*Math.pow(2,10)<c&&c<=1e3*Math.pow(2,18)?g=r*Math.pow(Math.pow(2,10),1/2+l)*Math.pow(c/(1e3*Math.pow(2,10)),1/4+l/2):1e3*Math.pow(2,18)<c&&c<=1e3*Math.pow(2,44)?g=r*Math.pow(Math.pow(2,10),1/2+l)*Math.pow(Math.pow(2,8),1/4+l/2)*Math.pow(c/(1e3*Math.pow(2,18)),1/6+l/3):1e3*Math.pow(2,44)<c?g=r*Math.pow(Math.pow(2,10),1/2+l)*Math.pow(Math.pow(2,8),1/4+l/2)*Math.pow(Math.pow(2,26),1/6+l/3)*Math.pow(c/(1e3*Math.pow(2,44)),1/12+l/6):g=0,this.#i(n,{value:g,cachedBy:i}),g}return a.hepteracts[e].BAL>this.#o[e].LIMIT&&(r*=Math.pow(a.hepteracts[e].BAL/this.#o[e].LIMIT,this.#o[e].DR+l)),this.#i(n,{value:r,cachedBy:i}),r};this.#s={viscosityPower:[1,.87,.8,.75,.7,.6,.54,.45,.39,.33,.3,.2,.1,.05,0,0,0],dilationMultiplier:[1,1/3,1/10,1/40,1/200,1/3e4,1/3e6,1/3e9,1/3e12,1/1e15,1/1e19,1/1e24,1/1e34,1/1e48,1/1e65,1/1e80,1/1e100],hyperchallengeMultiplier:[1,1.2,1.5,1.7,3,5,8,13,21,34,55,100,400,1600,7777,18888,88888],illiteracyPower:[1,.9,.8,.7,.6,.5,.45,.4,.35,.3,.25,.2,.15,.1,.08,.06,.04],deflationMultiplier:[1,.3,.1,.03,.01,1/1e6,1/1e8,1/1e10,1/1e12,1/1e15,1/1e18,1/1e25,1/1e35,1/1e50,1/1e77,0,0],extinctionDivisor:[1,1.25,1.5,2,3,4,5,6,7,8,9,10,11,12,13,14,15],droughtSalvage:[0,-25,-50,-75,-100,-200,-300,-400,-600,-800,-1e3,-1250,-2e3,-4e3,-8e3,-12e3,-16e3],recessionPower:[1,.9,.7,.6,.5,.37,.3,.23,.18,.15,.12,.09,.03,.01,.007,7e-4,7e-5]};this.R_CalcECC=(e,a)=>{let n=0;switch(e){case"transcend":return n+=Math.min(100,a),n+=1/20*(Math.min(1e3,Math.max(100,a))-100),n+=1/100*(Math.max(1e3,a)-1e3),n;case"reincarnation":return n+=Math.min(25,a),n+=1/2*(Math.min(75,Math.max(25,a))-25),n+=1/10*(Math.max(75,a)-75),n;case"ascension":return n+=Math.min(10,a),n+=1/2*(Math.max(10,a)-10),n}};this.R_computeFreeAntUpgradeLevels=()=>{if(!this.gameData)return 0;let e=this.gameData,a=0;return a+=this.R_CalcECC("reincarnation",e.challengecompletions[9]),a+=Math.round(2e3*(1-Math.pow(.999,e.constantUpgrades[6]??0))),a+=12*this.R_CalcECC("ascension",e.challengecompletions[11]),a+=2*e.researches[97],a+=2*e.researches[98],a+=e.researches[102],a+=2*e.researches[132],a+=Math.floor(1/200*e.researches[200]),a+=+this.R_getAchievementReward("freeAntUpgrades"),a*=this.R_calculateChallenge15Reward("bonusAntLevel"),e.currentChallenge.ascension===11&&(a+=Math.floor(3*e.challengecompletions[8]+5*e.challengecompletions[9])),a};this.R_getAchievementReward=e=>this.R_AchRewards[e]();this.R_calculateAchievementsByReward=this.R_achievements.reduce((e,a,n)=>{if(a.reward)for(let i of Object.keys(a.reward))e[i]||(e[i]=[]),e[i].push(Number(n));return e},{});this.R_AchRewards={acceleratorPower:()=>this.R_calculateAchievementsByReward.acceleratorPower.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.acceleratorPower():0),0),accelerators:()=>this.R_calculateAchievementsByReward.accelerators.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.accelerators():0),0),multipliers:()=>this.R_calculateAchievementsByReward.multipliers.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.multipliers():0),0),accelBoosts:()=>this.R_calculateAchievementsByReward.accelBoosts.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.accelBoosts():0),0),crystalMultiplier:()=>this.R_calculateAchievementsByReward.crystalMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.crystalMultiplier():1),1),quarkGain:()=>this.R_calculateAchievementsByReward.quarkGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.quarkGain():1),1),taxReduction:()=>this.R_calculateAchievementsByReward.taxReduction.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.taxReduction():1),1),particleGain:()=>this.R_calculateAchievementsByReward.particleGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.particleGain():1),1),chronosTalisman:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.chronosTalisman[0]],midasTalisman:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.midasTalisman[0]],metaphysicsTalisman:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.metaphysicsTalisman[0]],polymathTalisman:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.polymathTalisman[0]],wowSquareTalisman:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.wowSquareTalisman[0]],conversionExponent:()=>this.R_calculateAchievementsByReward.conversionExponent.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.conversionExponent():0),0),talismanPower:()=>this.R_calculateAchievementsByReward.talismanPower.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.talismanPower():0),0),sacrificeMult:()=>this.R_calculateAchievementsByReward.sacrificeMult.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.sacrificeMult():1),1),antSpeed:()=>this.R_calculateAchievementsByReward.antSpeed.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.antSpeed():1),1),antSacrificeUnlock:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.antSacrificeUnlock[0]],antAutobuyers:()=>this.R_calculateAchievementsByReward.antAutobuyers.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.antAutobuyers():0),0),preserveAnthillCount:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.preserveAnthillCount[0]],preserveAnthillCountSingularity:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.preserveAnthillCountSingularity[0]],inceptusAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.inceptusAutobuy[0]],fortunaeAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.fortunaeAutobuy[0]],tributumAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.tributumAutobuy[0]],celeritasAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.celeritasAutobuy[0]],exploratoremAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.exploratoremAutobuy[0]],sacrificiumAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.sacrificiumAutobuy[0]],experientiaAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.experientiaAutobuy[0]],hicAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.hicAutobuy[0]],scientiaAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.scientiaAutobuy[0]],praemoenioAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.praemoenioAutobuy[0]],phylacteriumAutobuy:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.phylacteriumAutobuy[0]],antELOAdditive:()=>this.R_calculateAchievementsByReward.antELOAdditive.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.antELOAdditive():0),0),antELOAdditiveMultiplier:()=>this.R_calculateAchievementsByReward.antELOAdditiveMultiplier.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.antELOAdditiveMultiplier():0),0),ascensionCountMultiplier:()=>this.R_calculateAchievementsByReward.ascensionCountMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.ascensionCountMultiplier():1),1),ascensionCountAdditive:()=>this.R_calculateAchievementsByReward.ascensionCountAdditive.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.ascensionCountAdditive():0),0),wowCubeGain:()=>this.R_calculateAchievementsByReward.wowCubeGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.wowCubeGain():1),1),wowTesseractGain:()=>this.R_calculateAchievementsByReward.wowTesseractGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.wowTesseractGain():1),1),wowHypercubeGain:()=>this.R_calculateAchievementsByReward.wowHypercubeGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.wowHypercubeGain():1),1),wowPlatonicGain:()=>this.R_calculateAchievementsByReward.wowPlatonicGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.wowPlatonicGain():1),1),wowHepteractGain:()=>this.R_calculateAchievementsByReward.wowHepteractGain.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.wowHepteractGain():1),1),ascensionScore:()=>this.R_calculateAchievementsByReward.ascensionScore.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.ascensionScore():1),1),ascensionRewardScaling:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.ascensionRewardScaling[0]],constUpgrade1Buff:()=>this.R_calculateAchievementsByReward.constUpgrade1Buff.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.constUpgrade1Buff():0),0),constUpgrade2Buff:()=>this.R_calculateAchievementsByReward.constUpgrade2Buff.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.constUpgrade2Buff():0),0),platonicToHypercubes:()=>this.R_calculateAchievementsByReward.platonicToHypercubes.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.platonicToHypercubes():0),0),statTracker:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.statTracker[0]],overfluxConversionRate:()=>this.R_calculateAchievementsByReward.overfluxConversionRate.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.overfluxConversionRate():1),1),diamondUpgrade18:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade18[0]],diamondUpgrade19:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade19[0]],diamondUpgrade20:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.diamondUpgrade20[0]],prestigeCountMultiplier:()=>this.R_calculateAchievementsByReward.prestigeCountMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.prestigeCountMultiplier():1),1),transcensionCountMultiplier:()=>this.R_calculateAchievementsByReward.transcensionCountMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.transcensionCountMultiplier():1),1),reincarnationCountMultiplier:()=>this.R_calculateAchievementsByReward.reincarnationCountMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.reincarnationCountMultiplier():1),1),duplicationRuneUnlock:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.duplicationRuneUnlock[0]],offeringBonus:()=>this.R_calculateAchievementsByReward.offeringBonus.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.offeringBonus():1),1),obtainiumBonus:()=>this.R_calculateAchievementsByReward.obtainiumBonus.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.obtainiumBonus():1),1),salvage:()=>this.R_calculateAchievementsByReward.salvage.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.salvage():0),0),prismRuneUnlock:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.prismRuneUnlock[0]],thriftRuneUnlock:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.thriftRuneUnlock[0]],transcendToPrestige:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.transcendToPrestige[0]],reincarnationToTranscend:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.reincarnationToTranscend[0]],freeAntUpgrades:()=>this.R_calculateAchievementsByReward.freeAntUpgrades.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.freeAntUpgrades():0),0),antSacrificeCountMultiplier:()=>this.R_calculateAchievementsByReward.antSacrificeCountMultiplier.reduce((e,a)=>e*(this.gameData?.achievements[a]?this.R_achievements[a].reward.antSacrificeCountMultiplier():1),1),autoAntSacrifice:()=>!!this.gameData?.achievements[this.R_calculateAchievementsByReward.autoAntSacrifice[0]],antSpeed2UpgradeImprover:()=>this.R_calculateAchievementsByReward.antSpeed2UpgradeImprover.reduce((e,a)=>e+(this.gameData?.achievements[a]?this.R_achievements[a].reward.antSpeed2UpgradeImprover():0),0)};this.#a={...this.#e},this.#t=this.R_redAmbrosiaUpgradeCalculationCollection}#e;#a;#t;#o;#n(e,a){if(!(e in this.#e)){u.debug(()=>`Could not find cache for '${e}'`);return}let n=this.#e[e];if(n.value===void 0||n.cachedBy.length===0){f.Debug.calculationCacheDebugMode&&console.log(`Cache missed (reason: null value or empty cache) for ${e} with value ${n.value}`);return}if(n.cachedBy.length!==a.length){f.Debug.calculationCacheDebugMode&&console.warn(`Cache missed (reason: cache length mismatch) for ${e} with value ${n.value}`);return}for(let i=0;i<n.cachedBy.length;i++)if(!a.includes(n.cachedBy[i])){f.Debug.calculationCacheDebugMode&&console.log(`Cache missed (reason: calc var mismatch) for ${e} (${n.cachedBy[i]})`);return}return f.Debug.calculationCacheDebugMode&&console.log(`Hit cache for ${e} with value ${n.value}`),n.value}#i(e,a){if(a.cachedBy.length===0||a.value===null||a.value===void 0){f.Debug.calculationCacheDebugMode&&console.warn(`Rejected cache update for ${e} (value: ${a.value}, cachedBy: ${a.cachedBy.length})`);return}this.#e[e]=a}clearCache(){this.#e={...this.#a}}dumpCache(){console.table(this.#e)}investToAmbrosiaUpgrade(e,a,n,i,s){let r=0,l=s(r,n);for(;a>=l&&(a-=l,r+=1,l=s(r,n),!(r>=i)););return r+=e,r}investToRedAmbrosiaUpgrade(e,a,n,i){let s=0,r=i(s,a);for(;e>=r&&(e-=r,s+=1,r=i(s,a),!(s>=n)););return s}R_calculateSigmoidExponential(e,a){return 1+(e-1)*(1-Math.exp(-a))}R_getTalismanEffects(e,a){switch(a===void 0&&(a=this.R_getTalismanRarity(e)),e){case"exemption":return{taxReduction:[0,-.2,-.3,-.4,-.45,-.5,-.55,-.6,-.61,-.62,-.65][a]??0,duplicationOOMBonus:a>=6?12:0};case"chronos":return{globalSpeed:[1,1.04,1.08,1.12,1.16,1.2,1.25,1.3,1.325,1.35,1.4][a]??1,speedOOMBonus:a>=6?12:0};case"midas":return{blessingBonus:[1,1.04,1.08,1.12,1.16,1.2,1.25,1.3,1.325,1.35,1.4][a]??1,thriftOOMBonus:a>=6?12:0};case"metaphysics":return{talismanEffect:[1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2][a]??1,extraTalismanEffect:a>=6?1.07:1};case"polymath":return{ascensionSpeedBonus:[1,1.04,1.08,1.12,1.16,1.2,1.25,1.3,1.325,1.35,1.4][a]??1,SIOOMBonus:a>=6?12:0};case"mortuus":return{antBonus:[1,1.05,1.1,1.15,1.2,1.3,1.4,1.5,1.65,1.8,2][a]??1,prismOOMBonus:a>=6?12:0};case"plastic":return{quarkBonus:[1,1.005,1.01,1.015,1.02,1.025,1.03,1.04,1.045,1.05,1.0666][a]??1};case"wowSquare":return{evenDimBonus:[1,1.025,1.05,1.075,1.1,1.125,1.15,1.2,1.225,1.25,1.3][a]??1,oddDimBonus:a>=6?1.2:1};case"achievement":return{positiveSalvageMult:[0,.001,.002,.003,.004,.006,.008,.01,.015,.02,.03][a]??0,negativeSalvageMult:a>=6?-.02:0};case"cookieGrandma":return{freeCorruptionLevel:[0,.01,.02,.03,.04,.05,.06,.07,.08,.09,.1][a]??0,cookieSix:a>=6};case"horseShoe":return{luckPercentage:[0,.001,.002,.003,.004,.005,.007,.01,.012,.015,.02][a]??0,redLuck:a>=6?40:0};default:return{}}}R_getTalismanLevel(e){if(!this.gameData)return 0;let n=this.gameData.talismans[e],i=[n.shard,n.commonFragment,n.uncommonFragment,n.rareFragment,n.epicFragment,n.legendaryFragment,n.mythicalFragment,this.R_getTalismanLevelCap(e)],s=m=>{let d=m.match(/^([\d.]+)e\+?(-?\d+)$/i);return d?Math.log10(parseFloat(d[1]))+parseInt(d[2],10):Math.log10(parseFloat(m))},r={shard:s(n.shard.toString()),commonFragment:s(n.commonFragment.toString()),uncommonFragment:s(n.uncommonFragment.toString()),rareFragment:s(n.rareFragment.toString()),epicFragment:s(n.epicFragment.toString()),legendaryFragment:s(n.legendaryFragment.toString()),mythicalFragment:s(n.mythicalFragment.toString())},l=0,c=this.R_getTalismanBaseMult(e),g=this.R_getTalismanCostType(e),h=this.R_getTalismanLevelCap(e);for(;l<h;){let m=g==="regular"?on(c,l):sn(c,l,this.R_getTalismanExponentialRatio(e)),d=!0;for(let b in m)if(r[b]<s(m[b])){d=!1;break}if(!d)break;for(let b in m){let y=s(m[b]);r[b]=Math.log10(Math.pow(10,r[b])-Math.pow(10,y))}l++}return l}R_getTalismanRarity(e){if(!this.gameData)return 0;let a=this.R_getTalismanLevel(e);if(!this.R_isTalismanUnlocked(e))return 0;let i=this.R_getTalismanMaxLevel(e),s=a/i,r=0;return s>=1&&(s>=2&&(r+=1),s>=4&&(r+=1),s>=8&&(r+=1)),1+Math.min(6,Math.floor(6*s))+r}R_getRuneBonusFromIndividualTalisman(e,a){let n=this.R_getTalismanLevel(e),i=this.R_getTalismanRarity(e);if(i===0)return 0;let s=1;if(e==="metaphysics"){let l=this.R_getTalismanEffects("metaphysics",i);s*=l.talismanEffect,s*=l.extraTalismanEffect}return e==="mortuus"&&(s*=this.R_getAntUpgradeEffect(15).talismanEffectBuff),nn[e][a]*s*n*(an[i]??0)}R_getRuneBonusFromAllTalismans(e){let a=this.R_allTalismanRuneBonusStatsSum(),n=0,i=["exemption","chronos","midas","metaphysics","polymath","mortuus","plastic","wowSquare","achievement","cookieGrandma","horseShoe"];for(let s of i)n+=this.R_getRuneBonusFromIndividualTalisman(s,e);return n*a}R_getTalismanLevelCap(e){let a=this.R_getTalismanMaxLevel(e),n=this.R_universalTalismanMaxLevelIncreasers();return e==="metaphysics"&&(n+=(this.gameData?.cubeUpgrades[67]??0)>0?1337:0),e==="mortuus"&&(n+=this.R_getAntUpgradeEffect(15).talismanLevelIncreaser),e==="plastic"&&(n+=this.R_getPCoinUpgradeLevel("INSTANT_UNLOCK_1")?10:0),e==="achievement"&&(n+=this.R_getLevelMilestone("achievementTalismanEnhancement")),e==="cookieGrandma"&&(n+=54),e==="horseShoe"&&(n+=88),a+n}R_universalTalismanMaxLevelIncreasers(){if(!this.gameData)return 0;let e=this.gameData,a=this.R_singularityChallengeData.taxmanLastStand.effect(e.singularityChallenges.taxmanLastStand.completions);return 6*this.R_CalcECC("ascension",e.challengecompletions[13])+Math.floor((e.researches[200]??0)/400)+(a.talismanFreeLevel??0)+this.R_getOcteractUpgradeEffect("octeractTalismanLevelCap1")+this.R_getOcteractUpgradeEffect("octeractTalismanLevelCap2")+this.R_getOcteractUpgradeEffect("octeractTalismanLevelCap3")+this.R_getOcteractUpgradeEffect("octeractTalismanLevelCap4")}R_isTalismanUnlocked(e){if(!this.gameData)return!1;let a=this.gameData;switch(e){case"exemption":return a.unlocks.rrow1;case"chronos":return!!this.R_getAchievementReward("chronosTalisman");case"midas":return!!this.R_getAchievementReward("midasTalisman");case"metaphysics":return!!this.R_getAchievementReward("metaphysicsTalisman");case"polymath":return!!this.R_getAchievementReward("polymathTalisman");case"mortuus":return this.R_getAntUpgradeEffect(11).talismanUnlock;case"plastic":return this.R_isShopTalismanUnlocked();case"wowSquare":return a.challengecompletions[11]>=1;case"achievement":return this.R_getLevelMilestone("achievementTalismanUnlock")===1;case"cookieGrandma":return(a.cubeUpgrades[80]??0)>0;case"horseShoe":return!!this.R_singularityChallengeData.taxmanLastStand.effect(a.singularityChallenges.taxmanLastStand.completions).talismanUnlock;default:return!1}}R_getLevelMilestone(e){if(!this.gameData)return 0;let a=this.gameData,n=Number(a.worlds);switch(e){case"speedRune":return n>=1?1:0;case"duplicationRune":return n>=2?1:0;case"prismRune":return n>=3?1:0;case"thriftRune":return n>=4?1:0;case"SIRune":return n>=5?1:0;case"achievementTalismanUnlock":return n>=10?1:0;case"achievementTalismanEnhancement":return Math.floor(n/10);default:return 0}}R_getPCoinUpgradeLevel(e){let a=this.getPseudoData?.()??this.pseudoData;if(!a)return 0;let n=a.playerUpgrades?.find(i=>i.internalName===e)?.level;return n!==void 0?n:0}R_getTalismanMaxLevel(e){switch(e){case"wowSquare":return 210;case"achievement":return 40;case"cookieGrandma":return 6;case"horseShoe":return 12;default:return 180}}R_getTalismanBaseMult(e){switch(e){case"exemption":return"1";case"chronos":return"10";case"midas":return"1e4";case"metaphysics":return"1e8";case"polymath":return"1e16";case"mortuus":return"100";case"plastic":return"1e5";case"wowSquare":return"1e5";case"achievement":return"1e30";case"cookieGrandma":return"1e1000";case"horseShoe":return"1e1200";default:return"1"}}R_getTalismanCostType(e){switch(e){case"wowSquare":case"achievement":case"cookieGrandma":case"horseShoe":return"exponential";default:return"regular"}}R_getTalismanExponentialRatio(e){switch(e){case"wowSquare":return 2;case"achievement":return 10;case"cookieGrandma":return 1e8;case"horseShoe":return 1e5;default:return 1}}R_isShopTalismanUnlocked(){return(this.gameData?.shopUpgrades.shopTalisman??0)>0}R_computeFreeLevelMultiplierGQ(){return((this.gameData?.shopUpgrades.shopSingularityPotency??0)>0?3.66:1)+.3/100*(this.gameData?.cubeUpgrades[75]??0)}R_getSavedUpgradeFreeLevel(e){let a=Number(e?.freeLevel??e?.freeLevels??0);return Number.isFinite(a)?a:0}R_computeGQUpgradeFreeLevelSoftcap(e){if(!this.gameData)return u.errorOnce("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let n=this.gameData.goldenQuarkUpgrades[e],i=this.R_computeFreeLevelMultiplierGQ(),s=this.R_getSavedUpgradeFreeLevel(n),r=i*s;return Math.min(n.level,r)+Math.sqrt(Math.max(0,r-n.level))}R_computeFreeLevelMultiplierOCT(){return 1+.3/100*(this.gameData?.cubeUpgrades[78]??0)}R_actualOcteractUpgradeTotalLevels(e){if(!this.gameData)return u.error("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let a=this.gameData,n=a.octUpgrades[e];if(!n)return u.error(`<red>R_actualOcteractUpgradeTotalLevels() missing octeract upgrade ${e}</red>`,this.context),0;if(a.singularityChallenges.noOcteracts.enabled||a.singularityChallenges.sadisticPrequel.enabled)return 0;let i=Number(n.level??0),s=this.R_computeOcteractFreeLevelSoftcap(e);return!Number.isFinite(i)||!Number.isFinite(s)?0:i>=s?s+i:2*Math.sqrt(s*i)}R_actualGQUpgradeTotalLevels(e){if(!this.gameData)return u.errorOnce("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let a=this.gameData,n=we[e];if((a.singularityChallenges.noSingularityUpgrades.enabled||a.singularityChallenges.sadisticPrequel.enabled)&&!n.qualityOfLife)return 0;let i=this.R_computeGQUpgradeFreeLevelSoftcap(e),s=Number(a.goldenQuarkUpgrades[e].level??0),r=s+i,l=0;if(this.R_getOcteractUpgradeEffect("octeractImprovedFree")){let c=.6;c+=this.R_getOcteractUpgradeEffect("octeractImprovedFree2"),c+=this.R_getOcteractUpgradeEffect("octeractImprovedFree3"),c+=this.R_getOcteractUpgradeEffect("octeractImprovedFree4"),l=Math.pow(s*i,c)}return Math.max(r,l)}R_getGQUpgradeEffect(e){let a=we[e],n=this.R_actualGQUpgradeTotalLevels(e);return a.effect?a.effect(n):0}R_bonusRuneLevelsSpeed(){return this.gameData?this.R_getRuneBonusFromAllTalismans("speed")+(this.gameData.upgrades[27]??0)*(Math.min(50,Math.floor(this.gameData.coins.add(1).log10()/10))+Math.max(0,Math.min(50,Math.floor(this.gameData.coins.add(1).log10()/50)-10)))+(this.gameData.upgrades[29]??0)*Math.floor(Math.min(100,((this.gameData.firstOwnedCoin??0)+(this.gameData.secondOwnedCoin??0)+(this.gameData.thirdOwnedCoin??0)+(this.gameData.fourthOwnedCoin??0)+(this.gameData.fifthOwnedCoin??0))/400)):0}R_bonusRuneLevelsDuplication(){return this.gameData?this.R_getRuneBonusFromAllTalismans("duplication")+(this.gameData.upgrades[28]??0)*Math.min(100,Math.floor(((this.gameData.firstOwnedCoin??0)+(this.gameData.secondOwnedCoin??0)+(this.gameData.thirdOwnedCoin??0)+(this.gameData.fourthOwnedCoin??0)+(this.gameData.fifthOwnedCoin??0))/400))+(this.gameData.upgrades[30]??0)*(Math.min(50,Math.floor(this.gameData.coins.add(1).log10()/30))+Math.min(50,Math.floor(this.gameData.coins.add(1).log10()/300))):0}R_calculateConsumableEventBuff(e){if(!this.eventData)return 0;let a=this.eventData,n=`EVENTBUFF_${p.eventBuffNumToName(e)}`,i=[a.HAPPY_HOUR_BELL.amount,e],s=this.#n(n,i);if(s!==void 0)return s;let{HAPPY_HOUR_BELL:r}=this.eventData,l=r.amount-1;if(r.amount===0)return this.#i(n,{value:0,cachedBy:i}),0;let c=0;switch(e){case 0:c=r?.25+.025*l:0;break;case 1:c=0;break;case 2:c=r?.5+.05*l:0;break;case 3:c=0;break;case 4:c=0;break;case 5:c=0;break;case 6:c=0;break;case 7:c=0;break;case 8:c=r?.5+.05*l:0;break;case 9:c=r?.5+.05*l:0;break;case 10:c=0;break;case 13:c=0;break;case 11:c=r?.1+.01*l:0;break;case 12:c=r?.1+.01*l:0;break}return this.#i(n,{value:c,cachedBy:i}),c}getSingChalApReward(e){if(!this.gameData)return 0;let a=this.R_singularityChallengeData[e];if(!a)return 0;let n=this.gameData.singularityChallenges[e]?.completions??0;return a.achievementPointValue(n)}R_calculateAmbrosiaGenerationShopUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaGenerationShopUpgrade",i=[a.shopUpgrades.shopAmbrosiaGeneration1,a.shopUpgrades.shopAmbrosiaGeneration2,a.shopUpgrades.shopAmbrosiaGeneration3,a.shopUpgrades.shopAmbrosiaGeneration4],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[1+a.shopUpgrades.shopAmbrosiaGeneration1/100,1+a.shopUpgrades.shopAmbrosiaGeneration2/100,1+a.shopUpgrades.shopAmbrosiaGeneration3/100,1+a.shopUpgrades.shopAmbrosiaGeneration4/1e3],l=r.reduce((c,g)=>c*g);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateAmbrosiaGenerationSingularityUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaGenerationSingularityUpgrade",i=[a.goldenQuarkUpgrades.singAmbrosiaGeneration.level,a.goldenQuarkUpgrades.singAmbrosiaGeneration2.level,a.goldenQuarkUpgrades.singAmbrosiaGeneration3.level,a.goldenQuarkUpgrades.singAmbrosiaGeneration4.level],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[1+a.goldenQuarkUpgrades.singAmbrosiaGeneration.level/100,1+a.goldenQuarkUpgrades.singAmbrosiaGeneration2.level/100,1+a.goldenQuarkUpgrades.singAmbrosiaGeneration3.level/100,1+2*a.goldenQuarkUpgrades.singAmbrosiaGeneration4.level/100],l=r.reduce((c,g)=>c*g);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateAmbrosiaGenerationOcteractUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaGenerationOcteractUpgrade",i=[a.octUpgrades.octeractAmbrosiaGeneration.level,a.octUpgrades.octeractAmbrosiaGeneration2.level,a.octUpgrades.octeractAmbrosiaGeneration3.level,a.octUpgrades.octeractAmbrosiaGeneration4.level],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[1+a.octUpgrades.octeractAmbrosiaGeneration.level/100,1+a.octUpgrades.octeractAmbrosiaGeneration2.level/100,1+a.octUpgrades.octeractAmbrosiaGeneration3.level/100,1+2*a.octUpgrades.octeractAmbrosiaGeneration4.level/100],l=r.reduce((c,g)=>c*g);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateSingularityMilestoneBlueberries(){if(!this.gameData)return 0;let e=this.gameData,a="R_SingularityMilestoneBlueberries",n=[e.highestSingularityCount],i=this.#n(a,n);if(i!==void 0)return i;let s=0;e.highestSingularityCount>=270?s=5:e.highestSingularityCount>=256?s=4:e.highestSingularityCount>=192?s=3:e.highestSingularityCount>=128?s=2:e.highestSingularityCount>=64&&(s=1);let r=s;return this.#i(a,{value:r,cachedBy:n}),r}R_calculateDilatedFiveLeafBonus(){if(!this.gameData)return 0;let e=this.gameData,a="R_DilatedFiveLeafBonus",n=[e.highestSingularityCount],i=this.#n(a,n);if(i!==void 0)return i;let s=[100,150,200,225,250,255,260,265,269,272],r=s.length/100;for(let c=0;c<s.length;c++)if(e.highestSingularityCount<s[c]){r=c/100;break}let l=r;return this.#i(a,{value:l,cachedBy:n}),l}R_calculateSingularityAmbrosiaLuckMilestoneBonus(){if(!this.gameData)return 0;let e=this.gameData,a="R_SingularityAmbrosiaLuckMilestoneBonus",n=[e.highestSingularityCount],i=this.#n(a,n);if(i!==void 0)return i;let s=0,r=[35,42,49,56,63,70,77],l=[135,142,149,156,163,170,177];for(let g of r)e.highestSingularityCount>=g&&(s+=5);for(let g of l)e.highestSingularityCount>=g&&(s+=6);let c=s;return this.#i(a,{value:c,cachedBy:n}),c}R_calculateAmbrosiaLuckShopUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaLuckShopUpgrade",i=[a.shopUpgrades.shopAmbrosiaLuck1,a.shopUpgrades.shopAmbrosiaLuck2,a.shopUpgrades.shopAmbrosiaLuck3,a.shopUpgrades.shopAmbrosiaLuck4],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[2*a.shopUpgrades.shopAmbrosiaLuck1,2*a.shopUpgrades.shopAmbrosiaLuck2,2*a.shopUpgrades.shopAmbrosiaLuck3,.6*a.shopUpgrades.shopAmbrosiaLuck4],l=r.reduce((c,g)=>c+g,0);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateAmbrosiaLuckSingularityUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaLuckSingularityUpgrade",i=[a.goldenQuarkUpgrades.singAmbrosiaLuck.level,a.goldenQuarkUpgrades.singAmbrosiaLuck2.level,a.goldenQuarkUpgrades.singAmbrosiaLuck3.level,a.goldenQuarkUpgrades.singAmbrosiaLuck4.level],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[+a.goldenQuarkUpgrades.singAmbrosiaLuck.level*4,+a.goldenQuarkUpgrades.singAmbrosiaLuck2.level*2,+a.goldenQuarkUpgrades.singAmbrosiaLuck3.level*3,+a.goldenQuarkUpgrades.singAmbrosiaLuck4.level*5],l=r.reduce((c,g)=>c+g,0);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateAmbrosiaLuckOcteractUpgrade(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AmbrosiaLuckOcteractUpgrade",i=[a.octUpgrades.octeractAmbrosiaLuck.level,a.octUpgrades.octeractAmbrosiaLuck2.level,a.octUpgrades.octeractAmbrosiaLuck3.level,a.octUpgrades.octeractAmbrosiaLuck4.level],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[+a.octUpgrades.octeractAmbrosiaLuck.level*4,+a.octUpgrades.octeractAmbrosiaLuck2.level*2,+a.octUpgrades.octeractAmbrosiaLuck3.level*3,+a.octUpgrades.octeractAmbrosiaLuck4.level*5],l=r.reduce((c,g)=>c+g,0);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateTotalCubes(){if(!this.gameData)return 0;let e=this.gameData,a="R_TotalCubes",n=[e.wowCubes,e.wowTesseracts,e.wowHypercubes,e.wowPlatonicCubes,e.wowAbyssals,e.wowOcteracts],i=this.#n(a,n);if(i!==void 0)return i;let s=Math.floor(Math.log10(Number(e.wowCubes)+1))+Math.floor(Math.log10(Number(e.wowTesseracts)+1))+Math.floor(Math.log10(Number(e.wowHypercubes)+1))+Math.floor(Math.log10(Number(e.wowPlatonicCubes)+1))+Math.floor(Math.log10(e.wowAbyssals+1))+Math.floor(Math.log10(e.wowOcteracts+1))+6;return this.#i(a,{value:s,cachedBy:n}),s}R_calculateAmbrosiaUpgradeValue(e){if(!this.gameData)return 0;let a=this.gameData,n=`AMB_${e}`;if(!(e in a.ambrosiaUpgrades)||!(e in this.R_ambrosiaUpgradeCalculationCollection))return 0;let i=[a.ambrosiaUpgrades[e].ambrosiaInvested],s=this.#n(n,i);if(s!==void 0)return s;let r=this.R_ambrosiaUpgradeCalculationCollection[e],c=this.investToAmbrosiaUpgrade(r.extraLevelCalc(),a.ambrosiaUpgrades[e].ambrosiaInvested,r.costPerLevel,r.maxLevel,r.costFunction);return this.#i(n,{value:c,cachedBy:i}),c}R_calculateSynergismLevel(){if(!this.gameData)return 0;let e=this.gameData,a=0;a+=this.R_achievements.reduce((i,s,r)=>i+(e.achievements[r]?s.pointValue:0),0);for(let i of Object.keys(this.R_progressiveAchievements)){let s=this.R_progressiveAchievements[i].pointsAwarded(e.progressiveAchievements[i]);a+=s}let n;return a<2500?n=Math.floor(a/50):n=50+Math.floor((a-2500)/100),n}R_calculateRedAmbrosiaUpgradeValue(e){if(!this.gameData)return 0;let a=this.gameData,n=`REDAMB_${e}`;if(!(e in a.redAmbrosiaUpgrades)||!(e in this.#t))return 0;let i=[a.redAmbrosiaUpgrades[e]],s=this.#n(n,i);if(s!==void 0)return s;let r=this.#t[e],c=this.investToRedAmbrosiaUpgrade(a.redAmbrosiaUpgrades[e],r.costPerLevel,r.maxLevel,r.costFunction);return this.#i(n,{value:c,cachedBy:i}),c}R_calculateCampaignRune6Bonus(){let e="R_CampaignRune6Bonus",a=this.campaignData?.tokens??0,n=[a],i=this.#n(e,n);if(i!==void 0)return i;let s=[500,750,1e3,1250,1500,1750,2e3,3e3,4e3,6e3,8e3,1e4];for(let l=0;l<s.length;l++)if(a<s[l]){let c=l;return this.#i(e,{value:c,cachedBy:n}),c}let r=12;return this.#i(e,{value:r,cachedBy:n}),r}R_calculateCampaignAmbrosiaSpeedBonus(){let e="R_CampaignAmbrosiaSpeedBonus",a=this.campaignData?.tokens??0,n=[a],i=this.#n(e,n);if(i!==void 0)return i;let s;a<2e3?s=1:s=1+.02*1/2e3*Math.min(a-2e3,2e3)+.03*(1-Math.exp(-Math.max(a-4e3,0)/2e3));let r=s;return this.#i(e,{value:r,cachedBy:n}),r}R_calculateCampaignLuckBonus(){let e="R_CampaignLuckBonus",a=this.campaignData?.tokens??0,n=[a],i=this.#n(e,n);if(i!==void 0)return i;let s;a<2e3?s=0:s=10+40/2e3*Math.min(a-2e3,2e3)+50*(1-Math.exp(-Math.max(a-4e3,0)/2500));let r=s;return this.#i(e,{value:r,cachedBy:n}),r}R_calculateCookieUpgrade29Luck(){if(!this.gameData)return 0;let e=this.gameData,a="R_CookieUpgrade29Luck",i=[e.cubeUpgrades[79]??0,e.lifetimeRedAmbrosia],s=this.#n(a,i);if(s!==void 0)return s;let r;e.cubeUpgrades[79]===0||e.lifetimeRedAmbrosia===0?r=0:r=10*Math.pow(Math.log10(e.lifetimeRedAmbrosia),2);let l=r;return this.#i(a,{value:l,cachedBy:i}),l}R_calculateSumOfExaltCompletions(){if(!this.gameData)return 0;let e=this.gameData,a="R_SumOfExaltCompletions",n=[...Object.values(e.singularityChallenges).map(l=>l.completions)],i=this.#n(a,n);if(i!==void 0)return i;let s=0;for(let l of Object.values(e.singularityChallenges))s+=l.completions;let r=s;return this.#i(a,{value:r,cachedBy:n}),r}getCorruptionTotalLevel(){if(!this.gameData)return 0;let a=this.gameData.corruptions.used;return Object.values(a).reduce((i,s)=>i+s,0)}getMaxCorruptionLevel(){if(!this.gameData)return 0;let e=this.gameData,a=e.singularityChallenges.noSingularityUpgrades.enabled||e.singularityChallenges.sadisticPrequel.enabled,n=a||e.singularityChallenges.noOcteracts.enabled,i=(e.goldenQuarkUpgrades?.platonicTau?.level??0)>0,s=a?0:e.goldenQuarkUpgrades?.corruptionFourteen?.level??0,r=n?0:e.octUpgrades.octeractCorruption?.level??0,l=0;return i?l=13:((e.challengecompletions?.[14]??0)>0?l=11:(e.challengecompletions?.[13]??0)>0?l=9:(e.challengecompletions?.[12]??0)>0?l=7:(e.challengecompletions?.[11]??0)>0&&(l=5),(e.platonicUpgrades?.[5]??0)>0&&(l+=1),(e.platonicUpgrades?.[10]??0)>0&&(l+=1)),l+=s+r,l}R_calculateFreeShopInfinityUpgrades(e=!0){return this.R_calculateAllShopTablets(e)}R_calculateAllShopTablets(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AllShopTablets",i=[a.highestSingularityCount,a.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,a.octUpgrades.octeractInfiniteShopUpgrades.level,a.shopUpgrades.shopInfiniteShopUpgrades,...a.singularityChallenges.noAmbrosiaUpgrades.enabled?[]:[this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels,this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels]],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=()=>a.highestSingularityCount>=280?Math.floor(.8*(a.highestSingularityCount-200)):a.highestSingularityCount>=250?Math.floor(.5*(a.highestSingularityCount-200)):0,l=[this.R_getRedAmbrosiaUpgradeEffects("infiniteShopUpgrades").freeLevels,r(),+a.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,+a.octUpgrades.octeractInfiniteShopUpgrades.level,Math.floor(.005*a.shopUpgrades.shopInfiniteShopUpgrades*this.R_calculateSumOfExaltCompletions()),...a.singularityChallenges.noAmbrosiaUpgrades.enabled?[]:[+this.R_getAmbrosiaUpgradeEffects("ambrosiaInfiniteShopUpgrades1").freeLevels,+this.R_getAmbrosiaUpgradeEffects("ambrosiaInfiniteShopUpgrades2").freeLevels]],c=l.reduce((g,h)=>g+h,0);return this.#i(n,{value:c,cachedBy:i}),e?c:l}R_calculateLimitedAscensionsDebuff(){if(!this.gameData)return 0;let e=this.gameData,a="R_LimitedAscensionsDebuff";if(!e.singularityChallenges.limitedAscensions.enabled)return 1;let n=[e.ascensionCount,e.singularityChallenges.limitedAscensions.completions],i=this.#n(a,n);if(i!==void 0)return i;let s=e.ascensionCount-Math.max(0,20-e.singularityChallenges.limitedAscensions.completions);s=Math.max(0,s);let r=Math.pow(2,s);return this.#i(a,{value:r,cachedBy:n}),r}R_calculateSingularityReductions(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_SingularityReductions",i=[a.insideSingularityChallenge?1:0,this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction2").singularityReduction,this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction1").singularityReduction,a.shopUpgrades.shopSingularityPenaltyDebuff],s=this.#n(n,i);if(e&&s!==void 0)return s;let r;a.insideSingularityChallenge?r=this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction2").singularityReduction:r=this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction1").singularityReduction;let l=[a.shopUpgrades.shopSingularityPenaltyDebuff,r],c=l.reduce((g,h)=>g+h,0);return this.#i(n,{value:c,cachedBy:i}),e?c:l}R_calculateEffectiveSingularities(e=-1){if(!this.gameData)return 0;let a=this.gameData,n="R_EffectiveSingularities",i=[e,a.insideSingularityChallenge?1:0,a.singularityChallenges.noOcteracts.completions],s=this.#n(n,i);if(s!==void 0)return s;let r=e===-1?a.singularityCount:e;return r*=Math.min(4.75,.75*e/10+1),a.insideSingularityChallenge&&a.singularityChallenges.noOcteracts.enabled&&(r*=Math.pow(a.singularityChallenges.noOcteracts.completions+1,3)),e>10&&(r*=1.5,r*=Math.min(4,1.25*e/10-.25)),e>25&&(r*=2.5,r*=Math.min(6,1.5*e/25-.5)),e>36&&(r*=4,r*=Math.min(5,e/18-1),r*=Math.pow(1.1,Math.min(e-36,64))),e>50&&(r*=5,r*=Math.min(8,2*e/50-1),r*=Math.pow(1.1,Math.min(e-50,50))),e>100&&(r*=2,r*=e/25,r*=Math.pow(1.1,e-100)),e>150&&(r*=2,r*=Math.pow(1.05,e-150)),e>200&&(r*=1.5,r*=Math.pow(1.275,e-200)),e>215&&(r*=1.25,r*=Math.pow(1.2,e-215)),e>230&&(r*=2),e>269&&(r*=3,r*=Math.pow(3,e-269)),this.#i(n,{value:r,cachedBy:i}),r}R_calculateSingularityDebuff(e,a=-1){if(!this.gameData)return 1;let n=this.gameData;if(a===-1&&(a=n.singularityCount),a===0||n.runes.antiquities>0)return 1;let i=a-this.R_calculateSingularityReductions();if(i<1)return 1;let s=this.R_calculateEffectiveSingularities(i),r=1;r*=1-Math.min(300,n.shopUpgrades.shopHorseShoe*this.calculateHorseShoeLevel())/1e3;let l;if(e==="Offering")l=i<150?Math.sqrt(s)+1:Math.pow(s,2/3)/400;else if(e==="Global Speed")l=1+Math.sqrt(s)/4;else if(e==="Obtainium")l=i<150?Math.sqrt(s)+1:Math.pow(s,2/3)/400;else if(e==="Researches")l=1+Math.sqrt(s)/2;else if(e==="Ascension Speed")l=r*(i<150?1+Math.sqrt(s)/5:1+Math.pow(s,.75)/1e4);else if(e==="Cubes"){let c=i>100?Math.pow(1.02,i-100):1;l=i<150?1+Math.sqrt(s)*c/4:1+Math.pow(s,.75)*c/1e3}else e==="Platonic Costs"?l=i>36?1+Math.pow(s,3/10)/12:1:e==="Hepteract Costs"?l=i>50?1+Math.pow(s,11/50)/25:1:l=Math.cbrt(s+1);return l}R_calculateAscensionSpeedExponentSpread(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_AscensionSpeedExponentSpread",i=[a.goldenQuarkUpgrades.singAscensionSpeed.level,a.goldenQuarkUpgrades.singAscensionSpeed2.level,a.shopUpgrades.chronometerInfinity],s=this.#n(n,i);if(e&&s!==void 0)return s;let r=[a.goldenQuarkUpgrades.singAscensionSpeed.level>0?.03:0,a.goldenQuarkUpgrades.singAscensionSpeed2.level*.001,.001*Math.floor((a.shopUpgrades.chronometerInfinity+this.R_calculateFreeShopInfinityUpgrades())/40)],l=r.reduce((c,g)=>c+g,0);return this.#i(n,{value:l,cachedBy:i}),e?l:r}R_calculateChallenge15Reward(e){if(!this.gameData)return u.errorOnce("<red>calculateChallenge15Reward() GAMEDATA WAS NULL</red>",this.context),0;let a=this.gameData,n=a.challenge15Exponent?a.challenge15Exponent:a.highestChallenge15Exponent?a.highestChallenge15Exponent:0;return n===0?0:tn[e](n)}R_calculateRawAscensionSpeedMult(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_RawAscensionSpeedMult",i=a.cubeUpgrades[59]??0,s=[a.shopUpgrades.chronometer,a.shopUpgrades.chronometer2,a.shopUpgrades.chronometer3,a.achievements[262],a.achievements[263],a.platonicUpgrades[15],a.singularityCount,a.shopUpgrades.chronometerZ,a.octUpgrades.octeractImprovedAscensionSpeed.level,a.octUpgrades.octeractImprovedAscensionSpeed2.level,a.singularityChallenges.limitedAscensions.completions,a.singularityChallenges.limitedTime.completions,a.shopUpgrades.shopChronometerS,i,a.insideSingularityChallenge?1:0],r=this.#n(n,s),l=[this.R_calculateMortuus2AscensionSpeed(),this.R_calculatePolymathAscSpeed(),1+1.2/100*a.shopUpgrades.chronometer,1+.6/100*a.shopUpgrades.chronometer2,1+1.5/100*a.shopUpgrades.chronometer3,1+.6/1e3*this.R_calculateHepteractEffective("chronos"),1+.002*this.getCorruptionTotalLevel()*a.platonicUpgrades[15],this.R_calculateChallenge15Reward("ascensionSpeed"),1+1/400*i,1+.5*(a.goldenQuarkUpgrades.intermediatePack.level>0?1:0),1+1/1e3*a.singularityCount*a.shopUpgrades.chronometerZ,1+ +a.octUpgrades.octeractImprovedAscensionSpeed.level/2e3*a.singularityCount,1+ +a.octUpgrades.octeractImprovedAscensionSpeed2.level/2e3*a.singularityCount,Math.pow(1.006,a.shopUpgrades.chronometerInfinity+this.R_calculateFreeShopInfinityUpgrades()),Math.pow(1+.1*a.singularityChallenges.limitedAscensions.completions/100,1+Math.max(0,Math.floor(Math.log10(a.ascensionCount)))),1+.06*a.singularityChallenges.limitedTime.completions,Math.max(Math.pow(1.01,(a.singularityCount-200)*a.shopUpgrades.shopChronometerS),1),1/this.R_calculateLimitedAscensionsDebuff(),1/this.R_calculateSingularityDebuff("Ascension Speed"),1+this.R_calculateConsumableEventBuff(4)],c=l.reduce((g,h)=>g*h,1);return this.#i(n,{value:c,cachedBy:s}),e?c:l}R_calculateAscensionSpeedMult(){let e=this.R_calculateRawAscensionSpeedMult(),a=this.R_calculateAscensionSpeedExponentSpread();return e<1?e=Math.pow(e,1-a):e=Math.pow(e,1+a),e}R_calculatePolymathAscSpeed(){if(!this.gameData)return 1;let e=this.gameData,a=(A,T)=>{let E=(J,oe)=>{let{mantissa:ee,exponent:ae}=k(J);return(ee*oe).toExponential()+"e"+ae},k=J=>{let oe=J.match(/^([\d.]+)e\+?(-?\d+)$/i);return oe?{mantissa:parseFloat(oe[1]),exponent:parseInt(oe[2],10)}:{mantissa:parseFloat(J),exponent:0}},B=A,D=1;T>=120&&(D*=(T-90)/30),T>=150&&(D*=(T-120)/30),T>=180&&(D*=(T-170)/10),B=E(A,D);let N=J=>(Math.floor(J)||0).toExponential(),U=E(N(Math.pow(T,3)/8+1),parseFloat(B)),P=T>=30?E(N(Math.pow(T-30,3)/32+1),parseFloat(B)):"0e0",G=T>=60?E(N(Math.pow(T-60,3)/384+1),parseFloat(B)):"0e0",X=T>=90?E(N(Math.pow(T-90,3)/500+1),parseFloat(B)):"0e0",K=T>=120?E(N(Math.pow(T-120,3)/375+1),parseFloat(B)):"0e0",ie=T>=150?E(N(Math.pow(T-150,3)/192+1),parseFloat(B)):"0e0",Z=T>=150?E(N(Math.pow(T-150,3)/1280+1),parseFloat(B)):"0e0";return{shard:U,commonFragment:P,uncommonFragment:G,rareFragment:X,epicFragment:K,legendaryFragment:ie,mythicalFragment:Z}},n=0;e.singularityChallenges.noOcteracts.enabled||e.singularityChallenges.sadisticPrequel.enabled||(n+=e.octUpgrades.octeractTalismanLevelCap1.level,n+=e.octUpgrades.octeractTalismanLevelCap2.level,n+=e.octUpgrades.octeractTalismanLevelCap3.level,n+=e.octUpgrades.octeractTalismanLevelCap4.level);let i=180,s=i;s+=6*Math.min(10,e.challengecompletions[13]),s+=3*(Math.max(10,e.challengecompletions[13])-10),s+=Math.floor(e.researches[200]/400),s+=e.singularityChallenges.taxmanLastStand.completions*25,s+=n;let r=[1,1.04,1.08,1.12,1.16,1.2,1.25,1.3,1.325,1.35,1.4],l={shard:e.talismans.polymath.shard.toString(),commonFragment:e.talismans.polymath.commonFragment.toString(),uncommonFragment:e.talismans.polymath.uncommonFragment.toString(),rareFragment:e.talismans.polymath.rareFragment.toString(),epicFragment:e.talismans.polymath.epicFragment.toString(),legendaryFragment:e.talismans.polymath.legendaryFragment.toString(),mythicalFragment:e.talismans.polymath.mythicalFragment.toString()},c=0,g=A=>a(1e16.toString(),A),h=A=>{let T=A.match(/^([\d.]+)e\+?(-?\d+)$/i);return T?Math.log10(parseFloat(T[1]))+parseInt(T[2],10):Math.log10(parseFloat(A))},m={};for(let A in l)m[A]=h(l[A]);let d=!0;for(;d&&c<s;){let A=g(c),T=!0;for(let E in A){let k=h(A[E]);if(m[E]<k){T=!1;break}}if(!T)break;for(let E in A){let k=h(A[E]);m[E]=Math.log10(Math.pow(10,m[E])-Math.pow(10,k))}c+=1}let b=c/i,y=0;b>=1&&(b>=2&&(y+=1),b>=4&&(y+=1),b>=8&&(y+=1));let v=1+Math.min(6,Math.floor(6*b))+y;return v=Math.min(v,r.length-1),r[v]??1}R_calculateMortuus2AscensionSpeed(){let e=this.R_calculateTrueAntLevel(15);return 2-Math.pow(.996,e)}R_calculateRuneEffectiveLevel(e){return 0}#s;R_calculateCorruptionEffect(e,a){if(!this.gameData)return 0;let n=this.gameData;switch(a){case"deflation":return this.#m(e);case"dilation":return this.#y(e);case"drought":return this.#l(e,n);case"extinction":return this.#c(e);case"hyperchallenge":return this.#h(e,n);case"illiteracy":return this.#g(e,n);case"recession":return this.#b(e);case"viscosity":return this.#r(e,n);default:return 1}}#r(e,a){let n=this.#s.viscosityPower[e.viscosity],i=1+a.platonicUpgrades[6]/30;return Math.min(n*i,1)}#l(e,a){let n=this.#s.droughtSalvage[e.drought];return a.platonicUpgrades[13]>0&&(n*=.5),n}#m(e){return this.#s.deflationMultiplier[e.deflation]}#c(e){return this.#s.extinctionDivisor[e.extinction]}#g(e,a){let n=this.#s.illiteracyPower[e.illiteracy],i=a.obtainium&&a.obtainium>0?1+1/100*a.platonicUpgrades[9]*Math.min(100,Math.log10(a.obtainium)):1;return Math.min(n*i,1)}#b(e){return this.#s.recessionPower[e.recession]}#y(e){return this.#s.dilationMultiplier[e.dilation]}#h(e,a){let n=this.#s.hyperchallengeMultiplier[e.hyperchallenge],i=1;return i*=1+2/5*a.platonicUpgrades[8],Math.max(1,n/i)}R_calculateTrueAntLevel(e){if(!this.gameData)return 0;let a=this.gameData,n=this.R_computeFreeAntUpgradeLevels(),i=this.R_antUpgradeData[e].exemptFromCorruption?1:this.R_calculateCorruptionEffect(a.corruptions.used,"extinction");return a.currentChallenge.ascension===11?Math.min(a.ants.upgrades[e],n)/i:(a.ants.upgrades[e]+Math.min(a.ants.upgrades[e],n))/i}calculateHorseShoeLevel(){if(!this.gameData)return 0;let e=this.gameData,a=e.runes.horseShoe.toString(),n=1/20;n+=.005*e.singularityChallenges.taxmanLastStand.completions;let i=e.shopUpgrades.shopHorseShoe>0?3:0,s=1,l=((g,h)=>{let m=A=>{let T=A.match(/^([\d.]+)e\+?(-?\d+)$/i);return T?{m:parseFloat(T[1]),e:parseInt(T[2],10)}:{m:parseFloat(A),e:0}},d=m(g),b=m(h),y=d.e-b.e,v=d.m/b.m;if(y<0||y===0&&v<1){let A=v*Math.pow(10,y);return Math.log10(1+A)}return Math.log10(v)+y})(a,"1e500"),c=Math.floor(n*l*s)+i;return Math.max(0,c)}R_calculateCashGrabBonus(e){if(!this.gameData)return 0;let a=this.gameData;return 1+a.shopUpgrades.shopCashGrabUltra*e*Math.min(1,Math.pow(a.lifetimeAmbrosia/1e7,1/3))}R_calculateEXUltraBonus(e){if(!this.gameData)return 0;let a=this.gameData;return 1+e*Math.min(a.shopUpgrades.shopEXUltra,Math.floor(a.lifetimeAmbrosia/1e3)/125)}calculateAmbrosiaSpeed(e=!0){if(!this.gameData)return 0;let a=this.gameData;if(!this.pseudoData)return 0;let n=this.pseudoData;if(!this.meData)return 0;let i=this.meData,s=this.R_getPCoinUpgradeLevel("AMBROSIA_GENERATION_BUFF"),r=s?1+s*.05:1,l=this.R_calculateCampaignAmbrosiaSpeedBonus(),c=100*(1+i.globalBonus/100)*(1+i.personalBonus/100)-100,g=this.R_getRedAmbrosiaUpgradeEffects("blueberryGenerationSpeed").blueberryGenerationSpeed,h=this.R_getRedAmbrosiaUpgradeEffects("blueberryGenerationSpeed2").blueberryGenerationSpeed,m=a.singularityChallenges.noSingularityUpgrades.completions>0?1:0,d=a.cubeUpgrades[76]??1,b=[m,r,l,this.R_calculateAmbrosiaGenerationShopUpgrade(),this.R_calculateAmbrosiaGenerationSingularityUpgrade(),this.R_calculateAmbrosiaGenerationOcteractUpgrade(),1+this.R_getAmbrosiaUpgradeEffects("ambrosiaPatreon").blueberryGeneration*c/100,1+a.singularityChallenges.oneChallengeCap.completions/100,1+a.singularityChallenges.noAmbrosiaUpgrades.completions/50,g,h,1+.01*d*this.R_calculateNumberOfThresholds(),this.R_calculateCashGrabBonus(_a),this.isEvent?1+this.R_calculateConsumableEventBuff(11):1],y=b.reduce((v,A)=>v*A,1);return e?y:b}R_calculateBlueBerries(e=!0){let a=this.getGameData();if(!a)return 0;let n=0;a.singularityChallenges.noAmbrosiaUpgrades.completions>=20?n=3:a.singularityChallenges.noAmbrosiaUpgrades.completions>=10?n=2:a.singularityChallenges.noAmbrosiaUpgrades.completions>0&&(n=1);let i=[+(a.singularityChallenges.noSingularityUpgrades.completions>0),+a.goldenQuarkUpgrades.blueberries.level,+a.octUpgrades.octeractBlueberries.level,+this.R_getRedAmbrosiaUpgradeEffects("blueberries").blueberries,this.R_calculateSingularityMilestoneBlueberries(),n],s=i.reduce((r,l)=>r+l,0);return e?s:i}calculateLuck(e=!0,a=!1){let n=this.getGameData(),i=this.getPseudoData();if(!n)return{additive:0,raw:0,total:0};if(!i)return{additive:0,raw:0,total:0};let s=n.cubeUpgrades[77]??0,r=[1,n.singularityChallenges.noSingularityUpgrades.completions>=30?.05:0,this.R_calculateDilatedFiveLeafBonus(),n.shopUpgrades.shopAmbrosiaLuckMultiplier4/100,n.singularityChallenges.noAmbrosiaUpgrades.completions/200,.001*s,this.isEvent?this.R_calculateConsumableEventBuff(12):0,a?this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaLuck4").ambrosiaLuckPercentage:this.R_getAmbrosiaUpgradeEffects("ambrosiaLuck4").ambrosiaLuckPercentage],l=this.R_getPCoinUpgradeLevel("AMBROSIA_LUCK_BUFF"),c=l?l*20:0,g=this.R_calculateCampaignLuckBonus(),h=this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels,m=this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels,d=this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels,b=this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels,y={2:h,3:m,4:d,5:b},v=this.R_calculateTotalCubes(),A=this.R_getAmbrosiaUpgradeEffects("ambrosiaCubeLuck1").ambrosiaLuck,T=this.R_getAmbrosiaUpgradeEffects("ambrosiaQuarkLuck1").ambrosiaLuck,E=this.R_getRedAmbrosiaUpgradeEffects("regularLuck").ambrosiaLuck,k=this.R_getRedAmbrosiaUpgradeEffects("regularLuck2").ambrosiaLuck,B=this.R_getRedAmbrosiaUpgradeEffects("viscount").luckBonus,D=[100,c,g,this.R_calculateSingularityAmbrosiaLuckMilestoneBonus(),this.R_calculateAmbrosiaLuckShopUpgrade(),this.R_calculateAmbrosiaLuckSingularityUpgrade(),this.R_calculateAmbrosiaLuckOcteractUpgrade(),n.highestSingularityCount>=131?131:0,n.highestSingularityCount>=269?269:0,n.shopUpgrades.shopOcteractAmbrosiaLuck*(1+Math.floor(Math.log10(n.totalWowOcteracts+1))),n.singularityChallenges.noAmbrosiaUpgrades.completions*15,E,k,B,2*s,this.R_calculateCookieUpgrade29Luck(),n.shopUpgrades.shopAmbrosiaUltra*this.R_calculateSumOfExaltCompletions(),Math.max(0,((this.R_calculateSynergismLevel()??0)-229)*4),this.calculateHorseShoeLevel()],N=[this.R_getAmbrosiaUpgradeEffects("ambrosiaLuck1").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffects("ambrosiaLuck2").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffects("ambrosiaLuck3").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffects("ambrosiaCubeLuck1").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffects("ambrosiaQuarkLuck1").ambrosiaLuck],U=[this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaLuck1").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaLuck2").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaLuck3").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaCubeLuck1").ambrosiaLuck,this.R_getAmbrosiaUpgradeEffectsFreeLevelsOnly("ambrosiaQuarkLuck1").ambrosiaLuck],P=[];if(a?P=[...D,...U]:P=[...D,...N],e){let G=r.reduce((K,ie)=>K+ie,0),X=P.reduce((K,ie)=>K+ie,0);return{additive:G,raw:X,total:G*X}}else return{additive:r,raw:P}}R_calculateLuckConversion(e=!0){if(!this.gameData)return 0;let a=this.gameData,n="R_LuckConversion",i=this.R_getRedAmbrosiaUpgradeEffects("conversionImprovement1").conversionImprovement,s=this.R_getRedAmbrosiaUpgradeEffects("conversionImprovement2").conversionImprovement,r=this.R_getRedAmbrosiaUpgradeEffects("conversionImprovement3").conversionImprovement,l=this.calculateHorseShoeLevel(),c=[a.shopUpgrades.shopRedLuck1,a.shopUpgrades.shopRedLuck2,a.shopUpgrades.shopRedLuck3,i,s,r,l],g=this.#n(n,c);if(e&&g!==void 0)return g;let h=[20,i,s,r,-.01*Math.floor(a.shopUpgrades.shopRedLuck1/20),-.01*Math.floor(a.shopUpgrades.shopRedLuck2/20),-.01*Math.floor(a.shopUpgrades.shopRedLuck3/20),-.5*l/(l+50)],m=h.reduce((d,b)=>d+b,0);return this.#i(n,{value:m,cachedBy:c}),e?m:h}R_calculateEffectiveSingularity(){if(!this.gameData)return 0;let e=this.gameData;return e.insideSingularityChallenge?e.singularityCount-(e.shopUpgrades.shopSingularityPenaltyDebuff+this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction2").singularityReduction):e.singularityCount-(e.shopUpgrades.shopSingularityPenaltyDebuff+this.R_getAmbrosiaUpgradeEffects("ambrosiaSingReduction1").singularityReduction)}R_calculateRedAmbrosiaLuck(e=!0){if(!this.gameData||!this.pseudoData)return 0;let a=this.gameData,n=this.pseudoData,i="R_RedAmbrosiaLuck",s=this.R_getPCoinUpgradeLevel("RED_LUCK_BUFF"),r=s?s*20:0,l=this.calculateLuck(),c=this.R_getRedAmbrosiaUpgradeEffects("redLuck").redAmbrosiaLuck,g=this.R_getRedAmbrosiaUpgradeEffects("viscount").redLuckBonus,h=this.calculateHorseShoeLevel(),m=[r,l.total,c,g,a.singularityChallenges.noAmbrosiaUpgrades.completions,a.shopUpgrades.shopRedLuck1,a.shopUpgrades.shopRedLuck2,a.shopUpgrades.shopRedLuck3,h],d=this.#n(i,m);if(e&&d!==void 0)return d;let b=[100,r,Math.floor((l.total-100)/this.R_calculateLuckConversion()),c,a.singularityChallenges.noAmbrosiaUpgrades.completions*4,a.shopUpgrades.shopRedLuck1*.05,a.shopUpgrades.shopRedLuck2*.075,a.shopUpgrades.shopRedLuck3*.1,g,h*.2,Math.max(0,(this.R_calculateSynergismLevel()??0)-259)],y=b.reduce((v,A)=>v+A,0);return this.#i(i,{value:y,cachedBy:m}),e?y:b}calculateGoldenRevolution(){if(!this.gameData)return 0;let e=this.gameData,a=e.highestSingularityCount>=100?1-.5*e.highestSingularityCount/250:1}async dumpDataForHeater(){let e=L.getModule("HSGameData");if(e)await e.forceUpdateAllData();else{u.error("Failed to acquire game data for heater export",this.context),M.Notify("Failed to acquire game data for heater export",{position:"top",notificationType:"error"});return}if(!this.gameData)return 0;let a=this.gameData;try{let{additive:n,raw:i,total:s}=this.calculateLuck(!0),r=this.calculateLuck(!0,!0),l=(s-100*Math.floor(s/100))/100,c=(r.total-100*Math.floor(r.total/100))/100,g=this.R_calculateBlueBerries(),h=this.calculateAmbrosiaSpeed(),m=g*h;return{...this.gameData,hs_data:{lifeTimeAmbrosia:a.lifetimeAmbrosia,lifeTimeRedAmbrosia:a.lifetimeRedAmbrosia,quarks:a.worlds,platonic4x4:a.platonicUpgrades[19],baseLuck:i,luckMult:n,totalLuck:s,trueBaseLuck:r.raw,redAmbrosiaLuck:this.R_calculateRedAmbrosiaLuck(),luckConversion:this.R_calculateLuckConversion(),totalCubes:this.R_calculateTotalCubes(),effectiveSingularity:this.R_calculateEffectiveSingularity(),transcription:.55+a.octUpgrades.octeractOneMindImprover.level/150,ascSpeed:this.R_calculateAscensionSpeedMult(),blueberries:g,bonusRow2:this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow2").freeLevels,bonusRow3:this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow3").freeLevels,bonusRow4:this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow4").freeLevels,bonusRow5:this.R_getRedAmbrosiaUpgradeEffects("freeLevelsRow5").freeLevels,spread:this.R_calculateAscensionSpeedExponentSpread(),totalInfinityVouchers:this.R_calculateAllShopTablets(),tokens:this.campaignData?.tokens,maxTokens:this.campaignData?.maxTokens,isAtMaxTokens:this.campaignData?.isAtMaxTokens,isEvent:this.isEvent,bellStacks:this.eventData?.HAPPY_HOUR_BELL.amount,personalQuarkBonus:this.meData?.bonus.quarks,blueAmbrosiaBarValue:a.blueberryTime,redAmbrosiaBarValue:a.redAmbrosiaTime,blueAmbrosiaBarMax:this.R_calculateRequiredBlueberryTime(),redAmbrosiaBarMax:this.R_calculateRequiredRedAmbrosiaTime(),ambrosiaSpeedMult:h,ambrosiaSpeed:m,ambrosiaGainChance:l,trueAmbrosiaGainChance:c,ambrosiaAcceleratorCount:a.shopUpgrades.shopAmbrosiaAccelerator,pseudoCoinUpgrades:{ambrosiaGenerationBuffLevel:this.R_getPCoinUpgradeLevel("AMBROSIA_GENERATION_BUFF"),ambrosiaLuckBuffLevel:this.R_getPCoinUpgradeLevel("AMBROSIA_LUCK_BUFF"),baseObtainiumBuffLevel:this.R_getPCoinUpgradeLevel("BASE_OBTAINIUM_BUFF"),baseOfferingBuffLevel:this.R_getPCoinUpgradeLevel("BASE_OFFERING_BUFF"),cubeBuffLevel:this.R_getPCoinUpgradeLevel("CUBE_BUFF"),redAmbrosiaGenerationBuffLevel:this.R_getPCoinUpgradeLevel("RED_GENERATION_BUFF"),redAmbrosiaLuckBuffLevel:this.R_getPCoinUpgradeLevel("RED_LUCK_BUFF")},redAmbrosiaUpgrades:{tutorial:this.R_calculateRedAmbrosiaUpgradeValue("tutorial"),conversionImprovement1:this.R_calculateRedAmbrosiaUpgradeValue("conversionImprovement1"),conversionImprovement2:this.R_calculateRedAmbrosiaUpgradeValue("conversionImprovement2"),conversionImprovement3:this.R_calculateRedAmbrosiaUpgradeValue("conversionImprovement3"),freeTutorialLevels:this.R_calculateRedAmbrosiaUpgradeValue("freeTutorialLevels"),freeLevelsRow2:this.R_calculateRedAmbrosiaUpgradeValue("freeLevelsRow2"),freeLevelsRow3:this.R_calculateRedAmbrosiaUpgradeValue("freeLevelsRow3"),freeLevelsRow4:this.R_calculateRedAmbrosiaUpgradeValue("freeLevelsRow4"),freeLevelsRow5:this.R_calculateRedAmbrosiaUpgradeValue("freeLevelsRow5"),blueberryGenerationSpeed:this.R_calculateRedAmbrosiaUpgradeValue("blueberryGenerationSpeed"),blueberryGenerationSpeed2:this.R_calculateRedAmbrosiaUpgradeValue("blueberryGenerationSpeed2"),regularLuck:this.R_calculateRedAmbrosiaUpgradeValue("regularLuck"),regularLuck2:this.R_calculateRedAmbrosiaUpgradeValue("regularLuck2"),redGenerationSpeed:this.R_calculateRedAmbrosiaUpgradeValue("redGenerationSpeed"),redLuck:this.R_calculateRedAmbrosiaUpgradeValue("redLuck"),redAmbrosiaCube:this.R_calculateRedAmbrosiaUpgradeValue("redAmbrosiaCube"),redAmbrosiaObtainium:this.R_calculateRedAmbrosiaUpgradeValue("redAmbrosiaObtainium"),redAmbrosiaOffering:this.R_calculateRedAmbrosiaUpgradeValue("redAmbrosiaOffering"),redAmbrosiaCubeImprover:this.R_calculateRedAmbrosiaUpgradeValue("redAmbrosiaCubeImprover"),viscount:this.R_calculateRedAmbrosiaUpgradeValue("viscount"),infiniteShopUpgrades:this.R_calculateRedAmbrosiaUpgradeValue("infiniteShopUpgrades"),redAmbrosiaAccelerator:this.R_calculateRedAmbrosiaUpgradeValue("redAmbrosiaAccelerator"),salvageYinYang:this.R_calculateRedAmbrosiaUpgradeValue("salvageYinYang"),blueberries:this.R_calculateRedAmbrosiaUpgradeValue("blueberries")},isInsideSingularityChallenge:a.insideSingularityChallenge}}}catch(n){let i=n instanceof Error?`${n.message}
+${n.stack}`:String(n);u.error(`Failed to calculate game data for heater export
+${i}`,this.context),M.Notify("Failed to calculate game data for heater export",{position:"top",notificationType:"error"});return}}};var Gt=class extends z{#e=new Map;#a=[5e3,15e3,3e4,6e4];constructor(t){super(t)}async init(){u.log("Initializing HSWebsocket module",this.context),this.isInitialized=!0}#t(t){let e=this.#e.get(t);if(!e){u.warn(`Tried to reconnect websocket ${t} but it doesn't exist`,this.context);return}this.#e.delete(t),this.registerWebSocket(t,e.regParams)}registerWebSocket(t,e){let a=this;if(this.#e.has(t)){u.debug(()=>`Tried to register websocket ${t} again`,this.context);return}if(!e.url){u.error(`Tried to register websocket ${t} without a URL`,this.context);return}let n={socket:new WebSocket(e.url),reconnectionTries:0,onClose:e.onClose??p.Noop,onOpen:e.onOpen??p.Noop,onMessage:e.onMessage??p.Noop,onRetriesFailed:e.onRetriesFailed??p.Noop,regParams:e},i=async l=>{let c=a.#e.get(t);console.log("WS CLOSED",t,{code:l.code,reason:l.reason,wasClean:l.wasClean,tries:c?.reconnectionTries});let g=a.#a[++n.reconnectionTries];g!==void 0?(u.log(`Reconnecting ${t} in ${g}ms (attempt ${n.reconnectionTries})`,a.context),setTimeout(()=>{a.#t(t)},g)):(u.warn(`WebSocket ${t} failed to reconnect after ${n.reconnectionTries} tries`,a.context),await(n.onRetriesFailed??p.Noop)()),await(n.onClose??p.Noop)(l)},s=async l=>{let c=a.#e.get(t);if(!c){u.warnOnce(`wsOnOpen(): Socket ${t} not found`,a.context);return}let g;try{g=JSON.parse(l.data)}catch(h){u.warn(`Failed to parse WebSocket message for ${t}: ${h}`,a.context),g=void 0}await(c.onMessage??p.Noop)(g)},r=async l=>{let c=a.#e.get(t);if(!c){u.warnOnce(`wsOnOpen(): Socket ${t} not found`,a.context);return}c.reconnectionTries=0,u.log(`WebSocket ${t} connected successfully`,a.context),await(c.onOpen??p.Noop)(l)};n.socket.onclose=i,n.socket.onopen=r,n.socket.onmessage=s,this.#e.set(t,n),u.log(`Registered websocket ${t}`,this.context)}unregisterWebSocket(t){let e=this.#e.get(t);e?((e.socket.readyState===WebSocket.OPEN||e.socket.readyState===WebSocket.CONNECTING)&&e.socket.close(),this.#e.delete(t),u.log(`Unregistered websocket ${t}`,this.context)):u.debug(()=>`Could not unregister websocket (Maybe you're not logged in?) ${t}`,this.context)}getWebSocket(t){return this.#e.get(t)}};var Wt=class o extends z{static#e;constructor(t){super(t),o.#e=t.context}async init(){this.isInitialized=!0}};function cn(o="",t=0){let e=document.createElement("div");e.className="hs-phase-name";let a=document.createElement("span");a.className="hs-phase-count",a.textContent=t?`x${t} `:"";let n=document.createElement("span");n.className="hs-phase-text",n.textContent=o,e.appendChild(a),e.appendChild(n);let i=document.createElement("div");i.className="hs-phase-loops";let s=document.createElement("div");s.className="hs-phase-avg";let r=document.createElement("div");r.className="hs-phase-sd";let l=document.createElement("div");return l.className="hs-phase-last",{nameCell:e,phaseCountSpan:a,nameTextSpan:n,innerLoopsCell:i,avgCell:s,sdCell:r,lastCell:l,cells:[e,i,s,r,l]}}function ma(o,t){let e=`x${t.phaseCount} `,a="x"+t.innerLoopCount.toFixed(2),n=t.avg.toFixed(2)+"s",i="\xB1"+t.sd.toFixed(2),s=t.last.toFixed(2)+"s";o.phaseCountSpan.textContent!==e&&(o.phaseCountSpan.textContent=e),o.nameTextSpan.textContent!==t.phaseName&&(o.nameTextSpan.textContent=t.phaseName),o.innerLoopsCell.textContent!==a&&(o.innerLoopsCell.textContent=a),o.avgCell.textContent!==n&&(o.avgCell.textContent=n),o.sdCell.textContent!==i&&(o.sdCell.textContent=i),o.lastCell.textContent!==s&&(o.lastCell.textContent=s)}function Qt(o,t,e,a,n){if(!o)return;let i=t.length>n?t.length-n:0,s=t.length-i;if(s<2){o.rawPolyline.setAttribute("points",""),o.avgPolyline&&o.avgPolyline.setAttribute("points",""),o.labelMax.textContent="",o.labelAvg.textContent="",o.labelMin.textContent="";return}let r=e||230,l=o.dataKey,c=l==="time",g=t[i].timestamp,h=g,m=1/0,d=-1/0,b=0,y=0;for(let Z=i;Z<t.length;Z++){let J=t[Z],oe=J.timestamp;oe<g&&(g=oe),oe>h&&(h=oe);let ee,ae;c?(ee=J.duration,ae=J.runningAvgDuration||0,b+=ee,y++):l==="quarks"?(ee=J.quarksGained/J.duration,ae=J.runningAvgQuarksPerSecond||0,b+=J.quarksGained,y+=J.duration):(ee=J.goldenQuarksGained/J.duration,ae=J.runningAvgGoldenQuarksPerSecond||0,b+=J.goldenQuarksGained,y+=J.duration),ee<m&&(m=ee),ee>d&&(d=ee),ae<m&&(m=ae),ae>d&&(d=ae)}let v=h-g||1,A=d-m||1,T=o.lastWidth!==r;T&&(o.svg.setAttribute("width",`${r}`),o.lastWidth=r);let E=new Array(s),k=new Array(s);for(let Z=i;Z<t.length;Z++){let J=t[Z],oe=(J.timestamp-g)/v*r,ee,ae;c?(ee=J.duration,ae=J.runningAvgDuration||0):l==="quarks"?(ee=J.quarksGained/J.duration,ae=J.runningAvgQuarksPerSecond||0):(ee=J.goldenQuarksGained/J.duration,ae=J.runningAvgGoldenQuarksPerSecond||0);let ve=30-(ee-m)/A*30,H=30-(ae-m)/A*30,W=Z-i;E[W]=`${oe},${ve}`,k[W]=`${oe},${H}`}let B=E.join(" "),D=k.join(" ");c?(o.lastPoints!==B&&(o.rawPolyline.setAttribute("points",B),o.lastPoints=B),o.avgPolyline&&o.lastPointsSecond!==D&&(o.avgPolyline.setAttribute("points",D),o.lastPointsSecond=D)):(o.avgPolyline&&o.lastPoints!==D&&(o.avgPolyline.setAttribute("points",D),o.lastPoints=D),o.lastPointsSecond!==B&&(o.rawPolyline.setAttribute("points",B),o.lastPointsSecond=B));let N=Math.max(0,r-4),U=30-(d-m)/A*30,P=30;if(T){let Z=`${r}`,J=`${N}`,oe=`${U}`,ee=`${P}`;o.maxLine.setAttribute("x1",J),o.maxLine.setAttribute("x2",Z),o.maxLine.setAttribute("y1",oe),o.maxLine.setAttribute("y2",oe),o.minLine.setAttribute("x1",J),o.minLine.setAttribute("x2",Z),o.minLine.setAttribute("y1",ee),o.minLine.setAttribute("y2",ee),o.lastMaxY=U,o.lastMinY=P}else{if(o.lastMaxY!==U){let Z=`${U}`;o.maxLine.setAttribute("y1",Z),o.maxLine.setAttribute("y2",Z),o.lastMaxY=U}if(o.lastMinY!==P){let Z=`${P}`;o.minLine.setAttribute("y1",Z),o.minLine.setAttribute("y2",Z),o.lastMinY=P}}let G=c?"s":" /s",X,K,ie;c?(X=`${d.toFixed(2)}${G}`,K=y>0?`${(b/y).toFixed(2)}${G} avg`:`0.00${G} avg`,ie=`${m.toFixed(2)}${G}`):(X=`${a(d)}${G}`,K=y>0?`${a(b/y)}${G}`:`0.00${G}`,ie=`${a(m)}${G}`),o.lastLabelMax!==X&&(o.labelMax.textContent=X,o.lastLabelMax=X),o.lastLabelAvg!==K&&(o.labelAvg.textContent=K,o.lastLabelAvg=K),o.lastLabelMin!==ie&&(o.labelMin.textContent=ie,o.lastLabelMin=ie)}function Ue(o,t,e,a="time"){if(!o)return null;o.textContent="";let n="http://www.w3.org/2000/svg",i=document.createElementNS(n,"svg");i.setAttribute("height","30"),i.style.display="block",i.style.overflow="visible";let s=document.createElementNS(n,"polyline");s.setAttribute("fill","none"),s.setAttribute("stroke",t),s.setAttribute("stroke-width","1"),s.setAttribute("stroke-opacity","0.5"),s.setAttribute("stroke-dasharray","2,2");let r=document.createElementNS(n,"polyline");r.setAttribute("fill","none"),r.setAttribute("stroke",t),r.setAttribute("stroke-width","1"),r.setAttribute("stroke-opacity","0.8");let l=document.createElementNS(n,"line");l.setAttribute("stroke",t),l.setAttribute("stroke-width","1");let c=document.createElementNS(n,"line");c.setAttribute("stroke",t),c.setAttribute("stroke-width","1"),i.appendChild(s),i.appendChild(r),i.appendChild(l),i.appendChild(c);let g=document.createElement("div");g.className="hs-sparkline-labels";let h=document.createElement("span");h.className="hs-sparkline-muted";let m=document.createElement("span");m.className="hs-sparkline-avg",m.style.color=t,m.style.fontWeight="bold";let d=document.createElement("span");return d.className="hs-sparkline-muted",g.appendChild(h),g.appendChild(m),g.appendChild(d),o.appendChild(i),o.appendChild(g),{container:o,svg:i,rawPolyline:s,avgPolyline:r,maxLine:l,minLine:c,labelMax:h,labelAvg:m,labelMin:d,isTime:e,dataKey:a,color:t,lastWidth:0,lastPoints:"",lastPointsSecond:"",lastMaxY:0,lastMinY:0,lastLabelMax:"",lastLabelAvg:"",lastLabelMin:""}}function fe(o){return o.toExponential(2).replace("+","")}function Vt(o){return o.toExponential(2)}function un(o){if(o==null)return"-";try{return o.toExponential(2).replace(/[E+]/g,t=>t==="E"?"e":"")}catch{try{return new j(o).toExponential(2).replace(/[E+]/g,e=>e==="E"?"e":"")}catch{return String(o)}}}function gn(o){let t=Math.floor(o),e=Math.floor(t/3600),a=Math.floor(t%3600/60),n=t%60;return e>0?`${e}h${a.toString().padStart(2,"0")}m${n.toString().padStart(2,"0")}s`:a>0?`${a}m${n.toString().padStart(2,"0")}s`:`${n}s`}function da(o,t){if(t<=0||o.length<t)return{avg:null,sd:null};let e=o.length-t,a=0;for(let s=e;s<o.length;s++)a+=o[s].duration;let n=a/t;if(t<=1)return{avg:n,sd:null};let i=0;for(let s=e;s<o.length;s++){let r=o[s].duration-n;i+=r*r}return{avg:n,sd:Math.sqrt(Math.max(0,i/t))}}function hi(o,t){return o===0?null:t/o}function hn(o,t){let e=hi(o,t);return e===null?null:Math.sqrt(e)}var Ft=class o{#e="HSAutosingModal";#a="running";#t=null;#o=null;#n=null;#i=null;#s=null;#r=null;#l;#m;#c;#g;#b;#y=!1;#h=!1;#p=!1;#S=!1;#v=!1;#A={x:0,y:0};#d={width:0,height:0,x:0,y:0};#f={width:0,height:0,maxX:0,maxY:0};#M=null;#E=null;#w=null;#L=null;#T=null;#O=null;#V=null;#B=null;#R=null;#C=null;#q=null;#$=null;#j=null;#U=null;#F=null;#I=null;#Y=null;#z=null;#J=null;#k=null;#P=null;#K=null;#Z=null;#H=null;#G=null;#ue=null;#be=null;#X=null;#ee=new Map;#te=null;#oe=null;#se=null;#Me=new Map;#Te=[];#fe=[];#Ae=null;#De=null;#ae=!0;#pe=!1;#ge=null;#he="";#_=[];#me="";#Ne=0;#re=0;#ce=0;#Se=0;#W="";#Le=0;#le=new Map;#Ce=null;#D=null;#u={singCompleted:0,singCompletedWithHappyHour:0,totalDuration:0,meanDuration:0,sumSqDuration:0,minDuration:1/0,maxDuration:0,totalQuarks:0,minQuarks:1/0,maxQuarks:0,meanQuarks:0,sumSqQuarks:0,totalGoldenQuarks:0,minGoldenQuarks:1/0,maxGoldenQuarks:0,meanGoldenQuarks:0,sumSqGoldenQuarks:0};#ne=[];#N=50;#Ue=0;#xe=0;#Ie=0;#Ve=new Map;static#Fe=new j(0);#it=0;#ke=o.#Fe;#ot=o.#Fe;#Ye=0;#Je=0;#st=0;#ze=0;#qe=0;#je=null;#Ke=null;#Ze=null;#gt=null;#ht=null;#rt=null;#Xe=t=>this.#Ct(t);#mt=()=>this.#at();#Oe=[];#de=[];#ie=new Map;#Ee=!1;#_e=!1;#Pe=!1;#$e=!1;#et=!1;#Ge=!1;#Bt=!1;#lt=!1;#dt=null;#vt=null;#tt=null;constructor(){this.#Mt(),this.#Tt()}#Mt(){this.#t=document.createElement("div"),this.#t.id="hs-autosing-timer-display",this.#t.classList.add("hs-hidden"),this.#t.style.contain="layout paint",this.#o=document.createElement("div"),this.#o.className="hs-timer-header";let t=document.createElement("span");t.textContent="\u23F1\uFE0F Autosing",t.className="hs-timer-title",this.#m=document.createElement("button"),this.#m.id="hs-timer-ctrl-pause",this.#m.textContent="\u23F8\uFE0F",this.#m.title="Pause Autosing",this.#m.className="hs-timer-ctrl-btn",this.#m.onclick=()=>{this.#p=!this.#p,this.#m.textContent=this.#p?"\u25B6\uFE0F":"\u23F8\uFE0F",this.#m.title=this.#p?"Resume Autosing":"Pause Autosing"},this.#g=document.createElement("button"),this.#g.id="hs-timer-ctrl-restart",this.#g.textContent="\u{1F504}",this.#g.title="Restart Singularity from the beginning",this.#g.className="hs-timer-ctrl-btn",this.#g.onclick=async()=>{await L.getModule("HSAutosing")?.restartAutosing()},this.#c=document.createElement("button"),this.#c.id="hs-timer-ctrl-stop",this.#c.textContent="\u{1F534}",this.#c.title="Stop Autosing NOW",this.#c.className="hs-timer-ctrl-btn",this.#c.onclick=()=>{let n=L.getModule("HSAutosing");this.#a==="review"?n?.closeAutosingModalAfterReview():n?.stopAutosing({showReviewModal:!0})},this.#b=document.createElement("button"),this.#b.id="hs-timer-ctrl-finish-stop",this.#b.textContent="\u{1F7E0}",this.#b.title="Stop Autosing at the end of current Singularity",this.#b.className="hs-timer-ctrl-btn",this.#b.onclick=()=>{let n=L.getModule("HSAutosing");if(n){let i=!n.getStopAtSingularitysEnd();n.setStopAtSingularitysEnd(i),this.#b.style.backgroundColor=i?"#ff9800":""}},this.#r=document.createElement("button"),this.#r.id="hs-timer-ctrl-chart-toggle",this.#r.textContent="\u{1F4CA}",this.#r.title="Toggle Detailed Data Visibility",this.#r.className="hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary",this.#r.onclick=()=>{this.#wt(!this.#ae)},this.#r.onmouseenter=()=>{this.#ae&&(this.#r.textContent="\u2716\uFE0F")},this.#r.onmouseleave=()=>{this.#r.textContent="\u{1F4CA}"},this.#l=document.createElement("button"),this.#l.id="hs-timer-ctrl-minimize",this.#l.textContent="\u2212",this.#l.title="Minimize",this.#l.className="hs-timer-ctrl-btn hs-timer-ctrl-btn-secondary",this.#l.onclick=()=>this.#Et(),this.#o.appendChild(t),this.#o.appendChild(document.createElement("div"));let e=document.createElement("div");e.className="hs-timer-controls",e.appendChild(this.#m),e.appendChild(this.#g),e.appendChild(this.#c),e.appendChild(this.#b),e.appendChild(this.#r),e.appendChild(this.#l),this.#o.appendChild(e),this.#Be(),this.#n=document.createElement("div"),this.#n.className="hs-timer-content",this.#i=document.createElement("div"),this.#i.innerHTML=`
+            <div class="hs-timer-section">
+                <div id="hs-farming-grid">
+                    <div class="hs-section-header-title">
+                        FARMING
+                        <span>
+                            <span id="hs-sing-target"></span>
+                            <span class="hs-sing-sep"> / </span>
+                            <span id="hs-sing-highest"></span>
+                        </span>
+                    </div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-c15-top" class="hs-c15-top hs-secondary-data-style"></span></div>
+                    <div class="hs-label-cell" id="hs-completed-sing-full-div">
+                        <span class="hs-timer-label">Completed:</span>
+                        <span id="hs-completed-sing-amount">0</span>
+                        <span class="hs-value-cell hs-detailed-data hs-secondary-data-style">
+                            <span id="hs-completed-sing-with-happy-hour-percent">(0.00%</span>
+                            <span> \u{1F514})</span>
+                        </span>
+                    </div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-c15-sigma" class="hs-secondary-data-style"></span></div>
+                </div>
+                <div class="hs-info-line-phase hs-detailed-data"><span class="hs-timer-label">Phase:</span> <span id="hs-phase-name-val">&nbsp;</span> <span id="hs-phase-timer-val"></span></div>
+            </div>
+
+            <hr class="hs-timer-hr">
+
+            <div class="hs-timer-section">
+                <div class="hs-times-grid hs-section-grid">
+                    <div class="hs-section-header-title hs-section-header-title-full">TIMES</div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Last\xA01:</span></div>
+                    <div class="hs-value-cell"><span id="hs-avg-1">-</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Total:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-total-time" class="hs-secondary-data-style">-</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span id="hs-avg-10-lbl" class="hs-timer-label">Last\xA010:</span></div>
+                    <div class="hs-value-cell hs-detailed-data">
+                        <span id="hs-avg-10">
+                            <span class="hs-avg-main"></span>
+                            <span class="hs-avg-sd"></span>
+                        </span>
+                    </div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-max-time" class="hs-secondary-data-style">-</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span id="hs-avg-50-lbl" class="hs-timer-label">Last\xA050:</span></div>
+                    <div class="hs-value-cell hs-detailed-data">
+                        <span id="hs-avg-50">
+                            <span class="hs-avg-main"></span>
+                            <span class="hs-avg-sd"></span>
+                        </span>
+                    </div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-min-time" class="hs-secondary-data-style">-</span></div>
+                    <div class="hs-label-cell"><span id="hs-avg-all-lbl" class="hs-timer-label">All\xA0<span id="hs-avg-all-count">0</span>:</span></div>
+                    <div class="hs-value-cell">
+                        <span id="hs-avg-all">
+                            <span class="hs-avg-main"></span>
+                            <span class="hs-avg-sd"></span>
+                        </span>
+                    </div>
+                    <div></div>
+                    <div></div>
+                </div>
+                <div id="hs-sparkline-time-container" class="hs-sparkline-row hs-detailed-data"></div>
+            </div>
+
+            <hr class="hs-timer-hr">
+
+            <div class="hs-timer-section">
+                <div class="hs-section-grid">
+                    <div class="hs-section-header-title-span2">QUARKS</div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Current:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-quarks-current-amount" class="hs-secondary-data-style">0</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Rate:</span></div>
+                    <div class="hs-value-cell"><span id="hs-quarks-rate-val" class="hs-quarks-rate-color">0/s</span> <span id="hs-quarks-rate-val-hr"> (0/hr)</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-quarks-max-gains" class="hs-secondary-data-style">-</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Gained:</span></div>
+                    <div class="hs-value-cell"><span id="hs-quarks-total-gains" class="hs-quarks-rate-color">-</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-quarks-min-gains" class="hs-secondary-data-style">-</span></div>
+                </div>
+                <div id="hs-sparkline-quarks-container" class="hs-sparkline-row hs-detailed-data"></div>
+            </div>
+
+            <hr class="hs-timer-hr">
+
+            <div class="hs-timer-section">
+                <div class="hs-section-grid">
+                    <div class="hs-section-header-title-span2">GOLDEN QUARKS</div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Current:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-gquarks-current-amount" class="hs-secondary-data-style">0</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Rate:</span></div>
+                    <div class="hs-value-cell"><span id="hs-gquarks-rate-val" class="hs-gquarks-rate-color">0/s</span> <span id="hs-gquarks-rate-val-hr"> (0/hr)</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Max:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-gquarks-max-gains" class="hs-secondary-data-style">-</span></div>
+                    <div class="hs-label-cell"><span class="hs-timer-label">Gained:</span></div>
+                    <div class="hs-value-cell"><span id="hs-gquarks-total-gains" class="hs-gquarks-rate-color">-</span></div>
+                    <div class="hs-label-cell hs-detailed-data"><span class="hs-timer-label hs-secondary-data-style">Min:</span></div>
+                    <div class="hs-value-cell hs-detailed-data"><span id="hs-gquarks-min-gains" class="hs-secondary-data-style">-</span></div>
+                </div>
+                <div id="hs-sparkline-goldenquarks-container" class="hs-sparkline-row hs-detailed-data"></div>
+            </div>
+
+            <div id="hs-phase-stats-wrapper" class="hs-detailed-data">
+                <hr class="hs-timer-hr">
+                <div id="hs-phase-stats-section" class="hs-timer-section">
+                    <div id="hs-phase-stats-container" class="hs-phase-stats-grid">
+                        <div class="hs-phase-stats-header-title hs-phase-stats-row0">PHASE STATISTICS</div>
+                        <div class="hs-phase-stats-header hs-phase-stats-row0">Loops</div>
+                        <div class="hs-phase-stats-header hs-phase-stats-row0">Avg</div>
+                        <div class="hs-phase-stats-header hs-phase-stats-row0">SD</div>
+                        <div class="hs-phase-stats-header hs-phase-stats-row0">Last</div>
+                    </div>
+                </div>
+                <hr class="hs-timer-hr">
+            </div>
 
         <h2 class="hs-panel-info-h2">12.5.2025 - Game Data Sniffing (GDS) and Singularity</h2>
         <p class="hs-panel-info-p">
@@ -4392,6 +7003,14 @@ body {
 .hs-corruption-slot:hover {
    filter: brightness(130%);
    box-shadow: 0 0 8px rgba(255, 0, 0, 0.35);
+}
+.hs-corruption-cleanse-button {
+   background-color: #000000;
+   border-color: #dc7d0b;
+   background-image: url(https://synergism.cc/Pictures/Default/CorruptExit.png);
+   background-repeat: no-repeat;
+   background-position: center;
+   background-size: 110%;
 }
 .hs-corruption-slot::before {
    content: attr(data-quickbar-index);

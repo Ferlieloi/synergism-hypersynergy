@@ -10,7 +10,6 @@ import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
-import { HSSettingsUI } from "../settings/hs-settings-ui";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
@@ -35,7 +34,6 @@ export class HSGameData extends HSModule {
     #saveData?: PlayerData;
     #lastB64Save?: string;
     #wasUsingGDS = false;
-    #hasPerformedInitialLoadoutMatch = false;
 
     // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
@@ -168,33 +166,42 @@ export class HSGameData extends HSModule {
      */
     async forceUpdateAllData() {
         const now = Date.now();
-
-        if (now - this.#lastForceFetch < this.#ForceFetchCooldown) {
-            HSLogger.warn("Forced data refresh on cooldown", this.context);
-            return;
-        }
-
+        if (now - this.#lastForceFetch < this.#ForceFetchCooldown) { HSLogger.warn("Forced data refresh on cooldown", this.context); return; }
         this.#lastForceFetch = now;
 
         await this.#refreshFetchedData();
-        await this.#refreshCampaignTokens();
-        // Do we need this redundant call ?!
-        await this.#refreshFetchedData();
-        this.#hackJSNativebtoa();
-        this.#hackJSNativeAtob();
-
-        const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
-
-        if (saveBtn) {
-            saveBtn.dispatchEvent(this.#saveTriggerEvent);
-        }
-
-        if (this.#mitm_gamedata)
-            this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
+        this.#refreshCampaignTokens();
+        await this.forceRefreshGameData();
 
         this.#pseudoDataUpdated();
         this.#meDataUpdated();
         this.#campaignDataUpdated();
+    }
+
+    /**
+     * Forces a refresh of save-derived game data only, without updating fetched pseudo/me/campaign data.
+     * @returns Promise<void>
+     */
+    async forceRefreshGameData(): Promise<void> {
+        const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
+        // Both have an early return if already patched...
+        this.#hackJSNativebtoa(); 
+        this.#hackJSNativeAtob();
+
+        if (saveBtn) {
+            saveBtn.dispatchEvent(this.#saveTriggerEvent);
+        } else {
+            HSLogger.warn('Could not find #savegame to force refresh game data', this.context);
+        }
+
+        if (this.#mitm_gamedata) {
+            try {
+                this.#saveData = JSON.parse(this.#mitm_gamedata) as PlayerData;
+            } catch (err) {
+                HSLogger.error(`Failed to parse save data during forceRefreshGameData: ${err}`, this.context);
+            }
+        }
+
         this.#saveDataUpdated();
     }
 
@@ -204,16 +211,13 @@ export class HSGameData extends HSModule {
      */
     async #refreshFetchedData() {
         // HSLogger.debug(() => `Refreshing fetched data`, this.context);
-
         try {
             const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
             const data = await upgradesQuery.json() as PseudoGameData;
 
             this.#playerPseudoUpgrades = data;
             this.#pseudoDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
-        }
+        } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
 
         try {
             const meQuery = await fetch('https://synergism.cc/api/v1/users/me');
@@ -221,9 +225,7 @@ export class HSGameData extends HSModule {
 
             this.#meBonuses = data;
             this.#meDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch me data: ${err}`, this.context);
-        }
+        } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
     }
 
     /**
@@ -259,16 +261,6 @@ export class HSGameData extends HSModule {
                 HSLogger.debug(() => `Could not call game data change callback. No save data found`, this.context);
             }
         });
-
-        if (!this.#hasPerformedInitialLoadoutMatch && this.#saveData) {
-            // There's probably a better place to put this...
-            HSSettingsUI.updateStrategyDropdownList();
-            const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-            if (ambrosiaModule) {
-                ambrosiaModule.performInitialActiveLoadoutMatch(this.#saveData);
-            }
-            this.#hasPerformedInitialLoadoutMatch = true;
-        }
     }
 
     /**
@@ -796,7 +788,7 @@ export class HSGameData extends HSModule {
                         try {
                             const saveData = JSON.parse(self.#mitm_atob_data) as PlayerData;
                             if (ambrosiaModule) {
-                                ambrosiaModule.performInitialActiveLoadoutMatch(saveData);
+                                await ambrosiaModule.performInitialActiveLoadoutMatch(saveData);
                             }
                         } catch (e) {
                             HSLogger.warn(`Failed to analyze save data for loadout restoration: ${e}`, self.context);

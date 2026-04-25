@@ -105,6 +105,8 @@ export class HSAmbrosia extends HSModule
     #blueProgressMinibarElement?: HTMLDivElement;
     #redProgressMinibarElement?: HTMLDivElement;
 
+    #hasPerformedInitialLoadoutMatch = false;
+
 
     // ==============================================
     // -------------------- Init --------------------
@@ -131,8 +133,8 @@ export class HSAmbrosia extends HSModule
         await this.#injectImportFromClipboardButton();
         this.#setupLoadoutContainerEvents();
 
-        this.isInitialized = true;
         HSSettingsUI.refreshAmbrosiaLoadoutDropdowns();
+        this.isInitialized = true;
     }
 
     async #initializeDomRefs() {
@@ -146,6 +148,16 @@ export class HSAmbrosia extends HSModule
         this.#loadoutsSlots = loadoutsSlots;
         this.#loadoutContainer = loadoutContainer;
         this.#pageHeader = pageHeader;
+    }
+
+    public async initializeActiveLoadoutFromGameData(): Promise<void> {
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI) return;
+        let gameData = gameDataAPI.getGameData();
+        if (!gameData) gameData = await gameDataAPI.getForcedGameData();
+        if (!gameData) { HSLogger.warn('Could not retrieve game data to perform the initial ambrosia loadout match', this.context); return; }
+
+        await this.#performInitialActiveLoadoutMatchOnce(gameData);
     }
 
     #setupAmbrosiaIconsDragDrop() {
@@ -487,56 +499,21 @@ export class HSAmbrosia extends HSModule
                 });
             }
         });
-
-        HSLogger.log('Ambrosia loadout state reset (Storage Updated)', this.context);
-    }
-
-    async setActiveLoadout(slotNumber: number, forceUpdate: boolean = false) {
-        // Ensure quickbar section is injected before manipulating DOM
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        // Dynamically resolve slot id
-        const slotId = `blueberryLoadout${slotNumber}`;
-        const slotElement = this.#loadoutsSlots.find(slot => slot.id === slotId);
-        if (!slotElement) {
-            HSLogger.warn(`Invalid loadout slot sent to setActiveLoadout: ${slotNumber}`, this.context);
-            return;
-        }
-        const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
-        if (!slotEnum) {
-            HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context);
-            return;
-        }
-        // Only update if the slot is not already active, or if forceUpdate is true
-        if (this.activeLoadout !== slotEnum || forceUpdate) {
-            this.activeLoadout = slotEnum;
-            // Update Visuals
-            await this.#updateActiveLoadout(slotEnum);
-            HSLogger.log(`Programmatically set active loadout to ${slotNumber}`, this.context);
-        }
     }
 
     async #updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
-        if (!slotEnum) {
-            HSLogger.warn('No slot specified to #updateActiveLoadout', this.context);
-            return;
-        }
+        if (!slotEnum) { HSLogger.warn('No slot specified to #updateActiveLoadout', this.context); return; }
 
         // Normalize & validate incoming slot value using helper.
         const resolvedSlot = HSAmbrosiaHelper.resolveAmbrosiaLoadout(slotEnum);
-        if (!resolvedSlot) {
-            HSLogger.warn('Invalid or unknown slot passed to #updateActiveLoadout: ' + slotEnum, this.context);
-            return;
-        }
+        if (!resolvedSlot) { HSLogger.warn('Invalid or unknown slot passed to #updateActiveLoadout: ' + slotEnum, this.context); return; }
 
         this.activeLoadout = resolvedSlot;
 
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
         const slotNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(resolvedSlot);
-        if (!slotNumber) {
-            HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context);
-            return;
-        }
+        if (!slotNumber) { HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context); return; }
 
         await this.#syncQuickbarActiveSlot(slotNumber);
         await this.#syncOriginalBarActiveSlot(slotNumber);
@@ -546,15 +523,9 @@ export class HSAmbrosia extends HSModule
 
     async #syncQuickbarActiveSlot(slotNumber: number) {
         const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for quickbar', this.context);
-            return;
-        }
+        if (!groupWrapper) { HSLogger.warn('Could not find group wrapper for quickbar', this.context); return; }
         const quickBar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
-        if (!quickBar) {
-            HSLogger.warn('Could not find quickbar element', this.context);
-            return;
-        }
+        if (!quickBar) { HSLogger.warn('Could not find quickbar element', this.context); return; }
 
         const slots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
         slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
@@ -570,10 +541,7 @@ export class HSAmbrosia extends HSModule
 
     async #syncOriginalBarActiveSlot(slotNumber: number) {
         const originalQuickBar = document.querySelector('#bbLoadoutContainer');
-        if (!originalQuickBar) {
-            HSLogger.warn('Could not find original quickbar container', this.context);
-            return;
-        }
+        if (!originalQuickBar) { HSLogger.warn('Could not find original quickbar container', this.context); return; }
 
         const slots = originalQuickBar.querySelectorAll('.blueberryLoadoutSlot');
         slots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
@@ -676,21 +644,32 @@ export class HSAmbrosia extends HSModule
         return { id: bestMatchId, score: highestScore };
     }
 
-    public performInitialActiveLoadoutMatch(saveData: PlayerData): void {
+    public async performInitialActiveLoadoutMatch(saveData: PlayerData): Promise<void> {
         if (!saveData) return;
 
         this.resetActiveLoadout();
-
         const { id: bestMatchId, score: highestScore } = this.findBestMatchingAmbrosiaLoadout(saveData);
         const SIMILARITY_THRESHOLD = 0.8;
 
         if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-            HSLogger.debug(() => `Initial load - BEST MATCH: Loadout ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant.`, this.context);
-            this.setActiveLoadout(parseInt(bestMatchId, 10), true);
+            // Ensure quickbar section is injected before manipulating DOM
+            await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+
+            const slotNumber = parseInt(bestMatchId, 10);
+            const slotId = `blueberryLoadout${slotNumber}`;
+            const slotElement = this.#loadoutsSlots.find(slot => slot.id === slotId);
+            if (!slotElement) { HSLogger.warn(`Invalid loadout slot: ${slotNumber}`, this.context); return; }
+            const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
+            if (!slotEnum) { HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context); return; }
+
+            this.activeLoadout = slotEnum;
+            await this.#updateActiveLoadout(slotEnum);
+
+            HSLogger.debug(() => `Initial load - Ambrosia loadout best match: ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant. `, this.context);
         } else if (bestMatchId) {
-            HSLogger.debug(() => `Initial load - No compliant loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
+            HSLogger.debug(() => `Initial load - No compliant Ambrosia loadout found. Closest was ${bestMatchId} at ${(highestScore * 100).toFixed(1)}% (Threshold: 80%).`, this.context);
         } else {
-            HSLogger.debug(() => `Initial load - No saved loadouts found to match.`, this.context);
+            HSLogger.debug(() => `Initial load - No saved Ambrosia loadouts found to match.`, this.context);
         }
     }
 
@@ -1002,14 +981,12 @@ export class HSAmbrosia extends HSModule
                 throw new Error('Mode toggle button not found');
             }
 
-            // Check if we're in SAVE mode and switch to LOAD mode
+            // If the current mode is LOAD, we need to switch to SAVE mode
+            // TODO: exposedPlayer.blueberryLoadoutMode = 'saveTree' / 'loadTree'
+            // TODO: update HSAmbrosiaHelper.ensureLoadoutModeIsLoad to handle either save or load with a parameter
             const currentMode = modeToggle.innerText;
-            // blueberry toggle state
-
-            // If the current mode is SAVE, we need to switch to LOAD mode
-            // This is so that the user never accidentally saves a loadout when using the quickbar
             if (currentMode.includes('LOAD ')) {
-                // switched blueberry mode to LOAD
+                // switch blueberry mode to SAVE
                 modeToggle.click();
             }
 
@@ -1198,12 +1175,7 @@ export class HSAmbrosia extends HSModule
 
             this.#gameStateSubViewSubscriptionId = gameStateMod.subscribeGameStateChange('SINGULARITY_VIEW', async (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => {
                 if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
-                    this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
-                    this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
-                    this.#isIdleSwapEnabled = true;
-                    this.#maybeInsertIdleLoadoutIndicator();
-                    this.subscribeGameDataChanges();
-
+                    await this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
                 } else {
                     this.#isIdleSwapEnabled = false;
                     this.#cachedNormalLuckBlueBarRequired = undefined;
@@ -1213,14 +1185,9 @@ export class HSAmbrosia extends HSModule
                 }
             });
 
-            // If we're already in the ambrosia view
-            if (gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() === SINGULARITY_VIEW.AMBROSIA &&
-                gameStateMod.getCurrentUIView("MAIN_VIEW").getId() === MAIN_VIEW.SINGULARITY) {
-                this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
-                this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
-                this.#isIdleSwapEnabled = true;
-                this.#maybeInsertIdleLoadoutIndicator();
-                this.subscribeGameDataChanges();
+            // If we're already in the ambrosia view, activate idle swap immediately.
+            if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() === MAIN_VIEW.SINGULARITY) {
+                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
             }
         } else {
             HSLogger.warn('HSAmbrosia.enableIdleSwap() - gameStateMod==undefined', 'hs-enable-idleswap-gamestate');
@@ -1228,6 +1195,27 @@ export class HSAmbrosia extends HSModule
 
         if (!this.#debugElement)
             this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
+    }
+
+    async #activateIdleSwapForCurrentSingularityAmbrosiaView(): Promise<void> {
+        if (this.#isIdleSwapEnabled) return;
+
+        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (!gameStateMod) {
+            HSLogger.warnOnce('HSAmbrosia.#activateIdleSwapForCurrentSingularityAmbrosiaView() - gameStateMod==undefined', 'hs-amb-gamestate-activate');
+            return;
+        }
+
+        if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() !== MAIN_VIEW.SINGULARITY ||
+            gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() !== SINGULARITY_VIEW.AMBROSIA) {
+            return;
+        }
+
+        this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
+        this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
+        this.#isIdleSwapEnabled = true;
+        this.#maybeInsertIdleLoadoutIndicator();
+        this.subscribeGameDataChanges();
     }
 
     disableIdleSwap() {
@@ -1279,14 +1267,22 @@ export class HSAmbrosia extends HSModule
         }
     }
 
+    async #performInitialActiveLoadoutMatchOnce(gameData: PlayerData): Promise<void> {
+        if (this.#hasPerformedInitialLoadoutMatch) return;
+
+        await this.performInitialActiveLoadoutMatch(gameData);
+        this.#hasPerformedInitialLoadoutMatch = true;
+    }
+
     async gameDataCallback() {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-
         if (!gameDataAPI) return;
-
         const gameData = gameDataAPI.getGameData();
-
         if (!gameData) return;
+
+        if (!this.#hasPerformedInitialLoadoutMatch) {
+            await this.#performInitialActiveLoadoutMatchOnce(gameData);
+        }
 
         if (gameData.blueberryTime != null && gameData.redAmbrosiaTime != null) {
 
@@ -1368,8 +1364,8 @@ export class HSAmbrosia extends HSModule
                         let blueSwapTresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
                         let blueSwapTresholdNormalMax = blueSwapTresholdNormalMin + bluePercentageSafeThreshold;
 
-                        let blueSwapTresholdRedMin = 100 - bluePercentageSafeThreshold;
-                        let blueSwapTresholdRedMax = 100;
+                        let blueSwapThresholdRedMin = 100 - bluePercentageSafeThreshold;
+                        let blueSwapThresholdRedMax = 100;
 
                         const shouldSwapToBlueLuck = canUseNormalLuckBlueRequirement
                             ? blueAmbrosiaBarValue >= normalLuckBlueBarRequired
@@ -1378,8 +1374,8 @@ export class HSAmbrosia extends HSModule
                         let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
                         let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
 
-                        let redSwapTresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
-                        let redSwapTresholdRedMax = 100;
+                        let redSwapThresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
+                        let redSwapThresholdRedMax = 100;
 
                         // Determine target loadout based on current state and thresholds
                         let targetLoadout: string | undefined;
@@ -1407,7 +1403,7 @@ export class HSAmbrosia extends HSModule
                         }
                         // If currently in Normal Luck, only exit when red bar has dropped below min threshold
                         else if (this.activeLoadout === normalLuckLoadout) {
-                            if (blueAmbrosiaPercent < blueSwapTresholdRedMin) {
+                            if (blueAmbrosiaPercent < blueSwapThresholdRedMin) {
                                 targetLoadout = octeractLoadout;
                             }
                             else {
@@ -1415,7 +1411,7 @@ export class HSAmbrosia extends HSModule
                             }
                         }
                         // Check if should swap to Red Luck (highest priority)
-                        else if (redAmbrosiaPercent >= redSwapTresholdRedMin) {
+                        else if (redAmbrosiaPercent >= redSwapThresholdRedMin) {
                             targetLoadout = redLuckLoadout;
                         }
                         // Check if should swap to Normal Luck
@@ -1489,6 +1485,10 @@ export class HSAmbrosia extends HSModule
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
         if (gameStateMod) {
+            if (currentView.getId() === MAIN_VIEW.SINGULARITY) {
+                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
+            }
+
             if (previousView.getId() === MAIN_VIEW.SINGULARITY &&
                 currentView.getId() !== MAIN_VIEW.SINGULARITY &&
                 gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() === SINGULARITY_VIEW.AMBROSIA

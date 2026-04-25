@@ -56,6 +56,8 @@ export interface CalculationCache {
     AMB_ambrosiaTalismanBonusRuneLevel: CachedValue;
     AMB_ambrosiaRuneOOMBonus: CachedValue;
 
+    AMB_ambrosiaBrickOfLead: CachedValue;
+
     REDAMB_blueberryGenerationSpeed: CachedValue;
     REDAMB_blueberryGenerationSpeed2: CachedValue;
     REDAMB_freeLevelsRow2: CachedValue;
