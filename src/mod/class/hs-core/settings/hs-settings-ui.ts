@@ -60,7 +60,7 @@ export class HSSettingsUI {
                         }
 
                         valueElement.value = HSUtils.asString(setting.settingValue);
-                        valueElement.addEventListener('change', async (e) => { await deps.settingChangeDelegate(e, settingObj); });
+                        valueElement.onchange = async (e) => { await deps.settingChangeDelegate(e, settingObj); };
                     }
                 } else if (controlType === "select") {
                     const settingValue = HSUtils.asString(setting.settingValue);
@@ -89,7 +89,7 @@ export class HSSettingsUI {
                             }
                         }
 
-                        selectElement.addEventListener('change', async (e) => { await deps.settingChangeDelegate(e, settingObj); });
+                        selectElement.onchange = async (e) => { await deps.settingChangeDelegate(e, settingObj); };
                     }
                 } else if (controlType === "state") {
                     const settingValue = HSUtils.parseColorTags(HSUtils.asString(setting.settingValue));
@@ -102,7 +102,7 @@ export class HSSettingsUI {
                     const buttonElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLButtonElement;
 
                     if (buttonElement) {
-                        buttonElement.addEventListener('click', async (e) => { await deps.settingChangeDelegate(e, settingObj); });
+                        buttonElement.onclick = async (e) => { await deps.settingChangeDelegate(e, settingObj); };
                     }
                 }
 
@@ -118,7 +118,13 @@ export class HSSettingsUI {
                             toggleElement.classList.add('hs-disabled');
                         }
 
-                        toggleElement.addEventListener('click', async (e) => { await deps.settingToggleDelegate(e, settingObj); });
+                        toggleElement.onclick = async (e) => {
+                            const mouseEvent = e as MouseEvent;
+                            mouseEvent.preventDefault();
+                            mouseEvent.stopImmediatePropagation();
+                            mouseEvent.stopPropagation();
+                            await deps.settingToggleDelegate(mouseEvent, settingObj);
+                        };
                     }
                 }
 

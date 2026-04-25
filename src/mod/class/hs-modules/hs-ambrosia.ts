@@ -1369,7 +1369,7 @@ export class HSAmbrosia extends HSModule
 
                         const shouldSwapToBlueLuck = canUseNormalLuckBlueRequirement
                             ? blueAmbrosiaBarValue >= normalLuckBlueBarRequired
-                            : blueAmbrosiaPercent >= blueSwapTresholdRedMin;
+                            : blueAmbrosiaPercent >= blueSwapThresholdRedMin;
 
                         let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
                         let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
@@ -1390,7 +1390,7 @@ export class HSAmbrosia extends HSModule
 
                         // If currently in Red Luck, only exit when red bar has dropped below normal threshold
                         else if (this.activeLoadout === redLuckLoadout) {
-                            if (redAmbrosiaPercent < redSwapTresholdRedMin) {
+                            if (redAmbrosiaPercent < redSwapThresholdRedMin) {
                                 if (shouldSwapToBlueLuck) {
                                     targetLoadout = normalLuckLoadout;
                                     this.#holdBlueLuckUntilReset = true;

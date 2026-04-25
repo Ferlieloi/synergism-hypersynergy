@@ -266,7 +266,7 @@ export class HSAutosingSettingsFixer {
         // Save user tab
         const gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
         const prevMainView = gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
-        
+
         // Track which selectors were corrected or failed
         const correctedSelectors: string[] = [];
         const failedSelectors: string[] = [];
@@ -289,7 +289,7 @@ export class HSAutosingSettingsFixer {
                 const tabButton = document.getElementById(req.tab) as HTMLButtonElement;
                 const subTabButton = document.getElementById(req.subTab) as HTMLButtonElement;
                 tabButton?.click();
-                await new Promise(res => setTimeout(res, 30)); 
+                await new Promise(res => setTimeout(res, 30));
                 subTabButton?.click();
                 await new Promise(res => setTimeout(res, 30));
 
@@ -315,7 +315,7 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(req.selector);
             }
         }
-        
+
         // Restore user tab
         window.setTimeout(() => prevMainView.goto(), 20);
 

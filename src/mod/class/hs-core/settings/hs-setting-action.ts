@@ -174,8 +174,15 @@ export class HSSettingActions {
             const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
             let newState: boolean | undefined;
 
+            const startAutosingEnabled = HSSettings.getSetting('startAutosing')?.isEnabled() ?? false;
+            HSLogger.debug(
+                () => `ambrosiaIdleSwapAction called disable=${Boolean(params.disable)} startAutosingEnabled=${startAutosingEnabled}`,
+                context
+            );
+
             if (ambrosiaMod) {
                 if (params.disable && params.disable === true) {
+                    HSLogger.debug(() => `ambrosiaIdleSwapAction disable stack: ${new Error().stack ?? 'n/a'}`, context);
                     ambrosiaMod.disableIdleSwap();
                     newState = false;
                 } else {
