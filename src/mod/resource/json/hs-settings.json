@@ -77,17 +77,50 @@
         "size": "8"
       },
       "selectOptions": [
-        { "text": "(none)", "value": "" },
-        { "text": "Buildings", "value": "buildingstab" },
-        { "text": "Upgrades", "value": "upgradestab" },
-        { "text": "Achievements", "value": "achievementstab" },
-        { "text": "Runes", "value": "runestab" },
-        { "text": "Research", "value": "researchtab" },
-        { "text": "Ant Hill", "value": "anttab" },
-        { "text": "Campaign", "value": "campaigntab" },
-        { "text": "Shop", "value": "shoptab" },
-        { "text": "Events", "value": "eventtab" },
-        { "text": "PseudoCoins", "value": "pseudoCoinstab" }
+        {
+          "text": "(none)",
+          "value": ""
+        },
+        {
+          "text": "Buildings",
+          "value": "buildingstab"
+        },
+        {
+          "text": "Upgrades",
+          "value": "upgradestab"
+        },
+        {
+          "text": "Achievements",
+          "value": "achievementstab"
+        },
+        {
+          "text": "Runes",
+          "value": "runestab"
+        },
+        {
+          "text": "Research",
+          "value": "researchtab"
+        },
+        {
+          "text": "Ant Hill",
+          "value": "anttab"
+        },
+        {
+          "text": "Campaign",
+          "value": "campaigntab"
+        },
+        {
+          "text": "Shop",
+          "value": "shoptab"
+        },
+        {
+          "text": "Events",
+          "value": "eventtab"
+        },
+        {
+          "text": "PseudoCoins",
+          "value": "pseudoCoinstab"
+        }
       ]
     }
   },
@@ -497,8 +530,8 @@
   },
   "ambrosiaIdleSwapNormalLuckLoadout": {
     "settingName": "ambrosiaIdleSwapNormalLuckLoadout",
-    "settingDescription": "Normal Luck loadout",
-    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when normal ambrosia bar is about to hit 100%.",
+    "settingDescription": "Blue Luck loadout",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when the blue ambrosia bar is about to hit 100%.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -1306,35 +1339,35 @@
       "controlEnabledId": "hs-setting-auto-sing-advanced-data"
     }
   },
-    "ambrosiaQuickBar": {
-      "settingName": "ambrosiaQuickBar",
-      "settingDescription": "Ambrosia quick bar (S25+)",
-      "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
-      "settingType": "boolean",
-      "enabled": true,
-      "settingAction": "ambrosiaQuickBarAction",
-      "settingControl": {
-        "controlType": "switch",
-        "controlGroup": "quickbar-qol",
-        "controlPage": "qol-buttons",
-        "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
-      }
-    },
-    "ambrosiaMinibars": {
-      "settingName": "ambrosiaMinibars",
-      "settingDescription": "Ambrosia minibars (S25+)",
-      "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
-      "settingType": "boolean",
-      "enabled": true,
-      "usesGameData": true,
-      "settingAction": "ambrosiaMinibarAction",
-      "settingControl": {
-        "controlType": "switch",
-        "controlGroup": "quickbar-qol",
-        "controlPage": "qol-buttons",
-        "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
-      }
-    },
+  "ambrosiaQuickBar": {
+    "settingName": "ambrosiaQuickBar",
+    "settingDescription": "Ambrosia quick bar (S25+)",
+    "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "ambrosiaQuickBarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
+    }
+  },
+  "ambrosiaMinibars": {
+    "settingName": "ambrosiaMinibars",
+    "settingDescription": "Ambrosia minibars (S25+)",
+    "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
+    "settingType": "boolean",
+    "enabled": true,
+    "usesGameData": true,
+    "settingAction": "ambrosiaMinibarAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
+    }
+  },
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",
@@ -1417,7 +1450,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio2": {
@@ -1430,9 +1467,13 @@
     "settingControl": {
       "controlId": "hs-setting-gq-distributor-ratio-2",
       "controlType": "number",
-    "controlGroup": "Golden-quarks-qol-settings",
+      "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio3": {
@@ -1447,7 +1488,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio4": {
@@ -1462,7 +1507,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio5": {
@@ -1477,7 +1526,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio6": {
@@ -1492,7 +1545,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio7": {
@@ -1507,7 +1564,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "gqDistributorRatio8": {
@@ -1522,7 +1583,11 @@
       "controlType": "number",
       "controlGroup": "Golden-quarks-qol-settings",
       "controlPage": "qolbuttons",
-      "controlOptions": { "min": 0, "max": 100, "step": 1 }
+      "controlOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
     }
   },
   "hideMaxedOctUpgrades": {
