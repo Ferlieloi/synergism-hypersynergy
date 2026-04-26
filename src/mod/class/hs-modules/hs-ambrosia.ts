@@ -508,7 +508,7 @@ export class HSAmbrosia extends HSModule
         const resolvedSlot = HSAmbrosiaHelper.resolveAmbrosiaLoadout(slotEnum);
         if (!resolvedSlot) { HSLogger.warn('Invalid or unknown slot passed to #updateActiveLoadout: ' + slotEnum, this.context); return; }
 
-        this.activeLoadout = resolvedSlot;
+        this.activeLoadout = resolvedSlot as AMBROSIA_LOADOUT_SLOT;
 
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
@@ -647,7 +647,7 @@ export class HSAmbrosia extends HSModule
     public async performInitialActiveLoadoutMatch(saveData: PlayerData): Promise<void> {
         if (!saveData) return;
 
-        this.resetActiveLoadout();
+        await this.resetActiveLoadout();
         const { id: bestMatchId, score: highestScore } = this.findBestMatchingAmbrosiaLoadout(saveData);
         const SIMILARITY_THRESHOLD = 0.8;
 
@@ -662,8 +662,9 @@ export class HSAmbrosia extends HSModule
             const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
             if (!slotEnum) { HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context); return; }
 
-            this.activeLoadout = slotEnum;
             await this.#updateActiveLoadout(slotEnum);
+            HSLogger.debug(() => `1345Updating active loadout to ${slotEnum}`, this.context);
+            HSLogger.debug(() => `Resolved active loadout slot: ${this.activeLoadout}`, this.context);
 
             HSLogger.debug(() => `Initial load - Ambrosia loadout best match: ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant. `, this.context);
         } else if (bestMatchId) {
@@ -671,6 +672,7 @@ export class HSAmbrosia extends HSModule
         } else {
             HSLogger.debug(() => `Initial load - No saved Ambrosia loadouts found to match.`, this.context);
         }
+        HSLogger.debug(() => `1Active loadout after initial match: ${this.activeLoadout}`, this.context);
     }
 
     public getAmbrosiaLoadoutsAmount(): number {
@@ -1164,6 +1166,7 @@ export class HSAmbrosia extends HSModule
     // ==============================================
 
     async enableIdleSwap() {
+        HSLogger.debug(() => 'Enabling Ambrosia Idle Swap', this.context);
         const self = this;
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
@@ -1171,8 +1174,15 @@ export class HSAmbrosia extends HSModule
         this.#cachedNormalLuckLoadoutValue = undefined;
 
         if (gameStateMod) {
-            this.#gameStateMainViewSubscriptionId = gameStateMod.subscribeGameStateChange('MAIN_VIEW', this.#gameStateCallbackMain.bind(this));
+            const isAlreadyInAmbrosiaView =
+                gameStateMod.getCurrentUIView('MAIN_VIEW').getId() === MAIN_VIEW.SINGULARITY
+                && gameStateMod.getCurrentUIView('SINGULARITY_VIEW').getId() === SINGULARITY_VIEW.AMBROSIA;
 
+            if (!isAlreadyInAmbrosiaView) {
+                await gameStateMod.refreshCurrentViewsFromDOM();
+            }
+
+            this.#gameStateMainViewSubscriptionId = gameStateMod.subscribeGameStateChange('MAIN_VIEW', this.#gameStateCallbackMain.bind(this));
             this.#gameStateSubViewSubscriptionId = gameStateMod.subscribeGameStateChange('SINGULARITY_VIEW', async (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => {
                 if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
                     await this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
@@ -1198,16 +1208,16 @@ export class HSAmbrosia extends HSModule
     }
 
     async #activateIdleSwapForCurrentSingularityAmbrosiaView(): Promise<void> {
-        if (this.#isIdleSwapEnabled) return;
-
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
         if (!gameStateMod) {
-            HSLogger.warnOnce('HSAmbrosia.#activateIdleSwapForCurrentSingularityAmbrosiaView() - gameStateMod==undefined', 'hs-amb-gamestate-activate');
             return;
         }
 
-        if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() !== MAIN_VIEW.SINGULARITY ||
-            gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() !== SINGULARITY_VIEW.AMBROSIA) {
+        let isInAmbrosiaView =
+            gameStateMod.getCurrentUIView('MAIN_VIEW').getId() === MAIN_VIEW.SINGULARITY
+            && gameStateMod.getCurrentUIView('SINGULARITY_VIEW').getId() === SINGULARITY_VIEW.AMBROSIA;
+
+        if (!isInAmbrosiaView) {
             return;
         }
 
@@ -1509,10 +1519,9 @@ export class HSAmbrosia extends HSModule
 
     #maybeInsertIdleLoadoutIndicator() {
         const indicatorExists = document.querySelector(`#${HSGlobal.HSAmbrosia.idleSwapIndicatorId} `) as HTMLElement;
-
-        if (indicatorExists)
+        if (indicatorExists) {
             return;
-
+        }
         const loadoutIndicator = document.createElement('div') as HTMLDivElement;
         loadoutIndicator.id = HSGlobal.HSAmbrosia.idleSwapIndicatorId;
         loadoutIndicator.innerText = "IDLE SWAP ENABLED WHILE IN THIS VIEW";

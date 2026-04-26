@@ -1,13 +1,13 @@
-import { 
-    MAIN_VIEW, MAIN_VIEW_BUTTON_IDS, 
-    BUILDING_VIEW, BUILDING_VIEW_BUTTON_IDS, 
-    ACHIEVEMENT_VIEW, ACHIEVEMENT_VIEW_BUTTON_IDS, 
-    RUNE_VIEW, RUNE_VIEW_BUTTON_IDS, 
-    CHALLENGE_VIEW, CHALLENGE_VIEW_BUTTON_IDS, 
-    ANT_VIEW, ANT_VIEW_BUTTON_IDS, 
-    CUBE_VIEW, CUBE_VIEW_BUTTON_IDS, 
-    SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS, 
-    SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS, 
+import {
+    MAIN_VIEW, MAIN_VIEW_BUTTON_IDS,
+    BUILDING_VIEW, BUILDING_VIEW_BUTTON_IDS,
+    ACHIEVEMENT_VIEW, ACHIEVEMENT_VIEW_BUTTON_IDS,
+    RUNE_VIEW, RUNE_VIEW_BUTTON_IDS,
+    CHALLENGE_VIEW, CHALLENGE_VIEW_BUTTON_IDS,
+    ANT_VIEW, ANT_VIEW_BUTTON_IDS,
+    CUBE_VIEW, CUBE_VIEW_BUTTON_IDS,
+    SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS,
+    SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS,
     PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS,
     VIEW_KEY, VIEW_TYPE, HSViewStateRecord,
 } from "../../types/module-types/hs-gamestate-types";
@@ -124,17 +124,17 @@ export class HSGameState extends HSModule {
                     this.#resolveSubViewChanges(uiView.getId());
                 }
             },
-            {
-                characterData: false,
-                childList: false,
-                subtree: false,
-                attributes: true,
-                attributeOldValue: false,
-                attributeFilter: ['style'],
-                valueParser: (element) => {
-                    return (element as HTMLElement).style.getPropertyValue('display');
-                }
-            });
+                {
+                    characterData: false,
+                    childList: false,
+                    subtree: false,
+                    attributes: true,
+                    attributeOldValue: false,
+                    attributeFilter: ['style'],
+                    valueParser: (element) => {
+                        return (element as HTMLElement).style.getPropertyValue('display');
+                    }
+                });
         }
 
         HSGlobal.HSGameState.viewProperties.forEach(async (viewProperties, mainViewId) => {
@@ -184,15 +184,15 @@ export class HSGameState extends HSModule {
                         }
                     });
                 },
-                {
-                    characterData: false,
-                    childList: false,
-                    subtree: false,
-                    attributes: true,
-                    attributeOldValue: false,
-                    attributeFilter: ['class'],
-                    valueParser: (element) => (element as HTMLElement).className
-                });
+                    {
+                        characterData: false,
+                        childList: false,
+                        subtree: false,
+                        attributes: true,
+                        attributeOldValue: false,
+                        attributeFilter: ['class'],
+                        valueParser: (element) => (element as HTMLElement).className
+                    });
             }
         });
 
@@ -275,6 +275,39 @@ export class HSGameState extends HSModule {
 
     getCurrentUIView<T extends GameView<VIEW_TYPE>>(viewKey: VIEW_KEY): T {
         return this.#viewStates[viewKey].currentView as T;
+    }
+
+    /**
+     * Force-refresh current main/sub-view state from DOM.
+     * Useful during early startup where mutation watchers may not have emitted yet.
+     */
+    async refreshCurrentViewsFromDOM(): Promise<void> {
+        const visibleMain = this.#mainUIViews.find((viewId) => {
+            const element = document.getElementById(viewId) as HTMLElement | null;
+            if (!element) return false;
+            return getComputedStyle(element).display !== 'none';
+        });
+
+        if (!visibleMain) {
+            HSLogger.debug(() => 'refreshCurrentViewsFromDOM: no visible main view detected', this.context);
+            return;
+        }
+
+        const refreshedMainView = new MainView(visibleMain);
+        if (refreshedMainView.getId() === MAIN_VIEW.UNKNOWN) {
+            HSLogger.warn(`refreshCurrentViewsFromDOM: could not resolve MAIN_VIEW from ${visibleMain}`, this.context);
+            return;
+        }
+
+        this.#viewStates.MAIN_VIEW.previousView = this.#viewStates.MAIN_VIEW.currentView;
+        this.#viewStates.MAIN_VIEW.currentView = refreshedMainView;
+
+        await this.#resolveSubViewChanges(refreshedMainView.getId());
+
+        HSLogger.debug(
+            () => `refreshCurrentViewsFromDOM: MAIN_VIEW=${this.#viewStates.MAIN_VIEW.currentView.getName()}`,
+            this.context
+        );
     }
 
     /** Get the previous sub-view (if any) for a given main view */
