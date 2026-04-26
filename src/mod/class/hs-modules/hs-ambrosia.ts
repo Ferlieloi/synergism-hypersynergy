@@ -1367,8 +1367,15 @@ export class HSAmbrosia extends HSModule
                         let blueSwapThresholdRedMin = 100 - bluePercentageSafeThreshold;
                         let blueSwapThresholdRedMax = 100;
 
+                        // Swap to blue luck slightly before the projected fill point.
+                        // Buffer is derived from one tick worth of speed plus acceleration contribution.
+                        const blueSwapBufferPercent = Math.max(0, Math.min(95, bluePercentageSafeThreshold + accelerationPercent));
+                        const normalLuckBlueSwapThreshold = canUseNormalLuckBlueRequirement
+                            ? normalLuckBlueBarRequired * (1 - blueSwapBufferPercent / 100)
+                            : 0;
+
                         const shouldSwapToBlueLuck = canUseNormalLuckBlueRequirement
-                            ? blueAmbrosiaBarValue >= normalLuckBlueBarRequired
+                            ? blueAmbrosiaBarValue >= normalLuckBlueSwapThreshold
                             : blueAmbrosiaPercent >= blueSwapThresholdRedMin;
 
                         let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
