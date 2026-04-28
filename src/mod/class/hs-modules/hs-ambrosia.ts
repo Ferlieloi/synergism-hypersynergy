@@ -94,6 +94,10 @@ export class HSAmbrosia extends HSModule
     #isIdleSwapEnabled = false;
     #blueAmbrosiaProgressBar?: HTMLDivElement;
     #redAmbrosiaProgressBar?: HTMLDivElement;
+    #holdBlueLuckUntilReset = false;
+    #lastBlueBarValue?: number;
+    #cachedNormalLuckBlueBarRequired?: number;
+    #cachedNormalLuckLoadoutValue?: string;
 
     #debugElement?: HTMLDivElement;
 
@@ -565,6 +569,31 @@ export class HSAmbrosia extends HSModule
             investmentParameters.maxLevel,
             investmentParameters.costFunction
         );
+    }
+
+    private calculateBlueBarRequirementForLoadout(saveData: PlayerData, loadoutNumber: number): number | undefined {
+        const loadout = saveData.blueberryLoadouts?.[String(loadoutNumber)];
+        if (!loadout || Object.keys(loadout).length === 0) return;
+
+        const brickLevel = (loadout as Record<string, number>).ambrosiaBrickOfLead ?? 0;
+
+        let val = HSGlobal.HSAmbrosia.R_TIME_PER_AMBROSIA;
+        val += Math.floor(saveData.lifetimeAmbrosia / 300);
+
+        const exalt5Comps = saveData.singularityChallenges.noAmbrosiaUpgrades.completions;
+        const acceleratorMult = 1 - 0.006 * exalt5Comps * saveData.shopUpgrades.shopAmbrosiaAccelerator;
+        const brickOfLeadMult = 1 / (1 - brickLevel / 50);
+
+        val *= acceleratorMult;
+        val *= brickOfLeadMult;
+
+        if (saveData.lifetimeAmbrosia >= 10000) {
+            const extraScalingPower = Math.log10(4);
+            val *= Math.pow(saveData.lifetimeAmbrosia / 10000, extraScalingPower);
+            return Math.ceil(val);
+        }
+
+        return val;
     }
 
     public findBestMatchingAmbrosiaLoadout(saveData: PlayerData): { id: string | undefined; score: number } {
@@ -1138,6 +1167,9 @@ export class HSAmbrosia extends HSModule
         const self = this;
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
+        this.#cachedNormalLuckBlueBarRequired = undefined;
+        this.#cachedNormalLuckLoadoutValue = undefined;
+
         if (gameStateMod) {
             this.#gameStateMainViewSubscriptionId = gameStateMod.subscribeGameStateChange('MAIN_VIEW', this.#gameStateCallbackMain.bind(this));
 
@@ -1146,6 +1178,8 @@ export class HSAmbrosia extends HSModule
                     await this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
                 } else {
                     this.#isIdleSwapEnabled = false;
+                    this.#cachedNormalLuckBlueBarRequired = undefined;
+                    this.#cachedNormalLuckLoadoutValue = undefined;
                     this.#removeIdleLoadoutIndicator();
                     this.unsubscribeGameDataChanges();
                 }
@@ -1186,6 +1220,10 @@ export class HSAmbrosia extends HSModule
 
     disableIdleSwap() {
         this.#isIdleSwapEnabled = false;
+        this.#holdBlueLuckUntilReset = false;
+        this.#lastBlueBarValue = undefined;
+        this.#cachedNormalLuckBlueBarRequired = undefined;
+        this.#cachedNormalLuckLoadoutValue = undefined;
         this.unsubscribeGameDataChanges();
 
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
@@ -1268,6 +1306,7 @@ export class HSAmbrosia extends HSModule
             let accelerationPercent = 0;
             const bluePercentageSpeed = (ambrosiaSpeed / blueAmbrosiaBarMax) * 100;
             const bluePercentageSafeThreshold = bluePercentageSpeed;
+            const hasBlueBarReset = this.#lastBlueBarValue !== undefined && blueAmbrosiaBarValue < this.#lastBlueBarValue;
 
             const maxAccelMultiplier = (1 / 2)
                 + (3 / 5 - 1 / 2) * +(gameData.singularityChallenges.noAmbrosiaUpgrades.completions >= 15)
@@ -1296,13 +1335,10 @@ export class HSAmbrosia extends HSModule
                         const redLuckLoadoutValue = idleSwapRedLuckSetting.getValue();
 
                         if (!Number.isInteger(parseInt(octeractLoadoutValue, 10)) || !Number.isInteger(parseInt(normalLuckLoadoutValue, 10)) || !Number.isInteger(parseInt(redLuckLoadoutValue, 10))) {
-                            const idleSwapSetting = HSSettings.getSetting("ambrosiaIdleSwap") as HSSetting<boolean>;
-
-                            if (idleSwapSetting) {
-                                idleSwapSetting.disable();
-                            }
-
-                            HSUI.Notify(`Idle swap was disabled due to unconfigured loadouts`);
+                            HSLogger.warnOnce(
+                                'Idle swap is enabled but loadout settings are not fully configured; skipping autoswap logic until configured',
+                                'hs-amb-idleswap-unconfigured-loadouts'
+                            );
                             return;
                         }
 
@@ -1310,14 +1346,33 @@ export class HSAmbrosia extends HSModule
                         const normalLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(normalLuckLoadoutValue);
                         const redLuckLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(redLuckLoadoutValue);
 
-                        let blueSwapThresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
-                        let blueSwapThresholdNormalMax = blueSwapThresholdNormalMin + bluePercentageSafeThreshold;
+                        if (this.#cachedNormalLuckLoadoutValue !== normalLuckLoadoutValue) {
+                            this.#cachedNormalLuckLoadoutValue = normalLuckLoadoutValue;
+                            this.#cachedNormalLuckBlueBarRequired = undefined;
+                        }
+
+                        if (this.#cachedNormalLuckBlueBarRequired === undefined) {
+                            const normalLuckLoadoutNumber = parseInt(normalLuckLoadoutValue, 10);
+                            if (Number.isInteger(normalLuckLoadoutNumber)) {
+                                this.#cachedNormalLuckBlueBarRequired = this.calculateBlueBarRequirementForLoadout(gameData, normalLuckLoadoutNumber);
+                            }
+                        }
+
+                        const normalLuckBlueBarRequired = this.#cachedNormalLuckBlueBarRequired;
+                        const canUseNormalLuckBlueRequirement = normalLuckBlueBarRequired !== undefined;
+
+                        let blueSwapTresholdNormalMin = bluePercentageSafeThreshold + accelerationPercent;
+                        let blueSwapTresholdNormalMax = blueSwapTresholdNormalMin + bluePercentageSafeThreshold;
 
                         let blueSwapThresholdRedMin = 100 - bluePercentageSafeThreshold;
                         let blueSwapThresholdRedMax = 100;
 
-                        let redSwapThresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
-                        let redSwapThresholdNormalMax = redSwapThresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        const shouldSwapToBlueLuck = canUseNormalLuckBlueRequirement
+                            ? blueAmbrosiaBarValue >= normalLuckBlueBarRequired
+                            : blueAmbrosiaPercent >= blueSwapTresholdRedMin;
+
+                        let redSwapTresholdNormalMin = HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
+                        let redSwapTresholdNormalMax = redSwapTresholdNormalMin + HSGlobal.HSAmbrosia.idleSwapMinRedThreshold;
 
                         let redSwapThresholdRedMin = HSGlobal.HSAmbrosia.idleSwapMaxRedThreshold;
                         let redSwapThresholdRedMax = 100;
@@ -1325,10 +1380,23 @@ export class HSAmbrosia extends HSModule
                         // Determine target loadout based on current state and thresholds
                         let targetLoadout: string | undefined;
 
+                        if (this.#holdBlueLuckUntilReset && hasBlueBarReset) {
+                            this.#holdBlueLuckUntilReset = false;
+                        }
+
+                        if (this.#holdBlueLuckUntilReset) {
+                            targetLoadout = normalLuckLoadout;
+                        }
+
                         // If currently in Red Luck, only exit when red bar has dropped below normal threshold
-                        if (this.activeLoadout === redLuckLoadout) {
-                            if (redAmbrosiaPercent < redSwapThresholdRedMin) {
-                                targetLoadout = normalLuckLoadout;
+                        else if (this.activeLoadout === redLuckLoadout) {
+                            if (redAmbrosiaPercent < redSwapTresholdRedMin) {
+                                if (shouldSwapToBlueLuck) {
+                                    targetLoadout = normalLuckLoadout;
+                                    this.#holdBlueLuckUntilReset = true;
+                                } else {
+                                    targetLoadout = octeractLoadout;
+                                }
                             } else {
                                 targetLoadout = redLuckLoadout; // Stay in Red Luck
                             }
@@ -1347,8 +1415,9 @@ export class HSAmbrosia extends HSModule
                             targetLoadout = redLuckLoadout;
                         }
                         // Check if should swap to Normal Luck
-                        else if (blueAmbrosiaPercent >= blueSwapThresholdRedMin) {
+                        else if (shouldSwapToBlueLuck) {
                             targetLoadout = normalLuckLoadout;
+                            this.#holdBlueLuckUntilReset = true;
                         }
                         else {
                             targetLoadout = this.activeLoadout;
@@ -1407,6 +1476,8 @@ export class HSAmbrosia extends HSModule
             } else {
                 HSLogger.logOnce('HSAmbrosia.gameDataCallback() - berryMinibarsEnabled was false', 'hs-minibars-false');
             }
+
+            this.#lastBlueBarValue = blueAmbrosiaBarValue;
         }
     };
 
