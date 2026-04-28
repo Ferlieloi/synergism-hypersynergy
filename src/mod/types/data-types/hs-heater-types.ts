@@ -50,6 +50,7 @@ export interface HeaterExportHsData {
     luckConversion: number;
     totalCubes: number;
     effectiveSingularity: number;
+    postaoag: boolean;
     transcription: number;
     ascSpeed: number;
     ascSpeed2: number;
@@ -75,6 +76,10 @@ export interface HeaterExportHsData {
     redAmbrosiaBarValue: number;
     blueAmbrosiaBarMax: number;
     redAmbrosiaBarMax: number;
+    baseObt: number;
+    baseOff: number;
+    bb: number;
+    runeexp: number;
     ambrosiaSpeedMult: number;
     ambrosiaSpeed: number;
     ambrosiaGainChance: number;
@@ -96,6 +101,7 @@ export interface HeaterSheetData {
     trueBaseLuck: number;
     totalCubes: number;
     effectiveSingularity: number;
+    postaoag: boolean;
     transcription: number;
     ascSpeed: number;
     ascSpeed2: number;
@@ -117,6 +123,10 @@ export interface HeaterSheetData {
     redAmbrosiaBarValue: number;
     blueAmbrosiaBarMax: number;
     redAmbrosiaBarMax: number;
+    baseObt: number;
+    baseOff: number;
+    bb: number;
+    runeexp: number;
     ambrosiaSpeedMult: number;
     ambrosiaSpeed: number;
     ambrosiaGainChance: number;
@@ -151,7 +161,6 @@ export interface HeaterOptimizerInput {
     multluck: number;
     cube: number;
     singularity: number;
-    exalt: number;
     postaoag: number;
     transcription: number;
     ascspeed1: number;

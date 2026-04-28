@@ -52,7 +52,6 @@ export class HSHeaterUI {
             { key: 'multluck', label: 'Luck Multiplier', step: 'any' },
             { key: 'cube', label: 'Total Cubes', step: '1' },
             { key: 'singularity', label: 'Effective Singularity', step: 'any' },
-            { key: 'exalt', label: 'Inside Singularity Challenge', step: '1' },
             { key: 'postaoag', label: 'Antiquities Active', step: '1' },
             { key: 'transcription', label: 'Transcription', step: 'any' },
             { key: 'ascspeed1', label: 'Ascension Speed 1', step: 'any' },
@@ -113,7 +112,7 @@ export class HSHeaterUI {
     static collectOptimizerInputFromForm(form: HTMLElement): HeaterOptimizerInput {
         const input = {} as HeaterOptimizerInput;
         const inputFields: Array<Exclude<keyof HeaterOptimizerInput, 'active'>> = [
-            'amb', 'quark', 'plat4x4', 'baseluck', 'multluck', 'cube', 'singularity', 'exalt', 'postaoag', 'transcription', 'ascspeed1', 'ascspeed2', 'spread', 'voucher', 'baseobt', 'baseoff', 'bb', 'bonusRow2', 'bonusRow3', 'bonusRow4', 'bonusRow5', 'ramb', 'runeexp', 'sirc', 'bonussi', 'totalbonusia', 'talismanbonusia', 'btp'
+            'amb', 'quark', 'plat4x4', 'baseluck', 'multluck', 'cube', 'singularity', 'postaoag', 'transcription', 'ascspeed1', 'ascspeed2', 'spread', 'voucher', 'baseobt', 'baseoff', 'bb', 'bonusRow2', 'bonusRow3', 'bonusRow4', 'bonusRow5', 'ramb', 'runeexp', 'sirc', 'bonussi', 'totalbonusia', 'talismanbonusia', 'btp'
         ];
 
         for (const key of inputFields) {
