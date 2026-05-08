@@ -680,13 +680,18 @@ export type RedAmbrosiaUpgradeRewards = {
 export type RedAmbrosiaNames = keyof RedAmbrosiaUpgradeRewards
 
 
+export interface AmbrosiaUpgradeEffectContext {
+    readonly freeLevelsOnly: boolean
+    getAmbrosiaUpgradeLevel: (upgradeName: AmbrosiaUpgradeNames) => number
+}
+
 export interface AmbrosiaUpgradeCalculationConfig<
     K extends keyof AmbrosiaUpgradeRewards
 > {
     costPerLevel: number
     maxLevel: number
     costFormula: (n: number, cpl: number) => number
-    effects: (n: number) => AmbrosiaUpgradeRewards[K]
+    effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => AmbrosiaUpgradeRewards[K]
     extraLevelCalc: () => number
     prerequisites?: Partial<Record<AmbrosiaUpgradeNames, number>>
     ignoreEXALT?: boolean

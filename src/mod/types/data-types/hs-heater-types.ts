@@ -129,7 +129,6 @@ export interface HeaterOptimizerInput {
     postAoag: number;
     transcription: number;
     ascSpeed: number;
-    ascSpeed2: number;
     ascSpread: number;
     baseObt: number;
     baseOff: number;
@@ -144,28 +143,26 @@ export interface HeaterOptimizerInput {
     runeIaBonusLevelsTotal: Decimal;
     runeIaBonusLevelsTalisman: Decimal;
     baseTalismanPower: Decimal;
+    jack: boolean;
+    chronometerLevel: number;
+    freeShopQLevels: number;
     totalVouchers: number;
-    shopAmbrosiaLuck1: number;
-    shopAmbrosiaLuck2: number;
-    shopAmbrosiaLuck3: number;
-    shopAmbrosiaLuck4: number;
     shopAmbrosiaGeneration1: number;
     shopAmbrosiaGeneration2: number;
     shopAmbrosiaGeneration3: number;
     shopAmbrosiaGeneration4: number;
+    shopAmbrosiaLuck1: number;
+    shopAmbrosiaLuck2: number;
+    shopAmbrosiaLuck3: number;
+    shopAmbrosiaLuck4: number;
     shopRedLuck1: number;
     shopRedLuck2: number;
     shopRedLuck3: number;
-    singQuarkHepteract1: number;
-    singQuarkHepteract2: number;
-    singQuarkHepteract3: number;
-    octeractImprovedQuarkHept: number;
     shopImproveQuarkHept1: number;
     shopImproveQuarkHept2: number;
     shopImproveQuarkHept3: number;
     shopImproveQuarkHept4: number;
     shopImproveQuarkHept5: number;
-    jack: boolean;
     active: boolean[];
 }
 

@@ -27,12 +27,14 @@ import {
 import {
     TALISMAN_BASE_COEFFICIENTS,
     TALISMAN_RARITY_VALUES,
-    regularCostProgressionString,
-    exponentialCostProgressionString,
     getTalismanBaseMult,
     getTalismanCostType,
     getTalismanExponentialRatio,
     getTalismanMaxLevel,
+    talismanCostKeys,
+    TalismanCostKey,
+    regularCostProgressionDecimal,
+    exponentialCostProgressionDecimal,
 } from "./stored-vars-and-calculations";
 import { HSLogger } from "../hs-logger";
 
@@ -161,100 +163,37 @@ export const R_getTalismanEffects = <K extends TalismanKeys>(
     }
 };
 
-const parseLog10 = (value: Decimal | number | string): number => {
-    const amount = new Decimal(value);
-    return amount.gt(0) ? amount.log10() : Number.NEGATIVE_INFINITY;
-};
-
-const getTalismanCostBaseLog10 = (baseMult: string): number => {
-    const parts = baseMult.split('e');
-    return Math.log10(parseFloat(parts[0])) + (parseInt(parts[1]) || 0);
-};
-
-const regularCostProgressionLog = (baseMult: string, level: number): Record<string, number> => {
-    const log10Base = getTalismanCostBaseLog10(baseMult);
-
-    let log10PriceMult = log10Base;
-    if (level >= 120) {
-        log10PriceMult += Math.log10((level - 90) / 30);
-    }
-    if (level >= 150) {
-        log10PriceMult += Math.log10((level - 120) / 30);
-    }
-    if (level >= 180) {
-        log10PriceMult += Math.log10((level - 170) / 10);
-    }
-
-    const getCostLog = (l: number, pow: number, div: number): number => {
-        if (l < 0) return Number.NEGATIVE_INFINITY;
-        return Math.log10(Math.pow(l, pow) / div + 1) + log10PriceMult;
-    };
-
-    return {
-        shard: getCostLog(level, 3, 8),
-        commonFragment: level >= 30 ? getCostLog(level - 30, 3, 32) : Number.NEGATIVE_INFINITY,
-        uncommonFragment: level >= 60 ? getCostLog(level - 60, 3, 384) : Number.NEGATIVE_INFINITY,
-        rareFragment: level >= 90 ? getCostLog(level - 90, 3, 500) : Number.NEGATIVE_INFINITY,
-        epicFragment: level >= 120 ? getCostLog(level - 120, 3, 375) : Number.NEGATIVE_INFINITY,
-        legendaryFragment: level >= 150 ? getCostLog(level - 150, 3, 192) : Number.NEGATIVE_INFINITY,
-        mythicalFragment: level >= 150 ? getCostLog(level - 150, 3, 1280) : Number.NEGATIVE_INFINITY,
-    };
-};
-
-const exponentialCostProgressionLog = (baseMult: string, level: number, ratio: number): Record<string, number> => {
-    const log10Base = getTalismanCostBaseLog10(baseMult);
-
-    const getCostLog = (l: number, r: number, mult: number): number => {
-        if (l < 0) return Number.NEGATIVE_INFINITY;
-        return l * Math.log10(r) + log10Base + Math.log10(mult);
-    };
-
-    return {
-        shard: getCostLog(level, ratio, 100),
-        commonFragment: level >= 30 ? getCostLog(level - 30, ratio, 50) : Number.NEGATIVE_INFINITY,
-        uncommonFragment: level >= 60 ? getCostLog(level - 60, ratio, 25) : Number.NEGATIVE_INFINITY,
-        rareFragment: level >= 90 ? getCostLog(level - 90, ratio, 20) : Number.NEGATIVE_INFINITY,
-        epicFragment: level >= 120 ? getCostLog(level - 120, ratio, 15) : Number.NEGATIVE_INFINITY,
-        legendaryFragment: level >= 150 ? getCostLog(level - 150, ratio, 10) : Number.NEGATIVE_INFINITY,
-        mythicalFragment: level >= 150 ? getCostLog(level - 150, ratio, 5) : Number.NEGATIVE_INFINITY,
-    };
-};
-
-export const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext): number => {
+export const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext, loadingTalismans = true): number => {
     const data = env.getGameData();
     if (!data) return 0;
 
     const shards = data.talismans[t];
-    const budgetLogs: Record<string, number> = {
-        shard: parseLog10(shards.shard),
-        commonFragment: parseLog10(shards.commonFragment),
-        uncommonFragment: parseLog10(shards.uncommonFragment),
-        rareFragment: parseLog10(shards.rareFragment),
-        epicFragment: parseLog10(shards.epicFragment),
-        legendaryFragment: parseLog10(shards.legendaryFragment),
-        mythicalFragment: parseLog10(shards.mythicalFragment),
-    };
-
-    const subtractLog10Values = (budgetLog: number, costLog: number): number => {
-        if (budgetLog === costLog) {
-            return Number.NEGATIVE_INFINITY;
-        }
-        return budgetLog + Math.log10(1 - Math.pow(10, costLog - budgetLog));
+    const budget: Record<TalismanCostKey, Decimal> = {
+        shard: new Decimal(shards.shard),
+        commonFragment: new Decimal(shards.commonFragment),
+        uncommonFragment: new Decimal(shards.uncommonFragment),
+        rareFragment: new Decimal(shards.rareFragment),
+        epicFragment: new Decimal(shards.epicFragment),
+        legendaryFragment: new Decimal(shards.legendaryFragment),
+        mythicalFragment: new Decimal(shards.mythicalFragment),
     };
 
     let level = 0;
     const baseMult = getTalismanBaseMult(t);
     const costType = getTalismanCostType(t);
     const cap = R_getTalismanLevelCap(t, env);
+    const smallBufferMult = loadingTalismans ? new Decimal(1.0001) : new Decimal(1);
 
     while (level < cap) {
-        const costLogs = costType === 'regular'
-            ? regularCostProgressionLog(baseMult, level)
-            : exponentialCostProgressionLog(baseMult, level, getTalismanExponentialRatio(t));
+        const costs = costType === 'regular'
+            ? regularCostProgressionDecimal(baseMult, level)
+            : exponentialCostProgressionDecimal(baseMult, level, getTalismanExponentialRatio(t));
 
         let canAfford = true;
-        for (const [item, costLog] of Object.entries(costLogs)) {
-            if ((budgetLogs[item] ?? Number.NEGATIVE_INFINITY) < costLog) {
+
+        for (const item of talismanCostKeys) {
+            const cost = costs[item];
+            if (cost.gt(budget[item].times(smallBufferMult))) {
                 canAfford = false;
                 break;
             }
@@ -262,9 +201,8 @@ export const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext): n
 
         if (!canAfford) break;
 
-        for (const [item, costLog] of Object.entries(costLogs)) {
-            const itemBudget = budgetLogs[item] ?? Number.NEGATIVE_INFINITY;
-            budgetLogs[item] = itemBudget === Number.NEGATIVE_INFINITY ? Number.NEGATIVE_INFINITY : subtractLog10Values(itemBudget, costLog);
+        for (const item of talismanCostKeys) {
+            budget[item] = budget[item].minus(costs[item]);
         }
 
         level++;
@@ -393,7 +331,11 @@ export const R_getRuneBonusFromAllTalismans = (rune: RuneKeys, env: TalismanHelp
 
 export const R_getTalismanLevelCap = (t: TalismanKeys, env: TalismanHelperContext): number => {
     const baseMax = getTalismanMaxLevel(t);
-    let increase = R_universalTalismanMaxLevelIncreasers(env);
+    let increase = 0;
+
+    if (t !== 'achievement') {
+        increase += R_universalTalismanMaxLevelIncreasers(env);
+    }
 
     switch (t) {
         case 'metaphysics':

@@ -245,7 +245,7 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.Mortuus2]: {
         exemptFromCorruption: true,
         effect: (n: number) => ({
-            talismanMaxLevels: Math.min(1200, Math.floor(n / 2)),
+            talismanLevelIncreaser: Math.min(1200, Math.floor(n / 2)),
             talismanEffectBuff: 1 + 0.65 * (1 - Math.pow(0.999, n)) + 0.005 * Math.min(20, n),
             ascensionSpeed: 1 + 0.5 * (1 - Math.pow(0.996, n)),
         }),

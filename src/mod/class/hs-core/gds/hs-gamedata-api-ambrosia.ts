@@ -4,6 +4,7 @@ import type {
     AmbrosiaUpgradeRewards,
     AmbrosiaUpgradeCalculationCollection,
     AmbrosiaUpgradeCalculationConfig,
+    AmbrosiaUpgradeEffectContext,
     RedAmbrosiaUpgradeRewards,
     RedAmbrosiaUpgradeKey,
     AmbrosiaUpgradeCalculationConfig as AmbrosiaUpgradeCalculationConfigAny,
@@ -12,6 +13,7 @@ import type {
 } from "../../../types/data-types/hs-gamedata-api-types";
 import { redAmbrosiaUpgradeCalculationCollection } from "./stored-vars-and-calculations";
 import { HSGlobal } from "../hs-global";
+import { HSLogger } from "../hs-logger";
 
 export interface AmbrosiaHelperContext {
     getGameData: () => Player | undefined;
@@ -66,6 +68,10 @@ export class AmbrosiaHelper {
             AmbrosiaHelper.ceilLog10PlusOne(Number(data.lifetimeRedAmbrosia ?? 0))
             + AmbrosiaHelper.ceilLog10PlusOne(Number(data.lifetimeAmbrosia ?? 0))
         );
+    }
+
+    private getAmbrosiaUpgradeCacheName(upgradeName: AmbrosiaUpgradeNames, freeLevelsOnly: boolean): keyof CalculationCache {
+        return (`AMB_${upgradeName}${freeLevelsOnly ? '_FREE' : ''}`) as keyof CalculationCache;
     }
 
     R_redAmbrosiaUpgradeCalculationCollection = redAmbrosiaUpgradeCalculationCollection;
@@ -271,10 +277,11 @@ export class AmbrosiaHelper {
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            effects: (n: number) => {
+            effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => {
+                const quark1Level = ctx?.getAmbrosiaUpgradeLevel('ambrosiaQuarks1') ?? this.calculateAmbrosiaUpgradeValue('ambrosiaQuarks1');
                 const quarkAmount =
                     1 +
-                    (0.01 + Math.floor(this.calculateAmbrosiaUpgradeValue('ambrosiaQuarks1') / 10) / 1000) * n;
+                    (0.01 + Math.floor(quark1Level / 10) / 1000) * n;
                 return {
                     quarks: quarkAmount,
                 };
@@ -291,9 +298,10 @@ export class AmbrosiaHelper {
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            effects: (n: number) => {
+            effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => {
+                const cubes1Level = ctx?.getAmbrosiaUpgradeLevel('ambrosiaCubes1') ?? this.calculateAmbrosiaUpgradeValue('ambrosiaCubes1');
                 const cubeAmount =
-                    (1 + (0.1 + 10 * (Math.floor(this.calculateAmbrosiaUpgradeValue('ambrosiaCubes1') / 10) / 1000)) * n) *
+                    (1 + (0.1 + 10 * (Math.floor(cubes1Level / 10) / 1000)) * n) *
                     Math.pow(1.15, Math.floor(n / 5));
                 return {
                     cubes: cubeAmount,
@@ -311,9 +319,10 @@ export class AmbrosiaHelper {
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
-            effects: (n: number) => {
+            effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => {
+                const luck1Level = ctx?.getAmbrosiaUpgradeLevel('ambrosiaLuck1') ?? this.calculateAmbrosiaUpgradeValue('ambrosiaLuck1');
                 const val =
-                    (3 + 0.3 * Math.floor(this.calculateAmbrosiaUpgradeValue('ambrosiaLuck1') / 10)) * n +
+                    (3 + 0.3 * Math.floor(luck1Level / 10)) * n +
                     40 * Math.floor(n / 10);
                 return {
                     ambrosiaLuck: val,
@@ -330,8 +339,9 @@ export class AmbrosiaHelper {
             maxLevel: 10,
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number => cpl + 50000 * n,
-            effects: (n: number) => {
-                const quark2Mult = 1 + this.calculateAmbrosiaUpgradeValue('ambrosiaQuarks2') / 100;
+            effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => {
+                const quarks2Level = ctx?.getAmbrosiaUpgradeLevel('ambrosiaQuarks2') ?? this.calculateAmbrosiaUpgradeValue('ambrosiaQuarks2');
+                const quark2Mult = 1 + quarks2Level / 100;
                 const quark3Base = 0.05 * n;
                 const quarkAmount = 1 + quark3Base * quark2Mult;
                 return {
@@ -350,8 +360,9 @@ export class AmbrosiaHelper {
             maxLevel: 100,
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number => cpl + 5000 * n,
-            effects: (n: number) => {
-                const cube2Multi = 1 + 3 * this.calculateAmbrosiaUpgradeValue('ambrosiaCubes2') / 100;
+            effects: (n: number, ctx?: AmbrosiaUpgradeEffectContext) => {
+                const cubes2Level = ctx?.getAmbrosiaUpgradeLevel('ambrosiaCubes2') ?? this.calculateAmbrosiaUpgradeValue('ambrosiaCubes2');
+                const cube2Multi = 1 + 3 * cubes2Level / 100;
                 const cube3Base = 0.2 * n;
                 const cube3Exponential = Math.pow(1.2, Math.floor(n / 5));
                 const cubeAmount = (1 + cube3Base * cube2Multi) * cube3Exponential;
@@ -703,7 +714,13 @@ export class AmbrosiaHelper {
     getAmbrosiaUpgradeEffectsFreeLevelsOnly = <T extends AmbrosiaUpgradeNames>(upgradeKey: T): AmbrosiaUpgradeRewards[T] => {
         const upgradeConfig = this.R_ambrosiaUpgradeCalculationCollection[upgradeKey];
         const freeLevels = upgradeConfig.extraLevelCalc();
-        return upgradeConfig.effects(freeLevels) as AmbrosiaUpgradeRewards[T];
+
+        const ctx: AmbrosiaUpgradeEffectContext = {
+            freeLevelsOnly: true,
+            getAmbrosiaUpgradeLevel: (name) => this.calculateAmbrosiaUpgradeValue(name, true),
+        };
+
+        return upgradeConfig.effects(freeLevels, ctx) as AmbrosiaUpgradeRewards[T];
     };
 
     get R_maxRedAmbrosiaUpgradeAP(): number {
@@ -915,10 +932,10 @@ export class AmbrosiaHelper {
         return val;
     }
 
-    calculateAmbrosiaUpgradeValue(upgradeName: AmbrosiaUpgradeNames) {
+    calculateAmbrosiaUpgradeValue(upgradeName: AmbrosiaUpgradeNames, freeLevelsOnly = false) {
         const data = this.ctx.getGameData();
         if (!data) return 0;
-        const cacheName = `AMB_${upgradeName}` as keyof CalculationCache;
+        const cacheName = this.getAmbrosiaUpgradeCacheName(upgradeName, freeLevelsOnly);
 
         if (!(upgradeName in data.ambrosiaUpgrades)) return 0;
         if (!(upgradeName in this.R_ambrosiaUpgradeCalculationCollection)) return 0;
@@ -929,6 +946,12 @@ export class AmbrosiaHelper {
         if (cached !== undefined) return cached;
 
         const investmentParameters = this.R_ambrosiaUpgradeCalculationCollection[upgradeName] as AmbrosiaUpgradeCalculationConfig<any>;
+
+        if (freeLevelsOnly) {
+            const reduced = investmentParameters.extraLevelCalc();
+            this.ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
+            return reduced;
+        }
 
         const upgradeValue = this.investToAmbrosiaUpgrade(
             investmentParameters.extraLevelCalc(),

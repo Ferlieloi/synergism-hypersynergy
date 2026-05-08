@@ -354,7 +354,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     {
         calculationName: "Ascension Speed Exponent Spread",
-        fnName: "R_calculateAscensionSpeedExponentSpread",
+        fnName: "R_calculateAscensionSpread",
         fnParams: [
             {
                 paramName: "reduce_vals",

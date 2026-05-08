@@ -1,3 +1,4 @@
+import Decimal from "break_infinity.js";
 import { AchievementRewards, HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationCollection, AntUpgrades, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
 import type { Player, SingularityChallengeRewards } from "../../../types/data-types/hs-player-savedata"
 
@@ -44,7 +45,8 @@ export const SHOP_UPGRADE_TYPE_KEYS: Record<ShopUpgradeGroups, string[]> = {
     'chronometer2',
     'chronometer3',
     'chronometerZ',
-    'shopChronometerS'
+    'shopChronometerS',
+    'chronometerInfinity',
   ],
   [ShopUpgradeGroups.Quark]: [
     'cubeToQuark',
@@ -1405,6 +1407,69 @@ export const TALISMAN_BASE_COEFFICIENTS: Record<TalismanKeys, Record<RuneKeys, n
   cookieGrandma: { speed: 1, duplication: 1, prism: 1, thrift: 1, superiorIntellect: 1, infiniteAscent: 0.01, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
   horseShoe: { speed: 1.2, duplication: 1.2, prism: 1.2, thrift: 1.2, superiorIntellect: 1.2, infiniteAscent: 0, antiquities: 0, horseShoe: 0.01, topHat: 0, finiteDescent: 0 }
 }
+
+export const talismanCostKeys = [
+  'shard',
+  'commonFragment',
+  'uncommonFragment',
+  'rareFragment',
+  'epicFragment',
+  'legendaryFragment',
+  'mythicalFragment',
+] as const;
+
+export type TalismanCostKey = (typeof talismanCostKeys)[number];
+
+export const regularCostProgressionDecimal = (baseMult: string, level: number): Record<TalismanCostKey, Decimal> => {
+  const baseMultDecimal = new Decimal(baseMult);
+
+  let priceMult = baseMultDecimal;
+  if (level >= 120) {
+    priceMult = priceMult.times((level - 90) / 30);
+  }
+  if (level >= 150) {
+    priceMult = priceMult.times((level - 120) / 30);
+  }
+  if (level >= 180) {
+    priceMult = priceMult.times((level - 170) / 10);
+  }
+
+  const getCost = (l: number, div: number): Decimal => {
+    return l < 0
+      ? new Decimal(0)
+      : Decimal.pow(l, 3).div(div).add(1).floor().times(priceMult);
+  };
+
+  return {
+    shard: getCost(level, 8),
+    commonFragment: getCost(level - 30, 32),
+    uncommonFragment: getCost(level - 60, 384),
+    rareFragment: getCost(level - 90, 500),
+    epicFragment: getCost(level - 120, 375),
+    legendaryFragment: getCost(level - 150, 192),
+    mythicalFragment: getCost(level - 150, 1280),
+  };
+};
+
+export const exponentialCostProgressionDecimal = (baseMult: string, level: number, ratio: number): Record<TalismanCostKey, Decimal> => {
+  const baseMultDecimal = new Decimal(baseMult);
+
+  const getCost = (l: number, mult: number): Decimal => {
+    return l < 0
+      ? new Decimal(0)
+      : Decimal.pow(ratio, l).times(baseMultDecimal).times(mult).floor();
+  };
+
+  return {
+    shard: getCost(level, 100),
+    commonFragment: getCost(level - 30, 50),
+    uncommonFragment: getCost(level - 60, 25),
+    rareFragment: getCost(level - 90, 20),
+    epicFragment: getCost(level - 120, 15),
+    legendaryFragment: getCost(level - 150, 10),
+    mythicalFragment: getCost(level - 150, 5),
+  };
+};
 
 export const regularCostProgressionString = (baseMult: string, level: number): Record<string, string> => {
   const log10Base = Math.log10(parseFloat(baseMult.split('e')[0])) + (parseInt(baseMult.split('e')[1]) || 0);

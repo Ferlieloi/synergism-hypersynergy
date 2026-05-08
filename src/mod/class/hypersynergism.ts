@@ -250,6 +250,29 @@ export class Hypersynergism {
         });
 
         this.#bindToolsButton('#hs-panel-amb-heater-compute-btn', async () => {
+            /*
+            const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+            if (!dataModule) return;
+
+            const heaterData = await dataModule.dumpDataForHeater();
+            if (!heaterData) return;
+
+            const json = JSON.stringify(heaterData);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ambrosia-heater-data-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+
+            HSUI.Notify('Ambrosia heater raw data downloaded', {
+                position: 'top',
+                notificationType: 'success'
+            });
+            */
             await HSHeaterUI.openHeaterComputationModal();
         });
 

@@ -329,9 +329,7 @@ export class HSGameData extends HSModule {
 
             this.#meBonuses = data;
             this.#meDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch me data: ${err}`, this.context);
-        }
+        } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
 
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#registerWebSocket();

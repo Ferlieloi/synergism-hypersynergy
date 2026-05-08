@@ -99,8 +99,7 @@ export const getShopBonusLevels = (upgradeKey: string, env: ShopUpgradeHelperCon
         return 0
     }
 
-    const result = getShopUpgradeGroups(upgradeKey, env)
-        .reduce((sum, group) => sum + getShopUpgradeTypeBonusLevels(group, env), 0)
+    const result = getShopUpgradeGroups(upgradeKey, env)        .reduce((sum, group) => sum + getShopUpgradeTypeBonusLevels(group, env), 0)
 
     env.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
     return result
@@ -719,7 +718,7 @@ export const calculateShopUpgradeEffect = (
         case 'shopChronometerS':
             if (key === 'ascensionSpeedMult' || key === 'globalSpeedMult') {
                 const singularityCount = env.getGameData()?.singularityCount ?? 0
-                return Math.pow(1.01, level * Math.max(0, singularityCount - 200))
+                return Math.pow(1.01, 1 * Math.max(0, singularityCount - 200))
             }
             break
         case 'shopSingularitySpeedup':

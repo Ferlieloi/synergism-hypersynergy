@@ -25,8 +25,7 @@ export class HSHeaterUI {
         { key: "isInsideExalt",             label: "Inside Exalt",          type: "boolean", url: "Pictures/Default/TinySChalTime.png" },
         { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",   type: "boolean", url: "Pictures/Runes/Antiquities.png" },
         { key: "transcription",             label: "Transcription",         type: "number",  url: "Pictures/Default/OcteractOneMindImprover.png" },
-        { key: "ascSpeed",                  label: "Asc. Speed (C)",        type: "number",  url: "Pictures/Default/TinySpeedAscension.png" },
-        { key: "ascSpeed2",                 label: "Asc. Speed (H)",        type: "number",  url: "Pictures/Default/TinySpeedAscension.png" },
+        { key: "ascSpeed",                  label: "Asc. Speed",            type: "number",  url: "Pictures/Default/TinySpeedAscension.png" },
         { key: "ascSpread",                 label: "Asc. Spread",           type: "number",  url: "Pictures/Default/SingularityAscensionSpeed.png" },
         { key: "baseObt",                   label: "Base Obtainium",        type: "number",  url: "Pictures/Default/Obtainium.png" },
         { key: "baseOff",                   label: "Base Offering",         type: "number",  url: "Pictures/Default/Offering.png" },
@@ -42,6 +41,8 @@ export class HSHeaterUI {
         { key: "runeIaBonusLevelsTalisman", label: "IA Bonus Levels (talisman)",   type: "number",  url: "Pictures/Runes/InfiniteAscent.png" },
         { key: "baseTalismanPower",         label: "Talisman Power Mult.",  type: "number",  url: "Pictures/Default/BlueberryTalismanBonusRuneLevel.png" },
         { key: "jack",                      label: "Jack of All Trades",    type: "boolean", url: "Pictures/Default/ShopPanthema.png" },
+        { key: "chronometerLevel",          label: "Chronometer Level",     type: "number",  url: "Pictures/Default/ShopChronometerInfinity.png" },
+        { key: "freeShopQLevels",           label: "Free Shop Q. Levels",   type: "number",  url: "Pictures/Default/Quark.png" },
         { key: "totalVouchers",             label: "Total Vouchers",        type: "number",  url: "Pictures/Default/ShopInfiniteShopUpgrades.png" },
         { key: "shopAmbrosiaGeneration1",   label: "Shop Ambrosia Gen 1",   type: "number",  url: "Pictures/Default/ShopAmbrosiaGeneration1.png" },
         { key: "shopAmbrosiaGeneration2",   label: "Shop Ambrosia Gen 2",   type: "number",  url: "Pictures/Default/ShopAmbrosiaGeneration2.png" },
@@ -59,10 +60,6 @@ export class HSHeaterUI {
         { key: "shopImproveQuarkHept3",     label: "Shop QHept 3",          type: "number",  url: "Pictures/Default/ShopImprovedQuarkHepteract2.png" },
         { key: "shopImproveQuarkHept4",     label: "Shop QHept 4",          type: "number",  url: "Pictures/Default/ShopImprovedQuarkHepteract3.png" },
         { key: "shopImproveQuarkHept5",     label: "Shop QHept 5",          type: "number",  url: "Pictures/Default/ShopImprovedQuarkHepteractInfinity.png" },
-        { key: "singQuarkHepteract1",       label: "GQ QHept 1",            type: "number",  url: "Pictures/Default/SingularityQuarkHepteract.png" },
-        { key: "singQuarkHepteract2",       label: "GQ QHept 2",            type: "number",  url: "Pictures/Default/SingularityQuarkHepteract2.png" },
-        { key: "singQuarkHepteract3",       label: "GQ QHept 3",            type: "number",  url: "Pictures/Default/SingularityQuarkHepteract3.png" },
-        { key: "octeractImprovedQuarkHept", label: "Oct QHept",             type: "number",  url: "Pictures/Default/OcteractImprovedQuarkHepteract.png" },
     ] as const;
 
     private static readonly activeLabels = ["C1: Quarks", "C2: 3-7D Cubes", "C3: Octeracts", "C4: Luck", "A: Obt/Off", "H: p4x4 (pre-AOAG)", "S: Max SR", "M: Amb + Oct"];
@@ -237,7 +234,6 @@ export class HSHeaterUI {
             postAoag:           exportData.hs_data.postAoag,
             transcription:      exportData.hs_data.transcription,
             ascSpeed:           exportData.hs_data.ascSpeed,
-            ascSpeed2:          exportData.hs_data.ascSpeed2,
             ascSpread:          exportData.hs_data.ascSpread,
             baseObt:            exportData.hs_data.baseObt,
             baseOff:            exportData.hs_data.baseOff,
@@ -253,6 +249,8 @@ export class HSHeaterUI {
             runeIaBonusLevelsTalisman:  exportData.hs_data.runeIaBonusLevelsTalisman,
             baseTalismanPower:          exportData.hs_data.baseTalismanPower,
             jack:                       exportData.hs_data.jack,
+            chronometerLevel:           exportData.hs_data.chronometerLevel,
+            freeShopQLevels:            exportData.hs_data.freeShopQLevels,
             totalVouchers:              exportData.hs_data.totalVouchers,
             shopAmbrosiaLuck1:          exportData.hs_data.shopAmbrosiaLuck1,
             shopAmbrosiaLuck2:          exportData.hs_data.shopAmbrosiaLuck2,
@@ -270,10 +268,6 @@ export class HSHeaterUI {
             shopImproveQuarkHept3:      exportData.hs_data.shopImproveQuarkHept3,
             shopImproveQuarkHept4:      exportData.hs_data.shopImproveQuarkHept4,
             shopImproveQuarkHept5:      exportData.hs_data.shopImproveQuarkHept5,
-            singQuarkHepteract1:        exportData.hs_data.singQuarkHepteract1,
-            singQuarkHepteract2:        exportData.hs_data.singQuarkHepteract2,
-            singQuarkHepteract3:        exportData.hs_data.singQuarkHepteract3,
-            octeractImprovedQuarkHept:  exportData.hs_data.octeractImprovedQuarkHept,
             active: Array(this.activeLabels.length).fill(true),
         };
     }
@@ -615,11 +609,6 @@ export class HSHeaterUI {
             return readBoolean(`hs-heater-input-active-${index}`);
         });
 
-        const shopAmbrosiaLuck1 = readNumber('hs-heater-input-shopAmbrosiaLuck1');
-        const shopAmbrosiaLuck2 = readNumber('hs-heater-input-shopAmbrosiaLuck2');
-        const shopAmbrosiaLuck3 = readNumber('hs-heater-input-shopAmbrosiaLuck3');
-        const shopAmbrosiaLuck4 = readNumber('hs-heater-input-shopAmbrosiaLuck4');
-
         return {
             amb:                readNumber('hs-heater-input-amb'),
             ramb:               readNumber('hs-heater-input-ramb'),
@@ -637,7 +626,6 @@ export class HSHeaterUI {
             postAoag:           readBoolean('hs-heater-input-postaoag') ? 1 : 0,
             transcription:      readNumber('hs-heater-input-transcription'),
             ascSpeed:           readNumber('hs-heater-input-ascSpeed'),
-            ascSpeed2:          readNumber('hs-heater-input-ascSpeed2'),
             ascSpread:          readNumber('hs-heater-input-ascSpread'),
             baseObt:            readNumber('hs-heater-input-baseObt'),
             baseOff:            readNumber('hs-heater-input-baseOff'),
@@ -647,33 +635,31 @@ export class HSHeaterUI {
             bonusRow4:          readNumber('hs-heater-input-bonusRow4'),
             bonusRow5:          readNumber('hs-heater-input-bonusRow5'),
             runeMaxExp:         readNumber('hs-heater-input-runeMaxExp'),
-            runeSiRC:     readNumber('hs-heater-input-runeSiRC'),
+            runeSiRC:           readNumber('hs-heater-input-runeSiRC'),
             runeSiBonusLevelsTotal:     readDecimal('hs-heater-input-runeSiBonusLevelsTotal'),
             runeIaBonusLevelsTotal:     readDecimal('hs-heater-input-runeIaBonusLevelsTotal'),
             runeIaBonusLevelsTalisman:  readDecimal('hs-heater-input-runeIaBonusLevelsTalisman'),
             baseTalismanPower:          readDecimal('hs-heater-input-baseTalismanPower'),
+            jack:                       readBoolean('hs-heater-input-jack'),
+            freeShopQLevels:            readNumber('hs-heater-input-freeShopQLevels'),
+            chronometerLevel:           readNumber('hs-heater-input-chronometerLevel'),
             totalVouchers:              readNumber('hs-heater-input-totalVouchers'),
-            shopAmbrosiaLuck1:  shopAmbrosiaLuck1,
-            shopAmbrosiaLuck2:  shopAmbrosiaLuck2,
-            shopAmbrosiaLuck3:  shopAmbrosiaLuck3,
-            shopAmbrosiaLuck4:  shopAmbrosiaLuck4,
-            shopAmbrosiaGeneration1: readNumber('hs-heater-input-shopAmbrosiaGeneration1'),
-            shopAmbrosiaGeneration2: readNumber('hs-heater-input-shopAmbrosiaGeneration2'),
-            shopAmbrosiaGeneration3: readNumber('hs-heater-input-shopAmbrosiaGeneration3'),
-            shopAmbrosiaGeneration4: readNumber('hs-heater-input-shopAmbrosiaGeneration4'),
-            shopRedLuck1:       readNumber('hs-heater-input-shopRedLuck1'),
-            shopRedLuck2:       readNumber('hs-heater-input-shopRedLuck2'),
-            shopRedLuck3:       readNumber('hs-heater-input-shopRedLuck3'),
+            shopAmbrosiaGeneration1:    readNumber('hs-heater-input-shopAmbrosiaGeneration1'),
+            shopAmbrosiaGeneration2:    readNumber('hs-heater-input-shopAmbrosiaGeneration2'),
+            shopAmbrosiaGeneration3:    readNumber('hs-heater-input-shopAmbrosiaGeneration3'),
+            shopAmbrosiaGeneration4:    readNumber('hs-heater-input-shopAmbrosiaGeneration4'),
+            shopAmbrosiaLuck1:          readNumber('hs-heater-input-shopAmbrosiaLuck1'),
+            shopAmbrosiaLuck2:          readNumber('hs-heater-input-shopAmbrosiaLuck2'),
+            shopAmbrosiaLuck3:          readNumber('hs-heater-input-shopAmbrosiaLuck3'),
+            shopAmbrosiaLuck4:          readNumber('hs-heater-input-shopAmbrosiaLuck4'),
+            shopRedLuck1:               readNumber('hs-heater-input-shopRedLuck1'),
+            shopRedLuck2:               readNumber('hs-heater-input-shopRedLuck2'),
+            shopRedLuck3:               readNumber('hs-heater-input-shopRedLuck3'),
             shopImproveQuarkHept1:      readNumber('hs-heater-input-shopImproveQuarkHept1'),
             shopImproveQuarkHept2:      readNumber('hs-heater-input-shopImproveQuarkHept2'),
             shopImproveQuarkHept3:      readNumber('hs-heater-input-shopImproveQuarkHept3'),
             shopImproveQuarkHept4:      readNumber('hs-heater-input-shopImproveQuarkHept4'),
             shopImproveQuarkHept5:      readNumber('hs-heater-input-shopImproveQuarkHept5'),
-            singQuarkHepteract1:        readNumber('hs-heater-input-singQuarkHepteract1'),
-            singQuarkHepteract2:        readNumber('hs-heater-input-singQuarkHepteract2'),
-            singQuarkHepteract3:        readNumber('hs-heater-input-singQuarkHepteract3'),
-            octeractImprovedQuarkHept:  readNumber('hs-heater-input-octeractImprovedQuarkHept'),
-            jack:               readBoolean('hs-heater-input-jack'),
             active,
         };
     }
