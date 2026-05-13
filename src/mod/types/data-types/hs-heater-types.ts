@@ -1,121 +1,10 @@
 import type Decimal from "break_infinity.js";
 import { GameData } from "./hs-player-savedata";
 
-export interface HeaterExportPseudoCoinUpgrades {
-    ambrosiaGenerationBuffLevel: number;
-    ambrosiaLuckBuffLevel: number;
-    baseObtainiumBuffLevel: number;
-    baseOfferingBuffLevel: number;
-    cubeBuffLevel: number;
-    redAmbrosiaGenerationBuffLevel: number;
-    redAmbrosiaLuckBuffLevel: number;
-}
-
-export interface HeaterExportRedAmbrosiaUpgrades {
-    tutorial: number;
-    conversionImprovement1: number;
-    conversionImprovement2: number;
-    conversionImprovement3: number;
-    freeTutorialLevels: number;
-    freeLevelsRow2: number;
-    freeLevelsRow3: number;
-    freeLevelsRow4: number;
-    freeLevelsRow5: number;
-    blueberryGenerationSpeed: number;
-    regularLuck: number;
-    redGenerationSpeed: number;
-    redLuck: number;
-    redAmbrosiaCube: number;
-    redAmbrosiaObtainium: number;
-    redAmbrosiaOffering: number;
-    redAmbrosiaCubeImprover: number;
-    viscount: number;
-    infiniteShopUpgrades: number;
-    redAmbrosiaAccelerator: number;
-    regularLuck2: number;
-    blueberryGenerationSpeed2: number;
-    salvageYinYang: number;
-    blueberries: number;
-    redAmbrosiaFreeAccumulator: number;
-    freeOfferingUpgrades: number;
-    freeObtainiumUpgrades: number;
-    freeCubeUpgrades: number;
-    freeSpeedUpgrades: number;
-}
-
-export interface HeaterExportHsData {
-    lifeTimeAmbrosia: number;
-    lifeTimeRedAmbrosia: number;
-    quarks: number;
-    platonic4x4: number;
-    luckBase: number;
-    luckMult: number;
-    luckTotal: number;
-    trueBaseLuck: number;
-    redAmbrosiaLuck: number;
-    luckConversion: number;
-    totalCubes: number;
-    singularityCount: number;
-    reducedSingularity: number;
-    postaoag: boolean;
-    transcription: number;
-    ascSpeed: number;
-    ascSpeed2: number;
-    blueberries: number;
-    bonusRow2: number;
-    bonusRow3: number;
-    bonusRow4: number;
-    bonusRow5: number;
-    spread: number;
-    totalVouchers: number;
-    baseTalismanPower: Decimal;
-    sirc: number;
-    bonussi: Decimal;
-    totalbonusia: Decimal;
-    talismanbonusia: Decimal;
-    tokens: number | null;
-    maxTokens: number | null;
-    isAtMaxTokens: boolean | null;
-    isEvent: boolean | null;
-    bellStacks: number | null;
-    personalQuarkBonus: number | null;
-    blueAmbrosiaBarValue: number;
-    redAmbrosiaBarValue: number;
-    blueAmbrosiaBarMax: number;
-    redAmbrosiaBarMax: number;
-    baseObt: number;
-    baseOff: number;
-    bb: number;
-    maxRuneExp: number;
-    ambrosiaSpeedMult: number;
-    ambrosiaSpeed: number;
-    ambrosiaGainChance: number;
-    trueAmbrosiaGainChance: number;
-    ambrosiaAcceleratorCount: number;
-    shopLuck: number;
-    shopAmbrosiaLuck1: number;
-    shopAmbrosiaLuck2: number;
-    shopAmbrosiaLuck3: number;
-    shopAmbrosiaLuck4: number;
-    shopAmb1: number;
-    shopAmb2: number;
-    shopAmb3: number;
-    shopAmb4: number;
-    shopRLuck1: number;
-    shopRLuck2: number;
-    shopRLuck3: number;
-    qHept: number;
-    jack: boolean;
-    baseRLuck: number;
-    pseudoCoinUpgrades: HeaterExportPseudoCoinUpgrades;
-    redAmbrosiaUpgrades: HeaterExportRedAmbrosiaUpgrades;
-    isInsideExalt: boolean;
-}
-
 export interface HeaterOptimizerInput {
     amb: number;
     ramb: number;
-    ambSpeedNonAmb: number;
+    ambSpeedNonAmbBerries: number;
     blueberries: number;
     luckBaseNonAmb: number;
     luckMultNonAmb: number;
@@ -168,30 +57,32 @@ export interface HeaterOptimizerInput {
     shopImproveQuarkHept3: number;
     shopImproveQuarkHept4: number;
     shopImproveQuarkHept5: number;
-    active: boolean[];
+    heaterOptions: boolean[];
+    ossifiedTactics: number;
+    ossifiedTactics2: number;
+    redberries: number;
+    viscount: boolean;
 }
 
 export interface HeaterOptimizationResult {
     input: HeaterOptimizerInput;
-    c1?: any[];
-    c2?: any[];
-    c3?: any[];
-    c4?: any[];
-    a1?: any[];
-    a2?: any[];
-    h0?: any[];
-    h1?: any[];
-    h2?: any[];
-    h3?: any[];
-    h4?: any[];
-    h5?: any[];
-    h6?: any[];
-    h7?: any[];
-    s1?: any[];
-    s2?: any[];
-    m0?: any[];
+    // calculateAmb
+    luck?: any[][];    // Q4  — best luck loadout
+    rLuck?: any[][];   // Q5  — best red luck loadout
+    allAmb?: any[][];  // Q6  — best all-ambrosia loadout
+    // calculateQuarks
+    quarks?: any[][];  // Q7  — best quarks loadout
+    // calculateCubes
+    cubes?: any[][];   // Q8  — best cubes loadout
+    // calculateOct
+    oct?: any[][];     // Q9  — best octeract loadout
+    // calculateOff
+    obt?: any[][];     // Q10 — best obtainium loadout
+    off?: any[][];     // Q11 — best offering loadout
+    // calculateHyperflux (up to 8 rows: hyperflux level 0–7)
+    hyperflux?: any[][];
+    // calculateAmbOct
+    ambOct?: any[][];  // Q25 — best amb+oct loadout
+    // calculateGen (3 rows: gen level 1–3)
+    gen?: any[][];
 }
-
-export type HeaterExportData = GameData & {
-    hs_data: HeaterExportHsData;
-};

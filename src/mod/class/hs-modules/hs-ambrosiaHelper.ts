@@ -1,4 +1,4 @@
-import { AMBROSIA_ICON, AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
+import { AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
@@ -37,11 +37,6 @@ export class HSAmbrosiaHelper {
         const elements = Array.from(document.querySelectorAll<HTMLElement>('.hs-quickbar-summary-wrapper'));
         this.#cachedQuickbarSummaryElements = elements;
         return elements;
-    }
-
-    /** Resolve an ambrosia icon enum by its ID string. */
-    static getIconEnumById(iconId: string): AMBROSIA_ICON | undefined {
-        return Object.values(AMBROSIA_ICON).find((icon) => icon === iconId) as AMBROSIA_ICON | undefined;
     }
 
     /** Resolve an ambrosia loadout slot enum by its slot ID string. */

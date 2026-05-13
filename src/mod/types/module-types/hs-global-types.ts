@@ -1,4 +1,3 @@
-import { HSAmbrosiaLoadoutIconMapping } from "./hs-ambrosia-types";
 import { HSWatcherOptions } from "./hs-elementhooker-types";
 import { HSViewProperties, MAIN_VIEW } from "./hs-gamestate-types";
 import { ELogLevel } from "./hs-logger-types";
@@ -77,7 +76,6 @@ export interface HSGlobalMouse {
 }
 
 export interface HSGlobalAmbrosia extends IStoreable {
-    ambrosiaLoadoutIcons: HSAmbrosiaLoadoutIconMapping;
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 
@@ -105,11 +103,9 @@ export interface HSGlobalAmbrosia extends IStoreable {
 export interface HSGlobalCorruptionQuickbar extends IStoreable {
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
-    corruptionLoadoutIcons: HSAmbrosiaLoadoutIconMapping; // TYPE
 }
 
 export interface HSGlobalAutomationQuickbar extends IStoreable {
-    // automationLoadoutIcons: HSAmbrosiaLoadoutIconMapping; // TYPE
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 }

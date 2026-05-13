@@ -230,7 +230,7 @@
    display: block;
 }
 
-.hs-corruption-slot-pickmode {
+.hs-quickbar-slot-pickmode {
    border: 2px dashed #ffff00;
    box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
 }

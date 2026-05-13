@@ -834,13 +834,13 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#pickTargetSlotIndex = slotIndex;
         this.#slots.forEach((slot, idx) => {
             if (idx === slotIndex) {
-                slot.classList.add('hs-corruption-slot-pickmode');
+                slot.classList.add('hs-quickbar-slot-pickmode');
             } else {
-                slot.classList.remove('hs-corruption-slot-pickmode');
+                slot.classList.remove('hs-quickbar-slot-pickmode');
             }
         });
 
-        HSUI.Notify('Icon picker active: click an in-game icon/image to assign to this slot. Any click ends mode.', { notificationType: 'default' });
+        HSUI.Notify('Icon picker active: click an in-game icon/image to assign to this slot. Any click ends mode.', { position: 'topRight', notificationType: 'default' });
 
         this.#pickDocClickListener = (event: MouseEvent) => {
             const target = event.target instanceof Element ? event.target : null;
@@ -887,6 +887,6 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
             }
             this.#wasGdsEnabled = null;
         }
-        this.#slots.forEach((slot) => slot.classList.remove('hs-corruption-slot-pickmode'));
+        this.#slots.forEach((slot) => slot.classList.remove('hs-quickbar-slot-pickmode'));
     }
 }
