@@ -1,6 +1,6 @@
 import { HSUI } from "../../hs-core/hs-ui";
-import type { HeaterTypeSemanticId, HeaterResultArrayKey } from "../../../types/data-types/hs-heater-types";
 import { buildHeaterTypeSemanticId, getHeaterTypeEntries, resolveHeaterTypeIconSrc } from "./hs-heater-result-config";
+import type { HeaterTypeSemanticId } from "../../../types/data-types/hs-heater-types";
 export type { HeaterTypeSemanticId } from "../../../types/data-types/hs-heater-types";
 
 export type HeaterIconOverrideChangeListener = (semanticId: string) => void;

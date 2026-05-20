@@ -1,6 +1,6 @@
 import { HSUI } from "../../hs-core/hs-ui";
 
-export class HSHeaterStyles {
+export class HSHeaterUIStyles {
     static #heaterStylesInjected = false;
 
     static getHeaterBaseStylesCss(): string {
@@ -323,6 +323,9 @@ export class HSHeaterStyles {
             .hs-heater-selected-type-cell .hs-heater-type-icon-button {
                 background: rgba(40, 110, 240, 0.06);
             }
+            .hs-heater-selected-type-cell .hs-heater-type-icon-button:hover {
+                background: rgba(27, 93, 217, 0.4) !important;
+            }
 
             .hs-heater-result-cell {
                 white-space: normal;
@@ -393,6 +396,10 @@ export class HSHeaterStyles {
                 display: block;
                 margin: auto;
             }
+
+            #hs-heater-sync-settings-btn.hs-heater-sync-settings-warning::after {
+                content: ' ⚠️';
+            }
         `;
     }
 
@@ -459,16 +466,17 @@ export class HSHeaterStyles {
                 background-color: transparent;
             }
 
-            /* === JSON Tooltip (by id) === */
-            #hs-heater-loadout-json-tooltip {
+            /* === Heater Tooltip Overlays === */
+            #hs-heater-loadout-json-tooltip,
+            #hs-heater-sync-settings-tooltip,
+            #hs-heater-start-heater-tooltip {
                 position: fixed;
                 z-index: 10000;
                 background: #1e1e1e;
-                color: #e0e0e0;
+                color: #d3d5da;
                 border: 1px solid rgba(255,255,255,0.2);
                 border-radius: 4px;
                 padding: 6px 8px;
-                white-space: pre-wrap;
                 word-break: break-word;
                 font-family: monospace;
                 font-size: 0.78em;
@@ -476,6 +484,32 @@ export class HSHeaterStyles {
                 max-height: 280px;
                 overflow-y: auto;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            }
+
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-key {
+                color: #7fa1d1;
+                font-weight: 600;
+            }
+
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-none {
+                color: #bc888c;
+                font-weight: 500;
+            }
+
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-key-none-selected,
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-none-selected {
+                color: #d71928;
+                font-weight: 900;
+            }
+
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-selected {
+                color: #667fd2e8;
+                font-weight: 700;
+            }
+
+            #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-unselected {
+                color: #7f7f7f;
+                font-weight: 500;
             }
         `;
     }

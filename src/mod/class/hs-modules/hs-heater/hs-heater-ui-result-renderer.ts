@@ -87,11 +87,9 @@ function buildArraySectionHeaderRow(showP4x4: boolean, effectHeader: string): st
 
 function buildLoadoutActionControls(escapedFullLoadout: string, isValidJson: boolean): string {
     if (!isValidJson) return "";
-
-    const previewIcon = `<span class="hs-heater-json-tooltip-trigger" tabindex="0" data-loadout="${escapedFullLoadout}" role="button" aria-label="Show loadout JSON">🔍</span>`;
-    const copyButton = `<button class="hs-heater-copy-loadout-btn" type="button" data-loadout="${escapedFullLoadout}">Copy</button>`;
+    const copyButton = `<button class="hs-heater-copy-loadout-btn hs-heater-json-tooltip-trigger" type="button" data-loadout="${escapedFullLoadout}">Copy</button>`;
     const importButton = `<button class="hs-heater-import-loadout-btn" type="button" data-loadout="${escapedFullLoadout}">Import</button>`;
-    return `${previewIcon}${copyButton}${importButton}`;
+    return `${copyButton}${importButton}`;
 }
 
 function buildArraySectionDataRow(

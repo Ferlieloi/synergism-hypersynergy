@@ -99,13 +99,13 @@ export const inputDefinitions = [
 ] as const satisfies readonly HeaterInputField[];
 
 export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (hsData: any) => HeaterInputBase[K] }>> = {
-    amb: (hsData) => hsData.lifetimeAmbrosia,
-    ramb: (hsData) => hsData.lifetimeRedAmbrosia,
-    luckMultNonAmb: (hsData) => hsData.luckMultNonAmb - 1,
-    ossifiedTactics: (hsData) => hsData.redAmbrosiaUpgrades.regularLuck,
-    ossifiedTactics2: (hsData) => hsData.redAmbrosiaUpgrades.regularLuck2,
-    redberries: (hsData) => hsData.redAmbrosiaUpgrades.blueberries,
-    viscount: (hsData) => Boolean(hsData.redAmbrosiaUpgrades.viscount),
+    amb:                (hsData) => hsData.lifetimeAmbrosia,
+    ramb:               (hsData) => hsData.lifetimeRedAmbrosia,
+    luckMultNonAmb:     (hsData) => hsData.luckMultNonAmb - 1,
+    ossifiedTactics:    (hsData) => hsData.redAmbrosiaUpgrades.regularLuck,
+    ossifiedTactics2:   (hsData) => hsData.redAmbrosiaUpgrades.regularLuck2,
+    redberries:         (hsData) => hsData.redAmbrosiaUpgrades.blueberries,
+    viscount:           (hsData) => Boolean(hsData.redAmbrosiaUpgrades.viscount),
 };
 
 export const heaterOptionLabels = HEATER_BRANCH_DEFINITIONS.map((branch) => branch.label) as readonly string[];

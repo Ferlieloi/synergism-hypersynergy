@@ -5,21 +5,25 @@ import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { HSHeaterOptimizer } from "./hs-heater-optimizer";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSHeaterStyles } from "./hs-heater-ui-styles";
-import { HSHeaterInputUI } from "./hs-heater-ui-input";
+import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
+import { HSHeaterUIInput } from "./hs-heater-ui-input";
 import { HSHeaterResultStore } from "./hs-heater-result-store";
 import { HSHeaterResultModalController } from "./hs-heater-result-modal-controller";
-import { getEffectiveHeaterIconSrc, getHeaterTypeDropdownOptionsWithIcons, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener, } from "./hs-heater-icon-store";
+import { HSHeaterUIResult } from "./hs-heater-ui-result";
+import { resolveHeaterTypeLabel } from "./hs-heater-result-config";
+import { escapeHtml } from "./hs-heater-utils";
+import { getHeaterTypeDropdownOptionsWithIcons } from "./hs-heater-icon-store";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
 import { HSLogger } from "../../hs-core/hs-logger";
+import { HSSettingsDefinition } from "../../../types/module-types/hs-settings-types";
 
 export class HSHeaterInputModalController {
     static context = 'HSHeaterInputModalController';
 
     static currentInputsModalId: string | null = null;
-    static #iconOverrideChangeListener: HeaterIconOverrideChangeListener | null = null;
     static #currentInputsModalObserver: MutationObserver | null = null;
+    static #syncSettingsTooltipId = 'hs-heater-sync-settings-tooltip';
 
     static #cachedInputsModal: HTMLElement | null = null;
     static #cachedTypeSelects: HTMLSelectElement[] = [];
@@ -27,18 +31,18 @@ export class HSHeaterInputModalController {
     static #cachedTypeIcons: HTMLButtonElement[] = [];
     static #cachedActiveLabels: HTMLElement[] = [];
 
-    static #loadoutSettingPreferences: Record<string, { label: string; preferences: string[] }> = {
-        ambrosiaIdleSwapOcteractLoadout:    { label: 'AFK Swapper Gen + Oct',   preferences: ["gen:2", "gen:1", "gen:0"] },
-        ambrosiaIdleSwapNormalLuckLoadout:  { label: 'AFK Swapper Blue Luck',   preferences: ["luck"] },
-        ambrosiaIdleSwapRedLuckLoadout:     { label: 'AFK Swapper Red Luck',    preferences: ["rLuck"] },
+    static #loadoutSettingPreferences: Partial<Record<keyof HSSettingsDefinition, { label: string; preferences: string[] }>> = {
+        autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7"] },
+        autosingLateCubeLoadout:            { label: 'Autosing Late Cube',      preferences: ["cubes"] },
+        autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
+        autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
+        autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obt"] },
+        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        autosingEarlyCubeLoadout:           { label: 'Auto-sing Early Cube',    preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7"] },
-        autosingLateCubeLoadout:            { label: 'Auto-sing Late Cube',     preferences: ["cubes"] },
-        autosingQuarkLoadout:               { label: 'Auto-sing Quark',         preferences: ["quarks"] },
-        autosingObtLoadout:                 { label: 'Auto-sing Obt',           preferences: ["obt", "off"] },
-        autosingOffLoadout:                 { label: 'Auto-sing Off',           preferences: ["off", "obt"] },
-        autosingAmbrosiaLoadout:            { label: 'Auto-sing Amb',           preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
+        ambrosiaIdleSwapOcteractLoadout:    { label: 'AFK Swapper Gen+Oct',     preferences: ["gen:2", "gen:1", "gen:0"] },
+        ambrosiaIdleSwapNormalLuckLoadout:  { label: 'AFK Swapper Blue Luck',   preferences: ["luck"] },
+        ambrosiaIdleSwapRedLuckLoadout:     { label: 'AFK Swapper Red Luck',    preferences: ["rLuck"] },
     };
 
 
@@ -62,8 +66,11 @@ export class HSHeaterInputModalController {
         const heaterData = await dataModule.dumpDataForHeater();
         if (!heaterData) return;
 
-        const initialInput = HSHeaterInputUI.buildOptimizerInput(heaterData);
-        HSHeaterStyles.ensureHeaterStylesInjected();
+        const initialInput = HSHeaterUIInput.buildOptimizerInput(heaterData);
+        if (initialInput.amb < 69838851) { // Amb needed to max all amb modules...
+            initialInput.heaterOptions[7] = false;
+        }
+        HSHeaterUIStyles.ensureHeaterStylesInjected();
 
         const ambrosiaModule = HSModuleManager.getModule<any>('HSAmbrosia') as { getAmbrosiaLoadoutsAmount?: () => number } | undefined;
         const loadoutsAmountRaw = ambrosiaModule?.getAmbrosiaLoadoutsAmount?.();
@@ -91,16 +98,16 @@ export class HSHeaterInputModalController {
 
         const content = `
             <div id="hs-heater-inputs-body-left" class="hs-scrollbar-themed">
-                ${HSHeaterInputUI.buildInputTable(initialInput)}
+                ${HSHeaterUIInput.buildInputTable(initialInput)}
             </div>
             <div id="hs-heater-inputs-body-right" class="hs-scrollbar-themed">
                 <div>${HSUIC.Button({ id: 'hs-heater-update-inputs-btn', class: 'redButton',  text: 'Update 🔓 Inputs' })}</div>
-                <div>${HSHeaterInputUI.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
-                <div>${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton',  text: '🔥 Start Heater',       styles: { cursor: 'help' }, props: { title: '⚠️ This can take a few seconds...' } })}</div>
+                <div>${HSHeaterUIInput.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
+                <div>${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}</div>
                 <div id="hs-heater-type-selects" class="hs-heater-type-selects-grid">${heaterTypeDropdowns}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-import-all-btn',    class: 'blueButton', text: 'Import All <span style="color: #338eef;">☑</span> Loadouts' })}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-sync-icons-btn',    class: 'blueButton', text:   'Sync All Icons' })}</div>
-                <div>${HSUIC.Button({ id: 'hs-heater-sync-settings-btn', class: 'blueButton', text: 'Sync All Loadout Settings', styles: { cursor: 'help' }, props: { title: this.getSyncSettingsTooltip() } })}</div>
+                <div>${HSUIC.Button({ id: 'hs-heater-sync-settings-btn', class: 'blueButton hs-heater-sync-settings-tooltip-trigger', text: 'Sync All Loadout Settings', styles: { cursor: 'help' } })}</div>
             </div>
         `;
 
@@ -152,7 +159,17 @@ export class HSHeaterInputModalController {
         if (!modal) return;
 
         this.cacheInputsModalElements(modal);
-        this.attachHeaterTypeSelectHandlers(modal);
+        HSHeaterUIInput.attachHeaterTypeSelectHandlers(modal, () => {
+            if (this.currentInputsModalId) {
+                HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId);
+                const activeModal = this.getActiveInputsModal();
+                if (activeModal) {
+                    this.refreshRequiredBranchHighlights(activeModal);
+                    this.updateSyncSettingsButtonWarningState(activeModal);
+                }
+            }
+        });
+        this.updateSyncSettingsButtonWarningState(modal);
         HSHeaterResultModalController.syncLoadoutAvailabilityState(modal);
         this.refreshRequiredBranchHighlights(modal);
         this.monitorInputsModalRemoval(modal);
@@ -176,8 +193,8 @@ export class HSHeaterInputModalController {
                     return;
                 }
 
-                const updatedInput = HSHeaterInputUI.buildOptimizerInput(heaterData);
-                HSHeaterInputUI.applyOptimizerInputToFields(modal, updatedInput, false);
+                const updatedInput = HSHeaterUIInput.buildOptimizerInput(heaterData);
+                HSHeaterUIInput.applyOptimizerInputToFields(modal, updatedInput, false);
                 HSUI.Notify('Heater inputs updated.', { position: 'top', notificationType: 'success' });
             } finally {
                 updateInputsButton.style.pointerEvents = '';
@@ -188,7 +205,18 @@ export class HSHeaterInputModalController {
         });
 
         const recalcButton = modal.querySelector('#hs-heater-recalculate-btn') as HTMLElement | null;
+        if (recalcButton) {
+            recalcButton.addEventListener('mouseenter', () => this.showStartHeaterTooltip(recalcButton));
+            recalcButton.addEventListener('mouseleave', () => this.removeStartHeaterTooltip());
+            recalcButton.addEventListener('focus', () => this.showStartHeaterTooltip(recalcButton));
+            recalcButton.addEventListener('blur', () => this.removeStartHeaterTooltip());
+        }
+
         recalcButton?.addEventListener('click', async () => {
+            const branchCheckboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
+            const hasActiveBranch = branchCheckboxes.some((checkbox) => checkbox.checked);
+            if (!hasActiveBranch) { HSUI.Notify('Select at least one active branch before starting the heater.', { position: 'top', notificationType: 'warning' }); return; }
+
             const originalText = recalcButton.textContent;
             recalcButton.textContent = `🔥 Heating... ⏳`;
             recalcButton.style.pointerEvents = 'none';
@@ -204,7 +232,7 @@ export class HSHeaterInputModalController {
                 await ambrosiaModule.showQuickBar();
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
-                const updatedInput = HSHeaterInputUI.readInputValues(modal);
+                const updatedInput = HSHeaterUIInput.readInputValues(modal);
                 const updatedResult = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
             } finally {
@@ -303,36 +331,50 @@ export class HSHeaterInputModalController {
         });
 
         const syncSettingsButton = modal.querySelector('#hs-heater-sync-settings-btn') as HTMLElement | null;
-        syncSettingsButton?.addEventListener('click', async () => {
-            try {
-                const loadoutSlots = this.buildLoadoutSlotMap(modal);
-                HSLogger.info(
-                    `Selected heater type loadouts for settings sync: ${Array.from(loadoutSlots.entries()).map(([semantic, slots]) => `${semantic}=${slots.join(',')}`).join('; ')}`,
-                    this.context
-                );
+        if (syncSettingsButton) {
+            syncSettingsButton.addEventListener('mouseenter', () => this.showSyncSettingsTooltip(syncSettingsButton));
+            syncSettingsButton.addEventListener('mouseleave', () => this.removeSyncSettingsTooltip());
+            syncSettingsButton.addEventListener('focus', () => this.showSyncSettingsTooltip(syncSettingsButton));
+            syncSettingsButton.addEventListener('blur',  () => this.removeSyncSettingsTooltip());
 
-                for (const [settingName, config] of Object.entries(this.#loadoutSettingPreferences)) {
-                    const chosenValue = this.choosePreferredLoadoutValue(config.preferences, loadoutSlots);
-                    if (chosenValue === '') {
-                        HSLogger.warn(
-                            `Sync settings fallback for ${settingName}: no selected loadout matched [${config.preferences.join(', ')}], applying None.`,
-                            this.context
-                        );
+            syncSettingsButton.addEventListener('click', async () => {
+                this.removeSyncSettingsTooltip();
+
+                try {
+                    const loadoutSlots = this.buildLoadoutSlotMap(modal);
+                    HSLogger.info(
+                        `Selected heater type loadouts for settings sync: ${Array.from(loadoutSlots.entries()).map(([semantic, slots]) => `${semantic}=${slots.join(',')}`).join('; ')}`,
+                        this.context
+                    );
+
+                    const changedSettings: (keyof HSSettingsDefinition)[] = [];
+                    const loadoutSettings = this.#loadoutSettingPreferences as Partial<Record<keyof HSSettingsDefinition, { label: string; preferences: string[] }>>;
+                    for (const [settingName, config] of Object.entries(loadoutSettings) as Array<[keyof HSSettingsDefinition, { label: string; preferences: string[] }]>) {
+                        const chosenValue = this.choosePreferredLoadoutValue(config.preferences, loadoutSlots);
+                        if (chosenValue === '') {
+                            HSLogger.warn(
+                                `Sync settings fallback for ${settingName}: no selected loadout matched [${config.preferences.join(', ')}], applying None.`,
+                                this.context
+                            );
+                        }
+                        HSLogger.info(`Sync settings chosen value for ${settingName}: ${chosenValue}`, this.context);
+                        const setting = HSSettings.getSetting(settingName);
+                        setting.setValue(chosenValue);
+                        changedSettings.push(settingName);
                     }
-                    HSLogger.info(`Sync settings chosen value for ${settingName}: ${chosenValue}`, this.context);
-                    HSSettings.getSetting(settingName as any).setValue(chosenValue);
+
+                    if (changedSettings.length > 0) {
+                        HSSettingsUI.refreshSettingControls(changedSettings);
+                    }
+                    HSUI.Notify('Loadout settings synced successfully.', { position: 'top', notificationType: 'success' });
+                } catch (error) {
+                    HSUI.Notify('Failed to sync all settings.', { position: 'top', notificationType: 'error' });
+                    console.error('Sync All Settings error:', error);
                 }
+            });
+        }
 
-                HSSettings.saveSettingsToStorage();
-                await HSSettingsUI.syncSettings(HSSettings.getUIDependencies());
-                HSUI.Notify('Loadout settings synced successfully.', { position: 'top', notificationType: 'success' });
-            } catch (error) {
-                HSUI.Notify('Failed to sync all settings.', { position: 'top', notificationType: 'error' });
-                console.error('Sync All Settings error:', error);
-            }
-        });
-
-        HSHeaterInputUI.attachInputLockHandlers(modal);
+        HSHeaterUIInput.attachInputLockHandlers(modal);
 
         modal.addEventListener('click', (event) => {
             const target = event.target as HTMLElement | null;
@@ -341,7 +383,7 @@ export class HSHeaterInputModalController {
             if (target.classList.contains('hs-heater-lock-button')) {
                 const fieldKey = target.dataset.fieldKey;
                 if (fieldKey) {
-                    HSHeaterInputUI.toggleFieldLock(modal, fieldKey);
+                    HSHeaterUIInput.toggleFieldLock(modal, fieldKey);
                 }
             }
         });
@@ -381,7 +423,6 @@ export class HSHeaterInputModalController {
                 loadoutMap.set(semanticId, [slotNumber]);
             }
         }
-
         return loadoutMap;
     }
 
@@ -392,9 +433,13 @@ export class HSHeaterInputModalController {
                 return slots[0];
             }
         }
-
         return '';
     }
+
+
+    // ================================================================
+    // Modal cleanup / lifecycle helpers
+    // ================================================================
 
     private static monitorInputsModalRemoval(modal: HTMLElement): void {
         if (this.#currentInputsModalObserver) return;
@@ -418,10 +463,7 @@ export class HSHeaterInputModalController {
             this.#currentInputsModalObserver = null;
         }
 
-        if (this.#iconOverrideChangeListener) {
-            unsubscribeHeaterIconOverrideChanges(this.#iconOverrideChangeListener);
-            this.#iconOverrideChangeListener = null;
-        }
+        HSHeaterUIInput.cleanupHeaterTypeSelectState();
 
         const resultModalExists = HSHeaterResultModalController.currentResultModalId
             ? document.getElementById(HSHeaterResultModalController.currentResultModalId) !== null
@@ -442,10 +484,10 @@ export class HSHeaterInputModalController {
 
     private static cacheInputsModalElements(modal: HTMLElement): void {
         this.#cachedInputsModal = modal;
-        this.#cachedTypeSelects = Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
+        this.#cachedTypeSelects =    Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
         this.#cachedTypeCheckboxes = Array.from(modal.querySelectorAll('.hs-heater-type-select-checkbox')) as HTMLInputElement[];
-        this.#cachedTypeIcons = Array.from(modal.querySelectorAll('.hs-heater-type-select-icon')) as HTMLButtonElement[];
-        this.#cachedActiveLabels = Array.from(modal.querySelectorAll('.hs-heater-active-branch')) as HTMLElement[];
+        this.#cachedTypeIcons =      Array.from(modal.querySelectorAll('.hs-heater-type-select-icon')) as HTMLButtonElement[];
+        this.#cachedActiveLabels =   Array.from(modal.querySelectorAll('.hs-heater-active-branch')) as HTMLElement[];
     }
 
     private static clearCachedInputsModalElements(): void {
@@ -464,84 +506,99 @@ export class HSHeaterInputModalController {
 
     
     // ================================================================
-    // Type icon sync helpers
+    // Sync helpers
     // ================================================================
 
-    private static getCachedTypeIconForSelect(select: HTMLSelectElement): HTMLButtonElement | null {
-        const index = this.#cachedTypeSelects.indexOf(select);
-        if (index >= 0 && this.#cachedTypeIcons[index]) {
-            return this.#cachedTypeIcons[index];
-        }
-        return select.parentElement?.querySelector('.hs-heater-type-select-icon') as HTMLButtonElement | null;
+
+    private static showSyncSettingsTooltip(trigger: HTMLElement): void {
+        this.removeSyncSettingsTooltip();
+
+        const modal = this.getActiveInputsModal();
+        const tooltip = document.createElement('div');
+        tooltip.id = this.#syncSettingsTooltipId;
+        tooltip.innerHTML = this.getSyncSettingsTooltipHtml(modal);
+        tooltip.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
+
+        document.body.appendChild(tooltip);
+        HSHeaterUIResult.positionOverlayNearTarget(tooltip, trigger);
     }
 
-    private static syncTypeSelectIcon(select: HTMLSelectElement): void {
-        const icon = this.getCachedTypeIconForSelect(select);
-        if (!icon) return;
+    private static getSyncSettingsTooltipHtml(modal: HTMLElement | null): string {
+        const loadoutSlots = modal ? this.buildLoadoutSlotMap(modal) : new Map<string, string[]>();
 
-        const iconSrc = getEffectiveHeaterIconSrc(select.value ?? '');
-        if (iconSrc) {
-            icon.style.backgroundImage = `url('${iconSrc}')`;
-            icon.style.visibility = 'visible';
-        } else {
-            icon.style.backgroundImage = '';
-            icon.style.visibility = 'hidden';
+        const lines = Object.entries(this.#loadoutSettingPreferences)
+            .map(([, config]) => this.getSyncSettingsTooltipLine(config, loadoutSlots));
+
+        return `
+            <span>Updates all your 'Loadout settings' based on the order below:</span><br>
+            ${lines.join('<br>')}
+        `;
+    }
+
+    private static getSyncSettingsTooltipLine(
+        config: { label: string; preferences: string[] },
+        loadoutSlots: Map<string, string[]>
+    ): string {
+        const selectedPreference = config.preferences.find((preference) => loadoutSlots.has(preference)) ?? '';
+        const preferenceHtml = config.preferences
+            .map((preference) => {
+                const label = this.formatSyncPreferenceLabel(preference);
+                const preferenceClass = preference === selectedPreference
+                    ? 'hs-heater-sync-settings-tooltip-selected'
+                    : 'hs-heater-sync-settings-tooltip-unselected';
+                return `<span class="${preferenceClass}">${label}</span>`;
+            })
+            .join(' > ');
+
+        const keyClasses = selectedPreference === ''
+            ? 'hs-heater-sync-settings-tooltip-key hs-heater-sync-settings-tooltip-key-none-selected'
+            : 'hs-heater-sync-settings-tooltip-key';
+        const noneTextClass = selectedPreference === ''
+            ? 'hs-heater-sync-settings-tooltip-none-selected'
+            : 'hs-heater-sync-settings-tooltip-unselected';
+        return `
+            <span><span class="${keyClasses}">${escapeHtml(config.label)}</span>: ${preferenceHtml} > <span class="${noneTextClass}">none</span></span>
+        `;
+    }
+
+    private static updateSyncSettingsButtonWarningState(modal: HTMLElement): void {
+        const syncSettingsButton = modal.querySelector('#hs-heater-sync-settings-btn') as HTMLElement | null;
+        if (!syncSettingsButton) return;
+
+        const loadoutSlots = this.buildLoadoutSlotMap(modal);
+        const hasNoneSelected = Object.values(this.#loadoutSettingPreferences)
+            .some((config) => !config.preferences.some((preference) => loadoutSlots.has(preference)));
+
+        syncSettingsButton.classList.toggle('hs-heater-sync-settings-warning', hasNoneSelected);
+    }
+
+    private static formatSyncPreferenceLabel(preference: string): string {
+        return escapeHtml(resolveHeaterTypeLabel(preference) ?? preference);
+    }
+
+    private static showStartHeaterTooltip(trigger: HTMLElement): void {
+        this.removeStartHeaterTooltip();
+
+        const tooltip = document.createElement('div');
+        tooltip.id = 'hs-heater-start-heater-tooltip';
+        tooltip.textContent = '⚠️ This can take a few seconds... ⚠️';
+        tooltip.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
+
+        document.body.appendChild(tooltip);
+        HSHeaterUIResult.positionOverlayNearTarget(tooltip, trigger, { placement: 'below' });
+    }
+
+    private static removeStartHeaterTooltip(): void {
+        const existing = document.getElementById('hs-heater-start-heater-tooltip');
+        if (existing && existing.parentElement) {
+            existing.parentElement.removeChild(existing);
         }
     }
 
-    private static refreshHeaterTypeSelectIcons(): void {
-        if (!this.#cachedTypeSelects.length) {
-            const modal = this.getActiveInputsModal();
-            if (!modal) {
-                return;
-            }
+    private static removeSyncSettingsTooltip(): void {
+        const existing = document.getElementById(this.#syncSettingsTooltipId);
+        if (existing && existing.parentElement) {
+            existing.parentElement.removeChild(existing);
         }
-
-        this.#cachedTypeSelects.forEach((select) => this.syncTypeSelectIcon(select));
-    }
-
-    private static attachHeaterTypeSelectHandlers(modal: HTMLElement): void {
-        const typeSelects = this.#cachedTypeSelects.length ? this.#cachedTypeSelects : Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
-
-        if (!this.#iconOverrideChangeListener) {
-            this.#iconOverrideChangeListener = () => this.refreshHeaterTypeSelectIcons();
-            subscribeHeaterIconOverrideChanges(this.#iconOverrideChangeListener);
-        }
-
-        const savedSelections = HSSettings.getSetting('heaterTypeLoadoutSelections').getValue() as string[] | null;
-        const selectionsArray = Array.isArray(savedSelections) ? savedSelections : [];
-
-        typeSelects.forEach((select, index) => {
-            if (index < selectionsArray.length && selectionsArray[index]) {
-                const savedValue = selectionsArray[index];
-                const optionExists = Array.from(select.options).some(opt => opt.value === savedValue);
-                if (optionExists) {
-                    select.value = savedValue;
-                }
-            }
-            this.syncTypeSelectIcon(select);
-        });
-
-        typeSelects.forEach((select) => {
-            select.addEventListener('change', () => {
-                this.syncTypeSelectIcon(select);
-                const updatedSelections = typeSelects.map(s => s.value);
-                HSSettings.getSetting('heaterTypeLoadoutSelections').setValue(updatedSelections);
-                HSSettings.saveSettingsToStorage();
-                if (this.currentInputsModalId) {
-                    HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId);
-                    const activeModal = this.getActiveInputsModal();
-                    if (activeModal) {
-                        this.refreshRequiredBranchHighlights(activeModal);
-                    }
-                }
-            });
-        });
-    }
-
-    private static getSyncSettingsTooltip(): string {
-        return Object.entries(this.#loadoutSettingPreferences)
-            .map(([, config]) => `${config.label}: ${config.preferences.join(' > ')}`)
-            .join('\n');
     }
 }

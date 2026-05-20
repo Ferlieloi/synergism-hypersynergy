@@ -69,11 +69,11 @@ const HEATER_RESULT_UI_SELECTORS = {
 } as const;
 
 // === Main UI Class ===
-export class HSHeaterResultUI {
+export class HSHeaterUIResult {
 
     // === State ===
     static #activeResultModal: HTMLElement | null = null;
-    static #context = 'HSHeaterResultUI';
+    static #context = 'HSHeaterUIResult';
 
     static setActiveResultModal(modal: HTMLElement | null): void {
         this.#activeResultModal = modal;
@@ -378,20 +378,37 @@ export class HSHeaterResultUI {
         }
     }
 
-    static positionOverlayNearTarget(preview: HTMLElement, button: HTMLElement): void {
+    static positionOverlayNearTarget(preview: HTMLElement, button: HTMLElement, options?: { placement?: 'right' | 'below'; gutter?: number }): void {
         const buttonRect = button.getBoundingClientRect();
         const previewRect = preview.getBoundingClientRect();
-        let left = buttonRect.right + 8;
-        let top = buttonRect.top;
+        const gutter = options?.gutter ?? 8;
+        const placement = options?.placement ?? 'right';
 
-        if (left + previewRect.width > window.innerWidth - 8)
-            left = buttonRect.left - previewRect.width - 8;
-        if (top + previewRect.height > window.innerHeight - 8)
-            top = window.innerHeight - previewRect.height - 8;
-        if (top < 8)
-            top = 8;
-        if (left < 8)
-            left = 8;
+        let left = placement === 'below' ? buttonRect.left : buttonRect.right + gutter;
+        let top = placement === 'below' ? buttonRect.bottom + gutter : buttonRect.top;
+
+        const rightOverflow = left + previewRect.width > window.innerWidth - gutter;
+        const bottomOverflow = top + previewRect.height > window.innerHeight - gutter;
+
+        if (placement === 'right' && rightOverflow) {
+            left = buttonRect.left;
+            top = buttonRect.bottom + gutter;
+        }
+
+        if (placement === 'below' && bottomOverflow) {
+            left = buttonRect.right + gutter;
+            top = buttonRect.top;
+        }
+
+        if (left + previewRect.width > window.innerWidth - gutter)
+            left = Math.max(window.innerWidth - previewRect.width - gutter, gutter);
+        if (top + previewRect.height > window.innerHeight - gutter)
+            top = Math.max(window.innerHeight - previewRect.height - gutter, gutter);
+        if (top < gutter)
+            top = gutter;
+        if (left < gutter)
+            left = gutter;
+
         preview.style.left = `${left}px`;
         preview.style.top = `${top}px`;
     }

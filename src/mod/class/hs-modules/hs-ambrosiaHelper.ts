@@ -12,20 +12,20 @@ import { HSElementHooker } from "../hs-core/hs-elementhooker";
  */
 export class HSAmbrosiaHelper {
     static #context: string = 'HSAmbrosiaHelper';
+
     static #cachedBlueberryToggleModeButton: HTMLButtonElement | undefined;
     static #cachedQuickbarSummaryElements: HTMLElement[] | undefined;
 
-    static async getCachedBlueberryToggleModeButton(): Promise<HTMLButtonElement | undefined> {
+    static async cacheBlueberryToggleModeButton(): Promise<HTMLButtonElement | undefined> {
         if (this.#cachedBlueberryToggleModeButton instanceof HTMLButtonElement) {
             return this.#cachedBlueberryToggleModeButton;
         }
-
         const element = await HSElementHooker.HookElement('#blueberryToggleMode');
         if (element instanceof HTMLButtonElement) {
             this.#cachedBlueberryToggleModeButton = element;
             return element;
         }
-
+        HSLogger.warn('Could not cache blueberry loadout mode toggle button', this.#context);
         return undefined;
     }
 
@@ -33,7 +33,6 @@ export class HSAmbrosiaHelper {
         if (this.#cachedQuickbarSummaryElements) {
             return this.#cachedQuickbarSummaryElements;
         }
-
         const elements = Array.from(document.querySelectorAll<HTMLElement>('.hs-quickbar-summary-wrapper'));
         this.#cachedQuickbarSummaryElements = elements;
         return elements;
@@ -81,23 +80,20 @@ export class HSAmbrosiaHelper {
         const loadoutEnum = Object.values(AMBROSIA_LOADOUT_SLOT).find(
             slot => slot === `blueberryLoadout${loadoutNumber}`
         ) as AMBROSIA_LOADOUT_SLOT | undefined;
-
-        if (!loadoutEnum) {
-            HSLogger.warn(`Could not convert loadout ${loadoutNumber} to slot`, this.#context);
-        }
+        if (!loadoutEnum) { HSLogger.warn(`Could not convert loadout ${loadoutNumber} to slot`, this.#context); }
 
         return loadoutEnum;
     }
 
     /** Ensure the game is in the specified loadout mode before clicking slots. */
-    static async ensureLoadoutMode(mode: 'LOAD' | 'SAVE'): Promise<void> {
-        // The module interacts with the real loadout buttons; game must be in the specified state to avoid accidental actions.
-        const modeButton = await this.getCachedBlueberryToggleModeButton();
-        if (modeButton) {
-            const currentMode = modeButton.innerText;
-            if (!currentMode.includes(mode)) {
-                modeButton.click();
-            }
+    static ensureLoadoutMode(mode: 'LOAD' | 'SAVE'): void {
+        const modeButton = this.#cachedBlueberryToggleModeButton;
+        if (!modeButton) { return; }
+
+        const currentMode = modeButton.innerText?.trim().toUpperCase();
+        const expectedMode = `MODE: ${mode} LOADOUT`;
+        if (currentMode !== expectedMode) {
+            modeButton.click();
         }
     }
 

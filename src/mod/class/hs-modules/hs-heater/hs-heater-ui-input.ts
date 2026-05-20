@@ -1,6 +1,8 @@
 import Decimal from "break_infinity.js";
 import { HSUIC } from "../../hs-core/hs-ui-components";
+import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { escapeHtml } from "./hs-heater-utils";
+import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "./hs-heater-icon-store";
 import type { HeaterOptimizerInput } from "../../../types/data-types/hs-heater-types";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
 import {
@@ -14,7 +16,7 @@ import {
 
 type HeaterInputValue = HeaterInputBase[HeaterInputKey];
 
-export class HSHeaterInputUI {
+export class HSHeaterUIInput {
 
     // ================================================================
     // Static Configuration / Constants
@@ -24,6 +26,10 @@ export class HSHeaterInputUI {
     static readonly exportFieldExtractors = exportFieldExtractors;
     static readonly heaterOptionLabels = heaterOptionLabels;
     static #lockHandlersAttachedModals = new WeakSet<HTMLElement>();
+
+    static #cachedTypeSelects: HTMLSelectElement[] = [];
+    static #cachedTypeIcons: HTMLButtonElement[] = [];
+    static #iconOverrideChangeListener: HeaterIconOverrideChangeListener | null = null;
 
     static buildOptimizerInput(exportData: any): HeaterOptimizerInput {
         return {
@@ -144,6 +150,93 @@ export class HSHeaterInputUI {
             });
         });
         this.#lockHandlersAttachedModals.add(modal);
+    }
+
+
+    // ================================================================
+    // Heater type select icon helpers
+    // ================================================================
+
+    static attachHeaterTypeSelectHandlers(modal: HTMLElement, onTypeSelectionChange?: () => void): void {
+        const typeSelects = Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
+        this.cacheHeaterTypeSelectElements(modal);
+
+        if (!this.#iconOverrideChangeListener) {
+            this.#iconOverrideChangeListener = () => this.refreshHeaterTypeSelectIcons(modal);
+            subscribeHeaterIconOverrideChanges(this.#iconOverrideChangeListener);
+        }
+
+        const savedSelections = HSSettings.getSetting('heaterTypeLoadoutSelections').getValue() as string[] | null;
+        const selectionsArray = Array.isArray(savedSelections) ? savedSelections : [];
+
+        typeSelects.forEach((select, index) => {
+            if (index < selectionsArray.length && selectionsArray[index]) {
+                const savedValue = selectionsArray[index];
+                const optionExists = Array.from(select.options).some(opt => opt.value === savedValue);
+                if (optionExists) {
+                    select.value = savedValue;
+                }
+            }
+            this.syncTypeSelectIcon(select, modal);
+        });
+
+        typeSelects.forEach((select) => {
+            select.addEventListener('change', () => {
+                this.syncTypeSelectIcon(select, modal);
+                const updatedSelections = typeSelects.map(s => s.value);
+                HSSettings.getSetting('heaterTypeLoadoutSelections').setValue(updatedSelections);
+                HSSettings.saveSettingsToStorage();
+                onTypeSelectionChange?.();
+            });
+        });
+    }
+
+    static cleanupHeaterTypeSelectState(): void {
+        if (this.#iconOverrideChangeListener) {
+            unsubscribeHeaterIconOverrideChanges(this.#iconOverrideChangeListener);
+            this.#iconOverrideChangeListener = null;
+        }
+        this.clearCachedTypeSelectElements();
+    }
+
+    static cacheHeaterTypeSelectElements(modal: HTMLElement): void {
+        this.#cachedTypeSelects = Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
+        this.#cachedTypeIcons = Array.from(modal.querySelectorAll('.hs-heater-type-select-icon')) as HTMLButtonElement[];
+    }
+
+    static clearCachedTypeSelectElements(): void {
+        this.#cachedTypeSelects = [];
+        this.#cachedTypeIcons = [];
+    }
+
+    static getCachedTypeIconForSelect(select: HTMLSelectElement, modal: HTMLElement): HTMLButtonElement | null {
+        const index = this.#cachedTypeSelects.indexOf(select);
+        if (index >= 0 && this.#cachedTypeIcons[index]) {
+            return this.#cachedTypeIcons[index];
+        }
+        return select.parentElement?.querySelector('.hs-heater-type-select-icon') as HTMLButtonElement | null;
+    }
+
+    static syncTypeSelectIcon(select: HTMLSelectElement, modal: HTMLElement): void {
+        const icon = this.getCachedTypeIconForSelect(select, modal);
+        if (!icon) return;
+
+        const iconSrc = getEffectiveHeaterIconSrc(select.value ?? '');
+        if (iconSrc) {
+            icon.style.backgroundImage = `url('${iconSrc}')`;
+            icon.style.visibility = 'visible';
+        } else {
+            icon.style.backgroundImage = '';
+            icon.style.visibility = 'hidden';
+        }
+    }
+
+    static refreshHeaterTypeSelectIcons(modal: HTMLElement): void {
+        if (!this.#cachedTypeSelects.length) {
+            this.cacheHeaterTypeSelectElements(modal);
+        }
+
+        this.#cachedTypeSelects.forEach((select) => this.syncTypeSelectIcon(select, modal));
     }
 
 

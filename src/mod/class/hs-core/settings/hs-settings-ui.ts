@@ -136,6 +136,78 @@ export class HSSettingsUI {
         this.applyHiddenVanillaTabsSetting();
     }
 
+    static refreshSettingControls(settingNames: string[]): void {
+        const deps = HSSettings.getUIDependencies();
+        if (!deps.settingsParsed) {
+            HSLogger.error(`Could not refresh setting controls - settings not parsed yet`, this.#context);
+            return;
+        }
+
+        for (const settingName of settingNames) {
+            const settingObj = deps.settings[settingName as keyof HSSettingsDefinition] as HSSetting<HSSettingType> | undefined;
+            if (!settingObj) continue;
+
+            const setting = settingObj.getDefinition();
+            const controlSettings = settingObj.hasControls() ? setting.settingControl : undefined;
+            if (!controlSettings) continue;
+
+            const controlType = controlSettings.controlType;
+            const controlOptions = controlSettings.controlOptions;
+            const targetValue = settingObj.getValue();
+            const stringValue = HSUtils.asString(targetValue);
+
+            if (controlType === 'text' || controlType === 'number') {
+                const valueElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLInputElement | null;
+                if (valueElement) {
+                    if (controlType === 'number' && controlOptions) {
+                        if ('min' in controlOptions) valueElement.setAttribute('min', controlOptions.min!.toString());
+                        if ('max' in controlOptions) valueElement.setAttribute('max', controlOptions.max!.toString());
+                        if ('step' in controlOptions) valueElement.setAttribute('step', controlOptions.step!.toString());
+                    } else if (controlType === 'text' && controlOptions) {
+                        if ('placeholder' in controlOptions) valueElement.setAttribute('placeholder', controlOptions.placeholder!);
+                    }
+                    valueElement.value = stringValue;
+                }
+            } else if (controlType === 'select') {
+                const selectElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement | null;
+                if (selectElement) {
+                    if (selectElement.multiple) {
+                        const values = Array.isArray(targetValue) ? targetValue.map((v) => HSUtils.asString(v)) : [];
+                        for (const option of Array.from(selectElement.options)) {
+                            option.selected = values.includes(option.value);
+                        }
+                    } else {
+                        const optionExists = Array.from(selectElement.options).some((option) => option.value === stringValue);
+                        if (optionExists) {
+                            selectElement.value = stringValue;
+                        } else {
+                            selectElement.value = '';
+                            HSLogger.warn(`Setting value ${stringValue} does not exist in select options for setting ${setting.settingName}`, this.#context);
+                        }
+                    }
+                }
+            } else if (controlType === 'state') {
+                const stateElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLElement | null;
+                if (stateElement) {
+                    stateElement.innerHTML = HSUtils.parseColorTags(stringValue);
+                }
+            }
+
+            if (controlSettings.controlEnabledId) {
+                const toggleElement = document.querySelector(`#${controlSettings.controlEnabledId}`) as HTMLDivElement | null;
+                if (toggleElement) {
+                    if (setting.enabled) {
+                        toggleElement.innerText = deps.settingEnabledString;
+                        toggleElement.classList.remove('hs-disabled');
+                    } else {
+                        toggleElement.innerText = deps.settingDisabledString;
+                        toggleElement.classList.add('hs-disabled');
+                    }
+                }
+            }
+        }
+    }
+
     static applyHiddenVanillaTabsSetting(): void {
         const setting = HSSettings.getSetting('hiddenVanillaTabs');
         if (!setting) return;

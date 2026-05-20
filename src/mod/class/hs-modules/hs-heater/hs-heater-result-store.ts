@@ -96,7 +96,16 @@ export class HSHeaterResultStore {
         if (selectedSemanticIds.size === 0) return new Set<number>();
 
         const normalizedResult = this.getCurrentNormalizedResult();
-        if (!normalizedResult) return new Set<number>();
+        if (!normalizedResult) {
+            const unavailableBranchIndexes = new Set<number>();
+            for (const semanticId of selectedSemanticIds) {
+                const branchIndex = getHeaterTypeBranchIndex(semanticId);
+                if (branchIndex !== null) {
+                    unavailableBranchIndexes.add(branchIndex);
+                }
+            }
+            return unavailableBranchIndexes;
+        }
 
         const availableSemanticIds = new Set<string>(normalizedResult.map((entry) => entry.semanticId as string));
         const unavailableBranchIndexes = new Set<number>();

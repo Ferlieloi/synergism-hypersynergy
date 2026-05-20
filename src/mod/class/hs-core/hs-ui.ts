@@ -1005,7 +1005,8 @@ export class HSUI extends HSModule {
         const modalBody = modal.querySelector('.hs-modal-body') as HTMLElement | null;
         if (!modalBody) return;
         const isMinimized = modalBody.style.display === 'none';
-        
+        const minimizeBtn = modal.querySelector('.hs-modal-minimize-btn') as HTMLElement | null;
+
         if (isMinimized) {
             // Restore: show body/resizer and restore saved dimensions
             modalBody.style.display = '';
@@ -1018,6 +1019,11 @@ export class HSUI extends HSModule {
             // Restore modal dimensions
             modal.style.width = '';
             modal.style.height = '';
+
+            if (minimizeBtn) {
+                minimizeBtn.textContent = '_';
+                minimizeBtn.title = 'Minimize';
+            }
         } else {
             // Clamp left border to page before minimizing
             const modalRect = modal.getBoundingClientRect();
@@ -1035,6 +1041,11 @@ export class HSUI extends HSModule {
             // Reset to header-only size
             modal.style.width = 'auto';
             modal.style.height = 'auto';
+
+            if (minimizeBtn) {
+                minimizeBtn.textContent = '+';
+                minimizeBtn.title = 'Restore';
+            }
         }
     }
 

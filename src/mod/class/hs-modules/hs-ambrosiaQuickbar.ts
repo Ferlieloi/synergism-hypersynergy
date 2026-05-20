@@ -21,7 +21,7 @@ export class HSAmbrosiaQuickbar {
     readonly host: HSAmbrosia;
     #quickBarClickHandlers: Map<HTMLButtonElement, (e: Event) => Promise<void>> = new Map();
     #quickBarContextMenuHandlers: Map<HTMLButtonElement, (e: Event) => void> = new Map();
-    #originalQuickBarButtons: Map<string, HTMLButtonElement> = new Map();
+    #originalButtonRefs: Map<string, HTMLButtonElement> = new Map();
 
     // Icon picking (mirrors HSQOLCorruptionQuickbar)
     readonly #AMBROSIA_ICON_STORAGE_KEY = 'hs-ambrosia-quickbar-icons';
@@ -157,25 +157,7 @@ export class HSAmbrosiaQuickbar {
 
         const loadoutContainer = this.host.getLoadoutContainer();
         if (loadoutContainer) {
-            const clone = loadoutContainer.cloneNode(true) as HTMLElement;
-            clone.id = HSGlobal.HSAmbrosia.quickBarId;
-            clone.className = 'hs-quickbar-slots-wrapper';
-            clone.style.display = "inline-flex";
-
-            const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;
-            const cloneLoadoutButtons = clone.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLButtonElement>;
-
-            cloneLoadoutButtons.forEach((button) => {
-                const buttonId = button.id;
-                button.dataset.originalId = buttonId;
-                button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
-                button.title = 'Alt+Click to pick an icon | Right-click to clear';
-                this.#cacheOriginalLoadoutButton(buttonId);
-            });
-
-            if (cloneSettingButton) {
-                cloneSettingButton.remove();
-            }
+            const clone = this.#buildCloneQuickbar(loadoutContainer);
 
             if (groupWrapper.childNodes.length > 0) {
                 if (groupWrapper.childNodes.length === 1) {
@@ -189,19 +171,13 @@ export class HSAmbrosiaQuickbar {
         }
     }
 
-    public getQuickbarSection(): HTMLElement {
-        const loadoutContainer = this.host.getLoadoutContainer();
-        if (!loadoutContainer) {
-            HSLogger.error("getQuickbarSection called but loadoutContainer is not initialized", this.context, true);
-            throw new Error("Ambrosia loadout container not initialized");
-        }
-
+    #buildCloneQuickbar(loadoutContainer: HTMLElement, preserveIds = false): HTMLElement {
         const clone = loadoutContainer.cloneNode(true) as HTMLElement;
         clone.id = HSGlobal.HSAmbrosia.quickBarId;
         clone.className = 'hs-quickbar-slots-wrapper';
         clone.style.display = "inline-flex";
 
-        const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement;
+        const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement | null;
         if (cloneSettingButton) {
             cloneSettingButton.remove();
         }
@@ -209,11 +185,26 @@ export class HSAmbrosiaQuickbar {
         const cloneLoadoutButtons = clone.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLButtonElement>;
         cloneLoadoutButtons.forEach((button) => {
             const buttonId = button.id;
-            button.dataset.originalId = buttonId;
-            button.id = buttonId;
+            if (!preserveIds) {
+                button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
+            }
         });
 
         return clone;
+    }
+
+    #resolveOriginalButtonId(cloneButton: HTMLButtonElement): string {
+        const existingOriginalId = cloneButton.dataset.originalId;
+        if (existingOriginalId) {
+            return existingOriginalId;
+        }
+
+        const prefix = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-`;
+        if (cloneButton.id.startsWith(prefix)) {
+            return cloneButton.id.slice(prefix.length);
+        }
+
+        return cloneButton.id;
     }
 
     setupQuickbarSectionEvents() {
@@ -225,11 +216,10 @@ export class HSAmbrosiaQuickbar {
             const clone = btn.cloneNode(true) as HTMLButtonElement;
             btn.replaceWith(clone);
 
-            const buttonId = clone.dataset.originalId || "";
-            if (buttonId) {
-                this.#cacheOriginalLoadoutButton(buttonId);
-            }
+            const buttonId = this.#resolveOriginalButtonId(clone);
+            clone.dataset.originalId = buttonId;
             clone.title = 'Alt+Click to pick an icon | Right-click to clear';
+            this.#cacheOriginalButtonRef(buttonId);
 
             const buttonHandler = async (e: Event) => {
                 const mouseEvent = e as MouseEvent;
@@ -263,20 +253,20 @@ export class HSAmbrosiaQuickbar {
         }
         this.#quickBarClickHandlers.clear();
         this.#quickBarContextMenuHandlers.clear();
-        this.#originalQuickBarButtons.clear();
+        this.#originalButtonRefs.clear();
     }
 
-    #cacheOriginalLoadoutButton(buttonId: string) {
-        if (!buttonId || this.#originalQuickBarButtons.has(buttonId)) return;
+    #cacheOriginalButtonRef(buttonId: string) {
+        if (!buttonId || this.#originalButtonRefs.has(buttonId)) return;
 
         const originalButton = document.getElementById(buttonId) as HTMLButtonElement | null;
         if (originalButton) {
-            this.#originalQuickBarButtons.set(buttonId, originalButton);
+            this.#originalButtonRefs.set(buttonId, originalButton);
         }
     }
 
     async refreshQuickbarIcons() {
-        const ambQuickBar = this.host.getPageHeader()?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
+        const ambQuickBar = await this.getQuickbarElement();
 
         if (ambQuickBar) {
             const quickbarSlots = ambQuickBar.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLElement>;
@@ -294,7 +284,7 @@ export class HSAmbrosiaQuickbar {
             });
         }
 
-        const originalBar = document.querySelector("#bbLoadoutContainer");
+        const originalBar = this.host.getLoadoutContainer();
         if (originalBar) {
             const originalSlots = originalBar.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLElement>;
             originalSlots.forEach((slot) => {
@@ -319,11 +309,65 @@ export class HSAmbrosiaQuickbar {
         }
     }
 
+    public async getQuickbarElement(): Promise<HTMLElement | null> {
+        await this.ensureInjectedQuickbar();
+        const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
+        return groupWrapper?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement | null;
+    }
+
+    public getOriginalButtonRef(buttonId?: string): HTMLButtonElement | undefined {
+        if (!buttonId) return undefined;
+        return this.#originalButtonRefs.get(buttonId);
+    }
+
+    public getClonedButtonRef(buttonId?: string): HTMLButtonElement | undefined {
+        if (!buttonId) return undefined;
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) return undefined;
+        const quickbar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement | null;
+        if (!quickbar) return undefined;
+        return quickbar.querySelector<HTMLButtonElement>(`.blueberryLoadoutSlot[data-original-id="${buttonId}"]`) ?? undefined;
+    }
+
+    public getCurrentOriginalLoadoutButtons(): HTMLButtonElement[] {
+        const loadoutContainer = this.host.getLoadoutContainer();
+        if (!loadoutContainer) { return []; }
+
+        return Array.from(loadoutContainer.querySelectorAll('.blueberryLoadoutSlot')) as HTMLButtonElement[];
+    }
+
+    public async syncActiveSlot(slotNumber: number): Promise<void> {
+        const originalButtons = this.getCurrentOriginalLoadoutButtons();
+        originalButtons.forEach((button) => button.classList.remove('hs-rainbow-border'));
+
+        const originalTargetId = `blueberryLoadout${slotNumber}`;
+        const originalTarget = originalButtons.find((button) => button.id === originalTargetId);
+        if (originalTarget) {
+            originalTarget.classList.add('hs-rainbow-border');
+        } else {
+            HSLogger.warn(`No active slot found in original quickbar for slot ${slotNumber}`, this.context);
+        }
+
+        const quickBar = await this.getQuickbarElement();
+        if (!quickBar) { HSLogger.debug(() => 'Ambrosia quickbar not injected yet; original bar was synced only', this.context); return; }
+
+        const clonedSlots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
+        clonedSlots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
+
+        const clonedTargetId = `hs-ambrosia-quickbar-blueberryLoadout${slotNumber}`;
+        const clonedTarget = quickBar.querySelector(`#${clonedTargetId}`);
+        if (clonedTarget) {
+            clonedTarget.classList.add('hs-rainbow-border');
+        } else {
+            HSLogger.warn(`No active slot found in ambrosia quickbar for slot ${slotNumber}`, this.context);
+        }
+    }
+
     async onQuickBarClick(e: Event, buttonId: string) {
-        const realButton = this.#originalQuickBarButtons.get(buttonId) ?? document.getElementById(buttonId) as HTMLButtonElement | null;
+        const realButton = this.#originalButtonRefs.get(buttonId) ?? document.getElementById(buttonId) as HTMLButtonElement | null;
         if (!realButton) { HSLogger.warn(`Could not find real button for ${buttonId}`, this.context); return; }
 
-        await HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
+        HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
         await HSUtils.hiddenAction(async () => { realButton.click(); });
     }
 

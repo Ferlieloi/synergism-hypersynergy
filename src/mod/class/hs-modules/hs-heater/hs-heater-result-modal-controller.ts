@@ -1,7 +1,7 @@
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSUI } from "../../hs-core/hs-ui";
-import { HSHeaterStyles } from "./hs-heater-ui-styles";
-import { HSHeaterResultUI } from "./hs-heater-ui-result";
+import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
+import { HSHeaterUIResult } from "./hs-heater-ui-result";
 import { HSHeaterResultStore } from "./hs-heater-result-store";
 import { buildResultTableHtmlFromNormalized } from "./hs-heater-ui-result-renderer";
 import type { HeaterOptimizationResult } from "../../../types/data-types/hs-heater-types";
@@ -30,7 +30,7 @@ export class HSHeaterResultModalController {
             return;
         }
 
-        HSHeaterStyles.ensureHeaterStylesInjected();
+        HSHeaterUIStyles.ensureHeaterStylesInjected();
 
         const resultPosition = (() => {
             if (!parentModalId) { return undefined; }
@@ -59,7 +59,7 @@ export class HSHeaterResultModalController {
         if (this.currentResultModalId) {
             const existingModal = document.getElementById(this.currentResultModalId);
             if (existingModal) {
-                const updated = HSHeaterResultUI.updateResultModalContent(existingModal, normalizedResult, selectedSemanticIds);
+                const updated = HSHeaterUIResult.updateResultModalContent(existingModal, normalizedResult, selectedSemanticIds);
                 if (parentModalId) {
                     this.currentResultParentModalId = parentModalId;
                     this.repositionResultModal(existingModal, parentModalId);
@@ -70,7 +70,7 @@ export class HSHeaterResultModalController {
             }
             this.currentResultModalId = null;
             this.currentResultParentModalId = null;
-            HSHeaterResultUI.clearActiveResultModal();
+            HSHeaterUIResult.clearActiveResultModal();
         }
 
         const content = buildResultTableHtmlFromNormalized(normalizedResult, selectedSemanticIds);
@@ -90,8 +90,8 @@ export class HSHeaterResultModalController {
 
         const resultModal = this.currentResultModalId ? document.getElementById(this.currentResultModalId) : null;
         if (resultModal) {
-            HSHeaterResultUI.setActiveResultModal(resultModal);
-            HSHeaterResultUI.attachResultModalHandlers(this.currentResultModalId);
+            HSHeaterUIResult.setActiveResultModal(resultModal);
+            HSHeaterUIResult.attachResultModalHandlers(this.currentResultModalId);
             this.monitorResultModalRemoval(resultModal);
         } else {
             this.currentResultModalId = null;
@@ -116,7 +116,7 @@ export class HSHeaterResultModalController {
         if (!inputsModal) return;
 
         const selectedSemanticIds = HSHeaterResultStore.collectSelectedSemanticIds(inputsModal);
-        HSHeaterResultUI.updateResultModalContent(resultModal, normalizedResult, selectedSemanticIds);
+        HSHeaterUIResult.updateResultModalContent(resultModal, normalizedResult, selectedSemanticIds);
         this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
     }
 
@@ -134,7 +134,7 @@ export class HSHeaterResultModalController {
 
         const selectedSemanticIds = HSHeaterResultStore.collectSelectedSemanticIds(inputsModal);
         if (resultModal) {
-            HSHeaterResultUI.updateResultModalContent(resultModal, normalizedResult, selectedSemanticIds);
+            HSHeaterUIResult.updateResultModalContent(resultModal, normalizedResult, selectedSemanticIds);
         }
 
         this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
@@ -151,7 +151,7 @@ export class HSHeaterResultModalController {
         const typeCheckboxes = Array.from(modal.querySelectorAll('.hs-heater-type-select-checkbox')) as HTMLInputElement[];
         if (!normalizedResult) {
             typeSelects.forEach((select) => {
-                select.classList.remove('hs-heater-type-select-unavailable');
+                select.classList.add('hs-heater-type-select-unavailable');
             });
             return;
         }
@@ -215,15 +215,15 @@ export class HSHeaterResultModalController {
         if (this.currentResultModalId) {
             const resultModal = document.getElementById(this.currentResultModalId);
             if (resultModal) {
-                HSHeaterResultUI.detachResultModalHandlers(resultModal);
+                HSHeaterUIResult.detachResultModalHandlers(resultModal);
             }
         }
 
         const wasParentModalAvailable = this.currentResultParentModalId ? document.getElementById(this.currentResultParentModalId) !== null : false;
         this.currentResultModalId = null;
         this.currentResultParentModalId = null;
-        HSHeaterResultUI.clearActiveResultModal();
-        HSHeaterResultUI.clearResultModalResources();
+        HSHeaterUIResult.clearActiveResultModal();
+        HSHeaterUIResult.clearResultModalResources();
 
         if (!wasParentModalAvailable) {
             HSHeaterResultStore.clearCurrentNormalizedResult();

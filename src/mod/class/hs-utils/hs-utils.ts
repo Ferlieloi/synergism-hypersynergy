@@ -21,7 +21,7 @@ export class HSUtils {
     static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
-    static sleepTime = 5;
+    static tackTime = 5;
 
     static #_onAfterTack: ((fn: () => void) => void) | null = null;
 
@@ -48,13 +48,32 @@ export class HSUtils {
         return HSUtils.#_onAfterTack !== null;
     }
 
-    // Resolves as a microtask immediately after the next game tack() completes (or wait 5ms if no tack patch)
-    static waitForNextTack = (): Promise<void> => {
+    // Resolves as a microtask immediately after the next game tack() completes
+    // If no tack hook is available, waits 5ms instead
+    static waitForNextTack = (tackCount = 1): Promise<void> => {
+        if (tackCount <= 0) { return Promise.resolve(); }
+
         if (!HSUtils.#_onAfterTack) {
             HSUtils.cacheAfterTackHook();
-            if (!HSUtils.#_onAfterTack) return HSUtils.sleep(5);
+            if (!HSUtils.#_onAfterTack) return HSUtils.sleep(HSUtils.tackTime * tackCount);
         }
-        return new Promise<void>(resolve => HSUtils.#_onAfterTack!(resolve));
+
+        if (tackCount === 1) {
+            return new Promise<void>(resolve => HSUtils.#_onAfterTack!(resolve));
+        }
+
+        return new Promise<void>((resolve) => {
+            let remaining = tackCount;
+            const next = () => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    resolve();
+                } else {
+                    HSUtils.#_onAfterTack!(next);
+                }
+            };
+            HSUtils.#_onAfterTack!(next);
+        });
     };
 
     // Simple promise-based wait/delay utility method
@@ -397,7 +416,7 @@ export class HSUtils {
     static #cachedAlertWrapper: HTMLElement | null = null;
 
     // This might be very volatile, but it works for now and hides alert/confirmation boxes
-    static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 10) {
+    static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 25) {
 
         const bg = !this.#cachedBG ? await HSElementHooker.HookElement('#transparentBG') as HTMLElement : this.#cachedBG;
         const confirmBox = !this.#cachedConfirmBox ? await HSElementHooker.HookElement('#confirmationBox') as HTMLElement : this.#cachedConfirmBox;
@@ -407,7 +426,7 @@ export class HSUtils {
         this.#cachedConfirmBox = confirmBox;
         this.#cachedAlertWrapper = alertWrapper;
 
-        const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
+        const okAlert =   document.querySelector('#ok_alert') as HTMLButtonElement;
         const okConfirm = document.querySelector('#ok_confirm') as HTMLButtonElement;
 
         const killedBg = HSUtils.#killElementDisplayProperties(bg);
@@ -566,7 +585,7 @@ export class HSUtils {
 
     static async click(button: HTMLButtonElement): Promise<void> {
         button.click();
-        await HSUtils.sleep(HSUtils.sleepTime);
+        await HSUtils.sleep(HSUtils.tackTime);
         return Promise.resolve();
     }
 
@@ -574,7 +593,7 @@ export class HSUtils {
         element.click();
         await new Promise(res => setTimeout(res, 5));
         element.click();
-        await HSUtils.sleep(HSUtils.sleepTime);
+        await HSUtils.sleep(HSUtils.tackTime);
         element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         return Promise.resolve();
     }
@@ -630,7 +649,7 @@ export class HSUtils {
                 }
             }
 
-        }, this.sleepTime); // Check every 50ms for fast response
+        }, this.tackTime); // Check every 50ms for fast response
     }
 
     static async stopDialogWatcher(): Promise<void> {
@@ -692,7 +711,7 @@ export class HSUtils {
                     HSLogger.debug(() => 'Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
-            }, HSUtils.sleepTime);
+            }, HSUtils.tackTime);
         });
     }
 

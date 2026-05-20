@@ -1,9 +1,4 @@
-import type {
-    HeaterOptimizerInput,
-    HeaterOptimizationResult,
-    HeaterResultRow,
-    HeaterResultRowMatrix,
-} from "../../../types/data-types/hs-heater-types";
+import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
 
 /*
     This file closely match the script on Rus9384's sheet (credits to him),
@@ -100,14 +95,14 @@ interface Stats {
 // ===========================================================================
 
 interface Options {
-    calculateAmb:      boolean;
-    calculateQuarks:   boolean;
-    calculateCubes:    boolean;
-    calculateOct:      boolean;
-    calculateOff:      boolean;
-    calculateHyperflux:boolean;
-    calculateAmbOct:   boolean;
-    calculateGen:      boolean;
+    calculateAmb:       boolean;
+    calculateQuarks:    boolean;
+    calculateCubes:     boolean;
+    calculateOct:       boolean;
+    calculateOff:       boolean;
+    calculateHyperflux: boolean;
+    calculateAmbOct:    boolean;
+    calculateGen:       boolean;
 }
 
 
@@ -116,24 +111,55 @@ interface Options {
 // ===========================================================================
 
 let stats: Stats = {
-    amb: 0, rAmb: 0, lifetimeAmbExp: 0, ambSpeed: 1,
-    baseLuck: 0, baseMLuck: 0, baseRLuck: 0, rLuck: 0, luckConversion: 20,
-    quarks: 0, qHept: 0, cubeExp: 0, sing: 0, exalt: 0,
-    postAoAG: false, mind: 0.5, aSpeed: 1, spread: 0,
-    baseObt: 1, baseOff: 1, blueberries: 3,
+    amb: 0,
+    rAmb: 0,
+    lifetimeAmbExp: 0,
+    ambSpeed: 1,
+    baseLuck: 0,
+    baseMLuck: 0,
+    baseRLuck: 0,
+    rLuck: 0,
+    luckConversion: 20,
+    quarks: 0,
+    qHept: 0,
+    cubeExp: 0,
+    sing: 0,
+    exalt: 0,
+    postAoAG: false,
+    mind: 0.5,
+    aSpeed: 1,
+    spread: 0,
+    baseObt: 1,
+    baseOff: 1,
+    blueberries: 3,
     bonus: [0, 0, 0, 0, 0],
-    runeExp: 0, runeCoefSI: 30, bonusSI: 0, baseSI: 1,
-    expIA: 0, bonusIA: 0, talismanIA: 0, talismanP: 1,
-    baseIACube: 1, baseIAQuark: 1,
-    patreon: 0, jack: false, voucher: 0,
-    shopQuark: 0, chronometer: 0, shopLuck: 0,
-    shopRLuck: [0, 0, 0, 0], shopAmb: [0, 0, 0, 0],
-    qHeptExp: 0, ossifiedTactics: 0, redberries: 0,
-    viscount: false, ossifiedTactics2: 0,
+    runeExp: 0,
+    runeCoefSI: 30,
+    bonusSI: 0,
+    baseSI: 1,
+    expIA: 0,
+    bonusIA: 0,
+    talismanIA: 0,
+    talismanP: 1,
+    baseIACube: 1,
+    baseIAQuark: 1,
+    patreon: 0,
+    jack: false,
+    voucher: 0,
+    shopQuark: 0,
+    chronometer: 0,
+    shopLuck: 0,
+    shopRLuck: [0, 0, 0, 0],
+    shopAmb: [0, 0, 0, 0],
+    qHeptExp: 0,
+    ossifiedTactics: 0,
+    redberries: 0,
+    viscount: false,
+    ossifiedTactics2: 0,
 };
 
 let options: Options = {
-    calculateAmb: false, calculateQuarks: false, calculateCubes: false, calculateOct: false,
+    calculateAmb: false, calculateQuarks:    false, calculateCubes:  false, calculateOct: false,
     calculateOff: false, calculateHyperflux: false, calculateAmbOct: false, calculateGen: false,
 };
 
