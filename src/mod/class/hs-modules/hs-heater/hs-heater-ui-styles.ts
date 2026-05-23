@@ -107,6 +107,7 @@ export class HSHeaterUIStyles {
             }
 
             .hs-heater-results-topbar {
+                position: relative;
                 display: flex;
                 flex-direction: row;
                 align-items: center;
@@ -116,6 +117,7 @@ export class HSHeaterUIStyles {
                 box-sizing: border-box;
                 margin-left: auto;
                 margin-right: auto;
+                margin-bottom: 4px;
             }
 
             .hs-heater-results-topbar > * {
@@ -124,11 +126,93 @@ export class HSHeaterUIStyles {
                 margin-bottom: 0;
             }
 
+            .hs-heater-results-topbar-help {
+                position: absolute;
+                right: 0px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 30px;
+                height: 30px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                background: rgba(1, 20, 50, 0.7);
+                color: #d3d5da;
+                font-size: 0.85em;
+                line-height: 1;
+                cursor: default;
+                user-select: none;
+            }
+
             /* === Results & Subtable Styles === */
             .hs-heater-results-table td, .hs-heater-results-table th,
             .hs-heater-subtable td, .hs-heater-subtable th {
                 padding: 0px 8px;
                 text-align: center;
+            }
+
+            .hs-heater-redamb-summary {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-bottom: 10px;
+                font-size: 0.95rem;
+                color: #9d9d9d;
+            }
+
+            .hs-heater-redamb-summary-table {
+                border-collapse: collapse;
+                width: max-content;
+                margin: 0;
+            }
+
+            .hs-heater-redamb-summary-table td {
+                padding: 4px 8px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .hs-heater-redamb-table-wrapper {
+                overflow-x: auto;
+            }
+
+            .hs-heater-redamb-table th,
+            .hs-heater-redamb-table td {
+                padding: 6px 8px;
+            }
+
+            .hs-heater-red-ambrosia-table th,
+            .hs-heater-red-ambrosia-table td {
+                padding: 1px 6px;
+                line-height: 1.2;
+                font-size: 0.92rem;
+            }
+
+            .hs-heater-red-ambrosia-icon-cell {
+                width: 24px;
+                padding: 0px 0px !important;
+            }
+
+            .hs-heater-red-ambrosia-icon {
+                display: inline-block;
+                width: 24px;
+                height: 24px;
+                object-fit: contain;
+            }
+
+            .hs-heater-red-ambrosia-maxed-row td {
+                color: #A9A9A9;
+            }
+
+            .hs-heater-red-ambrosia-maxed-row .hs-heater-red-ambrosia-icon {
+                opacity: 0.35;
+            }
+
+            .hs-heater-redamb-section-header-row td {
+                text-align: left;
+                font-weight: 700;
+                background-color: rgba(255, 255, 255, 0.05);
             }
 
             .hs-heater-subtable th:last-child,
@@ -306,17 +390,48 @@ export class HSHeaterUIStyles {
                 cursor: help;
             }
 
+            .hs-heater-header-tooltip::before {
+                content: attr(data-tooltip);
+                position: absolute;
+                left: 50%;
+                top: calc(100% + 2px);
+                transform: translateX(-50%);
+                min-width: 12rem;
+                max-width: 18rem;
+                padding: 8px 10px;
+                background: #1e1e1e;
+                color: #d3d5da;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 4px;
+                white-space: pre-line;
+                text-align: left;
+                font-size: 0.78em;
+                line-height: 1.35;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                z-index: 10000;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+
             .hs-heater-header-tooltip::after {
                 content: "";
                 position: absolute;
-                top: 0px;
-                right: 0px;
+                top: 0;
+                right: 0;
                 width: 0;
                 height: 0;
                 border-left: 5px solid transparent;
                 border-bottom: 5px solid transparent;
-                border-top: 5px solid rgba(55, 87, 247, 0.8);
-                border-right: 5px solid rgba(55, 87, 247, 0.8);
+                border-top: 5px solid rgb(122, 144, 255);
+                border-right: 5px solid rgb(122, 144, 255);
+                pointer-events: none;
+            }
+
+            .hs-heater-header-tooltip:hover::before,
+            .hs-heater-header-tooltip:focus-within::before {
+                opacity: 1;
+                visibility: visible;
             }
 
             .hs-heater-selected-type-cell,
@@ -386,6 +501,7 @@ export class HSHeaterUIStyles {
 
             .hs-heater-inputs-header { background-color: #472323; }
             .hs-heater-results-header { background-color: #232647; }
+            .hs-heater-redamb-header { background-color: #472323; }
             .redButton { background-color: #3f0101; }
             .redButton:hover { background-color: #b71919; }
             .blueButton { background-color: #05013f; }
@@ -400,6 +516,8 @@ export class HSHeaterUIStyles {
             #hs-heater-sync-settings-btn.hs-heater-sync-settings-warning::after {
                 content: ' ⚠️';
             }
+
+
         `;
     }
 
@@ -469,7 +587,8 @@ export class HSHeaterUIStyles {
             /* === Heater Tooltip Overlays === */
             #hs-heater-loadout-json-tooltip,
             #hs-heater-sync-settings-tooltip,
-            #hs-heater-start-heater-tooltip {
+            #hs-heater-start-heater-tooltip,
+            #hs-heater-topbar-help-tooltip {
                 position: fixed;
                 z-index: 10000;
                 background: #1e1e1e;
@@ -479,11 +598,18 @@ export class HSHeaterUIStyles {
                 padding: 6px 8px;
                 word-break: break-word;
                 font-family: monospace;
-                font-size: 0.78em;
-                max-width: 480px;
-                max-height: 280px;
+                font-size: 0.85em;
+                max-width: 500px;
+                max-height: 500px;
                 overflow-y: auto;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                white-space: pre-wrap;
+            }
+            #hs-heater-sync-settings-tooltip {
+                white-space: normal !important;
+            }
+            .hs-heater-tooltip-bigger {
+                font-size: 0.95em !important;
             }
 
             #hs-heater-sync-settings-tooltip .hs-heater-sync-settings-tooltip-key {

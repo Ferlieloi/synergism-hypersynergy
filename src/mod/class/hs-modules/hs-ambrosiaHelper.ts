@@ -80,7 +80,10 @@ export class HSAmbrosiaHelper {
         const loadoutEnum = Object.values(AMBROSIA_LOADOUT_SLOT).find(
             slot => slot === `blueberryLoadout${loadoutNumber}`
         ) as AMBROSIA_LOADOUT_SLOT | undefined;
-        if (!loadoutEnum) { HSLogger.warn(`Could not convert loadout ${loadoutNumber} to slot`, this.#context); }
+        if (!loadoutEnum) {
+            HSLogger.warn(`Check your loadout settings (missing loadout).`, this.#context);
+            return undefined;
+        }
 
         return loadoutEnum;
     }

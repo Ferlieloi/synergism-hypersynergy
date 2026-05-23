@@ -30,7 +30,7 @@ export type { HeaterInputField, HeaterInputKey, HeaterInputBase };
 export const inputDefinitions = [
     { key: "amb",                       label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "ramb",                      label: "Lifetime Red Ambrosia",     type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
-    { key: "ambSpeedNonAmbBerries",     label: "Base Amb Speed/s",          type: "number",  url: "Pictures/PseudoShop/AMBROSIATimeSkip.png" },
+    { key: "ambSpeedNonAmbBerries",     label: "Blue Bar Speed/s",          type: "number",  url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
     { key: "blueberries",               label: "Blueberries Owned",         type: "number",  url: "Pictures/Default/Blueberries.png" },
     { key: "luckBaseNonAmb",            label: "Base Luck",                 type: "number",  url: "Pictures/Achievements/Rewards/AmbrosiaLuck.png" },
     { key: "luckMultNonAmb",            label: "Base Luck Mult",            type: "percent", url: "Pictures/PseudoShop/AMBROSIA_LUCK_BUFF.png" },
@@ -95,7 +95,10 @@ export const inputDefinitions = [
     { key: "ossifiedTactics",           label: "Ossified Tactics",          type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png" },
     { key: "ossifiedTactics2",          label: "Ossified Tactics II",       type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png" },
     { key: "redberries",                label: "Berries that are... blue?", type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaBlueberries.png" },
+    { key: "fusion",                    label: "Red-Blue Ultrafusion",      type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaAccelerator.png" },
     { key: "viscount",                  label: "Viscount",                  type: "boolean", url: "Pictures/RedAmbrosia/RedAmbrosiaTutorial.png" },
+    { key: "rBar",                      label: "Red Bar Capacity",          type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
+    { key: "rSpeed",                    label: "Red Bar Speed/s",           type: "number",  url: "Pictures/PseudoShop/AMBROSIATimeSkip.png" },
 ] as const satisfies readonly HeaterInputField[];
 
 export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (hsData: any) => HeaterInputBase[K] }>> = {
@@ -106,6 +109,9 @@ export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (h
     ossifiedTactics2:   (hsData) => hsData.redAmbrosiaUpgrades.regularLuck2,
     redberries:         (hsData) => hsData.redAmbrosiaUpgrades.blueberries,
     viscount:           (hsData) => Boolean(hsData.redAmbrosiaUpgrades.viscount),
+    fusion:             (hsData) => hsData.redAmbrosiaUpgrades.redAmbrosiaAccelerator,
+    rBar:               (hsData) => hsData.redBarCapacity,
+    rSpeed:             (hsData) => hsData.redBarSpeed,
 };
 
 export const heaterOptionLabels = HEATER_BRANCH_DEFINITIONS.map((branch) => branch.label) as readonly string[];

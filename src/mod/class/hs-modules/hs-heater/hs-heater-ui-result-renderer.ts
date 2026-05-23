@@ -65,7 +65,7 @@ function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
 }
 
 function buildHeaderTooltipLabel(label: string, tooltip: string): string {
-    return `<th class="hs-heater-header-tooltip" title="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
+    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
 }
 
 function buildArraySectionHeaderRow(showP4x4: boolean, effectHeader: string): string {
@@ -148,7 +148,9 @@ function buildArrayResultSection(entriesByKey: Map<ResultKey, NormalizedHeaterRe
     const allRows = sectionDefs.map((sectionDef) => buildArraySectionRows(sectionDef, entriesByKey, selectedSemanticIds)).join("");
     return `
         <div class="hs-heater-results-wrapper">
-            <div class="hs-heater-results-topbar"></div>
+            <div class="hs-heater-results-topbar">
+                <div class="hs-heater-results-topbar-help" aria-label="Heater results help" tabindex="0">?</div>
+            </div>
             <table class="hs-heater-subtable hs-heater-results-table">
                 <tbody>${allRows}</tbody>
             </table>

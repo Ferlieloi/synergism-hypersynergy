@@ -62,7 +62,6 @@ export class HSHeaterResultModalController {
                 const updated = HSHeaterUIResult.updateResultModalContent(existingModal, normalizedResult, selectedSemanticIds);
                 if (parentModalId) {
                     this.currentResultParentModalId = parentModalId;
-                    this.repositionResultModal(existingModal, parentModalId);
                 }
                 if (updated) {
                     return;

@@ -9,6 +9,7 @@ import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIInput } from "./hs-heater-ui-input";
 import { HSHeaterResultStore } from "./hs-heater-result-store";
 import { HSHeaterResultModalController } from "./hs-heater-result-modal-controller";
+import { HSHeaterRedAmbrosiaModalController } from "./hs-heater-red-ambrosia-modal-controller";
 import { HSHeaterUIResult } from "./hs-heater-ui-result";
 import { resolveHeaterTypeLabel } from "./hs-heater-result-config";
 import { escapeHtml } from "./hs-heater-utils";
@@ -235,6 +236,7 @@ export class HSHeaterInputModalController {
                 const updatedInput = HSHeaterUIInput.readInputValues(modal);
                 const updatedResult = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
+                await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
             } finally {
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';

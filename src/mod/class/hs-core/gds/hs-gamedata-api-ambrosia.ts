@@ -657,7 +657,7 @@ export class AmbrosiaHelper {
 
         ambrosiaFreeRedLuckUpgrades: {
             costPerLevel: 20000,
-            maxLevel: 25,
+            maxLevel: 40,
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
                 cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
@@ -923,6 +923,43 @@ export class AmbrosiaHelper {
         return reduce_vals ? reduced : vals;
     }
 
+    calculateRequiredBlueberryTime() {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+        const cacheName = 'RequiredBlueberryTime' as keyof CalculationCache;
+        const timePerAmbrosia = HSGlobal.HSAmbrosia.TIME_PER_AMBROSIA; // Currently 45
+
+        const calculationVars: number[] = [
+            data.lifetimeAmbrosia,
+            data.shopUpgrades.shopAmbrosiaAccelerator,
+            data.singularityChallenges.noAmbrosiaUpgrades.completions,
+            data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
+            data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
+            data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
+        ];
+
+        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
+        if (cached !== undefined) return cached;
+
+        let val = timePerAmbrosia;
+        val += Math.floor((data.lifetimeAmbrosia / 300));
+
+        const acceleratorMult = this.#ctx.getShopUpgradeEffects('shopAmbrosiaAccelerator', 'ambrosiaPointRequirementMult') as number;
+        const brickOfLeadMult = this.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
+
+        val *= acceleratorMult;
+        val *= brickOfLeadMult;
+
+        if (data.lifetimeAmbrosia >= 10000) {
+            const extraScalingPower = Math.log10(4);
+            val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower);
+            val = Math.ceil(val);
+        }
+
+        this.#ctx.updateCalculationCache(cacheName, { value: val, cachedBy: calculationVars });
+        return val;
+    }
+
     calculateRequiredRedAmbrosiaTime() {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
@@ -996,43 +1033,6 @@ export class AmbrosiaHelper {
             } else {
                 val = 3 * Math.pow(10, (numThresholds - 1) / 2 + digitReduction) - data.lifetimeAmbrosia;
             }
-        }
-
-        this.#ctx.updateCalculationCache(cacheName, { value: val, cachedBy: calculationVars });
-        return val;
-    }
-
-    calculateRequiredBlueberryTime() {
-        const data = this.#ctx.getGameData();
-        if (!data) return 0;
-        const cacheName = 'RequiredBlueberryTime' as keyof CalculationCache;
-        const timePerAmbrosia = HSGlobal.HSAmbrosia.TIME_PER_AMBROSIA; // Currently 45
-
-        const calculationVars: number[] = [
-            data.lifetimeAmbrosia,
-            data.shopUpgrades.shopAmbrosiaAccelerator,
-            data.singularityChallenges.noAmbrosiaUpgrades.completions,
-            data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
-            data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
-            data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
-        ];
-
-        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
-        if (cached !== undefined) return cached;
-
-        let val = timePerAmbrosia;
-        val += Math.floor((data.lifetimeAmbrosia / 300));
-
-        const acceleratorMult = this.#ctx.getShopUpgradeEffects('shopAmbrosiaAccelerator', 'ambrosiaPointRequirementMult') as number;
-        const brickOfLeadMult = this.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
-
-        val *= acceleratorMult;
-        val *= brickOfLeadMult;
-
-        if (data.lifetimeAmbrosia >= 10000) {
-            const extraScalingPower = Math.log10(4);
-            val *= Math.pow(data.lifetimeAmbrosia / 10000, extraScalingPower);
-            val = Math.ceil(val);
         }
 
         this.#ctx.updateCalculationCache(cacheName, { value: val, cachedBy: calculationVars });

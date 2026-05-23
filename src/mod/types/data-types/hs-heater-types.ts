@@ -58,7 +58,10 @@ export interface HeaterOptimizerInput {
     ossifiedTactics: number;
     ossifiedTactics2: number;
     redberries: number;
+    fusion: number;
     viscount: boolean;
+    rBar: number;
+    rSpeed: number;
     heaterOptions: boolean[];
 }
 
@@ -85,6 +88,22 @@ export type HeaterResultUnaffordableRow = [
 export type HeaterResultRow = HeaterResultAffordableRow | HeaterResultUnaffordableRow;
 export type HeaterResultRowMatrix = HeaterResultRow[];
 
+export type HeaterResultSheetRow = {
+    loadout:        string;
+    blueberryCost:  number | "N / A";
+    cost:           number | "N / A";
+    costDetail:     number | "Maxed" | "N / A";
+    effect:         string;
+    p4x4Eq:         number | "Never" | "N / A";
+    maxed:          boolean;
+    p4Effect:       number | "-" | "N / A";
+    p4CefLog:       number | "-" | "N / A" | "Never";
+    p9Effect:       number | "-" | "N / A";
+    p9CefLog:       number | "-" | "N / A" | "Never";
+};
+
+export type HeaterResultSheetRowMatrix = HeaterResultSheetRow[];
+
 export type HeaterResultArrayKey =
     | 'luck'
     | 'rLuck'
@@ -103,6 +122,31 @@ export type SingleResultKey = Exclude<HeaterResultArrayKey, RowBasedResultKey>;
 export type HeaterTypeSemanticId = 'none' | SingleResultKey | `${RowBasedResultKey}:${number}`;
 export type HeaterResultSectionId = 'common' | 'p4x4' | 'hybrid';
 
+export type HeaterRedAmbUpgradeEffectName =
+    | 'ossifiedTactics'
+    | 'blueberries'
+    | 'freeLevelsRow2'
+    | 'freeLevelsRow3'
+    | 'freeLevelsRow4'
+    | 'freeLevelsRow5'
+    | 'viscount';
+
+export type HeaterRedAmbUpgradeEffect = {
+    rEffect?: number;
+    bEffect?: number;
+    octEffect?: number;
+};
+
+export type HeaterRedAmbUpgradeEffects = Partial<Record<HeaterRedAmbUpgradeEffectName, HeaterRedAmbUpgradeEffect>>;
+
+export type HeaterRedAmbCommonValues = {
+    luck: number;
+    mLuck: number;
+    luckConversion: number;
+    totalRedLuck: number;
+    rLuckEffectRatio: number;
+};
+
 export type NormalizedHeaterResultEntry = {
     semanticId: HeaterTypeSemanticId;
     label: string;
@@ -115,23 +159,17 @@ export type NormalizedHeaterResultEntry = {
 
 export interface HeaterOptimizationResult {
     input: HeaterOptimizerInput;
-    // calculateAmb
-    luck?: HeaterResultRowMatrix;    // Q4  — best luck loadout
-    rLuck?: HeaterResultRowMatrix;   // Q5  — best red luck loadout
-    allAmb?: HeaterResultRowMatrix;  // Q6  — best all-ambrosia loadout
-    // calculateQuarks
-    quarks?: HeaterResultRowMatrix;  // Q7  — best quarks loadout
-    // calculateCubes
-    cubes?: HeaterResultRowMatrix;   // Q8  — best cubes loadout
-    // calculateOct
-    oct?: HeaterResultRowMatrix;     // Q9  — best octeract loadout
-    // calculateOff
-    obt?: HeaterResultRowMatrix;     // Q10 — best obtainium loadout
-    off?: HeaterResultRowMatrix;     // Q11 — best offering loadout
-    // calculateHyperflux (up to 8 rows: hyperflux level 0–7)
+    luck?: HeaterResultRowMatrix;
+    rLuck?: HeaterResultRowMatrix;
+    allAmb?: HeaterResultRowMatrix;
+    quarks?: HeaterResultRowMatrix;
+    cubes?: HeaterResultRowMatrix;
+    oct?: HeaterResultRowMatrix;
+    obt?: HeaterResultRowMatrix;
+    off?: HeaterResultRowMatrix;
     hyperflux?: HeaterResultRowMatrix;
-    // calculateAmbOct
-    ambOct?: HeaterResultRowMatrix;  // Q25 — best amb+oct loadout
-    // calculateGen (3 rows: gen level 1–3)
+    ambOct?: HeaterResultRowMatrix;
     gen?: HeaterResultRowMatrix;
+    redAmbUpgradeEffects?: HeaterRedAmbUpgradeEffects;
+    redAmbCommonValues?: HeaterRedAmbCommonValues;
 }

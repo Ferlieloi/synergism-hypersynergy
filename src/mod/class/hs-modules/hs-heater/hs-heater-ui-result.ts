@@ -60,7 +60,8 @@ const HEATER_RESULT_UI_SELECTORS = {
     previewRow:         'hs-heater-loadout-preview-row',
     previewButton:      'hs-heater-preview-button',
     previewEmptyCell:   'hs-heater-preview-empty-cell',
-    tooltipId:          'hs-heater-loadout-json-tooltip',
+    copyJsonTooltipId:  'hs-heater-loadout-json-tooltip',
+    topbarHelpTooltipId: 'hs-heater-topbar-help-tooltip',
     copyLoadoutBtn:     'hs-heater-copy-loadout-btn',
     importLoadoutBtn:   'hs-heater-import-loadout-btn',
     jsonTooltipTrigger: 'hs-heater-json-tooltip-trigger',
@@ -207,16 +208,26 @@ export class HSHeaterUIResult {
         this.#quickbarCloneCleanup?.();
         this.#quickbarCloneCleanup = null;
 
-        header.innerHTML = '';
+        // Preserve any static header content (help badge, future actions) and remove only the old quickbar clone.
+        header.querySelector('[data-hs-heater-quickbar-clone]')?.remove();
 
         const slotsSource = document.getElementById('hs-ambrosia-slots-wrapper');
         if (slotsSource) {
             const clone = slotsSource.cloneNode(true) as HTMLElement;
             clone.removeAttribute('id');
+            clone.dataset.hsHeaterQuickbarClone = 'true';
             // Strip child IDs to avoid duplicate DOM IDs
             clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
             header.appendChild(clone);
             this.#quickbarCloneCleanup = this.#setupQuickbarCloneLink(clone, slotsSource);
+        }
+
+        const topbarHelp = header.querySelector<HTMLDivElement>('.hs-heater-results-topbar-help');
+        if (topbarHelp) {
+            topbarHelp.addEventListener('mouseenter', () => this.showTopbarHelpTooltip(topbarHelp));
+            topbarHelp.addEventListener('mouseleave', () => this.removeTopbarHelpTooltip());
+            topbarHelp.addEventListener('focus', () => this.showTopbarHelpTooltip(topbarHelp));
+            topbarHelp.addEventListener('blur', () => this.removeTopbarHelpTooltip());
         }
     }
 
@@ -286,8 +297,8 @@ export class HSHeaterUIResult {
 
         const preview = document.createElement('div');
         preview.id = HEATER_RESULT_UI_SELECTORS.previewId;
-        preview.innerHTML = this.buildLoadoutPreviewHtml(loadout);
         preview.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
+        preview.innerHTML = this.buildLoadoutPreviewHtml(loadout);
 
         document.body.appendChild(preview);
         this.positionOverlayNearTarget(preview, button);
@@ -306,16 +317,40 @@ export class HSHeaterUIResult {
         if (!loadout) return;
 
         const tooltip = document.createElement('div');
-        tooltip.id = HEATER_RESULT_UI_SELECTORS.tooltipId;
-        tooltip.textContent = this.formatLoadoutJsonForTooltip(loadout);
+        tooltip.id = HEATER_RESULT_UI_SELECTORS.copyJsonTooltipId;
         tooltip.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
+        tooltip.textContent = this.formatLoadoutJsonForTooltip(loadout);
 
         document.body.appendChild(tooltip);
         this.positionOverlayNearTarget(tooltip, trigger);
     }
 
     static removeLoadoutJsonTooltip(): void {
-        const existing = document.getElementById(HEATER_RESULT_UI_SELECTORS.tooltipId);
+        const existing = document.getElementById(HEATER_RESULT_UI_SELECTORS.copyJsonTooltipId);
+        if (existing && existing.parentElement) {
+            existing.parentElement.removeChild(existing);
+        }
+    }
+
+    static showTopbarHelpTooltip(trigger: HTMLElement): void {
+        this.removeTopbarHelpTooltip();
+
+        const tooltip = document.createElement('div');
+        tooltip.id = HEATER_RESULT_UI_SELECTORS.topbarHelpTooltipId;
+        tooltip.classList.add('hs-heater-tooltip-bigger');
+        tooltip.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
+        tooltip.textContent = 
+            `The loadouts will only be as good as your inputs, this means:\n`
+            + `- If you want an optimized p4x4 loadout, you need to actually have\n pre-AoAG inputs.\n`
+            + `- Same for Obt/Off loadouts (but less problematic, so simply (un)checking the "post-aoag" input is enough).\n`
+            + `- ??? (Feel free to contribute)`;
+
+        document.body.appendChild(tooltip);
+        this.positionOverlayNearTarget(tooltip, trigger, { placement: 'below' });
+    }
+
+    static removeTopbarHelpTooltip(): void {
+        const existing = document.getElementById(HEATER_RESULT_UI_SELECTORS.topbarHelpTooltipId);
         if (existing && existing.parentElement) {
             existing.parentElement.removeChild(existing);
         }

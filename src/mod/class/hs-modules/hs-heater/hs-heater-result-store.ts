@@ -68,9 +68,14 @@ export function normalizeHeaterOptimizationResult(
 
 export class HSHeaterResultStore {
     static #currentNormalizedResult: NormalizedHeaterResultEntry[] | null = null;
+    static #currentRawResult: HeaterOptimizationResult | null = null;
 
     static getCurrentNormalizedResult(): NormalizedHeaterResultEntry[] | null {
         return this.#currentNormalizedResult;
+    }
+
+    static getCurrentRawResult(): HeaterOptimizationResult | null {
+        return this.#currentRawResult;
     }
 
     static collectSelectedSemanticIds(modal: HTMLElement, options?: { enabledOnly?: boolean }): Set<string> {
@@ -122,11 +127,13 @@ export class HSHeaterResultStore {
     }
 
     static setResultFromRaw(result: HeaterOptimizationResult): void {
+        this.#currentRawResult = result;
         this.#currentNormalizedResult = normalizeHeaterOptimizationResult(result);
     }
 
     static clearCurrentNormalizedResult(): void {
         this.#currentNormalizedResult = null;
+        this.#currentRawResult = null;
     }
 
     static getLoadoutJsonBySemanticId(semanticId: string): string | null {

@@ -26,7 +26,7 @@ const HEATER_RESULT_SECTION_CONFIG: Record<HeaterResultSectionId, HeaterResultSe
         order: 0,
     },
     p4x4: {
-        title: "p4x4 Loadouts",
+        title: "p4x4 (pre-AoAG) Loadouts",
         showP4x4: true,
         effectHeader: "Effect",
         order: 1,

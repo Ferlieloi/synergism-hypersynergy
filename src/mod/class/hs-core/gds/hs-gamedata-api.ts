@@ -2419,6 +2419,30 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         else return 0;
     }
 
+    calculateRedAmbrosiaGenerationSpeed(): number {
+        const data = this.getGameData();
+        if (!data) return 0;
+
+        const ambSpeedNonAmb = (this.ambrosia.calculateAmbrosiaGenerationSpeed(true, true) as number);
+        const blueberries = (this.ambrosia.calculateBlueberryInventory() as number);
+
+        let ambSpeed = ambSpeedNonAmb * blueberries;
+        ambSpeed *= 1 + this.getPatreonBonus();
+        let pseudoRSpeed = this.getPCoinUpgradeLevel('RED_GENERATION_BUFF');
+        let rSpeed = Math.sqrt(ambSpeed * Math.min(1000, ambSpeed));
+        rSpeed *= 1 + 0.05 * pseudoRSpeed;
+        rSpeed *= 1 + 0.02 * data.singularityChallenges.noAmbrosiaUpgrades.completions;
+        rSpeed *= 1 + 0.003 * this.ambrosia.calculateRedAmbrosiaUpgradeValue('redGenerationSpeed');
+        return rSpeed;
+    }
+
+    getPatreonBonus(): number {
+        if (!this.meData) return 0;
+        const meData = this.meData;
+        let bonus = (1 + (meData?.globalBonus ?? 0) / 100) * (1 + (meData?.personalBonus ?? 0) / 100) - 1;
+        return bonus;
+    }
+
     async dumpDataForHeater(): Promise<any> {
         const gameDataModule = HSModuleManager.getModule("HSGameData") as HSGameData;
 
@@ -2444,7 +2468,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const ambSpeedNonAmb =          (this.ambrosia.calculateAmbrosiaGenerationSpeed(true, true) as number);
             const blueberries =             (this.ambrosia.calculateBlueberryInventory() as number);
             const ambSpeedNonAmbBerries =   ambSpeedNonAmb * blueberries;
-
+            
             const heaterData = {
                 ...this.gameData,
                 hs_data: {
@@ -2491,8 +2515,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     runeIaBonusLevelsTotal:     new Decimal(this.getRuneBonusLevels('infiniteAscent')),
                     runeIaBonusLevelsTalisman:  new Decimal(talismanRuneBonuses.infiniteAscent),
                     baseTalismanPower:          new Decimal(this.talisman.allTalismanRuneBonusStatsSum()),
-                    patreonBonus:               (1 + (meData?.globalBonus ?? 0) / 100) * (1 + (meData?.personalBonus ?? 0) / 100) - 1,
-                    activeBells:                eventData?.HAPPY_HOUR_BELL.amount,
+                    patreonBonus:               this.getPatreonBonus(),
+                    activeBells:                eventData?.HAPPY_HOUR_BELL.amount ?? 0,
                     jack:                       gameData.shopUpgrades.shopPanthema > 0,
                     freeShopLevelsInfinity:     this.freeInfinityLevels(),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),
@@ -2515,6 +2539,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     shopImproveQuarkHept3:      gameData.shopUpgrades.improveQuarkHept3,
                     shopImproveQuarkHept4:      gameData.shopUpgrades.improveQuarkHept4,
                     shopImproveQuarkHept5:      gameData.shopUpgrades.improveQuarkHept5,
+                    redBarCapacity:             this.ambrosia.calculateRequiredRedAmbrosiaTime(),
+                    redBarSpeed:                this.calculateRedAmbrosiaGenerationSpeed(),
                     // Not Heater
                     totalVouchers:              this.calculateAllShopTablets(),
                     plat4x4:                gameData.platonicUpgrades[19],
@@ -2522,7 +2548,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     maxTokens:              this.campaignData?.maxTokens,
                     isAtMaxTokens:          this.campaignData?.isAtMaxTokens,
                     isEvent:                this.isEvent,
-                    bellStacks:             eventData?.HAPPY_HOUR_BELL.amount,
+                    bellStacks:             eventData?.HAPPY_HOUR_BELL.amount ?? 0,
                     blueAmbrosiaBarValue:   gameData.blueberryTime,
                     redAmbrosiaBarValue:    gameData.redAmbrosiaTime,
                     blueAmbrosiaBarMax:     this.ambrosia.calculateRequiredBlueberryTime(),
@@ -2543,32 +2569,36 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         tutorial:                   this.ambrosia.calculateRedAmbrosiaUpgradeValue('tutorial'),
                         freeTutorialLevels:         this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeTutorialLevels'),
                         conversionImprovement1:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('conversionImprovement1'),
-                        conversionImprovement2:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('conversionImprovement2'),
-                        conversionImprovement3:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('conversionImprovement3'),
-                        freeLevelsRow2:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow2'),
-                        freeLevelsRow3:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow3'),
-                        freeLevelsRow4:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
-                        freeLevelsRow5:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
-                        blueberries:                this.ambrosia.calculateRedAmbrosiaUpgradeValue('blueberries'),
                         blueberryGenerationSpeed:   this.ambrosia.calculateRedAmbrosiaUpgradeValue('blueberryGenerationSpeed'),
-                        blueberryGenerationSpeed2:  this.ambrosia.calculateRedAmbrosiaUpgradeValue('blueberryGenerationSpeed2'),
                         regularLuck:                this.ambrosia.calculateRedAmbrosiaUpgradeValue('regularLuck'),
-                        regularLuck2:               this.ambrosia.calculateRedAmbrosiaUpgradeValue('regularLuck2'),
-                        redGenerationSpeed:         this.ambrosia.calculateRedAmbrosiaUpgradeValue('redGenerationSpeed'),
-                        redLuck:                    this.ambrosia.calculateRedAmbrosiaUpgradeValue('redLuck'),
+                        blueberries:                this.ambrosia.calculateRedAmbrosiaUpgradeValue('blueberries'),
+                        redAmbrosiaFreeAccumulator: this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaFreeAccumulator'),
+
+                        freeLevelsRow2:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow2'),
                         redAmbrosiaCube:            this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaCube'),
                         redAmbrosiaObtainium:       this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaObtainium'),
                         redAmbrosiaOffering:        this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaOffering'),
-                        redAmbrosiaCubeImprover:    this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaCubeImprover'),
-                        redAmbrosiaAccelerator:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaAccelerator'),
-                        redAmbrosiaFreeAccumulator: this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaFreeAccumulator'),
-                        salvageYinYang:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('salvageYinYang'),
-                        infiniteShopUpgrades:       this.ambrosia.calculateRedAmbrosiaUpgradeValue('infiniteShopUpgrades'),
                         freeOfferingUpgrades:       this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeOfferingUpgrades'),
+                        
+                        freeLevelsRow3:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow3'),
+                        conversionImprovement2:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('conversionImprovement2'),
+                        redGenerationSpeed:         this.ambrosia.calculateRedAmbrosiaUpgradeValue('redGenerationSpeed'),
+                        redLuck:                    this.ambrosia.calculateRedAmbrosiaUpgradeValue('redLuck'),
+                        salvageYinYang:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('salvageYinYang'),
                         freeObtainiumUpgrades:      this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeObtainiumUpgrades'),
+
+                        freeLevelsRow4:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow4'),
+                        redAmbrosiaCubeImprover:    this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaCubeImprover'),
+                        infiniteShopUpgrades:       this.ambrosia.calculateRedAmbrosiaUpgradeValue('infiniteShopUpgrades'),
+                        redAmbrosiaAccelerator:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaAccelerator'),
                         freeCubeUpgrades:           this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeCubeUpgrades'),
-                        freeSpeedUpgrades:          this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeSpeedUpgrades'),
+
                         viscount:                   this.ambrosia.calculateRedAmbrosiaUpgradeValue('viscount'),
+                        freeLevelsRow5:             this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeLevelsRow5'),
+                        conversionImprovement3:     this.ambrosia.calculateRedAmbrosiaUpgradeValue('conversionImprovement3'),
+                        blueberryGenerationSpeed2:  this.ambrosia.calculateRedAmbrosiaUpgradeValue('blueberryGenerationSpeed2'),
+                        regularLuck2:               this.ambrosia.calculateRedAmbrosiaUpgradeValue('regularLuck2'),
+                        freeSpeedUpgrades:          this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeSpeedUpgrades'),
                     },
                     me_data: {
                         personalBonus:  meData?.personalBonus,

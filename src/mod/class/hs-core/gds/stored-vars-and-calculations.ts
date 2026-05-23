@@ -350,102 +350,9 @@ export const challenge15Rewards = {
 };
 
 export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculationCollection = {
-  blueberryGenerationSpeed: {
-    costPerLevel: 1,
-    maxLevel: 100,
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    effects: (n: number) => {
-      const val = 1 + n / 500
-      return {
-        blueberryGenerationSpeed: val
-      }
-    }
-  },
-  blueberryGenerationSpeed2: {
-    costPerLevel: 8000,
-    maxLevel: 250,
-    costFunction: (n: number, cpl: number) => cpl + 0 * n,
-    effects: (n: number) => {
-      const val = 1 + n / 1000
-      return {
-        blueberryGenerationSpeed: val
-      }
-    }
-  },
-  freeLevelsRow2: {
-    costPerLevel: 10,
-    maxLevel: 5,
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-    effects: (n: number) => {
-      return {
-        freeLevels: n
-      }
-    }
-  },
-  freeLevelsRow3: {
-    costPerLevel: 250,
-    maxLevel: 5,
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-    effects: (n: number) => {
-      return {
-        freeLevels: n
-      }
-    }
-  },
-  freeLevelsRow4: {
-    costPerLevel: 5000,
-    maxLevel: 5,
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-    effects: (n: number) => {
-      return {
-        freeLevels: n
-      }
-    }
-  },
-  freeLevelsRow5: {
-    costPerLevel: 50000,
-    maxLevel: 5,
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-    effects: (n: number) => {
-      return {
-        freeLevels: n
-      }
-    }
-  },
-  regularLuck: {
-    costPerLevel: 1,
-    maxLevel: 100,
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    effects: (n: number) => {
-      return {
-        ambrosiaLuck: 2 * n
-      }
-    }
-  },
-  regularLuck2: {
-    costPerLevel: 8000,
-    maxLevel: 250,
-    costFunction: (n: number, cpl: number) => cpl + 0 * n,
-    effects: (n: number) => {
-      return {
-        ambrosiaLuck: 2 * n
-      }
-    }
-  },
-  viscount: {
-    costPerLevel: 99999,
-    maxLevel: 1,
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    effects: (n: number) => {
-      return {
-        roleUnlock: n > 0,
-        quarkBonus: 1 + 0.1 * n,
-        luckBonus: 125 * n,
-        redLuckBonus: 25 * n
-      }
-    }
-  },
+  // Row 1
   tutorial: {
+    label: `A beginner's guide`,
     costFunction: (n: number, cpl: number) => cpl + 0 * n,
     maxLevel: 100,
     costPerLevel: 1,
@@ -456,39 +363,11 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         obtainiumMult: amount,
         offeringMult: amount
       }
-    }
-  },
-  conversionImprovement1: {
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
-    maxLevel: 5,
-    costPerLevel: 5,
-    effects: (n: number) => {
-      return {
-        conversionImprovement: -n
-      }
-    }
-  },
-  conversionImprovement2: {
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(4, n),
-    maxLevel: 3,
-    costPerLevel: 200,
-    effects: (n: number) => {
-      return {
-        conversionImprovement: -n
-      }
-    }
-  },
-  conversionImprovement3: {
-    costFunction: (n: number, cpl: number) => cpl * Math.pow(10, n),
-    maxLevel: 2,
-    costPerLevel: 10000,
-    effects: (n: number) => {
-      return {
-        conversionImprovement: -n
-      }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaTutorial.png'
   },
   freeTutorialLevels: {
+    label: 'Tutorial Module Levels',
     costFunction: (n: number, cpl: number) => cpl + n,
     maxLevel: 5,
     costPerLevel: 1,
@@ -496,59 +375,60 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
       return {
         freeLevels: n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeTutorialLevels.png'
   },
-  redGenerationSpeed: {
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+  conversionImprovement1: {
+    label: 'Luck Converter',
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
+    maxLevel: 5,
+    costPerLevel: 5,
+    effects: (n: number) => {
+      return {
+        conversionImprovement: -n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaConversionImprovement1.png'
+  },
+  blueberryGenerationSpeed: {
+    label: 'The Sands of Time',
+    costPerLevel: 1,
     maxLevel: 100,
-    costPerLevel: 12,
-    effects: (n: number) => {
-      return {
-        redAmbrosiaGenerationSpeed: 1 + 3 * n / 1000
-      }
-    }
-  },
-  redLuck: {
     costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    effects: (n: number) => {
+      const val = 1 + n / 500
+      return {
+        blueberryGenerationSpeed: val
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaBlueberryGenerationSpeed.png'
+  },
+  regularLuck: {
+    label: 'Ossified Blueberry Tactics',
+    costPerLevel: 1,
     maxLevel: 100,
-    costPerLevel: 4,
-    effects: (n: number) => {
-      return {
-        redAmbrosiaLuck: n
-      }
-    }
-  },
-  redAmbrosiaCube: {
     costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    maxLevel: 1,
-    costPerLevel: 500,
     effects: (n: number) => {
       return {
-        unlockedRedAmbrosiaCube: n > 0
+        ambrosiaLuck: 2 * n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png'
   },
-  redAmbrosiaObtainium: {
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    maxLevel: 1,
-    costPerLevel: 1250,
+  blueberries: {
+    label: 'Berries that are... blue?',
+    costFunction: (level: number, _baseCost: number) => [100000, 1400000, 3000000, 3250000, 3500000][level] ?? 0,
+    maxLevel: 5,
+    costPerLevel: 1e5,
     effects: (n: number) => {
       return {
-        unlockRedAmbrosiaObtainium: n > 0
+        blueberries: n
       }
-    }
-  },
-  redAmbrosiaOffering: {
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    maxLevel: 1,
-    costPerLevel: 4000,
-    effects: (n: number) => {
-      return {
-        unlockRedAmbrosiaOffering: n > 0
-      }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaBlueberries.png'
   },
   redAmbrosiaFreeAccumulator: {
+    label: 'Red DOAa',
     costFunction: (level: number, _cpl: number) => [100, 400, 1000, 3000, 10000, 25000, 75000, 150000, 400000, 1000000][level] ?? 0,
     maxLevel: 10,
     costPerLevel: 1,
@@ -557,9 +437,60 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
         freeAccumulatorLevels: n / 1000 + 0.01 * +(n > 0),
         freeAccumulatorLevelCapIncrease: 0.1 * n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedAmbrosiaFreeAccumulator.png'
+  },
+  // Row 2
+  freeLevelsRow2: {
+    label: 'Row 2 Upgrade Levels',
+    costPerLevel: 10,
+    maxLevel: 5,
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
+    effects: (n: number) => {
+      return {
+        freeLevels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow2.png'
+  },
+  redAmbrosiaCube: {
+    label: 'Cubes "made" of Red Ambrosia',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 1,
+    costPerLevel: 500,
+    effects: (n: number) => {
+      return {
+        unlockedRedAmbrosiaCube: n > 0
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedAmbrosiaCube.png'
+  },
+  redAmbrosiaObtainium: {
+    label: 'Obtainium "made" of Red Ambrosia',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 1,
+    costPerLevel: 1250,
+    effects: (n: number) => {
+      return {
+        unlockRedAmbrosiaObtainium: n > 0
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaObtainium.png'
+  },
+  redAmbrosiaOffering: {
+    label: 'Offering "made" of Red Ambrosia',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 1,
+    costPerLevel: 4000,
+    effects: (n: number) => {
+      return {
+        unlockRedAmbrosiaOffering: n > 0
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaOffering.png'
   },
   freeOfferingUpgrades: {
+    label: 'The Feast and the Famine',
     costFunction: (level: number, _cpl: number) => [1000, 3000, 9000, 27000, 81000][level] ?? 0,
     maxLevel: 5,
     costPerLevel: 1,
@@ -567,69 +498,60 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
       return {
         levels: n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeOfferingUpgrades.png'
   },
-  freeObtainiumUpgrades: {
-    costFunction: (level: number, _cpl: number) => [1500, 4500, 13500, 40500, 121500][level] ?? 0,
+  // Row 3
+  freeLevelsRow3: {
+    label: 'Row 3 Upgrade Levels',
+    costPerLevel: 250,
     maxLevel: 5,
-    costPerLevel: 1,
-    effects: (n: number) => {
-      return {
-        levels: n
-      }
-    }
-  },
-  freeCubeUpgrades: {
-    costFunction: (level: number, _cpl: number) => [10000, 30000, 90000, 270000, 810000][level] ?? 0,
-    maxLevel: 5,
-    costPerLevel: 1,
-    effects: (n: number) => {
-      return {
-        levels: n
-      }
-    }
-  },
-  freeSpeedUpgrades: {
-    costFunction: (level: number, _cpl: number) => [15000, 45000, 135000, 405000, 1215000][level] ?? 0,
-    maxLevel: 5,
-    costPerLevel: 1,
-    effects: (n: number) => {
-      return {
-        levels: n
-      }
-    }
-  },
-  redAmbrosiaCubeImprover: {
-    costFunction: (n: number, cpl: number) => cpl * (n + 1),
-    maxLevel: 20,
-    costPerLevel: 100,
-    effects: (n: number) => {
-      return {
-        extraExponent: 0.01 * n
-      }
-    }
-  },
-  infiniteShopUpgrades: {
-    costFunction: (n: number, cpl: number) => cpl + 100 * n,
-    maxLevel: 40,
-    costPerLevel: 200,
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
     effects: (n: number) => {
       return {
         freeLevels: n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow3.png'
   },
-  redAmbrosiaAccelerator: {
-    costFunction: (n: number, cpl: number) => cpl + n * 0,
-    maxLevel: 100,
-    costPerLevel: 1000,
+  conversionImprovement2: {
+    label: 'Luck Converter II',
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(4, n),
+    maxLevel: 3,
+    costPerLevel: 200,
     effects: (n: number) => {
       return {
-        ambrosiaTimePerRedAmbrosia: 0.02 * n + 1 * +(n > 0)
+        conversionImprovement: -n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaConversionImprovement2.png'
+  },
+  redGenerationSpeed: {
+    label: 'Millenium-Aged Red Ambrosia',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 100,
+    costPerLevel: 12,
+    effects: (n: number) => {
+      return {
+        redAmbrosiaGenerationSpeed: 1 + 3 * n / 1000
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedGenerationSpeed.png'
+  },
+  redLuck: {
+    label: 'The Dice that Decide Your Fate',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 100,
+    costPerLevel: 4,
+    effects: (n: number) => {
+      return {
+        redAmbrosiaLuck: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedLuck.png'
   },
   salvageYinYang: {
+    label: 'Yin and Yang: Salvage Edition',
     costFunction: (n: number, baseCost: number) => baseCost * (n + 1),
     maxLevel: 100,
     costPerLevel: 200,
@@ -638,17 +560,158 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
       return disabled
         ? { positiveSalvage: 0, negativeSalvage: 0 }
         : { positiveSalvage: 10 * n, negativeSalvage: -10 * n }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaSalvageYinYang.png'
   },
-  blueberries: {
-    costFunction: (level: number, _baseCost: number) => [100000, 1400000, 3000000, 3250000, 3500000][level] ?? 0,
+  freeObtainiumUpgrades: {
+    label: 'Weird Science',
+    costFunction: (level: number, _cpl: number) => [1500, 4500, 13500, 40500, 121500][level] ?? 0,
     maxLevel: 5,
-    costPerLevel: 1e5,
+    costPerLevel: 1,
     effects: (n: number) => {
       return {
-        blueberries: n
+        levels: n
       }
-    }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeObtainiumUpgrades.png'
+  },
+  // Row 4
+  freeLevelsRow4: {
+    label: 'Row 4 Upgrade Levels',
+    costPerLevel: 5000,
+    maxLevel: 5,
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
+    effects: (n: number) => {
+      return {
+        freeLevels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow4.png'
+  },
+  redAmbrosiaCubeImprover: {
+    label: 'Hire Red Ambrosia Artisans',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 20,
+    costPerLevel: 100,
+    effects: (n: number) => {
+      return {
+        extraExponent: 0.01 * n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedAmbrosiaCubeImprover.png'
+  },
+  infiniteShopUpgrades: {
+    label: 'Red Infinity Shop Voucher',
+    costFunction: (n: number, cpl: number) => cpl + 100 * n,
+    maxLevel: 40,
+    costPerLevel: 200,
+    effects: (n: number) => {
+      return {
+        freeLevels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaInfiniteShopLevels.png'
+  },
+  redAmbrosiaAccelerator: {
+    label: 'Red-Blue Ultrafusion',
+    costFunction: (n: number, cpl: number) => cpl + n * 0,
+    maxLevel: 100,
+    costPerLevel: 1000,
+    effects: (n: number) => {
+      return {
+        ambrosiaTimePerRedAmbrosia: 0.02 * n + 1 * +(n > 0)
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaAccelerator.png'
+  },
+  freeCubeUpgrades: {
+    label: `Livin' in a Box`,
+    costFunction: (level: number, _cpl: number) => [10000, 30000, 90000, 270000, 810000][level] ?? 0,
+    maxLevel: 5,
+    costPerLevel: 1,
+    effects: (n: number) => {
+      return {
+        levels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeCubeUpgrades.png'
+  },
+  // Row 5
+  viscount: {
+    label: 'Viscount of Ruby Guy',
+    costPerLevel: 99999,
+    maxLevel: 1,
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    effects: (n: number) => {
+      return {
+        roleUnlock: n > 0,
+        quarkBonus: 1 + 0.1 * n,
+        luckBonus: 125 * n,
+        redLuckBonus: 25 * n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaTutorial.png'
+  },
+  freeLevelsRow5: {
+    label: 'Row 5 Upgrade Levels',
+    costPerLevel: 50000,
+    maxLevel: 5,
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
+    effects: (n: number) => {
+      return {
+        freeLevels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow5.png'
+  },
+  conversionImprovement3: {
+    label: 'Luck Converter III',
+    costFunction: (n: number, cpl: number) => cpl * Math.pow(10, n),
+    maxLevel: 2,
+    costPerLevel: 10000,
+    effects: (n: number) => {
+      return {
+        conversionImprovement: -n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaConversionImprovement3.png'
+  },
+  blueberryGenerationSpeed2: {
+    label: 'The Sands of Time II',
+    costPerLevel: 8000,
+    maxLevel: 250,
+    costFunction: (n: number, cpl: number) => cpl + 0 * n,
+    effects: (n: number) => {
+      const val = 1 + n / 1000
+      return {
+        blueberryGenerationSpeed: val
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaBlueberryGenerationSpeed.png'
+  },
+  regularLuck2: {
+    label: 'Ossified Blueberry Tactics II',
+    costPerLevel: 8000,
+    maxLevel: 250,
+    costFunction: (n: number, cpl: number) => cpl + 0 * n,
+    effects: (n: number) => {
+      return {
+        ambrosiaLuck: 2 * n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRegularLuck.png'
+  },
+  freeSpeedUpgrades: {
+    label: 'The Distance',
+    costFunction: (level: number, _cpl: number) => [15000, 45000, 135000, 405000, 1215000][level] ?? 0,
+    maxLevel: 5,
+    costPerLevel: 1,
+    effects: (n: number) => {
+      return {
+        levels: n
+      }
+    },
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaFreeSpeedUpgrades.png'
   }
 }
 

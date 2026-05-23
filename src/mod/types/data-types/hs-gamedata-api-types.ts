@@ -524,10 +524,12 @@ export interface CachedValue {
 }
 
 export interface RedAmbrosiaUpgradeCalculationConfig<K extends keyof RedAmbrosiaUpgradeRewards> {
+    label: string,
     costPerLevel: number,
     maxLevel: number,
     costFunction: (n: number, cpl: number) => number,
-    effects: (n: number, gameData?: GameData) => RedAmbrosiaUpgradeRewards[K]
+    effects: (n: number, gameData?: GameData) => RedAmbrosiaUpgradeRewards[K],
+    url: string
 }
 
 export type RedAmbrosiaUpgradeRewards = {
