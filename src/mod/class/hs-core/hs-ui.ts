@@ -38,6 +38,7 @@ export class HSUI extends HSModule {
     #uiPanelCloseBtn?: HTMLDivElement;
     #uiPanelMinimizeBtn?: HTMLDivElement;
     #uiPanelOpenBtn?: HTMLDivElement;
+    #uiQuickAccessMenu?: HTMLDivElement;
 
     #loggerElement?: HTMLElement;
     #logClearBtn?: HTMLButtonElement;
@@ -321,6 +322,9 @@ export class HSUI extends HSModule {
         this.#uiPanelOpenBtn.style.display = 'none';
 
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
+            if (this.#uiQuickAccessMenu) {
+                this.#uiQuickAccessMenu.style.display = 'none';
+            }
             if (HSUI.#modPanelOpen && this.#uiPanel) {
                 await this.#uiPanel.transition({ opacity: 0 });
                 HSUI.#modPanelOpen = false;
@@ -355,6 +359,7 @@ export class HSUI extends HSModule {
         if (!this.#uiPanelOpenBtn) return;
 
         const quickMenu = this.#buildQuickAccessMenuContainer();
+        this.#uiQuickAccessMenu = quickMenu;
         const quickbarsSubmenu = this.#buildQuickbarsSubmenu();
         const quickbarsBtn     = this.#buildQuickbarsButton();
         const autoSingBtn     = this.#buildQuickAccessButton('autosing',   '▶', 'Start Auto-Sing (S256+)', () => this.#toggleAutoSing());

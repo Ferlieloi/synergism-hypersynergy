@@ -1400,8 +1400,7 @@ export class HSHeaterOptimizer {
             let tableAmb    = mergeTables(tableCache.tableLuck4, tableSpeed, "amb");
             let tableRLuck2 = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rAmb");
             let tableRAmb   = mergeTables(tableAmb, tableRLuck2, "rAmb");
-            tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "rAmb");
-
+            tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb");
             let tableBrickOfLead = generateTable(["ambrosiaBrickOfLead"], "mLuck");
             loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
             let optLoadout = new Loadout(maxLoadout);
