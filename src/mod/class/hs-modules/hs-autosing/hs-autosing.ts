@@ -439,14 +439,13 @@ export class HSAutosing extends HSModule {
 
         this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc);
 
-        const exposureMsg = `Exposure status:
-            stageFunc: ${!!this.#stageFunc},
+        const exposureMsg = `Exposure status: ${this.#isExposureReady}
+            (stageFunc: ${!!this.#stageFunc},
             exposedPlayer: ${!!this.#exposedPlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
-            autoConfirmPatched: ${isAutoConfirmPatched},
-            ? isExposureReady: ${this.#isExposureReady}.`;
+            autoConfirmPatched: ${isAutoConfirmPatched})`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }

@@ -56,8 +56,7 @@
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "ui",
-      "controlPage": "ui",
-      "controlEnabledId": "hs-setting-auto-confirm-btn"
+      "controlPage": "ui"
     }
   },
   "hiddenVanillaTabs": {

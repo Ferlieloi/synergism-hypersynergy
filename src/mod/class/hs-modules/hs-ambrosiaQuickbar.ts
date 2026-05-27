@@ -379,7 +379,6 @@ export class HSAmbrosiaQuickbar {
 
         HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
         await HSUtils.hiddenAction(async () => { realButton.click(); });
-        this.host.updateActiveLoadout(slotEnum);
     }
 
     async showQuickBar() {

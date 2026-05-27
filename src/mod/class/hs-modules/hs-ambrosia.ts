@@ -50,6 +50,7 @@ export class HSAmbrosia extends HSModule
     #blueberryToggleModeButton: HTMLButtonElement | null = null;
     #persistentAmbrosiaLevelsToggleButton: HTMLButtonElement | null = null;
     #loadoutContainerClickHandler?: (e: MouseEvent) => Promise<void>;
+    #isLoadoutClickHandlerAttached = false;
     #persistentAmbrosiaLevelsToggleHandler?: (event: Event) => void;
     #isAmbrosiaTabActive = false;
     #state = {
@@ -145,6 +146,7 @@ export class HSAmbrosia extends HSModule
         HSLogger.log(`Initializing HSAmbrosia module`, this.context);
 
         await this.#cacheDomRefs();
+        this.#attachLoadoutClickHandler();
 
         await this.loadState();
 
@@ -211,22 +213,28 @@ export class HSAmbrosia extends HSModule
 
     #attachAmbrosiaTabEvents() {
         if (this.#loadoutContainer) {
-            this.#loadoutContainerClickHandler ??= this.#onLoadoutClick.bind(this);
-            const handler = this.#loadoutContainerClickHandler;
-            this.#loadoutContainer.delegateEventListener('click', '.blueberryLoadoutSlot', handler);
+            this.#attachLoadoutClickHandler();
         }
 
         void this.#hookPersistentAmbrosiaLevelsToggleButton();
     }
 
     #detachAmbrosiaTabEvents() {
-        if (this.#loadoutContainer && this.#loadoutContainerClickHandler) {
-            this.#loadoutContainer.removeDelegateEventListener('click', '.blueberryLoadoutSlot', this.#loadoutContainerClickHandler);
-        }
+        // The loadout click handler stays attached even when the Ambrosia tab is hidden.
+        // Persistent quickbar clicks rely on the original loadout click event to update active loadout state.
 
         if (this.#persistentAmbrosiaLevelsToggleButton && this.#persistentAmbrosiaLevelsToggleHandler) {
             this.#persistentAmbrosiaLevelsToggleButton.removeEventListener('click', this.#persistentAmbrosiaLevelsToggleHandler);
         }
+    }
+
+    #attachLoadoutClickHandler() {
+        if (!this.#loadoutContainer || this.#isLoadoutClickHandlerAttached) return;
+
+        this.#loadoutContainerClickHandler ??= this.#onLoadoutClick.bind(this);
+        const handler = this.#loadoutContainerClickHandler;
+        this.#loadoutContainer.delegateEventListener('click', '.blueberryLoadoutSlot', handler);
+        this.#isLoadoutClickHandlerAttached = true;
     }
 
     async #onLoadoutClick(e: MouseEvent) {
