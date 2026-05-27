@@ -556,8 +556,6 @@ export class HSGameData extends HSModule {
         if (!this.#singularityChallengeButtons)
             this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
 
-
-
         HSLogger.info(`GDS = ON`, this.context);
         this.#turboEnabled = true;
 

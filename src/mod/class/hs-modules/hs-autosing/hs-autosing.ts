@@ -424,7 +424,7 @@ export class HSAutosing extends HSModule {
         this.#exposedPlayer         = HSGlobal.exposedPlayer                    ?? null;
         this.#stageFunc             = (window as any).__HS_synergismStage       ?? null;
         this.#getMaxChallengesFunc  = (window as any).__HS_getMaxChallenges     ?? null;
-        const isAutoConfirmPatched  = (window as any).__HS_AUTO_CONFIRM_PATCHED ?? false;
+        const isAutoConfirmPatched  = HSUtils.cacheAutoConfirmPatchState();
         const isAfterTackHooked     = HSUtils.cacheAfterTackHook();
 
         // We need either __HS_AUTO_CONFIRM or startDialogWatcher

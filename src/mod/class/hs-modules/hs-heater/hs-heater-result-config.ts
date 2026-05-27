@@ -27,17 +27,23 @@ const HEATER_RESULT_SECTION_CONFIG: Record<HeaterResultSectionId, HeaterResultSe
         effectHeader: "Effect",
         order: 0,
     },
+    obtOff: {
+        title: "Obtainium & Offering Loadouts",
+        showP4x4: false,
+        effectHeader: "Effect",
+        order: 1,
+    },
     p4x4: {
         title: "p4x4 (pre-AoAG) Loadouts",
         showP4x4: true,
         effectHeader: "Effect",
-        order: 1,
+        order: 2,
     },
     hybrid: {
         title: "Hybrid Loadouts",
         showP4x4: false,
         effectHeader: "Oct Effect",
-        order: 2,
+        order: 3,
     },
 };
 
@@ -74,18 +80,13 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
     },
     obt: {
         label: "Obtainium",
-        section: "common",
+        section: "obtOff",
         icon: "Pictures/Default/BlueberryObtainium.png",
     },
     off: {
         label: "Offering",
-        section: "common",
+        section: "obtOff",
         icon: "Pictures/Default/BlueberryOffering.png",
-    },
-    voucher: {
-        label: "Vouchers",
-        section: "common",
-        icon: "Pictures/Default/BlueberryInfiniteShopUpgrades2.png",
     },
     hyperflux: {
         label: "Hyperflux (H0–H7)",
@@ -171,7 +172,6 @@ export const HEATER_BRANCH_DEFINITIONS = [
     { id: "cubes",     label: "3-7D Cubes",                  resultKeys: ["cubes"],                   optionKey: "calculateCubes" },
     { id: "oct",       label: "Octeracts",                   resultKeys: ["oct"],                     optionKey: "calculateOct" },
     { id: "obtOff",    label: "Obtainium + Offering",        resultKeys: ["obt", "off"],              optionKey: "calculateOff" },
-    { id: "voucher",   label: "Vouchers",                    resultKeys: ["voucher"],                 optionKey: "calculateVoucher" },
     { id: "hyperflux", label: "Hyperflux (p4x4, pre-AoAG)",  resultKeys: ["hyperflux"],               optionKey: "calculateHyperflux" },
     { id: "sr",        label: "Max SR",                      resultKeys: ["sr1", "sr2"],              optionKey: "calculateSR" },
     { id: "gen",       label: "Amb Generation + Oct",        resultKeys: ["gen"],                     optionKey: "calculateGen" },

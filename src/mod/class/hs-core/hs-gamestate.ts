@@ -56,6 +56,21 @@ export class HSGameState extends HSModule {
         PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
     };
 
+    #combinedViewSubscriptions: Map<string, {
+        mainView: MAIN_VIEW;
+        subView: SINGULARITY_VIEW;
+        mainSubscriptionId?: string;
+        subSubscriptionId?: string;
+        lastActive: boolean;
+        callback: (isActive: boolean, previousMain: GameView<MAIN_VIEW>, previousSub: GameView<SINGULARITY_VIEW>, currentMain: GameView<MAIN_VIEW>, currentSub: GameView<SINGULARITY_VIEW>) => void;
+    }> = new Map();
+
+    #predicateSubscriptions: Map<string, {
+        predicate: () => boolean;
+        lastActive: boolean;
+        callback: (active: boolean) => void;
+    }> = new Map();
+
     #mainUIViews: string[] = [
         'buildings',
         'upgrades',
@@ -112,6 +127,7 @@ export class HSGameState extends HSModule {
                     });
 
                     this.#resolveSubViewChanges(uiView.getId());
+                    self.#evaluatePredicateSubscriptions();
                 }
             },
             {
@@ -173,6 +189,7 @@ export class HSGameState extends HSModule {
                             HSLogger.error(`Error when trying to call subtab VIEW change subscriber callback: ${e}`, self.context);
                         }
                     });
+                    self.#evaluatePredicateSubscriptions();
                 },
                 {
                     characterData: false,
@@ -208,6 +225,132 @@ export class HSGameState extends HSModule {
         } else {
             HSLogger.warn(`Subscription ID ${subscriptionId} not found for view key ${viewKey}`, this.context);
         }
+    }
+
+    subscribeForView(
+        mainView: MAIN_VIEW,
+        subView: SINGULARITY_VIEW,
+        callback: (isActive: boolean) => void
+    ): string | undefined {
+        return this.subscribeViewPair(
+            mainView,
+            subView,
+            (isActive) => callback(isActive)
+        );
+    }
+
+    unsubscribeForView(subscriptionId: string) {
+        this.unsubscribeViewPair(subscriptionId);
+    }
+
+    subscribeViewPair(
+        mainView: MAIN_VIEW,
+        subView: SINGULARITY_VIEW,
+        callback: (isActive: boolean, previousMain: GameView<MAIN_VIEW>, previousSub: GameView<SINGULARITY_VIEW>, currentMain: GameView<MAIN_VIEW>, currentSub: GameView<SINGULARITY_VIEW>) => void
+    ): string | undefined {
+        const id = HSUtils.uuidv4();
+
+        const combined = {
+            mainView,
+            subView,
+            mainSubscriptionId: undefined as string | undefined,
+            subSubscriptionId: undefined as string | undefined,
+            lastActive: false,
+            callback,
+        };
+
+        const evaluate = () => {
+            const previousMain = this.#viewStates.MAIN_VIEW.previousView as GameView<MAIN_VIEW>;
+            const currentMain = this.#viewStates.MAIN_VIEW.currentView as GameView<MAIN_VIEW>;
+            const previousSub = this.#viewStates.SINGULARITY_VIEW.previousView as GameView<SINGULARITY_VIEW>;
+            const currentSub = this.#viewStates.SINGULARITY_VIEW.currentView as GameView<SINGULARITY_VIEW>;
+            const isActive = currentMain.getId() === mainView && currentSub.getId() === subView;
+
+            if (isActive !== combined.lastActive) {
+                combined.lastActive = isActive;
+                try {
+                    callback(isActive, previousMain, previousSub, currentMain, currentSub);
+                } catch (e) {
+                    HSLogger.error(`Error when trying to call combined view subscription callback: ${e}`, this.context);
+                }
+            }
+        };
+
+        const mainSubscriptionId = this.subscribeGameStateChange('MAIN_VIEW', () => evaluate());
+        const subSubscriptionId = this.subscribeGameStateChange('SINGULARITY_VIEW', () => evaluate());
+
+        combined.mainSubscriptionId = mainSubscriptionId;
+        combined.subSubscriptionId = subSubscriptionId;
+        this.#combinedViewSubscriptions.set(id, combined);
+
+        evaluate();
+        return id;
+    }
+
+    unsubscribeViewPair(subscriptionId: string) {
+        const combined = this.#combinedViewSubscriptions.get(subscriptionId);
+        if (!combined) {
+            HSLogger.warn(`Combined subscription ID ${subscriptionId} not found`, this.context);
+            return;
+        }
+
+        if (combined.mainSubscriptionId) {
+            this.unsubscribeGameStateChange('MAIN_VIEW', combined.mainSubscriptionId);
+        }
+        if (combined.subSubscriptionId) {
+            this.unsubscribeGameStateChange('SINGULARITY_VIEW', combined.subSubscriptionId);
+        }
+
+        this.#combinedViewSubscriptions.delete(subscriptionId);
+    }
+
+    subscribeWhen(
+        predicate: () => boolean,
+        callback: (active: boolean) => void
+    ): string | undefined {
+        const id = HSUtils.uuidv4();
+        const lastActive = predicate();
+
+        this.#predicateSubscriptions.set(id, {
+            predicate,
+            lastActive,
+            callback,
+        });
+
+        try {
+            callback(lastActive);
+        } catch (e) {
+            HSLogger.error(`Error when trying to call predicate subscription callback: ${e}`, this.context);
+        }
+
+        return id;
+    }
+
+    unsubscribeWhen(subscriptionId: string) {
+        if (!this.#predicateSubscriptions.delete(subscriptionId)) {
+            HSLogger.warn(`Predicate subscription ID ${subscriptionId} not found`, this.context);
+        }
+    }
+
+    #evaluatePredicateSubscriptions() {
+        this.#predicateSubscriptions.forEach((entry, id) => {
+            let active: boolean;
+            try {
+                active = entry.predicate();
+            } catch (e) {
+                HSLogger.error(`Error evaluating predicate subscription ${id}: ${e}`, this.context);
+                return;
+            }
+
+            if (active !== entry.lastActive) {
+                entry.lastActive = active;
+                try {
+                    entry.callback(active);
+                } catch (e) {
+                    HSLogger.error(`Error when trying to call predicate subscription callback: ${e}`, this.context);
+                }
+            }
+        });
     }
 
     async #resolveSubViewChanges(mainViewId: MAIN_VIEW) {

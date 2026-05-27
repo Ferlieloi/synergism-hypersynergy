@@ -223,14 +223,17 @@ export class HSAmbrosiaQuickbar {
 
             const buttonHandler = async (e: Event) => {
                 const mouseEvent = e as MouseEvent;
+                // Alt+Click enters icon pick mode
                 if (mouseEvent.altKey) {
                     mouseEvent.preventDefault();
                     mouseEvent.stopPropagation();
                     this.#iconPicker.start(buttonId);
                     return;
                 }
+                // Regular click
                 await this.onQuickBarClick(e, buttonId);
             };
+            // Right-click clears the custom icon for the slot
             const contextMenuHandler = (e: Event) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -265,8 +268,8 @@ export class HSAmbrosiaQuickbar {
         }
     }
 
-    async refreshQuickbarIcons() {
-        const ambQuickBar = await this.getQuickbarElement();
+    refreshQuickbarIcons() {
+        const ambQuickBar = this.getQuickbarElement();
 
         if (ambQuickBar) {
             const quickbarSlots = ambQuickBar.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLElement>;
@@ -300,17 +303,21 @@ export class HSAmbrosiaQuickbar {
         }
     }
 
-    async updateQuickBar() {
-        await HSQuickbarManager.getInstance().whenSectionInjected("ambrosia");
+    updateQuickBar() {
+        const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
+        if (!isInjected) { HSLogger.warn("updateQuickBar() fail: quickbar not injected", this.context); return; }
+
         const quickbarSetting = HSSettings.getSetting("ambrosiaQuickBar") as HSSetting<boolean>;
 
         if (quickbarSetting.isEnabled()) {
-            await this.refreshQuickbarIcons();
+            this.refreshQuickbarIcons();
         }
     }
 
-    public async getQuickbarElement(): Promise<HTMLElement | null> {
-        await this.ensureInjectedQuickbar();
+    public getQuickbarElement(): HTMLElement | null {
+        const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
+        if (!isInjected) { HSLogger.warn("getQuickbarElement() fail: quickbar not injected", this.context); return null; }
+
         const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
         return groupWrapper?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement | null;
     }
@@ -336,7 +343,7 @@ export class HSAmbrosiaQuickbar {
         return Array.from(loadoutContainer.querySelectorAll('.blueberryLoadoutSlot')) as HTMLButtonElement[];
     }
 
-    public async syncActiveSlot(slotNumber: number): Promise<void> {
+    public syncActiveSlot(slotNumber: number): void {
         const originalButtons = this.getCurrentOriginalLoadoutButtons();
         originalButtons.forEach((button) => button.classList.remove('hs-rainbow-border'));
 
@@ -348,7 +355,7 @@ export class HSAmbrosiaQuickbar {
             HSLogger.warn(`No active slot found in original quickbar for slot ${slotNumber}`, this.context);
         }
 
-        const quickBar = await this.getQuickbarElement();
+        const quickBar = this.getQuickbarElement();
         if (!quickBar) { HSLogger.debug(() => 'Ambrosia quickbar not injected yet; original bar was synced only', this.context); return; }
 
         const clonedSlots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
@@ -367,8 +374,12 @@ export class HSAmbrosiaQuickbar {
         const realButton = this.#originalButtonRefs.get(buttonId) ?? document.getElementById(buttonId) as HTMLButtonElement | null;
         if (!realButton) { HSLogger.warn(`Could not find real button for ${buttonId}`, this.context); return; }
 
+        const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(buttonId);
+        if (!slotEnum) { HSLogger.warn(`Could not resolve Ambrosia slot enum for ${buttonId}`, this.context); return; }
+
         HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
         await HSUtils.hiddenAction(async () => { realButton.click(); });
+        this.host.updateActiveLoadout(slotEnum);
     }
 
     async showQuickBar() {
@@ -381,8 +392,8 @@ export class HSAmbrosiaQuickbar {
         if (wrapper) {
             wrapper.style.display = "inline-flex";
             HSUI.injectStyle(this.host.getQuickbarCSS(), this.host.getQuickbarCSSId());
-            await this.refreshQuickbarIcons();
-            await this.host.refreshActiveLoadoutFromState();
+            this.refreshQuickbarIcons();
+            this.host.refreshActiveLoadoutFromState();
         } else {
             HSLogger.warn("Could not find quickbar wrapper", this.context);
         }

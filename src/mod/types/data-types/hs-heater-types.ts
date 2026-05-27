@@ -108,7 +108,7 @@ export type HeaterResultSheetRowMatrix = HeaterResultSheetRow[];
 export type RowBasedResultKey = import("../../class/hs-modules/hs-heater/hs-heater-result-config").RowBasedResultKey;
 export type SingleResultKey = Exclude<HeaterResultArrayKey, RowBasedResultKey>;
 export type HeaterTypeSemanticId = 'none' | SingleResultKey | `${RowBasedResultKey}:${number}`;
-export type HeaterResultSectionId = 'common' | 'p4x4' | 'hybrid';
+export type HeaterResultSectionId = 'common' | 'obtOff' | 'p4x4' | 'hybrid';
 
 export type HeaterRedAmbUpgradeEffectName =
     | 'ossifiedTactics'

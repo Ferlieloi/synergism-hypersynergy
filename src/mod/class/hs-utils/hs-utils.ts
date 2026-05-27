@@ -21,9 +21,29 @@ export class HSUtils {
     static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
-    static tackTime = 5;
+    static dialogWatcherTime = 15; // More than that ?
+    static tackTime = 6; // for bookmark/steam (no tack hook)... Assuming a bit of lag... ?
 
+    static #autoConfirmPatchState: boolean | null = null;
     static #_onAfterTack: ((fn: () => void) => void) | null = null;
+
+    static cacheAutoConfirmPatchState(): boolean {
+        const patched = (window as any).__HS_AUTO_CONFIRM_PATCHED ?? false;
+        HSUtils.#autoConfirmPatchState = patched;
+        return patched;
+    }
+
+    static isAutoConfirmPatched(): boolean {
+        return HSUtils.#autoConfirmPatchState ?? HSUtils.cacheAutoConfirmPatchState();
+    }
+
+    static setAutoConfirm(value: boolean): void {
+        (window as any).__HS_AUTO_CONFIRM = value;
+    }
+
+    static disableAutoConfirmForDialogAutomation(): void {
+        HSUtils.setAutoConfirm(false);
+    }
 
     // Reusable MessageChannel for sub-millisecond event-loop yielding.
     // Queue-based so concurrent yields (if ever) work correctly.
@@ -603,6 +623,8 @@ export class HSUtils {
         if (this.#dialogWatcherInterval !== null) {
             return;
         }
+        HSUtils.disableAutoConfirmForDialogAutomation();
+        HSLogger.debug(() => `Dialog watcher started, triggers every ${this.dialogWatcherTime}ms`, HSUtils.#context);
 
         let confirmWrapper: HTMLElement | null = null;
         let alertWrapper: HTMLElement | null = null;
@@ -622,9 +644,9 @@ export class HSUtils {
                 }
                 if (okConfirm) {
                     okConfirm.click();
+                    HSLogger.debug(() => `Confirm dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
-
             // Check for alert dialog
             if (!alertWrapper || !alertWrapper.isConnected) {
                 alertWrapper = document.getElementById('alertWrapper');
@@ -635,8 +657,10 @@ export class HSUtils {
                 }
                 if (okAlert) {
                     okAlert.click();
+                    HSLogger.debug(() => `Alert dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
+            // Check for prompt dialog
             if (!promptWrapper || !promptWrapper.isConnected) {
                 promptWrapper = document.getElementById("promptWrapper");
             }
@@ -646,10 +670,11 @@ export class HSUtils {
                 }
                 if (okPrompt) {
                     okPrompt.click();
+                    HSLogger.debug(() => `Prompt dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
 
-        }, this.tackTime); // Check every 50ms for fast response
+        }, this.dialogWatcherTime); // Check every 10ms for fast response
     }
 
     static async stopDialogWatcher(): Promise<void> {
@@ -711,10 +736,73 @@ export class HSUtils {
                     HSLogger.debug(() => 'Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
                     resolve();
                 }
-            }, HSUtils.tackTime);
+            }, HSUtils.dialogWatcherTime);
         });
     }
+/*
+    static async closeExpectedDialogs(expectedClosures: number, timeoutMs = 500): Promise<boolean> {
+        HSUtils.disableAutoConfirmForDialogAutomation();
+        HSLogger.debug(() => `entering closeExpectedDialogs(expectedClosures=${expectedClosures}, timeoutMs=${timeoutMs})`, HSUtils.#context);
 
+        let closedCount = 0;
+        let prevConfirmOpen = false;
+        let prevAlertOpen = false;
+        let prevPromptOpen = false;
+        let resolved = false;
+
+        return new Promise((resolve) => {
+            let timeoutId: number | null = null;
+            const intervalId = window.setInterval(() => {
+                const confirmWrapper = document.getElementById('confirmWrapper');
+                const alertWrapper = document.getElementById('alertWrapper');
+                const promptWrapper = document.getElementById('promptWrapper');
+
+                const confirmOpen = confirmWrapper?.style.display === 'block';
+                const alertOpen = alertWrapper?.style.display === 'block';
+                const promptOpen = promptWrapper?.style.display === 'block';
+
+                if (confirmOpen && !prevConfirmOpen) {
+                    document.getElementById('ok_confirm')?.click();
+                }
+                if (alertOpen && !prevAlertOpen) {
+                    document.getElementById('ok_alert')?.click();
+                }
+                if (promptOpen && !prevPromptOpen) {
+                    document.getElementById('ok_prompt')?.click();
+                }
+
+                if (prevConfirmOpen && !confirmOpen) closedCount++;
+                if (prevAlertOpen && !alertOpen) closedCount++;
+                if (prevPromptOpen && !promptOpen) closedCount++;
+
+                prevConfirmOpen = confirmOpen;
+                prevAlertOpen = alertOpen;
+                prevPromptOpen = promptOpen;
+
+                if (closedCount >= expectedClosures) {
+                    if (!resolved) {
+                        resolved = true;
+                        window.clearInterval(intervalId);
+                        if (timeoutId !== null) {
+                            window.clearTimeout(timeoutId);
+                        }
+                        HSLogger.debug(() => `closeExpectedDialogs resolved successfully after ${closedCount} closures`, HSUtils.#context);
+                        resolve(true);
+                    }
+                }
+            }, HSUtils.dialogWatcherTime);
+
+            timeoutId = window.setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    window.clearInterval(intervalId);
+                    HSLogger.warn(`closeExpectedDialogs timed out after ${timeoutMs}ms before reaching expected ${expectedClosures} closure(s); only ${closedCount} were closed.`, HSUtils.#context);
+                    resolve(false);
+                }
+            }, timeoutMs);
+        });
+    }
+*/
     static base64WithCRLF(
         base64: string,
         chunkSize = 49000

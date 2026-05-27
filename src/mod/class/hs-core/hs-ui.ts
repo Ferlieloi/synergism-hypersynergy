@@ -218,11 +218,15 @@ export class HSUI extends HSModule {
         if (this.#uiPanelMinimizeBtn) {
             this.#uiPanelMinimizeBtn.addEventListener('click', () => {
                 const panelBodies = this.#uiPanel!.querySelectorAll('.hs-panel-body') as NodeListOf<HTMLElement>;
+                const panelTabs = this.#uiPanel!.querySelector('.hs-panel-tabs') as HTMLElement | null;
+                const panelResizer = this.#uiPanel!.querySelector('.hs-resizer') as HTMLElement | null;
                 const isMinimized = Array.from(panelBodies).some(body => body.style.display === 'none');
                 
                 if (isMinimized) {
-                    // Restore: show all panel bodies
+                    // Restore: show all panel bodies, tabs, and resizer
                     panelBodies.forEach(body => body.style.display = '');
+                    if (panelTabs) panelTabs.style.display = '';
+                    if (panelResizer) panelResizer.style.display = '';
 
                     const savedWidth = this.#uiPanel!.getAttribute('data-saved-width');
                     const savedHeight = this.#uiPanel!.getAttribute('data-saved-height');
@@ -239,8 +243,10 @@ export class HSUI extends HSModule {
                     if (panelRect.left < 0) {
                         this.#uiPanel!.style.left = '0px';
                     }
-                    // Minimize: hide all panel bodies
+                    // Minimize: hide all panel bodies, tabs, and resizer
                     panelBodies.forEach(body => body.style.display = 'none');
+                    if (panelTabs) panelTabs.style.display = 'none';
+                    if (panelResizer) panelResizer.style.display = 'none';
 
                     const computedPanelStyle = window.getComputedStyle(this.#uiPanel!);
                     this.#uiPanel!.setAttribute('data-saved-width', computedPanelStyle.width);

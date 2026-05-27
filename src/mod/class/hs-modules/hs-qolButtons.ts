@@ -173,6 +173,8 @@ export class HSQOLButtons extends HSModule {
         }
     };
 
+    // TODO: Make the 'add10' feature a 'addX' instead,
+    // with X being editable by the user (by right-clicking the button or something...)
     async #injectAdd10Button() {
         if (document.getElementById('hs-add-10-btn')) return;
 
@@ -191,6 +193,7 @@ export class HSQOLButtons extends HSModule {
         add10Btn.textContent = 'Add x10';
 
         add10Btn.addEventListener('click', async () => {
+            // This click triggers the Auto-Loadout feature (if enabled) with HSAmbrosia.#addCodeButtonHandler
             addBtn.click();
             const input = document.getElementById('prompt_text') as HTMLInputElement | null;
             if (!input) return;
@@ -200,6 +203,7 @@ export class HSQOLButtons extends HSModule {
             HSUtils.startDialogWatcher();
             await HSUtils.sleep(3);
             HSUtils.stopDialogWatcher();
+            // TODO: Loadout restoration should happen here
         });
 
         // Insert the new button next to the existing buttons.

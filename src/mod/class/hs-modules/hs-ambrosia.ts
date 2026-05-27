@@ -2,10 +2,10 @@ import { HSGameDataSubscriber, HSModuleOptions, HSPersistable } from "../../type
 import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../types/data-types/hs-gamedata-api-types";
 import { AmbrosiaUpgradeData, AmbrosiaUpgrades, GameData } from "../../types/data-types/hs-player-savedata";
 import { AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
-import { MAIN_VIEW, SINGULARITY_VIEW, VIEW_TYPE } from "../../types/module-types/hs-gamestate-types";
+import { MAIN_VIEW, SINGULARITY_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameData } from "../hs-core/gds/hs-gamedata";
-import { GameView, HSGameState } from "../hs-core/hs-gamestate";
+import { HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSQuickbarManager } from "./hs-qolQuickbarManager";
 import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
@@ -33,12 +33,12 @@ export class HSAmbrosia extends HSModule
     implements HSPersistable, HSGameDataSubscriber {
 
     gameDataSubscriptionId?: string;
-    #gameStateMainViewSubscriptionId?: string;
-    #gameStateSubViewSubscriptionId?: string;
+    #ambrosiaViewSubscriptionId?: string;
 
     #loadoutsSlots: HTMLElement[] = [];
 
     #loadoutContainer: HTMLElement | null = null;
+    #blueberryUpgradeContainer: HTMLElement | null = null;
     #pageHeader: HTMLElement | null = null;
 
     #addCodeButton: HTMLButtonElement | null = null;
@@ -48,10 +48,12 @@ export class HSAmbrosia extends HSModule
     #importBlueberriesButton: HTMLButtonElement | null = null;
     #importBlueberriesInput: HTMLInputElement | null = null;
     #blueberryToggleModeButton: HTMLButtonElement | null = null;
-    #showCurrAmbrosiaUpgradesButton: HTMLButtonElement | null = null;
+    #persistentAmbrosiaLevelsToggleButton: HTMLButtonElement | null = null;
+    #loadoutContainerClickHandler?: (e: MouseEvent) => Promise<void>;
+    #persistentAmbrosiaLevelsToggleHandler?: (event: Event) => void;
+    #isAmbrosiaTabActive = false;
     #state = {
-        activeLoadout: null as AMBROSIA_LOADOUT_SLOT | null,
-        showCurrentLevelsPersistent: true
+        persistentAmbrosiaLevelsDisplayEnabled: true
     };
     #debugElement?: HTMLDivElement;
 
@@ -77,6 +79,7 @@ export class HSAmbrosia extends HSModule
     #_delegateTimeHandler?: (e: Event) => Promise<void>;
 
     #isIdleSwapEnabled = false;
+    #isIdleSwapActive = false;
     #blueAmbrosiaProgressBar?: HTMLDivElement;
     #redAmbrosiaProgressBar?: HTMLDivElement;
     #holdBlueLuckUntilReset = false;
@@ -150,18 +153,18 @@ export class HSAmbrosia extends HSModule
         await this.#createPersistentMinibars();
 
         await this.#injectImportFromClipboardButton();
-        await this.#hookShowCurrAmbrosiaUpgradesButton();
 
-        this.#setupLoadoutContainerEvents();
+        this.#subscribeGameStateViewChanges();
 
         HSSettingsUI.refreshAmbrosiaLoadoutDropdowns();
         this.isInitialized = true;
     }
 
     async #cacheDomRefs() {
-        const [loadoutsSlots, loadoutContainer, pageHeader, addCodeButton, addCodeAllButton, addCodeOneButton, timeCodeButton, importBlueberriesButton, importBlueberriesInput, blueberryToggleModeButton] = await Promise.all([
+        const [loadoutsSlots, loadoutContainer, blueberryUpgradeContainer, pageHeader, addCodeButton, addCodeAllButton, addCodeOneButton, timeCodeButton, importBlueberriesButton, importBlueberriesInput, blueberryToggleModeButton] = await Promise.all([
             HSElementHooker.HookElements('.blueberryLoadoutSlot'),
             HSElementHooker.HookElement('#bbLoadoutContainer'),
+            HSElementHooker.HookElement('#blueberryUpgradeContainer'),
             HSElementHooker.HookElement('header'),
             HSElementHooker.HookElement('#addCode'),
             HSElementHooker.HookElement('#addCodeAll'),
@@ -174,6 +177,7 @@ export class HSAmbrosia extends HSModule
 
         this.#loadoutsSlots = loadoutsSlots;
         this.#loadoutContainer = loadoutContainer;
+        this.#blueberryUpgradeContainer = blueberryUpgradeContainer;
         this.#pageHeader = pageHeader;
         this.#addCodeButton = addCodeButton as HTMLButtonElement;
         this.#addCodeAllButton = addCodeAllButton as HTMLButtonElement;
@@ -205,14 +209,28 @@ export class HSAmbrosia extends HSModule
     // --------------- Loadout Events ---------------
     // ==============================================
 
-    #setupLoadoutContainerEvents() {
-        if (!this.#loadoutContainer) return;
+    #attachAmbrosiaTabEvents() {
+        if (this.#loadoutContainer) {
+            this.#loadoutContainerClickHandler ??= this.#onLoadoutClick.bind(this);
+            const handler = this.#loadoutContainerClickHandler;
+            this.#loadoutContainer.delegateEventListener('click', '.blueberryLoadoutSlot', handler);
+        }
 
-        this.#loadoutContainer.delegateEventListener('click', '.blueberryLoadoutSlot', this.#onLoadoutClick.bind(this));
+        void this.#hookPersistentAmbrosiaLevelsToggleButton();
+    }
+
+    #detachAmbrosiaTabEvents() {
+        if (this.#loadoutContainer && this.#loadoutContainerClickHandler) {
+            this.#loadoutContainer.removeDelegateEventListener('click', '.blueberryLoadoutSlot', this.#loadoutContainerClickHandler);
+        }
+
+        if (this.#persistentAmbrosiaLevelsToggleButton && this.#persistentAmbrosiaLevelsToggleHandler) {
+            this.#persistentAmbrosiaLevelsToggleButton.removeEventListener('click', this.#persistentAmbrosiaLevelsToggleHandler);
+        }
     }
 
     async #onLoadoutClick(e: MouseEvent) {
-        const slotElement = e.target as HTMLButtonElement;
+        const slotElement = (e.target as HTMLElement).closest('.blueberryLoadoutSlot') as HTMLButtonElement | null;
         if (!slotElement) return;
 
         const slotElementId = slotElement.id;
@@ -222,9 +240,7 @@ export class HSAmbrosia extends HSModule
             return;
         }
 
-        if (this.activeLoadout !== slotEnum) {
-            await this.#updateActiveLoadout(slotEnum);
-        }
+        this.updateActiveLoadout(slotEnum);
     }
 
 
@@ -248,15 +264,15 @@ export class HSAmbrosia extends HSModule
         return this.#quickbarCSSId;
     }
 
-    async refreshActiveLoadoutFromState() {
+    refreshActiveLoadoutFromState() {
         const resolvedCurrent = HSAmbrosiaHelper.resolveAmbrosiaLoadout(this.activeLoadout);
         if (resolvedCurrent) {
-            await this.#updateActiveLoadout(resolvedCurrent);
+            this.updateActiveLoadout(resolvedCurrent);
         }
     }
 
-    async updateQuickBar() {
-        await this.quickbar.updateQuickBar();
+    updateQuickBar() {
+        this.quickbar.updateQuickBar();
     }
 
     async showQuickBar() {
@@ -267,10 +283,12 @@ export class HSAmbrosia extends HSModule
         await this.quickbar.hideQuickBar();
     }
 
+    // Never used, and not really any need for it since we want HSAmbrosia basically always ON
     async destroy() {
         await this.quickbar.destroy();
         await this.disableBerryMinibars();
         this.unsubscribeGameDataChanges();
+        this.#unsubscribeGameStateViewChanges();
 
         // Remove style tokens
         HSUI.removeInjectedStyle(this.#minibarCSSId);
@@ -284,6 +302,27 @@ export class HSAmbrosia extends HSModule
     // ==============================================
     // -------- Ambrosia Minibars (Quickbar) --------
     // ==============================================
+
+    async enableBerryMinibars() {
+        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+        if (!groupWrapper) {
+            HSLogger.warn('Could not find group wrapper for minibars', this.context);
+            return;
+        }
+        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
+        if (barWrapper) {
+            barWrapper.style.display = 'block';
+            HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
+            this.subscribeGameDataChanges();
+            this.#berryMinibarsEnabled = true;
+
+            // Restore automation/corruption summary headers when minibars quickbar is enabled.
+            HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
+        } else {
+            HSLogger.warn('Could not find minibar wrapper', this.context);
+        }
+    }
 
     async disableBerryMinibars() {
         await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
@@ -305,27 +344,6 @@ export class HSAmbrosia extends HSModule
 
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
-    }
-
-    async enableBerryMinibars() {
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for minibars', this.context);
-            return;
-        }
-        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-        if (barWrapper) {
-            barWrapper.style.display = 'block';
-            HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
-            this.subscribeGameDataChanges();
-            this.#berryMinibarsEnabled = true;
-
-            // Restore automation/corruption summary headers when minibars quickbar is enabled.
-            HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
-        } else {
-            HSLogger.warn('Could not find minibar wrapper', this.context);
-        }
     }
 
     async #createPersistentMinibars() {
@@ -418,7 +436,7 @@ export class HSAmbrosia extends HSModule
         });
     }
 
-    async #updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
+    updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
         if (!slotEnum) { HSLogger.warn('No slot specified to #updateActiveLoadout', this.context); return; }
 
         // Normalize & validate incoming slot value using helper.
@@ -427,12 +445,13 @@ export class HSAmbrosia extends HSModule
 
         this.activeLoadout = resolvedSlot as AMBROSIA_LOADOUT_SLOT;
 
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+        const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
+        if (!isInjected) { HSLogger.warn("updateActiveLoadout() fail: quickbar not injected", this.context); return; }
 
         const slotNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(resolvedSlot);
         if (!slotNumber) { HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context); return; }
 
-        await this.quickbar.syncActiveSlot(slotNumber);
+        this.quickbar.syncActiveSlot(slotNumber);
 
         HSLogger.debug(() => 'Switched Ambrosia loadout to ' + resolvedSlot, this.context);
     }
@@ -544,7 +563,7 @@ export class HSAmbrosia extends HSModule
             const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(slotId);
             if (!slotEnum) { HSLogger.warn(`No slot enum found for slot ID: ${slotId}`, this.context); return; }
 
-            await this.#updateActiveLoadout(slotEnum);
+            this.updateActiveLoadout(slotEnum);
 
             HSLogger.debug(() => `Initial load - Ambrosia loadout best match: ${bestMatchId} is ${(highestScore * 100).toFixed(1)}% compliant. `, this.context);
         } else if (bestMatchId) {
@@ -555,12 +574,7 @@ export class HSAmbrosia extends HSModule
     }
 
     public getAmbrosiaLoadoutsAmount(): number {
-        if (!this.#loadoutsSlots || this.#loadoutsSlots.length === 0) return 0;
-        return this.#loadoutsSlots.filter((slot) => {
-            if (!slot) return false;
-            if (slot.style.display === 'none') return false;
-            return true;
-        }).length;
+        return this.#loadoutsSlots.filter((slot) => slot.style.display !== 'none').length;
     }
 
     // ==============================================
@@ -568,7 +582,6 @@ export class HSAmbrosia extends HSModule
     // ==============================================
 
     async enableAutoLoadout() {
-        const self = this;
 
         // Use module canonical state instead of the removed setting.
         if (!this.activeLoadout) {
@@ -595,11 +608,11 @@ export class HSAmbrosia extends HSModule
         }
 
         if (!this.#_delegateAddHandler) {
-            this.#_delegateAddHandler = async (e: Event) => { await self.#addCodeButtonHandler(e); };
+            this.#_delegateAddHandler = async (e: Event) => { await this.#addCodeButtonHandler(e); };
         }
 
         if (!this.#_delegateTimeHandler) {
-            this.#_delegateTimeHandler = async (e: Event) => { await self.#timeCodeButtonHandler(e); };
+            this.#_delegateTimeHandler = async (e: Event) => { await this.#timeCodeButtonHandler(e); };
         }
 
         addCodeBtn.removeEventListener('click', this.#_delegateAddHandler, { capture: true });
@@ -641,50 +654,40 @@ export class HSAmbrosia extends HSModule
     }
 
     async #addCodeButtonHandler(e: Event) {
-        const originalLoadout = this.activeLoadout;
-        const originalLoadoutBtn = this.quickbar.getClonedButtonRef(originalLoadout);
+        // const originalLoadout = this.activeLoadout;
+        // const originalLoadoutBtn = this.quickbar.getClonedButtonRef(originalLoadout);
         const addLoadoutSetting = HSSettings.getSetting('autoLoadoutAdd') as HSSelectStringSetting;
 
-        if (originalLoadoutBtn && addLoadoutSetting) {
+        if (addLoadoutSetting) {
             const addLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(addLoadoutSetting.getValue());
             const addLoadoutBtn = this.quickbar.getClonedButtonRef(addLoadout);
             if (!addLoadout || !addLoadoutBtn) { HSLogger.warn('Invalid autoLoadoutAdd setting - cannot resolve addLoadout or loadoutSlot', this.context); return; }
 
-            // Switch to add loadout
             HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
+
+            // We DON'T want any await before that...
+            // This calls hiddenAction via the quickbar click which kills all popups except Prompts
+            // (so 'Add All' and 'Add x1' will be taken care of. And 'Add'/'Add x10' will have the Prompt remaining, and 'Add x10' will handle his own Prompt)
+            // hiddenAction will trigger the loadout switch, then awaits a bit, which will let the game take back control,
+            // the game will handle the loadout switch first, then finally be able to handle the Add click
             addLoadoutBtn.click();
-
-            // Let the game process the click
-            await HSUtils.waitForNextTack(2);
-
-            // Restore loadout
-            if (originalLoadout !== addLoadout) {
-                originalLoadoutBtn.click();
-            }
         }
     }
 
     async #timeCodeButtonHandler(e: Event) {
-        const originalLoadout = this.activeLoadout;
-        const originalLoadoutBtn = this.quickbar.getClonedButtonRef(originalLoadout);
+        // const originalLoadout = this.activeLoadout;
+        // const originalLoadoutBtn = this.quickbar.getClonedButtonRef(originalLoadout);
         const timeLoadoutSetting = HSSettings.getSetting('autoLoadoutTime') as HSSelectStringSetting;
 
-        if (originalLoadoutBtn && timeLoadoutSetting) {
+        if (timeLoadoutSetting) {
             const timeLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(timeLoadoutSetting.getValue());
             const timeLoadoutBtn = this.quickbar.getClonedButtonRef(timeLoadout);
             if (!timeLoadout || !timeLoadoutBtn) { HSLogger.warn('Invalid autoLoadoutTime setting - cannot resolve timeLoadout or loadoutSlot', this.context); return; }
 
-            // Switch to time loadout
             HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
-            timeLoadoutBtn.click();
-            
-            // Let the game process the click
-            await HSUtils.waitForNextTack(2);
 
-            // Restore loadout
-            if (originalLoadout !== timeLoadout) {
-                originalLoadoutBtn.click();
-            }
+            // We DON'T want any await before that... See Add comment above...
+            timeLoadoutBtn.click();
         }
     }
 
@@ -697,8 +700,10 @@ export class HSAmbrosia extends HSModule
         const storageModule = HSModuleManager.getModule('HSStorage') as HSStorage;
 
         if (storageModule) {
-            this.#state.activeLoadout = this.activeLoadout ?? null;
-            storageModule.setData(HSGlobal.HSAmbrosia.storageKey, JSON.stringify(this.#state));
+            const payload = {
+                persistentAmbrosiaLevelsDisplayEnabled: this.#state.persistentAmbrosiaLevelsDisplayEnabled
+            };
+            storageModule.setData(HSGlobal.HSAmbrosia.storageKey, JSON.stringify(payload));
         } else {
             HSLogger.warn(`saveState - Could not find storage module`, this.context);
         }
@@ -723,15 +728,11 @@ export class HSAmbrosia extends HSModule
 
         try {
             if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
-                if (parsedData.activeLoadout) {
-                    this.activeLoadout = HSAmbrosiaHelper.resolveAmbrosiaLoadout(parsedData.activeLoadout);
-                    this.#state.activeLoadout = this.activeLoadout ?? null;
-                } else {
-                    this.activeLoadout = undefined;
-                    this.#state.activeLoadout = null;
+                if ('persistentAmbrosiaLevelsDisplayEnabled' in parsedData) {
+                    this.#state.persistentAmbrosiaLevelsDisplayEnabled = Boolean(parsedData.persistentAmbrosiaLevelsDisplayEnabled);
+                } else if ('permaAmbLevelsDisplayEnabled' in parsedData) {
+                    this.#state.persistentAmbrosiaLevelsDisplayEnabled = Boolean(parsedData.permaAmbLevelsDisplayEnabled);
                 }
-
-                this.#state.showCurrentLevelsPersistent = Boolean(parsedData.showCurrentLevelsPersistent);
             }
         } catch (e) {
             HSLogger.warn(`loadState - Error parsing data`, this.context);
@@ -741,106 +742,100 @@ export class HSAmbrosia extends HSModule
 
 
     // ==============================================
-    // ---- Ambrosia Loadouts Perma-show levels -----
+    // ----- Persistent Ambrosia Levels Display -----
     // ==============================================
 
-    async #hookShowCurrAmbrosiaUpgradesButton() {
-        const button = this.#showCurrAmbrosiaUpgradesButton ?? await HSElementHooker.HookElement('#showCurrAmbrosiaUpgrades') as HTMLButtonElement;
-        if (!button) { HSLogger.warn('hookShowCurrAmbrosiaUpgradesButton() could not find #showCurrAmbrosiaUpgrades', this.context); return; }
-        this.#showCurrAmbrosiaUpgradesButton = button;
+    async #hookPersistentAmbrosiaLevelsToggleButton() {
+        const button = this.#persistentAmbrosiaLevelsToggleButton ?? await HSElementHooker.HookElement('#showCurrAmbrosiaUpgrades') as HTMLButtonElement;
+        if (!button) { HSLogger.warn('hookPersistentAmbrosiaLevelsToggleButton() could not find #showCurrAmbrosiaUpgrades', this.context); return; }
+        this.#persistentAmbrosiaLevelsToggleButton = button;
 
         button.removeAttribute('title');
-        button.setAttribute('aria-label', 'Toggle persistent amb levels display');
-        button.dataset.tooltip = 'Toggle persistent amb levels display';
+        button.setAttribute('aria-label', 'Toggle persistent Amb Levels Display');
+        button.dataset.tooltip = 'Toggle persistent Amb Levels Display';
         button.classList.add('hs-tooltip');
-        button.addEventListener('click', (event) => {
+
+        this.#persistentAmbrosiaLevelsToggleHandler ??= (event: Event) => {
             event.preventDefault();
             event.stopPropagation();
-            HSLogger.debug(() => 'showCurrAmbrosiaUpgrades clicked', this.context);
-            this.#togglePersistentCurrentLevels();
-        });
+            HSLogger.debug(() => 'persistentAmbrosiaLevelsToggle clicked', this.context);
+            if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
+                this.#disablePersistentAmbrosiaLevelsDisplay();
+            } else {
+                this.#enablePersistentAmbrosiaLevelsDisplay();
+            }
+        };
 
-        if (this.#state.showCurrentLevelsPersistent) {
-            this.#enablePersistentCurrentLevels();
+        button.addEventListener('click', this.#persistentAmbrosiaLevelsToggleHandler);
+
+        if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
+            this.#enablePersistentAmbrosiaLevelsDisplay();
         }
     }
 
-    #togglePersistentCurrentLevels() {
-        if (this.#state.showCurrentLevelsPersistent) {
-            this.#disablePersistentCurrentLevels();
-        } else {
-            this.#enablePersistentCurrentLevels();
+    #enablePersistentAmbrosiaLevelsDisplay() {
+        if (!this.#persistentAmbrosiaLevelsToggleButton) { HSLogger.warn('enablePersistentAmbrosiaLevelsDisplay() missing button reference', this.context); return; }
+
+        this.#state.persistentAmbrosiaLevelsDisplayEnabled = true;
+        this.#persistentAmbrosiaLevelsToggleButton.classList.add('hs-ambrosia-current-levels-active');
+        this.#persistentAmbrosiaLevelsToggleButton.textContent = '📌';
+
+        if (this.#isAmbrosiaTabActive) {
+            this.#attachPersistentAmbrosiaLevelsDisplayListeners();
+            this.#displayPersistentAmbrosiaLevels();
         }
-    }
-
-    #enablePersistentCurrentLevels() {
-        if (!this.#showCurrAmbrosiaUpgradesButton) { HSLogger.warn('enablePersistentCurrentLevels() missing button reference', this.context); return; }
-
-        this.#state.showCurrentLevelsPersistent = true;
-        this.#showCurrAmbrosiaUpgradesButton.classList.add('hs-ambrosia-current-levels-active');
-        this.#showCurrAmbrosiaUpgradesButton.textContent = '📌';
-        this.#displayCurrentAmbrosiaLevels();
-
-        this.#showCurrAmbrosiaUpgradesButton.addEventListener('mouseover', this.#showCurrAmbrosiaButtonMouseOverCaptureHandler, true);
-        this.#showCurrAmbrosiaUpgradesButton.addEventListener('mouseout', this.#showCurrAmbrosiaButtonMouseOutCaptureHandler, true);
-
-        this.#loadoutContainer?.addEventListener('mouseout', this.#showCurrentLevelsSlotMouseOutHandler);
 
         void this.saveState();
     }
 
-    #disablePersistentCurrentLevels() {
-        if (!this.#showCurrAmbrosiaUpgradesButton) { HSLogger.warn('disablePersistentCurrentLevels() missing button reference', this.context); return; }
-        this.#showCurrAmbrosiaUpgradesButton.textContent = '🔎';
+    #disablePersistentAmbrosiaLevelsDisplay() {
+        if (!this.#persistentAmbrosiaLevelsToggleButton) { HSLogger.warn('disablePersistentAmbrosiaLevelsDisplay() missing button reference', this.context); return; }
+        this.#persistentAmbrosiaLevelsToggleButton.textContent = '🔎';
 
-        this.#state.showCurrentLevelsPersistent = false;
-        this.#showCurrAmbrosiaUpgradesButton.classList.remove('hs-ambrosia-current-levels-active');
+        this.#state.persistentAmbrosiaLevelsDisplayEnabled = false;
+        this.#persistentAmbrosiaLevelsToggleButton.classList.remove('hs-ambrosia-current-levels-active');
 
-        this.#showCurrAmbrosiaUpgradesButton.removeEventListener('mouseover', this.#showCurrAmbrosiaButtonMouseOverCaptureHandler, true);
-        this.#showCurrAmbrosiaUpgradesButton.removeEventListener('mouseout', this.#showCurrAmbrosiaButtonMouseOutCaptureHandler, true);
-        this.#loadoutContainer?.removeEventListener('mouseout', this.#showCurrentLevelsSlotMouseOutHandler);
+        this.#detachPersistentAmbrosiaLevelsDisplayListeners();
 
         void this.saveState();
 
-        if (!this.#showCurrAmbrosiaUpgradesButton.matches(':hover')) {
-            this.#restoreCurrentAmbrosiaDisplay();
+        if (!this.#blueberryUpgradeContainer?.matches(':hover')) {
+            this.#restorePersistentAmbrosiaLevelsDisplay();
         }
     }
 
-    #showCurrAmbrosiaButtonMouseOverCaptureHandler = (event: Event) => {
-        if (!this.#state.showCurrentLevelsPersistent) return;
-        if (!(event.target instanceof HTMLElement)) return;
-        if (!event.target.closest('#showCurrAmbrosiaUpgrades')) return;
-        // Ignore synthetic events dispatched by our own code; we only want real user hover events
+    #shouldRestorePersistentAmbrosiaLevelsDisplay() {
+        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return false;
+        if (this.#blueberryUpgradeContainer?.matches(':hover')) return false;
+        if (this.#loadoutsSlots.some((loadoutSlot) => loadoutSlot.matches(':hover'))) return false;
+        return true;
+    }
+
+    #maybeRestorePersistentAmbrosiaLevelsDisplay() {
+        if (!this.#shouldRestorePersistentAmbrosiaLevelsDisplay()) return;
+        this.#displayPersistentAmbrosiaLevels();
+    }
+
+    #persistentAmbrosiaLevelsContainerEnterHandler = (event: Event) => {
+        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#blueberryUpgradeContainer) return;
         if (!event.isTrusted) return;
 
-        HSLogger.debug(() => 'showCurrAmbrosiaButtonMouseOverCaptureHandler() hiding current levels while button is hovered', this.context);
-        event.stopImmediatePropagation();
-        this.#hideCurrentAmbrosiaDisplay();
+        this.#hidePersistentAmbrosiaLevelsDisplay();
     };
 
-    #showCurrAmbrosiaButtonMouseOutCaptureHandler = (event: Event) => {
-        if (!this.#state.showCurrentLevelsPersistent) return;
-        if (!(event.target instanceof HTMLElement)) return;
-        if (!event.target.closest('#showCurrAmbrosiaUpgrades')) return;
-        // Ignore synthetic events dispatched by our own code; we only want real user hover events
+    #persistentAmbrosiaLevelsContainerLeaveHandler = (event: Event) => {
+        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#blueberryUpgradeContainer) return;
         if (!event.isTrusted) return;
 
-        HSLogger.debug(() => 'showCurrAmbrosiaButtonMouseOutCaptureHandler() restoring current levels after button hover', this.context);
-        event.stopImmediatePropagation();
-
         setTimeout(() => {
-            if (!this.#state.showCurrentLevelsPersistent) return;
-            if (this.#loadoutsSlots.some((loadoutSlot) => loadoutSlot.matches(':hover'))) {
-                HSLogger.debug(() => 'showCurrAmbrosiaButtonMouseOutCaptureHandler() slot still hovered, skipping restore', this.context);
-                return;
-            }
-            this.#displayCurrentAmbrosiaLevels();
+            this.#maybeRestorePersistentAmbrosiaLevelsDisplay();
         }, 0);
     };
 
-    #showCurrentLevelsSlotMouseOutHandler = (event: MouseEvent) => {
-        if (!this.#state.showCurrentLevelsPersistent) return;
+    #persistentAmbrosiaLevelsSlotMouseOutHandler = (event: MouseEvent) => {
+        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
         if (!(event.target instanceof HTMLElement)) return;
 
         const slot = event.target.closest('.blueberryLoadoutSlot');
@@ -849,24 +844,14 @@ export class HSAmbrosia extends HSModule
         const relatedTarget = event.relatedTarget;
         if (relatedTarget instanceof Node && slot.contains(relatedTarget)) { return; }
 
-        HSLogger.debug(() => 'showCurrentLevelsSlotMouseOutHandler() restoring pinned current levels after native slot hover', this.context);
         setTimeout(() => {
-            if (!this.#state.showCurrentLevelsPersistent) return;
-            if (this.#showCurrAmbrosiaUpgradesButton?.matches(':hover')) {
-                HSLogger.debug(() => 'showCurrentLevelsSlotMouseOutHandler() button is hovered; skipping restore', this.context);
-                return;
-            }
-            if (this.#loadoutsSlots.some((loadoutSlot) => loadoutSlot.matches(':hover'))) {
-                HSLogger.debug(() => 'showCurrentLevelsSlotMouseOutHandler() another slot is still hovered; skipping restore', this.context);
-                return;
-            }
-            this.#displayCurrentAmbrosiaLevels();
+            this.#maybeRestorePersistentAmbrosiaLevelsDisplay();
         }, 0);
     };
 
-    #displayCurrentAmbrosiaLevels() {
-        const button = this.#showCurrAmbrosiaUpgradesButton;
-        if (!button) { HSLogger.warn('displayCurrentAmbrosiaLevels() missing persistent levels button', this.context); return; }
+    #displayPersistentAmbrosiaLevels() {
+        const button = this.#persistentAmbrosiaLevelsToggleButton;
+        if (!button) { HSLogger.warn('displayPersistentAmbrosiaLevels() missing persistent levels button', this.context); return; }
 
         const event = new MouseEvent('mouseover', {
             bubbles: true,
@@ -876,9 +861,90 @@ export class HSAmbrosia extends HSModule
         button.dispatchEvent(event);
     }
 
-    #hideCurrentAmbrosiaDisplay() {
-        const button = this.#showCurrAmbrosiaUpgradesButton;
-        if (!button) { HSLogger.warn('hideCurrentAmbrosiaDisplay() missing persistent levels button', this.context); return; }
+    #attachPersistentAmbrosiaLevelsDisplayListeners() {
+        this.#detachPersistentAmbrosiaLevelsDisplayListeners();
+        if (this.#blueberryUpgradeContainer) {
+            this.#blueberryUpgradeContainer.addEventListener('mouseenter', this.#persistentAmbrosiaLevelsContainerEnterHandler);
+            this.#blueberryUpgradeContainer.addEventListener('mouseleave', this.#persistentAmbrosiaLevelsContainerLeaveHandler);
+        }
+        if (this.#loadoutContainer) {
+            this.#loadoutContainer.addEventListener('mouseout', this.#persistentAmbrosiaLevelsSlotMouseOutHandler);
+        }
+    }
+
+    #detachPersistentAmbrosiaLevelsDisplayListeners() {
+        if (this.#blueberryUpgradeContainer) {
+            this.#blueberryUpgradeContainer.removeEventListener('mouseenter', this.#persistentAmbrosiaLevelsContainerEnterHandler);
+            this.#blueberryUpgradeContainer.removeEventListener('mouseleave', this.#persistentAmbrosiaLevelsContainerLeaveHandler);
+        }
+        if (this.#loadoutContainer) {
+            this.#loadoutContainer.removeEventListener('mouseout', this.#persistentAmbrosiaLevelsSlotMouseOutHandler);
+        }
+    }
+
+    #subscribeGameStateViewChanges() {
+        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (!gameStateMod) { HSLogger.warn('subscribeGameStateViewChanges() - gameStateMod==undefined', 'hs-ambrosia-gamestate'); return; }
+
+        if (!this.#ambrosiaViewSubscriptionId) {
+            this.#ambrosiaViewSubscriptionId = gameStateMod.subscribeForView(
+                MAIN_VIEW.SINGULARITY,
+                SINGULARITY_VIEW.AMBROSIA,
+                (isActive) => {
+                    if (isActive) { // Ambrosia Tab Enter
+                        this.#onAmbrosiaTabEnter();
+                    } else { // Ambrosia Tab Leave
+                        this.#onAmbrosiaTabLeave();
+                    }
+                }
+            );
+        }
+    }
+
+    #unsubscribeGameStateViewChanges() {
+        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (!gameStateMod) return;
+
+        if (this.#ambrosiaViewSubscriptionId) {
+            gameStateMod.unsubscribeForView(this.#ambrosiaViewSubscriptionId);
+            this.#ambrosiaViewSubscriptionId = undefined;
+        }
+    }
+
+    #onAmbrosiaTabEnter() {
+        if (this.#isAmbrosiaTabActive) return;
+        this.#isAmbrosiaTabActive = true;
+
+        this.#attachAmbrosiaTabEvents();
+
+        if (this.#isIdleSwapEnabled) {
+            void this.#activateIdleSwap();
+        }
+
+        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+
+        this.#enablePersistentAmbrosiaLevelsDisplay();
+    }
+
+    #onAmbrosiaTabLeave() {
+        if (!this.#isAmbrosiaTabActive) return;
+        this.#isAmbrosiaTabActive = false;
+
+        this.#detachAmbrosiaTabEvents();
+        this.#detachPersistentAmbrosiaLevelsDisplayListeners();
+
+        if (this.#isIdleSwapEnabled) {
+            this.#deactivateIdleSwap();
+        }
+
+        if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
+            this.#restorePersistentAmbrosiaLevelsDisplay();
+        }
+    }
+
+    #hidePersistentAmbrosiaLevelsDisplay() {
+        const button = this.#persistentAmbrosiaLevelsToggleButton;
+        if (!button) { HSLogger.warn('hidePersistentAmbrosiaLevelsDisplay() missing persistent levels button', this.context); return; }
 
         const event = new MouseEvent('mouseout', {
             bubbles: true,
@@ -889,12 +955,12 @@ export class HSAmbrosia extends HSModule
         button.dispatchEvent(event);
     }
 
-    #restoreCurrentAmbrosiaDisplay() {
-        const button = this.#showCurrAmbrosiaUpgradesButton;
-        if (!button) { HSLogger.warn('restoreCurrentAmbrosiaDisplay() missing persistent levels button', this.context); return; }
+    #restorePersistentAmbrosiaLevelsDisplay() {
+        const button = this.#persistentAmbrosiaLevelsToggleButton;
+        if (!button) { HSLogger.warn('restorePersistentAmbrosiaLevelsDisplay() missing persistent levels button', this.context); return; }
 
         if (button.matches(':hover')) {
-            HSLogger.debug(() => 'restoreCurrentAmbrosiaDisplay() button still hovered; deferring to normal hover state', this.context);
+            HSLogger.debug(() => 'restorePersistentAmbrosiaLevelsDisplay() button still hovered; deferring to normal hover state', this.context);
             return;
         }
 
@@ -1147,7 +1213,7 @@ export class HSAmbrosia extends HSModule
                         ? err
                         : 'Unknown error';
 
-            HSLogger.error(`Quick Import failed: ${msg} `, this.context, true);
+            HSLogger.error(`Quick Import failed: ${msg}`, this.context, true);
             // Log detailed error context for debugging
             HSLogger.debug(() => `Quick Import exception message: ${msg}; clipboardLen=${text?.length ?? 'n/a'}; imported=${importedCount ?? 0}; skipped=${skippedCount ?? 0}; failures=${JSON.stringify(failures ?? [])}`, this.context);
 
@@ -1175,71 +1241,37 @@ export class HSAmbrosia extends HSModule
 
     async enableIdleSwap() {
         HSLogger.debug(() => 'Enabling Ambrosia Idle Swap', this.context);
-        const self = this;
-        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
+        this.#isIdleSwapEnabled = true;
         this.#cachedNormalLuckBlueBarRequired = undefined;
         this.#cachedNormalLuckLoadoutValue = undefined;
         this.#initIdleSwapSettingsCache();
 
-        if (gameStateMod) {
-            const isAlreadyInAmbrosiaView =
-                gameStateMod.getCurrentUIView('MAIN_VIEW').getId() === MAIN_VIEW.SINGULARITY
-                && gameStateMod.getCurrentUIView('SINGULARITY_VIEW').getId() === SINGULARITY_VIEW.AMBROSIA;
-
-            if (!isAlreadyInAmbrosiaView) {
-                await gameStateMod.refreshCurrentViewsFromDOM();
-            }
-
-            this.#gameStateMainViewSubscriptionId = gameStateMod.subscribeGameStateChange('MAIN_VIEW', this.#gameStateCallbackMain.bind(this));
-            this.#gameStateSubViewSubscriptionId = gameStateMod.subscribeGameStateChange('SINGULARITY_VIEW', async (previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) => {
-                if (currentView.getId() === SINGULARITY_VIEW.AMBROSIA) {
-                    await this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
-                } else {
-                    this.#isIdleSwapEnabled = false;
-                    this.#cachedNormalLuckBlueBarRequired = undefined;
-                    this.#cachedNormalLuckLoadoutValue = undefined;
-                    this.#removeIdleLoadoutIndicator();
-                    this.unsubscribeGameDataChanges();
-                }
-            });
-
-            // If we're already in the ambrosia view, activate idle swap immediately.
-            if (gameStateMod.getCurrentUIView("MAIN_VIEW").getId() === MAIN_VIEW.SINGULARITY) {
-                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
-            }
-        } else {
-            HSLogger.warn('HSAmbrosia.enableIdleSwap() - gameStateMod==undefined', 'hs-enable-idleswap-gamestate');
+        if (this.#isAmbrosiaTabActive) {
+            await this.#activateIdleSwap();
         }
 
         if (!this.#debugElement)
             this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
     }
 
-    async #activateIdleSwapForCurrentSingularityAmbrosiaView(): Promise<void> {
-        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
-        if (!gameStateMod) {
-            return;
-        }
-
-        let isInAmbrosiaView =
-            gameStateMod.getCurrentUIView('MAIN_VIEW').getId() === MAIN_VIEW.SINGULARITY
-            && gameStateMod.getCurrentUIView('SINGULARITY_VIEW').getId() === SINGULARITY_VIEW.AMBROSIA;
-
-        if (!isInAmbrosiaView) {
-            return;
-        }
+    async #activateIdleSwap(): Promise<void> {
+        if (!this.#isIdleSwapEnabled || this.#isIdleSwapActive || !this.#isAmbrosiaTabActive) return;
 
         this.#blueAmbrosiaProgressBar = await HSElementHooker.HookElement('#ambrosiaProgressBar') as HTMLDivElement;
         this.#redAmbrosiaProgressBar = await HSElementHooker.HookElement('#pixelProgressBar') as HTMLDivElement;
         this.#cacheIdleSwapLoadoutButtons();
-        this.#isIdleSwapEnabled = true;
+        this.#isIdleSwapActive = true;
         this.#maybeInsertIdleLoadoutIndicator();
         this.subscribeGameDataChanges();
+
+        if (!this.#debugElement)
+            this.#debugElement = document.querySelector('#hs-panel-debug-gamedata-currentambrosia') as HTMLDivElement;
     }
 
     disableIdleSwap() {
         this.#isIdleSwapEnabled = false;
+        this.#deactivateIdleSwap();
         this.#holdBlueLuckUntilReset = false;
         this.#lastBlueBarValue = undefined;
         this.#cachedNormalLuckBlueBarRequired = undefined;
@@ -1254,25 +1286,18 @@ export class HSAmbrosia extends HSModule
         this.#cachedIdleSwapNormalLuckLoadout = undefined;
         this.#cachedIdleSwapRedLuckLoadout = undefined;
         this.#cachedIdleSwapLoadoutButtons.clear();
-        this.unsubscribeGameDataChanges();
+    }
 
-        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
+    #deactivateIdleSwap() {
+        if (!this.#isIdleSwapActive) return;
 
-        if (gameStateMod) {
-            if (this.#gameStateMainViewSubscriptionId) {
-                gameStateMod.unsubscribeGameStateChange('MAIN_VIEW', this.#gameStateMainViewSubscriptionId);
-                this.#gameStateMainViewSubscriptionId = undefined;
-            }
-
-            if (this.#gameStateSubViewSubscriptionId) {
-                gameStateMod.unsubscribeGameStateChange('SINGULARITY_VIEW', this.#gameStateSubViewSubscriptionId);
-                this.#gameStateSubViewSubscriptionId = undefined;
-            }
-        } else {
-            HSLogger.warnOnce('HSAmbrosia.disableIdleSwap() - gameStateMod==undefined', 'hs-disable-idleswap-gamestate');
-        }
-
+        this.#isIdleSwapActive = false;
+        this.#holdBlueLuckUntilReset = false;
+        this.#lastBlueBarValue = undefined;
+        this.#cachedNormalLuckBlueBarRequired = undefined;
+        this.#cachedNormalLuckLoadoutValue = undefined;
         this.#removeIdleLoadoutIndicator();
+        this.unsubscribeGameDataChanges();
     }
 
     #initIdleSwapSettingsCache() {
@@ -1341,8 +1366,8 @@ export class HSAmbrosia extends HSModule
         const gameDataMod = this.#cachedGameDataMod ?? HSModuleManager.getModule<HSGameData>('HSGameData');
 
         if (gameDataMod && this.gameDataSubscriptionId) {
-            // Only actually unsubscribe if all ambrosia feature which use GDS are disabled
-            if (!this.#isIdleSwapEnabled && !this.#berryMinibarsEnabled) {
+            // Only actually unsubscribe if no feature currently needs game data
+            if (!this.#isIdleSwapActive && !this.#berryMinibarsEnabled) {
                 gameDataMod.unsubscribeGameDataChange(this.gameDataSubscriptionId);
                 this.gameDataSubscriptionId = undefined;
                 HSLogger.debug(() => 'Unsubscribed from game data changes', this.context);
@@ -1381,7 +1406,7 @@ export class HSAmbrosia extends HSModule
                 );
             }
 
-            if (this.#isIdleSwapEnabled) {
+            if (this.#isIdleSwapActive) {
                 this.#refreshIdleSwapSettingsCache();
 
                 const blueberrySpeedMults = (gameDataAPI.ambrosia.calculateAmbrosiaGenerationSpeed(true, false) as number);
@@ -1620,25 +1645,6 @@ export class HSAmbrosia extends HSModule
             while (newDebugElement.firstChild) {
                 this.#debugElement.appendChild(newDebugElement.firstChild);
             }
-        }
-    }
-
-    #gameStateCallbackMain(previousView: GameView<VIEW_TYPE>, currentView: GameView<VIEW_TYPE>) {
-        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
-
-        if (gameStateMod) {
-            if (currentView.getId() === MAIN_VIEW.SINGULARITY) {
-                void this.#activateIdleSwapForCurrentSingularityAmbrosiaView();
-            }
-
-            if (previousView.getId() === MAIN_VIEW.SINGULARITY &&
-                currentView.getId() !== MAIN_VIEW.SINGULARITY &&
-                gameStateMod.getCurrentUIView("SINGULARITY_VIEW").getId() === SINGULARITY_VIEW.AMBROSIA
-            ) {
-                this.#isIdleSwapEnabled = false;
-            }
-        } else {
-            HSLogger.warnOnce('HSAmbrosia.gameStateCallbackMain() - gameStateMod==undefined', 'hs-amb-gamestate-cb');
         }
     }
 

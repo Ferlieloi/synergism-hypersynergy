@@ -51,6 +51,7 @@
     "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
     "settingType": "boolean",
     "enabled": false,
+    "hidden": true,
     "settingAction": "autoConfirmPopups",
     "settingControl": {
       "controlType": "switch",
