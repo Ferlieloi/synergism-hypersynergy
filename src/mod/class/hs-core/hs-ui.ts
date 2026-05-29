@@ -635,7 +635,7 @@ export class HSUI extends HSModule {
         function resize(e: MouseEvent) {
             if (!isResizing) return;
 
-            const newWidth = clamp(startWidth + (e.clientX - startX), 500, 2500);
+            const newWidth = clamp(startWidth + (e.clientX - startX), 525, 2500);
             const newHeight = clamp(startHeight + (e.clientY - startY), 400, 1500);
 
             resizable.style.width = `${newWidth}px`;

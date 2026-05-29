@@ -161,7 +161,7 @@ export class HSHeaterInputModalController {
         this.cacheInputsModalElements(modal);
         HSHeaterUIInput.attachHeaterTypeSelectHandlers(modal, () => {
             if (this.currentInputsModalId) {
-                HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId);
+                HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId, false);
                 const activeModal = this.getActiveInputsModal();
                 if (activeModal) {
                     this.refreshRequiredBranchHighlights(activeModal);

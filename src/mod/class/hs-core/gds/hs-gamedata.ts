@@ -110,6 +110,26 @@ export class HSGameData extends HSModule {
     }
 
     /**
+     * Returns true when the current renderer environment appears to be Steam/Electron.
+     * Uses the exposed Steam bridge plus Electron-specific runtime hints.
+     */
+    #isSteamElectron(): boolean {
+        const steam = (window as unknown as { steam?: unknown }).steam as any;
+        const hasSteamBridge = typeof steam === 'object' && steam !== null
+            && typeof steam.cloudWriteFile === 'function'
+            && typeof steam.getSteamId === 'function';
+
+        const hasElectronUserAgent = typeof navigator === 'object'
+            && typeof navigator.userAgent === 'string'
+            && /\bElectron\b/.test(navigator.userAgent);
+
+        const hasElectronProcess = typeof (window as any).process === 'object'
+            && typeof (window as any).process?.versions?.electron === 'string';
+
+        return hasSteamBridge || hasElectronUserAgent || hasElectronProcess;
+    }
+
+    /**
      * Initializes the HSGameData module, sets up DOM elements, fetches pseudo and me data,
      * registers the WebSocket, and hooks the import button for save file interception.
      * @returns Promise<void>
@@ -143,7 +163,9 @@ export class HSGameData extends HSModule {
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#registerWebSocket();
         this.isInitialized = true;
-        // this.#hackSteamCloudWriteFile(); // Needed here ?
+
+        const isSteam = this.#isSteamElectron();
+        HSLogger.log(`Steam/Electron env detected: ${isSteam}`, this.context);
 
         // Always hook the import button regardless of GDS setting
         // We do this asynchronously to not block init if the element takes time to appear
@@ -192,7 +214,6 @@ export class HSGameData extends HSModule {
     async forceRefreshGameData(): Promise<void> {
         const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
         // Both have an early return if already patched...
-        // this.#hackSteamCloudWriteFile();
         this.#hackJSNativebtoa(); 
         this.#hackJSNativeAtob();
 
@@ -569,7 +590,6 @@ export class HSGameData extends HSModule {
         this.#turboEnabled = true;
 
         if (HSGlobal.Common.experimentalGDS) {
-            // this.#hackSteamCloudWriteFile();
             this.#hackJSNativebtoa();
             this.#hackJSNativeAtob();
             this.#processSaveDataExperimental();
@@ -653,7 +673,6 @@ export class HSGameData extends HSModule {
      * @returns Promise<void>
      */
     async prepareForAutosing() {
-        // this.#hackSteamCloudWriteFile();
         this.#hackJSNativebtoa();
         this.#hackJSNativeAtob();
     }
@@ -705,81 +724,6 @@ export class HSGameData extends HSModule {
 
         this.#atobHacked = true;
     }
-/*
-    #hackSteamCloudWriteFile() {
-        if (this.#steamCloudHooked) return;
-
-        const steam = (window as unknown as { steam?: { cloudWriteFile?: (name: string, content: string) => Promise<boolean> } }).steam;
-        if (!steam || typeof steam.cloudWriteFile !== 'function') {
-            HSLogger.debug(() => `Steam cloud write hook not installed: steam API unavailable`, this.context);
-            return;
-        }
-
-        HSLogger.debug(() => `Installing Steam cloud write hook`, this.context);
-        const original = steam.cloudWriteFile.bind(steam);
-        if (!this.#nativeSteamCloudWriteFile) {
-            this.#nativeSteamCloudWriteFile = original;
-        }
-
-        const flushPending = async () => {
-            this.#steamCloudWriteTimer = undefined;
-            const pending = this.#steamCloudWritePending;
-            if (!pending || !this.#nativeSteamCloudWriteFile) {
-                HSLogger.debug(() => `No pending Steam cloud write to flush`, this.context);
-                return;
-            }
-            this.#steamCloudWritePending = undefined;
-            this.#steamCloudWriteLastFlush = Date.now();
-            HSLogger.debug(() => `Flushing pending Steam cloud write for file ${pending.name}`, this.context);
-
-            try {
-                await this.#nativeSteamCloudWriteFile(pending.name, pending.content);
-                HSLogger.debug(() => `Steam cloud write flush succeeded for ${pending.name}`, this.context);
-            } catch (error) {
-                HSLogger.error(`Failed to flush throttled Steam cloud write: ${error}`, this.context);
-            }
-        }
-
-        steam.cloudWriteFile = async (name: string, content: string): Promise<boolean> => {
-            if (!this.#nativeSteamCloudWriteFile) {
-                HSLogger.debug(() => `Steam cloud write requested but native function missing`, this.context);
-                return Promise.resolve(false);
-            }
-
-            this.#steamCloudWritePending = { name, content };
-            const now = Date.now();
-            const elapsed = now - this.#steamCloudWriteLastFlush;
-            HSLogger.debug(() => `Steam cloud write intercepted for ${name}, elapsed=${elapsed}ms`, this.context);
-
-            if (elapsed >= this.#steamCloudWriteThrottleMs) {
-                this.#steamCloudWriteLastFlush = now;
-                const pending = this.#steamCloudWritePending;
-                this.#steamCloudWritePending = undefined;
-                HSLogger.debug(() => `Executing immediate Steam cloud write for ${pending.name}`, this.context);
-                try {
-                    const result = await this.#nativeSteamCloudWriteFile(pending.name, pending.content);
-                    HSLogger.debug(() => `Immediate Steam cloud write result=${result} for ${pending.name}`, this.context);
-                    return result;
-                } catch (error) {
-                    HSLogger.error(`Throttled Steam cloud write failed: ${error}`, this.context);
-                    return false;
-                }
-            }
-
-            if (this.#steamCloudWriteTimer === undefined) {
-                const delay = this.#steamCloudWriteThrottleMs - elapsed;
-                HSLogger.debug(() => `Scheduling throttled Steam cloud write flush in ${delay}ms for ${name}`, this.context);
-                this.#steamCloudWriteTimer = window.setTimeout(flushPending, delay);
-            } else {
-                HSLogger.debug(() => `Steam cloud write already scheduled, replacing pending save with ${name}`, this.context);
-            }
-
-            return Promise.resolve(true);
-        }
-
-        this.#steamCloudHooked = true;
-    }
-*/
 
     /**
      * Hacks the native btoa function to capture encoded save data.

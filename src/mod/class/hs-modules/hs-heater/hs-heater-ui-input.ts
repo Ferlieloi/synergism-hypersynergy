@@ -3,6 +3,7 @@ import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { escapeHtml } from "./hs-heater-utils";
 import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "./hs-heater-icon-store";
+import { HSHeaterResultStore } from "./hs-heater-result-store";
 import type { HeaterOptimizerInput } from "../../../types/data-types/hs-heater-types";
 import type { HeaterBranchId } from "./hs-heater-result-config";
 import { HSInputType } from "../../../types/module-types/hs-ui-types";
@@ -187,6 +188,7 @@ export class HSHeaterUIInput {
         typeSelects.forEach((select) => {
             select.addEventListener('change', () => {
                 this.syncTypeSelectIcon(select, modal);
+                this.syncTypeSelectAvailability(select, modal);
                 const updatedSelections = typeSelects.map(s => s.value);
                 HSSettings.getSetting('heaterTypeLoadoutSelections').setValue(updatedSelections);
                 HSSettings.saveSettingsToStorage();
@@ -233,6 +235,20 @@ export class HSHeaterUIInput {
             icon.style.backgroundImage = '';
             icon.style.visibility = 'hidden';
         }
+    }
+
+    static syncTypeSelectAvailability(select: HTMLSelectElement, modal: HTMLElement): void {
+        const row = select.closest('.hs-heater-type-select-row') as HTMLElement | null;
+        if (!row) return;
+
+        const checkbox = row.querySelector<HTMLInputElement>('.hs-heater-type-select-checkbox');
+        if (!checkbox) return;
+
+        const semanticId = (select.value || '').trim();
+        const isAvailable = HSHeaterResultStore.isSemanticIdAvailable(semanticId);
+
+        checkbox.checked = isAvailable;
+        select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
     }
 
     static refreshHeaterTypeSelectIcons(modal: HTMLElement): void {
@@ -352,7 +368,7 @@ export class HSHeaterUIInput {
     static buildInputTableRow(field: HeaterInputField, value: number | Decimal | boolean): string {
         const lockId = `hs-heater-lock-${field.key}`;
         const iconHtml = field.url
-            ? `<img src="${field.url}" alt="${escapeHtml(field.label)}" width="20" height="20" class="hs-heater-icon-image" />`
+            ? `<img src="${field.url}" alt="${escapeHtml(field.label)}" class="hs-heater-icon-image" />`
             : '';
         const inputHtml = this.buildFieldInputHtml(field, value);
 

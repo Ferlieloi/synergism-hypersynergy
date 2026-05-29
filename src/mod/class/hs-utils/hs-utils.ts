@@ -21,8 +21,8 @@ export class HSUtils {
     static #context = 'HSUtils';
     static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
-    static dialogWatcherTime = 15; // More than that ?
-    static tackTime = 6; // for bookmark/steam (no tack hook)... Assuming a bit of lag... ?
+    static dialogWatcherTime = 5; // More than that ?
+    static tackTime = 5; // for bookmark/steam (no tack hook)
 
     static #autoConfirmPatchState: boolean | null = null;
     static #_onAfterTack: ((fn: () => void) => void) | null = null;
@@ -435,9 +435,7 @@ export class HSUtils {
     static #cachedConfirmBox: HTMLElement | null = null;
     static #cachedAlertWrapper: HTMLElement | null = null;
 
-    // This might be very volatile, but it works for now and hides alert/confirmation boxes
-    static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 25) {
-
+    static async killAlertConfirmElementDisplayProperties(): Promise<{ restore: () => void }> {
         const bg = !this.#cachedBG ? await HSElementHooker.HookElement('#transparentBG') as HTMLElement : this.#cachedBG;
         const confirmBox = !this.#cachedConfirmBox ? await HSElementHooker.HookElement('#confirmationBox') as HTMLElement : this.#cachedConfirmBox;
         const alertWrapper = !this.#cachedAlertWrapper ? await HSElementHooker.HookElement('#alertWrapper') as HTMLElement : this.#cachedAlertWrapper;
@@ -446,12 +444,25 @@ export class HSUtils {
         this.#cachedConfirmBox = confirmBox;
         this.#cachedAlertWrapper = alertWrapper;
 
-        const okAlert =   document.querySelector('#ok_alert') as HTMLButtonElement;
-        const okConfirm = document.querySelector('#ok_confirm') as HTMLButtonElement;
-
         const killedBg = HSUtils.#killElementDisplayProperties(bg);
         const killedConfirm = HSUtils.#killElementDisplayProperties(confirmBox);
         const killedAlertWrapper = HSUtils.#killElementDisplayProperties(alertWrapper);
+
+        return {
+            restore: () => {
+                killedBg.restore();
+                killedConfirm.restore();
+                killedAlertWrapper.restore();
+            }
+        };
+    }
+    
+    // This might be very volatile, but it works for now and hides alert/confirmation boxes
+    static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 25) {
+        const okAlert =   document.querySelector('#ok_alert') as HTMLButtonElement;
+        const okConfirm = document.querySelector('#ok_confirm') as HTMLButtonElement;
+
+        const protector = await HSUtils.killAlertConfirmElementDisplayProperties();
 
         await action();
         await HSUtils.wait(waitMs);
@@ -460,15 +471,11 @@ export class HSUtils {
             okConfirm.click();
             await HSUtils.wait(waitMs);
 
-            killedBg.restore();
-            killedConfirm.restore();
-            killedAlertWrapper.restore();
+            protector.restore();
 
             okAlert.click();
         } else {
-            killedBg.restore();
-            killedConfirm.restore();
-            killedAlertWrapper.restore();
+            protector.restore();
 
             if (alertOrConfirm === "alert") {
                 okAlert.click();
@@ -618,11 +625,14 @@ export class HSUtils {
         return Promise.resolve();
     }
 
-    static startDialogWatcher(): void {
+    static startDialogWatcher(dialogWatcherTime: number | undefined = undefined): void {
         // Prevent multiple watchers
-        if (this.#dialogWatcherInterval !== null) {
-            return;
+        if (this.#dialogWatcherInterval !== null) { return; }
+
+        if (dialogWatcherTime !== undefined) {
+            this.dialogWatcherTime = dialogWatcherTime;
         }
+
         HSUtils.disableAutoConfirmForDialogAutomation();
         HSLogger.debug(() => `Dialog watcher started, triggers every ${this.dialogWatcherTime}ms`, HSUtils.#context);
 
@@ -644,7 +654,7 @@ export class HSUtils {
                 }
                 if (okConfirm) {
                     okConfirm.click();
-                    HSLogger.debug(() => `Confirm dialog detected and OK button clicked`, HSUtils.#context);
+                    // HSLogger.debug(() => `Confirm dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
             // Check for alert dialog
@@ -657,7 +667,7 @@ export class HSUtils {
                 }
                 if (okAlert) {
                     okAlert.click();
-                    HSLogger.debug(() => `Alert dialog detected and OK button clicked`, HSUtils.#context);
+                    // HSLogger.debug(() => `Alert dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
             // Check for prompt dialog
@@ -670,7 +680,7 @@ export class HSUtils {
                 }
                 if (okPrompt) {
                     okPrompt.click();
-                    HSLogger.debug(() => `Prompt dialog detected and OK button clicked`, HSUtils.#context);
+                    // HSLogger.debug(() => `Prompt dialog detected and OK button clicked`, HSUtils.#context);
                 }
             }
 
