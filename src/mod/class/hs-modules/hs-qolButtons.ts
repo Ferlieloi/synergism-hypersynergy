@@ -254,10 +254,13 @@ export class HSQOLButtons extends HSModule {
     public async setMaxedGQUpgradesVisibility(): Promise<void> {
         const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
         if (hideMaxedGQUpgradesSetting.getValue()) {
+            const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+            if (!gameDataAPI) return;
+            await gameDataAPI.getForcedGameData();
             await this.#hideButtons<GoldenQuarkUpgradeKey>(
                 'actualSingularityUpgradeContainer',
                 '.singularityUpgrade',
-                (key) => goldenQuarkUpgradeMaxLevels[key]?.maxLevel,
+                (key) => gameDataAPI.goldenQuark.computeGQUpgradeMaxLevel(key),
                 (gameData, key) => gameData.goldenQuarkUpgrades[key]?.level ?? 0
             );
         } else {

@@ -434,7 +434,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getGameData: () => this.gameData,
             getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
             getSavedUpgradeFreeLevel: (upgrade) => this.getSavedUpgradeFreeLevel(upgrade),
-            getOcteractUpgradeEffect: (upgradeKey) => octeract.getOcteractUpgradeEffect(upgradeKey),
+            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey, effectKey),
             getFavoriteUpgradeMaxedDependencyCount: () => this.getFavoriteUpgradeMaxedDependencyCount(),
         };
         goldenQuark = this.registerCalculationHelper(new GoldenQuarkHelper(goldenQuarkContext));
@@ -2011,7 +2011,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             + Math.sqrt(Math.max(0, baseRealFreeLevels - upgrade.level));
     }
 
-    getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey): number => {
+    getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey, effectKey?: string): number => {
         if (!this.gameData) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() GAMEDATA WAS NULL</red>`, this.context); return 0; }
 
         const upgrade = octeractUpgradeMaxLevels[upgradeKey]
@@ -2019,7 +2019,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         if (!Number.isFinite(totalLevels)) { HSLogger.errorOnce(`<red>getOcteractUpgradeEffect() totalLevels invalid for ${upgradeKey}: ${totalLevels}</red>`, this.context); return 0; }
 
-        return upgrade.effect ? upgrade.effect(totalLevels) : 0
+        return upgrade.effect ? upgrade.effect(totalLevels, effectKey) : 0
     }
 
     computeFreeLevelMultiplierOCT(): number {

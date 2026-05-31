@@ -1324,8 +1324,8 @@ export class HSAutosing extends HSModule {
         }
 
         const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
-        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
         const qGain = Math.max(0, q - this.#previousQuarkAmount);
+        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
         this.#previousQuarkAmount = q;
         this.#previousGoldenQuarkAmount = gq;
 

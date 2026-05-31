@@ -1,10 +1,12 @@
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSLogger } from "../../hs-core/hs-logger";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSQuickbarIconPickerController } from "../hs-qolQuickbarIconPicker";
 import { escapeHtml } from "./hs-heater-utils";
 import { buildResultTableHtmlFromNormalized } from "./hs-heater-ui-result-renderer";
 import { clearHeaterIconOverride, getEffectiveHeaterIconSrc, getOverrideHeaterIconSrc, setHeaterIconOverride, } from "./hs-heater-icon-store";
 import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
+import type { HSAmbrosia } from "../hs-ambrosia";
 
 // === Loadout Preview Metadata Type and Map ===
 type LoadoutPreviewMeta = { iconFile: string };
@@ -777,7 +779,7 @@ export class HSHeaterUIResult {
             return;
         }
 
-        const onClick = (event: Event) => {
+        const onClick = async (event: Event) => {
             const button = (event.target as HTMLElement | null)?.closest(`.${HEATER_RESULT_UI_SELECTORS.copyLoadoutBtn}, .${HEATER_RESULT_UI_SELECTORS.importLoadoutBtn}`) as HTMLElement | null;
             if (!button) return;
 
@@ -794,7 +796,9 @@ export class HSHeaterUIResult {
                 return;
             }
             if (button.classList.contains(HEATER_RESULT_UI_SELECTORS.importLoadoutBtn)) {
-                void this.importLoadoutToActiveSlot(loadout);
+                const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+                if (!ambrosiaModule) return;
+                await ambrosiaModule.importLoadoutToActiveSlot(loadout);
             }
         };
 
@@ -920,34 +924,6 @@ export class HSHeaterUIResult {
         } catch (error) {
             HSLogger.error(`clipboard-write-failed: ${JSON.stringify({ source: 'copyLoadoutToClipboard', loadoutPreview: loadout.slice(0, 180) })} ${String(error)}`, this.#context);
             HSUI.Notify('Failed to copy loadout to clipboard.', { position: 'top', notificationType: 'error' });
-        }
-    }
-
-    static async importLoadoutToActiveSlot(loadout: string): Promise<void> {
-        const fileInput = document.getElementById(HEATER_RESULT_UI_SELECTORS.importFileInputId) as HTMLInputElement | null;
-        if (!fileInput) {
-            HSLogger.warn(`import-file-input-missing: ${JSON.stringify({ source: 'importLoadoutToActiveSlot', inputId: HEATER_RESULT_UI_SELECTORS.importFileInputId })}`, this.#context);
-            HSUI.Notify('Failed to import loadout: game import file input was not found.', { position: 'top', notificationType: 'error' });
-            return;
-        }
-
-        if (typeof DataTransfer === 'undefined' || typeof File === 'undefined' || typeof Blob === 'undefined') {
-            HSLogger.warn(`import-not-supported-by-browser: ${JSON.stringify({ source: 'importLoadoutToActiveSlot', dataTransfer: typeof DataTransfer, file: typeof File, blob: typeof Blob })}`, this.#context);
-            HSUI.Notify('Loadout import is not supported by this browser.', { position: 'top', notificationType: 'error' });
-            return;
-        }
-
-        try {
-            const blob = new Blob([loadout], { type: 'application/json' });
-            const file = new File([blob], 'heater-import.json', { type: 'application/json' });
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            fileInput.files = dataTransfer.files;
-            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-            HSUI.Notify('Loadout imported to the active slot.', { position: 'top', notificationType: 'success' });
-        } catch (error) {
-            HSLogger.error(`import-dispatch-failed: ${JSON.stringify({ source: 'importLoadoutToActiveSlot', loadoutPreview: loadout.slice(0, 180) })} ${String(error)}`, this.#context);
-            HSUI.Notify('Failed to import loadout.', { position: 'top', notificationType: 'error' });
         }
     }
 }

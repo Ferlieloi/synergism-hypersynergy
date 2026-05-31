@@ -6,7 +6,7 @@ export interface GoldenQuarkHelperContext {
     getGameData: () => GameData | undefined;
     getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean;
     getSavedUpgradeFreeLevel: (upgrade?: { freeLevel?: number; freeLevels?: number }) => number;
-    getOcteractUpgradeEffect: (upgradeKey: OcteractUpgradeKey) => number;
+    getOcteractUpgradeEffect: (upgradeKey: OcteractUpgradeKey, effectKey?: string) => number;
     getFavoriteUpgradeMaxedDependencyCount: () => number;
 }
 
@@ -33,6 +33,29 @@ export class GoldenQuarkHelper {
         return Math.min(upgrade.level, baseRealFreeLevels) + Math.sqrt(Math.max(0, baseRealFreeLevels - upgrade.level));
     }
 
+    computeGQUpgradeMaxLevel(upgradeKey: GoldenQuarkUpgradeKey): number {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+
+        const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey];
+        if (!upgrade.canExceedCap) {
+            return upgrade.maxLevel;
+        }
+
+        let cap = upgrade.maxLevel;
+        const overclockPerks = [50, 60, 75, 100, 125, 150, 175, 200, 225, 250];
+        for (const perk of overclockPerks) {
+            if (data.highestSingularityCount >= perk) {
+                cap += 1;
+            } else {
+                break;
+            }
+        }
+
+        cap += this.#ctx.getOcteractUpgradeEffect('octeractSingUpgradeCap', 'goldenQuarkUpgradeCapIncrease');
+        return cap;
+    }
+
     actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
@@ -42,7 +65,8 @@ export class GoldenQuarkHelper {
         if ((data.singularityChallenges.noSingularityUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled) && !upgrade.qualityOfLife) {
             return 0;
         }
-        if ((data.singularityChallenges.limitedAscensions.enabled || data.singularityChallenges.limitedTime.enabled || data.singularityChallenges.sadisticPrequel.enabled) && upgradeKey === 'platonicDelta') {
+        if ((data.singularityChallenges.limitedAscensions.enabled || data.singularityChallenges.limitedTime.enabled || data.singularityChallenges.sadisticPrequel.enabled)
+            && upgradeKey === 'platonicDelta') {
             return 0;
         }
 

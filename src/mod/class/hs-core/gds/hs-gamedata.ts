@@ -33,6 +33,8 @@ export class HSGameData extends HSModule {
     #saveData?: GameData;
     #lastB64Save?: string;
     #wasUsingGDS = false;
+    
+    isSteam = false;
 
     // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
@@ -44,16 +46,9 @@ export class HSGameData extends HSModule {
     #nativeBtoa?: typeof window.btoa;
     #nativeAtob?: typeof window.atob;
 
-    #steamCloudHooked = false;
-    #nativeSteamCloudWriteFile?: (name: string, content: string) => Promise<boolean>;
-    #steamCloudWriteTimer?: number;
-    #steamCloudWritePending?: { name: string; content: string };
-    #steamCloudWriteLastFlush = 0;
-    #steamCloudWriteThrottleMs = 10000;
-
     // --- Turbo Mode & Intervals ---
-    #turboEnabled = false;
-    #turboCSS = `
+    #gdsEnabled = false;
+    #gdsCSS = `
         #savegame {
             display: none !important;
         }
@@ -104,8 +99,6 @@ export class HSGameData extends HSModule {
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
-        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
-
         this.#saveTriggerEvent = new Event('click');
     }
 
@@ -126,7 +119,22 @@ export class HSGameData extends HSModule {
         const hasElectronProcess = typeof (window as any).process === 'object'
             && typeof (window as any).process?.versions?.electron === 'string';
 
-        return hasSteamBridge || hasElectronUserAgent || hasElectronProcess;
+        const isSteamElectron = hasSteamBridge || hasElectronUserAgent || hasElectronProcess;
+        HSLogger.debug(() => `Steam/Electron env detection: ${isSteamElectron}.`, this.context);
+        return isSteamElectron;
+    }
+
+    /**
+     * Caches DOM elements used during initialization and later operations.
+     * @returns void
+     */
+    #cacheDomElements() {
+        this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
+        this.#manualSaveButton = document.querySelector('#savegame') as HTMLButtonElement;
+        this.#saveinfoElement = document.querySelector('#saveinfo') as HTMLParagraphElement;
+        this.#singularityButton = document.querySelector('#singularitybtn') as HTMLImageElement;
+        this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
+        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
     }
 
     /**
@@ -138,9 +146,7 @@ export class HSGameData extends HSModule {
         const self = this;
         HSLogger.log(`Initializing HSGameData module`, this.context);
 
-        this.#singularityButton = document.querySelector('#singularitybtn') as HTMLImageElement;
-        this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
-        this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
+        this.#cacheDomElements();
 
         try {
             const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
@@ -164,8 +170,7 @@ export class HSGameData extends HSModule {
         this.#registerWebSocket();
         this.isInitialized = true;
 
-        const isSteam = this.#isSteamElectron();
-        HSLogger.log(`Steam/Electron env detected: ${isSteam}`, this.context);
+        this.isSteam = this.#isSteamElectron();
 
         // Always hook the import button regardless of GDS setting
         // We do this asynchronously to not block init if the element takes time to appear
@@ -214,7 +219,7 @@ export class HSGameData extends HSModule {
     async forceRefreshGameData(): Promise<void> {
         const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
         // Both have an early return if already patched...
-        this.#hackJSNativebtoa(); 
+        this.#hackJSNativebtoa();
         this.#hackJSNativeAtob();
 
         if (saveBtn) {
@@ -494,7 +499,7 @@ export class HSGameData extends HSModule {
      * @returns void
      */
     #processSaveDataWithRAF = () => {
-        if (!this.#turboEnabled) return;
+        if (!this.#gdsEnabled) return;
 
         const saveDataB64 = localStorage.getItem(this.#saveDataLocalStorageKey);
 
@@ -544,9 +549,9 @@ export class HSGameData extends HSModule {
     async enableGDS() {
         const self = this;
 
-        if (this.#turboEnabled) return;
+        if (this.#gdsEnabled) return;
 
-        HSUI.injectStyle(this.#turboCSS, HSGlobal.HSGameData.turboCSSId);
+        HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
 
         if (this.#saveInterval) clearInterval(this.#saveInterval);
 
@@ -578,16 +583,15 @@ export class HSGameData extends HSModule {
             if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
                 this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
             }
-        }, HSGlobal.HSGameData.turboModeSpeedMs)
+        }, HSGlobal.HSGameData.gdsSpeedMs)
 
         if (!this.#singularityButton)
             this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
 
-        if (!this.#singularityChallengeButtons)
-            this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
+        this.#singularityChallengeButtons ||= Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
 
         HSLogger.info(`GDS = ON`, this.context);
-        this.#turboEnabled = true;
+        this.#gdsEnabled = true;
 
         if (HSGlobal.Common.experimentalGDS) {
             this.#hackJSNativebtoa();
@@ -602,7 +606,7 @@ export class HSGameData extends HSModule {
      * Processes save data from MITM when new encoded save JSON has been captured.
      */
     #processSaveDataExperimental = () => {
-        if (!this.#turboEnabled) return;
+        if (!this.#gdsEnabled) return;
 
         if (this.#mitm_gamedata && this.#mitm_gamedata !== this.#last_mitm_gamedata) {
             this.#last_mitm_gamedata = this.#mitm_gamedata;
@@ -636,7 +640,7 @@ export class HSGameData extends HSModule {
         if (this.#campaignTokenRefreshInterval)
             clearInterval(this.#campaignTokenRefreshInterval);
 
-        HSUI.removeInjectedStyle(HSGlobal.HSGameData.turboCSSId);
+        HSUI.removeInjectedStyle(HSGlobal.HSGameData.gdsCSSId);
 
         if (!this.#singularityButton)
             this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
@@ -665,7 +669,7 @@ export class HSGameData extends HSModule {
         // }
 
         HSLogger.info(`GDS turbo = OFF`, this.context);
-        this.#turboEnabled = false;
+        this.#gdsEnabled = false;
     }
 
     /**
@@ -754,46 +758,6 @@ export class HSGameData extends HSModule {
                     });
                 }
             }
-            // Call the original btoa so everything still works normally
-            return _btoa(s);
-        }
-
-        this.#btoaHacked = true;
-    }
-    
-    #hackJSNativebtoaEXPERIMENTAL() {
-        if (this.#btoaHacked)
-            return;
-
-        const self = this;
-
-        // Store ref to native btoa
-        const _btoa = window.btoa;
-
-        if (!this.#nativeBtoa)
-            this.#nativeBtoa = _btoa;
-
-        let _lastSave = Date.now();
-
-        // Overwrite btoa
-        window.btoa = function (s) {
-            let result = _btoa(s);
-            // Capture raw save JSON before the game encodes it to base64.
-            // This is the save payload as the game produces it.
-            if (s && s.length > 0 && s[0] === '{') {
-                self.#mitm_gamedata = s;
-                if (!self.#mitmProcessScheduled) {
-                    self.#mitmProcessScheduled = true;
-                    queueMicrotask(() => {
-                        self.#mitmProcessScheduled = false;
-                        self.#processSaveDataExperimental();
-                    });
-                }
-            }
-            if (Date.now() - _lastSave < 10000) {
-                throw new Error("Already saved in the past 10s.");
-            }
-            _lastSave = Date.now();
             // Call the original btoa so everything still works normally
             return _btoa(s);
         }
@@ -950,8 +914,9 @@ export class HSGameData extends HSModule {
                 } else {
                     // User pressed non-active sing challenge button
                     // If any challenge is active, user can't sing
-                    const anyChallengeActive = challengeTargets
-                        .map((t) => document.querySelector(`#${t}`)?.getAttribute('style')?.includes('orchid'))
+                    const challengeButtons = this.#singularityChallengeButtons ?? Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
+                    const anyChallengeActive = challengeButtons
+                        .map((btn) => challengeTargets.includes(btn.id) ? btn.getAttribute('style')?.includes('orchid') : false)
                         .some((b => b === true));
 
                     // User can't sing because they're trying to swap sing challenge

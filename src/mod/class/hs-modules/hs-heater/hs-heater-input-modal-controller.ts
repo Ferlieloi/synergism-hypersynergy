@@ -404,7 +404,6 @@ export class HSHeaterInputModalController {
             const branchId = label.dataset.branchId as HeaterBranchId | undefined;
             const unavailable = branchId ? unavailableBranchIds.has(branchId) : false;
             label.classList.toggle('hs-heater-active-branch-required', unavailable);
-            label.title = unavailable ? 'Result unavailable' : '';
         });
     }
 

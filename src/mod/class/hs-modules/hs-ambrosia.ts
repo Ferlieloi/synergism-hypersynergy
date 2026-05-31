@@ -146,6 +146,8 @@ export class HSAmbrosia extends HSModule
         HSLogger.log(`Initializing HSAmbrosia module`, this.context);
 
         await this.#cacheDomRefs();
+        await HSAmbrosiaHelper.cacheBlueberryToggleModeButton();
+
         this.#attachLoadoutClickHandler();
 
         await this.loadState();
@@ -603,8 +605,6 @@ export class HSAmbrosia extends HSModule
             return;
         }
 
-        await HSAmbrosiaHelper.cacheBlueberryToggleModeButton();
-
         const addCodeBtn = this.#addCodeButton;
         const addCodeAllBtn = this.#addCodeAllButton;
         const addCodeOneBtn = this.#addCodeOneButton;
@@ -1010,8 +1010,7 @@ export class HSAmbrosia extends HSModule
 
     async #handleQuickImport() {
         const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups' as keyof HSSettingsDefinition);
-        let restoreAutoConfirm = autoConfirmSetting && autoConfirmSetting.isEnabled();
-        if (autoConfirmSetting) {
+        if (autoConfirmSetting) { // Should be already OFF, and no need to restore
             autoConfirmSetting.disable();
         }
         const afkSwapperSetting = HSSettings.getSetting('ambrosiaIdleSwap' as keyof HSSettingsDefinition);
@@ -1042,7 +1041,6 @@ export class HSAmbrosia extends HSModule
 
             // Split clipboard by lines
             const lines = text.split(/\r?\n|\r/g).map(line => line.trim());
-            // parsed clipboard lines
 
             // Validate we have between 1 and 16 loadouts
             if (lines.length === 0 || lines.length > 16) {
@@ -1052,31 +1050,24 @@ export class HSAmbrosia extends HSModule
                 return;
             }
 
+            const isSingleLoadout = lines.length === 1 || (lines.length === 2 && lines[1] === '');
+            let activeSlotIndex = 0;
+            if (isSingleLoadout && this.activeLoadout) {
+                const loadoutNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(this.activeLoadout);
+                if (typeof loadoutNumber === 'number') {
+                    activeSlotIndex = loadoutNumber - 1;
+                }
+            }
+
             const fileInput = document.getElementById('importBlueberries') as HTMLInputElement;
             const modeToggle = await HSElementHooker.HookElement('#blueberryToggleMode') as HTMLButtonElement;
+            if (!fileInput) { throw new Error('Import input element not found'); }
+            if (!modeToggle) { throw new Error('Mode toggle button not found'); }
 
-            if (!fileInput) {
-                throw new Error('Import input element not found');
-            }
-
-            if (!modeToggle) {
-                throw new Error('Mode toggle button not found');
-            }
-
-            // If the current mode is LOAD, we need to switch to SAVE mode
-            // TODO: update HSAmbrosiaHelper.ensureLoadoutModeIsLoad to handle either save or load with a parameter
-            const currentMode = modeToggle.innerText;
-            if (currentMode.includes('LOAD ')) {
-                // switch blueberry mode to SAVE
-                modeToggle.click();
-            }
+            HSAmbrosiaHelper.ensureLoadoutMode('SAVE');
 
             importedCount = 0;
             skippedCount = 0;
-
-            // Use dynamic slot resolution
-            const loadoutsSlots = this.#loadoutsSlots;
-
             failures = [];
 
             // starting loadout import loop
@@ -1090,118 +1081,20 @@ export class HSAmbrosia extends HSModule
                     continue;
                 }
 
-                // Use dynamic slot element
-                const loadoutBtn = loadoutsSlots[i] as HTMLButtonElement;
-                if (!loadoutBtn) {
-                    HSLogger.warn(`Loadout slot element for index ${i} not found`, this.context);
-                    // no slot element for index
+                const result = await this.#importLoadoutLine(loadoutData, isSingleLoadout ? activeSlotIndex : i);
+
+                if (result.skipped) {
+                    skippedCount++;
+                    continue;
+                }
+                if (!result.success) {
+                    failures.push({ index: i + 1, reason: result.reason ?? 'Unknown error' });
                     continue;
                 }
 
-                const blob = new Blob([loadoutData], { type: 'application/json' });
-                const file = new File([blob], 'quick-import.json', { type: 'application/json' });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                fileInput.files = dataTransfer.files;
-                // file input set and dispatched
-                const event = new Event('change', { bubbles: true });
-                fileInput.dispatchEvent(event);
-
-                // Wait for the import alert (the game shows an alert after file selection).
-                // If the alert appears but its content is empty, poll a bit longer for text to materialize.
-                let alertText = '';
-                let alertWrapper: HTMLElement | null;
-                let okAlert: HTMLButtonElement | null;
-
-                for (let attempt = 0; attempt < 50; attempt++) {
-                    alertWrapper = document.getElementById('alertWrapper');
-                    if (alertWrapper && alertWrapper.style.display === 'block') {
-                        // poll a bit for text just in case
-                        for (let inner = 0; inner < 40; inner++) {
-                            await HSUtils.sleep(5);
-                            const scroll = alertWrapper.querySelector('.scrollbar');
-                            const candidate = (scroll && scroll.textContent) ? scroll.textContent.trim() : (alertWrapper.textContent || '').trim();
-                            if (candidate.length > 0) {
-                                alertText = candidate;
-                                break;
-                            }
-                        }
-
-                        okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
-                        if (okAlert) {
-                            okAlert.click();
-                        }
-
-                        // Wait for it to close
-                        let alertStillPresent = true;
-                        for (let clearWait = 0; clearWait < 20; clearWait++) {
-                            await HSUtils.sleep(5);
-                            alertWrapper = document.getElementById('alertWrapper');
-                            if (!alertWrapper || alertWrapper.style.display !== 'block') {
-                                alertStillPresent = false;
-                                break;
-                            }
-                            // Re-click if stuck
-                            okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
-                            if (okAlert) okAlert.click();
-                        }
-                        break;
-                    }
-                    await HSUtils.sleep(5);
-                }
-
-                const isSuccess = (alertText || '').toLowerCase().includes('tree successfully imported');
-
-                if (!isSuccess) {
-                    // record failure for later reporting
-                    const reason = alertText || 'Unknown error';
-                    failures.push({ index: i + 1, reason });
-
-                    // Clear the file input to avoid residual state
-                    try {
-                        fileInput.files = new DataTransfer().files;
-                    } catch (e) { /* ignore */ }
-
-                    // do not click save on this slot
-                    continue;
-                }
-
-                // Import succeeded -> now click the loadout button to save into the slot
-                loadoutBtn.click();
-
-                // Wait for confirm dialog and click OK to accept overwriting the slot; keep clicking until dismissed
-                let confirmWrapper: HTMLElement | null;
-                let okConfirm: HTMLButtonElement | null;
-
-                for (let attempt = 0; attempt < 50; attempt++) {
-                    confirmWrapper = document.getElementById('confirmWrapper');
-                    if (confirmWrapper && confirmWrapper.style.display === 'block') {
-                        okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
-                        if (okConfirm) {
-                            okConfirm.click();
-                        }
-
-                        // Wait for it to close
-                        let confirmStillPresent = true;
-                        for (let clearWait = 0; clearWait < 20; clearWait++) {
-                            await HSUtils.sleep(5);
-                            confirmWrapper = document.getElementById('confirmWrapper');
-                            if (!confirmWrapper || confirmWrapper.style.display !== 'block') {
-                                confirmStillPresent = false;
-                                break;
-                            }
-                            // Re-click if stuck
-                            okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
-                            if (okConfirm) okConfirm.click();
-                        }
-                        break;
-                    }
-                    await HSUtils.sleep(5);
-                }
-
-                // Success path
                 importedCount++;
             }
+
             // summary: imported/skipped/failed
             modeToggle.click();
 
@@ -1228,17 +1121,143 @@ export class HSAmbrosia extends HSModule
             HSUI.Notify('Quick Import failed', { notificationType: 'error' });
         } finally {
             await HSUtils.stopDialogWatcher();
-            if (restoreAutoConfirm) {
-                autoConfirmSetting.enable();
-            }
+            HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
             if (restoreAfkSwapper) {
                 afkSwapperSetting.enable();
             }
-            // Restore previously active loadout slot
             if (previouslyActiveSlot) {
                 previouslyActiveSlot.click();
             }
             // cleanup complete
+        }
+    }
+
+    async #importLoadoutLine(line: string, slotIndex?: number): Promise<{ success: boolean; skipped?: boolean; reason?: string }> {
+        let effectiveSlotIndex = slotIndex;
+
+        if (effectiveSlotIndex === undefined && this.activeLoadout) {
+            const loadoutNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(this.activeLoadout);
+            if (typeof loadoutNumber === 'number') {
+                effectiveSlotIndex = loadoutNumber - 1;
+            }
+        }
+
+        const loadoutBtn = this.#loadoutsSlots[effectiveSlotIndex ?? -1] as HTMLButtonElement | undefined;
+        if (!loadoutBtn) {
+            HSLogger.warn(`Loadout slot element for index ${effectiveSlotIndex ?? -1} not found`, this.context);
+            return { success: false, reason: 'Loadout slot element not found' };
+        }
+
+        const fileInput = document.getElementById('importBlueberries') as HTMLInputElement | null;
+        if (!fileInput) {
+            throw new Error('Import input element not found');
+        }
+
+        const blob = new Blob([line], { type: 'application/json' });
+        const file = new File([blob], 'quick-import.json', { type: 'application/json' });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        // file input set and dispatched
+
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+
+        // Wait for the import alert (the game shows an alert after file selection).
+        // If the alert appears but its content is empty, poll a bit longer for text to materialize.
+        let alertText = '';
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const alertWrapper = document.getElementById('alertWrapper');
+            if (alertWrapper && alertWrapper.style.display === 'block') {
+                for (let inner = 0; inner < 40; inner++) {
+                    await HSUtils.sleep(5);
+                    const scroll = alertWrapper.querySelector('.scrollbar');
+                    const candidate = (scroll && scroll.textContent)
+                        ? scroll.textContent.trim()
+                        : (alertWrapper.textContent || '').trim();
+                    if (candidate.length > 0) {
+                        alertText = candidate;
+                        break;
+                    }
+                }
+
+                const okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
+                if (okAlert) {
+                    okAlert.click();
+                }
+
+                for (let clearWait = 0; clearWait < 20; clearWait++) {
+                    await HSUtils.sleep(5);
+                    const currentAlertWrapper = document.getElementById('alertWrapper');
+                    if (!currentAlertWrapper || currentAlertWrapper.style.display !== 'block') {
+                        break;
+                    }
+                    const retryOkAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
+                    if (retryOkAlert) retryOkAlert.click();
+                }
+                break;
+            }
+            await HSUtils.sleep(5);
+        }
+
+        const isSuccess = (alertText || '').toLowerCase().includes('tree successfully imported');
+        if (!isSuccess) {
+            try {
+                // Clear the file input to avoid residual state
+                fileInput.files = new DataTransfer().files;
+            } catch { /* ignore */ }
+            return { success: false, reason: alertText || 'Unknown error' };
+        }
+
+        // Import succeeded -> now click the loadout button to save into the slot
+        loadoutBtn.click();
+
+        // Wait for confirm dialog and click OK to accept overwriting the slot; keep clicking until dismissed
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const confirmWrapper = document.getElementById('confirmWrapper');
+            if (confirmWrapper && confirmWrapper.style.display === 'block') {
+                const okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
+                if (okConfirm) {
+                    okConfirm.click();
+                }
+
+                for (let clearWait = 0; clearWait < 20; clearWait++) {
+                    await HSUtils.sleep(5);
+                    const currentConfirmWrapper = document.getElementById('confirmWrapper');
+                    if (!currentConfirmWrapper || currentConfirmWrapper.style.display !== 'block') {
+                        break;
+                    }
+                    const retryOkConfirm = document.getElementById('ok_confirm') as HTMLButtonElement | null;
+                    if (retryOkConfirm) retryOkConfirm.click();
+                }
+                break;
+            }
+            await HSUtils.sleep(5);
+        }
+
+        return { success: true };
+    }
+
+    public async importLoadoutToActiveSlot(loadout: string): Promise<{ success: boolean; skipped?: boolean; reason?: string }> {
+        HSAmbrosiaHelper.ensureLoadoutMode('SAVE');
+
+        try {
+            const result = await this.#importLoadoutLine(loadout);
+            if (!result.success) {
+                HSLogger.warn(`importLoadoutToActiveSlot failed: ${JSON.stringify({ source: 'importLoadoutToActiveSlot', reason: result.reason })}`, this.context);
+                HSUI.Notify(`Failed to import loadout${result.reason ? `: ${result.reason}` : ''}`, { position: 'top', notificationType: 'error' });
+                return result;
+            }
+
+            HSUI.Notify('Loadout imported to the active slot.', { position: 'top', notificationType: 'success' });
+            return result;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            HSLogger.error(`importLoadoutToActiveSlot exception: ${JSON.stringify({ source: 'importLoadoutToActiveSlot', loadoutPreview: loadout.slice(0, 180) })} ${message}`, this.context);
+            HSUI.Notify('Failed to import loadout.', { position: 'top', notificationType: 'error' });
+            return { success: false, reason: message };
+        } finally {
+            HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
         }
     }
 

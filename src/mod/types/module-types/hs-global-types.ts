@@ -124,8 +124,8 @@ export interface HSGlobalGameData {
     fetchedDataRefreshInterval: number;
     campaignTokenRefreshInterval: number;
     globalEventRefreshInterval: number;
-    turboModeSpeedMs: number;
-    turboCSSId: string;
+    gdsSpeedMs: number;
+    gdsCSSId: string;
 }
 
 export interface HSGlobalHSUI {

@@ -48,7 +48,7 @@ export class OcteractHelper {
         return 2 * Math.sqrt(actualFreeLevels * level);
     }
 
-    getOcteractUpgradeEffect(upgradeKey: OcteractUpgradeKey): number {
+    getOcteractUpgradeEffect(upgradeKey: OcteractUpgradeKey, effectKey?: string): number {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
@@ -56,6 +56,6 @@ export class OcteractHelper {
         const totalLevels = this.actualOcteractUpgradeTotalLevels(upgradeKey);
         if (!Number.isFinite(totalLevels)) return 0;
 
-        return upgrade.effect ? upgrade.effect(totalLevels) : 0;
+        return upgrade.effect ? upgrade.effect(totalLevels, effectKey) : 0;
     }
 }

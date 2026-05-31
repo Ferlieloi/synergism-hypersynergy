@@ -65,11 +65,11 @@ export class HSCodes extends HSModule {
             // Need to disconnect or our changes will put this observer into a loop
             this.#disconnect();
 
-            if(this.#codeBoxLabel && this.#codeBoxLabel.innerText.includes("synergism2021")) {
+            if(this.#codeBoxLabel && this.#codeBoxLabel.innerText.includes("synergism2026")) {
                 const originalText = this.#codeBoxLabel.innerText;
                 this.#codeBoxLabel.innerHTML = `<div id="hs-hijack-codes-wrapper">
                     [HSCodes] Hypersynergism has hijacked this modal to offer you all the reusable codes conveniently (click code to auto input it):</br>
-                    <span style="${this.#codeSpanStyle}" data-code="synergism2021">synergism2021</span>
+                    <span style="${this.#codeSpanStyle}" data-code="synergism2026">synergism2026</span>
                     <span style="${this.#codeSpanStyle}" data-code="Khafra">Khafra</span>
                     <span style="${this.#codeSpanStyle}" data-code=":unsmith:">:unsmith:</span>
                     <span style="${this.#codeSpanStyle}" data-code=":antismith:">:antismith:</span>

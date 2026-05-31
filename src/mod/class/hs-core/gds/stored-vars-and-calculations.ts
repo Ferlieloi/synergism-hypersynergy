@@ -911,9 +911,10 @@ export const synergismLevelMilestones: Record<SynergismLevelMilestones, Synergis
   }
 }
 
+// TODO: Add all effects (and other useful data) from singularity.ts > goldenQuarkUpgrades
 export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQuarkUpgradeDef> = {
-  goldenQuarks1: { maxLevel: 15 },
-  goldenQuarks2: { maxLevel: 75 },
+  goldenQuarks1: { maxLevel: 15, canExceedCap: true },
+  goldenQuarks2: { maxLevel: 75, canExceedCap: true },
   goldenQuarks3: { maxLevel: 1000 },
   starterPack: { maxLevel: 1 },
   wowPass: { maxLevel: 1 },
@@ -931,14 +932,14 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   },
   corruptionFifteen: { maxLevel: 1 },
   singOfferings1: { maxLevel: -1 },
-  singOfferings2: { maxLevel: 25 },
-  singOfferings3: { maxLevel: 40 },
+  singOfferings2: { maxLevel: 25, canExceedCap: true },
+  singOfferings3: { maxLevel: 40, canExceedCap: true },
   singObtainium1: { maxLevel: -1 },
-  singObtainium2: { maxLevel: 25 },
-  singObtainium3: { maxLevel: 40 },
+  singObtainium2: { maxLevel: 25, canExceedCap: true },
+  singObtainium3: { maxLevel: 40, canExceedCap: true },
   singCubes1: { maxLevel: -1 },
-  singCubes2: { maxLevel: 25 },
-  singCubes3: { maxLevel: 40 },
+  singCubes2: { maxLevel: 25, canExceedCap: true },
+  singCubes3: { maxLevel: 40, canExceedCap: true },
   singCitadel: { maxLevel: -1 },
   singCitadel2: { maxLevel: 100 },
   octeractUnlock: { maxLevel: 1 },
@@ -951,21 +952,21 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   divinePack: { maxLevel: 1 },
   wowPass2: { maxLevel: 1 },
   wowPass3: { maxLevel: 1 },
-  potionBuff: { maxLevel: 10 },
-  potionBuff2: { maxLevel: 10 },
-  potionBuff3: { maxLevel: 10 },
+  potionBuff: { maxLevel: 10, canExceedCap: true },
+  potionBuff2: { maxLevel: 10, canExceedCap: true },
+  potionBuff3: { maxLevel: 10, canExceedCap: true },
   singChallengeExtension: { maxLevel: 4 },
   singChallengeExtension2: { maxLevel: 3 },
   singChallengeExtension3: { maxLevel: 3 },
   singQuarkImprover1: { maxLevel: 30 },
   singQuarkHepteract: { maxLevel: 10 },
   singQuarkHepteract2: { maxLevel: 10 },
-  singQuarkHepteract3: { maxLevel: 10 },
+  singQuarkHepteract3: { maxLevel: 10, canExceedCap: true },
   singOcteractGain: { maxLevel: -1 },
-  singOcteractGain2: { maxLevel: 25 },
-  singOcteractGain3: { maxLevel: 50 },
-  singOcteractGain4: { maxLevel: 100 },
-  singOcteractGain5: { maxLevel: 200 },
+  singOcteractGain2: { maxLevel: 25, canExceedCap: true },
+  singOcteractGain3: { maxLevel: 50, canExceedCap: true },
+  singOcteractGain4: { maxLevel: 100, canExceedCap: true },
+  singOcteractGain5: { maxLevel: 200, canExceedCap: true },
   platonicTau: {
     maxLevel: 1,
     qualityOfLife: true,
@@ -1061,7 +1062,12 @@ export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgrad
       return 0.001 * n + ((n > 0) ? 0.01 : 0)
     },
   },
-  octeractSingUpgradeCap: { maxLevel: 10 },
+  octeractSingUpgradeCap: {
+    maxLevel: 10,
+    effect: (n: number, effectKey?: string) => {
+      return effectKey === 'goldenQuarkUpgradeCapIncrease' ? n : 0
+    },
+  },
   octeractOfferings1: { maxLevel: -1 },
   octeractObtainium1: { maxLevel: -1 },
   octeractAscensions: { maxLevel: 1000000 },
@@ -1093,13 +1099,14 @@ export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgrad
 
 type GoldenQuarkUpgradeDef = {
   maxLevel: number
+  canExceedCap?: boolean
   effect?: (n: number, key?: string) => number
   qualityOfLife?: boolean
 }
 
 type OcteractUpgradeDef = {
   maxLevel: number
-  effect?: (n: number) => number
+  effect?: (n: number, effectKey?: string) => number
 }
 
 export const SINGULARITY_CHALLENGE_DATA: {
