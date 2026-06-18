@@ -22,7 +22,7 @@ import { HSModuleOptions } from "../../types/hs-types";
  * Author: Swiffy
 */
 export class HSHepteracts extends HSModule {
-    #heptGrid? : Element;
+    #heptGrid?: Element;
     #hepteractCraftTexts?: HTMLDivElement;
 
     #hepteractBaseNames = [
@@ -36,7 +36,7 @@ export class HSHepteracts extends HSModule {
         'multiplier'
     ];
 
-    #hepteracts : string[] = [];
+    #hepteracts: string[] = [];
     #hepteractMeters: string[] = [];
 
     #boxCounts = {
@@ -50,7 +50,7 @@ export class HSHepteracts extends HSModule {
         multiplierHepteract: 0
     };
 
-    #hepteractCosts : { [key: string]: number | null } = {
+    #hepteractCosts: { [key: string]: number | null } = {
         chronosHepteract: null,
         hyperrealismHepteract: null,
         quarkHepteract: 100,
@@ -59,13 +59,17 @@ export class HSHepteracts extends HSModule {
         acceleratorHepteract: null,
         acceleratorBoostHepteract: null,
         multiplierHepteract: null
-    }; 
+    };
 
-    #hyperToChallengeRatio = 0;
-    #chronosToChallengeRatio = 0;
-    #boostToMultiplierRatio = 0;
-    #acceleratorToMultiplierRatio = 0;
-    #chronosToAcceleratorRatio = 0;
+    #chronosToMinChrHypChaRatio = 0;
+    #hyperToMinChrHypChaRatio = 0;
+    #challengeToMinChrHypChaRatio = 0;
+    #acceleratorToMinAccBooMulRatio = 0;
+    #boostToMinAccBooMulRatio = 0;
+    #multiplierToMinAccBooMulRatio = 0;
+    #chronosToMinChrAccRatio = 0;
+    #acceleratorToMinChrAccRatio = 0;
+
 
     #ratioElementHtml = `
         <div id="hs-ratio-container">
@@ -73,7 +77,7 @@ export class HSHepteracts extends HSModule {
             <div class="hs-ratio" id="hs-ratio-b">ACC/BST/MLT: 1 / 123 / 123</div>
             <div class="hs-ratio" id="hs-ratio-c">CHR/ACC: 1 / 123</div>
         </div>`;
-    
+
     #ratioElementStyle = `
         #hs-ratio-container {
             width: 100%;
@@ -101,7 +105,7 @@ export class HSHepteracts extends HSModule {
     #expandPending = false;
     #watchUpdatePending = false;
 
-    constructor(moduleOptions : HSModuleOptions) {
+    constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
 
         this.#hepteracts = this.#hepteractBaseNames.map(h => {
@@ -120,21 +124,21 @@ export class HSHepteracts extends HSModule {
 
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
 
-        if(gameStateMod) {
+        if (gameStateMod) {
             gameStateMod.subscribeGameStateChange("MAIN_VIEW", (prevView, currentView) => {
-                if(prevView.getId() === MAIN_VIEW.CUBES && 
-                    currentView.getId() !== MAIN_VIEW.CUBES && 
+                if (prevView.getId() === MAIN_VIEW.CUBES &&
+                    currentView.getId() !== MAIN_VIEW.CUBES &&
                     gameStateMod.getCurrentUIView("CUBE_VIEW").getId() === CUBE_VIEW.HEPTERACT_FORGE
                 ) {
-                    if(self.#ownedHepteractsWatch) {
+                    if (self.#ownedHepteractsWatch) {
                         HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
                     }
-                } 
+                }
             });
 
             gameStateMod.subscribeGameStateChange("CUBE_VIEW", async (prevView, currentView) => {
-                if(currentView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
+                if (currentView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
                     HSLogger.debug(() => "Hepteract forge view opened, starting watch", this.context);
                     self.#ownedHepteractsElement = await HSElementHooker.HookElement('#hepteractQuantity') as HTMLElement;
 
@@ -148,18 +152,18 @@ export class HSHepteracts extends HSModule {
                         }
 
                         self.#watchUpdatePending = false;
-                    }, 
-                    {
-                        greedy: true,
-                        overrideThrottle: true,
-                        valueParser: (element) => {
-                            const subElement = element.querySelector('span');
-                            const value = subElement?.innerText;
-                            return value;
-                        }
-                    });
-                } else if(prevView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
-                    if(self.#ownedHepteractsWatch) {
+                    },
+                        {
+                            greedy: true,
+                            overrideThrottle: true,
+                            valueParser: (element) => {
+                                const subElement = element.querySelector('span');
+                                const value = subElement?.innerText;
+                                return value;
+                            }
+                        });
+                } else if (prevView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
+                    if (self.#ownedHepteractsWatch) {
                         HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
                     }
@@ -171,11 +175,11 @@ export class HSHepteracts extends HSModule {
         this.#hepteractCraftTexts = await HSElementHooker.HookElement('#hepteractCraftTexts') as HTMLDivElement;
 
         this.#heptGrid.childNodes.forEach(node => {
-            if(node.nodeType === 1) {
+            if (node.nodeType === 1) {
                 const htmlNode = node as HTMLElement;
                 const id = htmlNode.id
 
-                if(self.#hepteracts.includes(id)) {
+                if (self.#hepteracts.includes(id)) {
                     const craftMaxBtn = document.querySelector(`#${id}CraftMax`) as HTMLElement;
                     const capBtn = document.querySelector(`#${id}Cap`) as HTMLElement;
                     const heptImg = document.querySelector(`#${id}Image`) as HTMLElement;
@@ -183,21 +187,21 @@ export class HSHepteracts extends HSModule {
                     // As hepteract costs are not static and we don't have direct access to them, we need to parse them from the DOM in a "just-in-time" manner...
                     htmlNode.addEventListener('mouseenter', async (e: MouseEvent) => {
 
-                        if(id in self.#hepteractCosts && id === 'quarkHepteract') {
+                        if (id in self.#hepteractCosts && id === 'quarkHepteract') {
                             return;
                         }
 
                         const costElement = document.querySelector('#hepteractCostText') as HTMLDivElement;
 
-                        if(costElement) {
+                        if (costElement) {
                             const costString = costElement.innerText;
                             const costMatch = costString.match(/you\s+(.*?)\s+Hepteracts/i);
 
-                            if(costMatch) {
+                            if (costMatch) {
                                 const cost = costMatch[1];
-                                
+
                                 try {
-                                    if(id in self.#hepteractCosts) {
+                                    if (id in self.#hepteractCosts) {
                                         const floatCost = HSUtils.parseFloat2(cost);
                                         (self.#hepteractCosts as any)[id] = floatCost;
                                     }
@@ -207,8 +211,8 @@ export class HSHepteracts extends HSModule {
                             }
                         }
                     });
-                    
-                    if(craftMaxBtn && capBtn && heptImg) {
+
+                    if (craftMaxBtn && capBtn && heptImg) {
 
                         // Update and render hepteract total cost when hovering over the image
                         heptImg.addEventListener('mouseenter', async (evt) => {
@@ -216,22 +220,21 @@ export class HSHepteracts extends HSModule {
                             const targetId = target.id;
                             const isQuarkHepteract = targetId.toLowerCase().includes('quark');
 
-                            if(self.#ownedHepteracts !== null && self.#ownedHepteracts !== undefined) {
+                            if (self.#ownedHepteracts !== null && self.#ownedHepteracts !== undefined) {
                                 const currentMax = (self.#boxCounts as any)[id];
                                 const cubeCost = (self.#hepteractCosts as any)[id];
 
-                                if(currentMax === null || cubeCost === null) return;
+                                if (currentMax === null || cubeCost === null) return;
 
                                 let hepteractDoubleCapSetting = HSSettings.getSetting('expandCostProtectionDoubleCap') as HSSetting<boolean>;
                                 let buyCost = null;
-
-                                if(hepteractDoubleCapSetting.getValue()) {
-                                    buyCost = ((currentMax * 2) /*- currentMax*/) * cubeCost;
+                                if (hepteractDoubleCapSetting.getValue()) {
+                                    buyCost = (currentMax * 2) * cubeCost * 0.75;
                                 } else {
                                     buyCost = currentMax * 2 * cubeCost;
                                 }
 
-                                if(self.#ownedHepteracts === 0) {
+                                if (self.#ownedHepteracts === 0) {
                                     self.#updateCraftText(buyCost, '∞', isQuarkHepteract);
                                 } else {
                                     const percentOwned = self.#ownedHepteracts > 0 ? buyCost / self.#ownedHepteracts : 1;
@@ -245,12 +248,12 @@ export class HSHepteracts extends HSModule {
                             const targetId = target.id;
                             const isQuarkHepteract = targetId.toLowerCase().includes('quark');
 
-                            if(!targetId) return;
+                            if (!targetId) return;
 
                             // Don't allow quick expand on quark hepteract
-                            if(isQuarkHepteract) return;
+                            if (isQuarkHepteract) return;
 
-                            if(self.#expandPending || self.#watchUpdatePending) {
+                            if (self.#expandPending || self.#watchUpdatePending) {
                                 HSLogger.debug(() => `Quick expand cancelled, another expand was still pending (exp ${self.#expandPending}, wtch: ${self.#watchUpdatePending})`, self.context);
                                 //self.#expandPending = false;
                                 return;
@@ -265,8 +268,8 @@ export class HSHepteracts extends HSModule {
                             //let percentObtOwned = null;
                             //let percentOfferingOwned = null;
 
-                            if(self.#ownedHepteracts !== null && self.#ownedHepteracts !== undefined) {
-                                if(self.#ownedHepteracts === 0) {
+                            if (self.#ownedHepteracts !== null && self.#ownedHepteracts !== undefined) {
+                                if (self.#ownedHepteracts === 0) {
                                     HSLogger.info(`Owned hepteracts is 0`, this.context);
                                     self.#expandPending = false;
                                     return;
@@ -275,14 +278,14 @@ export class HSHepteracts extends HSModule {
                                 const currentMax = (self.#boxCounts as any)[id];
                                 const cubeCost = (self.#hepteractCosts as any)[id];
 
-                                if(currentMax === null || cubeCost === null) {
+                                if (currentMax === null || cubeCost === null) {
                                     HSLogger.warn(`Hepteract cost for ${id} not parsed yet`, self.context);
                                 }
 
                                 let hepteractDoubleCapSetting = HSSettings.getSetting('expandCostProtectionDoubleCap') as HSSetting<boolean>;
                                 let nextHepts = null;
 
-                                if(hepteractDoubleCapSetting.getValue()) {
+                                if (hepteractDoubleCapSetting.getValue()) {
                                     nextHepts = ((currentMax * 2) /*- currentMax*/)
                                     buyCost = ((currentMax * 2) /*- currentMax*/) * cubeCost;
                                 } else {
@@ -325,13 +328,13 @@ export class HSHepteracts extends HSModule {
 
                                 const notify = (costProtectionNotificationSetting && costProtectionNotificationSetting.getValue() === true) ? false : true;
 
-                                if(expandCostProtectionSetting.isEnabled()) {
+                                if (expandCostProtectionSetting.isEnabled()) {
                                     const heptSettingValue = expandCostProtectionSetting.getCalculatedValue();
 
-                                    if(heptSettingValue && (percentHeptOwned >= heptSettingValue)) {
-                                        if(notify)
+                                    if (heptSettingValue && (percentHeptOwned >= heptSettingValue)) {
+                                        if (notify)
                                             HSLogger.info(`Hept. cost protection: Cost owned ${HSUtils.N(percentHeptOwned * 100)}% >= ${heptSettingValue * 100}%`, this.context);
-    
+
                                         //self.#watchUpdatePending = false;
                                         self.#expandPending = false;
                                         return;
@@ -370,11 +373,11 @@ export class HSHepteracts extends HSModule {
                                 self.#expandPending = false;
                                 return;
                             }
-                            
+
                             // This is the small "ON/OFF" toggle button which is used to enable/disable the hepteract buy notifications
                             const hepteractBuyNotificationToggle = await HSElementHooker.HookElement('#toggle35') as HTMLButtonElement;
 
-                            if(hepteractBuyNotificationToggle && hepteractBuyNotificationToggle.innerText.includes('ON')) {
+                            if (hepteractBuyNotificationToggle && hepteractBuyNotificationToggle.innerText.includes('ON')) {
                                 HSLogger.info(`Turned hepteract notification toggle OFF`, this.context);
                                 hepteractBuyNotificationToggle.click();
                             }
@@ -385,27 +388,27 @@ export class HSHepteracts extends HSModule {
                             }, "confirm", false, 25);
 
                             await HSUtils.wait(25);
-                            
+
                             craftMaxBtn.click();
 
-                            if(buyCost && percentHeptOwned) {
+                            if (buyCost && percentHeptOwned) {
                                 self.#updateCraftText(buyCost, percentHeptOwned);
                             }
 
                             await HSUtils.wait(5);
 
-                            if(id !== 'quarkHepteract') {
+                            if (id !== 'quarkHepteract') {
                                 const costElement = document.querySelector('#hepteractCostText') as HTMLDivElement;
-        
-                                if(costElement) {
+
+                                if (costElement) {
                                     const costString = costElement.innerText;
                                     const costMatch = costString.match(/you\s+(.*?)\s+Hepteracts/i);
-        
-                                    if(costMatch) {
+
+                                    if (costMatch) {
                                         const cost = costMatch[1];
-                                        
+
                                         try {
-                                            if(id in self.#hepteractCosts) {
+                                            if (id in self.#hepteractCosts) {
                                                 const floatCost = HSUtils.parseFloat2(cost);
                                                 (self.#hepteractCosts as any)[id] = floatCost;
                                             }
@@ -415,13 +418,13 @@ export class HSHepteracts extends HSModule {
                                     }
                                 }
                             }
-                           
+
                             const ownedHeptQuantElement = !self.#ownedHepteractsElement ? document.querySelector('#hepteractQuantity') as HTMLElement : self.#ownedHepteractsElement;
 
-                            if(ownedHeptQuantElement) {
+                            if (ownedHeptQuantElement) {
                                 const subElement = ownedHeptQuantElement.querySelector('span') as HTMLSpanElement;
 
-                                if(subElement) {
+                                if (subElement) {
                                     const value = subElement.innerText;
                                     const hepts = parseFloat(value);
                                     self.#ownedHepteracts = hepts;
@@ -435,7 +438,7 @@ export class HSHepteracts extends HSModule {
             }
         });
 
-        if(document.querySelectorAll('.heptTypeImage').length > 0) {
+        if (document.querySelectorAll('.heptTypeImage').length > 0) {
             HSUI.injectStyle(`
                 .heptTypeImage:not(#quarkHepteractImage):not(#hepteractToQuarkImage):not(#overfluxPowderImage) {
                     transform: scale(1);
@@ -453,7 +456,7 @@ export class HSHepteracts extends HSModule {
             `);
         }
 
-        
+
 
         HSLogger.log("Hepteract images now serve as 'quick expand and max' buttons", this.context);
         HSLogger.log("Setting up hepteract ratio watch", this.context);
@@ -473,47 +476,61 @@ export class HSHepteracts extends HSModule {
             const meter = document.querySelector(`#${meterId}`) as HTMLElement;
             const boxName = meterId.substring(0, meterId.indexOf('ProgressBar')) + 'Hepteract';
 
-            if(meter && boxName) {
+            if (meter && boxName) {
                 HSElementHooker.watchElement(meter, (value) => {
-                    if(boxName in self.#boxCounts) {
+                    if (boxName in self.#boxCounts) {
                         (self.#boxCounts as any)[boxName] = value;
-                        
-                        if(Object.values(self.#boxCounts).every(v => v > 0)) {
-                            self.#chronosToChallengeRatio = Math.round(self.#boxCounts.chronosHepteract / self.#boxCounts.challengeHepteract);
-                            self.#hyperToChallengeRatio = Math.round(self.#boxCounts.hyperrealismHepteract / self.#boxCounts.challengeHepteract);
-                            self.#acceleratorToMultiplierRatio = Math.round(self.#boxCounts.acceleratorHepteract / self.#boxCounts.multiplierHepteract);
-                            self.#boostToMultiplierRatio = Math.round(self.#boxCounts.acceleratorBoostHepteract / self.#boxCounts.multiplierHepteract);
-                            self.#chronosToAcceleratorRatio = Math.round(self.#boxCounts.chronosHepteract / self.#boxCounts.acceleratorHepteract);
 
-                            if(this.#ratioElementA && this.#ratioElementB && this.#ratioElementC) {
-                                this.#ratioElementA.innerText = `CHR/HYP/CHL: ${HSUtils.N(self.#chronosToChallengeRatio, 0)} / ${HSUtils.N(self.#hyperToChallengeRatio, 0)} / 1`;
-                                this.#ratioElementB.innerText = `ACC/BST/MLT: ${HSUtils.N(self.#acceleratorToMultiplierRatio, 0)} / ${HSUtils.N(self.#boostToMultiplierRatio, 0)} / 1`;
-                                this.#ratioElementC.innerText = `CHR/ACC: ${HSUtils.N(self.#chronosToAcceleratorRatio, 0)} / 1`;
+                        if (Object.values(self.#boxCounts).every(v => v > 0)) {
+                            const box = self.#boxCounts;
+                            if (!Object.values(box).every(v => v > 0)) return;
+
+                            // group 1: CHR / HYP / CHL
+                            const min1 = Math.min(box.chronosHepteract, box.hyperrealismHepteract, box.challengeHepteract);
+                            self.#chronosToMinChrHypChaRatio = Math.round(box.chronosHepteract / min1);
+                            self.#hyperToMinChrHypChaRatio = Math.round(box.hyperrealismHepteract / min1);
+                            self.#challengeToMinChrHypChaRatio = Math.round(box.challengeHepteract / min1);
+
+                            // group 2: ACC / BST / MLT
+                            const min2 = Math.min(box.acceleratorHepteract, box.acceleratorBoostHepteract, box.multiplierHepteract);
+                            self.#acceleratorToMinAccBooMulRatio = Math.round(box.acceleratorHepteract / min2);
+                            self.#boostToMinAccBooMulRatio = Math.round(box.acceleratorBoostHepteract / min2);
+                            self.#multiplierToMinAccBooMulRatio = Math.round(box.multiplierHepteract / min2);
+
+                            // group 3: CHR / ACC
+                            const min3 = Math.min(box.chronosHepteract, box.acceleratorHepteract);
+                            self.#chronosToMinChrAccRatio = Math.round(box.chronosHepteract / min3);
+                            self.#acceleratorToMinChrAccRatio = Math.round(box.acceleratorHepteract / min3);
+
+                            if (this.#ratioElementA && this.#ratioElementB && this.#ratioElementC) {
+                                this.#ratioElementA.innerText = `CHR/HYP/CHL: ${HSUtils.N(self.#chronosToMinChrHypChaRatio, 0)} / ${HSUtils.N(self.#hyperToMinChrHypChaRatio, 0)} / ${HSUtils.N(self.#challengeToMinChrHypChaRatio, 0)}`;
+                                this.#ratioElementB.innerText = `ACC/BST/MLT: ${HSUtils.N(self.#acceleratorToMinAccBooMulRatio, 0)} / ${HSUtils.N(self.#boostToMinAccBooMulRatio, 0)} / ${HSUtils.N(self.#multiplierToMinAccBooMulRatio, 0)}`;
+                                this.#ratioElementC.innerText = `CHR/ACC: ${HSUtils.N(self.#chronosToMinChrAccRatio, 0)} / ${HSUtils.N(self.#acceleratorToMinChrAccRatio, 0)}`;
                             }
                         }
                     } else {
                         HSLogger.warn(`Key ${boxName} not found in #boxCounts`, self.context);
                     }
-                }, 
-                {
-                    valueParser: (element) => {
-                        const value = element.innerText;
-    
-                        if(typeof value === 'string') {
-                            const split = value.split('/');
-    
-                            try {
-                                if(split && split[1]) {
-                                    return parseFloat(HSUtils.unfuckNumericString(split[1]));
+                },
+                    {
+                        valueParser: (element) => {
+                            const value = element.innerText;
+
+                            if (typeof value === 'string') {
+                                const split = value.split('/');
+
+                                try {
+                                    if (split && split[1]) {
+                                        return parseFloat(HSUtils.unfuckNumericString(split[1]));
+                                    }
+                                } catch (e) {
+                                    HSLogger.warn(`Parsing failed for ${split}`, self.context);
+                                    return '';
                                 }
-                            } catch (e) {
-                                HSLogger.warn(`Parsing failed for ${split}`, self.context);
-                                return '';
                             }
+                            return '';
                         }
-                        return '';
-                    }
-                });
+                    });
             } else {
                 HSLogger.warn(`Invalid meter or boxName`, self.context);
             }
@@ -529,8 +546,8 @@ export class HSHepteracts extends HSModule {
             percentOwned: 0
         }
 
-        if(this.#ownedHepteracts !== null && this.#ownedHepteracts !== undefined) {
-            if(this.#ownedHepteracts === 0) {
+        if (this.#ownedHepteracts !== null && this.#ownedHepteracts !== undefined) {
+            if (this.#ownedHepteracts === 0) {
                 HSLogger.info(`Owned hepteracts is 0`, this.context);
                 return undefined;
             }
@@ -538,7 +555,7 @@ export class HSHepteracts extends HSModule {
             const currentMax = (this.#boxCounts as any)[hepteractId];
             const cubeCost = (this.#hepteractCosts as any)[hepteractId];
 
-            if(currentMax === null || cubeCost === null) {
+            if (currentMax === null || cubeCost === null) {
                 HSLogger.warn(`Hepteract cost for ${hepteractId} not parsed yet`, this.context);
                 return undefined;
             };
@@ -546,7 +563,7 @@ export class HSHepteracts extends HSModule {
             let hepteractDoubleCapSetting = HSSettings.getSetting('expandCostProtectionDoubleCap') as HSSetting<boolean>;
             let buyCost = null;
 
-            if(hepteractDoubleCapSetting.getValue()) {
+            if (hepteractDoubleCapSetting.getValue()) {
                 buyCost = currentMax * cubeCost;
             } else {
                 buyCost = currentMax * 2 * cubeCost;
@@ -565,29 +582,29 @@ export class HSHepteracts extends HSModule {
     }
 
     #updateCraftText(buyCost: number, percentOwned: number | string, isQuarkHepteract: boolean = false) {
-        if(this.#hepteractCraftTexts) {
+        if (this.#hepteractCraftTexts) {
             const hasCostText = this.#hepteractCraftTexts.querySelector(`#hs-costText`) as HTMLDivElement;
 
             let persOwn;
 
-            if(HSUtils.isNumeric(percentOwned)) {
+            if (HSUtils.isNumeric(percentOwned)) {
                 persOwn = HSUtils.N(percentOwned as number * 100);
             } else {
                 persOwn = percentOwned as string;
             }
 
-            if(!hasCostText) {
+            if (!hasCostText) {
                 const costText = document.createElement('div');
                 costText.id = 'hs-costText';
 
-                if(isQuarkHepteract)
+                if (isQuarkHepteract)
                     costText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
                 else
                     costText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
 
                 this.#hepteractCraftTexts.appendChild(costText);
             } else {
-                if(isQuarkHepteract)
+                if (isQuarkHepteract)
                     hasCostText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
                 else
                     hasCostText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;

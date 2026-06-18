@@ -570,18 +570,6 @@ export class HSAmbrosia extends HSModule
     async enableAutoLoadout() {
         const self = this;
 
-        // Use module canonical state instead of the removed setting.
-        if (!this.activeLoadout) {
-            const autoLoadoutsSetting = HSSettings.getSetting('addTimeAutoLoadouts') as HSSetting<boolean>;
-
-            if (autoLoadoutsSetting && autoLoadoutsSetting.isEnabled()) {
-                autoLoadoutsSetting.disable();
-            }
-
-            HSLogger.warn(`Could not enable auto loadout - current loadout state is not known!`, this.context);
-            return;
-        }
-
         await HSAmbrosiaHelper.cacheBlueberryToggleModeButton();
 
         const addCodeBtn = this.#addCodeButton;
@@ -677,7 +665,7 @@ export class HSAmbrosia extends HSModule
             // Switch to time loadout
             HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
             timeLoadoutBtn.click();
-            
+
             // Let the game process the click
             await HSUtils.waitForNextTack(2);
 
@@ -1357,7 +1345,7 @@ export class HSAmbrosia extends HSModule
         this.#hasPerformedInitialLoadoutMatch = true;
     }
 
-    async gameDataCallback() { 
+    async gameDataCallback() {
         const gameDataAPI = this.#cachedGameDataAPI || (this.#cachedGameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI'));
         if (!gameDataAPI) return;
 

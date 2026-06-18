@@ -183,7 +183,7 @@ export class HSSettings extends HSModule {
         this.isInitialized = true;
     }
 
-    
+
     // ===============================
     // --- UI dependency plumbing ----
     // ===============================
@@ -273,6 +273,8 @@ export class HSSettings extends HSModule {
 
             if (storageMod) {
                 const serializedSettings = this.#serializeSettings();
+                const parsed = JSON.parse(serializedSettings);
+
                 const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
 
                 if (!saved) {
@@ -412,40 +414,40 @@ export class HSSettings extends HSModule {
                     const defaultTopLevel = defaultSettings[topLevelKey] as unknown as Record<string, unknown> | undefined;
                     if (!loadedTopLevel || !defaultTopLevel) return;
 
-                Object.keys(loadedTopLevel).forEach(nestedKey => {
-                    if (nestedKey in defaultTopLevel) {
-                        const bValue = loadedTopLevel[nestedKey];
-                        const defaultValue = defaultTopLevel[nestedKey];
+                    Object.keys(loadedTopLevel).forEach(nestedKey => {
+                        if (nestedKey in defaultTopLevel) {
+                            const bValue = loadedTopLevel[nestedKey];
+                            const defaultValue = defaultTopLevel[nestedKey];
 
-                        // If this is a nested object (but not an array), recursively merge
-                        if (
-                            bValue !== null &&
-                            typeof bValue === 'object' &&
-                            !Array.isArray(bValue) &&
-                            typeof defaultValue === 'object' &&
-                            !Array.isArray(defaultValue)
-                        ) {
-                            const mergedNestedObj = {
-                                ...(defaultValue as Record<string, unknown>),
-                            };
+                            // If this is a nested object (but not an array), recursively merge
+                            if (
+                                bValue !== null &&
+                                typeof bValue === 'object' &&
+                                !Array.isArray(bValue) &&
+                                typeof defaultValue === 'object' &&
+                                !Array.isArray(defaultValue)
+                            ) {
+                                const mergedNestedObj = {
+                                    ...(defaultValue as Record<string, unknown>),
+                                };
 
-                            // Override with B's values where they exist
-                            Object.keys(bValue as Record<string, unknown>).forEach(deepKey => {
-                                if (deepKey in mergedNestedObj) {
-                                    mergedNestedObj[deepKey] = (bValue as Record<string, unknown>)[deepKey];
-                                }
-                            });
+                                // Override with B's values where they exist
+                                Object.keys(bValue as Record<string, unknown>).forEach(deepKey => {
+                                    if (deepKey in mergedNestedObj) {
+                                        mergedNestedObj[deepKey] = (bValue as Record<string, unknown>)[deepKey];
+                                    }
+                                });
 
-                            // Update the resolved object
-                            const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
-                            resolvedTopLevel[nestedKey] = mergedNestedObj;
-                        } else {
-                            const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
-                            resolvedTopLevel[nestedKey] = bValue;
+                                // Update the resolved object
+                                const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
+                                resolvedTopLevel[nestedKey] = mergedNestedObj;
+                            } else {
+                                const resolvedTopLevel = resolved[topLevelKey] as Record<string, unknown>;
+                                resolvedTopLevel[nestedKey] = bValue;
+                            }
                         }
-                    }
-                    // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
-                });
+                        // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
+                    });
                 });
                 return resolved as unknown as HSSettingsDefinition;
             } else {
