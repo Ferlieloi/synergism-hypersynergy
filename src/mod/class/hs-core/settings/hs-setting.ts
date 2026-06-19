@@ -144,7 +144,6 @@ export abstract class HSSetting<T extends HSSettingType> {
         }
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${newState}`, this.context);
-
         this.definition.enabled = newState;
 
         if (this.definition.settingType === 'boolean') {

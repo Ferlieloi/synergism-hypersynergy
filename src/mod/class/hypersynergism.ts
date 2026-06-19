@@ -330,7 +330,7 @@ export class Hypersynergism {
     }
 
     #fixExaltBug() {
-        console.log('Attempting to exit an exalt by clicking the active challenge (if any).');
+        HSLogger.log('Attempting to exit an exalt by clicking the active challenge (if any).');
 
         const singChallengesWrapper = document.querySelector('#singularityChallenges');
         if (!singChallengesWrapper) return;
