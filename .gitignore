@@ -7,3 +7,7 @@ Synergism-*.txt
 cdn_cache_purge.bat
 cdn_cache_purge.ps1
 docs/git-ignore/
+electron_app/cache
+electron_app/extracted
+electron_app/node_modules
+electron_loader_test
