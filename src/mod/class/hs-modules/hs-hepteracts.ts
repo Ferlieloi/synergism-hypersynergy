@@ -94,9 +94,14 @@ export class HSHepteracts extends HSModule {
     #ratioElementC?: HTMLElement;
 
     #hepteractForgeView?: HTMLElement;
+
     #ownedHepteractsElement?: HTMLElement;
     #ownedHepteracts?: number;
     #ownedHepteractsWatch?: string;
+
+    #ownedQuarkElement?: HTMLElement;
+    #ownedQuarks?: number;
+    #ownedQuarksWatch?: string;
 
     // Quick expand is expected to be spam clicked
     // We need to make sure that hepteract expansion + max goes through
@@ -131,8 +136,12 @@ export class HSHepteracts extends HSModule {
                     gameStateMod.getCurrentUIView("CUBE_VIEW").getId() === CUBE_VIEW.HEPTERACT_FORGE
                 ) {
                     if (self.#ownedHepteractsWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping hepteract watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
+                    }
+                    if (self.#ownedQuarksWatch) {
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping quark watch", this.context);
+                        HSElementHooker.stopWatching(self.#ownedQuarksWatch);
                     }
                 }
             });
@@ -162,10 +171,44 @@ export class HSHepteracts extends HSModule {
                                 return value;
                             }
                         });
+
+                    self.#ownedQuarkElement = await HSElementHooker.HookElement('#quarkDisplay') as HTMLElement;
+                    const initialQuarks = parseFloat(HSUtils.unfuckNumericString(self.#ownedQuarkElement.innerText));
+                    self.#ownedQuarks = initialQuarks;
+                    setInterval(() => {
+                        const current = document.querySelector('#quarkDisplay');
+
+                        console.log(
+                            'Same element?',
+                            current === self.#ownedQuarkElement,
+                            'Current text:',
+                            current?.textContent
+                        );
+                    }, 5000);
+                    self.#ownedQuarksWatch = HSElementHooker.watchElement(self.#ownedQuarkElement, (value) => {
+                        try {
+                            const quarks = parseFloat(HSUtils.unfuckNumericString(value));
+                            self.#ownedQuarks = quarks;
+                        } catch (e) {
+                            HSLogger.error(`Failed to parse quark amount`, self.context);
+                        }
+
+                        self.#watchUpdatePending = false;
+                    },
+                        {
+                            greedy: true,
+                            overrideThrottle: true,
+                            valueParser: (element) => element.innerText
+                        }
+                    );
                 } else if (prevView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
                     if (self.#ownedHepteractsWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping watch", this.context);
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping hepteract watch", this.context);
                         HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
+                    }
+                    if (self.#ownedQuarksWatch) {
+                        HSLogger.debug(() => "Hepteract forge view closed, stopping quark watch", this.context);
+                        HSElementHooker.stopWatching(self.#ownedQuarksWatch);
                     }
                 }
             });
@@ -586,29 +629,28 @@ export class HSHepteracts extends HSModule {
             const hasCostText = this.#hepteractCraftTexts.querySelector(`#hs-costText`) as HTMLDivElement;
 
             let persOwn;
+            if (isQuarkHepteract) {
+                percentOwned = this.#ownedQuarks && this.#ownedQuarks > 0 ? buyCost / this.#ownedQuarks : '∞';
+                console.log(`Quark hepteract cost: ${buyCost}, owned quarks: ${this.#ownedQuarks}, percent owned: ${percentOwned}`);
+            }
 
             if (HSUtils.isNumeric(percentOwned)) {
                 persOwn = HSUtils.N(percentOwned as number * 100);
             } else {
                 persOwn = percentOwned as string;
             }
-
+            const resource = isQuarkHepteract ? 'QUARK' : 'HEPT';
             if (!hasCostText) {
                 const costText = document.createElement('div');
                 costText.id = 'hs-costText';
 
-                if (isQuarkHepteract)
-                    costText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
-                else
-                    costText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
+                costText.innerText = `[${this.context}]: Total ${resource} cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
 
                 this.#hepteractCraftTexts.appendChild(costText);
             } else {
-                if (isQuarkHepteract)
-                    hasCostText.innerText = `[${this.context}]: Total QUARK cost to max after next expand: ${HSUtils.N(buyCost)} (ESTIMATE!)`;
-                else
-                    hasCostText.innerText = `[${this.context}]: Total HEPT cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
+                hasCostText.innerText = `[${this.context}]: Total ${resource} cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)`;
             }
+
         }
     }
 }

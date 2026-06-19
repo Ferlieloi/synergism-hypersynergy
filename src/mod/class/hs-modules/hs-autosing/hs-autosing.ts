@@ -14,6 +14,7 @@ import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
+import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -513,6 +514,10 @@ export class HSAutosing extends HSModule {
 
         if (!await this.#validateAutosingSetupAndRequirements()) { this.stopAutosing(); return; }
 
+        if (!(HSSettings.getSetting("showDebugLogs")?.isEnabled() ?? false)) {
+            HSGlobal.HSLogger.logLevel = ELogLevel.NONE;
+        }
+
         this.#performAutosingLogic();
     }
 
@@ -524,6 +529,8 @@ export class HSAutosing extends HSModule {
     }
 
     public stopAutosing(options?: { showReviewModal?: boolean }): void {
+        HSGlobal.HSLogger.logLevel = ELogLevel.ALL;
+
         if (!this.#autosingEnabled) return;
         void this.#stopAutosingCore({ modalDisposition: options?.showReviewModal ? 'review' : 'destroy' });
 

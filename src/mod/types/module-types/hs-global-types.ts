@@ -52,7 +52,7 @@ export interface HSGlobalElementHooker {
 }
 
 export interface HSGlobalLogger {
-    logLevel: ELogLevel.ALL,
+    logLevel: ELogLevel,
     logSize: number;
 }
 

@@ -86,8 +86,11 @@ export class HSLogger {
     static updateDebugEnabled(): void {
         const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
         HSLogger.#cachedDebugEnabled = !!(debugLog && debugLog.getValue());
+        if (debugLog) {
+            HSGlobal.HSLogger.logLevel = ELogLevel.ALL;
+        }
     }
-    
+
 
     // =======================================
     // --------- Public logging API ----------
@@ -340,8 +343,8 @@ export class HSLogger {
     static #shouldLog(logType: ELogType, isImportant: boolean): boolean {
         const currentLogLevel = HSGlobal.HSLogger.logLevel;
 
-        if (currentLogLevel === ELogLevel.ALL || isImportant) return true;
         if (currentLogLevel === ELogLevel.NONE) return false;
+        if (currentLogLevel === ELogLevel.ALL || isImportant) return true;
 
         return this.#getLogTypeAllowed(logType, currentLogLevel);
     }
