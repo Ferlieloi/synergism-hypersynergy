@@ -289,6 +289,27 @@ module.exports = function patchBundle(code) {
     }
 
     // ==================================================================================
+    // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
+    try {
+        const steamSyncRe = /\(\s*([a-zA-Z_$][\w$]*)\s*\|\|\s*([a-zA-Z_$][\w$]*)\s*-\s*([a-zA-Z_$][\w$]*)\s*>=\s*6e4\s*\)\s*&&/;
+
+        const m = steamSyncRe.exec(code);
+        if (m) {
+            const [, buttonVar, nowVar, lastVar] = m;
+
+            const replacement = `(${nowVar} - ${lastVar} >= 6e4)&&`;
+
+            code = code.replace(steamSyncRe, replacement);
+
+            log(`Patched Steam auto-sync (removed ${buttonVar} trigger)`);
+        } else {
+            warn('Could not patch Steam auto-sync — pattern not found');
+        }
+    } catch (e) {
+        warn('Error while patching Steam auto-sync', e);
+    }
+
+    // ==================================================================================
 
     log(`Patch complete — waiting for DOM to be ready before injecting bundle`);
     return code;
