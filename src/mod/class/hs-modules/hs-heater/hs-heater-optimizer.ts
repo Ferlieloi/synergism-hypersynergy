@@ -104,7 +104,6 @@ interface Options {
     calculateCubes:     boolean;
     calculateOct:       boolean;
     calculateOff:       boolean;
-    calculateVoucher:   boolean;
     calculateHyperflux: boolean;
     calculateSR:        boolean;
     calculateAmbOct:    boolean;
@@ -141,9 +140,9 @@ let stats: Stats = {
     runeExp: 0,
     runeCoefSI: 30,
     bonusSI: 0,
-    bonusIA: 0,
     baseSI: 1,
     expIA: 0,
+    bonusIA: 0,
     talismanIA: 0,
     talismanP: 1,
     baseIACube: 1,
@@ -170,13 +169,16 @@ let options: Options = {
     calculateCubes: false,
     calculateOct: false,
     calculateOff: false,
-    calculateVoucher: false,
     calculateHyperflux: false,
     calculateSR: false,
     calculateAmbOct: false,
     calculateGen: false,
 };
 
+let singDebuffCache: { off: number[]; cube: number[] } = {
+    off: [],
+    cube: []
+}
 
 // ===========================================================================
 // Upgrade class
@@ -211,6 +213,11 @@ class Upgrade {
 
     static singDebuff(sing = 0, stat = ""): number {
 
+      if (stat === "mOff" && singDebuffCache.off[sing] !== undefined)
+        return singDebuffCache.off[sing]
+      if (stat === "cube" && singDebuffCache.cube[sing] !== undefined)
+        return singDebuffCache.cube[sing]
+
         const effectiveSing = (): number => {
             let eff = sing * Math.min(4.75, 0.075 * sing + 1)
             if(sing > 10)
@@ -240,13 +247,16 @@ class Upgrade {
         if (stat === "mOff") {
             let result = 1.02 ** sing * (1 + Math.sqrt(effSing) / 4)
             result *= sing < 150 ? 3 * Math.sqrt(effSing + 1) : effSing ** (2 / 3) / 400
+            result *= 1 + Math.sqrt(effSing) / 4 // Global Speed due to Half Mind
+            singDebuffCache.off[sing] = result
             return result
         } else if (stat === "cube") {
             let result = 2 * 1.03 ** Math.max(0, sing - 100)
-            if(sing < 150)
-                result = 3 * (1 + (Math.sqrt(effSing) * result) / 4)
+            if(sing < 150) // Including Ascension Speed due to One Mind
+              result = 3 * (1 + (Math.sqrt(effSing) * result) / 4) * (1 + Math.sqrt(effSing) / 5)
             else
-                result = 1 + (effSing ** 0.75 * result) / 1000
+              result = 1 + (effSing ** 0.75 * result) / 1000 * (1 + effSing ** 0.75 / 10000)
+            singDebuffCache.cube[sing] = result
             return result
         }
 
@@ -740,7 +750,7 @@ Object.assign(upgrades, {
       blueberryCost: 1
     }),
     ambrosiaFreeRedLuckUpgrades: new Upgrade({
-      maxLevel: 25,
+      maxLevel: 40,
       cost: level => 10000 * level * level,
       effects: {
         rLuck: (input, level, loadout) => input + (Upgrade.rLuck(level, loadout) - Upgrade.rLuck(0, loadout)) * (stats.exalt !== 4 ? 1 : 0)
@@ -952,11 +962,11 @@ class Loadout {
     }
 
     get format(): string {
-        let upgradeLevels: Record<string, number> = {};
+        let upgradeLevels: Record<string, number> = {}
         for (let upgrade in upgrades)
             if ((this.upgradeLevels[upgrade] ?? 0) > 0)
-                upgradeLevels[upgrade] = this.upgradeLevels[upgrade];
-        return JSON.stringify(upgradeLevels);
+                upgradeLevels[upgrade] = this.upgradeLevels[upgrade]
+        return JSON.stringify(upgradeLevels)
     }
 
     generateOutput(stat: string = "", maxLoadout: Loadout, p4x4: number | null = null): HeaterResultRow {
@@ -1067,20 +1077,14 @@ function generateTable(selectedUpgrades: string[], stat: string, minLevels: Reco
   }
 
 // Merges two tables with locally optimal loadouts
-function mergeTables(table1: Loadout[], table2: Loadout[], stat: string, minLevels: Record<string, number> = {}): Loadout[] {
+function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadout[] {
     const result: Loadout[] = [];
     for (let item1 of table1)
       for (let item2 of table2) {
         let union = Loadout.union(item1, item2)
         if (2 * union.cost - item1.cost - item2.cost > stats.amb)
           break // Every next loadout will be more expensive
-        let skip = false
-        for (let upgrade in minLevels)
-          if ((union.upgradeLevels[upgrade] ?? 0) < minLevels[upgrade]) {
-            skip = true
-            break
-          }
-        if (!skip && union.cost <= stats.amb && union.blueberryCost <= stats.blueberries)
+        if (union.cost <= stats.amb && union.blueberryCost <= stats.blueberries)
           result.push(union) // No point in adding unaffordable loadouts to the table
       }
     if (result.length <= 0)
@@ -1092,11 +1096,11 @@ function mergeTables(table1: Loadout[], table2: Loadout[], stat: string, minLeve
 function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = stats.amb): Loadout {
 
     let power = 0, j = 0;
-    let upperBounds: Array<{ budget: number; loadout: Loadout } | undefined> = [];
+    let upperBounds: Array<{ budget: number; loadout: Loadout }> = [];
     // An optimization for large tables
     if (stat !== "allAmb" && table1.length > 100 && table2.length > 100) {
       // Only consider 100 points in each table
-      for (let i = 1; i <= table1.length; i += (table1.length - 1) / 100) {
+      for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
         for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
           let loadout1 = table1.at(-Math.round(i))!;
           let loadout2 = table2[Math.round(next)]
@@ -1118,7 +1122,12 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
     for (let i = 1; i <= table1.length; i++) {
         let ref = table1.at(-i)!;
         // Find appropriate loadout2 from previously computed upper bounds
-        let upperBound = upperBounds.findLast(entry => entry !== undefined && entry.budget >= ref.cost)?.loadout;
+        // budget denotes how much we would spend in loadout1, the rest goes to loadout2
+        // upperBounds are sorted by budget in a descending order
+        // Hence we need to find the first entry with budget <= loadout1.cost
+        // That way we ensure the loadout2 from upperBounds uses at least as much amb as we have to spare
+        // If it uses more, that's not a problem, this is an *upper* bound, after all
+        let upperBound = upperBounds.find(entry => entry?.budget <= ref.cost)?.loadout
         if (upperBound !== undefined) {
             let boundUnion = Loadout.union(ref, upperBound);
             if (boundUnion.getStat(stat) < power)
@@ -1430,20 +1439,13 @@ export class HSHeaterOptimizer {
         }
 
         if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-          options.calculateOff || options.calculateVoucher || options.calculateGen) {
+          options.calculateOff || options.calculateGen) {
             // Local optima for cubes match local optima for quarks and octeracts
             tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
         }
 
         // --- calculateQuarks ---
         if (options.calculateQuarks) { // Calculate Quarks
-            let minLevels: Record<string, number> = {};
-            if (stats.amb >= 1e7) {
-                minLevels.ambrosiaQuarks1 = 100;
-                minLevels.ambrosiaQuarks2 = 50;
-            } else if (stats.amb >= 1e6) {
-                minLevels.ambrosiaQuarks1 = 50;
-            }
             let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
             let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
             let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
@@ -1456,18 +1458,11 @@ export class HSHeaterOptimizer {
 
         // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
-            let minLevels: Record<string, number> = {};
-            if (stats.amb >= 1e7) {
-                minLevels.ambrosiaCubes1 = 100;
-                minLevels.ambrosiaCubes2 = 50;
-            } else if (stats.amb >= 1e6) {
-                minLevels.ambrosiaCubes1 = 50;
-            }
-            let tableCube1     = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube", minLevels);
+            let tableCube1     = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube");
             let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube");
-            let tableCube2     = mergeTables(tableCube1, tableQuarkCube, "cube", minLevels);
+            let tableCube2     = mergeTables(tableCube1, tableQuarkCube, "cube");
             // Local optima for cubes match local optima for octeracts
-            tableCache.tableCubeR = mergeTables(tableCube2, tableCache.tableRune, "cube", minLevels);
+            tableCache.tableCubeR = mergeTables(tableCube2, tableCache.tableRune, "cube");
         }
 
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
@@ -1603,15 +1598,6 @@ export class HSHeaterOptimizer {
             output.off = [loadoutOff.generateOutput("off", maxLoadout)];
         }
 
-        if (options.calculateVoucher) {
-          let loadoutVoucher = tableCache.tableVoucher.at(-1)!
-          let budget = stats.amb - loadoutVoucher.cost
-          let tableGen = generateTable(["ambrosiaFreeGenerationUpgrades"], "amb")
-          let loadoutGen = tableGen.findLast(loadout => loadout.cost <= budget)!
-          loadoutVoucher = Loadout.union(loadoutVoucher, loadoutGen)
-          output.voucher = [loadoutVoucher.generateOutput("vouchers", maxLoadout)];
-        }
-
         if (options.calculateSR) {
 
           let exalt = stats.exalt
@@ -1676,7 +1662,7 @@ export class HSHeaterOptimizer {
             for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
                 let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
                 let tableCubeVX = tableCubeV
-                if (stats.exalt > 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
+                if (stats.exalt == 0 && h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
                   tableCubeVX = tableCubeVS
                   budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
                 }

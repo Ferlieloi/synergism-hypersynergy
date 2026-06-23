@@ -80,6 +80,9 @@ export async function openAutosingChallengesModal(
             
             <div class="hs-if-content">
                 ${contentHtml}
+                <div class="hs-challenge-meta">
+                    Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)}
+                </div>
             </div>
 
             <div style="flex-grow: 1;"></div>
@@ -105,6 +108,9 @@ export async function openAutosingChallengesModal(
         const actionLabel = getSpecialActionLabel(entry);
 
         const isSpecial = !!actionLabel;
+        const specialActionInputs = SPECIAL_ACTIONS.find(a => a.value === entry.challengeNumber)?.inputs ?? [] as readonly ModalInput[];
+        const showWaitInside = !isSpecial || specialActionInputs.includes("waitTime");
+        const showMax = !isSpecial || specialActionInputs.includes("maxTime");
 
         const displayText = isSpecial
             ? `<strong>${actionLabel}</strong>`
@@ -118,12 +124,12 @@ export async function openAutosingChallengesModal(
                 ${displayText}
                 <div class="hs-challenge-meta">
                     Wait before: ${formatMs(entry.challengeWaitBefore ?? 0)} 
-                    ${!isSpecial
-                ? ` | Wait inside: ${formatMs(entry.challengeWaitTime)}`
-                : ""}
-                    ${!isSpecial
-                ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
-                : ""}
+                    ${showWaitInside
+                        ? ` | Wait inside: ${formatMs(entry.challengeWaitTime)}`
+                        : ""}
+                    ${showMax
+                        ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
+                        : ""}
                 </div>
                 ${entry.comment ? `<div class=\"hs-challenge-comment\">🗨️ ${entry.comment}</div>` : ""}
             </div>
@@ -753,7 +759,7 @@ export async function openAutosingChallengesModal(
                     challengeInput.min = "1";
                     challengeInput.max = "15";
                     challengeInput.disabled = false;
-                    challengeInput.value = challengeInput.dataset.lastChallengeValue ?? "1";
+                    challengeInput.value = challengeInput.value === "" ? (challengeInput.dataset.lastChallengeValue ?? "1") : challengeInput.value;
                     challengeInput.style.opacity = "1";
                     challengeInput.style.cursor = "";
                     challengeRow.style.opacity = "1";
@@ -792,7 +798,7 @@ export async function openAutosingChallengesModal(
                     valueLabel.textContent = "Value";
                     valueInput.type = "number";
                     valueInput.disabled = false;
-                    valueInput.value = valueInput.dataset.lastValue ?? "1";
+                    valueInput.value = valueInput.value === "" ? (valueInput.dataset.lastValue ?? "1") : valueInput.value;
                     valueInput.style.opacity = "1";
                     valueInput.style.cursor = "";
                     valueRow.style.opacity = "1";

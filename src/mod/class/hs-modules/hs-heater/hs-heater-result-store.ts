@@ -79,6 +79,12 @@ export class HSHeaterResultStore {
         return this.#currentRawResult;
     }
 
+    static isSemanticIdAvailable(semanticId: string): boolean {
+        const normalizedResult = this.getCurrentNormalizedResult();
+        if (!normalizedResult) return false;
+        return normalizedResult.some((entry) => String(entry.semanticId) === semanticId);
+    }
+
     static collectSelectedSemanticIds(modal: HTMLElement, options?: { enabledOnly?: boolean }): Set<string> {
         const typeSelects = Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
         const typeCheckboxes = Array.from(modal.querySelectorAll('.hs-heater-type-select-checkbox')) as HTMLInputElement[];

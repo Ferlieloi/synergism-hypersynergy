@@ -7,7 +7,7 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy, GetFromDOMOptions, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
@@ -19,7 +19,6 @@ import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
-const BACKGROUND_COLOR_REGEX = /background-color/i;
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -429,7 +428,7 @@ export class HSAutosing extends HSModule {
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
 
         // We need either __HS_AUTO_CONFIRM or startDialogWatcher
-        if (!isAutoConfirmPatched) HSUtils.startDialogWatcher();
+        if (!isAutoConfirmPatched) HSUtils.startDialogWatcher(5);
 
         // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
@@ -440,14 +439,13 @@ export class HSAutosing extends HSModule {
 
         this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isAutoConfirmPatched && isAfterTackHooked && this.#applyCorruptionsFunc);
 
-        const exposureMsg = `Exposure status:
-            stageFunc: ${!!this.#stageFunc},
+        const exposureMsg = `Exposure status: ${this.#isExposureReady}
+            (stageFunc: ${!!this.#stageFunc},
             exposedPlayer: ${!!this.#exposedPlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
             applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
-            autoConfirmPatched: ${isAutoConfirmPatched},
-            ? isExposureReady: ${this.#isExposureReady}.`;
+            autoConfirmPatched: ${isAutoConfirmPatched})`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
@@ -738,17 +736,28 @@ export class HSAutosing extends HSModule {
                 this.#autosingModal.show();
             }
 
+            let prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
             await this.#performSingularity(true);
 
             // Main autosing loop
             while (this.#autosingEnabled) {
                 if (this.#endStageDone || this.#antiquitiesObserverActivated) {
                     await this.#endStagePromise;
+                    if (this.#autosingEnabled) {
+                        prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+                        await this.#performSingularity();
+                    }
                     continue;
                 }
 
+                // This loop is only handling pre-AOAG (When AOAG becomes buyable, AOAG and final phases are triggered without coming back here)
                 while (this.#autosingEnabled && !this.#endStageDone && !this.#antiquitiesObserverActivated) {
+                    await HSUtils.yield();
                     const stage = await this.#getStage();
+                    
+                    window.setTimeout(() => prevMainView.goto(), 25);
+                    window.setTimeout(() => prevMainView.goto(), 50);
+
                     await this.#matchStageToStrategy(stage);
                 }
             }
@@ -1270,53 +1279,34 @@ export class HSAutosing extends HSModule {
                 return '';
             }
         } else {
-            // No fast path: warn once, then try text content, then fall back to DOM navigation.
+            // No fast path: warn once, and fall back to DOM navigation.
             if (!this.#hasWarnedMissingStageFunc) {
-                HSLogger.warn("Performance Warning: 'synergismStage' function not exposed.", this.context);
+                HSLogger.warn("Performance Warning: 'synergismStage' not exposed (no Tampermonkey?)", this.context);
                 this.#hasWarnedMissingStageFunc = true;
             }
-
             try {
-                const raw = this.#stage?.textContent ?? '';
-                const m = raw.match(STAGE_REGEX);
-                if (m && m[1]) {
-                    return m[1].trim();
+                const isOnStageTab =
+                    this.#settingsTab.style.display === 'block' &&
+                    this.#settingsSubTab.classList.contains('active-subtab') &&
+                    this.#misc.style.backgroundColor === 'crimson';
+
+                if (!isOnStageTab) {
+                    this.#settingsTab.click();
+                    this.#settingsSubTab.click();
+                    this.#misc.click();
+                    await HSUtils.sleep(30);
                 }
+
+                await this.#waitForInnerText(this.#stage, t => t.includes("Current Game Section:"), true);
+                const stageTextRaw = this.#stage?.textContent ?? "";
+                const stageMatch = stageTextRaw.match(STAGE_REGEX);
+                const stageText = stageMatch ? stageMatch[1] : null;
+
+                HSLogger.warn(`Current stage: ${stageText}`, this.context);
+                return stageText || '';
             } catch (e) { HSLogger.warn(`Error reading stage element: ${e}`, this.context); }
-
-            return this.#getStageViaDOM();
+            return '';
         }
-    }
-
-    async #getStageViaDOM(): Promise<string> {
-        HSLogger.debug(() => "Getting stage via DOM navigation (slow)", this.context);
-        this.#settingsTab.click();
-        this.#settingsSubTab.click();
-        this.#misc.click();
-
-        const stageText = await this.#getFromDOM<string>(this.#stage, {
-            regex: STAGE_REGEX,
-            predicate: t => t.includes("Current Game Section:")
-        });
-
-        return stageText || "";
-    }
-
-    async #getFromDOM<T>(
-        el: HTMLElement | null,
-        { regex, parser, predicate = t => t.trim().length > 0 }: GetFromDOMOptions<T>
-    ): Promise<T | null> {
-        if (!el) return null;
-
-        await this.#waitForInnerText(el, predicate);
-
-        const text = el.textContent ?? "";
-        const extracted = regex
-            ? text.match(regex)?.[1] ?? null
-            : text;
-        if (!extracted) return null;
-
-        return parser ? parser(extracted.trim()) : (extracted.trim() as unknown as T);
     }
 
 
@@ -1326,7 +1316,6 @@ export class HSAutosing extends HSModule {
 
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
-        const prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
 
         let q: number;
         let gq: number;
@@ -1343,8 +1332,8 @@ export class HSAutosing extends HSModule {
         }
 
         const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
-        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
         const qGain = Math.max(0, q - this.#previousQuarkAmount);
+        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
         this.#previousQuarkAmount = q;
         this.#previousGoldenQuarkAmount = gq;
 
@@ -1384,9 +1373,8 @@ export class HSAutosing extends HSModule {
             await HSUtils.yield();
             stage = await this.#getStage();
         } while (!this.#isAllowedStage(stage));
-        HSLogger.debug(() => `Reached allowed stage: ${stage}`, this.context);
+        HSLogger.debug(() => `Reached allowed starting stage: ${stage} (performSingularity)`, this.context);
 
-        window.setTimeout(() => prevMainView.goto(), 20);
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
     }
@@ -1431,14 +1419,13 @@ export class HSAutosing extends HSModule {
 
         this.#ascendBtn.click();
 
-        if (this.#stopAtSingularitysEnd) {
+        if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
             HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
             await this.#pushSingularityBeforeStop();
             HSUI.Notify("Auto-Sing stopped at end of singularity as requested.");
             this.stopAutosing();
             return;
         }
-        await this.#performSingularity();
 
         this.#endStagePromiseResolve?.();
         this.#endStagePromise = undefined;
@@ -1751,8 +1738,8 @@ export class HSAutosing extends HSModule {
         });
     }
 
-    #waitForInnerText(el: HTMLElement, predicate: (text: string) => boolean = t => t.trim().length > 0): Promise<void> {
-        if (predicate(el.textContent ?? "")) return Promise.resolve();
+    #waitForInnerText(el: HTMLElement, predicate: (text: string) => boolean = t => t.trim().length > 0, waitForNextMutation: boolean = false): Promise<void> {
+        if (!waitForNextMutation && predicate(el.textContent ?? "")) return Promise.resolve();
 
         if (!this.#waitForInnerTextObserver) {
             HSLogger.warn("Performance Warning: MutationObserver for inner text changes missing and needs to be recreated.", this.context);

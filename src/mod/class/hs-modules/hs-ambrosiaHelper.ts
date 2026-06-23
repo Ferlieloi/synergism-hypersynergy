@@ -91,7 +91,7 @@ export class HSAmbrosiaHelper {
     /** Ensure the game is in the specified loadout mode before clicking slots. */
     static ensureLoadoutMode(mode: 'LOAD' | 'SAVE'): void {
         const modeButton = this.#cachedBlueberryToggleModeButton;
-        if (!modeButton) { return; }
+        if (!modeButton) { HSLogger.warn(`modeButton not found.`, this.#context); return; }
 
         const currentMode = modeButton.innerText?.trim().toUpperCase();
         const expectedMode = `MODE: ${mode} LOADOUT`;

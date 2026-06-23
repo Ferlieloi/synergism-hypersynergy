@@ -7,7 +7,7 @@ import { HSAutosing } from "./hs-autosing";
 // DB Disabled... See for advanced data collection re-implementation
 // import { HSAutosingDB } from './hs-autosingDB';
 import { HSAutosingExportManager } from './hs-autosingExportManager';
-import { createPhaseRowDom, updatePhaseRowDom, PhaseRowDom } from "./hs-autosingPhaseStats";
+import { createPhaseRowDom, updatePhaseRowDom, getPhaseStats, PhaseHistoryEntry, PhaseRowDom } from "./hs-autosingPhaseStats";
 import { SparklineDom, SparklineMetric, buildSparklineDom, updateSparkline } from './hs-autosingSparkline';
 import Decimal from "break_infinity.js";
 import { formatNumber, formatNumberWithSign, formatDecimal, formatTotalTime } from "./hs-autosingFormatUtils";
@@ -141,13 +141,7 @@ export class HSAutosingModal {
     #metricsSumDuration: number = 0;
     #metricsSumQuarks: number = 0;
     #metricsSumGoldenQuarks: number = 0;
-    #phaseHistory: Map<string, {
-        phaseCount: number;
-        totalTime: number;
-        sumSq: number;
-        lastTime: number;
-        innerLoopCount: number;
-    }> = new Map();
+    #phaseHistory: Map<string, PhaseHistoryEntry> = new Map();
     static readonly #DECIMAL_0 = new Decimal(0);
     #c15Count: number = 0;
     #c15Mean: Decimal = HSAutosingModal.#DECIMAL_0;
@@ -313,6 +307,7 @@ export class HSAutosingModal {
         this.#timerContent.className = 'hs-scrollbar-themed';
 
         this.#dynamicContent = document.createElement('div');
+        this.#dynamicContent.className = 'hs-timer-content';
         this.#dynamicContent.innerHTML = `
             <div class="hs-timer-section">
                 <div id="hs-farming-grid">
@@ -774,6 +769,7 @@ export class HSAutosingModal {
         this.#sparklineTimes        = null;
     }
 
+
     // =============================
     // Session/Timer Management
     // =============================
@@ -897,10 +893,10 @@ export class HSAutosingModal {
                 this.#insertPhaseRenderName(phase);
             }
             phaseData.phaseCount += 1;
+            phaseData.innerLoopCount += 1;
             phaseData.totalTime  += phaseDuration;
             phaseData.sumSq      += phaseDuration * phaseDuration;
             phaseData.lastTime   = phaseDuration;
-            phaseData.innerLoopCount = 1;
             this.#currentSingularityPhases.set(phase, phaseDuration);
             this.#lastRecordedPhaseName = phase;
         }
@@ -1344,31 +1340,22 @@ export class HSAutosingModal {
         for (const phaseName of this.#phaseRenderOrder) {
             const phaseData = this.#phaseHistory.get(phaseName);
             if (!phaseData) continue;
-            const avg = phaseData.phaseCount > 0 ? phaseData.totalTime / phaseData.phaseCount : 0;
-            let sd = 0;
-            if (phaseData.phaseCount > 1) {
-                const variance = (phaseData.sumSq - phaseData.phaseCount * avg * avg) / (phaseData.phaseCount - 1);
-                sd = Math.sqrt(Math.max(0, variance));
-            }
-            const stats = {
-                phaseCount: phaseData.phaseCount,
-                phaseName,
-                innerLoopCount: phaseData.innerLoopCount,
-                avg,
-                sd,
-                last: phaseData.lastTime
+            const stats = getPhaseStats(this.#phaseHistory, phaseName);
+            const rowStats = {
+                ...stats,
+                phaseName
             };
             let rowDom = this.#phaseRowMap.get(phaseName);
             if (!rowDom) {
                 rowDom = createPhaseRowDom(phaseName, phaseData.phaseCount);
-                updatePhaseRowDom(rowDom, stats);
+                updatePhaseRowDom(rowDom, rowStats);
                 this.#phaseRowMap.set(phaseName, rowDom);
 
                 const fragment = document.createDocumentFragment();
                 rowDom.cells.forEach(cell => fragment.appendChild(cell));
                 this.#phaseStatsContainer!.insertBefore(fragment, this.#phaseStatsContainer!.children[domChildIdx] || null);
             } else {
-                updatePhaseRowDom(rowDom, stats);
+                updatePhaseRowDom(rowDom, rowStats);
             }
             domChildIdx += 5;
         }

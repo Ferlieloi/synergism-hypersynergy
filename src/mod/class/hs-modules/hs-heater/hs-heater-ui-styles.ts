@@ -46,6 +46,7 @@ export class HSHeaterUIStyles {
 
             .hs-heater-input-table {
                 table-layout: fixed;
+                font-size: 0.9em;
             }
 
             .hs-heater-results-table,
@@ -70,8 +71,10 @@ export class HSHeaterUIStyles {
 
             .hs-heater-input-table td:first-child,
             .hs-heater-input-table th:first-child {
-                width: auto;
                 white-space: nowrap;
+                width: 24px;
+                min-width: 24px;
+                max-width: 24px;
             }
 
             .hs-heater-input-table td:nth-child(2),
@@ -91,6 +94,13 @@ export class HSHeaterUIStyles {
                 box-sizing: border-box;
             }
 
+            .hs-heater-icon-image {
+                display: block;
+                margin: auto;
+                width: 20px;
+                height: 20px;
+            }
+
             /* === Results Table Styles === */
             .hs-heater-results-table th:first-child,
             .hs-heater-results-table td:first-child {
@@ -104,6 +114,7 @@ export class HSHeaterUIStyles {
 
             .hs-heater-results-wrapper {
                 overflow-x: auto;
+                font-size: 0.95em;
             }
 
             .hs-heater-results-topbar {
@@ -276,6 +287,7 @@ export class HSHeaterUIStyles {
 
             /* === Lock Button === */
             .hs-heater-lock-button {
+                min-height: 20px;
                 border: none;
                 background: transparent;
                 cursor: pointer;
@@ -502,6 +514,8 @@ export class HSHeaterUIStyles {
                 align-items: center;
                 cursor: pointer;
                 width: 100%;
+                height: auto;
+                min-height: 22px;
             }
 
             .hs-heater-type-label {
@@ -513,8 +527,8 @@ export class HSHeaterUIStyles {
 
             .hs-heater-type-icon {
                 flex-shrink: 0;
-                width: 25px;
-                height: 25px;
+                width: 22px;
+                height: 22px;
                 object-fit: contain;
                 pointer-events: none;
             }
@@ -522,8 +536,10 @@ export class HSHeaterUIStyles {
             /* === Buttons & Interactive === */
             .hs-heater-copy-loadout-btn,
             .hs-heater-import-loadout-btn {
+                height: 20px;
+                min-height: 20px;
                 cursor: pointer;
-                padding: 4px 8px;
+                padding: 1px 4px;
                 font-size: 0.85em;
                 border: 2px solid transparent;
             }
@@ -546,11 +562,7 @@ export class HSHeaterUIStyles {
             .blueButton { background-color: #05013f; }
             .blueButton:hover { background-color: #291ece; }
 
-            /* === Icons & Preview === */
-            .hs-heater-icon-image {
-                display: block;
-                margin: auto;
-            }
+            /* === Preview === */
 
             #hs-heater-sync-settings-btn.hs-heater-sync-settings-warning::after {
                 content: ' ⚠️';

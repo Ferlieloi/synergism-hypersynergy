@@ -449,6 +449,15 @@ export class HSSettings extends HSModule {
                         // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
                     });
                 });
+
+                // autoConfirmPopups is hidden and internal only for now, we force it OFF on load.
+                const autoConfirmPopups = resolved.autoConfirmPopups as unknown as Record<string, unknown> | undefined;
+                if (autoConfirmPopups) {
+                    autoConfirmPopups.enabled = false;
+                    autoConfirmPopups.settingValue = false;
+                    autoConfirmPopups.calculatedSettingValue = false;
+                }
+
                 return resolved as unknown as HSSettingsDefinition;
             } else {
                 return defaultSettings;

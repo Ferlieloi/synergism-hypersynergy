@@ -31,6 +31,14 @@ export interface PhaseRowDom {
     cells: HTMLDivElement[];
 }
 
+export interface PhaseHistoryEntry {
+    phaseCount: number;
+    totalTime: number;
+    sumSq: number;
+    lastTime: number;
+    innerLoopCount: number;
+}
+
 /**
  * Creates 5 cell divs for a phase row.
  * @param phaseName
@@ -69,15 +77,15 @@ export function createPhaseRowDom(phaseName = '', phaseCount = 0): PhaseRowDom {
 /**
  * Updates a phase row DOM with new statistics and phase info.
  * @param dom The PhaseRowDom to update
- * @param stats Object with phaseCount, phaseName, innerLoopCount, avg, sd, last values to display
+ * @param stats Object with phaseCount, phaseName, avgInnerLoops, avg, sd, last values to display
  */
 export function updatePhaseRowDom(
     dom: PhaseRowDom,
-    stats: { phaseCount?: number; phaseName: string; innerLoopCount: number; avg: number; sd: number; last: number }
+    stats: { phaseCount?: number; phaseName: string; avgInnerLoops: number; avg: number; sd: number; last: number }
 ) {
     // Pre-format all values, then only touch DOM if changed
     const countText = `x${stats.phaseCount} `;
-    const loopsText = 'x' + stats.innerLoopCount.toFixed(2);
+    const loopsText = 'x' + stats.avgInnerLoops.toFixed(2);
     const avgText = stats.avg.toFixed(2) + 's';
     const sdText = '\u00B1' + stats.sd.toFixed(2);
     const lastText = stats.last.toFixed(2) + 's';
@@ -92,18 +100,18 @@ export function updatePhaseRowDom(
 
 /**
  * Utility to compute phase statistics from a phaseHistory map.
- * @param phaseHistory Map of phase name to { phaseCount, totalTime, sumSq, lastTime, innerLoopCount }
+ * @param phaseHistory Map of phase name to PhaseHistoryEntry
  * @param phase The phase name to compute stats for
- * @returns Object with phaseCount, innerLoopCount, avg, sd, last values
+ * @returns Object with phaseCount, avgInnerLoops, avg, sd, last values
  */
 export function getPhaseStats(
-    phaseHistory: Map<string, { phaseCount: number; totalTime: number; sumSq: number; lastTime: number; innerLoopCount: number }>,
+    phaseHistory: Map<string, PhaseHistoryEntry>,
     phase: string
 ) {
     const entry = phaseHistory.get(phase);
-    if (!entry || entry.phaseCount === 0) return { phaseCount: 0, innerLoopCount: 0, avg: 0, sd: 0, last: 0 };
+    if (!entry || entry.phaseCount === 0) return { phaseCount: 0, avgInnerLoops: 0, avg: 0, sd: 0, last: 0 };
     const phaseCount = entry.phaseCount;
-    const innerLoopCount = entry.innerLoopCount;
+    const avgInnerLoops = entry.innerLoopCount / phaseCount;
     const avg = entry.totalTime / phaseCount;
     // Sample standard deviation
     let sd = 0;
@@ -112,5 +120,5 @@ export function getPhaseStats(
         sd = Math.sqrt(Math.max(0, variance));
     }
     const last = entry.lastTime;
-    return { phaseCount, innerLoopCount, avg, sd, last };
+    return { phaseCount, avgInnerLoops, avg, sd, last };
 }

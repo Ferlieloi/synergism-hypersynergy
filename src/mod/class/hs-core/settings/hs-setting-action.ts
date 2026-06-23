@@ -9,10 +9,9 @@ import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
-import { HSStrategyManager } from "./hs-strategy-manager";
-import { HSUI } from "../hs-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
+import { HSUtils } from "../../hs-utils/hs-utils";
 
 /**
  * Class: HSSettingActions
@@ -45,12 +44,18 @@ export class HSSettingActions {
             }
         },
 
+        // Auto validate Confirm & Alert (not Prompt)
         autoConfirmPopups: async (params: HSSettingActionParams) => {
+            const context = params.contextName ?? "HSSettings";
             if (params.disable && params.disable === true) {
-                (window as any).__HS_AUTO_CONFIRM = false;
+                HSUtils.setAutoConfirm(false);
             } else {
-                // Auto validate pop-ups
-                (window as any).__HS_AUTO_CONFIRM = true;
+                const isAutoConfirmPatched = HSUtils.isAutoConfirmPatched();
+                if (isAutoConfirmPatched) {
+                    HSUtils.setAutoConfirm(true);
+                } else {
+                    HSLogger.warn("autoConfirmPopups enabled, but __HS_AUTO_CONFIRM not patched", context);
+                }
             }
         },
 

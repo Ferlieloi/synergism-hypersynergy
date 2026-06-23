@@ -34,7 +34,7 @@ export class HSHeaterInputModalController {
     static #cachedActiveLabels: HTMLElement[] = [];
 
     static #loadoutSettingPreferences: Partial<Record<keyof HSSettingsDefinition, { label: string; preferences: string[] }>> = {
-        autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7"] },
+        autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7", "oct"] },
         autosingLateCubeLoadout:            { label: 'Autosing Late Cube',      preferences: ["cubes"] },
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
         autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
@@ -43,7 +43,7 @@ export class HSHeaterInputModalController {
         autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         ambrosiaIdleSwapOcteractLoadout:    { label: 'AFK Swapper Gen+Oct',     preferences: ["gen:2", "gen:1", "gen:0"] },
-        ambrosiaIdleSwapNormalLuckLoadout:  { label: 'AFK Swapper Blue Luck',   preferences: ["luck"] },
+        ambrosiaIdleSwapNormalLuckLoadout:  { label: 'AFK Swapper Blue Luck',   preferences: ["ambOct", "luck"] },
         ambrosiaIdleSwapRedLuckLoadout:     { label: 'AFK Swapper Red Luck',    preferences: ["rLuck"] },
     };
 
@@ -161,7 +161,7 @@ export class HSHeaterInputModalController {
         this.cacheInputsModalElements(modal);
         HSHeaterUIInput.attachHeaterTypeSelectHandlers(modal, () => {
             if (this.currentInputsModalId) {
-                HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId);
+                HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId, false);
                 const activeModal = this.getActiveInputsModal();
                 if (activeModal) {
                     this.refreshRequiredBranchHighlights(activeModal);
@@ -404,7 +404,6 @@ export class HSHeaterInputModalController {
             const branchId = label.dataset.branchId as HeaterBranchId | undefined;
             const unavailable = branchId ? unavailableBranchIds.has(branchId) : false;
             label.classList.toggle('hs-heater-active-branch-required', unavailable);
-            label.title = unavailable ? 'Result unavailable' : '';
         });
     }
 

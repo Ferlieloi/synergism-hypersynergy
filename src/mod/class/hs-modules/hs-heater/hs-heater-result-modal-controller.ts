@@ -119,7 +119,7 @@ export class HSHeaterResultModalController {
         this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
     }
 
-    static refreshSelectedTypeHighlights(parentModalId: string): void {
+    static refreshSelectedTypeHighlights(parentModalId: string, syncAvailability = true): void {
         const resultModal = this.currentResultModalId ? document.getElementById(this.currentResultModalId) : null;
         if (!resultModal && this.currentResultModalId) {
             this.cleanupResultModalState();
@@ -136,7 +136,9 @@ export class HSHeaterResultModalController {
             HSHeaterUIResult.updateResultModalContent(resultModal, normalizedResult, selectedSemanticIds);
         }
 
-        this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
+        if (syncAvailability) {
+            this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
+        }
         this.refreshRequiredBranchHighlights(inputsModal);
     }
 
