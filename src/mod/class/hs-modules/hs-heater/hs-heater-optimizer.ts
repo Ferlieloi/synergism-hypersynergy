@@ -1089,7 +1089,7 @@ function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadou
       }
     if (result.length <= 0)
       result.push(new Loadout)
-    return(trimTable(result, stat))
+    return trimTable(result, stat)
   }
 
 // Finds the globally optimal loadout among affordable ones
@@ -1139,7 +1139,8 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
             continue; // Can't afford this loadout, try a cheaper one
         for (let next = j + 1; next < table2.length; next++) {
             let nextUnion = Loadout.union(ref, table2[next]);
-            nextUnion.fixBlueberryUpgrades();
+            if (budget < Number.POSITIVE_INFINITY)
+              nextUnion.fixBlueberryUpgrades()
             // Function 'union(i, next).cost' might not be monotone for 'next' because of overlapping upgrades
             // Therefore we compare only total cost of upgrades present in only one of two loadouts at once
             if (2 * nextUnion.cost - ref.cost - table2[next].cost > budget)
@@ -1414,7 +1415,7 @@ export class HSHeaterOptimizer {
             loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
             let optLoadout = new Loadout(maxLoadout);
             optLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
-            optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb");
+            optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb", Number.POSITIVE_INFINITY);
             if (options.calculateAmb)
                 output.allAmb = [loadoutAllAmb.generateOutput("allAmb", optLoadoutAllAmb)];
             if (options.calculateAmbOct && (optLoadoutAllAmb.getStat("allAmb") > loadoutAllAmb.getStat("allAmb"))) {
@@ -1458,11 +1459,14 @@ export class HSHeaterOptimizer {
 
         // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
-            let tableCube1     = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube");
-            let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube");
-            let tableCube2     = mergeTables(tableCube1, tableQuarkCube, "cube");
-            // Local optima for cubes match local optima for octeracts
-            tableCache.tableCubeR = mergeTables(tableCube2, tableCache.tableRune, "cube");
+          let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube")
+          let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
+          // Local maxima for Cubes match local maxima for Octeracts
+          tableCache.tableCube = mergeTables(tableCube1, tableQuarkCube, "cube")
+        }
+
+        if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
+          tableCache.tableCubeR = mergeTables(tableCache.tableCube, tableCache.tableRune, "cube")
         }
 
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
@@ -1485,7 +1489,7 @@ export class HSHeaterOptimizer {
 
         // --- Shared oct table ---
         if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
-            tableCache.tableOctV = mergeTables(tableCache.tableCubeR, tableCache.tableVoucher, "oct");
+            tableCache.tableOctV = mergeTables(tableCache.tableCube, tableCache.tableVoucher, "oct");
         }
 
         // --- calculateOct ---
@@ -1571,19 +1575,14 @@ export class HSHeaterOptimizer {
             }
         }
 
-        // --- Shared sing table (off / hyperflux) ---
-        if (options.calculateOff || options.calculateSR || options.calculateHyperflux) {
-            // Local optima for cubes match local optima for offerings/obtainium
-            tableCache.tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
-        }
-
         // --- calculateOff: Obt + Off ---
         if (options.calculateOff) {
+            let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
             let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
             let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
             let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
             let tableObt4    = mergeTables(tableObt3, tableCache.tableVoucher, "obt");
-            let tableObtSing = mergeTables(tableObt4, tableCache.tableSing, "obt");
+            let tableObtSing = mergeTables(tableObt4, tableSing, "obt");
             let tableObtRune = mergeTables(tableObtSing, tableCache.tableRune, "obt")
             let loadoutObt   = findOpt(tableObtRune, tableCache.tableLuck, "obt");
             output.obt = [loadoutObt.generateOutput("obt", maxLoadout)];
@@ -1592,7 +1591,7 @@ export class HSHeaterOptimizer {
             let tableOff2    = generateTable(["ambrosiaOffering1"], "off");
             let tableOff3    = mergeTables(tableOff1, tableOff2, "off");
             let tableOff4    = mergeTables(tableOff3, tableCache.tableVoucher, "off");
-            let tableOffSing = mergeTables(tableOff4, tableCache.tableSing, "off");
+            let tableOffSing = mergeTables(tableOff4, tableSing, "off");
             let tableOffRune = mergeTables(tableOffSing, tableCache.tableRune, "off")
             let loadoutOff   = findOpt(tableOffRune, tableCache.tableLuck, "off");
             output.off = [loadoutOff.generateOutput("off", maxLoadout)];
@@ -1652,9 +1651,10 @@ export class HSHeaterOptimizer {
             let postAoAG = stats.postAoAG
             stats.postAoAG = false
 
-            let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
-            let tableCubeV   = mergeTables(tableCache.tableCubeR, tableVoucher, "cube");
-            let tableCubeVS  = mergeTables(tableCubeV, tableCache.tableSing, "cube");
+            let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube")
+            let tableCubeV = mergeTables(tableCache.tableCubeR, tableVoucher, "cube")
+            let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
+            let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")
 
             let loadoutsH: (Loadout | undefined)[] = new Array(8).fill(undefined);
             let thresholds: number[] = new Array(8).fill(0);
@@ -1662,9 +1662,10 @@ export class HSHeaterOptimizer {
             for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
                 let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
                 let tableCubeVX = tableCubeV
-                if (stats.exalt == 0 && h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
+                if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
                   tableCubeVX = tableCubeVS
-                  budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
+                  if (stats.exalt === 0)
+                    budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
                 }
                 if (budget < 0)
                     break;
