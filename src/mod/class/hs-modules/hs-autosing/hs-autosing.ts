@@ -754,7 +754,7 @@ export class HSAutosing extends HSModule {
                 while (this.#autosingEnabled && !this.#endStageDone && !this.#antiquitiesObserverActivated) {
                     await HSUtils.yield();
                     const stage = await this.#getStage();
-                    
+
                     window.setTimeout(() => prevMainView.goto(), 25);
                     window.setTimeout(() => prevMainView.goto(), 50);
 
@@ -1063,9 +1063,8 @@ export class HSAutosing extends HSModule {
                 : challengeIndex <= 10
                     ? () => p.currentChallenge.reincarnation === challengeIndex
                     : () => p.currentChallenge.ascension === challengeIndex;
-            // while (isChallengeActive()) await HSUtils.yield();
-            this.#fastDoubleClick(challengeBtn!);
-            while (!isChallengeActive()) await HSUtils.yield();
+
+            while (!isChallengeActive()) await HSUtils.yield(() => this.#fastDoubleClick(challengeBtn!));
         } else {
             const isActive = accessor.isActive;
             /* // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...

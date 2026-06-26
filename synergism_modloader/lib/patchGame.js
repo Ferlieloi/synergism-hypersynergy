@@ -243,18 +243,5 @@ function killLeftoverProcessesUnder(dirPath, log) {
         })
     })
 }
-/**
- * Quick-switch: updates just the sidecar config file next to the game exe,
- * so the next launch uses a different mod URL without a full repatch.
- * NOTE: this does NOT re-apply out.js patches — if the new mod version needs
- * different game hooks, a full re-patch is required instead.
- *
- * @param {string} lastPatchedExe - path to the patched game exe
- * @param {string} modUrl - the new mod URL to write
- */
-function updateModUrl(lastPatchedExe, modUrl) {
-    const sidecarPath = path.join(path.dirname(lastPatchedExe), MOD_CONFIG_FILENAME)
-    fs.writeFileSync(sidecarPath, JSON.stringify({ modUrl }, null, 2), 'utf-8')
-}
 
-module.exports = { patchGame, findLaunchableExe, buildModUrl, buildPatcherUrl, updateModUrl }
+module.exports = { patchGame, findLaunchableExe, buildModUrl, buildPatcherUrl }

@@ -54,10 +54,15 @@ export class HSUtils {
         return { port1, resolvers };
     })();
 
-    static yield = (): Promise<void> => new Promise<void>(resolve => {
-        HSUtils.#_yieldChannel.resolvers.push(resolve);
-        HSUtils.#_yieldChannel.port1.postMessage(null);
-    });
+    static yield = (fn?: () => void): Promise<void> =>
+        new Promise<void>(resolve => {
+            if (fn) {
+                fn();
+            }
+
+            HSUtils.#_yieldChannel.resolvers.push(resolve);
+            HSUtils.#_yieldChannel.port1.postMessage(null);
+        });
 
     static cacheAfterTackHook(): boolean {
         HSUtils.#_onAfterTack = (window as any).__HS_onAfterTack ?? null;
@@ -456,10 +461,10 @@ export class HSUtils {
             }
         };
     }
-    
+
     // This might be very volatile, but it works for now and hides alert/confirmation boxes
     static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 25) {
-        const okAlert =   document.querySelector('#ok_alert') as HTMLButtonElement;
+        const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
         const okConfirm = document.querySelector('#ok_confirm') as HTMLButtonElement;
 
         const protector = await HSUtils.killAlertConfirmElementDisplayProperties();
@@ -749,70 +754,70 @@ export class HSUtils {
             }, HSUtils.dialogWatcherTime);
         });
     }
-/*
-    static async closeExpectedDialogs(expectedClosures: number, timeoutMs = 500): Promise<boolean> {
-        HSUtils.disableAutoConfirmForDialogAutomation();
-        HSLogger.debug(() => `entering closeExpectedDialogs(expectedClosures=${expectedClosures}, timeoutMs=${timeoutMs})`, HSUtils.#context);
-
-        let closedCount = 0;
-        let prevConfirmOpen = false;
-        let prevAlertOpen = false;
-        let prevPromptOpen = false;
-        let resolved = false;
-
-        return new Promise((resolve) => {
-            let timeoutId: number | null = null;
-            const intervalId = window.setInterval(() => {
-                const confirmWrapper = document.getElementById('confirmWrapper');
-                const alertWrapper = document.getElementById('alertWrapper');
-                const promptWrapper = document.getElementById('promptWrapper');
-
-                const confirmOpen = confirmWrapper?.style.display === 'block';
-                const alertOpen = alertWrapper?.style.display === 'block';
-                const promptOpen = promptWrapper?.style.display === 'block';
-
-                if (confirmOpen && !prevConfirmOpen) {
-                    document.getElementById('ok_confirm')?.click();
-                }
-                if (alertOpen && !prevAlertOpen) {
-                    document.getElementById('ok_alert')?.click();
-                }
-                if (promptOpen && !prevPromptOpen) {
-                    document.getElementById('ok_prompt')?.click();
-                }
-
-                if (prevConfirmOpen && !confirmOpen) closedCount++;
-                if (prevAlertOpen && !alertOpen) closedCount++;
-                if (prevPromptOpen && !promptOpen) closedCount++;
-
-                prevConfirmOpen = confirmOpen;
-                prevAlertOpen = alertOpen;
-                prevPromptOpen = promptOpen;
-
-                if (closedCount >= expectedClosures) {
+    /*
+        static async closeExpectedDialogs(expectedClosures: number, timeoutMs = 500): Promise<boolean> {
+            HSUtils.disableAutoConfirmForDialogAutomation();
+            HSLogger.debug(() => `entering closeExpectedDialogs(expectedClosures=${expectedClosures}, timeoutMs=${timeoutMs})`, HSUtils.#context);
+    
+            let closedCount = 0;
+            let prevConfirmOpen = false;
+            let prevAlertOpen = false;
+            let prevPromptOpen = false;
+            let resolved = false;
+    
+            return new Promise((resolve) => {
+                let timeoutId: number | null = null;
+                const intervalId = window.setInterval(() => {
+                    const confirmWrapper = document.getElementById('confirmWrapper');
+                    const alertWrapper = document.getElementById('alertWrapper');
+                    const promptWrapper = document.getElementById('promptWrapper');
+    
+                    const confirmOpen = confirmWrapper?.style.display === 'block';
+                    const alertOpen = alertWrapper?.style.display === 'block';
+                    const promptOpen = promptWrapper?.style.display === 'block';
+    
+                    if (confirmOpen && !prevConfirmOpen) {
+                        document.getElementById('ok_confirm')?.click();
+                    }
+                    if (alertOpen && !prevAlertOpen) {
+                        document.getElementById('ok_alert')?.click();
+                    }
+                    if (promptOpen && !prevPromptOpen) {
+                        document.getElementById('ok_prompt')?.click();
+                    }
+    
+                    if (prevConfirmOpen && !confirmOpen) closedCount++;
+                    if (prevAlertOpen && !alertOpen) closedCount++;
+                    if (prevPromptOpen && !promptOpen) closedCount++;
+    
+                    prevConfirmOpen = confirmOpen;
+                    prevAlertOpen = alertOpen;
+                    prevPromptOpen = promptOpen;
+    
+                    if (closedCount >= expectedClosures) {
+                        if (!resolved) {
+                            resolved = true;
+                            window.clearInterval(intervalId);
+                            if (timeoutId !== null) {
+                                window.clearTimeout(timeoutId);
+                            }
+                            HSLogger.debug(() => `closeExpectedDialogs resolved successfully after ${closedCount} closures`, HSUtils.#context);
+                            resolve(true);
+                        }
+                    }
+                }, HSUtils.dialogWatcherTime);
+    
+                timeoutId = window.setTimeout(() => {
                     if (!resolved) {
                         resolved = true;
                         window.clearInterval(intervalId);
-                        if (timeoutId !== null) {
-                            window.clearTimeout(timeoutId);
-                        }
-                        HSLogger.debug(() => `closeExpectedDialogs resolved successfully after ${closedCount} closures`, HSUtils.#context);
-                        resolve(true);
+                        HSLogger.warn(`closeExpectedDialogs timed out after ${timeoutMs}ms before reaching expected ${expectedClosures} closure(s); only ${closedCount} were closed.`, HSUtils.#context);
+                        resolve(false);
                     }
-                }
-            }, HSUtils.dialogWatcherTime);
-
-            timeoutId = window.setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    window.clearInterval(intervalId);
-                    HSLogger.warn(`closeExpectedDialogs timed out after ${timeoutMs}ms before reaching expected ${expectedClosures} closure(s); only ${closedCount} were closed.`, HSUtils.#context);
-                    resolve(false);
-                }
-            }, timeoutMs);
-        });
-    }
-*/
+                }, timeoutMs);
+            });
+        }
+    */
     static base64WithCRLF(
         base64: string,
         chunkSize = 49000
