@@ -1,0 +1,56 @@
+{
+  "name": "hypersynergism-loader",
+  "productName": "Hypersynergism Loader",
+  "version": "0.1.0",
+  "description": "Mod loader for Synergism that patches a copy of the game to load Hypersynergism mod builds.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:dir": "electron-builder --dir"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@electron/asar": "^3.2.10"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.hypersynergism.loader",
+    "productName": "Hypersynergism Loader",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "lib/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/favicon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "HypersynergismLoader.exe"
+    },
+    "extraResources": [
+      {
+        "from": "vendor/7-zip",
+        "to": "7zip-bin"
+      }
+    ]
+  }
+}

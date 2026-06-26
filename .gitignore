@@ -7,3 +7,13 @@ Synergism-*.txt
 cdn_cache_purge.bat
 cdn_cache_purge.ps1
 docs/git-ignore/
+electron_app/cache
+electron_app/extracted
+electron_app/node_modules
+electron_loader_test
+
+synergism_modloader/node_modules/
+synergism_modloader/dist/
+synergism_modloader/package-lock.json
+/synergism_modloader/vendor
+hypersynergism_steam_modloader.zip
