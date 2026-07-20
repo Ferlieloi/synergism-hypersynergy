@@ -1474,7 +1474,7 @@ export class HSHeaterOptimizer {
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
           let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
           let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
-          let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "mLuck")
+          let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
           // Local optima for cubes match local optima for octeracts
           tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
         }
