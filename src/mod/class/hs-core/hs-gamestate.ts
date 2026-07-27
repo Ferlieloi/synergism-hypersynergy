@@ -203,6 +203,15 @@ export class HSGameState extends HSModule {
             }
         });
 
+        // Hydrate view state from the live DOM immediately.
+        // The mutation watchers above only fire on future DOM changes, so if the mod
+        // loads while the player is already on some main view/subview (e.g. Ambrosia),
+        // #viewStates would otherwise stay on its hardcoded defaults until the player
+        // navigates away and back. That leaves any module which subscribes during its
+        // own init() (like HSAmbrosia's #subscribeGameStateViewChanges) with a stale
+        // "not active" view pair, so it never receives the initial tab-enter callback.
+        await this.refreshCurrentViewsFromDOM();
+
         this.isInitialized = true;
     }
 
