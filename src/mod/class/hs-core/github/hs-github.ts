@@ -47,8 +47,8 @@ export class HSGithub {
         try {
             // GitHub's tags API does NOT guarantee any particular sort order (it isn't
             // documented as chronological or semver-aware), so we can't just trust that
-            // the first entry is the newest. Fetch a small batch, filter to entries that
-            // actually look like version tags, and pick the highest one ourselves.
+            // the first entry is the newest. Fetch a small batch of 10, filter to entries
+            // that actually look like version tags, and pick the highest one ourselves.
             const githubOwner = this.owner ?? HSGlobal.Release.githubOwner ?? 'ahvonenj';
             const githubUrl = `https://api.github.com/repos/${githubOwner}/synergism-hypersynergy/tags?per_page=10`;
             const ghResp = await fetch(githubUrl);

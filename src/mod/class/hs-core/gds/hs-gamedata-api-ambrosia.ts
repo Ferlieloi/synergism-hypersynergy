@@ -414,7 +414,7 @@ export class AmbrosiaHelper {
             costFormula: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
             effects: (n: number) => {
-                const val = 1 + (n * (this.#ctx.getMeData()?.bonus.quarks ?? 0)) / 100;
+                const val = 1 + (n * (this.#ctx.getMeData()?.bonus.quark ?? 0)) / 100;
                 return {
                     blueberryGeneration: val,
                 };
@@ -838,7 +838,7 @@ export class AmbrosiaHelper {
         const me = this.#ctx.getMeData();
         if (!me) return 1;
         const blueberryGeneration = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration;
-        return 1 + (blueberryGeneration * 100 * (1 + me.globalBonus / 100) * (1 + me.personalBonus / 100) - 100) / 100;
+        return 1 + (blueberryGeneration * 100 * (1 + (me.globalBonus ?? 0) / 100) * (1 + (me.bonus.quark ?? 0) / 100) - 100) / 100;
     }
 
     calculateAmbrosiaGenerationSpeed(reduce_vals = true, true_base = true) {
@@ -867,7 +867,7 @@ export class AmbrosiaHelper {
             P_GEN_BUFF_LVL,
             campaignBlueberrySpeedBonus,
             meBonuses.globalBonus,
-            meBonuses.personalBonus,
+            meBonuses.bonus.quark,
             RED_AMB_GEN_1,
             RED_AMB_GEN_2,
             data.shopUpgrades.shopAmbrosiaGeneration1,

@@ -121,10 +121,9 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         } else {
             return {
                 bonus: {
-                    quarks: 0
+                    quark: 0
                 },
                 globalBonus: 0,
-                personalBonus: 0,
             }
         }
     }

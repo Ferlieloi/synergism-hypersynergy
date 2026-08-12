@@ -177,10 +177,10 @@ export class HSAmbrosiaQuickbar {
         clone.className = 'hs-quickbar-slots-wrapper';
         clone.style.display = "inline-flex";
 
-        const cloneSettingButton = clone.querySelector(".blueberryLoadoutSetting") as HTMLButtonElement | null;
-        if (cloneSettingButton) {
-            cloneSettingButton.remove();
-        }
+        const cloneSettingButtons = clone.querySelectorAll(".blueberryLoadoutSetting") as NodeListOf<HTMLButtonElement>;
+        cloneSettingButtons.forEach((button) => {
+            button.remove();
+        });
 
         const cloneLoadoutButtons = clone.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLButtonElement>;
         cloneLoadoutButtons.forEach((button) => {

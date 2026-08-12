@@ -25,11 +25,10 @@ interface Member {
 }
 
 export interface Bonus {
-    quarks: number;
+    quark: number;
 }
 
 export interface MeData {
-    personalBonus: number;
     globalBonus: number;
     bonus: Bonus;
 }
