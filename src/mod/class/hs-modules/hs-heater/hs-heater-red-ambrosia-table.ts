@@ -687,6 +687,7 @@ function renderRedAmbrosiaUpgradeTableHtml(rows: RedAmbrosiaUpgradeTableRow[], c
             ${compactView ? '' : renderRedAmbrosiaUpgradeContextSummaryHtml(context)}
             <div class="hs-heater-red-ambrosia-footer">
                 <div>${HSUIC.Button({ id: 'hs-heater-red-ambrosia-action-btn', class: 'redButton', text: 'Toggle Data' })}</div>
+                <div id="hs-heater-red-ambrosia-footer-note">Lower value / brighter color = better</div>
             </div>
         </div>
     `;

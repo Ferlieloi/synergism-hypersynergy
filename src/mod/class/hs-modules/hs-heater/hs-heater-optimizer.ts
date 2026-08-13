@@ -1223,11 +1223,11 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.bonus = [0, bonusRow2, bonusRow3, bonusRow4, bonusRow5, 0];
 
     // --- Runes & Talismans
-    stats.runeExp    = runeSiExp.log10();
+    stats.runeExp    = runeSiExp.eq(0) ? -1e10 : runeSiExp.log10();
     stats.runeCoefSI = runeSiRC;
     stats.bonusSI    = runeSiBonusLevelsTotal;
     stats.baseSI     = 1 + Upgrade.runeLevelSI();
-    stats.expIA      = runeIaExp.log10();
+    stats.expIA      = runeIaExp.eq(0) ? -1e10 : runeIaExp.log10();
     stats.bonusIA    = runeIaBonusLevelsTotal.toNumber();
     stats.talismanIA = runeIaBonusLevelsTalisman.toNumber();
     stats.talismanP  = baseTalismanPower.toNumber();
