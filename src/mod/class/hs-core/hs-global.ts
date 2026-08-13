@@ -383,10 +383,9 @@ export const HSGlobal: IHSGlobal = class {
                     'cartSubTab2',
                     'cartSubTab3',
                     'cartSubTab4',
-                    'cartSubTab5',
-                    'cartSubTab6'
+                    'cartSubTab5'
                 ],
-                subViewsSelector: ['#cartSubTab1', '#cartSubTab2', '#cartSubTab3', '#cartSubTab4', '#cartSubTab5', '#cartSubTab6'],
+                subViewsSelector: ['#cartSubTab1', '#cartSubTab2', '#cartSubTab3', '#cartSubTab4', '#cartSubTab5'],
                 viewClassName: 'PseudoCoinView'
             }]
         ])
