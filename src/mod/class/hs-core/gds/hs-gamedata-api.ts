@@ -2601,7 +2601,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         freeSpeedUpgrades:          this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeSpeedUpgrades'),
                     },
                     me_data: {
-                        personalBonus:  meData?.bonus?.quark,
                         globalBonus:    meData?.globalBonus,
                         bonus:          meData?.bonus,
                     }
