@@ -432,7 +432,7 @@
   "ambrosiaIdleSwap": {
     "settingName": "ambrosiaIdleSwap",
     "settingDescription": "Ambrosia AFK swapper",
-    "settingHelpText": "When enabled, automatically switches ambrosia loadouts depending on the ambrosia bar progress. IMPORTANT: BY DESIGN, THE AUTO SWAPPER WILL ONLY WORK WHEN IN THE AMBROSIA VIEW, SO NO \u0027SWAPPING IN THE BACKGROUND\u0027",
+    "settingHelpText": "When enabled, automatically switches ambrosia loadouts depending on the ambrosia bar progress. The 3 loadouts should be made with the Ambrosia Heater to avoid any issue. IMPORTANT: BY DESIGN, THE AUTO SWAPPER WILL ONLY WORK WHEN IN THE AMBROSIA VIEW, SO NO \u0027SWAPPING IN THE BACKGROUND\u0027",
     "settingType": "boolean",
     "enabled": true,
     "usesGameData": true,
@@ -446,8 +446,8 @@
   },
   "ambrosiaIdleSwapOcteractLoadout": {
     "settingName": "ambrosiaIdleSwapOcteractLoadout",
-    "settingDescription": "Octeract + Bar Points loadout",
-    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when ambrosia bars are not close to full.",
+    "settingDescription": "Ambrosia Generation + Octeract (Gen + Oct) loadout",
+    "settingHelpText": "The AFK swapper will stay on this loadout, except when blue or red bar are about to be filled.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -531,7 +531,7 @@
   "ambrosiaIdleSwapNormalLuckLoadout": {
     "settingName": "ambrosiaIdleSwapNormalLuckLoadout",
     "settingDescription": "Blue Luck loadout",
-    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when the blue ambrosia bar is about to hit 100%.",
+    "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when the blue ambrosia bar is about to hit 100%. This loadout does NOT want any brick of lead.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",

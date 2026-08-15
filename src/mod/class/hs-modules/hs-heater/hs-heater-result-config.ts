@@ -49,7 +49,7 @@ const HEATER_RESULT_SECTION_CONFIG: Record<HeaterResultSectionId, HeaterResultSe
 
 const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
     luck: {
-        label: "Luck",
+        label: "Blue Luck",
         section: "common",
         icon: "Pictures/Default/BlueberryLuck2.png",
     },
