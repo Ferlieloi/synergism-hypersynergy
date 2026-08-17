@@ -727,7 +727,9 @@ Object.assign(upgrades, {
       cost: level => 10 * level ** 3,
       effects: {
         mLuck: (input, level) => input + 0.02 * level,
-        speed: (input, level) => input * (1 - 0.02 * level)
+        speed: (input, level) => input * (1 - 0.02 * level),
+        cube: (input, level) => input * (1 - 0.01 * level) ** (1 + stats.spread) * (stats.exalt === 7 ? 100 / (100 - level) : 1),
+        oct: (input, level) => input * (1 - 0.01 * level) ** ((1 + stats.spread) * stats.mind)
       },
       blueberryCost: 4
     }),
@@ -1221,11 +1223,11 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.bonus = [0, bonusRow2, bonusRow3, bonusRow4, bonusRow5, 0];
 
     // --- Runes & Talismans
-    stats.runeExp    = runeSiExp.log10();
+    stats.runeExp    = runeSiExp.eq(0) ? -1e10 : runeSiExp.log10();
     stats.runeCoefSI = runeSiRC;
     stats.bonusSI    = runeSiBonusLevelsTotal;
     stats.baseSI     = 1 + Upgrade.runeLevelSI();
-    stats.expIA      = runeIaExp.log10();
+    stats.expIA      = runeIaExp.eq(0) ? -1e10 : runeIaExp.log10();
     stats.bonusIA    = runeIaBonusLevelsTotal.toNumber();
     stats.talismanIA = runeIaBonusLevelsTalisman.toNumber();
     stats.talismanP  = baseTalismanPower.toNumber();
@@ -1432,9 +1434,9 @@ export class HSHeaterOptimizer {
             let luckMinLevel: Record<string, number> = { ambrosiaLuck1: 20 }; // This is necessary for correct local optima
             let tableLuck1  = generateTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck", luckMinLevel);
             let tableLuck2  = mergeTables(tableLuck1, tableCache.tableLuck1, "luck");
-            let tableLuckAdd  = mergeTables(tableLuck2, tableCache.tableLuckHybrid, "luck");
+            tableCache.tableLuckAdd1 = mergeTables(tableLuck2, tableCache.tableLuckHybrid, "luck");
             let tableLuckMult = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
-            tableCache.tableLuck = mergeTables(tableLuckAdd, tableLuckMult, "luck");
+            tableCache.tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck");
             // Local optima for cubes match local optima for quarks
             tableCache.tableRune = generateTable(["ambrosiaTalismanBonusRuneLevel", "ambrosiaRuneOOMBonus"], "cube");
         }
@@ -1470,9 +1472,11 @@ export class HSHeaterOptimizer {
         }
 
         if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
-            let tableLuckCube1 = generateTable(["ambrosiaLuckCube1"], "cube");
-            // Local optima for cubes match local optima for octeracts
-            tableCache.tableLuckCube = mergeTables(tableCache.tableLuck, tableLuckCube1, "cube");
+          let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
+          let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
+          let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
+          // Local optima for cubes match local optima for octeracts
+          tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
         }
 
         // --- calculateCubes ---

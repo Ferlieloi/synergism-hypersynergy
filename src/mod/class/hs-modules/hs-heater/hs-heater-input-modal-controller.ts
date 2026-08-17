@@ -582,7 +582,7 @@ export class HSHeaterInputModalController {
 
         const tooltip = document.createElement('div');
         tooltip.id = 'hs-heater-start-heater-tooltip';
-        tooltip.textContent = '⚠️ This can take a few seconds... ⚠️';
+        tooltip.textContent = '⚠️ This can take a few seconds... ⚠️\n⚠️ And will take longer and longer the more amb you have ⚠️';
         tooltip.style.zIndex = String(HSUI.getHighestActiveModalZIndex() + 1);
 
         document.body.appendChild(tooltip);

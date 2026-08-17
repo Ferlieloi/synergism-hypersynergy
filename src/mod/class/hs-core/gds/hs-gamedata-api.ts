@@ -2439,7 +2439,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     getPatreonBonus(): number {
         if (!this.meData) return 0;
         const meData = this.meData;
-        let bonus = (1 + (meData?.globalBonus ?? 0) / 100) * (1 + (meData?.personalBonus ?? 0) / 100) - 1;
+        let bonus = (1 + (meData?.globalBonus ?? 0) / 100) * (1 + (meData?.bonus?.quark ?? 0) / 100) - 1;
         return bonus;
     }
 
@@ -2601,7 +2601,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         freeSpeedUpgrades:          this.ambrosia.calculateRedAmbrosiaUpgradeValue('freeSpeedUpgrades'),
                     },
                     me_data: {
-                        personalBonus:  meData?.personalBonus,
                         globalBonus:    meData?.globalBonus,
                         bonus:          meData?.bonus,
                     }

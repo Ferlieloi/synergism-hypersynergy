@@ -765,7 +765,11 @@ export class HSQOLButtons extends HSModule {
             afkSwapperToggle.textContent = 'Toggle AFK Swapper';
             afkSwapperToggle.classList.add('hs-tooltip');
             afkSwapperToggle.dataset.tooltip = [
-                'You need three loadouts [... Feel free to contribute]',
+                'You need 3 SPECIFIC loadouts for the AFK Swapper to work, and work best.',
+                'It is recommended to use the Ambrosia Heater to generate the correct and optimal loadouts.',
+                '- Ambrosia Generation + Octeract (Gen + Oct) => Main/default loadout, used to have both oct and amb speed',
+                '- Blue Luck => Used when filling blue bar (this loadout most notably does NOT want any brick of lead)',
+                '- Red Luck => Used when filling red bar',
             ].join('\n');
 
             afkSwapperToggle.addEventListener('click', () => {

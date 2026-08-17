@@ -265,6 +265,18 @@ export class HSHeaterUIStyles {
                 background-color: rgba(255, 255, 255, 0.05);
             }
 
+            .hs-heater-red-ambrosia-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            #hs-heater-red-ambrosia-footer-note {
+                width: auto;
+                display: inline-block;
+                color: grey;
+            }
+
             .hs-heater-subtable th:last-child,
             .hs-heater-subtable td:last-child {
                 text-align: center;
@@ -650,7 +662,7 @@ export class HSHeaterUIStyles {
                 word-break: break-word;
                 font-family: monospace;
                 font-size: 0.85em;
-                max-width: 500px;
+                max-width: 600px;
                 max-height: 500px;
                 overflow-y: auto;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
