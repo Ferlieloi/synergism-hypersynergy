@@ -205,30 +205,60 @@
         // ==================================================================================
         // ───────────────────────────────── BUNDLE PATCHES ─────────────────────────────────
 
-        // Strategy: find function headers by pattern, verify a unique anchor
-        // string appears near the opening brace, then inject at that point.
-        // This avoids brace-counting bugs in minified code.
-        const findFunctionBodyContaining = (src, headerRegex, anchorStr, windowSize = 1500) => {
-            const re = new RegExp(headerRegex.source, 'g');
-            let m;
-            while ((m = re.exec(src)) !== null) {
-                const bodyStart = m.index + m[0].length;
-                if (src.slice(bodyStart, bodyStart + windowSize).includes(anchorStr))
-                    return { bodyStart, match: m };
+        // Locate a minified function from stable behavior inside its body instead of
+        // depending on a particular minifier spelling (for example `true` vs `!0`).
+        // Candidates are checked nearest-first so nested callbacks between the
+        // function entry and its semantic anchor are ignored unless they also contain
+        // every required marker.
+        const findFunctionBodyBySemantics = (src, anchorStr, requiredMarkers, lookBehind = 20000) => {
+            const headerPatterns = [
+                /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
+                /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/g,
+                /(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g
+            ];
+
+            let anchorIdx = src.indexOf(anchorStr);
+            while (anchorIdx !== -1) {
+                const windowStart = Math.max(0, anchorIdx - lookBehind);
+                const beforeAnchor = src.slice(windowStart, anchorIdx);
+                const candidates = [];
+
+                for (const pattern of headerPatterns) {
+                    pattern.lastIndex = 0;
+                    let match;
+                    while ((match = pattern.exec(beforeAnchor)) !== null) {
+                        candidates.push({
+                            bodyStart: windowStart + match.index + match[0].length,
+                            fnName: match[1]
+                        });
+                    }
+                }
+
+                candidates.sort((a, b) => b.bodyStart - a.bodyStart);
+                for (const candidate of candidates) {
+                    const candidatePrefix = src.slice(candidate.bodyStart, anchorIdx);
+                    if (requiredMarkers.every(marker => candidatePrefix.includes(marker))) {
+                        return candidate;
+                    }
+                }
+
+                anchorIdx = src.indexOf(anchorStr, anchorIdx + anchorStr.length);
             }
+
             return null;
         };
 
         // ==================================================================================
         // ────── EXPORT PATCH ─ Inject at the start of exportSynergism's body.
-        // The function is async, takes a bool arg, and contains "Synergysave2".
-        const exportResult = findFunctionBodyContaining(
+        // Identify it by stable save-export behavior. The function's syntax, async
+        // keyword, parameter names, and minified boolean representation may change.
+        const exportResult = findFunctionBodyBySemantics(
             code,
-            /([a-zA-Z_$][\w$]*)\s*=\s*async\s*\([^)]*!0[^)]*\)\s*=>\s*\{/,
-            '"Synergysave2"'
+            'Synergysave2',
+            ['.offlinetick', '.lastExportedSave']
         );
         if (exportResult) {
-            const exportFn = exportResult.match[1];
+            const exportFn = exportResult.fnName;
             const expose = exportFn
                 ? `\nif(!window.__HS_EXPORT_EXPOSED){` +
                         `window.__HS_exportData=${exportFn};` +
@@ -244,7 +274,7 @@
             code = code.slice(0, exportResult.bodyStart) + expose + code.slice(exportResult.bodyStart);
             log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
         } else {
-            warn('Could not patch exportSynergism — header not found');
+            warn('Could not patch exportSynergism — semantic function match not found');
         }
 
         // ==================================================================================
