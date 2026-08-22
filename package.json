@@ -21,6 +21,7 @@
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
     "dev": "node esbuild.config.js dev",
+    "dev:server": "node scripts/start-dev-server.cjs",
     "test:patcher": "node scripts/test-loader-patcher.cjs",
     "release-and-tag-helper": "node scripts/release-and-tag-helper.mjs"
   },

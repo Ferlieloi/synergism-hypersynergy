@@ -210,6 +210,86 @@
         // Candidates are checked nearest-first so nested callbacks between the
         // function entry and its semantic anchor are ignored unless they also contain
         // every required marker.
+        const findMatchingBrace = (src, bodyStart) => {
+            let depth = 1;
+            let quote = null;
+            let escaped = false;
+
+            for (let i = bodyStart; i < src.length; i++) {
+                const char = src[i];
+                const next = src[i + 1];
+
+                if (quote) {
+                    if (escaped) escaped = false;
+                    else if (char === '\\') escaped = true;
+                    else if (char === quote) quote = null;
+                    continue;
+                }
+
+                if (char === '"' || char === "'" || char === '`') {
+                    quote = char;
+                    continue;
+                }
+                if (char === '/' && next === '/') {
+                    i = src.indexOf('\n', i + 2);
+                    if (i === -1) return -1;
+                    continue;
+                }
+                if (char === '/' && next === '*') {
+                    i = src.indexOf('*/', i + 2);
+                    if (i === -1) return -1;
+                    i++;
+                    continue;
+                }
+                if (char === '{') depth++;
+                else if (char === '}' && --depth === 0) return i;
+            }
+
+            return -1;
+        };
+
+        const findFunctionBodyByName = (src, fnName) => {
+            const escapedName = fnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const headerPatterns = [
+                new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>\\s*\\{`, 'g'),
+                new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`, 'g'),
+                new RegExp(`(?:async\\s+)?function\\s+${escapedName}\\s*\\([^)]*\\)\\s*\\{`, 'g')
+            ];
+
+            for (const pattern of headerPatterns) {
+                const match = pattern.exec(src);
+                if (match) {
+                    const bodyStart = match.index + match[0].length;
+                    return { bodyStart, bodyEnd: findMatchingBrace(src, bodyStart), fnName };
+                }
+            }
+
+            return null;
+        };
+
+        const findExportFunctionFromClickHandler = (src) => {
+            const listenerPrefix =
+                `[a-zA-Z_$][\\w$]*\\(\\s*["']exportgame["']\\s*\\)\\s*` +
+                `\\.addEventListener\\(\\s*["']click["']\\s*,\\s*`;
+            const listenerPatterns = [
+                new RegExp(
+                    listenerPrefix +
+                    `(?:async\\s*)?\\(\\s*\\)\\s*=>\\s*(?:\\{\\s*)?(?:void\\s+)?([a-zA-Z_$][\\w$]*)\\s*\\(`,
+                    'g'
+                ),
+                new RegExp(listenerPrefix + `([a-zA-Z_$][\\w$]*)\\s*\\)`, 'g')
+            ];
+
+            for (const pattern of listenerPatterns) {
+                const match = pattern.exec(src);
+                if (!match) continue;
+                const result = findFunctionBodyByName(src, match[1]);
+                if (result) return result;
+            }
+
+            return null;
+        };
+
         const findFunctionBodyBySemantics = (src, anchorStr, requiredMarkers, lookBehind = 20000) => {
             const headerPatterns = [
                 /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
@@ -227,10 +307,8 @@
                     pattern.lastIndex = 0;
                     let match;
                     while ((match = pattern.exec(beforeAnchor)) !== null) {
-                        candidates.push({
-                            bodyStart: windowStart + match.index + match[0].length,
-                            fnName: match[1]
-                        });
+                        const bodyStart = windowStart + match.index + match[0].length;
+                        candidates.push({ bodyStart, bodyEnd: findMatchingBrace(src, bodyStart), fnName: match[1] });
                     }
                 }
 
@@ -248,33 +326,85 @@
             return null;
         };
 
+        const findExportDataFunction = (src, fnResult) => {
+            if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
+            const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
+            const awaitedCall = /\bawait\s+([a-zA-Z_$][\w$]*)\s*\(/g;
+            let match;
+            const awaitedNames = [];
+            while ((match = awaitedCall.exec(body)) !== null) awaitedNames.push(match[1]);
+
+            let terminalFallback = null;
+            for (const fnName of awaitedNames.reverse()) {
+                if (fnName === fnResult.fnName) continue;
+                const result = findFunctionBodyByName(src, fnName);
+                if (!result || result.bodyEnd < result.bodyStart) continue;
+                terminalFallback ??= result;
+                const candidateBody = src.slice(result.bodyStart, result.bodyEnd);
+                const readsExportMode = candidateBody.includes('"saveType"') || candidateBody.includes("'saveType'");
+                const writesClipboardOrFile = candidateBody.includes('clipboard')
+                    || candidateBody.includes('createObjectURL')
+                    || candidateBody.includes('Blob');
+                if (readsExportMode && writesClipboardOrFile) return result;
+            }
+
+            // Older/minimal bundles may strip the recognizable DOM/output markers.
+            // In exportSynergism the save-output call has historically been the final await.
+            return terminalFallback;
+        };
+
         // ==================================================================================
-        // ────── EXPORT PATCH ─ Inject at the start of exportSynergism's body.
-        // Identify it by stable save-export behavior. The function's syntax, async
-        // keyword, parameter names, and minified boolean representation may change.
-        const exportResult = findFunctionBodyBySemantics(
-            code,
-            'Synergysave2',
-            ['.offlinetick', '.lastExportedSave']
+        // ────── EXPORT PATCH ─ Expose exportSynergism and suppress only its final
+        // save-output helper when autosing requests a quark-only export.
+        // Primary strategy: follow the stable exportgame click listener to the
+        // minified function it invokes. Fall back to save-export behavior if the
+        // listener wiring changes. Neither strategy depends on parameter spelling.
+        const exportListenerResult = findExportFunctionFromClickHandler(code);
+        const exportResult = exportListenerResult || findFunctionBodyBySemantics(
+            code, 'Synergysave2', ['.offlinetick', '.lastExportedSave']
         );
         if (exportResult) {
             const exportFn = exportResult.fnName;
+            const exportDataResult = findExportDataFunction(code, exportResult);
+            const exportDataFn = exportDataResult?.fnName;
+            let suppressOutput = '';
+            if (exportDataResult && exportDataFn) {
+                suppressOutput = `\nif(window.__HS_SUPPRESS_EXPORT_ONCE){` +
+                    `window.__HS_SUPPRESS_EXPORT_ONCE=false;` +
+                    `console.log('[HS-PATCH] ✅ Save output suppressed (quarks awarded)');` +
+                    `return;` +
+                    `}\n`;
+                log(`Patched exportData output guard (fn=${exportDataFn})`);
+            } else {
+                warn('Found exportSynergism but could not identify its final awaited exportData helper');
+            }
+
             const expose = exportFn
                 ? `\nif(!window.__HS_EXPORT_EXPOSED){` +
-                        `window.__HS_exportData=${exportFn};` +
+                        `window.__HS_exportSynergism=${exportFn};` +
+                        (exportDataFn ? `window.__HS_exportData=${exportDataFn};window.__HS_EXPORT_OUTPUT_PATCHED=true;` : '') +
                         `window.__HS_EXPORT_EXPOSED=true;` +
                         `console.log('[HS-PATCH] \u2705 exportSynergism exposed');` +
+                        `}` +
                         `if(window.__HS_SILENT_EXPORT)return;` +
-                    `}\n`
+                    `\n`
                 : `\nif(!window.__HS_EXPORT_EXPOSED){` +
                         `window.__HS_EXPORT_EXPOSED=true;` +
                         `console.log('[HS-PATCH] \u26a0\ufe0f exportSynergism found but fn name unknown');` +
+                        `}` +
                         `if(window.__HS_SILENT_EXPORT)return;` +
-                    `}\n`;
-            code = code.slice(0, exportResult.bodyStart) + expose + code.slice(exportResult.bodyStart);
-            log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'})`);
+                    `\n`;
+            const insertions = [{ index: exportResult.bodyStart, text: expose }];
+            if (exportDataResult && suppressOutput) {
+                insertions.push({ index: exportDataResult.bodyStart, text: suppressOutput });
+            }
+            insertions.sort((a, b) => b.index - a.index);
+            for (const insertion of insertions) {
+                code = code.slice(0, insertion.index) + insertion.text + code.slice(insertion.index);
+            }
+            log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'}, output=${exportDataFn ?? 'unavailable'}, via=${exportListenerResult ? 'click-handler' : 'semantic-fallback'})`);
         } else {
-            warn('Could not patch exportSynergism — semantic function match not found');
+            warn('Could not patch exportSynergism — click handler and semantic fallback did not match');
         }
 
         // ==================================================================================
@@ -586,7 +716,9 @@
                         `synergismStage:      typeof window.__HS_synergismStage,` +
                         `DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,` +
                         `i18next:             typeof window.__HS_i18next,` +
+                        `exportSynergism:     typeof window.__HS_exportSynergism,` +
                         `exportData:          typeof window.__HS_exportData,` +
+                        `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
@@ -636,7 +768,7 @@
             await clickWhenAvailable('kMisc');
             await new Promise(r => setTimeout(r, 300));
 
-            // Trigger exportSynergism silently to expose __HS_exportData.
+            // Trigger exportSynergism silently to expose both export functions.
             window.__HS_SILENT_EXPORT = true;
             await clickWhenAvailable('exportgame');
             window.__HS_SILENT_EXPORT = false;

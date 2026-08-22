@@ -97,8 +97,6 @@ export class HSAutosing extends HSModule {
     #exalt2Btn!: HTMLButtonElement;
     #exaltTimer!: HTMLSpanElement;
     #saveType!: HTMLInputElement;
-    #exportBtn!: HTMLButtonElement;
-    #exportBtnClone?: HTMLButtonElement;
     #addCodeAllBtn!: HTMLButtonElement;
     #timeCodeBtn!: HTMLButtonElement;
     #upg81Btn!: HTMLButtonElement;
@@ -416,11 +414,6 @@ export class HSAutosing extends HSModule {
     }
 
     async #cacheExposedFunctions(): Promise<void> {
-        this.#exportBtn = document.getElementById('exportgame') as HTMLButtonElement;
-        this.#exportBtnClone = this.#exportBtn ? (this.#exportBtn.cloneNode(true) as HTMLButtonElement) : undefined;
-        if (this.#exportBtnClone && (window as any).__HS_EXPORT_EXPOSED)
-            this.#setupExportButtonClone();
-
         this.#exposedPlayer = HSGlobal.exposedPlayer ?? null;
         this.#stageFunc = (window as any).__HS_synergismStage ?? null;
         this.#getMaxChallengesFunc = (window as any).__HS_getMaxChallenges ?? null;
@@ -448,22 +441,6 @@ export class HSAutosing extends HSModule {
             autoConfirmPatched: ${isAutoConfirmPatched})`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
-    }
-
-    #setupExportButtonClone(): void {
-        this.#exportBtnClone!.addEventListener(
-            'click',
-            () => {
-                const hasExportHook = Object.prototype.hasOwnProperty.call(window, "__HS_exportData")
-                    && typeof (window as any).__HS_exportData !== "undefined";
-                if (!hasExportHook) return;
-
-                const exportBackup = (window as any).__HS_exportData;
-                (window as any).__HS_exportData = undefined;
-                window.setTimeout(() => { (window as any).__HS_exportData = exportBackup; }, 100);
-            },
-            true
-        );
     }
 
     async cacheAlmostEverything(): Promise<boolean> {
@@ -1410,10 +1387,17 @@ export class HSAutosing extends HSModule {
 
         // Export to gather a few quarks
         await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
-        const exportBtn = this.#exportBtnClone ?? this.#exportBtn;
-        if (exportBtn) {
-            this.#saveType.checked = true;
-            exportBtn.click();
+        const exportSynergism = (window as any).__HS_exportSynergism;
+        if (typeof exportSynergism === 'function' && (window as any).__HS_EXPORT_OUTPUT_PATCHED) {
+            (window as any).__HS_SUPPRESS_EXPORT_ONCE = true;
+            try {
+                await exportSynergism();
+            } finally {
+                // Clear a stale guard if exportSynergism returned before reaching exportData.
+                (window as any).__HS_SUPPRESS_EXPORT_ONCE = false;
+            }
+        } else {
+            HSLogger.warn('Quark-only export unavailable: the game export-output hook was not patched.', this.context);
         }
 
         this.#ascendBtn.click();
