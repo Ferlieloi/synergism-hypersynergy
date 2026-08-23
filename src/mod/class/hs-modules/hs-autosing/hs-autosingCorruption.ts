@@ -24,6 +24,7 @@ export class HSAutosingCorruption {
     readonly #corruptionPromptOkBtn: HTMLButtonElement;
     readonly #importBtn: HTMLButtonElement;
     #applyCorruptionsFunc: ((json: string) => boolean) | null;
+    #lastAppliedCorruptionsJson: string | null = null;
 
     #loadoutByName: Map<string, CorruptionLoadout> = new Map();
 
@@ -55,14 +56,23 @@ export class HSAutosingCorruption {
         return true;
     }
 
-    async setCorruptions(corruptions: CorruptionLoadout): Promise<void> {
+    invalidateAppliedCache(): void {
+        this.#lastAppliedCorruptionsJson = null;
+    }
+
+    async setCorruptions(corruptions: CorruptionLoadout, force: boolean = false): Promise<void> {
         const jsonString = JSON.stringify(corruptions);
+        if (!force && jsonString === this.#lastAppliedCorruptionsJson) return;
 
         // Fast path: call applyCorruptions directly — no UI clicks, no prompt, synchronous.
         if (this.#applyCorruptionsFunc) {
-            this.#applyCorruptionsFunc(jsonString);
+            const success = this.#applyCorruptionsFunc(jsonString);
+            if (!success) {
+                HSLogger.warn(`Failed to set corruptions: ${jsonString}`, this.#context);
+                return;
+            }
+            this.#lastAppliedCorruptionsJson = jsonString;
             HSLogger.debug(() => `Corruptions set: ${jsonString}`, this.#context);
-            await HSUtils.yield(); // Should not be needed...
             return;
         }
 
@@ -73,6 +83,7 @@ export class HSAutosingCorruption {
             this.#corruptionPromptOkBtn.click();
             await HSUtils.yield();
             if (this.#corruptionsMatchDOM(corruptions)) {
+                this.#lastAppliedCorruptionsJson = jsonString;
                 HSLogger.debug(() => `Corruptions DOM match: ${jsonString}`, this.#context);
                 break;
             }

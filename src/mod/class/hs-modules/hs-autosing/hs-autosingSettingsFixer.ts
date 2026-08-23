@@ -1,7 +1,7 @@
 import { HSLogger } from '../../hs-core/hs-logger';
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
-import { HSGameState, MainView } from '../../hs-core/hs-gamestate';
+import { HSGameState } from '../../hs-core/hs-gamestate';
 import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
 import { HSAmbrosiaHelper } from '../hs-ambrosiaHelper';
 
@@ -265,7 +265,7 @@ export class HSAutosingSettingsFixer {
 
         // Save user tab
         const gamestate = HSModuleManager.getModule<HSGameState>("HSGameState") as HSGameState;
-        const prevMainView = gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+        const prevMainView = gamestate.getCurrentMainViewFromDOM();
 
         // Track which selectors were corrected or failed
         const correctedSelectors: string[] = [];
@@ -317,7 +317,8 @@ export class HSAutosingSettingsFixer {
         }
 
         // Restore user tab
-        window.setTimeout(() => prevMainView.goto(), 20);
+        prevMainView.goto();
+        await new Promise(res => setTimeout(res, 20));
 
         // Log final verification result
         if (correctedSelectors.length > 0 || failedSelectors.length > 0) {

@@ -15,6 +15,7 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
+import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -113,7 +114,8 @@ export class HSAutosing extends HSModule {
     #upg81Observer?: MutationObserver;
     #upg81Promise?: Promise<boolean>;
     #upg81PromiseResolve?: (value: boolean) => void;
-    #upg81ClickTimerId?: number;
+    #upg81ClickLoopActive: boolean = false;
+    #upg81ClickLoopGeneration: number = 0;
     #exaltStateObserver?: MutationObserver;
     #waitForExaltStateActive?: {
         targetState: boolean;
@@ -151,12 +153,15 @@ export class HSAutosing extends HSModule {
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
+    #mainViewRestoreSubscriptionId?: string;
+    #mainViewRestoreTimeoutId?: number;
 
     #autosingModal?: HSAutosingModal;
 
     // Strategy Caches
     readonly #phaseIndexByOption = new Map<PhaseOption, number>(phases.map((p, i) => [p, i] as const));
     #strategyPhaseRanges?: Array<{ phase: AutosingStrategyPhase; startIndex: number; endIndex: number }>;
+    #phaseConfigByStage = new Map<string, AutosingStrategyPhase>();
     #finalPhaseConfig?: AutosingStrategyPhase;
 
 
@@ -547,6 +552,7 @@ export class HSAutosing extends HSModule {
         this.#waitForInnerTextObserver = undefined;
         this.#waitForInnerTextObservedElement = undefined;
         this.#cleanupWaitForInnerText(false);
+        this.#cleanupScheduledMainViewRestore();
 
         if (this.#endStagePromiseResolve) {
             try { this.#endStagePromiseResolve(); } catch (e) { /* ignore */ }
@@ -713,16 +719,25 @@ export class HSAutosing extends HSModule {
                 this.#autosingModal.show();
             }
 
-            let prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+            // Read the live DOM rather than the observer cache. Rapid tab changes can
+            // occur around a singularity, and restoring a stale cached view sends the
+            // player back to the wrong tab (usually Settings).
+            let prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
             await this.#performSingularity(true);
+            this.#isExposureReady
+                ? this.#scheduleMainViewRestore(prevMainView)
+                : this.#restoreMainView(prevMainView);
 
             // Main autosing loop
             while (this.#autosingEnabled) {
                 if (this.#endStageDone || this.#antiquitiesObserverActivated) {
                     await this.#endStagePromise;
                     if (this.#autosingEnabled) {
-                        prevMainView = this.#gamestate.getCurrentUIView<MainView>('MAIN_VIEW');
+                        prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
                         await this.#performSingularity();
+                        this.#isExposureReady
+                            ? this.#scheduleMainViewRestore(prevMainView)
+                            : this.#restoreMainView(prevMainView);
                     }
                     continue;
                 }
@@ -731,9 +746,8 @@ export class HSAutosing extends HSModule {
                 while (this.#autosingEnabled && !this.#endStageDone && !this.#antiquitiesObserverActivated) {
                     await HSUtils.yield();
                     const stage = await this.#getStage();
-
-                    window.setTimeout(() => prevMainView.goto(), 25);
-                    window.setTimeout(() => prevMainView.goto(), 50);
+                    // Only the DOM stage fallback navigates to Settings on every phase.
+                    if (!this.#isExposureReady) this.#restoreMainView(prevMainView);
 
                     await this.#matchStageToStrategy(stage);
                 }
@@ -757,9 +771,13 @@ export class HSAutosing extends HSModule {
             return;
         }
 
-        // Find the unique dash split where both sides are valid PhaseOptions.
-        // Call getPhaseIndex directly (returns -1 for unknown) instead of isPhaseOption+getPhaseIndex
-        // to halve the number of Map lookups per candidate.
+        const cachedPhaseConfig = this.#phaseConfigByStage.get(stage);
+        if (cachedPhaseConfig) {
+            await this.#executePhase(cachedPhaseConfig);
+            return;
+        }
+
+        // Resolve a stage once, then cache its phase for subsequent singularities.
         let stageStartIndex = -1;
         let stageEndIndex = -1;
 
@@ -778,6 +796,7 @@ export class HSAutosing extends HSModule {
 
         const phaseConfig = this.#strategyPhaseRanges!.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
         if (!phaseConfig) { HSLogger.warn(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context); this.stopAutosing(); return; }
+        this.#phaseConfigByStage.set(stage, phaseConfig);
 
         HSLogger.debug(() => `Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         await this.#executePhase(phaseConfig);
@@ -839,7 +858,7 @@ export class HSAutosing extends HSModule {
         switch (challenge.challengeNumber) {
             case 401: {
                 const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
-                if (phaseLoadout) await this.#corruptionManager.setCorruptions(phaseLoadout);
+                if (phaseLoadout) await this.#corruptionManager.setCorruptions(phaseLoadout, true);
                 break;
             }
             case LOADOUT_ACTION_VALUE:
@@ -1041,7 +1060,12 @@ export class HSAutosing extends HSModule {
                     ? () => p.currentChallenge.reincarnation === challengeIndex
                     : () => p.currentChallenge.ascension === challengeIndex;
 
-            while (!isChallengeActive()) await HSUtils.yield(() => this.#fastDoubleClick(challengeBtn!));
+            // Challenge state is advanced by the game tack. Retrying faster than that
+            // only floods the DOM event handlers and can delay the tack we need.
+            while (this.#autosingEnabled && !isChallengeActive()) {
+                this.#fastDoubleClick(challengeBtn!);
+                if (!isChallengeActive()) await HSUtils.waitForNextTack();
+            }
         } else {
             const isActive = accessor.isActive;
             /* // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
@@ -1135,24 +1159,18 @@ export class HSAutosing extends HSModule {
         // Fast path: no DOM text parsing, no Decimal
         if (this.#isExposureReady) {
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
-            if (this.#exposedPlayer!.challengecompletions[challengeIndex] >= maxPossible) return;
+            const deadline = performance.now() + maxTime;
 
-            await new Promise<void>((resolve) => {
-                if (this.#challengeObserverActive) {
-                    this.#cleanupChallengeObserver();
-                }
-
-                this.#challengeObserverActive = {
-                    predicate: () => this.#exposedPlayer!.challengecompletions[challengeIndex] >= maxPossible,
-                    resolve,
-                    finished: false,
-                };
-
-                this.#challengeCompletionObserver?.disconnect();
-                this.#challengeCompletionObserver?.observe(levelElement!, { childList: true, characterData: true, subtree: true });
-                if (this.#challengeObserverActive.predicate()) this.#cleanupChallengeObserver();
-                window.setTimeout(() => this.#cleanupChallengeObserver(), maxTime);
-            });
+            // Read exposed state after each game tack. The old fast path waited on a
+            // hidden DOM element to mutate, which could consume the entire timeout
+            // even after the challenge had already reached its cap.
+            while (
+                this.#autosingEnabled
+                && this.#exposedPlayer!.challengecompletions[challengeIndex] < maxPossible
+                && performance.now() < deadline
+            ) {
+                await HSUtils.waitForNextTack();
+            }
         } else {
             // Fallback: DOM text parsing + Decimal
             const getCompletions = accessor.getCompletions;
@@ -1164,16 +1182,24 @@ export class HSAutosing extends HSModule {
                     this.#cleanupChallengeObserver();
                 }
 
+                let timeoutId: number | undefined;
+                const resolveAndClearTimeout = (): void => {
+                    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+                    resolve();
+                };
+
                 this.#challengeObserverActive = {
                     predicate: () => getCompletions().gte(maxPossible),
-                    resolve,
+                    resolve: resolveAndClearTimeout,
                     finished: false,
                 };
 
                 this.#challengeCompletionObserver?.disconnect();
                 this.#challengeCompletionObserver?.observe(levelElement!, { childList: true, characterData: true, subtree: true });
                 if (this.#challengeObserverActive.predicate()) this.#cleanupChallengeObserver();
-                window.setTimeout(() => this.#cleanupChallengeObserver(), maxTime);
+                if (this.#challengeObserverActive) {
+                    timeoutId = window.setTimeout(() => this.#cleanupChallengeObserver(), maxTime);
+                }
             });
         }
     }
@@ -1321,6 +1347,9 @@ export class HSAutosing extends HSModule {
 
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
+        // A singularity can reset vanilla's pending corruption state. Always apply
+        // the first requested loadout of the new run, then deduplicate within it.
+        this.#corruptionManager.invalidateAppliedCache();
 
         if (this.#isExposureReady) {
             // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
@@ -1584,6 +1613,7 @@ export class HSAutosing extends HSModule {
     }
 
     #rebuildStrategyPhaseCaches(): void {
+        this.#phaseConfigByStage.clear();
         if (!this.#strategy) {
             this.#strategyPhaseRanges = undefined;
             this.#finalPhaseConfig = undefined;
@@ -1598,6 +1628,56 @@ export class HSAutosing extends HSModule {
                 return { phase: p, startIndex, endIndex };
             })
             .filter((r) => r.startIndex !== -1 && r.endIndex !== -1);
+    }
+
+    #restoreMainView(view: MainView): void {
+        if (this.#gamestate.getCurrentMainViewFromDOM().getId() !== view.getId()) {
+            view.goto();
+        }
+    }
+
+    #scheduleMainViewRestore(view: MainView): void {
+        this.#cleanupScheduledMainViewRestore();
+        if (view.getId() === MAIN_VIEW.SETTINGS) return;
+
+        let sawSettingsRedirect = this.#gamestate.getCurrentMainViewFromDOM().getId() === MAIN_VIEW.SETTINGS;
+        const restore = (): void => {
+            if (this.#autosingEnabled) this.#restoreMainView(view);
+        };
+
+        this.#mainViewRestoreSubscriptionId = this.#gamestate.subscribeGameStateChange<MainView>(
+            'MAIN_VIEW',
+            (_previous, current) => {
+                if (current.getId() === MAIN_VIEW.SETTINGS) {
+                    sawSettingsRedirect = true;
+                    restore();
+                } else if (sawSettingsRedirect && current.getId() === view.getId()) {
+                    this.#cleanupScheduledMainViewRestore();
+                }
+            }
+        );
+
+        if (sawSettingsRedirect) restore();
+
+        // Keep the one-shot listener briefly in case the vanilla redirect is queued
+        // after the singularity state becomes readable, then verify once and clean up.
+        this.#mainViewRestoreTimeoutId = window.setTimeout(() => {
+            if (sawSettingsRedirect || this.#gamestate.getCurrentMainViewFromDOM().getId() === MAIN_VIEW.SETTINGS) {
+                restore();
+            }
+            this.#cleanupScheduledMainViewRestore();
+        }, 100);
+    }
+
+    #cleanupScheduledMainViewRestore(): void {
+        if (this.#mainViewRestoreSubscriptionId) {
+            this.#gamestate.unsubscribeGameStateChange('MAIN_VIEW', this.#mainViewRestoreSubscriptionId);
+            this.#mainViewRestoreSubscriptionId = undefined;
+        }
+        if (this.#mainViewRestoreTimeoutId !== undefined) {
+            window.clearTimeout(this.#mainViewRestoreTimeoutId);
+            this.#mainViewRestoreTimeoutId = undefined;
+        }
     }
 
     #ensureElements<T extends Record<string, Element | null>>(elements: T): elements is { [K in keyof T]: NonNullable<T[K]> } {
@@ -1654,26 +1734,33 @@ export class HSAutosing extends HSModule {
         );
     }
 
-    #startUpg81Clicking(initialTimeout = 0, intervalMs = 5): void {
-        if (this.#upg81ClickTimerId !== undefined || !this.#upg81Btn) return;
+    #startUpg81Clicking(): void {
+        if (this.#upg81ClickLoopActive || !this.#upg81Btn) return;
 
-        const tick = (): void => {
-            if (!this.#autosingEnabled || !this.#upg81Promise) {
-                this.#stopUpg81Clicking();
-                return;
+        const generation = ++this.#upg81ClickLoopGeneration;
+        this.#upg81ClickLoopActive = true;
+
+        void (async (): Promise<void> => {
+            try {
+                while (
+                    generation === this.#upg81ClickLoopGeneration
+                    && this.#autosingEnabled
+                    && this.#upg81Promise
+                ) {
+                    this.#upg81Btn.click();
+                    await HSUtils.waitForNextTack();
+                }
+            } finally {
+                if (generation === this.#upg81ClickLoopGeneration) {
+                    this.#upg81ClickLoopActive = false;
+                }
             }
-
-            this.#upg81Btn.click();
-            this.#upg81ClickTimerId = window.setTimeout(tick, intervalMs);
-        };
-        this.#upg81ClickTimerId = window.setTimeout(tick, initialTimeout);
+        })();
     }
 
     #stopUpg81Clicking(): void {
-        if (this.#upg81ClickTimerId !== undefined) {
-            window.clearTimeout(this.#upg81ClickTimerId);
-            this.#upg81ClickTimerId = undefined;
-        }
+        this.#upg81ClickLoopGeneration++;
+        this.#upg81ClickLoopActive = false;
     }
 
     async #waitForGreenUpg81(): Promise<void> {

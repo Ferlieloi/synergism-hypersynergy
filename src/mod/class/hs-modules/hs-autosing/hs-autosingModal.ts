@@ -31,6 +31,7 @@ import { SingularityBundle } from "./hs-autosingExportManager";
  * Author: XxmolkxX
  */
 export class HSAutosingModal {
+    static readonly #MIN_RENDER_INTERVAL_MS = 100;
     #context = 'HSAutosingModal';
     #modalMode: 'running' | 'review' = 'running';
     // --- DOM Elements & UI State ---
@@ -171,6 +172,9 @@ export class HSAutosingModal {
     // --- Render Batching & Change Tracking ---
     // These flags and version numbers ensure that expensive DOM updates only happen when needed.
     #renderPending: boolean              = false;
+    #renderTimerId: number | null        = null;
+    #renderAnimationFrameId: number | null = null;
+    #lastRenderTimestamp: number         = 0;
     #renderSummaryStatsPending: boolean  = false;
     #renderDetailedStatsPending: boolean = false;
     #renderPhasesPending: boolean        = false;
@@ -1152,8 +1156,8 @@ export class HSAutosingModal {
         this.#requestRender({ summaryStats: true, detailedStats: true, phases: true, phaseName: true, sparklines: true, exportBtn: true });
     }
 
-    /** Request a render update for specific modal sections. Sets pending flags
-     *  and schedules a render via requestAnimationFrame. */
+    /** Request a render update for specific modal sections. Data stays current,
+     * while DOM work is coalesced and rate-limited so it cannot compete with AutoSing. */
     #requestRender(opts: { summaryStats?: boolean; detailedStats?: boolean; phases?: boolean; phaseName?: boolean; sparklines?: boolean; exportBtn?: boolean } = {}): void {
         if (this.#isMinimized) return;
         if (opts.summaryStats)  this.#renderSummaryStatsPending  = true;
@@ -1166,10 +1170,23 @@ export class HSAutosingModal {
         if (this.#renderPending) return;
         this.#renderPending = true;
 
-        window.requestAnimationFrame(() => {
-            this.#renderPending = false;
-            this.#flushRender();
-        });
+        const scheduleAnimationFrame = (): void => {
+            this.#renderTimerId = null;
+            this.#renderAnimationFrameId = window.requestAnimationFrame(() => {
+                this.#renderAnimationFrameId = null;
+                this.#renderPending = false;
+                this.#lastRenderTimestamp = performance.now();
+                this.#flushRender();
+            });
+        };
+
+        const elapsed = performance.now() - this.#lastRenderTimestamp;
+        const remaining = HSAutosingModal.#MIN_RENDER_INTERVAL_MS - elapsed;
+        if (remaining > 0) {
+            this.#renderTimerId = window.setTimeout(scheduleAnimationFrame, remaining);
+        } else {
+            scheduleAnimationFrame();
+        }
     }
 
     /** Execute pending render updates for modal sections. Only runs if modal is visible and DOM is ready. */
@@ -1445,6 +1462,15 @@ export class HSAutosingModal {
     /** Destroy the modal, remove event listeners, and clean up DOM elements. */
     public destroy(): void {
         this.#clearSingularityInterval();
+        if (this.#renderTimerId !== null) {
+            window.clearTimeout(this.#renderTimerId);
+            this.#renderTimerId = null;
+        }
+        if (this.#renderAnimationFrameId !== null) {
+            window.cancelAnimationFrame(this.#renderAnimationFrameId);
+            this.#renderAnimationFrameId = null;
+        }
+        this.#renderPending = false;
         window.removeEventListener('mousemove', this.#onMouseMoveHandler);
         window.removeEventListener('mouseup', this.#onMouseUpHandler);
         // Remove drag/resize handlers from timerHeader

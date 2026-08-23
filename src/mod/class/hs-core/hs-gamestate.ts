@@ -137,6 +137,10 @@ export class HSGameState extends HSModule {
                 attributes: true,
                 attributeOldValue: false,
                 attributeFilter: ['style'],
+                // Main-view transitions are state, not high-frequency display data.
+                // Dropping a transition here leaves currentView stale until the same
+                // tab is clicked again, which breaks consumers such as AutoSing.
+                overrideThrottle: true,
                 valueParser: (element) => {
                     return (element as HTMLElement).style.getPropertyValue('display');
                 }
@@ -419,11 +423,8 @@ export class HSGameState extends HSModule {
         return this.#viewStates[viewKey].currentView as T;
     }
 
-    /**
-     * Force-refresh current main/sub-view state from DOM.
-     * Useful during early startup where mutation watchers may not have emitted yet.
-     */
-    async refreshCurrentViewsFromDOM(): Promise<void> {
+    /** Read the visible main view directly from the DOM instead of the observer cache. */
+    getCurrentMainViewFromDOM(): MainView {
         const visibleMain = this.#mainUIViews.find((viewId) => {
             const element = document.getElementById(viewId) as HTMLElement | null;
             if (!element) return false;
@@ -431,15 +432,25 @@ export class HSGameState extends HSModule {
         });
 
         if (!visibleMain) {
-            HSLogger.debug(() => 'refreshCurrentViewsFromDOM: no visible main view detected', this.context);
-            return;
+            HSLogger.debug(() => 'getCurrentMainViewFromDOM: no visible main view detected; using cached state', this.context);
+            return this.#viewStates.MAIN_VIEW.currentView as MainView;
         }
 
-        const refreshedMainView = new MainView(visibleMain);
-        if (refreshedMainView.getId() === MAIN_VIEW.UNKNOWN) {
-            HSLogger.warn(`refreshCurrentViewsFromDOM: could not resolve MAIN_VIEW from ${visibleMain}`, this.context);
-            return;
+        const currentView = new MainView(visibleMain);
+        if (currentView.getId() === MAIN_VIEW.UNKNOWN) {
+            HSLogger.warn(`getCurrentMainViewFromDOM: could not resolve MAIN_VIEW from ${visibleMain}`, this.context);
+            return this.#viewStates.MAIN_VIEW.currentView as MainView;
         }
+
+        return currentView;
+    }
+
+    /**
+     * Force-refresh current main/sub-view state from DOM.
+     * Useful during early startup where mutation watchers may not have emitted yet.
+     */
+    async refreshCurrentViewsFromDOM(): Promise<void> {
+        const refreshedMainView = this.getCurrentMainViewFromDOM();
 
         this.#viewStates.MAIN_VIEW.previousView = this.#viewStates.MAIN_VIEW.currentView;
         this.#viewStates.MAIN_VIEW.currentView = refreshedMainView;
