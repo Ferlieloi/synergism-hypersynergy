@@ -1398,6 +1398,7 @@ const generateLoadouts = () => {
     let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)
     let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
     let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+    tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux)
     tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
     loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
     loadoutSR1.generateOutput(24, "singReduction", maxLoadout, "")

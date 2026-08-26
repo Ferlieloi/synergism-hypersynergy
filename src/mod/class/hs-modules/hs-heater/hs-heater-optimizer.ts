@@ -1581,7 +1581,7 @@ export class HSHeaterOptimizer {
 
         // --- calculateOff: Obt + Off ---
         if (options.calculateOff) {
-            let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
+            let tableSing    = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
             let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
             let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
             let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
@@ -1611,6 +1611,7 @@ export class HSHeaterOptimizer {
           let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)!
           let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
           let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+          tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
           tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
           loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
           output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
