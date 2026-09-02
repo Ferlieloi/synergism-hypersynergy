@@ -213,12 +213,12 @@ export class HSAmbrosia extends HSModule
     // --------------- Loadout Events ---------------
     // ==============================================
 
-    #attachAmbrosiaTabEvents() {
+    async #attachAmbrosiaTabEvents() {
         if (this.#loadoutContainer) {
             this.#attachLoadoutClickHandler();
         }
 
-        void this.#hookPersistentAmbrosiaLevelsToggleButton();
+        await this.#hookPersistentAmbrosiaLevelsToggleButton();
     }
 
     #detachAmbrosiaTabEvents() {
@@ -913,11 +913,11 @@ export class HSAmbrosia extends HSModule
         }
     }
 
-    #onAmbrosiaTabEnter() {
+    async #onAmbrosiaTabEnter() {
         if (this.#isAmbrosiaTabActive) return;
         this.#isAmbrosiaTabActive = true;
 
-        this.#attachAmbrosiaTabEvents();
+        await this.#attachAmbrosiaTabEvents();
 
         if (this.#isIdleSwapEnabled) {
             void this.#activateIdleSwap();

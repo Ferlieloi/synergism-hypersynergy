@@ -314,10 +314,9 @@ export const HSGlobal: IHSGlobal = class {
                 subViewIds: [
                     'toggleRuneSubTab1',
                     'toggleRuneSubTab2',
-                    'toggleRuneSubTab3',
-                    'toggleRuneSubTab4'
+                    'toggleRuneSubTab3'
                 ],
-                subViewsSelector: ['#toggleRuneSubTab1', '#toggleRuneSubTab2', '#toggleRuneSubTab3', '#toggleRuneSubTab4'],
+                subViewsSelector: ['#toggleRuneSubTab1', '#toggleRuneSubTab2', '#toggleRuneSubTab3'],
                 viewClassName: 'RuneView'
             }],
             [MAIN_VIEW.CHALLENGES, {
@@ -350,6 +349,15 @@ export const HSGlobal: IHSGlobal = class {
                 subViewsSelector: ['#switchCubeSubTab1', '#switchCubeSubTab2', '#switchCubeSubTab3', '#switchCubeSubTab4', '#switchCubeSubTab5', '#switchCubeSubTab6', '#switchCubeSubTab7'],
                 viewClassName: 'CubeView'
             }],
+            [MAIN_VIEW.TRAITS, {
+                subViewIds: [
+                    'corrCampaignsBtn',
+                    'corrStatsBtn',
+                    'corrLoadoutsBtn'
+                ],
+                subViewsSelector: ['#corrCampaignsBtn', '#corrStatsBtn', '#corrLoadoutsBtn'],
+                viewClassName: 'TraitsView'
+            }],
             [MAIN_VIEW.SINGULARITY, {
                 subViewIds: [
                     'toggleSingularitySubTab1',
@@ -371,10 +379,9 @@ export const HSGlobal: IHSGlobal = class {
                     'switchSettingSubTab6',
                     'switchSettingSubTab7',
                     'switchSettingSubTab8',
-                    'switchSettingSubTab9',
-                    'switchSettingSubTab10'
+                    'switchSettingSubTab9'
                 ],
-                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9', '#switchSettingSubTab10'],
+                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9'],
                 viewClassName: 'SettingsView'
             }],
             [MAIN_VIEW.PSEUDOCOINS, {
