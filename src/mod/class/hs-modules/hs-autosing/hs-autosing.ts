@@ -15,7 +15,6 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
-import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -719,13 +718,10 @@ export class HSAutosing extends HSModule {
             }
 
             // Read the live DOM rather than the observer cache. Rapid tab changes can
-            // occur around a singularity, and restoring a stale cached view sends the
-            // player back to the wrong tab (usually Settings).
+            // occur around a singularity, and the game may redirect to another page.
             let prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
             await this.#performSingularity(true);
-            this.#isExposureReady
-                ? this.#scheduleMainViewRestore(prevMainView)
-                : this.#restoreMainView(prevMainView);
+            this.#scheduleMainViewRestore(prevMainView);
 
             // Main autosing loop
             while (this.#autosingEnabled) {
@@ -734,9 +730,7 @@ export class HSAutosing extends HSModule {
                     if (this.#autosingEnabled) {
                         prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
                         await this.#performSingularity();
-                        this.#isExposureReady
-                            ? this.#scheduleMainViewRestore(prevMainView)
-                            : this.#restoreMainView(prevMainView);
+                        this.#scheduleMainViewRestore(prevMainView);
                     }
                     continue;
                 }
@@ -1641,35 +1635,27 @@ export class HSAutosing extends HSModule {
 
     #scheduleMainViewRestore(view: MainView): void {
         this.#cleanupScheduledMainViewRestore();
-        if (view.getId() === MAIN_VIEW.SETTINGS) return;
+        const targetViewId = view.getId();
 
-        let sawSettingsRedirect = this.#gamestate.getCurrentMainViewFromDOM().getId() === MAIN_VIEW.SETTINGS;
         const restore = (): void => {
             if (this.#autosingEnabled) this.#restoreMainView(view);
         };
 
+        // Restore immediately if the Exalt transition already redirected the player,
+        // then briefly guard against a redirect queued after the game state changed.
+        restore();
+
         this.#mainViewRestoreSubscriptionId = this.#gamestate.subscribeGameStateChange<MainView>(
             'MAIN_VIEW',
             (_previous, current) => {
-                if (current.getId() === MAIN_VIEW.SETTINGS) {
-                    sawSettingsRedirect = true;
-                    restore();
-                } else if (sawSettingsRedirect && current.getId() === view.getId()) {
-                    this.#cleanupScheduledMainViewRestore();
-                }
+                if (current.getId() !== targetViewId) restore();
             }
         );
 
-        if (sawSettingsRedirect) restore();
-
-        // Keep the one-shot listener briefly in case the vanilla redirect is queued
-        // after the singularity state becomes readable, then verify once and clean up.
         this.#mainViewRestoreTimeoutId = window.setTimeout(() => {
-            if (sawSettingsRedirect || this.#gamestate.getCurrentMainViewFromDOM().getId() === MAIN_VIEW.SETTINGS) {
-                restore();
-            }
+            restore();
             this.#cleanupScheduledMainViewRestore();
-        }, 100);
+        }, 250);
     }
 
     #cleanupScheduledMainViewRestore(): void {
