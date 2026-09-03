@@ -20,6 +20,7 @@ import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
+const EXALT_STATE_ATTRIBUTE = 'data-inside-singularity-challenge';
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
@@ -96,7 +97,6 @@ export class HSAutosing extends HSModule {
     #antSacrifice!: HTMLButtonElement;
     #AOAG!: HTMLButtonElement;
     #exalt2Btn!: HTMLButtonElement;
-    #exaltTimer!: HTMLSpanElement;
     #saveType!: HTMLInputElement;
     #addCodeAllBtn!: HTMLButtonElement;
     #timeCodeBtn!: HTMLButtonElement;
@@ -217,7 +217,6 @@ export class HSAutosing extends HSModule {
             antSacrifice: document.getElementById('antSacrifice') as HTMLButtonElement | null,
             AOAG: document.getElementById('antiquitiesRuneSacrifice') as HTMLButtonElement | null,
             exalt2Btn: document.getElementById('oneChallengeCap') as HTMLButtonElement | null,
-            exaltTimer: document.getElementById('ascSingChallengeTimeTakenStats') as HTMLSpanElement | null,
             elevatorTeleportButton: document.getElementById('elevatorTeleportButton') as HTMLButtonElement | null,
             elevatorInput: document.getElementById('elevatorTargetInput') as HTMLInputElement | null,
             upg81Btn: document.getElementById('upg81') as HTMLButtonElement | null,
@@ -234,7 +233,6 @@ export class HSAutosing extends HSModule {
         this.#antSacrifice = elements.antSacrifice;
         this.#AOAG = elements.AOAG;
         this.#exalt2Btn = elements.exalt2Btn;
-        this.#exaltTimer = elements.exaltTimer;
         this.#elevatorTeleportButton = elements.elevatorTeleportButton;
         this.#elevatorInput = elements.elevatorInput;
         this.#upg81Btn = elements.upg81Btn;
@@ -377,7 +375,8 @@ export class HSAutosing extends HSModule {
             });
         }
 
-        // Exalt state observer, to ensure enterAndLeaveExalt does indeed enter and leave
+        // Bookmark mode observes the public DOM state published by the game.
+        // Exposure-ready mode reads player.insideSingularityChallenge directly.
         if (!this.#exaltStateObserver) {
             this.#exaltStateObserver = new MutationObserver(() => {
                 if (!this.#waitForExaltStateActive) return;
@@ -1343,7 +1342,13 @@ export class HSAutosing extends HSModule {
         this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
         this.#upg81Observer?.observe(this.#upg81Btn, { attributes: true, attributeFilter: ['class'] });
 
-        await this.#enterAndLeaveExalt();
+        if (!await this.#enterAndLeaveExalt()) {
+            if (this.#autosingEnabled) {
+                HSLogger.warn("Failed to enter and leave Exalt 2. Auto-Sing stopped.", this.context);
+                this.stopAutosing();
+            }
+            return;
+        }
 
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
@@ -1384,12 +1389,12 @@ export class HSAutosing extends HSModule {
         this.#prevActionTime = performance.now();
     }
 
-    async #enterAndLeaveExalt(): Promise<void> {
+    async #enterAndLeaveExalt(): Promise<boolean> {
         this.#exalt2Btn.click();
-        await this.#waitForExaltState(true);
+        if (!await this.#waitForExaltState(true) || !this.#autosingEnabled) return false;
 
         this.#exalt2Btn.click();
-        await this.#waitForExaltState(false);
+        return await this.#waitForExaltState(false);
     }
 
 
@@ -1600,12 +1605,10 @@ export class HSAutosing extends HSModule {
     }
 
     #isInExalt(): boolean {
-        // Fast path: use exposedPlayer. No heavy getComputedStyle.
         if (this.#isExposureReady) {
             return this.#exposedPlayer!.insideSingularityChallenge;
         }
-        const style = window.getComputedStyle(this.#exaltTimer);
-        return style.display !== "none";
+        return document.documentElement.getAttribute(EXALT_STATE_ATTRIBUTE) === 'true';
     }
 
     #getPhaseIndex(phase: PhaseOption): number {
@@ -1849,13 +1852,17 @@ export class HSAutosing extends HSModule {
     }
 
     async #waitForExaltState(targetState: boolean): Promise<boolean> {
-        if (this.#isInExalt() === targetState) return true;
-
-        const exaltTimerElement = this.#exaltTimer;
-        if (!exaltTimerElement) {
-            HSLogger.warn("Could not observe exalt state because exalt timer element is missing.", this.context);
-            return false;
+        if (this.#isExposureReady) {
+            while (
+                this.#autosingEnabled
+                && this.#exposedPlayer!.insideSingularityChallenge !== targetState
+            ) {
+                await HSUtils.waitForNextTack();
+            }
+            return this.#exposedPlayer!.insideSingularityChallenge === targetState;
         }
+
+        if (this.#isInExalt() === targetState) return true;
 
         return await new Promise<boolean>((resolve) => {
             if (this.#waitForExaltStateActive) {
@@ -1869,7 +1876,15 @@ export class HSAutosing extends HSModule {
             };
 
             this.#exaltStateObserver?.disconnect();
-            this.#exaltStateObserver?.observe(exaltTimerElement, { attributes: true, attributeFilter: ['style', 'class'] });
+            if (!this.#exaltStateObserver) {
+                HSLogger.warn("Could not observe the game's Exalt state attribute.", this.context);
+                this.#cleanupWaitForExaltState(false);
+                return;
+            }
+            this.#exaltStateObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: [EXALT_STATE_ATTRIBUTE],
+            });
             if (this.#isInExalt() === targetState) this.#cleanupWaitForExaltState(true);
         });
     }
