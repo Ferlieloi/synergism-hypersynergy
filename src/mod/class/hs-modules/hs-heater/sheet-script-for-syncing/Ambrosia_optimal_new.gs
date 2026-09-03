@@ -411,7 +411,8 @@ const generateLoadouts = () => {
       maxLevel: 20,
       cost: level => 40 * level ** 3,
       effects: {
-        obt: (input, level) => input + level
+        obt: (input, level) => input + level,
+        off: (input, level) => input + level / 1e10,
       },
       row: 1,
       blueberryCost: 1
@@ -420,7 +421,8 @@ const generateLoadouts = () => {
       maxLevel: 60,
       cost: level => 20 * level ** 3,
       effects: {
-        off: (input, level) => input + level
+        off: (input, level) => input + level,
+        obt: (input, level) => input + level / 1e10,
       },
       row: 3,
       blueberryCost: 2,
@@ -510,10 +512,10 @@ const generateLoadouts = () => {
       maxLevel: 100,
       cost: level => 100 * level * level,
       effects: {
-        cube: input => input, // The effect is computed in ambrosiaRuneOOMBonus
-        quark: input => input,
-        mObt: input => input,
-        mOff: input => input
+        cube: (input, level) => input + 1e-10 * level, // The effect is computed in ambrosiaRuneOOMBonus
+        quark: (input, level) => input + 1e-10 * level,
+        mObt: (input, level) => input + 1e-10 * level,
+        mOff: (input, level) => input + 1e-10 * level
       },
       row: 1
     }),
@@ -522,10 +524,10 @@ const generateLoadouts = () => {
       costArray: Upgrade.ambrosiaRuneOOMBonusCost(),
       cost: level => upgrades.ambrosiaRuneOOMBonus.costArray[level],
       effects: {
-        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube,
-        quark: (input, level, loadout) => input * (1 + 0.002 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIAQuark,
-        mObt: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI,
-        mOff: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI
+        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube + 1e-10 * level,
+        quark: (input, level, loadout) => input * (1 + 0.002 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIAQuark + 1e-10 * level,
+        mObt: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level,
+        mOff: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level
       },
       row: 3
     }),
@@ -1284,9 +1286,14 @@ const generateLoadouts = () => {
   if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
     let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
     let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
-    let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
-    // Local optima for cubes match local optima for octeracts
-    tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
+    if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
+      let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
+      tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
+    }
+    if (options.calculateOct || options.calculateGen) {
+      let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "oct")
+      tableCache.tableLuckOct = mergeTables(tableLuck, tableBrick, "oct")
+    }
   }
 
   if (options.calculateCubes || options.calculateSR) {
@@ -1305,7 +1312,7 @@ const generateLoadouts = () => {
   }
 
   if (options.calculateOct) {
-    let loadoutOct = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct")
+    let loadoutOct = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct")
     loadoutOct.generateOutput(9, "oct", maxLoadout)
 
     if (stats.ossifiedTactics < redUpgrades.regularLuck.maxLevel || stats.ossifiedTactics2 < redUpgrades.regularLuck2.maxLevel) {
@@ -1372,16 +1379,20 @@ const generateLoadouts = () => {
     let tableObt1 = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt")
     let tableObt2 = generateTable(["ambrosiaObtainium1"], "obt")
     let tableObt3 = mergeTables(tableObt1, tableObt2, "obt")
-    let tableObt4 = mergeTables(tableObt3, tableCache.tableVoucher, "obt")
+
+    let tableOff1 = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off")
+    let tableOff2 = generateTable(["ambrosiaOffering1"], "off")
+    let tableOff3 = mergeTables(tableOff1, tableOff2, "off")
+
+    let tableObtOff = mergeTables(tableObt3, tableOff3, "obt")
+    let tableObt4 = mergeTables(tableObtOff, tableCache.tableVoucher, "obt")
     let tableObtSing = mergeTables(tableObt4, tableSing, "obt")
     let tableObtRune = mergeTables(tableObtSing, tableCache.tableRune, "obt")
     let loadoutObt = findOpt(tableObtRune, tableCache.tableLuck, "obt")
     loadoutObt.generateOutput(12, "obt", maxLoadout)
 
-    let tableOff1 = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off")
-    let tableOff2 = generateTable(["ambrosiaOffering1"], "off")
-    let tableOff3 = mergeTables(tableOff1, tableOff2, "off")
-    let tableOff4 = mergeTables(tableOff3, tableCache.tableVoucher, "off")
+    let tableOffObt = mergeTables(tableObt3, tableOff3, "obt")
+    let tableOff4 = mergeTables(tableOffObt, tableCache.tableVoucher, "off")
     let tableOffSing = mergeTables(tableOff4, tableSing, "off")
     let tableOffRune = mergeTables(tableOffSing, tableCache.tableRune, "off")
     let loadoutOff = findOpt(tableOffRune, tableCache.tableLuck, "off")
@@ -1398,6 +1409,7 @@ const generateLoadouts = () => {
     let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)
     let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
     let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+    tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux)
     tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
     loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
     loadoutSR1.generateOutput(24, "singReduction", maxLoadout, "")
@@ -1426,7 +1438,7 @@ const generateLoadouts = () => {
         maxLoadout.generateOutput(27 + level)
         continue
       }
-      let loadoutGen = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct", budget)
+      let loadoutGen = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct", budget)
       loadoutGen.upgradeLevels.ambrosiaFreeGenerationUpgrades = level
       loadoutGen.generateOutput(27 + level, "oct", maxLoadout)
     }

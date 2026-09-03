@@ -1,6 +1,7 @@
 import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
 import { formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
+import { HSLogger } from "../../hs-core/hs-logger";
 /*
     This file closely match the script on Rus9384's sheet (credits to him),
     in order to be easily updatable when the sheet updates (and vice-versa...)
@@ -604,7 +605,8 @@ Object.assign(upgrades, {
       maxLevel: 20,
       cost: level => 40 * level ** 3,
       effects: {
-        obt: (input, level) => input + level
+        obt: (input, level) => input + level,
+        off: (input, level) => input + level / 1e10,
       },
       row: 1,
       blueberryCost: 1
@@ -613,7 +615,8 @@ Object.assign(upgrades, {
       maxLevel: 60,
       cost: level => 20 * level ** 3,
       effects: {
-        off: (input, level) => input + level
+        off: (input, level) => input + level,
+        obt: (input, level) => input + level / 1e10,
       },
       row: 3,
       blueberryCost: 2,
@@ -703,10 +706,10 @@ Object.assign(upgrades, {
       maxLevel: 100,
       cost: level => 100 * level * level,
       effects: {
-        cube: input => input, // The effect is computed in ambrosiaRuneOOMBonus
-        quark: input => input,
-        mObt: input => input,
-        mOff: input => input
+        cube: (input, level) => input + 1e-10 * level, // The effect is computed in ambrosiaRuneOOMBonus
+        quark: (input, level) => input + 1e-10 * level,
+        mObt: (input, level) => input + 1e-10 * level,
+        mOff: (input, level) => input + 1e-10 * level
       },
       row: 1
     }),
@@ -715,10 +718,10 @@ Object.assign(upgrades, {
       costArray: _runeOOMCostArray,
       cost: level => _runeOOMCostArray[level] ?? 0,
       effects: {
-        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube,
-        quark: (input, level, loadout) => input * (1 + 0.002 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIAQuark,
-        mObt: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI,
-        mOff: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI
+        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube + 1e-10 * level,
+        quark: (input, level, loadout) => input * (1 + 0.002 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIAQuark + 1e-10 * level,
+        mObt: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level,
+        mOff: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level
       },
       row: 3
     }),
@@ -1287,6 +1290,8 @@ export class HSHeaterOptimizer {
         // Populate stats + options from input
         fillStatsAndOptionsFromInput(input);
 
+        HSLogger.debug(() => `[HeaterDiag] options=${JSON.stringify(options)}`, 'HSHeaterOptimizer');
+
         // Build maxLoadout (used by generateOutput to detect if a loadout is maxed)
         let maxLoadout = new Loadout();
         for (let upgrade in upgrades)
@@ -1297,423 +1302,474 @@ export class HSHeaterOptimizer {
         let redAmbUpgradeEffects: HeaterRedAmbUpgradeEffects = {};
         let tableCache: Record<string, Loadout[]> = {};
 
-        // --- Shared luck tables (used by calculateAmb and calculateAmbOct) ---
-        tableCache.tableLuck1      = generateTable(["ambrosiaFreeLuckUpgrades", "ambrosiaLuck3"], "luck");
-        tableCache.tableLuckHybrid = generateTable(["ambrosiaQuarkLuck1", "ambrosiaCubeLuck1"], "luck");
-        tableCache.tableLuck4      = generateTable(["ambrosiaLuck4"], "mLuck");
+        try {
 
-        if (options.calculateAmb || options.calculateAmbOct) {
-            let tableLuck = generateTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck");
-            tableLuck = mergeTables(tableLuck, tableCache.tableLuck1, "luck");
-            tableCache.tableLuckAdd = mergeTables(tableLuck, tableCache.tableLuckHybrid, "luck");
-        }
+          HSLogger.debug(() => '[HeaterDiag] Building shared luck tables', 'HSHeaterOptimizer');
+          // --- Shared luck tables (used by calculateAmb and calculateAmbOct) ---
+          tableCache.tableLuck1      = generateTable(["ambrosiaFreeLuckUpgrades", "ambrosiaLuck3"], "luck");
+          tableCache.tableLuckHybrid = generateTable(["ambrosiaQuarkLuck1", "ambrosiaCubeLuck1"], "luck");
+          tableCache.tableLuck4      = generateTable(["ambrosiaLuck4"], "mLuck");
 
-        let luckLuck = 0;
-        if (options.calculateAmb) { // Luck calculation
-            let loadoutLuck = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-            let maxAmbLoadout = new Loadout(maxLoadout);
-            maxAmbLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
-            output.luck = [loadoutLuck.generateOutput("luck", maxAmbLoadout)];
-            luckLuck = loadoutLuck.luck;
-        }
+          if (options.calculateAmb || options.calculateAmbOct) {
+              let tableLuck = generateTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck");
+              tableLuck = mergeTables(tableLuck, tableCache.tableLuck1, "luck");
+              tableCache.tableLuckAdd = mergeTables(tableLuck, tableCache.tableLuckHybrid, "luck");
+          }
 
-        let rLuckRLuck = 0;
-        if (options.calculateAmb) { // Red Luck calculation
-            let tableLuckMult         = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
-            tableCache.tableFreeRLuck = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rLuck");
-            tableCache.tableLuckR     = mergeTables(tableLuckMult, tableCache.tableLuckAdd, "rLuck");
-            let loadoutRLuck          = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-            output.rLuck = [loadoutRLuck.generateOutput("rLuck", maxLoadout)];
+          let luckLuck = 0;
+          if (options.calculateAmb) { // Luck calculation
+              HSLogger.debug(() => '[HeaterDiag] calculateAmb: luck', 'HSHeaterOptimizer');
+              let loadoutLuck = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+              if (!loadoutLuck) HSLogger.error('[HeaterDiag] calculateAmb: luck - findOpt returned undefined', 'HSHeaterOptimizer');
+              let maxAmbLoadout = new Loadout(maxLoadout);
+              maxAmbLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
+              output.luck = [loadoutLuck.generateOutput("luck", maxAmbLoadout)];
+              luckLuck = loadoutLuck.luck;
+          }
 
-            rLuckRLuck = loadoutRLuck.getStat("rLuck");
-            let baseLoadout = new Loadout();
-            let rLuckEffectRatio = rLuckRLuck / baseLoadout.getStat("rLuck");
-            output.redAmbCommonValues = {
-                luck: loadoutRLuck.luck,
-                mLuck: loadoutRLuck.getStat("mLuck"),
-                luckConversion: Upgrade.luckConversion(loadoutRLuck.effectiveLevel("ambrosiaFreeRedLuckUpgrades")),
-                totalRedLuck: input.redLuckBase * rLuckEffectRatio,
-                rLuckEffectRatio,
-            };
-        }
+          let rLuckRLuck = 0;
+          if (options.calculateAmb) { // Red Luck calculation
+              HSLogger.debug(() => '[HeaterDiag] calculateAmb: rLuck', 'HSHeaterOptimizer');
+              let tableLuckMult         = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
+              tableCache.tableFreeRLuck = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rLuck");
+              tableCache.tableLuckR     = mergeTables(tableLuckMult, tableCache.tableLuckAdd, "rLuck");
+              let loadoutRLuck          = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+              if (!loadoutRLuck) HSLogger.error('[HeaterDiag] calculateAmb: rLuck - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.rLuck = [loadoutRLuck.generateOutput("rLuck", maxLoadout)];
 
-        if (options.calculateAmb) { // Luck calculation - Red Amb Upgrades
+              rLuckRLuck = loadoutRLuck.getStat("rLuck");
+              let baseLoadout = new Loadout();
+              let rLuckEffectRatio = rLuckRLuck / baseLoadout.getStat("rLuck");
+              output.redAmbCommonValues = {
+                  luck: loadoutRLuck.luck,
+                  mLuck: loadoutRLuck.getStat("mLuck"),
+                  luckConversion: Upgrade.luckConversion(loadoutRLuck.effectiveLevel("ambrosiaFreeRedLuckUpgrades")),
+                  totalRedLuck: input.redLuckBase * rLuckEffectRatio,
+                  rLuckEffectRatio,
+              };
+          }
 
-            const fusion = stats.fusion * rLuckRLuck * stats.baseRLuck / 100;
-            const fusionGain = (multiplier: number) => (1 + fusion * multiplier) / (1 + fusion);
+          if (options.calculateAmb) { // Luck calculation - Red Amb Upgrades
 
-            if (stats.redberries < redUpgrades.blueberries.maxLevel) {
-                stats.blueberries++;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.blueberries = { rEffect, bEffect };
-                stats.blueberries--;
+              const fusion = stats.fusion * rLuckRLuck * stats.baseRLuck / 100;
+              const fusionGain = (multiplier: number) => (1 + fusion * multiplier) / (1 + fusion);
+
+              if (stats.redberries < redUpgrades.blueberries.maxLevel) {
+                  stats.blueberries++;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.blueberries = { rEffect, bEffect };
+                  stats.blueberries--;
+              }
+
+              if (stats.bonus[1] < 5) {
+                  stats.bonus[1]++;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.freeLevelsRow2 = { rEffect, bEffect };
+                  stats.bonus[1]--;
+              }
+
+              if (stats.bonus[2] < 5) {
+                  stats.bonus[2]++;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.freeLevelsRow3 = { rEffect, bEffect };
+                  stats.bonus[2]--;
+              }
+
+              if (stats.bonus[3] < 5) {
+                  stats.bonus[3]++;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.freeLevelsRow4 = { rEffect, bEffect };
+                  stats.bonus[3]--;
+              }
+
+              if (stats.bonus[4] < 5) {
+                  stats.bonus[4]++;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.freeLevelsRow5 = { rEffect, bEffect };
+                  stats.bonus[4]--;
+              }
+
+              if (!stats.viscount) {
+                  stats.baseLuck += 125;
+                  stats.baseRLuck += 25;
+                  let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
+                  let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
+                  let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
+                  let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
+                  redAmbUpgradeEffects.viscount = { rEffect, bEffect };
+                  stats.baseLuck -= 125;
+                  stats.baseRLuck -= 25;
+              }
+          }
+
+          let loadoutAllAmb: Loadout | undefined;
+          let optLoadoutAllAmb: Loadout | undefined;
+          if (options.calculateAmb || options.calculateAmbOct) { // All Amb calculation
+              HSLogger.debug(() => '[HeaterDiag] calculateAmb/calculateAmbOct: allAmb', 'HSHeaterOptimizer');
+              let tableSpeed  = generateTable(["ambrosiaFreeGenerationUpgrades"], "amb");
+              let tableAmb    = mergeTables(tableCache.tableLuck4, tableSpeed, "amb");
+              let tableRLuck2 = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rAmb");
+              let tableRAmb   = mergeTables(tableAmb, tableRLuck2, "rAmb");
+              tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb");
+              let tableBrickOfLead = generateTable(["ambrosiaBrickOfLead"], "mLuck");
+              loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
+              let optLoadout = new Loadout(maxLoadout);
+              optLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
+              optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb", Number.POSITIVE_INFINITY);
+              if (!loadoutAllAmb || !optLoadoutAllAmb) HSLogger.error('[HeaterDiag] allAmb - findOpt returned undefined', 'HSHeaterOptimizer');
+              if (options.calculateAmb)
+                  output.allAmb = [loadoutAllAmb.generateOutput("allAmb", optLoadoutAllAmb)];
+              if (options.calculateAmbOct && (optLoadoutAllAmb.getStat("allAmb") > loadoutAllAmb.getStat("allAmb"))) {
+                  options.calculateAmbOct = false;
+                  output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
+              }
+          }
+
+          // --- Shared luck/rune/voucher tables for cube-class calculations ---
+          if (
+              options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
+              options.calculateHyperflux || options.calculateOff || options.calculateGen
+          ) {
+              let luckMinLevel: Record<string, number> = { ambrosiaLuck1: 20 }; // This is necessary for correct local optima
+              let tableLuck1  = generateTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck", luckMinLevel);
+              let tableLuck2  = mergeTables(tableLuck1, tableCache.tableLuck1, "luck");
+              tableCache.tableLuckAdd1 = mergeTables(tableLuck2, tableCache.tableLuckHybrid, "luck");
+              let tableLuckMult = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
+              tableCache.tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck");
+              // Local optima for cubes match local optima for quarks
+              tableCache.tableRune = generateTable(["ambrosiaTalismanBonusRuneLevel", "ambrosiaRuneOOMBonus"], "cube");
+          }
+
+          if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
+            options.calculateOff || options.calculateGen) {
+              // Local optima for cubes match local optima for quarks and octeracts
+              tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
+          }
+
+          // --- calculateQuarks ---
+          if (options.calculateQuarks) { // Calculate Quarks
+              HSLogger.debug(() => '[HeaterDiag] calculateQuarks', 'HSHeaterOptimizer');
+              let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
+              let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
+              let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
+              let tableQuarkR   = mergeTables(tableQuark3, tableCache.tableRune, "quark");
+              let tableLuckQuark1 = generateTable(["ambrosiaLuckQuark1"], "quark");
+              let tableLuckQuark  = mergeTables(tableCache.tableLuck, tableLuckQuark1, "quark");
+              let loadoutQuark  = findOpt(tableQuarkR, tableLuckQuark, "quark");
+              if (!loadoutQuark) HSLogger.error('[HeaterDiag] calculateQuarks - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.quarks = [loadoutQuark.generateOutput("quark", maxLoadout)];
+          }
+
+          // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
+          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
+            let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube")
+            let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
+            // Local maxima for Cubes match local maxima for Octeracts
+            tableCache.tableCube = mergeTables(tableCube1, tableQuarkCube, "cube")
+          }
+
+          if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
+            tableCache.tableCubeR = mergeTables(tableCache.tableCube, tableCache.tableRune, "cube")
+          }
+
+          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
+            let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
+            let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
+            if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
+              let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
+              tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
             }
-
-            if (stats.bonus[1] < 5) {
-                stats.bonus[1]++;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.freeLevelsRow2 = { rEffect, bEffect };
-                stats.bonus[1]--;
+            if (options.calculateOct || options.calculateGen) {
+              let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "oct")
+              tableCache.tableLuckOct = mergeTables(tableLuck, tableBrick, "oct")
             }
+          }
 
-            if (stats.bonus[2] < 5) {
-                stats.bonus[2]++;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.freeLevelsRow3 = { rEffect, bEffect };
-                stats.bonus[2]--;
-            }
+          // --- calculateCubes ---
+          if (options.calculateCubes || options.calculateSR) {
+              let tableCubeV     = mergeTables(tableCache.tableCubeR, tableCache.tableVoucher, "cube");
+              let tableCubeH     = generateTable(["ambrosiaHyperflux"], "cube");
+              tableCache.tableCubeTotal = mergeTables(tableCubeV, tableCubeH, "cube")
+          }
 
-            if (stats.bonus[3] < 5) {
-                stats.bonus[3]++;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.freeLevelsRow4 = { rEffect, bEffect };
-                stats.bonus[3]--;
-            }
+          if (options.calculateCubes) {
+            HSLogger.debug(() => '[HeaterDiag] calculateCubes', 'HSHeaterOptimizer');
+            let loadoutCube = findOpt(tableCache.tableCubeTotal, tableCache.tableLuckCube, "cube")
+            if (!loadoutCube) HSLogger.error('[HeaterDiag] calculateCubes - findOpt returned undefined', 'HSHeaterOptimizer');
+            output.cubes = [loadoutCube.generateOutput("cube", maxLoadout)];
+          }
 
-            if (stats.bonus[4] < 5) {
-                stats.bonus[4]++;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.freeLevelsRow5 = { rEffect, bEffect };
-                stats.bonus[4]--;
-            }
+          // --- Shared oct table ---
+          if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
+              tableCache.tableOctV = mergeTables(tableCache.tableCube, tableCache.tableVoucher, "oct");
+          }
 
-            if (!stats.viscount) {
-                stats.baseLuck += 125;
-                stats.baseRLuck += 25;
-                let rNext = findOpt(tableCache.tableLuckR, tableCache.tableFreeRLuck, "rLuck");
-                let rEffect = rNext.getStat("rLuck") / rLuckRLuck;
-                let bNext = findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, "luck");
-                let bEffect = bNext.luck / luckLuck * fusionGain(rEffect);
-                redAmbUpgradeEffects.viscount = { rEffect, bEffect };
-                stats.baseLuck -= 125;
-                stats.baseRLuck -= 25;
-            }
-        }
+          // --- calculateOct ---
+          if (options.calculateOct) {
+              HSLogger.debug(() => '[HeaterDiag] calculateOct', 'HSHeaterOptimizer');
+              let loadoutOct = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct")
+              if (!loadoutOct) HSLogger.error('[HeaterDiag] calculateOct - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.oct = [loadoutOct.generateOutput("oct", maxLoadout)];
 
-        let loadoutAllAmb: Loadout | undefined;
-        let optLoadoutAllAmb: Loadout | undefined;
-        if (options.calculateAmb || options.calculateAmbOct) { // All Amb calculation
-            let tableSpeed  = generateTable(["ambrosiaFreeGenerationUpgrades"], "amb");
-            let tableAmb    = mergeTables(tableCache.tableLuck4, tableSpeed, "amb");
-            let tableRLuck2 = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rAmb");
-            let tableRAmb   = mergeTables(tableAmb, tableRLuck2, "rAmb");
-            tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb");
-            let tableBrickOfLead = generateTable(["ambrosiaBrickOfLead"], "mLuck");
-            loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
-            let optLoadout = new Loadout(maxLoadout);
-            optLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
-            optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb", Number.POSITIVE_INFINITY);
-            if (options.calculateAmb)
-                output.allAmb = [loadoutAllAmb.generateOutput("allAmb", optLoadoutAllAmb)];
-            if (options.calculateAmbOct && (optLoadoutAllAmb.getStat("allAmb") > loadoutAllAmb.getStat("allAmb"))) {
-                options.calculateAmbOct = false;
-                output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
-            }
-        }
+              if (stats.ossifiedTactics < redUpgrades.regularLuck.maxLevel || stats.ossifiedTactics2 < redUpgrades.regularLuck2.maxLevel) {
+                  stats.baseLuck += 2;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.ossifiedTactics = {
+                      ...(redAmbUpgradeEffects.ossifiedTactics ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.baseLuck -= 2;
+              }
 
-        // --- Shared luck/rune/voucher tables for cube-class calculations ---
-        if (
-            options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-            options.calculateHyperflux || options.calculateOff || options.calculateGen
-        ) {
-            let luckMinLevel: Record<string, number> = { ambrosiaLuck1: 20 }; // This is necessary for correct local optima
-            let tableLuck1  = generateTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck", luckMinLevel);
-            let tableLuck2  = mergeTables(tableLuck1, tableCache.tableLuck1, "luck");
-            tableCache.tableLuckAdd1 = mergeTables(tableLuck2, tableCache.tableLuckHybrid, "luck");
-            let tableLuckMult = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
-            tableCache.tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck");
-            // Local optima for cubes match local optima for quarks
-            tableCache.tableRune = generateTable(["ambrosiaTalismanBonusRuneLevel", "ambrosiaRuneOOMBonus"], "cube");
-        }
+              if (stats.redberries < redUpgrades.blueberries.maxLevel) {
+                  stats.blueberries++;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.blueberries = {
+                      ...(redAmbUpgradeEffects.blueberries ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.blueberries--;
+              }
 
-        if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-          options.calculateOff || options.calculateGen) {
-            // Local optima for cubes match local optima for quarks and octeracts
-            tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
-        }
+              if (stats.bonus[1] < 5) {
+                  stats.bonus[1]++;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.freeLevelsRow2 = {
+                      ...(redAmbUpgradeEffects.freeLevelsRow2 ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.bonus[1]--;
+              }
 
-        // --- calculateQuarks ---
-        if (options.calculateQuarks) { // Calculate Quarks
-            let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
-            let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
-            let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
-            let tableQuarkR   = mergeTables(tableQuark3, tableCache.tableRune, "quark");
-            let tableLuckQuark1 = generateTable(["ambrosiaLuckQuark1"], "quark");
-            let tableLuckQuark  = mergeTables(tableCache.tableLuck, tableLuckQuark1, "quark");
-            let loadoutQuark  = findOpt(tableQuarkR, tableLuckQuark, "quark");
-            output.quarks = [loadoutQuark.generateOutput("quark", maxLoadout)];
-        }
+              if (stats.bonus[2] < 5) {
+                  stats.bonus[2]++;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.freeLevelsRow3 = {
+                      ...(redAmbUpgradeEffects.freeLevelsRow3 ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.bonus[2]--;
+              }
 
-        // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
-        if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
-          let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube")
-          let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
-          // Local maxima for Cubes match local maxima for Octeracts
-          tableCache.tableCube = mergeTables(tableCube1, tableQuarkCube, "cube")
-        }
+              if (stats.bonus[3] < 5) {
+                  stats.bonus[3]++;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.freeLevelsRow4 = {
+                      ...(redAmbUpgradeEffects.freeLevelsRow4 ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.bonus[3]--;
+              }
 
-        if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
-          tableCache.tableCubeR = mergeTables(tableCache.tableCube, tableCache.tableRune, "cube")
-        }
+              if (stats.bonus[4] < 5) {
+                  stats.bonus[4]++;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.freeLevelsRow5 = {
+                      ...(redAmbUpgradeEffects.freeLevelsRow5 ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.bonus[4]--;
+              }
 
-        if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
-          let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
-          let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
-          let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
-          // Local optima for cubes match local optima for octeracts
-          tableCache.tableLuckCube = mergeTables(tableLuck, tableBrick, "cube")
-        }
+              if (!stats.viscount) {
+                  stats.baseLuck += 125;
+                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
+                  redAmbUpgradeEffects.viscount = {
+                      ...(redAmbUpgradeEffects.viscount ?? {}),
+                      octEffect: effect,
+                  };
+                  stats.baseLuck -= 125;
+              }
+          }
 
-        // --- calculateCubes ---
-        if (options.calculateCubes || options.calculateSR) {
-            let tableCubeV     = mergeTables(tableCache.tableCubeR, tableCache.tableVoucher, "cube");
-            let tableCubeH     = generateTable(["ambrosiaHyperflux"], "cube");
-            tableCache.tableCubeTotal = mergeTables(tableCubeV, tableCubeH, "cube")
-        }
+          // --- calculateOff: Obt + Off ---
+          if (options.calculateOff) {
+              HSLogger.debug(() => '[HeaterDiag] calculateOff: obt', 'HSHeaterOptimizer');
+              let tableSing    = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
+              let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
+              let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
+              let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
 
-        if (options.calculateCubes) {
-          let loadoutCube = findOpt(tableCache.tableCubeTotal, tableCache.tableLuckCube, "cube")
-          output.cubes = [loadoutCube.generateOutput("cube", maxLoadout)];
-        }
+              let tableOff1    = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off")
+              let tableOff2    = generateTable(["ambrosiaOffering1"], "off")
+              let tableOff3    = mergeTables(tableOff1, tableOff2, "off")
 
-        // --- Shared oct table ---
-        if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
-            tableCache.tableOctV = mergeTables(tableCache.tableCube, tableCache.tableVoucher, "oct");
-        }
+              let tableObtOff  = mergeTables(tableObt3, tableOff3, "obt")
+              let tableObt4    = mergeTables(tableObtOff, tableCache.tableVoucher, "obt")
+              let tableObtSing = mergeTables(tableObt4, tableSing, "obt");
+              let tableObtRune = mergeTables(tableObtSing, tableCache.tableRune, "obt")
+              let loadoutObt   = findOpt(tableObtRune, tableCache.tableLuck, "obt");
+              if (!loadoutObt) HSLogger.error('[HeaterDiag] calculateOff: obt - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.obt = [loadoutObt.generateOutput("obt", maxLoadout)];
 
-        // --- calculateOct ---
-        if (options.calculateOct) {
-            let loadoutOct = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-            output.oct = [loadoutOct.generateOutput("oct", maxLoadout)];
+              HSLogger.debug(() => '[HeaterDiag] calculateOff: off', 'HSHeaterOptimizer');
+              let tableOffObt  = mergeTables(tableObt3, tableOff3, "obt")
+              let tableOff4    = mergeTables(tableOffObt, tableCache.tableVoucher, "off")
+              let tableOffSing = mergeTables(tableOff4, tableSing, "off")
+              let tableOffRune = mergeTables(tableOffSing, tableCache.tableRune, "off")
+              let loadoutOff   = findOpt(tableOffRune, tableCache.tableLuck, "off")
+              if (!loadoutOff) HSLogger.error('[HeaterDiag] calculateOff: off - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.off = [loadoutOff.generateOutput("off", maxLoadout)];
+          }
 
-            if (stats.ossifiedTactics < redUpgrades.regularLuck.maxLevel || stats.ossifiedTactics2 < redUpgrades.regularLuck2.maxLevel) {
-                stats.baseLuck += 2;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.ossifiedTactics = {
-                    ...(redAmbUpgradeEffects.ossifiedTactics ?? {}),
-                    octEffect: effect,
-                };
-                stats.baseLuck -= 2;
-            }
+          if (options.calculateSR) {
 
-            if (stats.redberries < redUpgrades.blueberries.maxLevel) {
-                stats.blueberries++;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.blueberries = {
-                    ...(redAmbUpgradeEffects.blueberries ?? {}),
-                    octEffect: effect,
-                };
-                stats.blueberries--;
-            }
-
-            if (stats.bonus[1] < 5) {
-                stats.bonus[1]++;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.freeLevelsRow2 = {
-                    ...(redAmbUpgradeEffects.freeLevelsRow2 ?? {}),
-                    octEffect: effect,
-                };
-                stats.bonus[1]--;
-            }
-
-            if (stats.bonus[2] < 5) {
-                stats.bonus[2]++;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.freeLevelsRow3 = {
-                    ...(redAmbUpgradeEffects.freeLevelsRow3 ?? {}),
-                    octEffect: effect,
-                };
-                stats.bonus[2]--;
-            }
-
-            if (stats.bonus[3] < 5) {
-                stats.bonus[3]++;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.freeLevelsRow4 = {
-                    ...(redAmbUpgradeEffects.freeLevelsRow4 ?? {}),
-                    octEffect: effect,
-                };
-                stats.bonus[3]--;
-            }
-
-            if (stats.bonus[4] < 5) {
-                stats.bonus[4]++;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.freeLevelsRow5 = {
-                    ...(redAmbUpgradeEffects.freeLevelsRow5 ?? {}),
-                    octEffect: effect,
-                };
-                stats.bonus[4]--;
-            }
-
-            if (!stats.viscount) {
-                stats.baseLuck += 125;
-                let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
-                let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
-                redAmbUpgradeEffects.viscount = {
-                    ...(redAmbUpgradeEffects.viscount ?? {}),
-                    octEffect: effect,
-                };
-                stats.baseLuck -= 125;
-            }
-        }
-
-        // --- calculateOff: Obt + Off ---
-        if (options.calculateOff) {
-            let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
-            let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
-            let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
-            let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
-            let tableObt4    = mergeTables(tableObt3, tableCache.tableVoucher, "obt");
-            let tableObtSing = mergeTables(tableObt4, tableSing, "obt");
-            let tableObtRune = mergeTables(tableObtSing, tableCache.tableRune, "obt")
-            let loadoutObt   = findOpt(tableObtRune, tableCache.tableLuck, "obt");
-            output.obt = [loadoutObt.generateOutput("obt", maxLoadout)];
-
-            let tableOff1    = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off");
-            let tableOff2    = generateTable(["ambrosiaOffering1"], "off");
-            let tableOff3    = mergeTables(tableOff1, tableOff2, "off");
-            let tableOff4    = mergeTables(tableOff3, tableCache.tableVoucher, "off");
-            let tableOffSing = mergeTables(tableOff4, tableSing, "off");
-            let tableOffRune = mergeTables(tableOffSing, tableCache.tableRune, "off")
-            let loadoutOff   = findOpt(tableOffRune, tableCache.tableLuck, "off");
-            output.off = [loadoutOff.generateOutput("off", maxLoadout)];
-        }
-
-        if (options.calculateSR) {
-
-          let exalt = stats.exalt
-          let postAoAG = stats.postAoAG
-          stats.postAoAG = false
-
-          stats.exalt = 0
-          let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)!
-          let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
-          let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
-          tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
-          loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
-          output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
-
-          stats.exalt = 7
-          let loadoutSR2 = generateTable(["ambrosiaSingReduction2"], "singReduction").at(-1)!
-          let levelSR2 = loadoutSR2.upgradeLevels.ambrosiaSingReduction2
-          let tableSR2Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
-          tableSR2Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction2 = levelSR2)
-          loadoutSR2 = findOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
-          output.sr2 = [loadoutSR2.generateOutput("singReduction", maxLoadout)];
-          stats.exalt = exalt
-          stats.postAoAG = postAoAG
-        }
-
-        // --- calculateAmbOct ---
-        if (options.calculateAmbOct) {
-            let loadoutAmbBase = findOpt(tableCache.tableLuckAdd, tableCache.tableAllAmb, "allAmb");
-            let loadoutAmbOct  = findOpt([loadoutAmbBase], tableCache.tableOctV, "ambOct");
-            output.ambOct = [loadoutAmbOct.generateOutput("oct", maxLoadout)];
-        }
-
-        // --- calculateGen ---
-        if (options.calculateGen) {
-            let genOutput: HeaterResultRowMatrix = [];
-            for (let level = 1; level <= 3; level++) {
-                let budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
-                if (budget < 0) {
-                    genOutput.push(maxLoadout.generateOutput("", maxLoadout));
-                    continue;
-                }
-                let loadoutGen = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct", budget);
-                loadoutGen.upgradeLevels.ambrosiaFreeGenerationUpgrades = level;
-                genOutput.push(loadoutGen.generateOutput("oct", maxLoadout));
-            }
-            output.gen = genOutput;
-        }
-
-        // --- calculateHyperflux ---
-        if (options.calculateHyperflux) {
-
+            HSLogger.debug(() => '[HeaterDiag] calculateSR: sr1', 'HSHeaterOptimizer');
+            let exalt = stats.exalt
             let postAoAG = stats.postAoAG
             stats.postAoAG = false
 
-            let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube")
-            let tableCubeV = mergeTables(tableCache.tableCubeR, tableVoucher, "cube")
-            let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
-            let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")
-
-            let loadoutsH: (Loadout | undefined)[] = new Array(8).fill(undefined);
-            let thresholds: number[] = new Array(8).fill(0);
-
-            for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
-                let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
-                let tableCubeVX = tableCubeV
-                if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
-                  tableCubeVX = tableCubeVS
-                  if (stats.exalt === 0)
-                    budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
-                }
-                if (budget < 0)
-                    break;
-                loadoutsH[h] = findOpt(tableCubeVX, tableCache.tableLuckCube, "cube", budget);
-                thresholds[h] = 0;
-                for (let p = h - 1; p >= 0; p--) {
-                    if (thresholds[p] > 50)
-                        continue;
-                    thresholds[h] = loadoutsH[p]!.getStat("cube") / loadoutsH[h]!.getStat("cube");
-                    thresholds[h] = Math.log2(thresholds[h]) / Math.log2((1 + 0.01 * h) / (1 + 0.01 * p));
-                    thresholds[h] = Math.max(0, Math.ceil(thresholds[h]));
-                    if (thresholds[h] > Math.min(50, thresholds[p]))
-                        break;
-                    thresholds[p] = Infinity;
-                }
-                loadoutsH[h]!.upgradeLevels.ambrosiaHyperflux = h;
+            stats.exalt = 0
+            let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)!
+            let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
+            let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+            tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
+            tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
+            if (tableSR1Cube.length === 0) {
+                // No cube-optimal loadout reaches ambrosiaHyperflux >= 4 within budget - nothing affordable to report for sr1
+                HSLogger.warn('[HeaterDiag] calculateSR: sr1 - no loadout with ambrosiaHyperflux >= 4 within budget, reporting Unaffordable', 'HSHeaterOptimizer');
+                output.sr1 = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
+            } else {
+                loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
+                if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
+                output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
             }
 
-            loadoutsH.length = upgrades.ambrosiaHyperflux.maxLevel + 1
+            HSLogger.debug(() => '[HeaterDiag] calculateSR: sr2', 'HSHeaterOptimizer');
+            stats.exalt = 7
+            let loadoutSR2 = generateTable(["ambrosiaSingReduction2"], "singReduction").at(-1)!
+            let levelSR2 = loadoutSR2.upgradeLevels.ambrosiaSingReduction2
+            let tableSR2Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+            tableSR2Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction2 = levelSR2)
+            loadoutSR2 = findOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
+            if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
+            output.sr2 = [loadoutSR2.generateOutput("singReduction", maxLoadout)];
+            stats.exalt = exalt
+            stats.postAoAG = postAoAG
+          }
 
-            let hyperOutput: HeaterResultRowMatrix = [];
-            for (let i = 0; i <= upgrades.ambrosiaHyperflux.maxLevel; i++) {
-                let maxLoadoutH = new Loadout(maxLoadout);
-                maxLoadoutH.upgradeLevels.ambrosiaHyperflux = i;
-                if (loadoutsH[i] === undefined) {
-                    hyperOutput.push(maxLoadout.generateOutput("", maxLoadout));
-                } else {
-                    // Calculating effect without hyperflux
-                    loadoutsH[i]!.upgradeLevels.ambrosiaHyperflux = 0; // Resetting hyperflux level to compute effect without it
-                    loadoutsH[i]!.getStat("cube", true); // Updating cache
-                    loadoutsH[i]!.upgradeLevels.ambrosiaHyperflux = i; // Restoring hyperflux level for correct output
-                    hyperOutput.push(loadoutsH[i]!.generateOutput("cube", maxLoadoutH, thresholds[i]));
-                }
-            }
-            output.hyperflux = hyperOutput;
+          // --- calculateAmbOct ---
+          if (options.calculateAmbOct) {
+              HSLogger.debug(() => '[HeaterDiag] calculateAmbOct', 'HSHeaterOptimizer');
+              let loadoutAmbBase = findOpt(tableCache.tableLuckAdd, tableCache.tableAllAmb, "allAmb");
+              let loadoutAmbOct  = findOpt([loadoutAmbBase], tableCache.tableOctV, "ambOct");
+              if (!loadoutAmbBase || !loadoutAmbOct) HSLogger.error('[HeaterDiag] calculateAmbOct - findOpt returned undefined', 'HSHeaterOptimizer');
+              output.ambOct = [loadoutAmbOct.generateOutput("oct", maxLoadout)];
+          }
 
-            stats.postAoAG = postAoAG;
+          // --- calculateGen ---
+          if (options.calculateGen) {
+              HSLogger.debug(() => '[HeaterDiag] calculateGen', 'HSHeaterOptimizer');
+              let genOutput: HeaterResultRowMatrix = [];
+              for (let level = 1; level <= 3; level++) {
+                  let budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
+                  if (budget < 0) {
+                      genOutput.push(maxLoadout.generateOutput("", maxLoadout));
+                      continue;
+                  }
+                  let loadoutGen = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct", budget)
+                  if (!loadoutGen) HSLogger.error(`[HeaterDiag] calculateGen level=${level} - findOpt returned undefined`, 'HSHeaterOptimizer');
+                  loadoutGen.upgradeLevels.ambrosiaFreeGenerationUpgrades = level;
+                  genOutput.push(loadoutGen.generateOutput("oct", maxLoadout));
+              }
+              output.gen = genOutput;
+          }
 
+          // --- calculateHyperflux ---
+          if (options.calculateHyperflux) {
+
+              HSLogger.debug(() => '[HeaterDiag] calculateHyperflux', 'HSHeaterOptimizer');
+              let postAoAG = stats.postAoAG
+              stats.postAoAG = false
+
+              let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube")
+              let tableCubeV = mergeTables(tableCache.tableCubeR, tableVoucher, "cube")
+              let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
+              let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")
+
+              let loadoutsH: (Loadout | undefined)[] = new Array(8).fill(undefined);
+              let thresholds: number[] = new Array(8).fill(0);
+
+              for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
+                  let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
+                  let tableCubeVX = tableCubeV
+                  if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
+                    tableCubeVX = tableCubeVS
+                    if (stats.exalt === 0)
+                      budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
+                  }
+                  if (budget < 0)
+                      break;
+                  loadoutsH[h] = findOpt(tableCubeVX, tableCache.tableLuckCube, "cube", budget);
+                  thresholds[h] = 0;
+                  for (let p = h - 1; p >= 0; p--) {
+                      if (thresholds[p] > 50)
+                          continue;
+                      thresholds[h] = loadoutsH[p]!.getStat("cube") / loadoutsH[h]!.getStat("cube");
+                      thresholds[h] = Math.log2(thresholds[h]) / Math.log2((1 + 0.01 * h) / (1 + 0.01 * p));
+                      thresholds[h] = Math.max(0, Math.ceil(thresholds[h]));
+                      if (thresholds[h] > Math.min(50, thresholds[p]))
+                          break;
+                      thresholds[p] = Infinity;
+                  }
+                  loadoutsH[h]!.upgradeLevels.ambrosiaHyperflux = h;
+              }
+
+              loadoutsH.length = upgrades.ambrosiaHyperflux.maxLevel + 1
+
+              let hyperOutput: HeaterResultRowMatrix = [];
+              for (let i = 0; i <= upgrades.ambrosiaHyperflux.maxLevel; i++) {
+                  let maxLoadoutH = new Loadout(maxLoadout);
+                  maxLoadoutH.upgradeLevels.ambrosiaHyperflux = i;
+                  if (loadoutsH[i] === undefined) {
+                      hyperOutput.push(maxLoadout.generateOutput("", maxLoadout));
+                  } else {
+                      // Calculating effect without hyperflux
+                      loadoutsH[i]!.upgradeLevels.ambrosiaHyperflux = 0; // Resetting hyperflux level to compute effect without it
+                      loadoutsH[i]!.getStat("cube", true); // Updating cache
+                      loadoutsH[i]!.upgradeLevels.ambrosiaHyperflux = i; // Restoring hyperflux level for correct output
+                      hyperOutput.push(loadoutsH[i]!.generateOutput("cube", maxLoadoutH, thresholds[i]));
+                  }
+              }
+              output.hyperflux = hyperOutput;
+
+              stats.postAoAG = postAoAG;
+
+          }
+
+          if (Object.keys(redAmbUpgradeEffects).length > 0) {
+              output.redAmbUpgradeEffects = redAmbUpgradeEffects;
+          }
+
+          return output;
+
+        } catch (e) {
+            HSLogger.error(`[HeaterDiag] createHeaterOptimizerResultFromInput crashed: ${e instanceof Error ? e.stack ?? e.message : e}`, 'HSHeaterOptimizer');
+            HSLogger.error(`[HeaterDiag] options at crash time: ${JSON.stringify(options)}`, 'HSHeaterOptimizer');
+            HSLogger.error(`[HeaterDiag] input at crash time: ${JSON.stringify(input)}`, 'HSHeaterOptimizer');
+            throw e;
         }
-
-        if (Object.keys(redAmbUpgradeEffects).length > 0) {
-            output.redAmbUpgradeEffects = redAmbUpgradeEffects;
-        }
-
-        return output;
     }
 }
