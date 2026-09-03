@@ -1,7 +1,7 @@
-import { GameView, MainView, BuildingView, AchievementView, RuneView, ChallengeView, AntView, CubeView, SingularityView, SettingsView, PseudoCoinView } from "../../class/hs-core/hs-gamestate";
+import { GameView, MainView, BuildingView, AchievementView, RuneView, ChallengeView, AntView, CubeView, SingularityView, SettingsView, PseudoCoinView, TraitsView } from "../../class/hs-core/hs-gamestate";
 
-export type VIEW_TYPE = MAIN_VIEW | BUILDING_VIEW | ACHIEVEMENT_VIEW | RUNE_VIEW | CHALLENGE_VIEW | ANT_VIEW | CUBE_VIEW | SINGULARITY_VIEW | SETTINGS_VIEW | PSEUDOCOIN_VIEW;
-export type VIEW_KEY = 'MAIN_VIEW' | 'BUILDING_VIEW' | 'ACHIEVEMENT_VIEW' | 'RUNE_VIEW' | 'CHALLENGE_VIEW' | 'ANT_VIEW' | 'CUBE_VIEW' | 'SINGULARITY_VIEW' | 'SETTINGS_VIEW' | 'PSEUDOCOIN_VIEW';
+export type VIEW_TYPE = MAIN_VIEW | BUILDING_VIEW | ACHIEVEMENT_VIEW | RUNE_VIEW | CHALLENGE_VIEW | ANT_VIEW | CUBE_VIEW | TRAITS_VIEW | SINGULARITY_VIEW | SETTINGS_VIEW | PSEUDOCOIN_VIEW;
+export type VIEW_KEY = 'MAIN_VIEW' | 'BUILDING_VIEW' | 'ACHIEVEMENT_VIEW' | 'RUNE_VIEW' | 'CHALLENGE_VIEW' | 'ANT_VIEW' | 'CUBE_VIEW' | 'TRAITS_VIEW' | 'SINGULARITY_VIEW' | 'SETTINGS_VIEW' | 'PSEUDOCOIN_VIEW';
 
 export interface View {
     MAIN_VIEW: MainView;
@@ -11,8 +11,9 @@ export interface View {
     CHALLENGE_VIEW: ChallengeView;
     ANT_VIEW: AntView;
     CUBE_VIEW: CubeView;
-    SETTINGS_VIEW: SettingsView;
+    TRAITS_VIEW: TraitsView;
     SINGULARITY_VIEW: SingularityView;
+    SETTINGS_VIEW: SettingsView;
     PSEUDOCOIN_VIEW: PseudoCoinView;
 }
 
@@ -26,13 +27,12 @@ export enum MAIN_VIEW {
     RESEARCH = 6,
     ANTS = 7,
     CUBES = 8,
-    CAMPAIGNS = 9,
-    TRAITS = 10,
-    SETTINGS = 11,
-    SHOP = 12,
-    SINGULARITY = 13,
-    EVENT = 14,
-    PSEUDOCOINS = 15
+    TRAITS = 9,
+    SETTINGS = 10,
+    SHOP = 11,
+    SINGULARITY = 12,
+    EVENT = 13,
+    PSEUDOCOINS = 14
 }
 
 export enum BUILDING_VIEW {
@@ -82,6 +82,13 @@ export enum CUBE_VIEW {
     HEPTERACT_FORGE = 7,
 }
 
+export enum TRAITS_VIEW {
+    UNKNOWN = -1,
+    CAMPAIGNS = 1,
+    CORRUPTION_STATS = 2,
+    CORRUPTION_LOADOUTS = 3,
+}
+
 export enum SINGULARITY_VIEW {
     UNKNOWN = -1,
     ELEVATOR = 1,
@@ -128,11 +135,10 @@ export const MAIN_VIEW_BUTTON_IDS: Record<MAIN_VIEW, string> = {
     [MAIN_VIEW.RESEARCH]: 'researchtab',
     [MAIN_VIEW.ANTS]: 'anttab',
     [MAIN_VIEW.CUBES]: 'cubetab',
-    [MAIN_VIEW.CAMPAIGNS]: 'campaigntab',
     [MAIN_VIEW.TRAITS]: 'traitstab',
+    [MAIN_VIEW.SINGULARITY]: 'singularitytab',
     [MAIN_VIEW.SETTINGS]: 'settingstab',
     [MAIN_VIEW.SHOP]: 'shoptab',
-    [MAIN_VIEW.SINGULARITY]: 'singularitytab',
     [MAIN_VIEW.EVENT]: 'eventtab',
     [MAIN_VIEW.PSEUDOCOINS]: 'pseudoCoinstab',
     [MAIN_VIEW.UNKNOWN]: '',
@@ -183,6 +189,13 @@ export const CUBE_VIEW_BUTTON_IDS: Record<CUBE_VIEW, string> = {
     [CUBE_VIEW.PLATONIC_UPGRADES]: 'switchCubeSubTab6',
     [CUBE_VIEW.HEPTERACT_FORGE]: 'switchCubeSubTab7',
     [CUBE_VIEW.UNKNOWN]: '',
+};
+
+export const TRAITS_VIEW_BUTTON_IDS: Record<TRAITS_VIEW, string> = {
+    [TRAITS_VIEW.CAMPAIGNS]: 'corrCampaignsBtn',
+    [TRAITS_VIEW.CORRUPTION_STATS]: 'corrStatsBtn',
+    [TRAITS_VIEW.CORRUPTION_LOADOUTS]: 'corrLoadoutsBtn',
+    [TRAITS_VIEW.UNKNOWN]: '',
 };
 
 export const SINGULARITY_VIEW_BUTTON_IDS: Record<SINGULARITY_VIEW, string> = {

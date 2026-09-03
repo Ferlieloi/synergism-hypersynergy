@@ -9,6 +9,7 @@ import {
     SINGULARITY_VIEW, SINGULARITY_VIEW_BUTTON_IDS,
     SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS,
     PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS,
+    TRAITS_VIEW, TRAITS_VIEW_BUTTON_IDS,
     VIEW_KEY, VIEW_TYPE, HSViewStateRecord,
 } from "../../types/module-types/hs-gamestate-types";
 import { HSModuleOptions } from "../../types/hs-types";
@@ -36,8 +37,9 @@ export class HSGameState extends HSModule {
         "ChallengeView": ChallengeView,
         "AntView": AntView,
         "CubeView": CubeView,
-        "SettingsView": SettingsView,
+        "TraitsView": TraitsView,
         "SingularityView": SingularityView,
+        "SettingsView": SettingsView,
         "PseudoCoinView": PseudoCoinView,
     };
 
@@ -46,11 +48,12 @@ export class HSGameState extends HSModule {
         // And all subtabs to their default/first ones (allow to avoid a warning...)
         MAIN_VIEW: { currentView: new MainView('buildings'), previousView: new MainView('buildings'), viewChangeSubscribers: new Map() },
         BUILDING_VIEW: { currentView: new BuildingView('switchToCoinBuilding'), previousView: new BuildingView('unknown'), viewChangeSubscribers: new Map() },
-        ACHIEVEMENT_VIEW: { currentView: new AchievementView('toggleAchievementSubTab1'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
+        ACHIEVEMENT_VIEW: { currentView: new AchievementView('toggleAchievementSubTab1'), previousView: new AchievementView('unknown'), viewChangeSubscribers: new Map() },
         RUNE_VIEW: { currentView: new RuneView('toggleRuneSubTab1'), previousView: new RuneView('unknown'), viewChangeSubscribers: new Map() },
         CHALLENGE_VIEW: { currentView: new ChallengeView('toggleChallengesSubTab1'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
         ANT_VIEW: { currentView: new AntView('toggleAntSubtab1'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
         CUBE_VIEW: { currentView: new CubeView('switchCubeSubTab1'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
+        TRAITS_VIEW: { currentView: new TraitsView('corrCampaignsBtn'), previousView: new TraitsView('unknown'), viewChangeSubscribers: new Map() },
         SINGULARITY_VIEW: { currentView: new SingularityView('toggleSingularitySubTab1'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
         SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
         PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
@@ -80,11 +83,10 @@ export class HSGameState extends HSModule {
         'research',
         'ants',
         'cubes',
-        'campaigns',
         'traits',
+        'singularity',
         'settings',
         'shop',
-        'singularity',
         'event',
         'pseudoCoins',
     ];
@@ -101,7 +103,16 @@ export class HSGameState extends HSModule {
         for (const view of this.#mainUIViews) {
             const viewElement = document.querySelector(`#${view}`) as HTMLDivElement;
 
+            if (!viewElement) {
+                HSLogger.warn(`[MainTabDiag] Main view element not found in DOM for selector #${view} - watcher will NOT be set up for this view`, self.context);
+                continue;
+            }
+
+            // HSLogger.debug(() => `[MainTabDiag] Setting up watcher for main view #${view}`, self.context);
+
             HSElementHooker.watchElement(viewElement, async (display: string) => {
+                // HSLogger.debug(() => `[MainTabDiag] watchElement callback fired for #${viewElement.id}, parsed display='${display}'`, self.context);
+
                 if (display && display !== 'none') {
                     const uiView = new MainView(viewElement.id);
 
@@ -129,6 +140,8 @@ export class HSGameState extends HSModule {
                     this.#resolveSubViewChanges(uiView.getId());
                     self.#evaluatePredicateSubscriptions();
                 }
+                // else HSLogger.debug(() => `[MainTabDiag] #${viewElement.id} display is '${display}' - treated as hidden, ignoring`, self.context);
+
             },
             {
                 characterData: false,
@@ -136,9 +149,18 @@ export class HSGameState extends HSModule {
                 subtree: false,
                 attributes: true,
                 attributeOldValue: false,
-                attributeFilter: ['style'],
+                attributeFilter: ['style', 'class'],
                 valueParser: (element) => {
-                    return (element as HTMLElement).style.getPropertyValue('display');
+                    const el = element as HTMLElement;
+
+                    // Game toggles the 'active-tab' class to show/hide tabs (.tab:not(.active-tab) { display: none })
+                    // Checking the class directly avoids forcing a style recalculation via getComputedStyle
+                    if (el.classList.contains('tab')) {
+                        return el.classList.contains('active-tab') ? 'block' : 'none';
+                    }
+
+                    // Fallback for elements not using the 'tab' class convention
+                    return el.style.display || getComputedStyle(el).display;
                 }
             });
         }
@@ -426,14 +448,18 @@ export class HSGameState extends HSModule {
     async refreshCurrentViewsFromDOM(): Promise<void> {
         const visibleMain = this.#mainUIViews.find((viewId) => {
             const element = document.getElementById(viewId) as HTMLElement | null;
+            const computedDisplay = element ? getComputedStyle(element).display : undefined;
+            HSLogger.debug(() => `[MainTabDiag] refreshCurrentViewsFromDOM candidate #${viewId}: found=${!!element}, computedDisplay='${computedDisplay}'`, this.context);
             if (!element) return false;
-            return getComputedStyle(element).display !== 'none';
+            return computedDisplay !== 'none';
         });
 
         if (!visibleMain) {
             HSLogger.debug(() => 'refreshCurrentViewsFromDOM: no visible main view detected', this.context);
             return;
         }
+
+        HSLogger.debug(() => `[MainTabDiag] refreshCurrentViewsFromDOM resolved visible main view: #${visibleMain}`, this.context);
 
         const refreshedMainView = new MainView(visibleMain);
         if (refreshedMainView.getId() === MAIN_VIEW.UNKNOWN) {
@@ -464,6 +490,7 @@ export class HSGameState extends HSModule {
             [MAIN_VIEW.CHALLENGES]: 'CHALLENGE_VIEW',
             [MAIN_VIEW.ANTS]: 'ANT_VIEW',
             [MAIN_VIEW.CUBES]: 'CUBE_VIEW',
+            [MAIN_VIEW.TRAITS]: 'TRAITS_VIEW',
             [MAIN_VIEW.SINGULARITY]: 'SINGULARITY_VIEW',
             [MAIN_VIEW.SETTINGS]: 'SETTINGS_VIEW',
             [MAIN_VIEW.PSEUDOCOINS]: 'PSEUDOCOIN_VIEW',
@@ -515,10 +542,12 @@ export abstract class GameView<T extends VIEW_TYPE> {
             buttonId = ANT_VIEW_BUTTON_IDS[id as ANT_VIEW];
         } else if (id in CUBE_VIEW_BUTTON_IDS) {
             buttonId = CUBE_VIEW_BUTTON_IDS[id as CUBE_VIEW];
-        } else if (id in SETTINGS_VIEW_BUTTON_IDS) {
-            buttonId = SETTINGS_VIEW_BUTTON_IDS[id as SETTINGS_VIEW];
+        } else if (id in TRAITS_VIEW_BUTTON_IDS) {
+            buttonId = TRAITS_VIEW_BUTTON_IDS[id as TRAITS_VIEW];
         } else if (id in SINGULARITY_VIEW_BUTTON_IDS) {
             buttonId = SINGULARITY_VIEW_BUTTON_IDS[id as SINGULARITY_VIEW];
+        } else if (id in SETTINGS_VIEW_BUTTON_IDS) {
+            buttonId = SETTINGS_VIEW_BUTTON_IDS[id as SETTINGS_VIEW];
         } else if (id in PSEUDOCOIN_VIEW_BUTTON_IDS) {
             buttonId = PSEUDOCOIN_VIEW_BUTTON_IDS[id as PSEUDOCOIN_VIEW];
         }
@@ -557,11 +586,10 @@ export class MainView extends GameView<MAIN_VIEW> {
             case 'research':    return MAIN_VIEW.RESEARCH;
             case 'ants':        return MAIN_VIEW.ANTS;
             case 'cubes':       return MAIN_VIEW.CUBES;
-            case 'campaigns':   return MAIN_VIEW.CAMPAIGNS;
             case 'traits':      return MAIN_VIEW.TRAITS;
+            case 'singularity': return MAIN_VIEW.SINGULARITY;
             case 'settings':    return MAIN_VIEW.SETTINGS;
             case 'shop':        return MAIN_VIEW.SHOP;
-            case 'singularity': return MAIN_VIEW.SINGULARITY;
             case 'event':       return MAIN_VIEW.EVENT;
             case 'pseudoCoins': return MAIN_VIEW.PSEUDOCOINS;
         }
@@ -706,6 +734,28 @@ export class CubeView extends GameView<CUBE_VIEW> {
     }
 
     getId(): CUBE_VIEW {
+        return this.#id;
+    }
+}
+
+export class TraitsView extends GameView<TRAITS_VIEW> {
+    #id: TRAITS_VIEW;
+
+    constructor(name: string) {
+        super(name, 'TRAITS_VIEW');
+        this.#id = this.getViewEnum(name);
+    }
+
+    getViewEnum(tab: string): TRAITS_VIEW {
+        switch (tab) {
+            case 'corrCampaignsBtn': return TRAITS_VIEW.CAMPAIGNS;
+            case 'corrStatsBtn':     return TRAITS_VIEW.CORRUPTION_STATS;
+            case 'corrLoadoutsBtn':  return TRAITS_VIEW.CORRUPTION_LOADOUTS;
+        }
+        return TRAITS_VIEW.UNKNOWN;
+    }
+
+    getId(): TRAITS_VIEW {
         return this.#id;
     }
 }
