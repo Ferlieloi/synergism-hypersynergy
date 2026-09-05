@@ -89,7 +89,11 @@ export class HSGithub {
 
     static #parseVersionTag(tag: string): { numbers: number[]; prerelease: Array<string | number> | null } {
         const normalized = tag.startsWith('v') ? tag.slice(1) : tag;
-        const [version, prerelease] = normalized.split('-', 2);
+        // Accept both the existing hyphenated suffixes (2.13.5-dev1) and release
+        // suffixes appended directly to the patch number (2.13.5b).
+        const match = normalized.match(/^(\d+(?:\.\d+)*)(?:-?(.+))?$/);
+        const version = match?.[1] ?? normalized;
+        const prerelease = match?.[2] ?? null;
         const numbers = version.split('.').map((segment) => {
             const parsed = Number(segment);
             return Number.isFinite(parsed) ? parsed : 0;
