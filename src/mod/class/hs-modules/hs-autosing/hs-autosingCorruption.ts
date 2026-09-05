@@ -26,7 +26,8 @@ export class HSAutosingCorruption {
     #applyCorruptionsFunc: ((json: string) => boolean) | null;
     #lastAppliedCorruptionsJson: string | null = null;
 
-    #loadoutByName: Map<string, CorruptionLoadout> = new Map();
+    #loadoutByName: Map<string, Readonly<CorruptionLoadout>> = new Map();
+    readonly #loadoutJson = new WeakMap<Readonly<CorruptionLoadout>, string>();
 
     constructor(
         corrNext: Record<string, HTMLElement | null>,
@@ -47,7 +48,7 @@ export class HSAutosingCorruption {
         this.#applyCorruptionsFunc = fn;
     }
 
-    #corruptionsMatchDOM(target: CorruptionLoadout): boolean {
+    #corruptionsMatchDOM(target: Readonly<CorruptionLoadout>): boolean {
         for (const name of CORRUPTION_NAMES) {
             const el = this.#corrNext[`corrNext${name}`] ?? this.#corrNext[name];
             if (!el) return false;
@@ -60,8 +61,10 @@ export class HSAutosingCorruption {
         this.#lastAppliedCorruptionsJson = null;
     }
 
-    async setCorruptions(corruptions: CorruptionLoadout, force: boolean = false): Promise<void> {
-        const jsonString = JSON.stringify(corruptions);
+    async setCorruptions(corruptions: Readonly<CorruptionLoadout>, force: boolean = false): Promise<void> {
+        // Only immutable named loadouts have cached JSON. Ad-hoc inputs may change
+        // between calls, so keep serializing those from their current values.
+        const jsonString = this.#loadoutJson.get(corruptions) ?? JSON.stringify(corruptions);
         if (!force && jsonString === this.#lastAppliedCorruptionsJson) return;
 
         // Fast path: call applyCorruptions directly — no UI clicks, no prompt, synchronous.
@@ -90,7 +93,7 @@ export class HSAutosingCorruption {
         }
     }
 
-    getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): CorruptionLoadout | null {
+    getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): Readonly<CorruptionLoadout> | null {
         if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") return null;
         if (phaseConfig.corruptionLoadoutName === undefined) return phaseConfig.corruptions ?? null;
 
@@ -101,7 +104,9 @@ export class HSAutosingCorruption {
     buildLoadoutCache(defs: CorruptionLoadoutDefinition[]): void {
         this.#loadoutByName.clear();
         for (const d of defs) {
-            this.#loadoutByName.set(d.name, { ...d.loadout });
+            const loadout = Object.freeze({ ...d.loadout });
+            this.#loadoutByName.set(d.name, loadout);
+            this.#loadoutJson.set(loadout, JSON.stringify(loadout));
         }
     }
     
@@ -114,9 +119,8 @@ export class HSAutosingCorruption {
         await this.setCorruptions(loadout);
     }
 
-    #getLoadoutByName(name?: string | null): CorruptionLoadout | null {
+    #getLoadoutByName(name?: string | null): Readonly<CorruptionLoadout> | null {
         if (!name) return null;
-        const l = this.#loadoutByName.get(name);
-        return l ? { ...l } : null;
+        return this.#loadoutByName.get(name) ?? null;
     }
 }

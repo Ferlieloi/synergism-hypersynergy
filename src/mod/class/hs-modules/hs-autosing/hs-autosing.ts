@@ -816,7 +816,7 @@ export class HSAutosing extends HSModule {
         if (phaseLoadout)
             await this.#corruptionManager.setCorruptions(phaseLoadout);
 
-        this.#ascendBtn.click();
+        this.#clickResetButton(this.#ascendBtn);
 
         const isEndPhase = phaseConfig.endPhase === "end";
         for (let i = 0; i < phaseConfig.strat.length; i++) {
@@ -925,16 +925,16 @@ export class HSAutosing extends HSModule {
     async #performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
-                this.#exitTranscBtn.click();
+                this.#clickResetButton(this.#exitTranscBtn);
                 break;
             case 102: // Exit Reincarnation challenge
-                this.#exitReincBtn.click();
+                this.#clickResetButton(this.#exitReincBtn);
                 break;
             case 103: // Exit Ascension challenge
-                this.#exitAscBtn.click();
+                this.#clickResetButton(this.#exitAscBtn);
                 break;
             case 104: // Ascend
-                this.#ascendBtn.click();
+                this.#clickResetButton(this.#ascendBtn);
                 break;
             case 151: // Wait (done in the waitBefore)
                 break;
@@ -943,8 +943,8 @@ export class HSAutosing extends HSModule {
                 break;
             case 153: // Auto Challenge Toggle
                 this.#autoChallengeButton.click();
-                this.#exitTranscBtn.click();
-                this.#exitReincBtn.click();
+                this.#clickResetButton(this.#exitTranscBtn);
+                this.#clickResetButton(this.#exitReincBtn);
                 break;
             case 154: // Auto Ant-Sac Toggle
                 this.#autoAntSacrificeButton.click();
@@ -1428,7 +1428,7 @@ export class HSAutosing extends HSModule {
             HSLogger.warn('Quark-only export unavailable: the game export-output hook was not patched.', this.context);
         }
 
-        this.#ascendBtn.click();
+        this.#clickResetButton(this.#ascendBtn);
 
         if (this.#stopAtSingularitysEnd && this.#autosingEnabled) {
             HSUI.Notify("Standard strategy exited: Auto-Sing will now push this sing before stopping.");
@@ -1468,11 +1468,11 @@ export class HSAutosing extends HSModule {
         }
 
         await this.#executeLastPushLoop();
-        await this.#exitTranscBtn.click();
+        await this.#clickResetButton(this.#exitTranscBtn);
         await HSUtils.sleep(2000);
         await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
         await this.#autoChallengeButton.click();
-        await this.#exitAscBtn.click();
+        await this.#clickResetButton(this.#exitAscBtn);
         await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
     }
 
@@ -1486,7 +1486,7 @@ export class HSAutosing extends HSModule {
         await HSUtils.sleep(100);
         await this.#setAmbrosiaLoadout(this.#ambrosia_late_cube);
 
-        await this.#exitAscBtn.click();
+        await this.#clickResetButton(this.#exitAscBtn);
         await this.#setAmbrosiaLoadout(this.#ambrosia_off);
         await HSUtils.sleep(4500);
         await this.#antSacrifice.click();
@@ -1700,6 +1700,19 @@ export class HSAutosing extends HSModule {
     #parseNumber(text: string): number {
         const parsed = parseFloat(text.replace(/,/g, '').trim());
         return isNaN(parsed) ? 0 : parsed;
+    }
+
+    #clickResetButton(element: HTMLElement): void {
+        try {
+            element.click();
+        } finally {
+            // Vanilla reset clicks also open their hover modal. Close it synchronously
+            // through vanilla's mouseout handler, before its animation frame can show it.
+            // Keep the tooltip when the user is actually hovering or keyboard-focused.
+            if (!element.matches(':hover, :focus')) {
+                element.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            }
+        }
     }
 
     #fastDoubleClick(element: HTMLElement): void {
