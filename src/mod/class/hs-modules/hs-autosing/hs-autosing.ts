@@ -15,6 +15,7 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
+import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -143,6 +144,7 @@ export class HSAutosing extends HSModule {
         resolve: () => void;
         reject: (error: Error) => void;
         finished: boolean;
+        timeoutId?: number;
     };
 
     // Game References
@@ -154,6 +156,7 @@ export class HSAutosing extends HSModule {
     #gamestate!: HSGameState;
     #mainViewRestoreSubscriptionId?: string;
     #mainViewRestoreTimeoutId?: number;
+    #isReadingDOMStage = false;
 
     #autosingModal?: HSAutosingModal;
 
@@ -721,6 +724,7 @@ export class HSAutosing extends HSModule {
             // occur around a singularity, and the game may redirect to another page.
             let prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
             await this.#performSingularity(true);
+            if (!this.#autosingEnabled) return;
             this.#scheduleMainViewRestore(prevMainView);
 
             // Main autosing loop
@@ -730,6 +734,7 @@ export class HSAutosing extends HSModule {
                     if (this.#autosingEnabled) {
                         prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
                         await this.#performSingularity();
+                        if (!this.#autosingEnabled) return;
                         this.#scheduleMainViewRestore(prevMainView);
                     }
                     continue;
@@ -739,6 +744,7 @@ export class HSAutosing extends HSModule {
                 while (this.#autosingEnabled && !this.#endStageDone && !this.#antiquitiesObserverActivated) {
                     await HSUtils.yield();
                     const stage = await this.#getStage();
+                    if (!this.#autosingEnabled) return;
                     // Only the DOM stage fallback navigates to Settings on every phase.
                     if (!this.#isExposureReady) this.#restoreMainView(prevMainView);
 
@@ -1060,6 +1066,7 @@ export class HSAutosing extends HSModule {
                 if (!isChallengeActive()) await HSUtils.waitForNextTack();
             }
         } else {
+            this.#ensureChallengesViewForDOMRead();
             const isActive = accessor.isActive;
             /* // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
             // I think we could even skip the 'not inside' check and go directly to the double click...?
@@ -1087,7 +1094,7 @@ export class HSAutosing extends HSModule {
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
             let current = 0;
 
-            while (true) {
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
@@ -1115,7 +1122,7 @@ export class HSAutosing extends HSModule {
             let lastText = '';
             let currentCompletions = HSAutosing.#DECIMAL_0;
 
-            while (true) {
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
@@ -1263,6 +1270,7 @@ export class HSAutosing extends HSModule {
     // ============================================================================
 
     async #getStage(): Promise<string> {
+        if (!this.#autosingEnabled) return '';
         if (this.#isExposureReady) {
             // Fast path with the exposed function: never fall through to DOM navigation.
             // A transient throw during a sing transition returns '' so the wait
@@ -1279,27 +1287,42 @@ export class HSAutosing extends HSModule {
                 HSLogger.warn("Performance Warning: 'synergismStage' not exposed (no Tampermonkey?)", this.context);
                 this.#hasWarnedMissingStageFunc = true;
             }
+            this.#isReadingDOMStage = true;
             try {
+                // Arm the observer before navigation: a fresh render may happen
+                // immediately, or on a later UI tick. Existing text is not evidence
+                // that the game has updated the stage for this read.
+                const stageUpdate = this.#waitForInnerText(this.#stage, t => t.includes("Current Game Section:"), true);
                 const isOnStageTab =
-                    this.#settingsTab.style.display === 'block' &&
+                    this.#settingsTab.classList.contains('active-tab') &&
                     this.#settingsSubTab.classList.contains('active-subtab') &&
                     this.#misc.style.backgroundColor === 'crimson';
 
-                if (!isOnStageTab) {
-                    this.#settingsTab.click();
-                    this.#settingsSubTab.click();
-                    this.#misc.click();
-                    await HSUtils.sleep(30);
+                try {
+                    if (!isOnStageTab) {
+                        this.#settingsTab.click();
+                        this.#settingsSubTab.click();
+                        this.#misc.click();
+                    }
+                } catch (e) {
+                    this.#cleanupWaitForInnerText(false, e instanceof Error ? e : new Error(String(e)));
                 }
 
-                await this.#waitForInnerText(this.#stage, t => t.includes("Current Game Section:"), true);
+                await stageUpdate;
                 const stageTextRaw = this.#stage?.textContent ?? "";
                 const stageMatch = stageTextRaw.match(STAGE_REGEX);
                 const stageText = stageMatch ? stageMatch[1] : null;
 
                 HSLogger.warn(`Current stage: ${stageText}`, this.context);
                 return stageText || '';
-            } catch (e) { HSLogger.warn(`Error reading stage element: ${e}`, this.context); }
+            } catch (e) {
+                if (this.#autosingEnabled) {
+                    HSLogger.warn(`Could not read a fresh game stage; Autosing stopped: ${e}`, this.context);
+                    this.stopAutosing();
+                }
+            } finally {
+                this.#isReadingDOMStage = false;
+            }
             return '';
         }
     }
@@ -1376,7 +1399,8 @@ export class HSAutosing extends HSModule {
             // Yield before checking if the stage is allowed
             await HSUtils.yield();
             stage = await this.#getStage();
-        } while (!this.#isAllowedStage(stage));
+        } while (this.#autosingEnabled && !this.#isAllowedStage(stage));
+        if (!this.#autosingEnabled) return;
         HSLogger.debug(() => `Reached allowed starting stage: ${stage} (performSingularity)`, this.context);
 
         this.#observeAntiquitiesRune();
@@ -1556,7 +1580,10 @@ export class HSAutosing extends HSModule {
         const challengeBtn = this.#challengeButtons[challengeIndex];
         const levelElement = this.#levelElements[challengeIndex];
 
-        const getLevelText = () => levelElement?.textContent ?? '';
+        const getLevelText = () => {
+            this.#ensureChallengesViewForDOMRead();
+            return levelElement?.textContent ?? '';
+        };
         const parseValue = (text: string) => new Decimal(this.#parseNumber(text));
 
         const getCompletions = challengeIndex === 15
@@ -1633,12 +1660,24 @@ export class HSAutosing extends HSModule {
         }
     }
 
+    #ensureChallengesViewForDOMRead(): void {
+        if (
+            !this.#isExposureReady
+            && this.#gamestate.getCurrentMainViewFromDOM().getId() !== MAIN_VIEW.CHALLENGES
+        ) {
+            this.#cleanupScheduledMainViewRestore();
+            new MainView('challenges').goto();
+        }
+    }
+
     #scheduleMainViewRestore(view: MainView): void {
         this.#cleanupScheduledMainViewRestore();
         const targetViewId = view.getId();
 
         const restore = (): void => {
-            if (this.#autosingEnabled) this.#restoreMainView(view);
+            // Bookmark mode intentionally visits Settings until its stage renders.
+            // Its caller restores the player's page once the read completes.
+            if (this.#autosingEnabled && !this.#isReadingDOMStage) this.#restoreMainView(view);
         };
 
         // Restore immediately if the Exalt transition already redirected the player,
@@ -1835,6 +1874,9 @@ export class HSAutosing extends HSModule {
                 reject,
                 finished: false,
             };
+            this.#waitForInnerTextActive.timeoutId = window.setTimeout(() => {
+                this.#cleanupWaitForInnerText(false, new Error("Timed out waiting for the game to refresh its stage"));
+            }, 5000);
 
             if (this.#waitForInnerTextObservedElement !== el) {
                 this.#waitForInnerTextObserver?.disconnect();
@@ -1846,7 +1888,7 @@ export class HSAutosing extends HSModule {
                 this.#waitForInnerTextObservedElement = el;
             }
 
-            if (predicate(el.textContent ?? "")) this.#cleanupWaitForInnerText(true);
+            if (!waitForNextMutation && predicate(el.textContent ?? "")) this.#cleanupWaitForInnerText(true);
         });
     }
 
@@ -1919,17 +1961,18 @@ export class HSAutosing extends HSModule {
         resolve(success);
     }
 
-    #cleanupWaitForInnerText(success: boolean): void {
+    #cleanupWaitForInnerText(success: boolean, error?: Error): void {
         if (!this.#waitForInnerTextActive || this.#waitForInnerTextActive.finished) return;
         this.#waitForInnerTextActive.finished = true;
         const resolve = this.#waitForInnerTextActive.resolve;
         const reject = this.#waitForInnerTextActive.reject;
+        window.clearTimeout(this.#waitForInnerTextActive.timeoutId);
         this.#waitForInnerTextActive = undefined;
 
         // Should we disconnect them here, since it's often called in burst ? 
         this.#waitForInnerTextObserver?.disconnect();
         this.#waitForInnerTextObservedElement = undefined;
 
-        if (success) resolve(); else reject(new Error("Wait for inner text aborted")); // We can probably drop the 'reject'
+        if (success) resolve(); else reject(error ?? new Error("Wait for inner text aborted"));
     }
 }
