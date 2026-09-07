@@ -15,6 +15,7 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
+import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -1065,6 +1066,7 @@ export class HSAutosing extends HSModule {
                 if (!isChallengeActive()) await HSUtils.waitForNextTack();
             }
         } else {
+            this.#ensureChallengesViewForDOMRead();
             const isActive = accessor.isActive;
             /* // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
             // I think we could even skip the 'not inside' check and go directly to the double click...?
@@ -1092,7 +1094,7 @@ export class HSAutosing extends HSModule {
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
             let current = 0;
 
-            while (true) {
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
@@ -1120,7 +1122,7 @@ export class HSAutosing extends HSModule {
             let lastText = '';
             let currentCompletions = HSAutosing.#DECIMAL_0;
 
-            while (true) {
+            while (this.#autosingEnabled) {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
@@ -1578,7 +1580,10 @@ export class HSAutosing extends HSModule {
         const challengeBtn = this.#challengeButtons[challengeIndex];
         const levelElement = this.#levelElements[challengeIndex];
 
-        const getLevelText = () => levelElement?.textContent ?? '';
+        const getLevelText = () => {
+            this.#ensureChallengesViewForDOMRead();
+            return levelElement?.textContent ?? '';
+        };
         const parseValue = (text: string) => new Decimal(this.#parseNumber(text));
 
         const getCompletions = challengeIndex === 15
@@ -1652,6 +1657,16 @@ export class HSAutosing extends HSModule {
     #restoreMainView(view: MainView): void {
         if (this.#gamestate.getCurrentMainViewFromDOM().getId() !== view.getId()) {
             view.goto();
+        }
+    }
+
+    #ensureChallengesViewForDOMRead(): void {
+        if (
+            !this.#isExposureReady
+            && this.#gamestate.getCurrentMainViewFromDOM().getId() !== MAIN_VIEW.CHALLENGES
+        ) {
+            this.#cleanupScheduledMainViewRestore();
+            new MainView('challenges').goto();
         }
     }
 
