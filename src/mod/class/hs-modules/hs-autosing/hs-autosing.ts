@@ -15,17 +15,16 @@ import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
 import { HSQuickbarManager } from "../hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
-import { MAIN_VIEW } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
+const CHALLENGE_COMPLETIONS_REGEX = /\((\d+)\s*\/\s*(\d+)\):/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
 const EXALT_STATE_ATTRIBUTE = 'data-inside-singularity-challenge';
 
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
-    levelElement?: HTMLParagraphElement;
-    isActive: () => boolean;
+    levelElement?: HTMLElement;
     getLevelText: () => string;
     getCompletions: () => Decimal;
     getGoal: () => Decimal;
@@ -39,7 +38,6 @@ type ChallengeAccessor = {
  */
 export class HSAutosing extends HSModule {
     static readonly #DECIMAL_INFINITY = new Decimal(Infinity);
-    static readonly #DECIMAL_9999 = new Decimal(9999);
     static readonly #DECIMAL_0 = new Decimal(0);
     #gameDataAPI?: HSGameDataAPI;
 
@@ -65,7 +63,7 @@ export class HSAutosing extends HSModule {
 
     // DOM Elements - Challenges
     #challengeButtons: Record<number, HTMLButtonElement> = {};
-    #levelElements: Record<number, HTMLParagraphElement> = {};
+    #challengeProgressElements: HTMLElement[] = [];
 
     // DOM Elements - Challenge Actions
     #exitTranscBtn!: HTMLButtonElement;
@@ -193,15 +191,25 @@ export class HSAutosing extends HSModule {
     }
 
     #cacheChallengeElements(): boolean {
+        const progressElements = {
+            transcension: document.getElementById('transcensionChallengeProgress'),
+            reincarnation: document.getElementById('reincarnationChallengeProgress'),
+            ascension: document.getElementById('ascensionChallengeProgress'),
+        };
+        if (!this.#ensureElements(progressElements)) return false;
+        this.#challengeProgressElements = [
+            progressElements.transcension,
+            progressElements.reincarnation,
+            progressElements.ascension,
+        ];
+
         for (let i = 1; i <= 15; i++) {
             const elements = {
                 challengeButton: document.getElementById(`challenge${i}`) as HTMLButtonElement | null,
-                challengeLevel: document.getElementById(`challenge${i}level`) as HTMLParagraphElement | null,
             };
             if (!this.#ensureElements(elements)) return false;
 
             this.#challengeButtons[i] = elements.challengeButton;
-            this.#levelElements[i] = elements.challengeLevel;
         }
         this.#buildChallengeAccessors();
         return true;
@@ -1066,21 +1074,13 @@ export class HSAutosing extends HSModule {
                 if (!isChallengeActive()) await HSUtils.waitForNextTack();
             }
         } else {
-            this.#ensureChallengesViewForDOMRead();
-            const isActive = accessor.isActive;
-            /* // The challenge DOM is not always updated when not in the Challenges tab, this is a quickfix for that...
-            // I think we could even skip the 'not inside' check and go directly to the double click...?
-            const exitButton = challengeIndex <= 5
-                ? this.#exitTranscBtn
-                : challengeIndex <= 10
-                    ? this.#exitReincBtn
-                    : this.#exitAscBtn;
-            const skipInactiveWait = !BACKGROUND_COLOR_REGEX.test(exitButton?.getAttribute('style') ?? '');
-            if (!skipInactiveWait) {
-                await this.#waitForClassCondition(challengeBtn!, () => !isActive());
-            } */
+            const progressUpdated = this.#waitForInnerText(
+                accessor.levelElement!,
+                text => text.trim().length > 0,
+                true
+            );
             this.#fastDoubleClick(challengeBtn!);
-            await this.#waitForClassCondition(challengeBtn!, () => isActive());
+            await progressUpdated;
         }
 
         const endTime = performance.now() + maxTime;
@@ -1578,34 +1578,23 @@ export class HSAutosing extends HSModule {
 
     #makeChallengeAccessor(challengeIndex: number): ChallengeAccessor {
         const challengeBtn = this.#challengeButtons[challengeIndex];
-        const levelElement = this.#levelElements[challengeIndex];
+        const levelElement = this.#challengeProgressElements[Math.floor((challengeIndex - 1) / 5)];
 
-        const getLevelText = () => {
-            this.#ensureChallengesViewForDOMRead();
-            return levelElement?.textContent ?? '';
-        };
+        const getLevelText = () => levelElement?.textContent ?? '';
         const parseValue = (text: string) => new Decimal(this.#parseNumber(text));
+        const getCompletionMatch = () => getLevelText().match(CHALLENGE_COMPLETIONS_REGEX);
 
         const getCompletions = challengeIndex === 15
-            ? () => this.#parseDecimal(getLevelText())
-            : () => {
-                const text = getLevelText();
-                const slashIdx = text.indexOf('/');
-                return parseValue(slashIdx === -1 ? text : text.slice(0, slashIdx));
-            };
+            ? () => this.#parseDecimal(levelElement?.querySelector('span')?.textContent ?? '')
+            : () => parseValue(getCompletionMatch()?.[1] ?? '0');
 
         const getGoal = challengeIndex === 15
             ? () => HSAutosing.#DECIMAL_INFINITY
-            : () => {
-                const goalText = getLevelText();
-                const slashIdx = goalText.indexOf('/');
-                return slashIdx !== -1 ? parseValue(goalText.slice(slashIdx + 1).trim()) : HSAutosing.#DECIMAL_9999;
-            };
+            : () => parseValue(getCompletionMatch()?.[2] ?? '9999');
 
         return {
             button: challengeBtn,
             levelElement,
-            isActive: () => !!challengeBtn?.classList.contains('challengeActive'),
             getLevelText,
             getCompletions,
             getGoal,
@@ -1657,16 +1646,6 @@ export class HSAutosing extends HSModule {
     #restoreMainView(view: MainView): void {
         if (this.#gamestate.getCurrentMainViewFromDOM().getId() !== view.getId()) {
             view.goto();
-        }
-    }
-
-    #ensureChallengesViewForDOMRead(): void {
-        if (
-            !this.#isExposureReady
-            && this.#gamestate.getCurrentMainViewFromDOM().getId() !== MAIN_VIEW.CHALLENGES
-        ) {
-            this.#cleanupScheduledMainViewRestore();
-            new MainView('challenges').goto();
         }
     }
 
@@ -1875,7 +1854,7 @@ export class HSAutosing extends HSModule {
                 finished: false,
             };
             this.#waitForInnerTextActive.timeoutId = window.setTimeout(() => {
-                this.#cleanupWaitForInnerText(false, new Error("Timed out waiting for the game to refresh its stage"));
+                this.#cleanupWaitForInnerText(false, new Error("Timed out waiting for the game to refresh UI text"));
             }, 5000);
 
             if (this.#waitForInnerTextObservedElement !== el) {
