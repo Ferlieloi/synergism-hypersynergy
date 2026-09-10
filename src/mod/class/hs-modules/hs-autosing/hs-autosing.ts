@@ -23,6 +23,13 @@ const CHALLENGE_15_SCORE_REGEX = /:\s*(\S+)/;
 const ALLOWED_REGEX = new RegExp(ALLOWED.join('|'));
 const EXALT_STATE_ATTRIBUTE = 'data-inside-singularity-challenge';
 
+class InnerTextWaitSupersededError extends Error {
+    constructor() {
+        super("Wait for inner text superseded");
+        this.name = "InnerTextWaitSupersededError";
+    }
+}
+
 type ChallengeAccessor = {
     button?: HTMLButtonElement;
     levelElement?: HTMLElement;
@@ -754,12 +761,20 @@ export class HSAutosing extends HSModule {
                 // This loop is only handling pre-AOAG (When AOAG becomes buyable, AOAG and final phases are triggered without coming back here)
                 while (this.#autosingEnabled && !this.#endStageDone && !this.#antiquitiesObserverActivated) {
                     await HSUtils.yield();
+                    // AOAG may unlock while yielding. Do not let the stale pre-AOAG
+                    // iteration start a new DOM wait that can replace a final-stage wait.
+                    if (!this.#autosingEnabled || this.#endStageDone || this.#antiquitiesObserverActivated) break;
                     const stage = await this.#getStage();
                     if (!this.#autosingEnabled) return;
                     // Only the DOM stage fallback navigates to Settings on every phase.
                     if (!this.#isExposureReady) this.#restoreMainView(prevMainView);
 
-                    await this.#matchStageToStrategy(stage);
+                    try {
+                        await this.#matchStageToStrategy(stage);
+                    } catch (error) {
+                        if (!this.#isExpectedAoagWaitSupersession(error)) throw error;
+                        HSLogger.debug(() => "Pre-AOAG UI wait superseded by the AOAG final stage", this.context);
+                    }
                 }
             }
         } catch (error) {
@@ -1322,6 +1337,10 @@ export class HSAutosing extends HSModule {
                 HSLogger.warn(`Current stage: ${stageText}`, this.context);
                 return stageText || '';
             } catch (e) {
+                if (this.#isExpectedAoagWaitSupersession(e)) {
+                    HSLogger.debug(() => "Stage UI wait superseded by the AOAG final stage", this.context);
+                    return '';
+                }
                 if (this.#autosingEnabled) {
                     HSLogger.warn(`Could not read a fresh game stage; Autosing stopped: ${e}`, this.context);
                     this.stopAutosing();
@@ -1857,7 +1876,7 @@ export class HSAutosing extends HSModule {
 
         return new Promise<void>((resolve, reject) => {
             if (this.#waitForInnerTextActive) {
-                this.#cleanupWaitForInnerText(false);
+                this.#cleanupWaitForInnerText(false, new InnerTextWaitSupersededError());
             }
 
             this.#waitForInnerTextActive = {
@@ -1883,6 +1902,12 @@ export class HSAutosing extends HSModule {
 
             if (!waitForNextMutation && predicate(el.textContent ?? "")) this.#cleanupWaitForInnerText(true);
         });
+    }
+
+    #isExpectedAoagWaitSupersession(error: unknown): boolean {
+        return error instanceof InnerTextWaitSupersededError
+            && this.#autosingEnabled
+            && this.#antiquitiesObserverActivated;
     }
 
     async #waitForExaltState(targetState: boolean): Promise<boolean> {
