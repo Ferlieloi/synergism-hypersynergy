@@ -79,13 +79,13 @@ export interface HSGlobalAmbrosia extends IStoreable {
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 
-    idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
-    idleSwapIndicatorId: string;
-    idleSwapMaxBlueThreshold: number;
-    idleSwapMinBlueThreshold: number;
-
-    idleSwapMaxRedThreshold: number;
-    idleSwapMinRedThreshold: number;
+    // RETIRED: Ambrosia AFK/idle swapper globals.
+    // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png';
+    // idleSwapIndicatorId: string;
+    // idleSwapMaxBlueThreshold: number;
+    // idleSwapMinBlueThreshold: number;
+    // idleSwapMaxRedThreshold: number;
+    // idleSwapMinRedThreshold: number;
 
     TIME_PER_AMBROSIA: number;
     TIME_PER_RED_AMBROSIA: number;
@@ -97,6 +97,8 @@ export interface HSGlobalAmbrosia extends IStoreable {
     redBarId: string;
     redBarProgressId: string;
     redBarProgressTextId: string;
+    purpleBarId: string;
+    purpleBarProgressId: string;
     barWrapperId: string;
 }
 

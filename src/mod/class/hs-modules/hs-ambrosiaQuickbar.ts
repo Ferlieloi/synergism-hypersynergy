@@ -1,5 +1,5 @@
 import type { HSAmbrosia } from "./hs-ambrosia";
-import { HSQuickbarManager } from "./hs-qolQuickbarManager";
+import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -8,7 +8,7 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import { getEffectiveHeaterIconSrc } from "./hs-heater/hs-heater-icon-store";
-import { HSQuickbarIconPickerController } from "./hs-qolQuickbarIconPicker";
+import { HSQuickbarIconPickerController } from "./hs-qol-quickbar/hs-qolQuickbarIconPicker";
 
 export interface HeaterSlotIconApplyResult {
     setCount: number;

@@ -781,7 +781,7 @@ export class HSGameData extends HSModule {
         this.#wasUsingGDS = gameDataSetting ? gameDataSetting.isEnabled() : false;
 
         if (gameDataSetting && gameDataSetting.isEnabled()) {
-            gameDataSetting.disable();
+            gameDataSetting.disable({ preserveGameDataDependents: true });
 
             const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
             if (autosing && autosing.isAutosingEnabled()) {
@@ -945,7 +945,7 @@ export class HSGameData extends HSModule {
                     //clearInterval(this.#afterSingularityCheckerInterval);
 
                     // From here on these are used
-                    gameDataSetting.disable();
+                    gameDataSetting.disable({ preserveGameDataDependents: true });
                     /*
                     await HSUI.Notify('GDS temporarily disabled for Sing and will be re-enabled soon', {
                         position: 'topRight',

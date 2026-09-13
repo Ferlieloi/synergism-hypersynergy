@@ -1,10 +1,10 @@
-import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSUtils } from "../hs-utils/hs-utils";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSUI } from "../hs-core/hs-ui";
-import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "./hs-corruption";
+import { HSElementHooker } from "../../hs-core/hs-elementhooker";
+import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSUI } from "../../hs-core/hs-ui";
+import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
+import { HSCorruption, HSCorruptionLevels, HSCorruptionUserLoadout } from "../hs-corruption";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
 import { HSQuickbarIconPickerController } from "./hs-qolQuickbarIconPicker";
 

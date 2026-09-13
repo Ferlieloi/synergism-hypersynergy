@@ -1,4 +1,4 @@
-import { HSLogger } from "../hs-core/hs-logger";
+import { HSLogger } from "../../hs-core/hs-logger";
 
 // Canonical factory: must return an object with `element` and optional `teardown`.
 export type QuickbarSectionFactory = () => { element: HTMLElement; teardown?: () => void };

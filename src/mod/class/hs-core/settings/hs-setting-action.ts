@@ -172,6 +172,9 @@ export class HSSettingActions {
             }
         },
 
+        /* RETIRED: The Ambrosia AFK/idle swapper is no longer useful after the
+         * corresponding game update. Keep the old action here as commented
+         * reference so the feature can be reconstructed if the game changes.
         ambrosiaIdleSwapAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 
@@ -194,6 +197,7 @@ export class HSSettingActions {
                 }
             }
         },
+        */
 
         startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";

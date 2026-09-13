@@ -430,7 +430,7 @@ export class HSAutosingSettingsFixer {
             'enableCorruptionQuickBar',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
-            'ambrosiaIdleSwap',
+            // RETIRED: 'ambrosiaIdleSwap',
             'useGameData'
         ] as const;
 

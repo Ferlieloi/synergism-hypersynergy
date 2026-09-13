@@ -1,5 +1,5 @@
-import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSUI } from "../hs-core/hs-ui";
+import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSUI } from "../../hs-core/hs-ui";
 
 export interface HSQuickbarIconPickerOptions<TSlotKey> {
     shouldIgnoreClickTarget: (target: Element) => boolean;
@@ -30,7 +30,7 @@ export class HSQuickbarIconPickerController<TSlotKey> {
 
         this.#wasGdsEnabled = HSSettings.getSetting("useGameData")?.isEnabled() ?? null;
         if (this.#wasGdsEnabled) {
-            HSSettings.getSetting("useGameData")?.disable();
+            HSSettings.getSetting("useGameData")?.disable({ preserveGameDataDependents: true });
         }
 
         this.#isPicking = true;

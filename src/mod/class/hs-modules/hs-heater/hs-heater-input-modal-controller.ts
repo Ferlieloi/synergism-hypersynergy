@@ -2,7 +2,7 @@ import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
-import { HSQuickbarManager } from "../hs-qolQuickbarManager";
+import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
 import { HSHeaterOptimizer } from "./hs-heater-optimizer";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
@@ -42,9 +42,10 @@ export class HSHeaterInputModalController {
         autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
         autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        ambrosiaIdleSwapOcteractLoadout:    { label: 'AFK Swapper Gen+Oct',     preferences: ["gen:2", "gen:1", "gen:0"] },
-        ambrosiaIdleSwapNormalLuckLoadout:  { label: 'AFK Swapper Blue Luck',   preferences: ["ambOct", "luck"] },
-        ambrosiaIdleSwapRedLuckLoadout:     { label: 'AFK Swapper Red Luck',    preferences: ["rLuck"] },
+        // RETIRED: Ambrosia AFK/idle swapper loadout recommendations.
+        // ambrosiaIdleSwapOcteractLoadout:   { label: 'AFK Swapper Gen+Oct',   preferences: ["gen:2", "gen:1", "gen:0"] },
+        // ambrosiaIdleSwapNormalLuckLoadout: { label: 'AFK Swapper Blue Luck', preferences: ["ambOct", "luck"] },
+        // ambrosiaIdleSwapRedLuckLoadout:    { label: 'AFK Swapper Red Luck',  preferences: ["rLuck"] },
     };
 
 

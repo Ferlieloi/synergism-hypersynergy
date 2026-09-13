@@ -36,10 +36,12 @@ export interface HSSettingsDefinition {
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
-    ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
-    ambrosiaIdleSwapOcteractLoadout: AmbrosiaIdleSwapOcteractLoadoutSetting;
-    ambrosiaIdleSwapNormalLuckLoadout: AmbrosiaIdleSwapNormalLuckLoadoutSetting;
-    ambrosiaIdleSwapRedLuckLoadout: AmbrosiaIdleSwapRedLuckLoadoutSetting;
+    // RETIRED: Ambrosia AFK/idle swapper settings are retained as hidden JSON
+    // definitions only, so old saved settings can be ignored safely.
+    // ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
+    // ambrosiaIdleSwapOcteractLoadout: AmbrosiaIdleSwapOcteractLoadoutSetting;
+    // ambrosiaIdleSwapNormalLuckLoadout: AmbrosiaIdleSwapNormalLuckLoadoutSetting;
+    // ambrosiaIdleSwapRedLuckLoadout: AmbrosiaIdleSwapRedLuckLoadoutSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
 
     // Patch Settings
@@ -185,10 +187,11 @@ export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
-export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> { }
-export interface AmbrosiaIdleSwapOcteractLoadoutSetting extends HSSettingBase<string> { }
-export interface AmbrosiaIdleSwapNormalLuckLoadoutSetting extends HSSettingBase<string> { }
-export interface AmbrosiaIdleSwapRedLuckLoadoutSetting extends HSSettingBase<string> { }
+// RETIRED: Ambrosia AFK/idle swapper setting types.
+// export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> { }
+// export interface AmbrosiaIdleSwapOcteractLoadoutSetting extends HSSettingBase<string> { }
+// export interface AmbrosiaIdleSwapNormalLuckLoadoutSetting extends HSSettingBase<string> { }
+// export interface AmbrosiaIdleSwapRedLuckLoadoutSetting extends HSSettingBase<string> { }
 
 
 // Patch Settings

@@ -95,7 +95,8 @@ export enum SINGULARITY_VIEW {
     SHOP = 2,
     PERKS = 3,
     OCTERACTS = 4,
-    AMBROSIA = 5
+    AMBROSIA = 5,
+    PURPLE = 6
 }
 
 export enum SETTINGS_VIEW {
@@ -204,6 +205,7 @@ export const SINGULARITY_VIEW_BUTTON_IDS: Record<SINGULARITY_VIEW, string> = {
     [SINGULARITY_VIEW.PERKS]: 'toggleSingularitySubTab3',
     [SINGULARITY_VIEW.OCTERACTS]: 'toggleSingularitySubTab4',
     [SINGULARITY_VIEW.AMBROSIA]: 'toggleSingularitySubTab5',
+    [SINGULARITY_VIEW.PURPLE]: 'toggleSingularitySubTab6',
     [SINGULARITY_VIEW.UNKNOWN]: '',
 };
 

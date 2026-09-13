@@ -1,6 +1,6 @@
 import { Hypersynergism } from "./class/hypersynergism";
 import { HSExternalModuleKind, HSModuleDefinition, HSModuleType } from "./types/hs-types";
-import { HSQuickbarManager } from "./class/hs-modules/hs-qolQuickbarManager";
+import { HSQuickbarManager } from "./class/hs-modules/hs-qol-quickbar/hs-qolQuickbarManager";
 
 // Loader won't find the hypersynergism instance in window without this declaration
 declare global {

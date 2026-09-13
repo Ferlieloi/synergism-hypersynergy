@@ -7,7 +7,7 @@ import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
-import { HSQuickbarManager } from "./hs-qolQuickbarManager";
+import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
@@ -56,7 +56,8 @@ export class HSAmbrosia extends HSModule
     #state = {
         persistentAmbrosiaLevelsDisplayEnabled: true
     };
-    #debugElement?: HTMLDivElement;
+    // RETIRED: #debugElement was used only by the Ambrosia AFK/idle swapper.
+    // #debugElement?: HTMLDivElement;
 
     activeLoadout?: AMBROSIA_LOADOUT_SLOT;
 
@@ -65,43 +66,47 @@ export class HSAmbrosia extends HSModule
     #cachedGameDataAPI?: HSGameDataAPI;
     #cachedGameDataMod?: HSGameData;
 
-    #cachedIdleSwapOcteractSetting?: HSSelectStringSetting;
-    #cachedIdleSwapNormalLuckSetting?: HSSelectStringSetting;
-    #cachedIdleSwapRedLuckSetting?: HSSelectStringSetting;
-    #cachedIdleSwapOcteractLoadoutValue?: string;
-    #cachedIdleSwapNormalLuckLoadoutValue?: string;
-    #cachedIdleSwapRedLuckLoadoutValue?: string;
-    #cachedIdleSwapOcteractLoadout?: string;
-    #cachedIdleSwapNormalLuckLoadout?: string;
-    #cachedIdleSwapRedLuckLoadout?: string;
-    #cachedIdleSwapLoadoutButtons: Map<string, HTMLButtonElement> = new Map();
+    // RETIRED: Ambrosia AFK/idle swapper state.
+    // #cachedIdleSwapOcteractSetting?: HSSelectStringSetting;
+    // #cachedIdleSwapNormalLuckSetting?: HSSelectStringSetting;
+    // #cachedIdleSwapRedLuckSetting?: HSSelectStringSetting;
+    // #cachedIdleSwapOcteractLoadoutValue?: string;
+    // #cachedIdleSwapNormalLuckLoadoutValue?: string;
+    // #cachedIdleSwapRedLuckLoadoutValue?: string;
+    // #cachedIdleSwapOcteractLoadout?: string;
+    // #cachedIdleSwapNormalLuckLoadout?: string;
+    // #cachedIdleSwapRedLuckLoadout?: string;
+    // #cachedIdleSwapLoadoutButtons: Map<string, HTMLButtonElement> = new Map();
 
     #_delegateAddHandler?: (e: Event) => Promise<void>;
     #_delegateTimeHandler?: (e: Event) => Promise<void>;
 
-    #isIdleSwapEnabled = false;
-    #isIdleSwapActive = false;
-    #blueAmbrosiaProgressBar?: HTMLDivElement;
-    #redAmbrosiaProgressBar?: HTMLDivElement;
-    #holdBlueLuckUntilReset = false;
-    #lastBlueBarValue?: number;
-    #cachedNormalLuckBlueBarRequired?: number;
-    #cachedNormalLuckLoadoutValue?: string;
+    // #isIdleSwapEnabled = false;
+    // #isIdleSwapActive = false;
+    // #blueAmbrosiaProgressBar?: HTMLDivElement;
+    // #redAmbrosiaProgressBar?: HTMLDivElement;
+    // #holdBlueLuckUntilReset = false;
+    // #lastBlueBarValue?: number;
+    // #cachedNormalLuckBlueBarRequired?: number;
+    // #cachedNormalLuckLoadoutValue?: string;
 
     #berryMinibarsEnabled = false;
     #blueProgressMinibarElement?: HTMLDivElement;
     #redProgressMinibarElement?: HTMLDivElement;
+    #purpleProgressMinibarBarElement?: HTMLDivElement;
+    #purpleProgressMinibarElement?: HTMLDivElement;
 
     #hasPerformedInitialLoadoutMatch = false;
 
     #quickbarCSSId = 'hs-ambrosia-quickbar-css';
-    #idleLoadoutCSSId = 'hs-ambrosia-idle-loadout-css';
+    // RETIRED: #idleLoadoutCSSId = 'hs-ambrosia-idle-loadout-css';
     #minibarCSSId = 'hs-ambrosia-minibar-css';
     #quickbarCSS = `
         #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
             filter: brightness(150%);
         }
     `;
+    /* RETIRED: Ambrosia AFK/idle swapper indicator styling.
     #idleLoadoutCSS = `
         #hs-ambrosia-loadout-idle-swap-indicator {
             margin-bottom: 10px;
@@ -131,6 +136,7 @@ export class HSAmbrosia extends HSModule
             }
         }
     `;
+    */
 
 
     // ==============================================
@@ -302,7 +308,7 @@ export class HSAmbrosia extends HSModule
 
         // Remove style tokens
         HSUI.removeInjectedStyle(this.#minibarCSSId);
-        HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
+        // RETIRED: HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
 
         this.isInitialized = false;
         this.activeLoadout = undefined;
@@ -322,10 +328,11 @@ export class HSAmbrosia extends HSModule
         }
         const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
         if (barWrapper) {
-            barWrapper.style.display = 'block';
+            barWrapper.style.display = 'flex';
             HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
             this.subscribeGameDataChanges();
             this.#berryMinibarsEnabled = true;
+            this.#updateBerryMinibars();
 
             // Restore automation/corruption summary headers when minibars quickbar is enabled.
             HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
@@ -382,32 +389,41 @@ export class HSAmbrosia extends HSModule
             return;
         }
 
-        // Blue bar
-        const blueBarOriginal = await HSElementHooker.HookElement('#ambrosiaProgressBar');
-        const blueBarClone = blueBarOriginal.cloneNode(true) as HTMLDivElement;
-        const blueBarProgress = blueBarClone.querySelector('#ambrosiaProgress') as HTMLDivElement;
-        const blueBarProgressText = blueBarClone.querySelector('#ambrosiaProgressText') as HTMLDivElement;
-
-        blueBarClone.id = HSGlobal.HSAmbrosia.blueBarId;
+        // Build independent bars rather than cloning the game's bars. The game uses an
+        // inline scaleX transform now, which would otherwise be copied at an arbitrary
+        // progress value and multiply the minibar's own progress updates.
+        const blueBar = document.createElement('div');
+        const blueBarProgress = document.createElement('div');
+        blueBar.id = HSGlobal.HSAmbrosia.blueBarId;
         blueBarProgress.id = HSGlobal.HSAmbrosia.blueBarProgressId;
-        blueBarProgressText.id = HSGlobal.HSAmbrosia.blueBarProgressTextId;
+        blueBar.appendChild(blueBarProgress);
 
-        // Red bar
-        const redBarOriginal = await HSElementHooker.HookElement('#pixelProgressBar');
-        const redBarClone = redBarOriginal.cloneNode(true) as HTMLDivElement;
-        const redBarProgress = redBarClone.querySelector('#pixelProgress') as HTMLDivElement;
-        const redBarProgressText = redBarClone.querySelector('#pixelProgressText') as HTMLDivElement;
-
-        redBarClone.id = HSGlobal.HSAmbrosia.redBarId;
+        const redBar = document.createElement('div');
+        const redBarProgress = document.createElement('div');
+        redBar.id = HSGlobal.HSAmbrosia.redBarId;
         redBarProgress.id = HSGlobal.HSAmbrosia.redBarProgressId;
-        redBarProgressText.id = HSGlobal.HSAmbrosia.redBarProgressTextId;
+        redBar.appendChild(redBarProgress);
+
+        // Purple Honey fills symmetrically from both outer edges toward the center.
+        const purpleBar = document.createElement('div');
+        const purpleBarProgress = document.createElement('div');
+        purpleBar.id = HSGlobal.HSAmbrosia.purpleBarId;
+        purpleBarProgress.id = HSGlobal.HSAmbrosia.purpleBarProgressId;
+        for (let i = 0; i < 2; i++) {
+            const half = document.createElement('div');
+            half.className = 'hs-purple-progress-fill';
+            purpleBarProgress.appendChild(half);
+        }
+        purpleBar.style.display = 'none';
+        purpleBar.appendChild(purpleBarProgress);
 
         // Wrapper for both
         const minibarWrapper = document.createElement('div') as HTMLDivElement;
         minibarWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
         minibarWrapper.style.display = 'none';
-        minibarWrapper.appendChild(blueBarClone);
-        minibarWrapper.appendChild(redBarClone);
+        minibarWrapper.appendChild(blueBar);
+        minibarWrapper.appendChild(redBar);
+        minibarWrapper.appendChild(purpleBar);
 
         // Append minibarWrapper as first child of groupWrapper
         if (groupWrapper.firstChild) {
@@ -418,6 +434,8 @@ export class HSAmbrosia extends HSModule
 
         this.#blueProgressMinibarElement = blueBarProgress;
         this.#redProgressMinibarElement = redBarProgress;
+        this.#purpleProgressMinibarBarElement = purpleBar;
+        this.#purpleProgressMinibarElement = purpleBarProgress;
     }
 
 
@@ -482,6 +500,7 @@ export class HSAmbrosia extends HSModule
         );
     }
 
+    /* RETIRED: Ambrosia AFK/idle swapper blue-bar calculation.
     private calculateBlueBarRequirementForLoadout(saveData: GameData, loadoutNumber: number): number | undefined {
         const loadout = saveData.blueberryLoadouts?.[loadoutNumber];
         if (!loadout || Object.keys(loadout).length === 0) return;
@@ -506,6 +525,7 @@ export class HSAmbrosia extends HSModule
 
         return val;
     }
+    */
 
     public findBestMatchingAmbrosiaLoadout(saveData: GameData): { id: string | undefined; score: number } {
         const currentUpgrades = saveData.ambrosiaUpgrades;
@@ -919,9 +939,10 @@ export class HSAmbrosia extends HSModule
 
         await this.#attachAmbrosiaTabEvents();
 
-        if (this.#isIdleSwapEnabled) {
-            void this.#activateIdleSwap();
-        }
+        // RETIRED: Ambrosia AFK/idle swapper activation on tab entry.
+        // if (this.#isIdleSwapEnabled) {
+        //     void this.#activateIdleSwap();
+        // }
 
         if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
 
@@ -935,9 +956,10 @@ export class HSAmbrosia extends HSModule
         this.#detachAmbrosiaTabEvents();
         this.#detachPersistentAmbrosiaLevelsDisplayListeners();
 
-        if (this.#isIdleSwapEnabled) {
-            this.#deactivateIdleSwap();
-        }
+        // RETIRED: Ambrosia AFK/idle swapper deactivation on tab exit.
+        // if (this.#isIdleSwapEnabled) {
+        //     this.#deactivateIdleSwap();
+        // }
 
         if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
             this.#restorePersistentAmbrosiaLevelsDisplay();
@@ -1007,11 +1029,12 @@ export class HSAmbrosia extends HSModule
         if (autoConfirmSetting) { // Should be already OFF, and no need to restore
             autoConfirmSetting.disable();
         }
-        const afkSwapperSetting = HSSettings.getSetting('ambrosiaIdleSwap' as keyof HSSettingsDefinition);
-        let restoreAfkSwapper = afkSwapperSetting && afkSwapperSetting.isEnabled();
-        if (afkSwapperSetting) {
-            afkSwapperSetting.disable();
-        }
+        // RETIRED: The quick importer no longer needs to suspend the AFK/idle swapper.
+        // const afkSwapperSetting = HSSettings.getSetting('ambrosiaIdleSwap' as keyof HSSettingsDefinition);
+        // const restoreAfkSwapper = afkSwapperSetting && afkSwapperSetting.isEnabled();
+        // if (afkSwapperSetting) {
+        //     afkSwapperSetting.disable();
+        // }
         let previouslyActiveSlot: HTMLButtonElement | null = null;
         let text: string | undefined;
         let importedCount = 0;
@@ -1116,9 +1139,10 @@ export class HSAmbrosia extends HSModule
         } finally {
             await HSUtils.stopDialogWatcher();
             HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
-            if (restoreAfkSwapper) {
-                afkSwapperSetting.enable();
-            }
+            // RETIRED: AFK/idle swapper restoration after quick import.
+            // if (restoreAfkSwapper) {
+            //     afkSwapperSetting.enable();
+            // }
             if (previouslyActiveSlot) {
                 previouslyActiveSlot.click();
             }
@@ -1260,6 +1284,7 @@ export class HSAmbrosia extends HSModule
     // -------- AFK/Idle Swapper & Game Data --------
     // ==============================================
 
+    /* RETIRED: Ambrosia AFK/idle swapper lifecycle and caches.
     async enableIdleSwap() {
         HSLogger.debug(() => 'Enabling Ambrosia Idle Swap', this.context);
 
@@ -1370,6 +1395,7 @@ export class HSAmbrosia extends HSModule
             }
         }
     }
+    */
 
     subscribeGameDataChanges() {
         const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
@@ -1387,8 +1413,9 @@ export class HSAmbrosia extends HSModule
         const gameDataMod = this.#cachedGameDataMod ?? HSModuleManager.getModule<HSGameData>('HSGameData');
 
         if (gameDataMod && this.gameDataSubscriptionId) {
-            // Only actually unsubscribe if no feature currently needs game data
-            if (!this.#isIdleSwapActive && !this.#berryMinibarsEnabled) {
+            // Only actually unsubscribe if the remaining minibar feature does not need game data.
+            // RETIRED condition also checked: !this.#isIdleSwapActive
+            if (!this.#berryMinibarsEnabled) {
                 gameDataMod.unsubscribeGameDataChange(this.gameDataSubscriptionId);
                 this.gameDataSubscriptionId = undefined;
                 HSLogger.debug(() => 'Unsubscribed from game data changes', this.context);
@@ -1410,6 +1437,10 @@ export class HSAmbrosia extends HSModule
         const gameData = gameDataAPI.getGameData();
         if (!gameData) return;
 
+        if (this.#berryMinibarsEnabled) {
+            this.#updateBerryMinibars(gameData, gameDataAPI);
+        }
+
         if (gameData.blueberryTime != null && gameData.redAmbrosiaTime != null) {
             const blueAmbrosiaBarValue = gameData.blueberryTime;
             const redAmbrosiaBarValue = gameData.redAmbrosiaTime;
@@ -1418,15 +1449,7 @@ export class HSAmbrosia extends HSModule
             const blueAmbrosiaPercent = ((blueAmbrosiaBarValue / blueAmbrosiaBarMax) * 100);
             const redAmbrosiaPercent = ((redAmbrosiaBarValue / redAmbrosiaBarMax) * 100);
 
-            if (this.#berryMinibarsEnabled) {
-                this.#updateBerryMinibars(
-                    blueAmbrosiaBarMax,
-                    redAmbrosiaBarMax,
-                    blueAmbrosiaPercent,
-                    redAmbrosiaPercent
-                );
-            }
-
+            /* RETIRED: Ambrosia AFK/idle swapper evaluation.
             if (this.#isIdleSwapActive) {
                 this.#refreshIdleSwapSettingsCache();
 
@@ -1480,40 +1503,72 @@ export class HSAmbrosia extends HSModule
 
                 this.#lastBlueBarValue = blueAmbrosiaBarValue;
             }
+            */
         }
     };
 
-    #updateBerryMinibars(
-        blueAmbrosiaBarMax: number,
-        redAmbrosiaBarMax: number,
-        blueAmbrosiaPercent: number,
-        redAmbrosiaPercent: number
-    ) {
+    #updateBerryMinibars(gameData?: GameData, gameDataAPI?: HSGameDataAPI) {
         if (!this.#berryMinibarsEnabled) {
             HSLogger.logOnce('HSAmbrosia.gameDataCallback() - berryMinibarsEnabled was false', 'hs-minibars-false');
             return;
         }
 
-        if (this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
-            if (!Number.isFinite(blueAmbrosiaBarMax) || blueAmbrosiaBarMax <= 0) {
-                HSLogger.warnOnce(`HSAmbrosia.gameDataCallback() - invalid blueAmbrosiaBarMax: ${blueAmbrosiaBarMax}`, 'hs-minibars-invalid-blue-max');
-            }
-            if (!Number.isFinite(redAmbrosiaBarMax) || redAmbrosiaBarMax <= 0) {
-                HSLogger.warnOnce(`HSAmbrosia.gameDataCallback() - invalid redAmbrosiaBarMax: ${redAmbrosiaBarMax}`, 'hs-minibars-invalid-red-max');
-            }
-            if (!Number.isFinite(blueAmbrosiaPercent) || !Number.isFinite(redAmbrosiaPercent)) {
-                HSLogger.warnOnce(`HSAmbrosia.gameDataCallback() - invalid minibar percents: blue=${blueAmbrosiaPercent}, red=${redAmbrosiaPercent}`, 'hs-minibars-invalid-percents');
-            }
-            this.#blueProgressMinibarElement.style.width = `${blueAmbrosiaPercent}% `;
-            this.#redProgressMinibarElement.style.width = `${redAmbrosiaPercent}% `;
+        gameDataAPI ??= this.#cachedGameDataAPI
+            ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        gameData ??= gameDataAPI?.getGameData();
+
+        if (gameDataAPI && gameData && this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
+            const blueRequirement = gameDataAPI.ambrosia.calculateRequiredBlueberryTime();
+            const redRequirement = gameDataAPI.ambrosia.calculateRequiredRedAmbrosiaTime();
+            const blueProgress = blueRequirement > 0
+                ? Math.min(1, Math.max(0, gameData.blueberryTime / blueRequirement))
+                : 0;
+            const redProgress = redRequirement > 0
+                ? Math.min(1, Math.max(0, gameData.redAmbrosiaTime / redRequirement))
+                : 0;
+
+            // These are the same save values and requirement formulas used by the
+            // game, so they continue updating even when its bar elements are stale.
+            this.#blueProgressMinibarElement.style.transform = `scaleX(${blueProgress})`;
+            this.#redProgressMinibarElement.style.transform = `scaleX(${redProgress})`;
         } else {
             HSLogger.warnOnce(`
-        HSAmbrosia.gameDataCallback() - minibar element(s) undefined.
-            blue: ${this.#blueProgressMinibarElement},
-        red: ${this.#redProgressMinibarElement} `, 'hs-minibars-undefined');
+        HSAmbrosia.gameDataCallback() - progress data or minibar element(s) undefined.
+            game data: ${gameData},
+            game data API: ${gameDataAPI},
+            minibar blue: ${this.#blueProgressMinibarElement},
+            minibar red: ${this.#redProgressMinibarElement} `, 'hs-minibars-undefined');
+        }
+
+        const purpleTabLabel = document.querySelector<HTMLElement>('[i18n="tabs.singularity.purple"]');
+        const purpleTabButton = purpleTabLabel?.closest('button')
+            ?? document.getElementById('toggleSingularitySubTab6');
+        const purpleUnlocked = purpleTabButton instanceof HTMLElement
+            && !purpleTabButton.hidden
+            && purpleTabButton.getAttribute('aria-hidden') !== 'true'
+            && getComputedStyle(purpleTabButton).display !== 'none';
+
+        if (this.#purpleProgressMinibarBarElement) {
+            this.#purpleProgressMinibarBarElement.style.display = purpleUnlocked ? 'block' : 'none';
+        }
+        if (!purpleUnlocked) return;
+
+        const purpleData = gameData as (GameData & { purpleHoneyProgress?: number }) | undefined;
+        if (gameDataAPI && purpleData?.purpleHoneyProgress != null && this.#purpleProgressMinibarElement) {
+            const purpleRequirement = gameDataAPI.ambrosia.calculatePurpleHoneyConversionFactor();
+            const progress = purpleRequirement > 0
+                ? Math.min(1, Math.max(0, purpleData.purpleHoneyProgress / purpleRequirement))
+                : 0;
+            this.#purpleProgressMinibarElement.style.setProperty('--progress-fill', String(progress));
+        } else {
+            HSLogger.warnOnce(`
+        HSAmbrosia.gameDataCallback() - purple progress data or minibar element undefined.
+            progress: ${purpleData?.purpleHoneyProgress},
+            minibar: ${this.#purpleProgressMinibarElement} `, 'hs-purple-minibar-undefined');
         }
     }
 
+    /* RETIRED: Ambrosia AFK/idle loadout selection and indicator.
     async #evaluateIdleSwap(
         gameData: GameData,
         blueAmbrosiaBarValue: number,
@@ -1697,4 +1752,5 @@ export class HSAmbrosia extends HSModule
 
         HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
     }
+    */
 }

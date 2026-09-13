@@ -785,6 +785,7 @@ export class SingularityView extends GameView<SINGULARITY_VIEW> {
             case 'toggleSingularitySubTab3': return SINGULARITY_VIEW.PERKS;
             case 'toggleSingularitySubTab4': return SINGULARITY_VIEW.OCTERACTS;
             case 'toggleSingularitySubTab5': return SINGULARITY_VIEW.AMBROSIA;
+            case 'toggleSingularitySubTab6': return SINGULARITY_VIEW.PURPLE;
         }
         return SINGULARITY_VIEW.UNKNOWN;
     }

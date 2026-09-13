@@ -9,7 +9,7 @@
    border: 2px solid orange;
 }
 
-/* AFK Swapper toggle button in Ambrosia subtab */
+/* RETIRED: AFK Swapper toggle button in Ambrosia subtab.
 #hs-ambrosia-loadout-idle-swap-toggle {
     font-size: 1.0em;
     font-family: fantasy;
@@ -21,6 +21,7 @@
     cursor: pointer;
     color: #774ed1;
 }
+*/
 
 /* Always hide the visually-useless ambrosia minibars numbers to avoid a 'jump' when enabling them. */
 #hs-blue-progress-text,

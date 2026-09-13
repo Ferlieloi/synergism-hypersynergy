@@ -48,7 +48,7 @@ Quick overview:
 - Ambrosia loadout auto switcher when using ADD or TIME codes
 - Toggleable patches (such as overflow fix on ambrosia page)
 - Patch to add visible names for Quark Shop items
-- Ambrosia Loadout Idle Swapper
+<!-- RETIRED: Ambrosia Loadout Idle Swapper -->
 - Game data access via GDS™
 - Ambrosia minibars
 

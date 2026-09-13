@@ -2,7 +2,12 @@ import { HSSettingActionParams, HSSettingBase, HSSettingType } from "../../../ty
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
+import { HSUI } from "../hs-ui";
 import { HSSettings } from "./hs-settings";
+
+export interface HSSettingToggleOptions {
+    preserveGameDataDependents?: boolean;
+}
 
 /**
  * Class: HSSetting
@@ -13,6 +18,8 @@ import { HSSettings } from "./hs-settings";
  * Author: Swiffy
  */
 export abstract class HSSetting<T extends HSSettingType> {
+    static #isDisablingGameDataDependents = false;
+
     protected context = 'HSSetting';
 
     #settingEnabledString;
@@ -47,8 +54,59 @@ export abstract class HSSetting<T extends HSSettingType> {
         this.#handleManualToggle(true);
     }
 
-    disable() {
-        this.#handleManualToggle(false);
+    disable(options?: HSSettingToggleOptions) {
+        this.#handleManualToggle(false, options);
+    }
+
+    #getEnabledGameDataDependents() {
+        return Object.values(HSSettings.getSettings()).filter((setting) => {
+            const definition = setting.getDefinition();
+            return definition.settingName !== 'useGameData'
+                && definition.usesGameData === true
+                && setting.isEnabled();
+        });
+    }
+
+    #disableGameDataDependentsWithWarning(): void {
+        const dependents = this.#getEnabledGameDataDependents();
+        if (dependents.length === 0) return;
+
+        const dependentNames = dependents.map((setting) => setting.getDefinition().settingDescription);
+        const warning = `Turning off GDS will also turn off: ${dependentNames.join(', ')}.`;
+        HSLogger.warn(warning, this.context);
+        void HSUI.Notify(warning, {
+            position: 'top',
+            notificationType: 'warning',
+            displayDuration: 6000,
+            width: 440,
+            height: dependentNames.length > 2 ? 80 : 60,
+        });
+
+        HSSetting.#isDisablingGameDataDependents = true;
+        try {
+            for (const setting of dependents) {
+                setting.disable();
+            }
+        } finally {
+            HSSetting.#isDisablingGameDataDependents = false;
+        }
+    }
+
+    #disableGameDataIfUnused(): void {
+        if (
+            HSSetting.#isDisablingGameDataDependents
+            || this.definition.settingName === 'useGameData'
+            || this.definition.usesGameData !== true
+            || this.definition.enabled
+        ) return;
+
+        if (this.#getEnabledGameDataDependents().length > 0) return;
+
+        const gameDataSetting = HSSettings.getSetting('useGameData');
+        if (gameDataSetting?.isEnabled()) {
+            HSLogger.info('No enabled settings require GDS; turning GDS off.', this.context);
+            gameDataSetting.disable();
+        }
     }
 
     // Toggles the setting's state and updates the UI accordingly
@@ -80,18 +138,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         // If we are disabling GDS, we will auto-disable all features that use it
         if (this.definition.settingName === 'useGameData') {
             if (hasStateChanged && !newState) {
-                const settings = HSSettings.getSettings();
-
-                for (const [settingKey, setting] of Object.entries(settings)) {
-                    const def = setting.getDefinition();
-
-                    if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
-                        continue;
-
-                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled() && setting.definition.settingName !== "startAutosing") {
-                        setting.disable();
-                    }
-                }
+                this.#disableGameDataDependentsWithWarning();
             }
         }
 
@@ -117,29 +164,19 @@ export abstract class HSSetting<T extends HSSettingType> {
         }
 
         await this.handleSettingAction('state', newState);
+        this.#disableGameDataIfUnused();
 
         // Persist the changed enabled state to storage so UI toggles stick
         HSSettings.saveSettingsToStorage();
     }
 
-    #handleManualToggle(newState: boolean) {
+    #handleManualToggle(newState: boolean, options?: HSSettingToggleOptions) {
         const hasStateChanged = this.definition.enabled !== newState;
         if (!hasStateChanged) return;
 
         if (this.definition.settingName === 'useGameData') {
-            if (hasStateChanged && !newState) {
-                const settings = HSSettings.getSettings();
-
-                for (const [settingKey, setting] of Object.entries(settings)) {
-                    const def = setting.getDefinition();
-
-                    if (HSGlobal.HSSettings.gameDataCheckBlacklist.includes(settingKey))
-                        continue;
-
-                    if ("usesGameData" in def && def.usesGameData === true && setting.isEnabled() && setting.definition.settingName !== "startAutosing") {
-                        setting.disable();
-                    }
-                }
+            if (hasStateChanged && !newState && !options?.preserveGameDataDependents) {
+                this.#disableGameDataDependentsWithWarning();
             }
         }
 
@@ -169,7 +206,13 @@ export abstract class HSSetting<T extends HSSettingType> {
             }
         }
 
-        this.handleSettingAction('state', newState);
+        void this.handleSettingAction('state', newState).then(
+            () => this.#disableGameDataIfUnused(),
+            (error) => {
+                HSLogger.error(`Setting action failed for ${this.definition.settingName}: ${error}`, this.context);
+                this.#disableGameDataIfUnused();
+            }
+        );
         HSSettings.saveSettingsToStorage();
     }
 

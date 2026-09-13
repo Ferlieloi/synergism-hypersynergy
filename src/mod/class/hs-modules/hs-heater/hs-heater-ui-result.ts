@@ -1,7 +1,7 @@
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
-import { HSQuickbarIconPickerController } from "../hs-qolQuickbarIconPicker";
+import { HSQuickbarIconPickerController } from "../hs-qol-quickbar/hs-qolQuickbarIconPicker";
 import { escapeHtml } from "./hs-heater-utils";
 import { buildResultTableHtmlFromNormalized } from "./hs-heater-ui-result-renderer";
 import { clearHeaterIconOverride, getEffectiveHeaterIconSrc, getOverrideHeaterIconSrc, setHeaterIconOverride, } from "./hs-heater-icon-store";

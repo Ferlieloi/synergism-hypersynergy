@@ -12,12 +12,11 @@ import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
-import { HSUI } from "../hs-core/hs-ui";
-import { HSQOLAutomationQuickbar } from "./hs-qolQuickbarAutomation";
-import { HSQOLEventsQuickbar } from "./hs-qolQuickbarEvents";
-import { HSQOLCorruptionQuickbar } from "./hs-qolQuickbarCorruption";
-import { HSQuickbarManager } from "./hs-qolQuickbarManager";
-import type { QUICKBAR_ID } from "./hs-qolQuickbarManager";
+import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
+import { HSQOLEventsQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarEvents";
+import { HSQOLCorruptionQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarCorruption";
+import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
+import type { QUICKBAR_ID } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 
 /**
  *  Class: HSQOLButtons
@@ -75,7 +74,8 @@ export class HSQOLButtons extends HSModule {
         // Any settings-driven feature activation is handled by HSSettings.syncSettings().
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
-        this.injectAFKSwapperToggleButton();
+        // RETIRED: Ambrosia AFK/idle swapper.
+        // this.injectAFKSwapperToggleButton();
     }
 
     public getEventsQuickbarSection(): HTMLElement {
@@ -752,40 +752,7 @@ export class HSQOLButtons extends HSModule {
         HSQuickbarManager.getInstance().disableQuickbar(id);
     }
 
-    /**
-     * Injects a custom button into the Ambrosia subtab when active, waiting for DOM readiness.
-     */
-    public async injectAFKSwapperToggleButton(): Promise<void> {
-        if (document.getElementById('hs-ambrosia-loadout-idle-swap-toggle')) return;
-        try {
-            const parent = await HSElementHooker.HookElement('#singularityAmbrosia', undefined, 2000);
-            const child = await HSElementHooker.HookElement('#ambrosiaProgressBar', undefined, 2000);
-            const afkSwapperToggle = document.createElement('button');
-            afkSwapperToggle.id = 'hs-ambrosia-loadout-idle-swap-toggle';
-            afkSwapperToggle.textContent = 'Toggle AFK Swapper';
-            afkSwapperToggle.classList.add('hs-tooltip');
-            afkSwapperToggle.dataset.tooltip = [
-                'You need 3 SPECIFIC loadouts for the AFK Swapper to work, and work best.',
-                'It is recommended to use the Ambrosia Heater to generate the correct and optimal loadouts.',
-                '- Ambrosia Generation + Octeract (Gen + Oct) => Main/default loadout, used to have both oct and amb speed',
-                '- Blue Luck => Used when filling blue bar (this loadout most notably does NOT want any brick of lead)',
-                '- Red Luck => Used when filling red bar',
-            ].join('\n');
-
-            afkSwapperToggle.addEventListener('click', () => {
-                const idleSwapToggle = document.getElementById('hs-setting-ambrosia-idle-swap-btn') as HTMLElement;
-                if (idleSwapToggle) {
-                    idleSwapToggle.click();
-                }
-            });
-
-            HSUI.injectHTMLElement(afkSwapperToggle, (element) => {
-                parent.insertBefore(element, child);
-            });
-        } catch (e) {
-            HSLogger.warn(`injectAFKSwapperToggleButton: Could not find required elements: ${e}`, this.context);
-        }
-    }
+    // RETIRED: injectAFKSwapperToggleButton() and its Ambrosia-tab toggle UI.
 
     /**
      * Subscribe to a SINGULARITY_VIEW tab visit and run a callback.

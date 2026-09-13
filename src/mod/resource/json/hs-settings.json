@@ -427,12 +427,12 @@
   },
   "ambrosiaIdleSwap": {
     "settingName": "ambrosiaIdleSwap",
-    "settingDescription": "Ambrosia AFK swapper",
+    "settingDescription": "RETIRED: Ambrosia AFK swapper",
     "settingHelpText": "When enabled, automatically switches ambrosia loadouts depending on the ambrosia bar progress. The 3 loadouts should be made with the Ambrosia Heater to avoid any issue. IMPORTANT: BY DESIGN, THE AUTO SWAPPER WILL ONLY WORK WHEN IN THE AMBROSIA VIEW, SO NO \u0027SWAPPING IN THE BACKGROUND\u0027",
     "settingType": "boolean",
-    "enabled": true,
-    "usesGameData": true,
-    "settingAction": "ambrosiaIdleSwapAction",
+    "enabled": false,
+    "usesGameData": false,
+    "hidden": true,
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "ambrosia2",
@@ -442,10 +442,11 @@
   },
   "ambrosiaIdleSwapOcteractLoadout": {
     "settingName": "ambrosiaIdleSwapOcteractLoadout",
-    "settingDescription": "Ambrosia Generation + Octeract (Gen + Oct) loadout",
+    "settingDescription": "RETIRED: Ambrosia Generation + Octeract (Gen + Oct) loadout",
     "settingHelpText": "The AFK swapper will stay on this loadout, except when blue or red bar are about to be filled.",
     "settingType": "selectstring",
-    "enabled": true,
+    "enabled": false,
+    "hidden": true,
     "settingValue": "",
     "settingControl": {
       "controlId": "hs-setting-idle-swap-octeract-loadout-value",
@@ -526,10 +527,11 @@
   },
   "ambrosiaIdleSwapNormalLuckLoadout": {
     "settingName": "ambrosiaIdleSwapNormalLuckLoadout",
-    "settingDescription": "Blue Luck loadout",
+    "settingDescription": "RETIRED: Blue Luck loadout",
     "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when the blue ambrosia bar is about to hit 100%. This loadout does NOT want any brick of lead.",
     "settingType": "selectstring",
-    "enabled": true,
+    "enabled": false,
+    "hidden": true,
     "settingValue": "",
     "settingControl": {
       "controlId": "hs-setting-idle-swap-normal-luck-loadout-value",
@@ -610,10 +612,11 @@
   },
   "ambrosiaIdleSwapRedLuckLoadout": {
     "settingName": "ambrosiaIdleSwapRedLuckLoadout",
-    "settingDescription": "Red Luck loadout",
+    "settingDescription": "RETIRED: Red Luck loadout",
     "settingHelpText": "Ambrosia AFK swapper will switch to this loadout when red ambrosia bar is about to hit 100%.",
     "settingType": "selectstring",
-    "enabled": true,
+    "enabled": false,
+    "hidden": true,
     "settingValue": "",
     "settingControl": {
       "controlId": "hs-setting-idle-swap-red-luck-loadout-value",

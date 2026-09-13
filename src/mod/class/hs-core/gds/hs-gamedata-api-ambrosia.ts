@@ -67,6 +67,26 @@ export class AmbrosiaHelper {
         );
     }
 
+    #isTwoMindEnabled(data: GameData): boolean {
+        const upgrades = data.ambrosiaUpgrades as typeof data.ambrosiaUpgrades & {
+            twoMind?: { blueberriesInvested?: number };
+        };
+        return (upgrades.twoMind?.blueberriesInvested ?? 0) > 0
+            && data.singularityChallenges.taxmanLastStand.completions > 0
+            && !data.singularityChallenges.noAmbrosiaUpgrades.enabled
+            && !data.singularityChallenges.sadisticPrequel.enabled;
+    }
+
+    #getBarDependence(data: GameData): { completions: number; enabled: boolean } {
+        const challenges = data.singularityChallenges as typeof data.singularityChallenges & {
+            barDependence?: { completions?: number; enabled?: boolean };
+        };
+        return {
+            completions: challenges.barDependence?.completions ?? 0,
+            enabled: challenges.barDependence?.enabled ?? false,
+        };
+    }
+
     #getAmbrosiaUpgradeCacheName(upgradeName: AmbrosiaUpgradeNames, freeLevelsOnly: boolean): keyof CalculationCache {
         return (`AMB_${upgradeName}${freeLevelsOnly ? '_FREE' : ''}`) as keyof CalculationCache;
     }
@@ -926,6 +946,8 @@ export class AmbrosiaHelper {
     calculateRequiredBlueberryTime() {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
+        const barDependence = this.#getBarDependence(data);
+        const twoMindEnabled = this.#isTwoMindEnabled(data);
         const cacheName = 'RequiredBlueberryTime' as keyof CalculationCache;
         const timePerAmbrosia = HSGlobal.HSAmbrosia.TIME_PER_AMBROSIA; // Currently 45
 
@@ -936,10 +958,24 @@ export class AmbrosiaHelper {
             data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
             data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
+            twoMindEnabled ? 1 : 0,
+            barDependence.enabled ? 1 : 0,
+            barDependence.completions,
         ];
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (cached !== undefined) return cached;
+
+        if (twoMindEnabled) {
+            return 25_000_000;
+        }
+
+        if (barDependence.enabled) {
+            return Math.max(
+                25_000_000,
+                1.5e15 * (barDependence.completions + 1) / (data.lifetimeAmbrosia + 1)
+            );
+        }
 
         let val = timePerAmbrosia;
         val += Math.floor((data.lifetimeAmbrosia / 300));
@@ -963,27 +999,93 @@ export class AmbrosiaHelper {
     calculateRequiredRedAmbrosiaTime() {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
+        const barDependence = this.#getBarDependence(data);
+        const twoMindEnabled = this.#isTwoMindEnabled(data);
 
         const cacheName = 'RequiredRedAmbrosiaTime' as keyof CalculationCache;
         const calculationVars: number[] = [
             data.lifetimeRedAmbrosia,
             data.singularityChallenges.limitedTime.completions,
+            twoMindEnabled ? 1 : 0,
+            barDependence.enabled ? 1 : 0,
+            barDependence.completions,
         ];
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (cached !== undefined) return cached;
 
+        if (twoMindEnabled) {
+            return 7_500;
+        }
+
+        if (barDependence.enabled) {
+            return Math.max(
+                7_500,
+                2e11 * (barDependence.completions + 1) / (data.lifetimeRedAmbrosia + 1)
+            );
+        }
+
         const redBarRequirementMultiplier = this.#ctx.getSingularityChallengeEffect('limitedTime', 'barRequirementMultiplier');
 
         let val = HSGlobal.HSAmbrosia.TIME_PER_RED_AMBROSIA;
-        val += 200 * data.lifetimeRedAmbrosia;
+        val += 2 * data.lifetimeRedAmbrosia;
 
-        const max = 1e6 * +redBarRequirementMultiplier;
+        const max = 1e4 * +redBarRequirementMultiplier;
         val *= +redBarRequirementMultiplier;
 
         const reduced = Math.min(max, val);
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduced;
+    }
+
+    calculatePurpleHoneyConversionFactor() {
+        const data = this.#ctx.getGameData() as (GameData & {
+            purpleHoneyProgress?: number;
+            purpleReactor?: {
+                purpleHoney?: number;
+                lifetimePurpleHoney?: number;
+            };
+            purpleReactorUpgrades?: Record<string, number>;
+        }) | undefined;
+        if (!data) return 0;
+
+        if (this.#isTwoMindEnabled(data)) {
+            return 150_000;
+        }
+
+        const barDependence = this.#getBarDependence(data);
+        const purpleHoney = data.purpleReactor?.purpleHoney ?? 0;
+        const lifetimePurpleHoney = data.purpleReactor?.lifetimePurpleHoney ?? 0;
+
+        if (barDependence.enabled) {
+            return Math.max(
+                150_000,
+                1e10 * Math.pow(barDependence.completions + 1, 2) / Math.max(1, lifetimePurpleHoney)
+            );
+        }
+
+        const upgrades = data.purpleReactorUpgrades ?? {};
+        const requirementReduction = [0.006, 0.005, 0.004, 0.003]
+            .reduce((multiplier, reduction, index) => {
+                const level = upgrades[`purpleHoneyRequirementReduction${index + 1}`] ?? 0;
+                return multiplier * (1 - reduction * level);
+            }, 1);
+        const singularitySizeMultiplier = 1
+            - Math.max(0, Math.floor((data.highestSingularityCount - 280) / 2) / 100);
+        const lifetimeMultiplier = Math.min(25_000, lifetimePurpleHoney * 0.9 + 2_500) / 2_500;
+        const currentHoneyMultiplier = 1 + Math.min(
+            purpleHoney / 10_000,
+            Math.log(1 + purpleHoney / 100)
+        );
+        const taxmanLastStandMultiplier = 1
+            - 0.01 * data.singularityChallenges.taxmanLastStand.completions;
+
+        return 50_000
+            * singularitySizeMultiplier
+            * lifetimeMultiplier
+            * currentHoneyMultiplier
+            * requirementReduction
+            * taxmanLastStandMultiplier;
     }
 
     calculateNumberOfThresholds() {

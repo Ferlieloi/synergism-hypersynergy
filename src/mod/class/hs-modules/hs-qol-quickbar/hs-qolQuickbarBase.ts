@@ -1,4 +1,4 @@
-import { HSLogger } from "../hs-core/hs-logger";
+import { HSLogger } from "../../hs-core/hs-logger";
 
 export abstract class HSQOLQuickbarBase {
     protected container: HTMLDivElement | null = null;

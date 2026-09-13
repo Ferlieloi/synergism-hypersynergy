@@ -1,8 +1,8 @@
-﻿import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { HSLogger } from "../hs-core/hs-logger";
+﻿import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
+import { HSLogger } from "../../hs-core/hs-logger";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
-import { HSWebSocket } from "../hs-core/hs-websocket";
+import { HSWebSocket } from "../../hs-core/hs-websocket";
 
 /**
  * Class: HSQOLEventsQuickbar

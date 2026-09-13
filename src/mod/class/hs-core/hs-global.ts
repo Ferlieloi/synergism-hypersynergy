@@ -131,14 +131,14 @@ export const HSGlobal: IHSGlobal = class {
         ],
         gameDataRequiredTooltip: 'This feature requires Game Data Sniffing to be enabled.',
 
-        // When game data is disabled, we will auto-disable all features that use it
-        // This blacklist is to ensure that auto-disable ignores these features even if they use game data
+        // Settings exempt from the "GDS must already be enabled" check. Features in
+        // this list may enable GDS themselves when switched on.
         gameDataCheckBlacklist: [
             'useGameData',
             'stopSniffOnError',
             // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            'ambrosiaIdleSwap',
+            // RETIRED: 'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
@@ -248,16 +248,17 @@ export const HSGlobal: IHSGlobal = class {
         quickBarId: 'hs-ambrosia-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
 
-        idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
-        idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
-        idleSwapMaxBlueThreshold: 97,
-        idleSwapMinBlueThreshold: 3,
-        idleSwapMaxRedThreshold: 99,
-        idleSwapMinRedThreshold: 1,
+        // RETIRED: Ambrosia AFK/idle swapper constants.
+        // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
+        // idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
+        // idleSwapMaxBlueThreshold: 97,
+        // idleSwapMinBlueThreshold: 3,
+        // idleSwapMaxRedThreshold: 99,
+        // idleSwapMinRedThreshold: 1,
 
         // Constants ripped from the game code
         TIME_PER_AMBROSIA: 45,
-        TIME_PER_RED_AMBROSIA: 100000,
+        TIME_PER_RED_AMBROSIA: 1000,
         digitReduction: 4,
 
         blueBarId: 'hs-blue-progress-bar',
@@ -266,6 +267,8 @@ export const HSGlobal: IHSGlobal = class {
         redBarId: 'hs-red-progress-bar',
         redBarProgressId: 'hs-red-progress',
         redBarProgressTextId: 'hs-red-progress-text',
+        purpleBarId: 'hs-purple-progress-bar',
+        purpleBarProgressId: 'hs-purple-progress',
         barWrapperId: 'hs-minibars-wrapper',
     }
 
@@ -364,9 +367,10 @@ export const HSGlobal: IHSGlobal = class {
                     'toggleSingularitySubTab2',
                     'toggleSingularitySubTab3',
                     'toggleSingularitySubTab4',
-                    'toggleSingularitySubTab5'
+                    'toggleSingularitySubTab5',
+                    'toggleSingularitySubTab6'
                 ],
-                subViewsSelector: ['#toggleSingularitySubTab1', '#toggleSingularitySubTab2', '#toggleSingularitySubTab3', '#toggleSingularitySubTab4', '#toggleSingularitySubTab5'],
+                subViewsSelector: ['#toggleSingularitySubTab1', '#toggleSingularitySubTab2', '#toggleSingularitySubTab3', '#toggleSingularitySubTab4', '#toggleSingularitySubTab5', '#toggleSingularitySubTab6'],
                 viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.SETTINGS, {
