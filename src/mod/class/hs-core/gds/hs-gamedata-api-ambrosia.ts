@@ -1065,11 +1065,22 @@ export class AmbrosiaHelper {
         }
 
         const upgrades = data.purpleReactorUpgrades ?? {};
-        const requirementReduction = [0.006, 0.005, 0.004, 0.003]
-            .reduce((multiplier, reduction, index) => {
-                const level = upgrades[`purpleHoneyRequirementReduction${index + 1}`] ?? 0;
-                return multiplier * (1 - reduction * level);
-            }, 1);
+        const requirementReductionUpgrades = [
+            { key: 'purpleHoneyRequirementReduction1', costPerLevel: 20, reductionPerLevel: 0.006 },
+            { key: 'purpleHoneyRequirementReduction2', costPerLevel: 400, reductionPerLevel: 0.005 },
+            { key: 'purpleHoneyRequirementReduction3', costPerLevel: 8_000, reductionPerLevel: 0.004 },
+            { key: 'purpleHoneyRequirementReduction4', costPerLevel: 160_000, reductionPerLevel: 0.003 },
+        ] as const;
+        const requirementReduction = requirementReductionUpgrades.reduce(
+            (multiplier, { key, costPerLevel, reductionPerLevel }) => {
+                // Save data stores cumulative Purple Honey spent, not the upgrade level.
+                // These four upgrades have linear costs and a maximum level of 50.
+                const invested = upgrades[key] ?? 0;
+                const level = Math.min(50, Math.max(0, Math.floor((invested + 0.001) / costPerLevel)));
+                return multiplier * (1 - reductionPerLevel * level);
+            },
+            1
+        );
         const singularitySizeMultiplier = 1
             - Math.max(0, Math.floor((data.highestSingularityCount - 280) / 2) / 100);
         const lifetimeMultiplier = Math.min(25_000, lifetimePurpleHoney * 0.9 + 2_500) / 2_500;

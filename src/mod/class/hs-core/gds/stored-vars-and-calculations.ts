@@ -1295,7 +1295,7 @@ export const SINGULARITY_CHALLENGE_DATA: {
         quarkMult: 1 + 0.02 * n,
         globalSpeed: 1 + 0.12 * n,
         ascensionSpeed: 1 + 0.12 * n,
-        barRequirementMultiplier: 1 - 0.02 * n,
+        barRequirementMultiplier: 1 - 0.01 * n,
         shopUpgrade: n >= 5,
         shopUpgrade2: n >= 10
       }
