@@ -869,6 +869,40 @@ export class HSHepteracts extends HSModule {
         return { resource, seconds };
     }
 
+    #calculateAbyssHepteractsToCraft(
+        requiredBalance: number,
+        currentBalance: number,
+        timesCapacityExtended: number,
+        hasDoubleCapacity: boolean
+    ): number {
+        if (requiredBalance <= currentBalance) return 0;
+
+        let balance = Math.max(0, currentBalance);
+        let baseCapacity = Math.pow(2, Math.max(0, Math.floor(timesCapacityExtended)));
+        const capacityMultiplier = hasDoubleCapacity ? 2 : 1;
+        let finalCapacity = baseCapacity * capacityMultiplier;
+        let amountToCraft = 0;
+
+        // Mirrors autoCraftHepteracts: fill the current final capacity, spend
+        // the old base capacity to expand, then double both capacities. The
+        // double-capacity reward therefore retains 1/4 of the new final cap.
+        while (requiredBalance > finalCapacity) {
+            const amountToFill = Math.max(0, finalCapacity - balance);
+            amountToCraft += amountToFill;
+            balance += amountToFill;
+
+            balance = Math.max(0, balance - baseCapacity);
+            baseCapacity *= 2;
+            finalCapacity = baseCapacity * capacityMultiplier;
+
+            if (!Number.isFinite(amountToCraft) || !Number.isFinite(finalCapacity)) {
+                return Number.POSITIVE_INFINITY;
+            }
+        }
+
+        return amountToCraft + Math.max(0, requiredBalance - balance);
+    }
+
     async #updatePlatonicUpgradeEstimate(upgradeId: number) {
         if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
 
@@ -904,11 +938,20 @@ export class HSHepteracts extends HSModule {
         if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
 
         const requiredAbyssals = requirements.abyssals ?? 0;
-        const ownedAbyssals = gameData.hepteracts?.abyss?.BAL ?? 0;
-        const missingAbyssals = Math.max(0, requiredAbyssals - ownedAbyssals);
+        const abyssHepteract = gameData.hepteracts?.abyss;
+        const ownedAbyssals = parseGameDataNumber(abyssHepteract?.BAL ?? 0);
+        const hasDoubleCapacity = Boolean(
+            gameDataAPI.getSingularityChallengeEffect('limitedAscensions', 'hepteractCap')
+        );
+        const abyssalsToCraft = this.#calculateAbyssHepteractsToCraft(
+            requiredAbyssals,
+            ownedAbyssals,
+            abyssHepteract?.TIMES_CAP_EXTENDED ?? 0,
+            hasDoubleCapacity
+        );
         const hepteractCostMultiplier = gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
-        const rawHepteractsNeeded = missingAbyssals * 1e8 * hepteractCostMultiplier;
-        const abyssCraftCubeCost = missingAbyssals * 69 * hepteractCostMultiplier;
+        const rawHepteractsNeeded = abyssalsToCraft * 1e8 * hepteractCostMultiplier;
+        const abyssCraftCubeCost = abyssalsToCraft * 69 * hepteractCostMultiplier;
 
         const estimates: PlatonicResourceEstimate[] = [
             this.#timeUntilResource(
