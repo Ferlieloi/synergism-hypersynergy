@@ -62,7 +62,7 @@
   "hiddenVanillaTabs": {
     "settingName": "hiddenVanillaTabs",
     "settingDescription": "Hide vanilla tabs",
-    "settingHelpText": "Select the tabs you want hidden from the vanilla tab row (Ctrl+click to select multiple).",
+    "settingHelpText": "Click each tab you want to hide. Click a selected tab again to restore it.",
     "settingType": "selectstrings",
     "enabled": true,
     "settingValue": [],
@@ -74,7 +74,7 @@
       "controlPage": "ui",
       "props": {
         "multiple": "multiple",
-        "size": "8"
+        "size": "16"
       },
       "selectOptions": [
         {
@@ -98,12 +98,28 @@
           "value": "runestab"
         },
         {
+          "text": "Challenges",
+          "value": "challengetab"
+        },
+        {
           "text": "Research",
           "value": "researchtab"
         },
         {
           "text": "Ant Hill",
           "value": "anttab"
+        },
+        {
+          "text": "WOW! Cubes",
+          "value": "cubetab"
+        },
+        {
+          "text": "Corruption",
+          "value": "traitstab"
+        },
+        {
+          "text": "Singularity",
+          "value": "singularitytab"
         },
         {
           "text": "Shop",
@@ -1412,7 +1428,7 @@
   "hideMaxedGQUpgrades": {
     "settingName": "hideMaxedGQUpgrades",
     "settingDescription": "Hide maxed GQ upgrades",
-    "settingHelpText": "When enabled, hides maxed Golden Quark upgrades in the quick bar.",
+    "settingHelpText": "Uses the game's native toggle to hide maxed Golden Quark upgrades and remembers the choice after reload.",
     "settingType": "boolean",
     "enabled": true,
     "settingAction": "hideMaxedGQUpgradesAction",
@@ -1592,7 +1608,7 @@
   "hideMaxedOctUpgrades": {
     "settingName": "hideMaxedOctUpgrades",
     "settingDescription": "Hide maxed Octeract upgrades",
-    "settingHelpText": "When enabled, hides maxed Octeract upgrades in the quick bar.",
+    "settingHelpText": "Uses the game's native toggle to hide maxed Octeract upgrades and remembers the choice after reload.",
     "settingType": "boolean",
     "enabled": true,
     "settingAction": "hideMaxedOctUpgradesAction",

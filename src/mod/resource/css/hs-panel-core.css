@@ -599,6 +599,10 @@ select::-webkit-scrollbar-corner {
     height: 80px;
 }
 
+#hs-setting-hidden-vanilla-tabs {
+    height: 160px;
+}
+
 .hs-panel-setting-block-select-input[multiple] option:checked {
     background-color: green;
     color: white;

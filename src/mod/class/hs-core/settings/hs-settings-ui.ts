@@ -17,6 +17,19 @@ import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
 
+interface NativeGameTab extends HTMLButtonElement {
+    makeRemoveable(): NativeGameTab;
+    canBeRemoved(): boolean;
+    toggleHidden(): void;
+    isHidden(): boolean;
+    showCloseButton(): void;
+}
+
+interface NativeGameTabRow extends HTMLDivElement {
+    getSubs(): NativeGameTab[];
+    isEditing(): boolean;
+}
+
 export interface HSSettingsUIDependencies {
     settingsParsed: boolean;
     settings: HSSettingRecord;
@@ -30,6 +43,8 @@ export interface HSSettingsUIDependencies {
 
 export class HSSettingsUI {
     static readonly #context = 'HSSettingsUI';
+    static #nativeTabPreferenceObserver: MutationObserver | null = null;
+    static #nativeTabClickListenerInstalled = false;
 
     static async syncSettings(deps: HSSettingsUIDependencies): Promise<void> {
         HSLogger.log(`Syncing mod settings`, this.#context);
@@ -90,6 +105,9 @@ export class HSSettingsUI {
                         }
 
                         selectElement.onchange = async (e) => { await deps.settingChangeDelegate(e, settingObj); };
+                        if (controlSettings.controlId === 'hs-setting-hidden-vanilla-tabs') {
+                            this.#enableClickToggleSelection(selectElement);
+                        }
                     }
                 } else if (controlType === "state") {
                     const settingValue = HSUtils.parseColorTags(HSUtils.asString(setting.settingValue));
@@ -134,6 +152,34 @@ export class HSSettingsUI {
 
         HSLogger.log(`Finished syncing mod settings`, this.#context);
         this.applyHiddenVanillaTabsSetting();
+        this.#initializeNativeTabPreferenceSync();
+    }
+
+    static #enableClickToggleSelection(selectElement: HTMLSelectElement): void {
+        selectElement.onmousedown = (event) => {
+            if (event.button !== 0 || !(event.target instanceof HTMLOptionElement)) return;
+
+            event.preventDefault();
+            const previousScrollTop = selectElement.scrollTop;
+
+            const clickedOption = event.target;
+            if (clickedOption.value === '') {
+                for (const option of Array.from(selectElement.options)) option.selected = false;
+            } else {
+                clickedOption.selected = !clickedOption.selected;
+                const noneOption = Array.from(selectElement.options).find((option) => option.value === '');
+                if (noneOption) noneOption.selected = false;
+            }
+
+            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Updating the game tabs can refresh this control. Preserve the user's
+            // place in the list instead of jumping to the first selected option.
+            const restoreScrollPosition = () => { selectElement.scrollTop = previousScrollTop; };
+            restoreScrollPosition();
+            queueMicrotask(restoreScrollPosition);
+            window.requestAnimationFrame(restoreScrollPosition);
+        };
     }
 
     static refreshSettingControls(settingNames: string[]): void {
@@ -172,10 +218,14 @@ export class HSSettingsUI {
                 const selectElement = document.querySelector(`#${controlSettings.controlId}`) as HTMLSelectElement | null;
                 if (selectElement) {
                     if (selectElement.multiple) {
+                        const previousScrollTop = selectElement.scrollTop;
                         const values = Array.isArray(targetValue) ? targetValue.map((v) => HSUtils.asString(v)) : [];
                         for (const option of Array.from(selectElement.options)) {
                             option.selected = values.includes(option.value);
                         }
+                        selectElement.scrollTop = previousScrollTop;
+                        queueMicrotask(() => { selectElement.scrollTop = previousScrollTop; });
+                        window.requestAnimationFrame(() => { selectElement.scrollTop = previousScrollTop; });
                     } else {
                         const optionExists = Array.from(selectElement.options).some((option) => option.value === stringValue);
                         if (optionExists) {
@@ -215,11 +265,95 @@ export class HSSettingsUI {
         const hiddenVanillaTabs = setting.getValue();
         if (!Array.isArray(hiddenVanillaTabs)) return;
 
-        const tabElements = document.querySelectorAll<HTMLElement>('#tabrow > button');
-        for (const tabElement of Array.from(tabElements)) {
-            if (!tabElement.id) continue;
-            tabElement.style.display = hiddenVanillaTabs.includes(tabElement.id) ? 'none' : '';
+        const tabRow = this.#getNativeGameTabRow();
+        if (!tabRow) return;
+        this.#ensurePseudoCoinsTabToggle(tabRow);
+
+        const tabs = tabRow.getSubs();
+        for (const tab of tabs) {
+            const shouldHide = hiddenVanillaTabs.includes(tab.id);
+            if (tab.isHidden() !== shouldHide) tab.toggleHidden();
         }
+
+        // The game normally removes hidden tabs when edit mode closes. Settings
+        // can be applied outside edit mode, so rebuild the visible row here while
+        // retaining every tab in the game's private ordered list.
+        if (!tabRow.isEditing()) {
+            tabRow.replaceChildren(...tabs.filter((tab) => !tab.isHidden()));
+        }
+    }
+
+    static #ensurePseudoCoinsTabToggle(tabRow: NativeGameTabRow): void {
+        const pseudoCoinsTab = tabRow.getSubs().find((tab) => tab.id === 'pseudoCoinstab');
+        if (!pseudoCoinsTab || pseudoCoinsTab.canBeRemoved()) return;
+
+        pseudoCoinsTab.makeRemoveable();
+        if (tabRow.isEditing()) pseudoCoinsTab.showCloseButton();
+    }
+
+    static #initializeNativeTabPreferenceSync(): void {
+        const tabRow = this.#getNativeGameTabRow();
+        if (!tabRow) return;
+
+        if (!this.#nativeTabClickListenerInstalled) {
+            this.#nativeTabClickListenerInstalled = true;
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+
+                const nativeToggle = target.closest('.tabCloseButton');
+                if (!nativeToggle?.closest('#tabrow')) return;
+
+                // The capture listener runs before the game's handler, so read the
+                // resulting native state on the next task.
+                window.setTimeout(() => this.#syncHiddenVanillaTabsFromNativeDOM(), 0);
+            }, true);
+        }
+
+        this.#nativeTabPreferenceObserver?.disconnect();
+        this.#nativeTabPreferenceObserver = new MutationObserver((mutations) => {
+            if (mutations.some((mutation) => mutation.type === 'attributes')) {
+                this.#syncHiddenVanillaTabsFromNativeDOM();
+            }
+        });
+        this.#nativeTabPreferenceObserver.observe(tabRow, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['aria-pressed', 'class'],
+        });
+    }
+
+    static #syncHiddenVanillaTabsFromNativeDOM(): void {
+        const setting = HSSettings.getSetting('hiddenVanillaTabs');
+        if (!setting) return;
+
+        const currentValue = setting.getValue();
+        if (!Array.isArray(currentValue)) return;
+
+        const tabRow = this.#getNativeGameTabRow();
+        if (!tabRow) return;
+        this.#ensurePseudoCoinsTabToggle(tabRow);
+
+        const hiddenTabs = tabRow.getSubs()
+            .filter((tab) => tab.isHidden())
+            .map((tab) => tab.id);
+
+        const currentTabs = currentValue.filter((tabId) => tabId !== '');
+        const currentTabSet = new Set(currentTabs);
+        if (currentTabSet.size === hiddenTabs.length
+            && hiddenTabs.every((tabId) => currentTabSet.has(tabId))) return;
+
+        setting.setValue(hiddenTabs);
+        this.refreshSettingControls(['hiddenVanillaTabs']);
+    }
+
+    static #getNativeGameTabRow(): NativeGameTabRow | null {
+        const tabRow = document.getElementById('tabrow') as Partial<NativeGameTabRow> | null;
+        if (!tabRow
+            || typeof tabRow.getSubs !== 'function'
+            || typeof tabRow.isEditing !== 'function') return null;
+
+        return tabRow as NativeGameTabRow;
     }
 
     static filterLoadoutSelectOptions(options: HSUICSelectOption[], maxLoadouts: number): HSUICSelectOption[] {

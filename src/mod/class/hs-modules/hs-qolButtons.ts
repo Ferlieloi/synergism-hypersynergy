@@ -4,19 +4,24 @@ import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSSetting } from "../hs-core/settings/hs-setting";
+import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
-import { GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
+import { goldenQuarkUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
+import { GoldenQuarkUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
 import { HSQOLEventsQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarEvents";
 import { HSQOLCorruptionQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarCorruption";
 import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 import type { QUICKBAR_ID } from "./hs-qol-quickbar/hs-qolQuickbarManager";
+
+const MAXED_UPGRADE_TOGGLES = {
+    toggleMaxedGoldenQuarkUpgrades: 'hideMaxedGQUpgrades',
+    toggleMaxedOcteractUpgrades: 'hideMaxedOctUpgrades',
+} as const;
+type MaxedUpgradeToggleId = keyof typeof MAXED_UPGRADE_TOGGLES;
 
 /**
  *  Class: HSQOLButtons
@@ -38,6 +43,7 @@ export class HSQOLButtons extends HSModule {
     #config: MutationObserverInit;
     #offeringPotionObserver: MutationObserver;
     #obtainiumPotionObserver: MutationObserver;
+    #maxedUpgradeToggleObserver: MutationObserver;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
@@ -52,6 +58,13 @@ export class HSQOLButtons extends HSModule {
         this.#obtainiumPotionObserver = new MutationObserver(
             () => this.#obtainiumMutationTrigger()
         );
+        this.#maxedUpgradeToggleObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.target instanceof HTMLButtonElement) {
+                    this.#syncMaxedUpgradeSettingFromButton(mutation.target);
+                }
+            }
+        });
     }
 
     async init(): Promise<void> {
@@ -70,6 +83,8 @@ export class HSQOLButtons extends HSModule {
             SINGULARITY_VIEW.OCTERACTS,
             async () => { this.setMaxedOctUpgradesVisibility(); }
         );
+
+        this.#initializeMaxedUpgradeToggleSync();
 
         // Any settings-driven feature activation is handled by HSSettings.syncSettings().
         // Only perform module-specific DOM setup here if not settings-driven.
@@ -238,93 +253,58 @@ export class HSQOLButtons extends HSModule {
     }
 
     public async setMaxedOctUpgradesVisibility(): Promise<void> {
-        const hideMaxedOctUpgradesSetting = HSSettings.getSetting('hideMaxedOctUpgrades') as HSSetting<boolean>;
-        if (hideMaxedOctUpgradesSetting.getValue()) {
-            await this.#hideButtons<OcteractUpgradeKey>(
-                'singularityOcteracts',
-                '.octeractUpgrade',
-                (key) => octeractUpgradeMaxLevels[key]?.maxLevel,
-                (gameData, key) => gameData.octUpgrades[key]?.level ?? 0
-            );
-        } else {
-            await this.#unhideButtons('singularityOcteracts', '.octeractUpgrade');
-        }
+        this.#applyMaxedUpgradePreference('toggleMaxedOcteractUpgrades');
     }
 
     public async setMaxedGQUpgradesVisibility(): Promise<void> {
-        const hideMaxedGQUpgradesSetting = HSSettings.getSetting('hideMaxedGQUpgrades') as HSSetting<boolean>;
-        if (hideMaxedGQUpgradesSetting.getValue()) {
-            const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-            if (!gameDataAPI) return;
-            await gameDataAPI.getForcedGameData();
-            await this.#hideButtons<GoldenQuarkUpgradeKey>(
-                'actualSingularityUpgradeContainer',
-                '.singularityUpgrade',
-                (key) => gameDataAPI.goldenQuark.computeGQUpgradeMaxLevel(key),
-                (gameData, key) => gameData.goldenQuarkUpgrades[key]?.level ?? 0
-            );
-        } else {
-            await this.#unhideButtons('actualSingularityUpgradeContainer', '.singularityUpgrade');
-        }
+        this.#applyMaxedUpgradePreference('toggleMaxedGoldenQuarkUpgrades');
     }
 
-    async #unhideButtons(containerId: string, selector: string): Promise<void> {
-        try {
-            const container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
-            const buttons = container.querySelectorAll<HTMLButtonElement>(selector);
-            buttons.forEach(button => button.style.display = '');
-        } catch (e) {
-            HSLogger.warn(`#unhideButtons: Could not find #${containerId} or matching buttons: ${e}`, this.context);
+    #initializeMaxedUpgradeToggleSync(): void {
+        for (const buttonId of Object.keys(MAXED_UPGRADE_TOGGLES)) {
+            this.#applyMaxedUpgradePreference(buttonId as MaxedUpgradeToggleId);
         }
+
+        // Capture lets this work even if the game's handler stops propagation.
+        // Reading is deferred until after the game's click handler changes aria-pressed.
+        document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+
+            const button = target.closest<HTMLButtonElement>('button.toggleMaxedUpgrades');
+            if (!button || !(button.id in MAXED_UPGRADE_TOGGLES)) return;
+
+            window.setTimeout(() => this.#syncMaxedUpgradeSettingFromButton(button), 0);
+        }, true);
     }
 
-    async #hideButtons<TUpgradeKey extends string>(
-        containerId: string,
-        selector: string,
-        getMaxLevel: (key: TUpgradeKey) => number | undefined,
-        getCurrentLevel: (gameData: any, key: TUpgradeKey) => number,
-    ): Promise<void> {
-        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!gameDataAPI) return;
-        const gameData = gameDataAPI.getGameData();
-        if (!gameData) return;
+    #applyMaxedUpgradePreference(
+        buttonId: MaxedUpgradeToggleId,
+    ): void {
+        const button = document.getElementById(buttonId) as HTMLButtonElement | null;
+        if (!button) return;
 
-        let container: HTMLElement;
-        try {
-            container = await HSElementHooker.HookElement(`#${containerId}`, undefined, 2000);
-        } catch (e) {
-            HSLogger.warn(`#hideButtons: Could not find #${containerId}: ${e}`, this.context);
-            return;
-        }
+        this.#maxedUpgradeToggleObserver.observe(button, {
+            attributes: true,
+            attributeFilter: ['aria-pressed'],
+        });
 
-        // Wait for at least one matching button to exist (robust to async DOM rendering)
-        const start = performance.now();
-        const timeoutMs = 1000;
-        let buttons: HTMLElement[] = [];
-        while (true) {
-            buttons = Array.from(container.querySelectorAll<HTMLElement>(selector));
-            if (buttons.length > 0) {
-                // Wait a bit more... and leave...
-                await new Promise(res => setTimeout(res, 50));
-                break;
-            }
-            if (performance.now() - start > timeoutMs) {
-                HSLogger.warn(`#hideButtons: No buttons matching '${selector}' found in #${containerId} after ${timeoutMs}ms`, this.context);
-                return;
-            }
-            await new Promise(res => setTimeout(res, 50));
-        }
+        const settingName = MAXED_UPGRADE_TOGGLES[buttonId];
+        const shouldHide = HSSettings.getSetting(settingName).getValue() === true;
+        const isHidden = button.getAttribute('aria-pressed') === 'true';
+        if (shouldHide !== isHidden) button.click();
+    }
 
-        for (const button of buttons) {
-            const upgradeKey = button.id as TUpgradeKey;
-            const maxLevel = getMaxLevel(upgradeKey);
-            const currentLevel = getCurrentLevel(gameData, upgradeKey);
+    #syncMaxedUpgradeSettingFromButton(button: HTMLButtonElement): void {
+        if (!(button.id in MAXED_UPGRADE_TOGGLES)) return;
 
-            if (maxLevel !== undefined && maxLevel !== -1 && currentLevel >= maxLevel) {
-                button.style.display = 'none';
-            } else {
-                button.style.display = '';
-            }
+        const buttonId = button.id as MaxedUpgradeToggleId;
+        const settingName = MAXED_UPGRADE_TOGGLES[buttonId];
+        const setting = HSSettings.getSetting(settingName);
+        const isHidden = button.getAttribute('aria-pressed') === 'true';
+        if (setting.getValue() !== isHidden) {
+            setting.setValue(isHidden);
+            HSSettingsUI.refreshSettingControls([settingName]);
         }
     }
 
