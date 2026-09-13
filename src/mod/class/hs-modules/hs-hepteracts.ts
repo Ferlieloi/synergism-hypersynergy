@@ -9,10 +9,17 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSUI } from "../hs-core/hs-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSModuleOptions } from "../../types/hs-types";
+import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
+import { parseGameDataNumber } from "../hs-core/gds/hs-gamedata-utils";
 
-type HepteractIncomeSnapshot = {
+type AscensionIncomeSnapshot = {
     perSecond: number;
     onAscension: number;
+};
+
+type PlatonicResourceEstimate = {
+    resource: string;
+    seconds: number;
 };
 
 /**
@@ -101,7 +108,10 @@ export class HSHepteracts extends HSModule {
     #hepteractForgeView?: HTMLElement;
     #hoveredHepteractId: string | null = null;
     #craftTextRefreshTimer?: ReturnType<typeof setInterval>;
-    #hepteractIncomeReadQueue: Promise<HepteractIncomeSnapshot | null> = Promise.resolve(null);
+    #ascensionIncomeReadQueue: Promise<unknown> = Promise.resolve();
+
+    #platonicUpgradeDescriptions?: HTMLElement;
+    #hoveredPlatonicUpgradeId: number | null = null;
 
     #ownedHepteractsElement?: HTMLElement;
     #ownedHepteracts?: number;
@@ -572,6 +582,24 @@ export class HSHepteracts extends HSModule {
             }
         });
 
+        this.#platonicUpgradeDescriptions = await HSElementHooker.HookElement('#platonicUpgradeDescriptions') as HTMLElement;
+        document.querySelectorAll<HTMLImageElement>('.platonicUpgradeImage').forEach((upgradeImage, index) => {
+            const upgradeId = index + 1;
+
+            upgradeImage.addEventListener('mouseover', () => {
+                self.#hoveredPlatonicUpgradeId = upgradeId;
+                self.#showPlatonicUpgradeEstimate('Calculating upgrade time...');
+                void HSUtils.yield().then(() => self.#updatePlatonicUpgradeEstimate(upgradeId));
+            });
+
+            upgradeImage.addEventListener('mouseleave', () => {
+                if (self.#hoveredPlatonicUpgradeId === upgradeId) {
+                    self.#hoveredPlatonicUpgradeId = null;
+                    self.#removePlatonicUpgradeEstimate();
+                }
+            });
+        });
+
         this.isInitialized = true;
     }
 
@@ -673,7 +701,7 @@ export class HSHepteracts extends HSModule {
         await this.#updateCraftText(buyCost, percentOwned, hepteractId, isQuarkHepteract);
     }
 
-    async #switchHepteractIncomeMode(
+    async #switchAscensionIncomeMode(
         statsElement: HTMLElement,
         incomeElement: HTMLElement,
         unitElement: HTMLElement,
@@ -699,88 +727,212 @@ export class HSHepteracts extends HSModule {
         return true;
     }
 
-    #readHepteractIncome(): Promise<HepteractIncomeSnapshot | null> {
-        const readIncome = async (): Promise<HepteractIncomeSnapshot | null> => {
-            const statsElement = document.querySelector('#ascHepteractStats') as HTMLElement | null;
-            const incomeElement = document.querySelector('#ascHepteract') as HTMLElement | null;
-            const unitElement = document.querySelector('#unit5') as HTMLElement | null;
-            const ascensionSpeedElement = document.querySelector('#ascAscensionTimeAccel') as HTMLElement | null;
+    async #readAscensionIncome(resourceId: number): Promise<AscensionIncomeSnapshot | null> {
+        const statsElementIds = ['', 'ascCubeStats', 'ascTessStats', 'ascHyperStats', 'ascPlatonicStats', 'ascHepteractStats'];
+        const incomeElementIds = ['', 'ascCubes', 'ascTess', 'ascHyper', 'ascPlatonic', 'ascHepteract'];
+        const statsElement = document.querySelector(`#${statsElementIds[resourceId]}`) as HTMLElement | null;
+        const incomeElement = document.querySelector(`#${incomeElementIds[resourceId]}`) as HTMLElement | null;
+        const unitElement = document.querySelector(`#unit${resourceId}`) as HTMLElement | null;
+        const ascensionSpeedElement = document.querySelector('#ascAscensionTimeAccel') as HTMLElement | null;
 
-            if (!statsElement || !incomeElement || !unitElement || !ascensionSpeedElement) {
-                HSLogger.warn('Could not find the hepteract rate or ascension speed display', this.context);
-                return null;
-            }
+        if (!statsElement || !incomeElement || !unitElement || !ascensionSpeedElement) {
+            HSLogger.warn(`Could not find ascension resource ${resourceId} or its speed display`, this.context);
+            return null;
+        }
 
-            const wasPerSecond = unitElement.textContent?.trim() === '/s';
-            const readDisplayedIncome = () => parseFloat(HSUtils.unfuckNumericString(incomeElement.innerText));
-            let rawPerSecond: number;
-            let onAscension: number;
+        const wasPerSecond = unitElement.textContent?.trim() === '/s';
+        const readDisplayedIncome = () => parseFloat(HSUtils.unfuckNumericString(incomeElement.innerText));
+        let rawPerSecond: number;
+        let onAscension: number;
 
-            try {
-                if (wasPerSecond) {
-                    rawPerSecond = readDisplayedIncome();
-                    const switched = await this.#switchHepteractIncomeMode(
-                        statsElement,
-                        incomeElement,
-                        unitElement,
-                        false
-                    );
+        try {
+            if (wasPerSecond) {
+                rawPerSecond = readDisplayedIncome();
+                const switched = await this.#switchAscensionIncomeMode(
+                    statsElement,
+                    incomeElement,
+                    unitElement,
+                    false
+                );
 
-                    if (!switched) {
-                        HSLogger.warn('Could not switch the hepteract display to ascension-gain mode', this.context);
-                        return null;
-                    }
-
-                    onAscension = readDisplayedIncome();
-                } else {
-                    onAscension = readDisplayedIncome();
-                    const switched = await this.#switchHepteractIncomeMode(
-                        statsElement,
-                        incomeElement,
-                        unitElement,
-                        true
-                    );
-
-                    if (!switched) {
-                        HSLogger.warn('Could not switch the hepteract display to /s mode', this.context);
-                        return null;
-                    }
-
-                    rawPerSecond = readDisplayedIncome();
-                }
-
-                const ascensionSpeedText = ascensionSpeedElement.innerText.trim();
-                const ascensionSpeed = ascensionSpeedText.endsWith('*')
-                    ? 1e6
-                    : parseFloat(HSUtils.unfuckNumericString(ascensionSpeedText));
-
-                if (Number.isNaN(rawPerSecond) || Number.isNaN(onAscension) || Number.isNaN(ascensionSpeed)) {
+                if (!switched) {
+                    HSLogger.warn(`Could not switch ascension resource ${resourceId} to ascension-gain mode`, this.context);
                     return null;
                 }
 
-                return {
-                    perSecond: rawPerSecond * ascensionSpeed,
-                    onAscension
-                };
-            } catch (e) {
-                HSLogger.warn(`Error while reading hepteract income: ${e}`, this.context);
-                return null;
-            } finally {
-                const isPerSecond = unitElement.textContent?.trim() === '/s';
-                if (isPerSecond !== wasPerSecond) {
-                    await this.#switchHepteractIncomeMode(
-                        statsElement,
-                        incomeElement,
-                        unitElement,
-                        wasPerSecond
-                    );
+                onAscension = readDisplayedIncome();
+            } else {
+                onAscension = readDisplayedIncome();
+                const switched = await this.#switchAscensionIncomeMode(
+                    statsElement,
+                    incomeElement,
+                    unitElement,
+                    true
+                );
+
+                if (!switched) {
+                    HSLogger.warn(`Could not switch ascension resource ${resourceId} to /s mode`, this.context);
+                    return null;
                 }
+
+                rawPerSecond = readDisplayedIncome();
             }
+
+            const ascensionSpeedText = ascensionSpeedElement.innerText.trim();
+            const ascensionSpeed = ascensionSpeedText.endsWith('*')
+                ? 1e6
+                : parseFloat(HSUtils.unfuckNumericString(ascensionSpeedText));
+
+            if (Number.isNaN(rawPerSecond) || Number.isNaN(onAscension) || Number.isNaN(ascensionSpeed)) {
+                return null;
+            }
+
+            return {
+                perSecond: rawPerSecond * ascensionSpeed,
+                onAscension
+            };
+        } catch (e) {
+            HSLogger.warn(`Error while reading ascension resource ${resourceId} income: ${e}`, this.context);
+            return null;
+        } finally {
+            const isPerSecond = unitElement.textContent?.trim() === '/s';
+            if (isPerSecond !== wasPerSecond) {
+                await this.#switchAscensionIncomeMode(
+                    statsElement,
+                    incomeElement,
+                    unitElement,
+                    wasPerSecond
+                );
+            }
+        }
+    }
+
+    #queueAscensionIncomeRead<T>(readIncome: () => Promise<T>): Promise<T> {
+        const queuedRead = this.#ascensionIncomeReadQueue.then(readIncome, readIncome);
+        this.#ascensionIncomeReadQueue = queuedRead.then(() => undefined, () => undefined);
+        return queuedRead;
+    }
+
+    #readHepteractIncome(): Promise<AscensionIncomeSnapshot | null> {
+        return this.#queueAscensionIncomeRead(() => this.#readAscensionIncome(5));
+    }
+
+    #readAllAscensionIncome(): Promise<Array<AscensionIncomeSnapshot | null>> {
+        return this.#queueAscensionIncomeRead(() => Promise.all(
+            [1, 2, 3, 4, 5].map(resourceId => this.#readAscensionIncome(resourceId))
+        ));
+    }
+
+    #showPlatonicUpgradeEstimate(text: string) {
+        if (!this.#platonicUpgradeDescriptions) return;
+
+        let estimateElement = this.#platonicUpgradeDescriptions.querySelector('#hs-platonic-upgrade-estimate') as HTMLParagraphElement | null;
+        if (!estimateElement) {
+            estimateElement = document.createElement('p');
+            estimateElement.id = 'hs-platonic-upgrade-estimate';
+            estimateElement.className = 'platonicPortion';
+            estimateElement.style.color = 'cyan';
+            this.#platonicUpgradeDescriptions.appendChild(estimateElement);
+        }
+        estimateElement.innerText = text;
+    }
+
+    #removePlatonicUpgradeEstimate() {
+        this.#platonicUpgradeDescriptions?.querySelector('#hs-platonic-upgrade-estimate')?.remove();
+    }
+
+    #readPlatonicRequirement(elementId: string): number | null {
+        const text = document.querySelector(`#${elementId}`)?.textContent ?? '';
+        const requirementText = text.slice(text.lastIndexOf('/') + 1);
+        const numericMatch = requirementText.match(/[-+]?\d[\d.,]*(?:e[-+]?\d+)?/i);
+        if (!numericMatch) return null;
+
+        const parsed = parseFloat(HSUtils.unfuckNumericString(numericMatch[0]));
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    #timeUntilResource(
+        resource: string,
+        required: number,
+        owned: number,
+        income: AscensionIncomeSnapshot | null
+    ): PlatonicResourceEstimate {
+        if (required <= owned) return { resource, seconds: 0 };
+        if (!income) return { resource, seconds: Number.POSITIVE_INFINITY };
+
+        const remainingAfterAscension = Math.max(0, required - owned - income.onAscension);
+        const seconds = remainingAfterAscension === 0
+            ? 0
+            : income.perSecond > 0
+                ? remainingAfterAscension / income.perSecond
+                : Number.POSITIVE_INFINITY;
+        return { resource, seconds };
+    }
+
+    async #updatePlatonicUpgradeEstimate(upgradeId: number) {
+        if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
+
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameData = gameDataAPI?.getGameData();
+        if (!gameDataAPI || !gameData) {
+            this.#showPlatonicUpgradeEstimate('Upgrade time unavailable: game data has not loaded yet.');
+            return;
+        }
+
+        const levelText = document.querySelector('#platonicUpgradeLevel')?.textContent ?? '';
+        const levelValues = levelText.match(/\d[\d.,]*(?:e[-+]?\d+)?/gi)
+            ?.map(value => parseFloat(HSUtils.unfuckNumericString(value))) ?? [];
+        if (levelValues.length >= 2 && levelValues[0] >= levelValues[1]) {
+            this.#showPlatonicUpgradeEstimate('Time until next level: maxed | Longest requirement: none');
+            return;
+        }
+
+        const requirements = {
+            cubes: this.#readPlatonicRequirement('platonicCubeCost'),
+            tesseracts: this.#readPlatonicRequirement('platonicTesseractCost'),
+            hypercubes: this.#readPlatonicRequirement('platonicHypercubeCost'),
+            platonics: this.#readPlatonicRequirement('platonicPlatonicCost'),
+            abyssals: this.#readPlatonicRequirement('platonicHepteractCost')
         };
 
-        const queuedRead = this.#hepteractIncomeReadQueue.then(readIncome, readIncome);
-        this.#hepteractIncomeReadQueue = queuedRead;
-        return queuedRead;
+        if (Object.values(requirements).some(value => value === null)) {
+            this.#showPlatonicUpgradeEstimate('Upgrade time unavailable: could not read every requirement.');
+            return;
+        }
+
+        const income = await this.#readAllAscensionIncome();
+        if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
+
+        const requiredAbyssals = requirements.abyssals ?? 0;
+        const ownedAbyssals = gameData.hepteracts?.abyss?.BAL ?? 0;
+        const missingAbyssals = Math.max(0, requiredAbyssals - ownedAbyssals);
+        const hepteractCostMultiplier = gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
+        const rawHepteractsNeeded = missingAbyssals * 1e8 * hepteractCostMultiplier;
+        const abyssCraftCubeCost = missingAbyssals * 69 * hepteractCostMultiplier;
+
+        const estimates: PlatonicResourceEstimate[] = [
+            this.#timeUntilResource(
+                'Wow! Cubes',
+                (requirements.cubes ?? 0) + abyssCraftCubeCost,
+                parseGameDataNumber(gameData.wowCubes),
+                income[0]
+            ),
+            this.#timeUntilResource('Wow! Tesseracts', requirements.tesseracts ?? 0, parseGameDataNumber(gameData.wowTesseracts), income[1]),
+            this.#timeUntilResource('Wow! Hypercubes', requirements.hypercubes ?? 0, parseGameDataNumber(gameData.wowHypercubes), income[2]),
+            this.#timeUntilResource('Platonic Cubes', requirements.platonics ?? 0, parseGameDataNumber(gameData.wowPlatonicCubes), income[3]),
+            this.#timeUntilResource(
+                'Hepteracts for Abyss Hepteracts',
+                rawHepteractsNeeded,
+                parseGameDataNumber(gameData.wowAbyssals),
+                income[4]
+            )
+        ];
+
+        const bottleneck = estimates.reduce((longest, current) => current.seconds > longest.seconds ? current : longest);
+        const longestRequirement = bottleneck.seconds > 0 ? bottleneck.resource : 'none';
+        this.#showPlatonicUpgradeEstimate(
+            `Time until next level: ${this.#formatDuration(bottleneck.seconds)} | Longest requirement: ${longestRequirement}`
+        );
     }
 
     #formatDuration(seconds: number): string {
