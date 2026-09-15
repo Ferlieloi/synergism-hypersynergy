@@ -13,17 +13,86 @@ export interface AmbrosiaHelperContext {
     getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number;
     getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any;
     getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any;
+    getGQUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
+    getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
+    getPurpleReactorUpgradeEffects: (upgradeKey: string, effectKey: string) => number;
+    getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number;
     getPCoinUpgradeLevel: (upgradeName: string) => number;
     getCampaignTokens: () => number;
     getEventBellAmount: () => number;
+    calculateSynergismLevel: () => number;
     isEvent: boolean;
     calculateEventSourceBuff: (buffType: EventBuffType) => number;
     checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined;
     updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void;
 }
 
+type PurpleAmbrosiaEnchantmentConfig = {
+    type: 'freeLevels' | 'blueberryCostReduction';
+    maxLevel: number;
+    cost: (level: number) => number;
+    freeLevels?: (level: number) => number;
+};
+
 export class AmbrosiaHelper {
     readonly #ctx: AmbrosiaHelperContext;
+
+    static readonly #EXALT_9_AMBROSIA_UPGRADES = new Set<AmbrosiaUpgradeNames>([
+        'ambrosiaQuarks4',
+        'ambrosiaCubes4',
+        'ambrosiaLuck4',
+        'ambrosiaFreeObtainiumUpgrades',
+        'ambrosiaFreeOfferingUpgrades',
+        'ambrosiaInfiniteShopUpgrades3',
+        'twoMind',
+    ]);
+
+    // Mirrors `purpleAmbrosiaEnchantment` in SynergismOfficial/src/BlueberryUpgrades.ts.
+    static readonly #PURPLE_AMBROSIA_ENCHANTMENTS: Record<AmbrosiaUpgradeNames, PurpleAmbrosiaEnchantmentConfig> = {
+        ambrosiaTutorial: { type: 'freeLevels', maxLevel: 5, cost: (n) => n * (n + 1) / 2, freeLevels: (n) => n },
+        ambrosiaQuarks1: { type: 'freeLevels', maxLevel: 10, cost: (n) => 5 * n * (n + 1) / 2, freeLevels: (n) => n },
+        ambrosiaCubes1: { type: 'freeLevels', maxLevel: 10, cost: (n) => 5 * n * (n + 1) / 2, freeLevels: (n) => n },
+        ambrosiaLuck1: { type: 'freeLevels', maxLevel: 10, cost: (n) => 5 * n * (n + 1) / 2, freeLevels: (n) => n },
+        ambrosiaQuarkCube1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaLuckCube1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaCubeQuark1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaLuckQuark1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaCubeLuck1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaQuarkLuck1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaQuarks2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 400 * n },
+        ambrosiaCubes2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 200 * n },
+        ambrosiaLuck2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 500 * n },
+        ambrosiaQuarks3: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 1_200 * n },
+        ambrosiaQuarks4: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 3_000 * n },
+        ambrosiaCubes3: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 600 * n },
+        ambrosiaCubes4: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 1_500 * n },
+        ambrosiaFreeCubeUpgrades: { type: 'freeLevels', maxLevel: 15, cost: (n) => 200 * n, freeLevels: (n) => n },
+        ambrosiaLuck3: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 1_500 * n },
+        ambrosiaLuck4: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 3_750 * n },
+        ambrosiaPatreon: { type: 'freeLevels', maxLevel: 1, cost: (n) => 200 * n, freeLevels: (n) => 0.02 * n },
+        ambrosiaObtainium1: { type: 'freeLevels', maxLevel: 1, cost: (n) => 200 * n, freeLevels: (n) => n },
+        ambrosiaOffering1: { type: 'freeLevels', maxLevel: 1, cost: (n) => 200 * n, freeLevels: (n) => n },
+        ambrosiaHyperflux: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 777 * n },
+        ambrosiaBaseOffering1: { type: 'freeLevels', maxLevel: 40, cost: (n) => n ** 2, freeLevels: (n) => n },
+        ambrosiaBaseObtainium1: { type: 'freeLevels', maxLevel: 20, cost: (n) => 3 * n ** 2, freeLevels: (n) => n },
+        ambrosiaBaseOffering2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 500 * n },
+        ambrosiaBaseObtainium2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 500 * n },
+        ambrosiaFreeObtainiumUpgrades: { type: 'freeLevels', maxLevel: 25, cost: (n) => 100 * n, freeLevels: (n) => n },
+        ambrosiaFreeOfferingUpgrades: { type: 'freeLevels', maxLevel: 25, cost: (n) => 100 * n, freeLevels: (n) => n },
+        ambrosiaSingReduction1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 150 * n },
+        ambrosiaInfiniteShopUpgrades1: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 800 * n },
+        ambrosiaInfiniteShopUpgrades2: { type: 'freeLevels', maxLevel: 8, cost: (n) => 40 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaInfiniteShopUpgrades3: { type: 'freeLevels', maxLevel: 8, cost: (n) => 125 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaSingReduction2: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 1_500 * n },
+        ambrosiaTalismanBonusRuneLevel: { type: 'freeLevels', maxLevel: 20, cost: (n) => 3 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaRuneOOMBonus: { type: 'freeLevels', maxLevel: 20, cost: (n) => 3 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaBrickOfLead: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 2_000 * n },
+        ambrosiaFreeLuckUpgrades: { type: 'freeLevels', maxLevel: 10, cost: (n) => 12 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaFreeGenerationUpgrades: { type: 'freeLevels', maxLevel: 2, cost: (n) => 100 * (10 ** n - 1) / 9, freeLevels: (n) => n },
+        ambrosiaFreeRedLuckUpgrades: { type: 'freeLevels', maxLevel: 25, cost: (n) => 15 * n * (n + 1), freeLevels: (n) => n },
+        ambrosiaFreeQuarkUpgrades: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 2_000 * n },
+        twoMind: { type: 'blueberryCostReduction', maxLevel: 1, cost: (n) => 2_222 * n },
+    };
 
     constructor(ctx: AmbrosiaHelperContext) {
         this.#ctx = ctx;
@@ -91,6 +160,66 @@ export class AmbrosiaHelper {
         return (`AMB_${upgradeName}${freeLevelsOnly ? '_FREE' : ''}`) as keyof CalculationCache;
     }
 
+    // Mirrors `redAmbrosiaUpgrade` in SynergismOfficial/src/BlueberryUpgrades.ts.
+    #getAmbrosiaUpgradeRedFreeLevels(upgradeName: AmbrosiaUpgradeNames): number {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+
+        const redFreeLevelRows: Partial<Record<AmbrosiaUpgradeNames, keyof RedAmbrosiaUpgrades>> = {
+            ambrosiaTutorial: 'freeTutorialLevels',
+            ambrosiaLuck1: 'freeLevelsRow2', ambrosiaCubeLuck1: 'freeLevelsRow2', ambrosiaQuarkLuck1: 'freeLevelsRow2',
+            ambrosiaLuck2: 'freeLevelsRow2', ambrosiaLuck3: 'freeLevelsRow2', ambrosiaLuck4: 'freeLevelsRow2',
+            ambrosiaFreeLuckUpgrades: 'freeLevelsRow2', ambrosiaFreeGenerationUpgrades: 'freeLevelsRow2', ambrosiaFreeRedLuckUpgrades: 'freeLevelsRow2',
+            ambrosiaBaseOffering1: 'freeLevelsRow3', ambrosiaBaseObtainium1: 'freeLevelsRow3', ambrosiaBaseOffering2: 'freeLevelsRow3', ambrosiaBaseObtainium2: 'freeLevelsRow3',
+            ambrosiaFreeObtainiumUpgrades: 'freeLevelsRow3', ambrosiaFreeOfferingUpgrades: 'freeLevelsRow3',
+            ambrosiaInfiniteShopUpgrades1: 'freeLevelsRow3', ambrosiaInfiniteShopUpgrades2: 'freeLevelsRow3', ambrosiaInfiniteShopUpgrades3: 'freeLevelsRow3',
+            ambrosiaTalismanBonusRuneLevel: 'freeLevelsRow3', ambrosiaRuneOOMBonus: 'freeLevelsRow3',
+            ambrosiaCubes1: 'freeLevelsRow4', ambrosiaQuarkCube1: 'freeLevelsRow4', ambrosiaLuckCube1: 'freeLevelsRow4',
+            ambrosiaCubes2: 'freeLevelsRow4', ambrosiaCubes3: 'freeLevelsRow4', ambrosiaCubes4: 'freeLevelsRow4', ambrosiaFreeCubeUpgrades: 'freeLevelsRow4',
+            ambrosiaQuarks1: 'freeLevelsRow5', ambrosiaCubeQuark1: 'freeLevelsRow5', ambrosiaLuckQuark1: 'freeLevelsRow5',
+            ambrosiaQuarks2: 'freeLevelsRow5', ambrosiaQuarks3: 'freeLevelsRow5', ambrosiaQuarks4: 'freeLevelsRow5', ambrosiaFreeQuarkUpgrades: 'freeLevelsRow5',
+        };
+        const row = redFreeLevelRows[upgradeName];
+        return row ? Number((this.getRedAmbrosiaUpgradeEffects(row as RedAmbrosiaUpgradeKey) as any).freeLevels ?? 0) : 0;
+    }
+
+    calculatePurpleAmbrosiaEnchantmentLevel(upgradeName: AmbrosiaUpgradeNames): number {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+
+        const enchantment = AmbrosiaHelper.#PURPLE_AMBROSIA_ENCHANTMENTS[upgradeName];
+        const savedInvestment = Number(data.ambrosiaUpgrades[upgradeName]?.purpleAmbrosiaInvested ?? 0);
+        const invested = Number.isFinite(savedInvestment) ? Math.max(0, savedInvestment) : 0;
+        let low = 0;
+        let high = enchantment.maxLevel;
+        while (low < high) {
+            const middle = low + Math.ceil((high - low) / 2);
+            if (enchantment.cost(middle) <= invested) low = middle;
+            else high = middle - 1;
+        }
+        return low;
+    }
+
+    getPurpleAmbrosiaEnchantmentFreeLevels(upgradeName: AmbrosiaUpgradeNames): number {
+        const enchantment = AmbrosiaHelper.#PURPLE_AMBROSIA_ENCHANTMENTS[upgradeName];
+        return enchantment.type === 'freeLevels'
+            ? (enchantment.freeLevels?.(this.calculatePurpleAmbrosiaEnchantmentLevel(upgradeName)) ?? 0)
+            : 0;
+    }
+
+    getAmbrosiaUpgradeBlueberryCostReduction(upgradeName: AmbrosiaUpgradeNames): number {
+        return AmbrosiaHelper.#PURPLE_AMBROSIA_ENCHANTMENTS[upgradeName].type === 'blueberryCostReduction'
+            ? this.calculatePurpleAmbrosiaEnchantmentLevel(upgradeName)
+            : 0;
+    }
+
+    #getAmbrosiaUpgradeExtraLevels(upgradeName: AmbrosiaUpgradeNames, purchasedLevel: number): number {
+        const purpleLevels = purchasedLevel > 0
+            ? this.getPurpleAmbrosiaEnchantmentFreeLevels(upgradeName)
+            : 0;
+        return this.#getAmbrosiaUpgradeRedFreeLevels(upgradeName) + purpleLevels;
+    }
+
     redAmbrosiaUpgradeCalculationCollection = redAmbrosiaUpgradeCalculationCollection;
 
     ambrosiaUpgradeCalculationCollection: AmbrosiaUpgradeCalculationCollection = {
@@ -123,7 +252,7 @@ export class AmbrosiaHelper {
                     quarks: quarkAmount,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
             prerequisites: {
                 ambrosiaTutorial: 10,
             },
@@ -141,7 +270,7 @@ export class AmbrosiaHelper {
                     cubes: cubeAmount,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
             prerequisites: {
                 ambrosiaTutorial: 10,
             },
@@ -178,7 +307,7 @@ export class AmbrosiaHelper {
                     cubes: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
             prerequisites: {
                 ambrosiaCubes1: 30,
                 ambrosiaQuarks1: 20,
@@ -199,7 +328,7 @@ export class AmbrosiaHelper {
                     cubes: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
             prerequisites: {
                 ambrosiaCubes1: 30,
                 ambrosiaLuck1: 20,
@@ -219,7 +348,7 @@ export class AmbrosiaHelper {
                     quarks: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
             prerequisites: {
                 ambrosiaQuarks1: 30,
                 ambrosiaCubes1: 20,
@@ -241,7 +370,7 @@ export class AmbrosiaHelper {
                     quarks: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
             prerequisites: {
                 ambrosiaQuarks1: 30,
                 ambrosiaLuck1: 20,
@@ -261,7 +390,7 @@ export class AmbrosiaHelper {
                     ambrosiaLuck: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
             prerequisites: {
                 ambrosiaLuck1: 30,
                 ambrosiaCubes1: 20,
@@ -281,7 +410,7 @@ export class AmbrosiaHelper {
                     ambrosiaLuck: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
             prerequisites: {
                 ambrosiaLuck1: 30,
                 ambrosiaQuarks1: 20,
@@ -303,7 +432,7 @@ export class AmbrosiaHelper {
                     quarks: quarkAmount,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
             prerequisites: {
                 ambrosiaQuarks1: 40,
             },
@@ -345,7 +474,7 @@ export class AmbrosiaHelper {
                     ambrosiaLuck: val,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
             prerequisites: {
                 ambrosiaLuck1: 40,
             },
@@ -387,7 +516,7 @@ export class AmbrosiaHelper {
                     cubes: cubeAmount,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
             prerequisites: {
                 ambrosiaCubes1: 100,
                 ambrosiaCubes2: 50,
@@ -405,7 +534,7 @@ export class AmbrosiaHelper {
                     ambrosiaLuck: perLevel * n,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
             prerequisites: {
                 ambrosiaLuck1: 90,
                 ambrosiaLuck2: 50,
@@ -424,7 +553,10 @@ export class AmbrosiaHelper {
                     ambrosiaLuckPercentage: (1 / 10000) * digits * n,
                 };
             },
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            prerequisites: {
+                ambrosiaLuck3: 100,
+            },
         },
 
         ambrosiaPatreon: {
@@ -434,7 +566,11 @@ export class AmbrosiaHelper {
             costFormula: (n: number, cpl: number): number =>
                 cpl * ((n + 1) ** 2 - n ** 2),
             effects: (n: number) => {
-                const val = 1 + (n * (this.#ctx.getMeData()?.bonus.quark ?? 0)) / 100;
+                const me = this.#ctx.getMeData();
+                const quarkBonus = me
+                    ? 100 * (1 + (me.globalBonus ?? 0) / 100) * (1 + (me.bonus.quark ?? 0) / 100) - 100
+                    : 0;
+                const val = 1 + (n * quarkBonus) / 100;
                 return {
                     blueberryGeneration: val,
                 };
@@ -450,8 +586,8 @@ export class AmbrosiaHelper {
             effects: (n: number) => {
                 const { luckTotal } = this.calculateLuck(true) as { luckTotal: number };
                 return {
-                    luckMult: n,
-                    obtainiumMult: n * luckTotal,
+                    luckMult: n / 1000,
+                    obtainiumMult: 1 + n * luckTotal / 1000,
                 };
             },
             extraLevelCalc: () => 0,
@@ -465,8 +601,8 @@ export class AmbrosiaHelper {
             effects: (n: number) => {
                 const luck = this.calculateLuck();
                 return {
-                    luckMult: n,
-                    offeringMult: n * luck.luckTotal,
+                    luckMult: n / 1000,
+                    offeringMult: 1 + n * luck.luckTotal / 1000,
                 };
             },
             extraLevelCalc: () => 0,
@@ -499,7 +635,7 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 offering: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
         },
 
         ambrosiaBaseObtainium1: {
@@ -511,7 +647,7 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 obtainium: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
         },
 
         ambrosiaBaseOffering2: {
@@ -523,10 +659,9 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 offering: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
             prerequisites: {
                 ambrosiaBaseOffering1: 30,
-                ambrosiaBaseObtainium1: 10,
             },
         },
 
@@ -539,10 +674,9 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 obtainium: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
             prerequisites: {
                 ambrosiaBaseObtainium1: 15,
-                ambrosiaBaseOffering1: 20,
             },
         },
 
@@ -572,7 +706,7 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 freeLevels: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
             prerequisites: {
                 ambrosiaCubes1: 70,
                 ambrosiaBaseOffering1: 20,
@@ -588,19 +722,16 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 freeLevels: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
             prerequisites: {
                 ambrosiaInfiniteShopUpgrades1: 20,
-                ambrosiaCubes2: 50,
-                ambrosiaBaseOffering2: 20,
-                ambrosiaBaseObtainium2: 10,
             },
         },
 
         ambrosiaSingReduction2: {
             costPerLevel: 1.25e7,
             maxLevel: 2,
-            ignoreEXALT: false,
+            ignoreEXALT: true,
             costFormula: (n: number, cpl: number): number =>
                 cpl * 3 ** n,
             effects: (n: number) => {
@@ -621,7 +752,7 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 talismanBonusRuneLevel: n / 200,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
         },
 
         ambrosiaRuneOOMBonus: {
@@ -634,7 +765,7 @@ export class AmbrosiaHelper {
                 runeOOMBonus: n,
                 infiniteAscentOOMBonus: n / 1000,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
         },
 
         ambrosiaBrickOfLead: {
@@ -647,6 +778,8 @@ export class AmbrosiaHelper {
                 barRequirementMult: 1 / (1 - n / 50),
                 additiveLuckMult: n / 50,
                 singularitySpeedMult: 1 - n / 100,
+                globalSpeedMult: 1 - n / 100,
+                ascensionSpeedMult: 1 - n / 100,
             }),
             extraLevelCalc: () => 0,
         },
@@ -665,18 +798,18 @@ export class AmbrosiaHelper {
 
         ambrosiaFreeGenerationUpgrades: {
             costPerLevel: 5000,
-            maxLevel: 3,
+            maxLevel: 5,
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
-                cpl * (Math.pow(10, n + 1) - Math.pow(10, n)),
+                cpl * (Math.pow(4, n + 1) - Math.pow(4, n)),
             effects: (n: number) => ({
                 freeGenerationUpgrades: n,
             }),
-            extraLevelCalc: () => 0, // INTENDED (no bonus levels applied)
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
         },
 
         ambrosiaFreeRedLuckUpgrades: {
-            costPerLevel: 20000,
+            costPerLevel: 10000,
             maxLevel: 40,
             ignoreEXALT: false,
             costFormula: (n: number, cpl: number): number =>
@@ -684,7 +817,7 @@ export class AmbrosiaHelper {
             effects: (n: number) => ({
                 freeRedLuckUpgrades: n,
             }),
-            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
             prerequisites: {
                 ambrosiaFreeLuckUpgrades: 10,
             },
@@ -701,12 +834,88 @@ export class AmbrosiaHelper {
             }),
             extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
         },
+
+        ambrosiaQuarks4: {
+            costPerLevel: 300_000,
+            maxLevel: 100,
+            ignoreEXALT: false,
+            costFormula: (_n, cpl) => cpl,
+            effects: (n) => ({ quarks: 1 + n / 100 }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
+            prerequisites: { ambrosiaQuarks3: 10 },
+        },
+        ambrosiaCubes4: {
+            costPerLevel: 300_000,
+            maxLevel: 50,
+            ignoreEXALT: false,
+            costFormula: (n, cpl) => cpl + 20_000 * n,
+            effects: (n) => ({ cubes: (1 + n / 100) * Math.pow(1.3, Math.floor(n / 5)) }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            prerequisites: { ambrosiaCubes3: 100 },
+        },
+        ambrosiaFreeCubeUpgrades: {
+            costPerLevel: 10_000,
+            maxLevel: 30,
+            ignoreEXALT: false,
+            costFormula: (n, cpl) => cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n) => ({ freeCubeUpgrades: n }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
+            prerequisites: { ambrosiaCubes2: 100 },
+        },
+        ambrosiaFreeObtainiumUpgrades: {
+            costPerLevel: 4_000,
+            maxLevel: 50,
+            ignoreEXALT: false,
+            costFormula: (n, cpl) => cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n) => ({ freeObtainiumUpgrades: n }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            prerequisites: { ambrosiaBaseObtainium1: 20, ambrosiaBaseObtainium2: 30 },
+        },
+        ambrosiaFreeOfferingUpgrades: {
+            costPerLevel: 4_000,
+            maxLevel: 50,
+            ignoreEXALT: false,
+            costFormula: (n, cpl) => cpl * (Math.pow(n + 1, 2) - Math.pow(n, 2)),
+            effects: (n) => ({ freeOfferingUpgrades: n }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            prerequisites: { ambrosiaBaseOffering1: 30, ambrosiaBaseOffering2: 60 },
+        },
+        ambrosiaInfiniteShopUpgrades3: {
+            costPerLevel: 500_000,
+            maxLevel: 20,
+            ignoreEXALT: false,
+            costFormula: (_n, cpl) => cpl,
+            effects: (n) => ({ freeLevels: n }),
+            extraLevelCalc: () => this.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
+            prerequisites: { ambrosiaInfiniteShopUpgrades2: 20 },
+        },
+        twoMind: {
+            costPerLevel: 0,
+            maxLevel: 1,
+            ignoreEXALT: false,
+            costFormula: () => Number.POSITIVE_INFINITY,
+            effects: (n) => ({ twoMindEnabled: n }),
+            extraLevelCalc: () => 0,
+        },
     };
 
     getRedAmbrosiaUpgradeEffects = <T extends RedAmbrosiaUpgradeKey>(upgradeKey: T): RedAmbrosiaUpgradeRewards[T] => {
         const currentLevel = this.calculateRedAmbrosiaUpgradeValue(upgradeKey);
         return this.redAmbrosiaUpgradeCalculationCollection[upgradeKey].effects(currentLevel, this.#ctx.getGameData()) as RedAmbrosiaUpgradeRewards[T];
     };
+
+    #isAmbrosiaUpgradeSuppressed(upgradeKey: AmbrosiaUpgradeNames): boolean {
+        const data = this.#ctx.getGameData();
+        if (!data) return true;
+
+        const upgradeConfig = this.ambrosiaUpgradeCalculationCollection[upgradeKey];
+        if (AmbrosiaHelper.#EXALT_9_AMBROSIA_UPGRADES.has(upgradeKey)
+            && data.singularityChallenges.taxmanLastStand.completions <= 0) return true;
+
+        return (data.singularityChallenges.noAmbrosiaUpgrades.enabled
+            || data.singularityChallenges.sadisticPrequel.enabled)
+            && !upgradeConfig.ignoreEXALT;
+    }
 
     getAmbrosiaUpgradeEffectiveLevels = <T extends AmbrosiaUpgradeNames>(upgradeKey: T): number => {
         const data = this.#ctx.getGameData();
@@ -715,30 +924,41 @@ export class AmbrosiaHelper {
         if (!(upgradeKey in data.ambrosiaUpgrades)) return 0;
         if (!(upgradeKey in this.ambrosiaUpgradeCalculationCollection)) return 0;
 
-        const upgradeConfig = this.ambrosiaUpgradeCalculationCollection[upgradeKey];
         const effectiveLevels = this.calculateAmbrosiaUpgradeValue(upgradeKey);
-
-        return ((data.singularityChallenges.noAmbrosiaUpgrades.enabled || data.singularityChallenges.sadisticPrequel.enabled) && !upgradeConfig.ignoreEXALT)
-            ? 0
-            : effectiveLevels;
+        return this.#isAmbrosiaUpgradeSuppressed(upgradeKey) ? 0 : effectiveLevels;
     };
 
     #getAmbrosiaUpgradeEffectsFreeLevelsOnly = <T extends AmbrosiaUpgradeNames>(upgradeKey: T): AmbrosiaUpgradeRewards[T] => {
         const upgradeConfig = this.ambrosiaUpgradeCalculationCollection[upgradeKey];
-        const freeLevelCount = upgradeConfig.extraLevelCalc?.() ?? 0;
+        // Purple enchantment levels only become active when the corresponding
+        // blueberry upgrade is purchased. A Heater base loadout has no purchased
+        // upgrades, so only persistent red-ambrosia row levels belong here.
+        const freeLevelCount = this.#isAmbrosiaUpgradeSuppressed(upgradeKey)
+            ? 0
+            : this.#getAmbrosiaUpgradeRedFreeLevels(upgradeKey);
 
         const ctx: AmbrosiaUpgradeEffectContext = {
             freeLevelsOnly: true,
-            getAmbrosiaUpgradeLevel: (name) => this.calculateAmbrosiaUpgradeValue(name, true),
+            getAmbrosiaUpgradeLevel: (name) => this.#getAmbrosiaUpgradeRedFreeLevels(name),
         };
 
         return upgradeConfig.effects(freeLevelCount, ctx) as AmbrosiaUpgradeRewards[T];
     };
 
+    #getAmbrosiaUpgradeEffectsNoLevels = <T extends AmbrosiaUpgradeNames>(upgradeKey: T): AmbrosiaUpgradeRewards[T] => {
+        const upgradeConfig = this.ambrosiaUpgradeCalculationCollection[upgradeKey];
+        const ctx: AmbrosiaUpgradeEffectContext = {
+            freeLevelsOnly: true,
+            getAmbrosiaUpgradeLevel: () => 0,
+        };
+        return upgradeConfig.effects(0, ctx) as AmbrosiaUpgradeRewards[T];
+    };
+
     getAmbrosiaUpgradeEffects = <T extends AmbrosiaUpgradeNames>(upgradeKey: T, mode: CalculationMode = 'normal'): AmbrosiaUpgradeRewards[T] => {
-        return mode === 'true_base'
-            ? this.#getAmbrosiaUpgradeEffectsFreeLevelsOnly(upgradeKey)
-            : this.ambrosiaUpgradeCalculationCollection[upgradeKey].effects(this.getAmbrosiaUpgradeEffectiveLevels(upgradeKey)) as AmbrosiaUpgradeRewards[T];
+        if (mode === 'true_base') return this.#getAmbrosiaUpgradeEffectsFreeLevelsOnly(upgradeKey);
+        if (mode === 'non_ambrosia') return this.#getAmbrosiaUpgradeEffectsNoLevels(upgradeKey);
+        return this.ambrosiaUpgradeCalculationCollection[upgradeKey]
+            .effects(this.getAmbrosiaUpgradeEffectiveLevels(upgradeKey)) as AmbrosiaUpgradeRewards[T];
     };
 
     get maxRedAmbrosiaUpgradeAP(): number {
@@ -750,26 +970,30 @@ export class AmbrosiaHelper {
         }, 0);
     }
 
-    calculateAmbrosiaGenerationShopUpgrade(reduce_vals = true, true_base = false) {
+    calculateAmbrosiaGenerationShopUpgrade(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
-        const cacheName = (`AmbrosiaGenerationShopUpgrade${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
+        const mode: CalculationMode = typeof trueBaseOrMode === 'string'
+            ? trueBaseOrMode
+            : trueBaseOrMode ? 'true_base' : 'normal';
+        const cacheName = (`AmbrosiaGenerationShopUpgrade${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : ''}`) as keyof CalculationCache;
         const calculationVars: number[] = [
             data.shopUpgrades.shopAmbrosiaGeneration1,
             data.shopUpgrades.shopAmbrosiaGeneration2,
             data.shopUpgrades.shopAmbrosiaGeneration3,
             data.shopUpgrades.shopAmbrosiaGeneration4,
             data.ambrosiaUpgrades.ambrosiaFreeGenerationUpgrades.ambrosiaInvested,
-            data.redAmbrosiaUpgrades.freeLevelsRow3,
+            data.ambrosiaUpgrades.ambrosiaFreeGenerationUpgrades.purpleAmbrosiaInvested ?? 0,
+            data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
+            mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2,
         ];
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (reduce_vals && cached !== undefined) return cached;
 
-        const mode = true_base ? 'true_base' : 'normal';
         const vals = [
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration1', 'ambrosiaGenerationMult', mode) as number,
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration2', 'ambrosiaGenerationMult', mode) as number,
@@ -783,56 +1007,26 @@ export class AmbrosiaHelper {
     }
 
     calculateAmbrosiaGenerationSingularityUpgrade(reduce_vals = true) {
-        const data = this.#ctx.getGameData();
-        if (!data) return 0;
-
-        const cacheName = 'AmbrosiaGenerationSingularityUpgrade' as keyof CalculationCache;
-        const calculationVars: number[] = [
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration2.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration3.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration4.level,
-        ];
-
-        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
-        if (reduce_vals && cached !== undefined) return cached;
-
         const vals = [
-            1 + data.goldenQuarkUpgrades.singAmbrosiaGeneration.level / 100,
-            1 + data.goldenQuarkUpgrades.singAmbrosiaGeneration2.level / 100,
-            1 + data.goldenQuarkUpgrades.singAmbrosiaGeneration3.level / 100,
-            1 + (2 * data.goldenQuarkUpgrades.singAmbrosiaGeneration4.level) / 100,
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
         ];
 
         const reduced = vals.reduce((a, b) => a * b, 1);
-        this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduce_vals ? reduced : vals;
     }
 
     calculateAmbrosiaGenerationOcteractUpgrade(reduce_vals = true) {
-        const data = this.#ctx.getGameData();
-        if (!data) return 0;
-
-        const cacheName = 'AmbrosiaGenerationOcteractUpgrade' as keyof CalculationCache;
-        const calculationVars: number[] = [
-            data.octUpgrades.octeractAmbrosiaGeneration.level,
-            data.octUpgrades.octeractAmbrosiaGeneration2.level,
-            data.octUpgrades.octeractAmbrosiaGeneration3.level,
-            data.octUpgrades.octeractAmbrosiaGeneration4.level,
-        ];
-
-        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
-        if (reduce_vals && cached !== undefined) return cached;
-
         const vals = [
-            1 + data.octUpgrades.octeractAmbrosiaGeneration.level / 100,
-            1 + data.octUpgrades.octeractAmbrosiaGeneration2.level / 100,
-            1 + data.octUpgrades.octeractAmbrosiaGeneration3.level / 100,
-            1 + (2 * data.octUpgrades.octeractAmbrosiaGeneration4.level) / 100,
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
         ];
 
         const reduced = vals.reduce((a, b) => a * b, 1);
-        this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduce_vals ? reduced : vals;
     }
 
@@ -854,40 +1048,41 @@ export class AmbrosiaHelper {
         return campaignBlueberrySpeedBonus;
     }
 
-    private calculateAmbrosiaGenerationSpeedPatreonBonus(): number {
-        const me = this.#ctx.getMeData();
-        if (!me) return 1;
-        const blueberryGeneration = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration;
-        return 1 + (blueberryGeneration * 100 * (1 + (me.globalBonus ?? 0) / 100) * (1 + (me.bonus.quark ?? 0) / 100) - 100) / 100;
-    }
-
-    calculateAmbrosiaGenerationSpeed(reduce_vals = true, true_base = true) {
+    calculateAmbrosiaGenerationSpeed(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         const meBonuses = this.#ctx.getMeData();
-        if (!data || !meBonuses) return 0;
+        if (!data) return 0;
 
-        const cacheName = (`AmbrosiaGenerationSpeedRaw${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
+        const mode: CalculationMode = typeof trueBaseOrMode === 'string'
+            ? trueBaseOrMode
+            : trueBaseOrMode ? 'true_base' : 'normal';
+        const cacheName = (`AmbrosiaGenerationSpeedRaw${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : ''}`) as keyof CalculationCache;
         const P_GEN_BUFF_LVL = this.#ctx.getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF');
         const campaignBlueberrySpeedBonus = this.calculateCampaignAmbrosiaSpeedBonus();
         const AMBROSIA_UNLOCKED_GATE = data.singularityChallenges.noSingularityUpgrades.completions > 0 ? 1 : 0;
         const RED_AMB_GEN_1 = this.#ctx.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed;
         const RED_AMB_GEN_2 = this.#ctx.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed;
-        const ambrosiaGenerationShopUpgrade = this.calculateAmbrosiaGenerationShopUpgrade(true, true_base) as number;
+        const ambrosiaGenerationShopUpgrade = this.calculateAmbrosiaGenerationShopUpgrade(true, mode) as number;
         const ambrosiaGenerationSingularityUpgrade = this.calculateAmbrosiaGenerationSingularityUpgrade(true) as number;
         const ambrosiaGenerationOcteractUpgrade = this.calculateAmbrosiaGenerationOcteractUpgrade(true) as number;
-        const ambrosiaPatreonBlueberryGeneration = true_base ? 1 : this.calculateAmbrosiaGenerationSpeedPatreonBonus();
-        const panthemaAmbrosiaGenerationMult = this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaGenerationMult', true_base ? 'true_base' : 'normal') as number;
+        const ambrosiaPatreonBlueberryGeneration = mode === 'normal'
+            ? this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration
+            : 1;
+        const panthemaAmbrosiaGenerationMult = this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaGenerationMult', mode) as number;
         const oneChallengeCap = this.#ctx.getSingularityChallengeEffect('oneChallengeCap', 'blueberrySpeedMult');
         const noAmbrosiaUpgrades = this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'blueberrySpeedMult');
         const eventBlueberryTimeBuff = this.#ctx.isEvent ? 1 + this.#ctx.calculateEventSourceBuff(EventBuffType.BlueberryTime) : 1;
-        const cookie76Bonus = 1 + 0.01 * (data.cubeUpgrades[76] ?? 0) * this.calculateNumberOfThresholds();
+        const cookie76Bonus = 1 + 0.02 * (data.cubeUpgrades[76] ?? 0);
+        const purpleTutorial = this.#ctx.getPurpleReactorUpgradeEffects('tutorial', 'ambrosiaGeneration');
+        const lifetimePurpleHoney = this.#ctx.getPurpleReactorUpgradeEffects('lifetimeHoneyAmbrosia', 'ambrosiaGenerationSpeed');
+        const purpleAries = this.#ctx.getPurpleAmbrosiaUpgradeEffects('aries', 'universalBarPointMult');
 
         const calculationVars: number[] = [
             AMBROSIA_UNLOCKED_GATE,
             P_GEN_BUFF_LVL,
             campaignBlueberrySpeedBonus,
-            meBonuses.globalBonus,
-            meBonuses.bonus.quark,
+            meBonuses?.globalBonus ?? 0,
+            meBonuses?.bonus?.quark ?? 0,
             RED_AMB_GEN_1,
             RED_AMB_GEN_2,
             data.shopUpgrades.shopAmbrosiaGeneration1,
@@ -895,17 +1090,18 @@ export class AmbrosiaHelper {
             data.shopUpgrades.shopAmbrosiaGeneration3,
             data.shopUpgrades.shopAmbrosiaGeneration4,
             data.ambrosiaUpgrades.ambrosiaFreeGenerationUpgrades.ambrosiaInvested,
-            data.redAmbrosiaUpgrades.freeLevelsRow3,
+            data.ambrosiaUpgrades.ambrosiaFreeGenerationUpgrades.purpleAmbrosiaInvested ?? 0,
+            data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration2.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration3.level,
-            data.goldenQuarkUpgrades.singAmbrosiaGeneration4.level,
-            data.octUpgrades.octeractAmbrosiaGeneration.level,
-            data.octUpgrades.octeractAmbrosiaGeneration2.level,
-            data.octUpgrades.octeractAmbrosiaGeneration3.level,
-            data.octUpgrades.octeractAmbrosiaGeneration4.level,
+            data.goldenQuarkUpgrades.singAmbrosiaGeneration.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaGeneration2.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaGeneration3.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaGeneration4.goldenQuarksInvested,
+            data.octUpgrades.octeractAmbrosiaGeneration.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaGeneration2.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaGeneration3.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaGeneration4.octeractsInvested,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration,
             oneChallengeCap,
             noAmbrosiaUpgrades,
@@ -915,6 +1111,12 @@ export class AmbrosiaHelper {
             data.shopUpgrades.shopPanthema,
             this.#ctx.isEvent ? 1 : 0,
             eventBlueberryTimeBuff,
+            data.purpleReactorUpgrades?.tutorial ?? 0,
+            data.purpleReactorUpgrades?.lifetimeHoneyAmbrosia ?? 0,
+            data.purpleReactor?.lifetimePurpleHoney ?? 0,
+            data.purpleAmbrosiaUpgrades?.aries ?? 0,
+            data.lifetimePurpleAmbrosia ?? 0,
+            mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2,
         ];
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
@@ -935,7 +1137,10 @@ export class AmbrosiaHelper {
             RED_AMB_GEN_2,
             cookie76Bonus,
             this.#ctx.getShopUpgradeEffects('shopCashGrabUltra', 'ambrosiaGenerationMult') as number,
+            purpleTutorial,
             eventBlueberryTimeBuff,
+            lifetimePurpleHoney,
+            purpleAries,
         ];
 
         const reduced = vals.reduce((a, b) => a * b, 1);
@@ -943,12 +1148,38 @@ export class AmbrosiaHelper {
         return reduce_vals ? reduced : vals;
     }
 
-    calculateRequiredBlueberryTime() {
+    // Mirrors allRedAmbrosiaGenerationSpeedStats in SynergismOfficial/src/Statistics.ts.
+    calculateRedAmbrosiaGenerationSpeed(reduce_vals = true) {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+
+        const synergismLevel = this.#ctx.calculateSynergismLevel();
+        const vals = [
+            data.singularityChallenges.noAmbrosiaUpgrades.completions > 0 ? 1 : 0,
+            1 + 0.02 * (data.cubeUpgrades[76] ?? 0),
+            1 + 0.05 * this.#ctx.getPCoinUpgradeLevel('RED_GENERATION_BUFF'),
+            synergismLevel >= 280 ? 1 + 0.01 * (synergismLevel - 279) : 1,
+            this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration,
+            this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed').redAmbrosiaGenerationSpeed,
+            this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed2').redAmbrosiaGenerationSpeed,
+            this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed,
+            this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed,
+            this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'redSpeedMult'),
+            this.#ctx.getPurpleReactorUpgradeEffects('tutorial', 'redAmbrosiaGeneration'),
+            this.#ctx.getPurpleReactorUpgradeEffects('lifetimeHoneyRedAmbrosia', 'redAmbrosiaGenerationSpeed'),
+            this.#ctx.getPurpleAmbrosiaUpgradeEffects('aries', 'universalBarPointMult'),
+            this.calculateBlueberryInventory(true) as number,
+        ];
+        const reduced = vals.reduce((a, b) => a * b, 1);
+        return reduce_vals ? reduced : vals;
+    }
+
+    calculateRequiredBlueberryTime(ignoreTwoMind = false, ignoreBrickOfLead = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
         const barDependence = this.#getBarDependence(data);
-        const twoMindEnabled = this.#isTwoMindEnabled(data);
-        const cacheName = 'RequiredBlueberryTime' as keyof CalculationCache;
+        const twoMindEnabled = !ignoreTwoMind && this.#isTwoMindEnabled(data);
+        const cacheName = (`RequiredBlueberryTime${ignoreTwoMind ? '_IGNORE_TWO_MIND' : ''}${ignoreBrickOfLead ? '_IGNORE_BRICK' : ''}`) as keyof CalculationCache;
         const timePerAmbrosia = HSGlobal.HSAmbrosia.TIME_PER_AMBROSIA; // Currently 45
 
         const calculationVars: number[] = [
@@ -956,9 +1187,11 @@ export class AmbrosiaHelper {
             data.shopUpgrades.shopAmbrosiaAccelerator,
             data.singularityChallenges.noAmbrosiaUpgrades.completions,
             data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaBrickOfLead.purpleAmbrosiaInvested ?? 0,
             data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
             twoMindEnabled ? 1 : 0,
+            ignoreBrickOfLead ? 1 : 0,
             barDependence.enabled ? 1 : 0,
             barDependence.completions,
         ];
@@ -981,7 +1214,9 @@ export class AmbrosiaHelper {
         val += Math.floor((data.lifetimeAmbrosia / 300));
 
         const acceleratorMult = this.#ctx.getShopUpgradeEffects('shopAmbrosiaAccelerator', 'ambrosiaPointRequirementMult') as number;
-        const brickOfLeadMult = this.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
+        const brickOfLeadMult = ignoreBrickOfLead
+            ? 1
+            : this.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead').barRequirementMult;
 
         val *= acceleratorMult;
         val *= brickOfLeadMult;
@@ -996,13 +1231,13 @@ export class AmbrosiaHelper {
         return val;
     }
 
-    calculateRequiredRedAmbrosiaTime() {
+    calculateRequiredRedAmbrosiaTime(ignoreTwoMind = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
         const barDependence = this.#getBarDependence(data);
-        const twoMindEnabled = this.#isTwoMindEnabled(data);
+        const twoMindEnabled = !ignoreTwoMind && this.#isTwoMindEnabled(data);
 
-        const cacheName = 'RequiredRedAmbrosiaTime' as keyof CalculationCache;
+        const cacheName = (`RequiredRedAmbrosiaTime${ignoreTwoMind ? '_IGNORE_TWO_MIND' : ''}`) as keyof CalculationCache;
         const calculationVars: number[] = [
             data.lifetimeRedAmbrosia,
             data.singularityChallenges.limitedTime.completions,
@@ -1038,7 +1273,7 @@ export class AmbrosiaHelper {
         return reduced;
     }
 
-    calculatePurpleHoneyConversionFactor() {
+    calculatePurpleHoneyConversionFactor(ignoreTwoMind = false) {
         const data = this.#ctx.getGameData() as (GameData & {
             purpleHoneyProgress?: number;
             purpleReactor?: {
@@ -1049,7 +1284,7 @@ export class AmbrosiaHelper {
         }) | undefined;
         if (!data) return 0;
 
-        if (this.#isTwoMindEnabled(data)) {
+        if (!ignoreTwoMind && this.#isTwoMindEnabled(data)) {
             return 150_000;
         }
 
@@ -1064,23 +1299,12 @@ export class AmbrosiaHelper {
             );
         }
 
-        const upgrades = data.purpleReactorUpgrades ?? {};
-        const requirementReductionUpgrades = [
-            { key: 'purpleHoneyRequirementReduction1', costPerLevel: 20, reductionPerLevel: 0.006 },
-            { key: 'purpleHoneyRequirementReduction2', costPerLevel: 400, reductionPerLevel: 0.005 },
-            { key: 'purpleHoneyRequirementReduction3', costPerLevel: 8_000, reductionPerLevel: 0.004 },
-            { key: 'purpleHoneyRequirementReduction4', costPerLevel: 160_000, reductionPerLevel: 0.003 },
-        ] as const;
-        const requirementReduction = requirementReductionUpgrades.reduce(
-            (multiplier, { key, costPerLevel, reductionPerLevel }) => {
-                // Save data stores cumulative Purple Honey spent, not the upgrade level.
-                // These four upgrades have linear costs and a maximum level of 50.
-                const invested = upgrades[key] ?? 0;
-                const level = Math.min(50, Math.max(0, Math.floor((invested + 0.001) / costPerLevel)));
-                return multiplier * (1 - reductionPerLevel * level);
-            },
-            1
-        );
+        const requirementReduction = [
+            this.#ctx.getPurpleReactorUpgradeEffects('purpleHoneyRequirementReduction1', 'purpleHoneyRequirementMult'),
+            this.#ctx.getPurpleReactorUpgradeEffects('purpleHoneyRequirementReduction2', 'purpleHoneyRequirementMult'),
+            this.#ctx.getPurpleReactorUpgradeEffects('purpleHoneyRequirementReduction3', 'purpleHoneyRequirementMult'),
+            this.#ctx.getPurpleReactorUpgradeEffects('purpleHoneyRequirementReduction4', 'purpleHoneyRequirementMult'),
+        ].reduce((a, b) => a * b, 1);
         const singularitySizeMultiplier = 1
             - Math.max(0, Math.floor((data.highestSingularityCount - 280) / 2) / 100);
         const lifetimeMultiplier = Math.min(25_000, lifetimePurpleHoney * 0.9 + 2_500) / 2_500;
@@ -1160,28 +1384,35 @@ export class AmbrosiaHelper {
         if (!(upgradeName in data.ambrosiaUpgrades)) return 0;
         if (!(upgradeName in this.ambrosiaUpgradeCalculationCollection)) return 0;
 
+        if (upgradeName === 'twoMind') {
+            return this.#isTwoMindEnabled(data) ? 1 : 0;
+        }
+
         const investmentParameters = this.ambrosiaUpgradeCalculationCollection[upgradeName] as AmbrosiaUpgradeCalculationConfig<any>;
+        const purchasedLevel = this.investToAmbrosiaUpgrade(
+            0,
+            data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
+            investmentParameters.costPerLevel,
+            investmentParameters.maxLevel,
+            investmentParameters.costFormula,
+        );
+        const extraLevels = this.#getAmbrosiaUpgradeExtraLevels(upgradeName, purchasedLevel);
         const calculationVars: number[] = [
             data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
-            investmentParameters.extraLevelCalc(),
+            data.ambrosiaUpgrades[upgradeName].purpleAmbrosiaInvested ?? 0,
+            extraLevels,
         ];
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
 
         if (cached !== undefined) return cached;
 
         if (freeLevelsOnly) {
-            const reduced = investmentParameters.extraLevelCalc();
+            const reduced = extraLevels;
             this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
             return reduced;
         }
 
-        const upgradeValue = this.investToAmbrosiaUpgrade(
-            investmentParameters.extraLevelCalc(),
-            data.ambrosiaUpgrades[upgradeName].ambrosiaInvested,
-            investmentParameters.costPerLevel,
-            investmentParameters.maxLevel,
-            investmentParameters.costFormula,
-        );
+        const upgradeValue = purchasedLevel + extraLevels;
 
         const reduced = upgradeValue;
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
@@ -1272,11 +1503,12 @@ export class AmbrosiaHelper {
 
         const vals = [
             +(gameData.singularityChallenges.noSingularityUpgrades.completions > 0) * 3,
-            +(gameData.goldenQuarkUpgrades.blueberries.level),
-            +(gameData.octUpgrades.octeractBlueberries.level),
+            this.#ctx.getGQUpgradeEffect('blueberries', 'blueberries'),
+            this.#ctx.getOcteractUpgradeEffect('octeractBlueberries', 'blueberries'),
             +(this.getRedAmbrosiaUpgradeEffects('blueberries').blueberries),
             this.calculateSingularityMilestoneBlueberries(),
             noAmbrosiaFactor,
+            this.#ctx.getSingularityChallengeEffect('barDependence', 'blueberries'),
         ];
 
         const reduced = vals.reduce((a, b) => a + b, 0);

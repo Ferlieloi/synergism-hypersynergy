@@ -238,7 +238,7 @@ export class RuneHelper {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e206'),
             levelsPerOOM: 1 / 50,
-            levelsPerOOMIncrease: () => this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'antiquityOOM'),
+            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('capricorn', 'antiquitiesOfAntGodCoefficient'),
             effects: (level: number, key?: string) => {
                 if (key === 'addCodeCooldownReduction') {
                     return level > 0 ? 0.8 - 0.3 * (level - 1) / (level + 10) : 1
@@ -257,21 +257,21 @@ export class RuneHelper {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e500'),
             levelsPerOOM: 1 / 20,
-            levelsPerOOMIncrease: () => this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'horseShoeOOM'),
+            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseShoeRuneCoefficient'),
             effects: (level: number) => {
-                const ambrosiaLuck = level
-                const redLuck = level / 5
-                const redLuckConversion = -0.5 * level / (level + 50)
+                const ambrosiaLuck = 2 * level
+                const redLuck = 2 * level / 5
+                const purpleHoneyLuck = level / 5
                 return {
                     ambrosiaLuck,
                     redLuck,
-                    redLuckConversion,
+                    purpleHoneyLuck,
                 }
             },
             effectiveLevelMult: () => 1,
             freeLevels: () => this.#ctx.getRuneBonusLevels('horseShoe'),
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean((this.#ctx.getGameData()?.singularityChallenges.taxmanLastStand.completions ?? 0) > 0),
+            isUnlocked: () => Boolean(this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseshoeRuneUnlocked')),
         },
         finiteDescent: {
             ignoreChal9: true,
@@ -438,10 +438,12 @@ export class RuneHelper {
     }
 
     getRuneLevelFromEXP = (rune: RuneKeys, runeEXP: Decimal): number => {
-        const expLog10 = runeEXP.gt(0) ? runeEXP.log10() : Number.NEGATIVE_INFINITY
-        const costLog10 = this.#costLog10Cache.get(rune) ?? this.runes[rune].costCoefficient.log10()
-        const log10ExpOverCostPlus1 = expLog10 - costLog10 + 1
-
+        // Mirrors SynergismOfficial/src/Runes.ts updateLevelsFromEXP.
+        // The previous log-domain shortcut used log10(EXP) - log10(cost) + 1,
+        // which is not log10(EXP / cost + 1) and overcounted almost every rune.
+        const log10ExpOverCostPlus1 = Decimal.log10(
+            runeEXP.div(this.runes[rune].costCoefficient).plus(1)
+        )
         return Math.max(0, Math.floor(this.getLevelsPerOOM(rune) * log10ExpOverCostPlus1))
     }
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      3.6
+// @version      3.9
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none
@@ -15,7 +15,7 @@
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '3.6';
+    const loaderVersion = '3.9';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -44,14 +44,15 @@
         return origDefine.call(this, name, ctor, options);
     };
 
-    // ─── Error detection & reload ─────────────────────────────────────────────
+    // ─── Collision diagnostics ────────────────────────────────────────────────
+    // A late original out.js can throw while our custom-element lock is active.
+    // Reloading repeats the same timing race and can trap the page in a loop.
     const illegalDivPattern = /Failed to construct\s*'?HTMLDivElement'?|Illegal constructor/i;
 
     window.addEventListener('error', (event) => {
         const text = `${String(event?.message || '')}\n${String(event?.error?.stack || '')}`;
         if (illegalDivPattern.test(text)) {
-            warn(`Illegal constructor detected, reloading page...`);
-            window.location.reload();
+            warn(`Illegal constructor from ${event?.filename || 'unknown script'}; continuing without reloading.`, event?.error || event?.message);
         }
     }, true);
 
@@ -61,8 +62,7 @@
         const stack = reason instanceof Error ? reason.stack : '';
         const text = `${message}\n${stack}`;
         if (illegalDivPattern.test(text)) {
-            warn(`Illegal constructor detected (unhandledrejection), reloading page...`);
-            window.location.reload();
+            warn('Illegal constructor in rejected promise; continuing without reloading.', reason);
         }
     }, true);
 
@@ -81,6 +81,52 @@
     function shouldBlockScript(src) {
         return src.includes('rocket-loader') || /\/dist\/out.*\.js/.test(src);
     }
+
+    // Rocket Loader can clone the original out.js and insert it before our
+    // MutationObserver callback runs. Mark that clone inert before insertion.
+    // Fire a synthetic load so Rocket Loader can advance its script queue.
+    function interceptInsertedGameScript(node) {
+        if (node?.nodeType !== 1 || node.localName !== 'script') return false;
+        const src = node.src || node.getAttribute('src') || '';
+        if (!/\/dist\/out.*\.js(?:[?#]|$)/.test(src)) return false;
+        node.type = 'application/x-hs-blocked';
+        node.setAttribute('data-hs-inert', '');
+        if (!gameScriptDetected) {
+            gameScriptDetected = true;
+            injectPatchedBundle();
+        }
+        debug(`Blocked game script before DOM insertion: ${src.substring(0, 80)}`);
+        return true;
+    }
+
+    function acknowledgeBlockedScript(node) {
+        queueMicrotask(() => {
+            node.dispatchEvent(new Event('load'));
+            node.remove();
+        });
+    }
+
+    const nativeInsertBefore = Node.prototype.insertBefore;
+    Node.prototype.insertBefore = function (node, referenceNode) {
+        const blocked = interceptInsertedGameScript(node);
+        const inserted = nativeInsertBefore.call(this, node, referenceNode);
+        if (blocked) acknowledgeBlockedScript(node);
+        return inserted;
+    };
+    const nativeAppendChild = Node.prototype.appendChild;
+    Node.prototype.appendChild = function (node) {
+        const blocked = interceptInsertedGameScript(node);
+        const inserted = nativeAppendChild.call(this, node);
+        if (blocked) acknowledgeBlockedScript(node);
+        return inserted;
+    };
+    const nativeReplaceChild = Node.prototype.replaceChild;
+    Node.prototype.replaceChild = function (node, oldNode) {
+        const blocked = interceptInsertedGameScript(node);
+        const replaced = nativeReplaceChild.call(this, node, oldNode);
+        if (blocked) acknowledgeBlockedScript(node);
+        return replaced;
+    };
 
     // ─── Script interception ──────────────────────────────────────────────────
     // We need to intercept the game's <script src="…/dist/out….js"> tag,
@@ -110,6 +156,7 @@
         for (const m of muts) {
             for (const n of m.addedNodes) {
                 if (n.tagName !== 'SCRIPT') continue;
+                if (n.hasAttribute('data-hs-inert')) continue;
                 const src = n.src || '';
                 if (shouldBlockScript(src)) {
                     n.type = 'javascript/blocked';
@@ -326,6 +373,38 @@
             return null;
         };
 
+        // Find the function containing a behavior marker, even when its header is
+        // far away or a nested callback lies between the header and marker.
+        const findEnclosingFunction = (src, anchorRe, markers, lookBehind = 100000) => {
+            const headers = [
+                /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
+                /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/g,
+                /(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g
+            ];
+            anchorRe.lastIndex = 0;
+            let anchor;
+            while ((anchor = anchorRe.exec(src)) !== null) {
+                const start = Math.max(0, anchor.index - lookBehind);
+                const prefix = src.slice(start, anchor.index);
+                const candidates = [];
+                for (const header of headers) {
+                    header.lastIndex = 0;
+                    let match;
+                    while ((match = header.exec(prefix)) !== null) {
+                        candidates.push({ bodyStart: start + match.index + match[0].length, fnName: match[1] });
+                    }
+                }
+                candidates.sort((a, b) => b.bodyStart - a.bodyStart);
+                for (const candidate of candidates) {
+                    const bodyEnd = findMatchingBrace(src, candidate.bodyStart);
+                    if (bodyEnd <= anchor.index) continue;
+                    const body = src.slice(candidate.bodyStart, bodyEnd);
+                    if (markers.every(marker => body.includes(marker))) return { ...candidate, bodyEnd };
+                }
+            }
+            return null;
+        };
+
         const findExportDataFunction = (src, fnResult) => {
             if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
             const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
@@ -484,38 +563,22 @@
 
         // ==================================================================================
         // ── GETMAXCHALLENGES PATCH — expose Challenges.ts getMaxChallenges as window.__HS_getMaxChallenges
-        // Unique anchor: n.cubeUpgrades[29] only appears inside getMaxChallenges (reincarnation cap += 4/level)
+        // Match challenge-cap behavior without assuming minified variable names.
         try {
-            const gmcAnchor = 'n.cubeUpgrades[29]';
-            const gmcAnchorIdx = code.indexOf(gmcAnchor);
-            if (gmcAnchorIdx !== -1) {
-                const backCtx = code.slice(Math.max(0, gmcAnchorIdx - 400), gmcAnchorIdx);
-                // Take the last arrow-function assignment before the anchor — that is getMaxChallenges
-                const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
-                const gmcFn = allFnMatches.at(-1)?.[1];
-                if (gmcFn) {
-                    // Find body start (position right after the opening '{') robustly
-                    const fnHeaderRe = new RegExp(`\\b${gmcFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
-                    let bodyStart = -1, fhm;
-                    const preAnchor = code.slice(0, gmcAnchorIdx);
-                    while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
-                    if (bodyStart !== -1) {
-                        const expose = 
-                            `\nif(!window.__HS_CHALLENGES_EXPOSED){` +
-                                `window.__HS_getMaxChallenges=${gmcFn};` +
-                                `window.__HS_CHALLENGES_EXPOSED=true;` +
-                                `console.log('[HS-PATCH] \u2705 getMaxChallenges exposed (fn=${gmcFn})');` +
-                            `}\n`;
-                        code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
-                        log(`Patched getMaxChallenges (fn=${gmcFn})`);
-                    } else {
-                        warn(`getMaxChallenges: found fn name '${gmcFn}' but could not locate body start`);
-                    }
-                } else {
-                    warn('getMaxChallenges: could not extract fn name from anchor context');
-                }
+            const gmcResult = findEnclosingFunction(code, /\.cubeUpgrades\s*\[\s*29\s*\]/g,
+                ['researches[105]', 'oneChallengeCap', 'reincarnationChallengeCap']);
+            if (gmcResult) {
+                const gmcFn = gmcResult.fnName;
+                const expose =
+                    `\nif(!window.__HS_CHALLENGES_EXPOSED){` +
+                        `window.__HS_getMaxChallenges=${gmcFn};` +
+                        `window.__HS_CHALLENGES_EXPOSED=true;` +
+                        `console.log('[HS-PATCH] \u2705 getMaxChallenges exposed (fn=${gmcFn})');` +
+                    `}\n`;
+                code = code.slice(0, gmcResult.bodyStart) + expose + code.slice(gmcResult.bodyStart);
+                log(`Patched getMaxChallenges (fn=${gmcFn})`);
             } else {
-                warn('Could not patch getMaxChallenges — anchor not found in bundle');
+                warn('Could not patch getMaxChallenges — challenge-cap behavior not found in bundle');
             }
         } catch (e) {
             warn('Error while patching getMaxChallenges', e);
@@ -523,39 +586,23 @@
 
         // ==================================================================================
         // ── TACK PATCH — wrap tack() to fire registered after-tack hooks
-        // Unique anchor: ("autoPotion", with optional whitespace and either quote style)
+        // Find the enclosing update from its timer behavior, not a nearby arrow.
         try {
-            const tackAnchorRe = /\(\s*["']autoPotion["']\s*,/;
-            const tackAnchorMatch = tackAnchorRe.exec(code);
-            const tackAnchorIdx = tackAnchorMatch ? tackAnchorMatch.index : -1;
-            if (tackAnchorIdx !== -1) {
-                const backCtx = code.slice(Math.max(0, tackAnchorIdx - 600), tackAnchorIdx);
-                const tackHeaderRe = /=>\s*\{/g;
-                let tm, lastTackBodyStart = -1;
-                while ((tm = tackHeaderRe.exec(backCtx)) !== null) {
-                    lastTackBodyStart = tm.index + tm[0].length;
-                }
-                if (lastTackBodyStart !== -1) {
-                    const assignRe = /([a-zA-Z_$][\w$]*)\s*=\s*(?:\(\s*[a-zA-Z_$][\w$]*\s*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g;
-                    let am2, tackFn = null;
-                    while ((am2 = assignRe.exec(backCtx)) !== null) tackFn = am2[1];
-
-                    const insertAt = Math.max(0, tackAnchorIdx - 600) + lastTackBodyStart;
-                    const tackPatch =
-                        `if(!window.__HS_TACK_PATCHED){` +
-                            `window.__HS_TACK_PATCHED=true;` +
-                            `window.__HS_tackHooks=[];` +
-                            `window.__HS_onAfterTack=function(fn){window.__HS_tackHooks.push(fn);};` +
-                            `console.log('[HS-PATCH] \u2705 tack() patched (fn=${tackFn ?? 'unknown'})');` +
-                        `}` +
-                        `queueMicrotask(()=>{const h=window.__HS_tackHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
-                    code = code.slice(0, insertAt) + tackPatch + code.slice(insertAt);
-                    log(`Patched tack() (fn=${tackFn ?? 'unknown'})`);
-                } else {
-                    warn('tack patch: found anchor but could not locate tack() body start');
-                }
+            const tackResult = findEnclosingFunction(code, /["']autoPotion["']/g,
+                ['prestige', 'autoPotion', 'ascension', 'quarks']);
+            if (tackResult) {
+                const tackPatch =
+                    `if(!window.__HS_TACK_PATCHED){` +
+                        `window.__HS_TACK_PATCHED=true;` +
+                        `window.__HS_tackHooks=[];` +
+                        `window.__HS_onAfterTack=function(fn){window.__HS_tackHooks.push(fn);};` +
+                        `console.log('[HS-PATCH] \u2705 tack() patched (fn=${tackResult.fnName})');` +
+                    `}` +
+                    `queueMicrotask(()=>{const h=window.__HS_tackHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
+                code = code.slice(0, tackResult.bodyStart) + tackPatch + code.slice(tackResult.bodyStart);
+                log(`Patched tack() (fn=${tackResult.fnName})`);
             } else {
-                warn('tack patch: anchor not found in bundle!!');
+                warn('Could not patch tack() — game-time timer behavior not found in bundle');
             }
         } catch (e) {
             warn('Error while patching tack()', e);
@@ -806,12 +853,10 @@
             s.src = url;
             s.onload = () => {
                 log(`✅ Mod script loaded from ${modSource}: ${url}`);
-                try {
-                    window.hypersynergism.init();
-                    log('✅ Mod initialised');
-                } catch (e) {
-                    warn('Mod init failed:', e);
-                }
+                // src/mod/index.ts creates and initializes hypersynergism itself.
+                // Calling init() here races that asynchronous initialization and
+                // makes "Mod initialised" appear before the work has completed.
+                log('Mod entrypoint started initialization');
                 resolve();
             };
             s.onerror = () => {

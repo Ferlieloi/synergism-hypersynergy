@@ -37,6 +37,7 @@ interface UpgradeParameters {
     blueberryCost:  number;
     prerequisites:  Partial<Record<string, number>>;
     ignoresExalt:   boolean;
+    requiresExalt9: boolean;
     costArray?:     number[];
 }
 
@@ -48,6 +49,7 @@ interface UpgradeParameters {
 interface Stats {
     amb:             number;
     rAmb:            number;
+    bonusAmbrosiaPerFill: number;
     lifetimeAmbExp:  number;
     ambSpeed:        number;
     baseLuck:        number;
@@ -58,19 +60,27 @@ interface Stats {
     quarks:          number;
     qHept:           number;
     cubeExp:         number;
+    rawSing:         number;
     sing:            number;
     exalt:           number;
+    exalt9Unlocked:  boolean;
     postAoAG:        boolean;
+    oneMindUnlocked: boolean;
+    aquariusExponent:number;
     mind:            number;
     aSpeed:          number;
     spread:          number;
     baseObt:         number;
     baseOff:         number;
     blueberries:     number;
+    purpleLeoLevel:  number;
+    tutorialBonus:   number;
     bonus:           number[];
     runeExp:         number;
     runeCoefSI:      number;
     bonusSI:         number;
+    talismanSI:      number;
+    runeMultSI:      number;
     baseSI:          number;
     expIA:           number;
     bonusIA:         number;
@@ -92,6 +102,15 @@ interface Stats {
     redberries:      number;
     fusion:          number;
     viscount:        boolean;
+    blueBarMaxWithoutTwoMindAndBrick: number;
+    blueBarRequirementBeforeRounding: number;
+    redBarMaxWithoutTwoMind: number;
+    ambrosiaUpgradeBonusLevels: Record<string, number>;
+    ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
+    shopUpgradeRawLevels: Record<string, number>;
+    shopBonusLevels: HeaterOptimizerInput['shopBonusLevelsNonAmbrosia'];
+    panthemaLevel: number;
+    shopUpgradesDisabled: boolean;
 }
 
 
@@ -118,6 +137,7 @@ interface Options {
 let stats: Stats = {
     amb: 0,
     rAmb: 0,
+    bonusAmbrosiaPerFill: 0,
     lifetimeAmbExp: 0,
     ambSpeed: 1,
     baseLuck: 0,
@@ -128,19 +148,27 @@ let stats: Stats = {
     quarks: 0,
     qHept: 0,
     cubeExp: 0,
+    rawSing: 0,
     sing: 0,
     exalt: 0,
+    exalt9Unlocked: false,
     postAoAG: false,
+    oneMindUnlocked: false,
+    aquariusExponent: 0,
     mind: 0.5,
     aSpeed: 1,
     spread: 0,
     baseObt: 1,
     baseOff: 1,
     blueberries: 3,
+    purpleLeoLevel: 0,
+    tutorialBonus: 0,
     bonus: [0, 0, 0, 0, 0, 0],
     runeExp: 0,
     runeCoefSI: 30,
     bonusSI: 0,
+    talismanSI: 0,
+    runeMultSI: 1,
     baseSI: 1,
     expIA: 0,
     bonusIA: 0,
@@ -154,14 +182,33 @@ let stats: Stats = {
     shopQuark: 0,
     chronometer: 0,
     shopLuck: 0,
-    shopRLuck: [0, 0, 0],
+    shopRLuck: [0, 0, 0, 0],
     shopAmb: [0, 0, 0, 0],
     qHeptExp: 0,
     ossifiedTactics: 0,
     redberries: 0,
     fusion: 0,
     viscount: false,
+    blueBarMaxWithoutTwoMindAndBrick: 25_000_000,
+    blueBarRequirementBeforeRounding: 25_000_000,
+    redBarMaxWithoutTwoMind: 7_500,
     ossifiedTactics2: 0,
+    ambrosiaUpgradeBonusLevels: {},
+    ambrosiaUpgradeBlueberryCostReductions: {},
+    shopUpgradeRawLevels: {},
+    shopBonusLevels: {
+      offering: 0,
+      obtainium: 0,
+      cubes: 0,
+      speed: 0,
+      quark: 0,
+      ambrosiaLuck: 0,
+      redAmbrosiaLuck: 0,
+      ambrosiaGeneration: 0,
+      infinity: 0,
+    },
+    panthemaLevel: 0,
+    shopUpgradesDisabled: false,
 };
 
 let options: Options = {
@@ -194,6 +241,7 @@ class Upgrade {
     blueberryCost:  number;
     prerequisites:  Partial<Record<string, number>>;
     ignoresExalt:   boolean;
+    requiresExalt9: boolean;
     costArray?:     number[];
 
     constructor(parameters: Partial<UpgradeParameters> = {}) {
@@ -205,6 +253,7 @@ class Upgrade {
         this.blueberryCost = parameters.blueberryCost ?? 0;
         this.prerequisites = parameters.prerequisites ?? {};
         this.ignoresExalt  = parameters.ignoresExalt  ?? false;
+        this.requiresExalt9 = parameters.requiresExalt9 ?? false;
 
         if (parameters.costArray !== undefined) {
             this.costArray = parameters.costArray;
@@ -272,53 +321,214 @@ class Upgrade {
       return result
     }
 
+    // Mirrors SynergismOfficial/src/Runes.ts updateLevelsFromEXP and
+    // getRuneEffectiveLevel. Work in log space so exported Decimal EXP values
+    // remain stable even when they exceed JavaScript's finite number range.
+    static log10OnePlusPower10(exponent: number): number {
+      if (exponent === Number.NEGATIVE_INFINITY)
+        return 0
+      if (exponent > 16)
+        return exponent + Math.log10(1 + 10 ** -exponent)
+      if (exponent < -323)
+        return 0
+      return Math.log10(1 + 10 ** exponent)
+    }
+
     static runeLevelSI(runeCoefDelta = 0, talismanPDelta = 0) {
-      let level = (stats.runeExp - 12) * (stats.runeCoefSI + runeCoefDelta)
-      let talismanL = Math.max(0, stats.bonusSI - 10000) // Assuming free levels from tesseract upgrades and exp
-      let bonusL = Math.min(10000, stats.bonusSI)
-      level += bonusL + talismanL * talismanPDelta / stats.talismanP
-      return Math.floor(level)
+      const purchasedLevel = Math.max(0, Math.floor(
+        (stats.runeCoefSI + runeCoefDelta) * this.log10OnePlusPower10(stats.runeExp - 12)
+      ))
+      const talismanBonus = stats.talismanP > 0
+        ? stats.talismanSI * talismanPDelta / stats.talismanP
+        : 0
+      return (purchasedLevel + stats.bonusSI + talismanBonus) * stats.runeMultSI
     }
 
     static runeLevelIA(runeCoefDelta = 0, talismanPDelta = 0) {
-      let level = (stats.expIA - 75) * (0.5 + runeCoefDelta)
-      level += stats.bonusIA + stats.talismanIA * talismanPDelta / stats.talismanP
-      return Math.floor(level)
+      const purchasedLevel = Math.max(0, Math.floor(
+        (0.5 + runeCoefDelta) * this.log10OnePlusPower10(stats.expIA - 75)
+      ))
+      const talismanBonus = stats.talismanP > 0
+        ? stats.talismanIA * talismanPDelta / stats.talismanP
+        : 0
+      return purchasedLevel + stats.bonusIA + talismanBonus
     }
 
-    static chronometerEffect(level = 0, mind = 1) {
+    // Mirrors SynergismOfficial/src/Shop.ts getBonusLevels/getShopLevel.
+    // A free level only affects a shop upgrade that has at least one bought
+    // level. shopPanthema is the sole exception and never receives levels.
+    static shopLevel(
+      upgrade: string,
+      groupDeltas: Partial<Record<keyof Stats['shopBonusLevels'], number>> = {},
+      freeUpgradeMultiplier = 1,
+    ): number {
+      const rawLevel = stats.shopUpgradeRawLevels[upgrade] ?? 0
+      const isUtility = /^improveQuarkHept/.test(upgrade)
+      if (rawLevel <= 0 || (stats.shopUpgradesDisabled && !isUtility))
+        return 0
 
-      if (stats.chronometer <= 0)
+      const groupsByUpgrade: Record<string, Array<keyof Stats['shopBonusLevels']>> = {
+        offeringEX: ['offering'], offeringEX2: ['offering'], offeringEX3: ['offering', 'infinity'],
+        obtainiumEX: ['obtainium'], obtainiumEX2: ['obtainium'], obtainiumEX3: ['obtainium', 'infinity'],
+        cashGrab: ['offering', 'obtainium'], cashGrab2: ['offering', 'obtainium'],
+        seasonPass: ['cubes'], seasonPass2: ['cubes'], seasonPass3: ['cubes'],
+        seasonPassY: ['cubes'], seasonPassZ: ['cubes'], seasonPassLost: ['cubes'],
+        seasonPassInfinity: ['cubes', 'infinity'], chronometerInfinity: ['speed', 'infinity'],
+        improveQuarkHept: ['quark'], improveQuarkHept2: ['quark'],
+        improveQuarkHept3: ['quark'], improveQuarkHept4: ['quark'],
+        improveQuarkHept5: ['quark', 'infinity'],
+        shopAmbrosiaLuck1: ['ambrosiaLuck'], shopAmbrosiaLuck2: ['ambrosiaLuck'],
+        shopAmbrosiaLuck3: ['ambrosiaLuck'], shopAmbrosiaLuck4: ['ambrosiaLuck'],
+        shopRedLuck1: ['redAmbrosiaLuck'], shopRedLuck2: ['redAmbrosiaLuck'],
+        shopRedLuck3: ['redAmbrosiaLuck'], shopRedLuck4: ['redAmbrosiaLuck'],
+        shopAmbrosiaGeneration1: ['ambrosiaGeneration'], shopAmbrosiaGeneration2: ['ambrosiaGeneration'],
+        shopAmbrosiaGeneration3: ['ambrosiaGeneration'], shopAmbrosiaGeneration4: ['ambrosiaGeneration'],
+      }
+      const groups = groupsByUpgrade[upgrade] ?? []
+      const bonus = groups.reduce((sum, group) => sum + stats.shopBonusLevels[group] + (groupDeltas[group] ?? 0), 0)
+      return rawLevel + freeUpgradeMultiplier * bonus
+    }
+
+    static totalInfinityLevels(loadout: Loadout): number {
+      return stats.shopBonusLevels.infinity + loadout.getStat('vouchers')
+    }
+
+    static panthemaInfinityBoost(loadout: Loadout): number {
+      return 1 + 0.01 * stats.panthemaLevel * this.totalInfinityLevels(loadout)
+    }
+
+    static panthemaMultiplier(
+      group: keyof Stats['shopBonusLevels'],
+      addedGroupLevels: number,
+      coefficient: number,
+      loadout: Loadout,
+    ): number {
+      if (stats.panthemaLevel <= 0)
+        return 1
+      const baseInfinityBoost = 1 + 0.01 * stats.panthemaLevel * stats.shopBonusLevels.infinity
+      const base = 1 + coefficient * stats.panthemaLevel * stats.shopBonusLevels[group] * baseInfinityBoost
+      const next = 1 + coefficient * stats.panthemaLevel
+        * (stats.shopBonusLevels[group] + addedGroupLevels)
+        * this.panthemaInfinityBoost(loadout)
+      return next / base
+    }
+
+    static panthemaAdditive(
+      group: 'ambrosiaLuck' | 'redAmbrosiaLuck',
+      addedGroupLevels: number,
+      coefficient: number,
+      loadout: Loadout,
+    ): number {
+      if (stats.panthemaLevel <= 0)
+        return 0
+      const baseInfinityBoost = 1 + 0.01 * stats.panthemaLevel * stats.shopBonusLevels.infinity
+      const base = coefficient * stats.panthemaLevel * stats.shopBonusLevels[group] * baseInfinityBoost
+      const next = coefficient * stats.panthemaLevel
+        * (stats.shopBonusLevels[group] + addedGroupLevels)
+        * this.panthemaInfinityBoost(loadout)
+      return next - base
+    }
+
+    static ascensionSpeed(loadout: Loadout) {
+      const oldSpreadPower = 1 + stats.spread * (stats.aSpeed >= 1 ? 1 : -1)
+      let nextRawSpeed = stats.aSpeed ** (1 / oldSpreadPower)
+      const vouchers = loadout.getStat('vouchers')
+
+      if (stats.chronometer > 0)
+        nextRawSpeed *= 1.006 ** vouchers
+      nextRawSpeed *= this.panthemaMultiplier('speed', 0, 0.005, loadout)
+
+      const brickLevel = stats.exalt === 6 || stats.exalt === 8
+        ? 0
+        : loadout.effectiveLevel('ambrosiaBrickOfLead')
+      nextRawSpeed *= 1 - 0.01 * brickLevel
+
+      const oldLevel = Math.floor(stats.chronometer / 40)
+      const newLevel = Math.floor((stats.chronometer + (stats.chronometer > 0 ? vouchers : 0)) / 40)
+      const nextSpread = stats.spread + 0.001 * (newLevel - oldLevel)
+      const nextSpreadPower = 1 + nextSpread * (nextRawSpeed >= 1 ? 1 : -1)
+      return nextRawSpeed ** nextSpreadPower
+    }
+
+    static cubeAscensionSpeedEffect(loadout: Loadout) {
+      if (!stats.oneMindUnlocked)
         return 1
 
-      let aSpeed = stats.aSpeed
-      aSpeed **= 1 / (1 + stats.spread * (aSpeed >= 1 ? 1 : -1)) // Calculating pre-spread speed
-
-      let exponent = mind * aSpeed >= 1 ? 1 + stats.spread : 1 - stats.spread
-      let oldLevel = Math.floor(stats.chronometer / 40)
-      let newLevel = Math.floor((stats.chronometer + level) / 40)
-      let effect = 1.006 ** (level * exponent) * aSpeed ** (0.001 * (newLevel - oldLevel))
-
-      return effect
-
+      const nextSpeed = this.ascensionSpeed(loadout)
+      const oldExponent = 1 + (stats.aSpeed >= 1 ? stats.aquariusExponent : 0)
+      const nextExponent = 1 + (nextSpeed >= 1 ? stats.aquariusExponent : 0)
+      return nextSpeed ** nextExponent / stats.aSpeed ** oldExponent
     }
 
-    static ambGeneration(level = 0) {
+    static octeractAscensionSpeedEffect(loadout: Loadout) {
+      const nextSpeed = this.ascensionSpeed(loadout)
+      const oldMind = stats.oneMindUnlocked && stats.aSpeed >= 1 ? stats.mind : 0.5
+      const nextMind = stats.oneMindUnlocked && nextSpeed >= 1 ? stats.mind : 0.5
+
+      return nextSpeed ** nextMind / stats.aSpeed ** oldMind
+    }
+
+    static infinityCubeShopEffect(loadout: Loadout, octeracts = false): number {
+      const vouchers = loadout.getStat('vouchers')
+      const freeCubeLevels = stats.exalt === 6 || stats.exalt === 8
+        ? 0
+        : loadout.effectiveLevel('ambrosiaFreeCubeUpgrades')
+      const baseLevel = this.shopLevel('seasonPassInfinity')
+      const nextLevel = this.shopLevel('seasonPassInfinity', { cubes: freeCubeLevels, infinity: vouchers })
+      // SynergismOfficial/src/Statistics.ts: Octeracts receive both PassINF
+      // globalCubeMult and its octeract-specific wowOcteractMult.
+      const exponent = octeracts ? 2.25 : 1
+      return 1.012 ** (exponent * (nextLevel - baseLevel))
+        * this.panthemaMultiplier('cubes', freeCubeLevels, 0.005, loadout)
+    }
+
+    static freeCubeShopEffect(loadout: Loadout, octeracts = false): number {
+      // SynergismOfficial/src/Shop.ts and Statistics.ts: free Cube group
+      // levels change only bought shop upgrades, not their purchase caps.
+      const freeCubeLevels = stats.exalt === 6 || stats.exalt === 8
+        ? 0
+        : loadout.effectiveLevel('ambrosiaFreeCubeUpgrades')
+      if (freeCubeLevels <= 0) return 1
+      const effectRatio = (key: string, coefficient: number, power = 1) => {
+        const base = this.shopLevel(key)
+        const next = this.shopLevel(key, { cubes: freeCubeLevels })
+        return ((1 + coefficient * next) / (1 + coefficient * base)) ** power
+      }
+      const globalY = effectRatio('seasonPassY', 0.0075, octeracts ? 2 : 1)
+      const globalZ = effectRatio('seasonPassZ', 0.01 * stats.rawSing, octeracts ? 2 : 1)
+      if (octeracts) {
+        return globalY * globalZ
+          * effectRatio('seasonPass3', 0.015)
+          * effectRatio('seasonPassLost', 0.001)
+      }
+      return globalY * globalZ * effectRatio('seasonPass', 0.0375)
+    }
+
+    static ambGeneration(level = 0, loadout: Loadout) {
+      const coefficients = [0.01, 0.01, 0.01, 0.001]
       let speed = 1
-      speed *= 1 + 0.01 * level / (1 + 0.01 * stats.shopAmb[0])
-      speed *= 1 + 0.01 * level / (1 + 0.01 * stats.shopAmb[1])
-      speed *= 1 + 0.01 * level / (1 + 0.01 * stats.shopAmb[2])
-      speed *= 1 + 0.001 * level / (1 + 0.001 * stats.shopAmb[3])
-      if (stats.jack)
-        speed *= 1 + 0.001 * (1 + 0.01 * stats.voucher) * level
-      return speed
+      for (let index = 0; index < coefficients.length; index++) {
+        const key = `shopAmbrosiaGeneration${index + 1}`
+        const coefficient = coefficients[index]
+        const baseLevel = this.shopLevel(key)
+        const nextLevel = this.shopLevel(key, { ambrosiaGeneration: level })
+        speed *= (1 + coefficient * nextLevel) / (1 + coefficient * baseLevel)
+      }
+      return speed * this.panthemaMultiplier('ambrosiaGeneration', level, 0.001, loadout)
     }
 
     static luckConversion(level = 0) {
-      let conversion = stats.shopRLuck.reduce((result, value) => result + Math.floor(value / 20) * 0.01, stats.luckConversion)
-      let levels = stats.shopRLuck.map(value => value > 0 ? value + level : 0)
-      levels[2] += stats.shopRLuck[2] > 0 ? level : 0
-      conversion = levels.reduce((result, value) => result - Math.floor(value / 20) * 0.01, conversion)
+      const divisors = [20, 20, 20, 100]
+      const freeLevelMultipliers = [1, 1, 2, 3]
+      let conversion = stats.shopRLuck.reduce(
+        (result, value, index) => result + Math.floor(value / divisors[index]) * 0.01,
+        stats.luckConversion
+      )
+      const levels = stats.shopRLuck.map((value, index) => value > 0 ? value + freeLevelMultipliers[index] * level : 0)
+      conversion = levels.reduce(
+        (result, value, index) => result - Math.floor(value / divisors[index]) * 0.01,
+        conversion
+      )
       return conversion
     }
 
@@ -326,9 +536,9 @@ class Upgrade {
       let rLuck = stats.baseRLuck + Math.floor((loadout.luck - 100) / this.luckConversion(level))
       rLuck += stats.shopRLuck[0] > 0 ? level * 0.05 : 0
       rLuck += stats.shopRLuck[1] > 0 ? level * 0.075 : 0
-      rLuck += stats.shopRLuck[2] > 0 ? level * 0.2 : 0 // Each bonus level applies twice
-      if (stats.jack)
-        rLuck += 0.05 * (1 + 0.01 * stats.voucher)
+      rLuck += stats.shopRLuck[2] > 0 ? level * 0.2 : 0 // Two free levels per group level
+      rLuck += stats.shopRLuck[3] > 0 ? level * 0.6 : 0 // Three free levels per group level
+      rLuck += this.panthemaAdditive('redAmbrosiaLuck', level, 0.05, loadout)
       return rLuck
     }
 
@@ -336,12 +546,60 @@ class Upgrade {
       return Math.min(speed, Math.sqrt(1000 * speed))
     }
 
-    static shopQuark(level = 0) {
+    static shopQuark(level = 0, loadout: Loadout) {
       let base = (1 + 0.2 * Math.log2(1 + stats.qHept / 500))
-      let result = base ** (stats.qHeptExp * 0.1 * level)
-      let jack = 0.001 * (1 + 0.01 * stats.voucher)
-      result *= 1 + jack * 0.1 * level / (1 + jack * stats.shopQuark)
-      return result
+      const vouchers = loadout.getStat('vouchers')
+      let exponentDelta = 0
+      for (let index = 1; index <= 4; index++) {
+        const key = index === 1 ? 'improveQuarkHept' : `improveQuarkHept${index}`
+        exponentDelta += 0.01 * (this.shopLevel(key, { quark: level }) - this.shopLevel(key))
+      }
+      exponentDelta += 0.0001 * (
+        this.shopLevel('improveQuarkHept5', { quark: level, infinity: vouchers })
+        - this.shopLevel('improveQuarkHept5')
+      )
+
+      return base ** exponentDelta * this.panthemaMultiplier('quark', level, 0.001, loadout)
+    }
+
+    static shopOfferingBaseDelta(offeringLevels: number, loadout: Loadout): number {
+      const vouchers = loadout.getStat('vouchers')
+      const baseLevel = this.shopLevel('offeringEX3')
+      const nextLevel = this.shopLevel('offeringEX3', { offering: offeringLevels, infinity: vouchers })
+      return Math.floor(nextLevel / 25) - Math.floor(baseLevel / 25)
+    }
+
+    static shopOfferingMultiplier(offeringLevels: number, loadout: Loadout): number {
+      const vouchers = loadout.getStat('vouchers')
+      const ratio = (
+        key: string,
+        effect: (level: number) => number,
+        deltas: Partial<Record<keyof Stats['shopBonusLevels'], number>> = { offering: offeringLevels },
+      ) =>
+        effect(this.shopLevel(key, deltas)) / effect(this.shopLevel(key))
+      let result = ratio('offeringEX', (n) => (1 + 0.1 * n) * 1.12 ** Math.floor(n / 10))
+      result *= ratio('cashGrab', (n) => 1 + 0.0166 * n)
+      result *= ratio('cashGrab2', (n) => 1 + 0.005 * n)
+      result *= ratio('offeringEX2', (n) => 1 + 0.01 * n * stats.rawSing)
+      result *= ratio('offeringEX3', (n) => 1.012 ** n, { offering: offeringLevels, infinity: vouchers })
+      return result * this.panthemaMultiplier('offering', offeringLevels, 0.01, loadout)
+    }
+
+    static shopObtainiumMultiplier(obtainiumLevels: number, loadout: Loadout): number {
+      const vouchers = loadout.getStat('vouchers')
+      const ratio = (
+        key: string,
+        effect: (level: number) => number,
+        deltas: Partial<Record<keyof Stats['shopBonusLevels'], number>> = { obtainium: obtainiumLevels },
+      ) =>
+        effect(this.shopLevel(key, deltas)) / effect(this.shopLevel(key))
+      let result = ratio('obtainiumEX', (n) => (1 + 0.1 * n) * 1.12 ** Math.floor(n / 10))
+      result *= ratio('cashGrab', (n) => 1 + 0.0166 * n)
+      result *= ratio('cashGrab2', (n) => 1 + 0.005 * n)
+      result *= ratio('obtainiumEX2', (n) => 1 + 0.01 * n * stats.rawSing)
+      result *= ratio('obtainiumEX3', (n) => 1.012 ** n, { obtainium: obtainiumLevels, infinity: vouchers })
+      result *= ratio('obtainiumEX3', (n) => 1.06 ** Math.floor(n / 25), { obtainium: obtainiumLevels, infinity: vouchers })
+      return result * this.panthemaMultiplier('obtainium', obtainiumLevels, 0.01, loadout)
     }
 
 }
@@ -359,7 +617,12 @@ const _runeOOMCostArray = Upgrade.ambrosiaRuneOOMBonusCost();
 Object.assign(upgrades, {
     ambrosiaTutorial: new Upgrade({
       maxLevel: 10,
-      cost: level => level * level
+      cost: level => level * level,
+      effects: {
+        quark: (input, level) => input * (1 + 0.01 * level),
+        cube: (input, level) => input * (1 + 0.05 * level),
+        oct: (input, level) => input * (1 + 0.05 * level),
+      }
     }),
     ambrosiaQuarks1: new Upgrade({
       maxLevel: 100,
@@ -367,7 +630,7 @@ Object.assign(upgrades, {
       effects: {
         quark: (input, level) => input * (1 + 0.01 * level)
       },
-      row: 1,
+      row: 4,
       prerequisites: {
         ambrosiaTutorial: 10
       }
@@ -379,7 +642,7 @@ Object.assign(upgrades, {
         cube: (input, level) => input * (1 + 0.05 * level) * 1.1 ** Math.floor(level / 5),
         oct: (input, level) => input * (1 + 0.05 * level) * 1.1 ** Math.floor(level / 5),
       },
-      row: 1,
+      row: 3,
       prerequisites: {
         ambrosiaTutorial: 10
       }
@@ -402,7 +665,7 @@ Object.assign(upgrades, {
         cube: (input, level) => input * (1 + 0.001 * Math.floor((Math.log10(stats.quarks + 1) + 1) ** 2) * level),
         oct: (input, level) => input * (1 + 0.001 * Math.floor((Math.log10(stats.quarks + 1) + 1) ** 2) * level),
       },
-      row: 2,
+      row: 3,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaCubes1: 30,
@@ -416,7 +679,7 @@ Object.assign(upgrades, {
         cube: (input, level, loadout) => input * (1 + 0.0005 * loadout.luck * level),
         oct: (input, level, loadout) => input * (1 + 0.0005 * loadout.luck * level)
       },
-      row: 2,
+      row: 3,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaCubes1: 30,
@@ -429,7 +692,7 @@ Object.assign(upgrades, {
       effects: {
         quark: (input, level) => input * (1 + 0.0001 * stats.cubeExp * level)
       },
-      row: 2,
+      row: 4,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaQuarks1: 30,
@@ -442,7 +705,7 @@ Object.assign(upgrades, {
       effects: {
         quark: (input, level, loadout) => input * (1 + 0.0001 * Math.min(loadout.luck, Math.sqrt(1000 * loadout.luck)) * level)
       },
-      row: 2,
+      row: 4,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaQuarks1: 30,
@@ -455,7 +718,7 @@ Object.assign(upgrades, {
       effects: {
         luck: (input, level) => input + 0.02 * stats.cubeExp * level
       },
-      row: 2,
+      row: 1,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaLuck1: 30,
@@ -468,7 +731,7 @@ Object.assign(upgrades, {
       effects: {
         luck: (input, level) => input + 0.02 * Math.floor((Math.log10(stats.quarks + 1) + 1) ** 2) * level
       },
-      row: 2,
+      row: 1,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaLuck1: 30,
@@ -481,7 +744,7 @@ Object.assign(upgrades, {
       effects: {
         quark: (input, level, loadout) => input * (1 + (0.01 + Math.floor(loadout.effectiveLevel("ambrosiaQuarks1") / 10) * 0.001) * level)
       },
-      row: 3,
+      row: 4,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaQuarks1: 40
@@ -506,7 +769,7 @@ Object.assign(upgrades, {
       effects: {
         luck: (input, level, loadout) => input + (3 + 0.3 * Math.floor(loadout.effectiveLevel("ambrosiaLuck1") / 10)) * level + 40 * Math.floor(level / 10)
       },
-      row: 3,
+      row: 1,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaLuck1: 40
@@ -525,6 +788,19 @@ Object.assign(upgrades, {
         ambrosiaQuarks2: 50
       }
     }),
+    ambrosiaQuarks4: new Upgrade({
+      maxLevel: 100,
+      cost: level => 300_000 * level,
+      effects: {
+        quark: (input, level) => input * (1 + level / 100)
+      },
+      row: 4,
+      blueberryCost: 5,
+      prerequisites: {
+        ambrosiaQuarks3: 10
+      },
+      requiresExalt9: true
+    }),
     ambrosiaCubes3: new Upgrade({
       maxLevel: 100,
       cost: level => (72500 + 2500 * level) * level,
@@ -532,11 +808,34 @@ Object.assign(upgrades, {
         cube: (input, level, loadout) => input * (1 + 0.2 * (1 + 0.03 * loadout.effectiveLevel("ambrosiaCubes2")) * level) * 1.2 ** Math.floor(level / 5),
         oct: (input, level, loadout) => input * (1 + 0.2 * (1 + 0.03 * loadout.effectiveLevel("ambrosiaCubes2")) * level) * 1.2 ** Math.floor(level / 5),
       },
-      row: 4,
+      row: 3,
       blueberryCost: 3,
       prerequisites: {
         ambrosiaCubes1: 100,
         ambrosiaCubes2: 50
+      }
+    }),
+    ambrosiaCubes4: new Upgrade({
+      maxLevel: 50,
+      cost: level => (290_000 + 10_000 * level) * level,
+      effects: {
+        cube: (input, level) => input * (1 + level / 100) * 1.3 ** Math.floor(level / 5),
+        oct: (input, level) => input * (1 + level / 100) * 1.3 ** Math.floor(level / 5),
+      },
+      row: 3,
+      blueberryCost: 5,
+      prerequisites: {
+        ambrosiaCubes3: 100
+      },
+      requiresExalt9: true
+    }),
+    ambrosiaFreeCubeUpgrades: new Upgrade({
+      maxLevel: 30,
+      cost: level => 10_000 * level * level,
+      row: 3,
+      blueberryCost: 2,
+      prerequisites: {
+        ambrosiaCubes2: 100
       }
     }),
     ambrosiaLuck3: new Upgrade({
@@ -545,7 +844,7 @@ Object.assign(upgrades, {
       effects: {
         luck: (input, level) => input + stats.blueberries * level
       },
-      row: 4,
+      row: 1,
       blueberryCost: 3,
       prerequisites: {
         ambrosiaLuck1: 90,
@@ -558,14 +857,19 @@ Object.assign(upgrades, {
       effects: {
         mLuck: (input, level) => input + 0.0001 * stats.lifetimeAmbExp * level
       },
-      row: 4,
-      blueberryCost: 5
+      row: 1,
+      blueberryCost: 5,
+      prerequisites: {
+        ambrosiaLuck3: 100
+      },
+      requiresExalt9: true
     }),
     ambrosiaPatreon: new Upgrade({
       maxLevel: 1,
       cost: level => level,
       effects: {
-        speed: input => input * (1 + stats.patreon)
+        speed: (input, level) => input * (1 + stats.patreon * level),
+        rSpeed: (input, level) => input * (1 + stats.patreon * level)
       }
     }),
     ambrosiaObtainium1: new Upgrade({
@@ -598,31 +902,28 @@ Object.assign(upgrades, {
       effects: {
         off: (input, level) => input + level
       },
-      row: 1,
-      blueberryCost: 1
+      row: 2,
+      blueberryCost: 0
     }),
     ambrosiaBaseObtainium1: new Upgrade({
       maxLevel: 20,
       cost: level => 40 * level ** 3,
       effects: {
         obt: (input, level) => input + level,
-        off: (input, level) => input + level / 1e10,
       },
-      row: 1,
-      blueberryCost: 1
+      row: 2,
+      blueberryCost: 0
     }),
     ambrosiaBaseOffering2: new Upgrade({
       maxLevel: 60,
       cost: level => 20 * level ** 3,
       effects: {
         off: (input, level) => input + level,
-        obt: (input, level) => input + level / 1e10,
       },
-      row: 3,
-      blueberryCost: 2,
+      row: 2,
+      blueberryCost: 1,
       prerequisites: {
-        ambrosiaBaseOffering1: 30,
-        ambrosiaBaseObtainium1: 10
+        ambrosiaBaseOffering1: 30
       }
     }),
     ambrosiaBaseObtainium2: new Upgrade({
@@ -631,12 +932,33 @@ Object.assign(upgrades, {
       effects: {
         obt: (input, level) => input + level
       },
-      row: 3,
+      row: 2,
+      blueberryCost: 1,
+      prerequisites: {
+        ambrosiaBaseObtainium1: 15
+      }
+    }),
+    ambrosiaFreeObtainiumUpgrades: new Upgrade({
+      maxLevel: 50,
+      cost: level => 4000 * level * level,
+      row: 2,
       blueberryCost: 2,
       prerequisites: {
-        ambrosiaBaseObtainium1: 15,
-        ambrosiaBaseOffering1: 20
-      }
+        ambrosiaBaseObtainium1: 20,
+        ambrosiaBaseObtainium2: 30
+      },
+      requiresExalt9: true
+    }),
+    ambrosiaFreeOfferingUpgrades: new Upgrade({
+      maxLevel: 50,
+      cost: level => 4000 * level * level,
+      row: 2,
+      blueberryCost: 2,
+      prerequisites: {
+        ambrosiaBaseOffering1: 30,
+        ambrosiaBaseOffering2: 60
+      },
+      requiresExalt9: true
     }),
     ambrosiaSingReduction1: new Upgrade({
       maxLevel: 2,
@@ -656,13 +978,9 @@ Object.assign(upgrades, {
       maxLevel: 20,
       cost: level => 25000 * level,
       effects: {
-        cube: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level * Upgrade.chronometerEffect(level),
-        oct: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** (1.25 * level) * Upgrade.chronometerEffect(level, stats.mind),
-        mObt: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level,
-        mOff: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level,
-        vouchers: (input, level) => input + level
+        vouchers: (input, level) => stats.exalt === 4 ? input : input + level
       },
-      row: 3,
+      row: 2,
       blueberryCost: 1,
       prerequisites: {
         ambrosiaCubes1: 70,
@@ -674,20 +992,26 @@ Object.assign(upgrades, {
       maxLevel: 20,
       cost: level => 75000 * level,
       effects: {
-        cube: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level * 1.006 ** ((1 + stats.spread) * level),
-        oct: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** (1.25 * level) * 1.006 ** ((1 + stats.spread) * stats.mind * level),
-        mObt: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level,
-        mOff: (input, level) => stats.exalt === 4 ? input : input * 1.012 ** level,
-        vouchers: (input, level) => input + level
+        vouchers: (input, level) => stats.exalt === 4 ? input : input + level
       },
-      row: 4,
+      row: 2,
       blueberryCost: 2,
       prerequisites: {
-        ambrosiaInfiniteShopUpgrades1: 20,
-        ambrosiaCubes2: 50,
-        ambrosiaBaseOffering2: 20,
-        ambrosiaBaseObtainium2: 10
+        ambrosiaInfiniteShopUpgrades1: 20
       }
+    }),
+    ambrosiaInfiniteShopUpgrades3: new Upgrade({
+      maxLevel: 20,
+      cost: level => 500000 * level,
+      effects: {
+        vouchers: (input, level) => stats.exalt === 4 ? input : input + level
+      },
+      row: 2,
+      blueberryCost: 3,
+      prerequisites: {
+        ambrosiaInfiniteShopUpgrades2: 20
+      },
+      requiresExalt9: true
     }),
     ambrosiaSingReduction2: new Upgrade({
       maxLevel: 2,
@@ -698,7 +1022,6 @@ Object.assign(upgrades, {
         mObt: (input, level) => stats.exalt > 0 && !stats.postAoAG ? input * Upgrade.singDebuff(stats.sing, "mOff") / Upgrade.singDebuff(stats.sing - level, "mOff") : input,
         singReduction: (input, level) => stats.exalt > 0 && !stats.postAoAG ? input + level : input
       },
-      row: 5,
       blueberryCost: 4,
       ignoresExalt: true
     }),
@@ -706,33 +1029,39 @@ Object.assign(upgrades, {
       maxLevel: 100,
       cost: level => 100 * level * level,
       effects: {
-        cube: (input, level) => input + 1e-10 * level, // The effect is computed in ambrosiaRuneOOMBonus
-        quark: (input, level) => input + 1e-10 * level,
-        mObt: (input, level) => input + 1e-10 * level,
-        mOff: (input, level) => input + 1e-10 * level
+        // Its effect is applied together with ambrosiaRuneOOMBonus below.
+        cube: (input) => input,
+        quark: (input) => input,
+        mObt: (input) => input,
+        mOff: (input) => input
       },
-      row: 1
+      row: 2
     }),
     ambrosiaRuneOOMBonus: new Upgrade({
       maxLevel: 100,
       costArray: _runeOOMCostArray,
       cost: level => _runeOOMCostArray[level] ?? 0,
       effects: {
-        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube + 1e-10 * level,
-        quark: (input, level, loadout) => input * (1 + 0.002 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIAQuark + 1e-10 * level,
-        mObt: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level,
-        mOff: (input, level, loadout) => input * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseSI + 1e-10 * level
+        cube: (input, level, loadout) => input * (1 + 0.01 * Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))) / stats.baseIACube,
+        quark: (input, level, loadout) => {
+          const runeLevel = Upgrade.runeLevelIA(0.001 * level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel"))
+          const runeEffect = 1 + 0.002 * runeLevel + (runeLevel > 0 ? 0.1 : 0)
+          return input * runeEffect / stats.baseIAQuark
+        },
+        mObt: (input, level, loadout) => input
+          * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel")) / 200)
+          / (1 + stats.baseSI / 200),
+        mOff: (input, level, loadout) => input
+          * (1 + Upgrade.runeLevelSI(level, 0.005 * loadout.effectiveLevel("ambrosiaTalismanBonusRuneLevel")) / 2000)
+          / (1 + stats.baseSI / 2000)
       },
-      row: 3
+      row: 2
     }),
     ambrosiaBrickOfLead: new Upgrade({
       maxLevel: 25,
       cost: level => 10 * level ** 3,
       effects: {
-        mLuck: (input, level) => input + 0.02 * level,
-        speed: (input, level) => input * (1 - 0.02 * level),
-        cube: (input, level) => input * (1 - 0.01 * level) ** (1 + stats.spread) * (stats.exalt === 7 ? 100 / (100 - level) : 1),
-        oct: (input, level) => input * (1 - 0.01 * level) ** ((1 + stats.spread) * stats.mind)
+        mLuck: (input, level) => input + 0.02 * level
       },
       blueberryCost: 4
     }),
@@ -740,18 +1069,23 @@ Object.assign(upgrades, {
       maxLevel: 25,
       cost: level => 5000 * level * level,
       effects: {
-        luck: (input, level) => input + stats.shopLuck * level * (stats.exalt !== 4 ? 1 : 0)
+        luck: (input, level, loadout) => stats.exalt === 4
+          ? input
+          : input + stats.shopLuck * level + Upgrade.panthemaAdditive('ambrosiaLuck', level, 0.2, loadout)
       },
       row: 1,
       blueberryCost: 1
     }),
     ambrosiaFreeGenerationUpgrades: new Upgrade({
-      maxLevel: 3,
-      cost: level => 45000 * (10 ** level - 1) / 9,
+      maxLevel: 5,
+      cost: level => 5000 * (4 ** level - 1),
       effects: {
-        speed: (input, level) => stats.exalt === 4 ? input : input * Upgrade.ambGeneration(level),
-        rSpeed: (input, level) => stats.exalt === 4 ? input : input * Upgrade.rSpeed(stats.ambSpeed * Upgrade.ambGeneration(level)) / Upgrade.rSpeed(stats.ambSpeed)
+        speed: (input, level, loadout) => stats.exalt === 4 ? input : input * Upgrade.ambGeneration(level, loadout),
+        // SynergismOfficial/src/Statistics.ts:
+        // allRedAmbrosiaGenerationSpeedStats does not use the blue
+        // Ambrosia-generation shop upgrades.
       },
+      row: 1,
       blueberryCost: 1
     }),
     ambrosiaFreeRedLuckUpgrades: new Upgrade({
@@ -760,7 +1094,7 @@ Object.assign(upgrades, {
       effects: {
         rLuck: (input, level, loadout) => input + (Upgrade.rLuck(level, loadout) - Upgrade.rLuck(0, loadout)) * (stats.exalt !== 4 ? 1 : 0)
       },
-      row: 3,
+      row: 1,
       blueberryCost: 2,
       prerequisites: {
         ambrosiaFreeLuckUpgrades: 10
@@ -770,10 +1104,18 @@ Object.assign(upgrades, {
       maxLevel: 10,
       cost: level => 25000 * level ** 3,
       effects: {
-        quark: (input, level) => stats.exalt === 4 ? input : input * Upgrade.shopQuark(level)
+        // SynergismOfficial/BlueberryUpgrades.ts: each effective Ambrosia
+        // level grants one tenth of a Quark-shop bonus level.
+        quark: (input, level, loadout) => stats.exalt === 4 ? input : input * Upgrade.shopQuark(level / 10, loadout)
       },
       row: 4,
       blueberryCost: 2
+    }),
+    twoMind: new Upgrade({
+      maxLevel: 1,
+      cost: () => 0,
+      blueberryCost: 8,
+      requiresExalt9: true
     })
 });
 
@@ -826,21 +1168,33 @@ class Loadout {
         let result = 0;
         for (const upgrade in this.upgradeLevels)
             if ((this.upgradeLevels[upgrade] ?? 0) > 0)
-                result += upgrades[upgrade]?.blueberryCost ?? 0;
+                result += Math.max(
+                    0,
+                    (upgrades[upgrade]?.blueberryCost ?? 0)
+                        - (stats.ambrosiaUpgradeBlueberryCostReductions[upgrade] ?? 0)
+                );
         return result;
     }
 
     // Returns effective level of an upgrade that accounts for bonus levels
     effectiveLevel(upgrade: string): number {
+        if (upgrades[upgrade]?.requiresExalt9 && !stats.exalt9Unlocked)
+            return 0;
         let level = this.upgradeLevels[upgrade] ?? 0;
+        if (upgrade === "ambrosiaTutorial")
+            level += stats.tutorialBonus;
         level += stats.bonus[upgrades[upgrade]?.row ?? 0] ?? 0;
+        if ((this.upgradeLevels[upgrade] ?? 0) > 0)
+            level += stats.ambrosiaUpgradeBonusLevels[upgrade] ?? 0;
         return level;
     }
 
     // Returns effect of a specific upgrade in the loadout
     getEffect(input: number, upgrade: string, effect: keyof UpgradeEffectMap): number {
         const upgradeData = upgrades[upgrade];
-        if (!upgradeData || (!upgradeData.ignoresExalt && (stats.exalt === 6 || stats.exalt === 8)))
+        if (!upgradeData
+            || (upgradeData.requiresExalt9 && !stats.exalt9Unlocked)
+            || (!upgradeData.ignoresExalt && (stats.exalt === 6 || stats.exalt === 8)))
             return input;
         const fn = upgradeData.effects[effect] as ((input: number, level: number, loadout: Loadout) => number) | undefined;
         if (fn !== undefined)
@@ -852,13 +1206,22 @@ class Loadout {
         return this.getStat("luck");
     }
 
+    get twoMindEnabled(): boolean {
+        return stats.exalt9Unlocked
+            && stats.exalt !== 6
+            && stats.exalt !== 8
+            && (this.upgradeLevels.twoMind ?? 0) > 0;
+    }
+
     // Returns the total value of a given stat for the loadout
     getStat(stat: string, override = false): number {
       if (this.statCache[stat] == null || override) {
         this.statCache[stat] = stat === "mLuck" ? stats.baseMLuck : 1
         switch (stat) {
           case "luck":
+            const unassignedBlueberries = stats.blueberries - this.blueberryCost
             let luck = stats.baseLuck
+              + (unassignedBlueberries >= 5 ? unassignedBlueberries * stats.purpleLeoLevel : 0)
             for (let upgrade in upgrades)
               luck = this.getEffect(luck, upgrade, "luck")
             this.statCache[stat] = luck * (1 + this.getStat("mLuck"))
@@ -867,22 +1230,62 @@ class Loadout {
             this.statCache[stat] = this.getStat("allAmb") * this.getStat("oct")
             break
           case "amb":
-            let amount = this.luck + (stats.rAmb > 0 ? 1 : 0)
-            this.statCache[stat] = amount * this.getStat("speed")
+            const brickLevel = stats.exalt === 6 || stats.exalt === 8
+              ? 0
+              : this.effectiveLevel("ambrosiaBrickOfLead")
+            const brickBarSpeed = 1 - brickLevel / 50
+            // SynergismOfficial/src/BlueberryUpgrades.ts ambrosiaBrickOfLead
+            // and Calculate.ts calculateRequiredBlueberryTime: Brick changes
+            // the reciprocal point requirement, not point generation speed.
+            // Two Mind scales reward luck to preserve the luck-based gain
+            // rate; its fixed bar still changes the flat Exalt 5 bonus rate.
+            const brickRequirement = stats.exalt === 10
+              ? stats.blueBarMaxWithoutTwoMindAndBrick
+              : stats.amb >= 10_000
+                ? Math.ceil(stats.blueBarRequirementBeforeRounding / brickBarSpeed)
+                : stats.blueBarRequirementBeforeRounding / brickBarSpeed
+            const requirementRatio = stats.blueBarMaxWithoutTwoMindAndBrick / brickRequirement
+            const flatBonusRatio = this.twoMindEnabled
+              ? stats.blueBarMaxWithoutTwoMindAndBrick / 25_000_000
+              : requirementRatio
+            this.statCache[stat] = (this.luck / 100 * requirementRatio
+              + stats.bonusAmbrosiaPerFill * flatBonusRatio)
+              * this.getStat("speed")
             break
           case "rLuck":
             this.statCache[stat] = Upgrade.rLuck(this.effectiveLevel("ambrosiaFreeRedLuckUpgrades"), this)
             break
           case "rAmb":
-            this.statCache[stat] = this.getStat("rLuck") * this.getStat("rSpeed")
+            // The Two Mind reward-luck/bar-size factors also cancel for
+            // Red Ambrosia, which has no separate flat per-fill bonus.
+            this.statCache[stat] = this.getStat("rLuck") / 100
+              * this.getStat("rSpeed")
             break
           case "allAmb":
             this.statCache[stat] = this.getStat("amb") * this.getStat("rAmb")
+            break
+          case "mOff":
+            for (let upgrade in upgrades)
+              this.statCache[stat] = this.getEffect(this.statCache[stat], upgrade, "mOff")
+            if (stats.exalt !== 4)
+              this.statCache[stat] *= Upgrade.shopOfferingMultiplier(
+                this.effectiveLevel('ambrosiaFreeOfferingUpgrades'), this
+              )
+            break
+          case "mObt":
+            for (let upgrade in upgrades)
+              this.statCache[stat] = this.getEffect(this.statCache[stat], upgrade, "mObt")
+            if (stats.exalt !== 4)
+              this.statCache[stat] *= Upgrade.shopObtainiumMultiplier(
+                this.effectiveLevel('ambrosiaFreeObtainiumUpgrades'), this
+              )
             break
           case "off":
             let off = stats.baseOff
             for (let upgrade in upgrades)
               off = this.getEffect(off, upgrade, "off")
+            if (stats.exalt !== 4)
+              off += Upgrade.shopOfferingBaseDelta(this.effectiveLevel('ambrosiaFreeOfferingUpgrades'), this)
             this.statCache[stat] = off * this.getStat("mOff")
             break
           case "obt":
@@ -897,6 +1300,12 @@ class Loadout {
           default:
             for (let upgrade in upgrades)
               this.statCache[stat] = this.getEffect(this.statCache[stat], upgrade, stat as keyof UpgradeEffectMap)
+            if (stat === 'cube')
+              this.statCache[stat] *= Upgrade.freeCubeShopEffect(this)
+                * Upgrade.infinityCubeShopEffect(this) * Upgrade.cubeAscensionSpeedEffect(this)
+            else if (stat === 'oct')
+              this.statCache[stat] *= Upgrade.freeCubeShopEffect(this, true)
+                * Upgrade.infinityCubeShopEffect(this, true) * Upgrade.octeractAscensionSpeedEffect(this)
         }
       }
       return this.statCache[stat]
@@ -1175,14 +1584,16 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
 
 function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     const {
-        amb, ramb, ambSpeedNonAmbBerries, blueberries,
+        amb, ramb, bonusAmbrosiaPerFill, ambSpeedNonAmbBerries, blueberries, purpleLeoLevel,
         luckBaseNonAmb, luckMultNonAmb, redLuckBase, luckConversion,
         quarksOwned, qHept, cubesExpTotal,
         currentSingularity, singularityReducers,
-        exalt, postAoag, transcription,
+        exalt, exalt9Unlocked, postAoag, oneMindUnlocked, aquariusUnlocked, transcription,
         ascSpeed, ascSpread, baseObt, baseOff,
+        bonusTutorial,
         bonusRow2, bonusRow3, bonusRow4, bonusRow5,
         runeSiExp, runeSiRC, runeSiBonusLevelsTotal,
+        runeSiBonusLevelsTalismanNonAmbrosia, runeSiEffectiveLevelMultiplier,
         runeIaExp, runeIaBonusLevelsTotal, runeIaBonusLevelsTalisman,
         baseTalismanPower,
         patreonBonus,
@@ -1190,22 +1601,31 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         jack, freeShopLevelsInfinity, freeShopLevelsQuark,
         chronometerLevel,
         shopAmbrosiaLuck1, shopAmbrosiaLuck2, shopAmbrosiaLuck3, shopAmbrosiaLuck4,
-        shopRedLuck1, shopRedLuck2, shopRedLuck3,
+        shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4,
         shopAmbrosiaGeneration1, shopAmbrosiaGeneration2, shopAmbrosiaGeneration3, shopAmbrosiaGeneration4,
         shopImproveQuarkHept1, shopImproveQuarkHept2, shopImproveQuarkHept3, shopImproveQuarkHept4, shopImproveQuarkHept5,
-        fusion, rBar, rSpeed,
+        fusion, rBar, rSpeed, blueBarMaxWithoutTwoMindAndBrick, blueBarRequirementBeforeRounding, redBarMaxWithoutTwoMind,
         ossifiedTactics, redberries, viscount, ossifiedTactics2,
+        ambrosiaUpgradeBonusLevels, ambrosiaUpgradeBlueberryCostReductions,
+        shopUpgradeRawLevels, shopBonusLevelsNonAmbrosia, panthemaLevel, shopUpgradesDisabled,
         heaterOptions,
     } = input;
 
     stats.amb            = amb;
     stats.rAmb           = ramb;
-    stats.lifetimeAmbExp = Math.log10((1 + amb) * (1 + ramb)) + 2;
+    stats.bonusAmbrosiaPerFill = bonusAmbrosiaPerFill;
+    // SynergismOfficial/src/BlueberryUpgrades.ts ambrosiaLuck4 uses the
+    // separate, rounded-up digit counts of lifetime blue and red Ambrosia.
+    stats.lifetimeAmbExp = Math.ceil(Math.log10(amb + 1)) + Math.ceil(Math.log10(ramb + 1));
 
     stats.ambSpeed    = ambSpeedNonAmbBerries;
     stats.blueberries = blueberries;
+    stats.purpleLeoLevel = purpleLeoLevel;
+    stats.tutorialBonus = bonusTutorial;
     stats.baseLuck       = luckBaseNonAmb;
-    stats.baseMLuck      = luckMultNonAmb + 0.1 * activeBells;
+    // SynergismOfficial/Event.ts: the first bell is +10%, then each extra
+    // bell is +1%. The exported base has this consumable contribution removed.
+    stats.baseMLuck      = luckMultNonAmb + (activeBells > 0 ? 0.09 + 0.01 * activeBells : 0);
     let rLuck            = redLuckBase;
     stats.luckConversion = luckConversion;
 
@@ -1213,10 +1633,14 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.qHept   = qHept;
     stats.cubeExp = cubesExpTotal + 6;
 
+    stats.rawSing  = currentSingularity;
     stats.sing     = currentSingularity - singularityReducers;
     stats.exalt    = exalt;
+    stats.exalt9Unlocked = exalt9Unlocked;
     stats.postAoAG = postAoag;
-    stats.mind     = transcription > 0 ? 0.55 + transcription / 150 : 0.5;
+    stats.oneMindUnlocked = oneMindUnlocked;
+    stats.aquariusExponent = aquariusUnlocked ? 0.01 * (0.55 + transcription / 150) : 0;
+    stats.mind     = 0.55 + transcription / 150;
     stats.aSpeed   = ascSpeed;
     stats.spread   = ascSpread;
     stats.baseObt  = baseObt;
@@ -1229,35 +1653,50 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.runeExp    = runeSiExp.eq(0) ? -1e10 : runeSiExp.log10();
     stats.runeCoefSI = runeSiRC;
     stats.bonusSI    = runeSiBonusLevelsTotal;
-    stats.baseSI     = 1 + Upgrade.runeLevelSI();
+    stats.talismanSI = runeSiBonusLevelsTalismanNonAmbrosia;
+    stats.runeMultSI = runeSiEffectiveLevelMultiplier;
     stats.expIA      = runeIaExp.eq(0) ? -1e10 : runeIaExp.log10();
     stats.bonusIA    = runeIaBonusLevelsTotal.toNumber();
     stats.talismanIA = runeIaBonusLevelsTalisman.toNumber();
     stats.talismanP  = baseTalismanPower.toNumber();
+    stats.baseSI     = Upgrade.runeLevelSI();
 
     stats.baseIACube  = 1 + 0.01  * Upgrade.runeLevelIA();
-    stats.baseIAQuark = 1 + 0.002 * Upgrade.runeLevelIA();
+    const baseIARuneLevel = Upgrade.runeLevelIA();
+    stats.baseIAQuark = 1 + 0.002 * baseIARuneLevel + (baseIARuneLevel > 0 ? 0.1 : 0);
     stats.patreon   = patreonBonus;
     stats.jack      = jack;
+    stats.ambrosiaUpgradeBonusLevels = ambrosiaUpgradeBonusLevels;
+    stats.ambrosiaUpgradeBlueberryCostReductions = ambrosiaUpgradeBlueberryCostReductions;
+    stats.shopUpgradeRawLevels = shopUpgradeRawLevels;
+    stats.shopBonusLevels = shopBonusLevelsNonAmbrosia;
+    stats.panthemaLevel = panthemaLevel;
+    stats.shopUpgradesDisabled = shopUpgradesDisabled;
+
     stats.voucher   = freeShopLevelsInfinity; // voucher = free shop levels (infinity line)
     stats.shopQuark = freeShopLevelsQuark - 0.1 * bonusRow5; // removing 1981 Cut from base (bonus[4])
     stats.chronometer = chronometerLevel;
-    stats.shopLuck  = (shopAmbrosiaLuck1 > 0 ? 2 : 0)
+
+    stats.shopLuck  = shopUpgradesDisabled ? 0 : (shopAmbrosiaLuck1 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck2 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck3 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck4 > 0 ? 0.6 : 0);
-    stats.shopRLuck = [shopRedLuck1, shopRedLuck2, shopRedLuck3];
+    stats.shopRLuck = shopUpgradesDisabled ? [0, 0, 0, 0] : [shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4];
     stats.shopAmb   = [shopAmbrosiaGeneration1, shopAmbrosiaGeneration2, shopAmbrosiaGeneration3, shopAmbrosiaGeneration4];
     stats.qHeptExp  = [shopImproveQuarkHept1, shopImproveQuarkHept2, shopImproveQuarkHept3, shopImproveQuarkHept4].filter(Boolean).length * 0.01;
     stats.qHeptExp += shopImproveQuarkHept5 > 0 ? 0.0001 : 0;
 
-    if (jack)
-        stats.shopLuck += 0.2 * (1 + 0.01 * stats.voucher); // For now vouchers are not counted in luck loadouts
-
-    // Updating base for bonuses
+    // The exported values contain no Ambrosia upgrade levels. Rebase the
+    // persistent Red Ambrosia row levels before the Loadout model reapplies
+    // them (plus active Purple Ambrosia enchantments).
     let baseLoadout  = new Loadout();
     stats.baseRLuck  = rLuck - Math.floor((stats.baseLuck * (1 + stats.baseMLuck) - 100) / stats.luckConversion);
-    stats.baseLuck  -= (baseLoadout.luck) / (1 + stats.baseMLuck) - stats.baseLuck;
+    // The export has already removed the Purple Leo contribution from its
+    // non-Ambrosia base.  The empty loadout re-adds Leo for its unassigned
+    // blueberries, so exclude that contribution when removing the persistent
+    // Red Ambrosia row bonuses from the exported base.
+    const baseLeoLuck = stats.blueberries >= 5 ? stats.blueberries * stats.purpleLeoLevel : 0;
+    stats.baseLuck  -= baseLoadout.luck / (1 + stats.baseMLuck) - baseLeoLuck - stats.baseLuck;
     stats.baseMLuck -= upgrades.ambrosiaLuck4.effects.mLuck!(0, stats.bonus[upgrades.ambrosiaLuck4.row] ?? 0, baseLoadout);
     stats.baseObt   -= baseLoadout.getStat("obt") / baseLoadout.getStat("mObt") - stats.baseObt;
     stats.baseOff   -= baseLoadout.getStat("off") / baseLoadout.getStat("mOff") - stats.baseOff;
@@ -1268,6 +1707,9 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.fusion   = (stats.fusion > 0 ? 1 : 0) + 0.02 * stats.fusion;
     stats.fusion   *= rBar > 0 ? rSpeed / rBar : 0;
     stats.viscount         = viscount;
+    stats.blueBarMaxWithoutTwoMindAndBrick = blueBarMaxWithoutTwoMindAndBrick;
+    stats.blueBarRequirementBeforeRounding = blueBarRequirementBeforeRounding;
+    stats.redBarMaxWithoutTwoMind = redBarMaxWithoutTwoMind;
     stats.ossifiedTactics2 = ossifiedTactics2;
 
     const optionsState = input.heaterOptions;
@@ -1286,6 +1728,11 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
 export class HSHeaterOptimizer {
 
     static createHeaterOptimizerResultFromInput(input: HeaterOptimizerInput): HeaterOptimizationResult {
+
+        if (!Number.isFinite(input.blueBarRequirementBeforeRounding)
+            || input.blueBarRequirementBeforeRounding <= 0) {
+            throw new Error('Blue bar pre-round requirement is missing; re-export current game data for Heater.');
+        }
 
         // Populate stats + options from input
         fillStatsAndOptionsFromInput(input);
@@ -1426,6 +1873,7 @@ export class HSHeaterOptimizer {
               let tableRLuck2 = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rAmb");
               let tableRAmb   = mergeTables(tableAmb, tableRLuck2, "rAmb");
               tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb");
+              tableCache.tableAllAmb = mergeTables(tableCache.tableAllAmb, generateTable(["twoMind"], "allAmb"), "allAmb");
               let tableBrickOfLead = generateTable(["ambrosiaBrickOfLead"], "mLuck");
               loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
               let optLoadout = new Loadout(maxLoadout);
@@ -1458,13 +1906,13 @@ export class HSHeaterOptimizer {
           if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
             options.calculateOff || options.calculateGen) {
               // Local optima for cubes match local optima for quarks and octeracts
-              tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
+              tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2", "ambrosiaInfiniteShopUpgrades3"], "cube");
           }
 
           // --- calculateQuarks ---
           if (options.calculateQuarks) { // Calculate Quarks
               HSLogger.debug(() => '[HeaterDiag] calculateQuarks', 'HSHeaterOptimizer');
-              let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
+              let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3", "ambrosiaQuarks4"], "quark");
               let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
               let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
               let tableQuarkR   = mergeTables(tableQuark3, tableCache.tableRune, "quark");
@@ -1477,10 +1925,19 @@ export class HSHeaterOptimizer {
 
           // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
           if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
-            let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube")
+            let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3", "ambrosiaCubes4"], "cube")
+            const tableFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "cube")
             let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
-            // Local maxima for Cubes match local maxima for Octeracts
-            tableCache.tableCube = mergeTables(tableCube1, tableQuarkCube, "cube")
+            tableCache.tableCube = mergeTables(mergeTables(tableCube1, tableFreeCube, "cube"), tableQuarkCube, "cube")
+            // SynergismOfficial/src/Statistics.ts: Cube-group shop levels
+            // affect Octeracts through extra tier-specific multipliers, so
+            // their local maxima must be searched against the Oct objective.
+            if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
+              const tableOctCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3", "ambrosiaCubes4"], "oct")
+              const tableOctFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "oct")
+              const tableOctQuarkCube = generateTable(["ambrosiaQuarkCube1"], "oct")
+              tableCache.tableOctCube = mergeTables(mergeTables(tableOctCube1, tableOctFreeCube, "oct"), tableOctQuarkCube, "oct")
+            }
           }
 
           if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
@@ -1516,7 +1973,7 @@ export class HSHeaterOptimizer {
 
           // --- Shared oct table ---
           if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
-              tableCache.tableOctV = mergeTables(tableCache.tableCube, tableCache.tableVoucher, "oct");
+              tableCache.tableOctV = mergeTables(tableCache.tableOctCube, tableCache.tableVoucher, "oct");
           }
 
           // --- calculateOct ---
@@ -1608,11 +2065,11 @@ export class HSHeaterOptimizer {
           if (options.calculateOff) {
               HSLogger.debug(() => '[HeaterDiag] calculateOff: obt', 'HSHeaterOptimizer');
               let tableSing    = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
-              let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
+              let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2", "ambrosiaFreeObtainiumUpgrades"], "obt");
               let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
               let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
 
-              let tableOff1    = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off")
+              let tableOff1    = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2", "ambrosiaFreeOfferingUpgrades"], "off")
               let tableOff2    = generateTable(["ambrosiaOffering1"], "off")
               let tableOff3    = mergeTables(tableOff1, tableOff2, "off")
 
@@ -1683,7 +2140,7 @@ export class HSHeaterOptimizer {
           if (options.calculateGen) {
               HSLogger.debug(() => '[HeaterDiag] calculateGen', 'HSHeaterOptimizer');
               let genOutput: HeaterResultRowMatrix = [];
-              for (let level = 1; level <= 3; level++) {
+              for (let level = 1; level <= upgrades.ambrosiaFreeGenerationUpgrades.maxLevel; level++) {
                   let budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
                   if (budget < 0) {
                       genOutput.push(maxLoadout.generateOutput("", maxLoadout));
@@ -1704,7 +2161,7 @@ export class HSHeaterOptimizer {
               let postAoAG = stats.postAoAG
               stats.postAoAG = false
 
-              let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube")
+              let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2", "ambrosiaInfiniteShopUpgrades3"], "cube")
               let tableCubeV = mergeTables(tableCache.tableCubeR, tableVoucher, "cube")
               let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
               let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")

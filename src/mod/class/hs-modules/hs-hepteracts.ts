@@ -907,8 +907,7 @@ export class HSHepteracts extends HSModule {
         if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
 
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        const gameData = gameDataAPI?.getGameData();
-        if (!gameDataAPI || !gameData) {
+        if (!gameDataAPI || !gameDataAPI.getGameData()) {
             this.#showPlatonicUpgradeEstimate('Upgrade time unavailable: game data has not loaded yet.');
             return;
         }
@@ -936,6 +935,16 @@ export class HSHepteracts extends HSModule {
 
         const income = await this.#readAllAscensionIncome();
         if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
+
+        // Read owned resources after sampling the header modes so the ETA does
+        // not use the older periodic GDS snapshot. This forces one save-derived
+        // refresh without enabling GDS turbo mode.
+        const gameData = await gameDataAPI.getForcedGameData();
+        if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
+        if (!gameData) {
+            this.#showPlatonicUpgradeEstimate('Upgrade time unavailable: could not refresh current resources.');
+            return;
+        }
 
         const requiredAbyssals = requirements.abyssals ?? 0;
         const abyssHepteract = gameData.hepteracts?.abyss;

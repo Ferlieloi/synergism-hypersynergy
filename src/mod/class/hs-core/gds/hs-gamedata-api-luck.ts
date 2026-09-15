@@ -21,6 +21,9 @@ export interface LuckHelperContext {
     calculateSynergismLevel: () => number;
     calculateChallenge15Reward: (rewardName: string) => number;
     getSavedUpgradeFreeLevel: (upgrade?: { freeLevel?: number; freeLevels?: number }) => number;
+    getGQUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
+    getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
+    getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number;
     checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined;
     updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void;
     getCampaignTokens: () => number;
@@ -35,11 +38,21 @@ export class LuckHelper {
         this.#ctx = ctx;
     }
 
-    calculateLuck(reduce_vals = true, true_base = false): { luckBase: number; luckMult: number; luckTotal: number } | { luckBase: number[]; luckMult: number[] } {
+    private resolveMode(trueBaseOrMode: boolean | CalculationMode): CalculationMode {
+        return typeof trueBaseOrMode === 'string'
+            ? trueBaseOrMode
+            : trueBaseOrMode ? 'true_base' : 'normal';
+    }
+
+    private modeCacheSuffix(mode: CalculationMode): string {
+        return mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : '';
+    }
+
+    calculateLuck(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false): { luckBase: number; luckMult: number; luckTotal: number } | { luckBase: number[]; luckMult: number[] } {
         const data = this.#ctx.getGameData();
         if (!data) return reduce_vals ? { luckBase: 0, luckMult: 0, luckTotal: 0 } : { luckBase: [0], luckMult: [0] };
 
-        const { additiveComponents, rawLuckComponents } = this.getLuckCalculationComponentValues(true_base);
+        const { additiveComponents, rawLuckComponents } = this.getLuckCalculationComponentValues(this.resolveMode(trueBaseOrMode));
 
         if (reduce_vals) {
             const additivesTotal = additiveComponents.reduce((a, b) => a + b, 0);
@@ -57,24 +70,23 @@ export class LuckHelper {
         };
     }
 
-    calculateLuckConversion(reduce_vals = true, true_base = false) {
+    calculateLuckConversion(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
-        const cacheName = (`LuckConversion${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
-        const calculationVars: number[] = this.getLuckConversionCalculationDeps();
+        const mode = this.resolveMode(trueBaseOrMode);
+        const cacheName = (`LuckConversion${this.modeCacheSuffix(mode)}`) as keyof CalculationCache;
+        const calculationVars: number[] = [...this.getLuckConversionCalculationDeps(), mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2];
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (reduce_vals && cached !== undefined) return cached;
 
-        const mode: CalculationMode = true_base ? 'true_base' : 'normal';
         const c1 = this.#ctx.getRedAmbrosiaUpgradeEffects('conversionImprovement1').conversionImprovement;
         const c2 = this.#ctx.getRedAmbrosiaUpgradeEffects('conversionImprovement2').conversionImprovement;
         const c3 = this.#ctx.getRedAmbrosiaUpgradeEffects('conversionImprovement3').conversionImprovement;
-        const horseShoeLevel = this.#ctx.getRuneEffectiveLevel('horseShoe');
-
         const effectiveShopRedLuck1 = this.#ctx.getShopLevel('shopRedLuck1', mode);
         const effectiveShopRedLuck2 = this.#ctx.getShopLevel('shopRedLuck2', mode);
         const effectiveShopRedLuck3 = this.#ctx.getShopLevel('shopRedLuck3', mode);
+        const effectiveShopRedLuck4 = this.#ctx.getShopLevel('shopRedLuck4', mode);
 
         const vals = [
             20,
@@ -84,7 +96,7 @@ export class LuckHelper {
             -0.01 * Math.floor(effectiveShopRedLuck1 / 20),
             -0.01 * Math.floor(effectiveShopRedLuck2 / 20),
             -0.01 * Math.floor(effectiveShopRedLuck3 / 20),
-            -0.5 * horseShoeLevel / (horseShoeLevel + 50),
+            -0.01 * Math.floor(effectiveShopRedLuck4 / 100),
         ];
 
         const reduced = vals.reduce((a, b) => a + b, 0);
@@ -92,11 +104,12 @@ export class LuckHelper {
         return reduce_vals ? reduced : vals;
     }
 
-    calculateRedAmbrosiaLuck(reduce_vals = true, true_base = true) {
+    calculateRedAmbrosiaLuck(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
-        const cacheName = 'RedAmbrosiaLuck' as keyof CalculationCache;
+        const mode = this.resolveMode(trueBaseOrMode);
+        const cacheName = (`RedAmbrosiaLuck${this.modeCacheSuffix(mode)}`) as keyof CalculationCache;
         const pseudoLvl = this.#ctx.getPCoinUpgradeLevel('RED_LUCK_BUFF');
         const pseudoLuck = pseudoLvl ? pseudoLvl * 20 : 0;
         const cube77 = data.cubeUpgrades[77] ?? 0;
@@ -113,7 +126,11 @@ export class LuckHelper {
             this.#ctx.getVanillaGlobalEventAmbrosiaLuck(),
             this.#ctx.getEventBellAmount(),
             data.ambrosiaUpgrades.ambrosiaLuck4.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaLuck4.purpleAmbrosiaInvested ?? 0,
+            data.lifetimeAmbrosia,
+            data.lifetimeRedAmbrosia,
             data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaBrickOfLead.purpleAmbrosiaInvested ?? 0,
             data.singularityChallenges.taxmanLastStand.completions,
             parseGameDataNumber(data.talismans.horseShoe.shard),
             parseGameDataNumber(data.talismans.horseShoe.commonFragment),
@@ -124,10 +141,10 @@ export class LuckHelper {
             parseGameDataNumber(data.talismans.horseShoe.mythicalFragment),
             this.#ctx.getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF'),
             this.#ctx.getCampaignTokens(),
-            data.goldenQuarkUpgrades.singAmbrosiaLuck.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck2.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck3.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck4.level,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck2.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck3.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck4.goldenQuarksInvested,
             data.highestSingularityCount >= 131 ? 1 : 0,
             data.highestSingularityCount >= 269 ? 1 : 0,
             ...this.getAmbrosiaLuckShopUpgradeCalculationDeps(),
@@ -136,10 +153,11 @@ export class LuckHelper {
             ...this.#ctx.getShopLevelDependencies('shopOcteractAmbrosiaLuck'),
             data.shopUpgrades.shopPanthema,
             data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.purpleAmbrosiaInvested ?? 0,
             data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.highestSingularityCount,
-            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
-            data.octUpgrades.octeractInfiniteShopUpgrades.level,
+            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.goldenQuarksInvested,
+            data.octUpgrades.octeractInfiniteShopUpgrades.octeractsInvested,
             data.shopUpgrades.shopInfiniteShopUpgrades,
             data.redAmbrosiaUpgrades.infiniteShopUpgrades,
             ...(Object.values(data.singularityChallenges) as any[]).map((c) => c.completions),
@@ -149,11 +167,20 @@ export class LuckHelper {
                     data.redAmbrosiaUpgrades.freeLevelsRow4,
                     data.redAmbrosiaUpgrades.freeLevelsRow5,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.purpleAmbrosiaInvested ?? 0,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.purpleAmbrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.ambrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.purpleAmbrosiaInvested ?? 0,
                 ]),
+            data.purpleAmbrosiaUpgrades?.leo ?? 0,
+            data.spentBlueberries,
+            data.purpleAmbrosiaUpgrades?.sagittarius ?? 0,
+            data.purpleAmbrosiaUpgrades?.capricorn ?? 0,
             data.redAmbrosiaUpgrades.redLuck,
             data.redAmbrosiaUpgrades.viscount,
             ...this.getLuckConversionCalculationDeps(),
+            mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2,
         ].flat();
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
@@ -162,14 +189,14 @@ export class LuckHelper {
         const redLuck = this.#ctx.getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
         const viscount = this.#ctx.getRedAmbrosiaUpgradeEffects('viscount').redLuckBonus;
         const horseShoeLevel = this.#ctx.getRuneEffectiveLevel('horseShoe');
-        const { additiveComponents, rawLuckComponents } = this.getLuckCalculationComponentValues(true_base);
+        const { additiveComponents, rawLuckComponents } = this.getLuckCalculationComponentValues(mode);
 
-        const mode = true_base ? 'true_base' as const : 'normal' as const;
         const effectiveShopRedLuck1 = this.#ctx.getShopLevel('shopRedLuck1', mode);
         const effectiveShopRedLuck2 = this.#ctx.getShopLevel('shopRedLuck2', mode);
         const effectiveShopRedLuck3 = this.#ctx.getShopLevel('shopRedLuck3', mode);
-        const luckConversion = this.calculateLuckConversion(true, true_base) as number;
-        const panthemaRedLuck = this.calculatePanthemaRedLuck(true_base);
+        const effectiveShopRedLuck4 = this.#ctx.getShopLevel('shopRedLuck4', mode);
+        const luckConversion = this.calculateLuckConversion(true, mode) as number;
+        const panthemaRedLuck = this.calculatePanthemaRedLuck(mode);
         const synergismLevelBonus = Math.max(0, (this.#ctx.calculateSynergismLevel() ?? 0) - 259);
 
         const totalLuck = additiveComponents.reduce((a, b) => a + b, 0) * rawLuckComponents.reduce((a, b) => a + b, 0);
@@ -183,8 +210,10 @@ export class LuckHelper {
             effectiveShopRedLuck1 * 0.05,
             effectiveShopRedLuck2 * 0.075,
             effectiveShopRedLuck3 * 0.1,
+            effectiveShopRedLuck4 * 0.2,
             viscount,
-            horseShoeLevel * 0.2,
+            this.#ctx.getRuneEffects('horseShoe').redLuck,
+            this.#ctx.getTalismanEffects('horseShoe').redLuck,
             panthemaRedLuck,
         ];
 
@@ -215,28 +244,24 @@ export class LuckHelper {
         return val;
     }
 
-    calculateAmbrosiaLuckShopUpgrade(reduce_vals = true, true_base = false) {
+    calculateAmbrosiaLuckShopUpgrade(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
-        const cacheName = (`AmbrosiaLuckShopUpgrade${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
-        const calculationVars = [...this.getAmbrosiaLuckShopUpgradeCalculationDeps(), true_base ? 1 : 0];
+        const mode = this.resolveMode(trueBaseOrMode);
+        const cacheName = (`AmbrosiaLuckShopUpgrade${this.modeCacheSuffix(mode)}`) as keyof CalculationCache;
+        const calculationVars = [...this.getAmbrosiaLuckShopUpgradeCalculationDeps(), mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2];
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (reduce_vals && cached !== undefined) return cached;
 
-        const noQuarkUpgrades = data.singularityChallenges.noQuarkUpgrades.enabled;
-        const ambrosiaLuckBonusLevels = true_base
-            ? this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaFreeLuckUpgrades', 'true_base').freeLuckUpgrades
-            : this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaFreeLuckUpgrades').freeLuckUpgrades;
-
-        const effectiveLevels = noQuarkUpgrades
-            ? [0, 0, 0, 0]
-            : [
-                (data.shopUpgrades.shopAmbrosiaLuck1 ?? 0) + ambrosiaLuckBonusLevels,
-                (data.shopUpgrades.shopAmbrosiaLuck2 ?? 0) + ambrosiaLuckBonusLevels,
-                (data.shopUpgrades.shopAmbrosiaLuck3 ?? 0) + ambrosiaLuckBonusLevels,
-                (data.shopUpgrades.shopAmbrosiaLuck4 ?? 0) + ambrosiaLuckBonusLevels,
-            ];
+        // Mirrors Shop.getShopLevel: bonus levels only apply to a purchased shop
+        // upgrade, and the No Quark Upgrades challenge disables non-utility levels.
+        const effectiveLevels = [
+            this.#ctx.getShopLevel('shopAmbrosiaLuck1', mode),
+            this.#ctx.getShopLevel('shopAmbrosiaLuck2', mode),
+            this.#ctx.getShopLevel('shopAmbrosiaLuck3', mode),
+            this.#ctx.getShopLevel('shopAmbrosiaLuck4', mode),
+        ];
 
         const vals = [
             2 * effectiveLevels[0],
@@ -250,32 +275,33 @@ export class LuckHelper {
         return reduce_vals ? reduced : vals;
     }
 
-    calculatePanthemaAmbrosiaLuck(true_base = false) {
-        const cacheName = (`PanthemaAmbrosiaLuck${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
-        const calculationVars = [...this.getPanthemaAmbrosiaLuckCalculationDeps(), true_base ? 1 : 0];
+    calculatePanthemaAmbrosiaLuck(trueBaseOrMode: boolean | CalculationMode = false) {
+        const mode = this.resolveMode(trueBaseOrMode);
+        const cacheName = (`PanthemaAmbrosiaLuck${this.modeCacheSuffix(mode)}`) as keyof CalculationCache;
+        const calculationVars = [...this.getPanthemaAmbrosiaLuckCalculationDeps(), mode === 'normal' ? 0 : mode === 'true_base' ? 1 : 2];
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (cached !== undefined) return cached;
 
-        const reduced = true_base
-            ? this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaLuck', 'true_base') as number
-            : this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaLuck') as number;
+        const reduced = this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaLuck', mode) as number;
 
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduced;
     }
 
-    calculatePanthemaRedLuck(true_base = false) {
+    calculatePanthemaRedLuck(trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
 
-        const cacheName = (`PanthemaRedLuck${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
+        const mode = this.resolveMode(trueBaseOrMode);
+        const cacheName = (`PanthemaRedLuck${this.modeCacheSuffix(mode)}`) as keyof CalculationCache;
         const calculationVars: number[] = [
             data.shopUpgrades.shopPanthema,
-            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.ambrosiaInvested,
-            data.redAmbrosiaUpgrades.freeLevelsRow4,
+            data.ambrosiaUpgrades.ambrosiaFreeRedLuckUpgrades.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaFreeRedLuckUpgrades.purpleAmbrosiaInvested ?? 0,
+            data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.highestSingularityCount,
-            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
-            data.octUpgrades.octeractInfiniteShopUpgrades.level,
+            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.goldenQuarksInvested,
+            data.octUpgrades.octeractInfiniteShopUpgrades.octeractsInvested,
             data.shopUpgrades.shopInfiniteShopUpgrades,
             data.redAmbrosiaUpgrades.infiniteShopUpgrades,
             ...(Object.values(data.singularityChallenges) as any[]).map((c) => c.completions),
@@ -285,16 +311,18 @@ export class LuckHelper {
                     data.redAmbrosiaUpgrades.freeLevelsRow4,
                     data.redAmbrosiaUpgrades.freeLevelsRow5,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.purpleAmbrosiaInvested ?? 0,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.purpleAmbrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.ambrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.purpleAmbrosiaInvested ?? 0,
                 ]),
         ].flat();
 
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (cached !== undefined) return cached;
 
-        const reduced = true_base
-            ? this.#ctx.getShopUpgradeEffects('shopPanthema', 'redLuck', 'true_base') as number
-            : this.#ctx.getShopUpgradeEffects('shopPanthema', 'redLuck') as number;
+        const reduced = this.#ctx.getShopUpgradeEffects('shopPanthema', 'redLuck', mode) as number;
 
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduced;
@@ -333,10 +361,10 @@ export class LuckHelper {
         if (!data) return 0;
 
         const vals = [
-            +data.goldenQuarkUpgrades.singAmbrosiaLuck.level * 4,
-            +data.goldenQuarkUpgrades.singAmbrosiaLuck2.level * 2,
-            +data.goldenQuarkUpgrades.singAmbrosiaLuck3.level * 3,
-            +data.goldenQuarkUpgrades.singAmbrosiaLuck4.level * 5,
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaLuck', 'ambrosiaLuck'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaLuck2', 'ambrosiaLuck'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaLuck3', 'ambrosiaLuck'),
+            this.#ctx.getGQUpgradeEffect('singAmbrosiaLuck4', 'ambrosiaLuck'),
         ];
 
         const reduced = vals.reduce((a, b) => a + b, 0);
@@ -371,10 +399,10 @@ export class LuckHelper {
         if (reduce_vals && cached !== undefined) return cached;
 
         const vals = [
-            +data.octUpgrades.octeractAmbrosiaLuck.level * 4,
-            +data.octUpgrades.octeractAmbrosiaLuck2.level * 2,
-            +data.octUpgrades.octeractAmbrosiaLuck3.level * 3,
-            +data.octUpgrades.octeractAmbrosiaLuck4.level * 5,
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaLuck', 'ambrosiaLuck'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaLuck2', 'ambrosiaLuck'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaLuck3', 'ambrosiaLuck'),
+            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaLuck4', 'ambrosiaLuck'),
         ];
 
         const reduced = vals.reduce((a, b) => a + b, 0);
@@ -382,13 +410,12 @@ export class LuckHelper {
         return reduce_vals ? reduced : vals;
     }
 
-    private getLuckCalculationComponentValues(true_base = false) {
+    private getLuckCalculationComponentValues(mode: CalculationMode = 'normal') {
         const data = this.#ctx.getGameData();
         if (!data) {
             return { additiveComponents: [0], rawLuckComponents: [0] };
         }
 
-        const mode: CalculationMode = true_base ? 'true_base' : 'normal';
         const cube77 = data.cubeUpgrades[77] ?? 0;
         const P_BUFF_LVL = this.#ctx.getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF');
         const P_BUFF = P_BUFF_LVL ? P_BUFF_LVL * 20 : 0;
@@ -411,13 +438,13 @@ export class LuckHelper {
             P_BUFF,
             this.calculateCampaignLuckBonus(),
             this.calculateSingularityAmbrosiaLuckMilestoneBonus(),
-            this.calculateAmbrosiaLuckShopUpgrade(true, true_base) as number,
+            this.calculateAmbrosiaLuckShopUpgrade(true, mode) as number,
             this.calculateAmbrosiaLuckSingularityUpgrade(true),
             this.calculateAmbrosiaLuckOcteractUpgrade(true),
             data.highestSingularityCount >= 131 ? 131 : 0,
             data.highestSingularityCount >= 269 ? 269 : 0,
             this.#ctx.getShopUpgradeEffects('shopOcteractAmbrosiaLuck', 'ambrosiaLuck') as number,
-            this.calculatePanthemaAmbrosiaLuck(true_base),
+            this.calculatePanthemaAmbrosiaLuck(mode),
             this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'ambrosiaLuck'),
             this.#ctx.getRedAmbrosiaUpgradeEffects('regularLuck').ambrosiaLuck,
             this.#ctx.getRedAmbrosiaUpgradeEffects('regularLuck2').ambrosiaLuck,
@@ -432,6 +459,7 @@ export class LuckHelper {
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck3', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1', mode).ambrosiaLuck,
+            this.#ctx.getPurpleAmbrosiaUpgradeEffects('leo', 'unassignedBlueberyLuck'),
         ];
 
         return { additiveComponents, rawLuckComponents };
@@ -445,12 +473,14 @@ export class LuckHelper {
             data.shopUpgrades.shopRedLuck1,
             data.shopUpgrades.shopRedLuck2,
             data.shopUpgrades.shopRedLuck3,
+            data.shopUpgrades.shopRedLuck4,
             data.redAmbrosiaUpgrades.conversionImprovement1,
             data.redAmbrosiaUpgrades.conversionImprovement2,
             data.redAmbrosiaUpgrades.conversionImprovement3,
             ...this.getHorseShoeLevelCalculationDeps(),
             data.ambrosiaUpgrades.ambrosiaFreeRedLuckUpgrades.ambrosiaInvested,
-            data.redAmbrosiaUpgrades.freeLevelsRow4,
+            data.ambrosiaUpgrades.ambrosiaFreeRedLuckUpgrades.purpleAmbrosiaInvested ?? 0,
+            data.redAmbrosiaUpgrades.freeLevelsRow2,
         ];
     }
 
@@ -461,6 +491,8 @@ export class LuckHelper {
         return [
             parseGameDataDecimal(data.runes.horseShoe).log10(),
             data.singularityChallenges.taxmanLastStand.completions,
+            data.purpleAmbrosiaUpgrades?.sagittarius ?? 0,
+            data.purpleAmbrosiaUpgrades?.capricorn ?? 0,
             ...this.#ctx.getShopLevelDependencies('shopHorseShoe'),
         ];
     }
@@ -475,6 +507,7 @@ export class LuckHelper {
             data.shopUpgrades.shopAmbrosiaLuck3,
             data.shopUpgrades.shopAmbrosiaLuck4,
             data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.purpleAmbrosiaInvested ?? 0,
             data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
         ];
@@ -487,10 +520,11 @@ export class LuckHelper {
         return [
             data.shopUpgrades.shopPanthema,
             data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.ambrosiaInvested,
+            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.purpleAmbrosiaInvested ?? 0,
             data.redAmbrosiaUpgrades.freeLevelsRow2,
             data.highestSingularityCount,
-            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.level,
-            data.octUpgrades.octeractInfiniteShopUpgrades.level,
+            data.goldenQuarkUpgrades.singInfiniteShopUpgrades.goldenQuarksInvested,
+            data.octUpgrades.octeractInfiniteShopUpgrades.octeractsInvested,
             data.shopUpgrades.shopInfiniteShopUpgrades,
             data.redAmbrosiaUpgrades.infiniteShopUpgrades,
             ...(Object.values(data.singularityChallenges) as any[]).map((c) => c.completions),
@@ -500,7 +534,11 @@ export class LuckHelper {
                     data.redAmbrosiaUpgrades.freeLevelsRow4,
                     data.redAmbrosiaUpgrades.freeLevelsRow5,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades1.purpleAmbrosiaInvested ?? 0,
                     data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.ambrosiaInvested,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades2.purpleAmbrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.ambrosiaInvested ?? 0,
+                    data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.purpleAmbrosiaInvested ?? 0,
                 ]),
         ].flat();
     }
@@ -510,10 +548,10 @@ export class LuckHelper {
         if (!data) return [0];
 
         return [
-            data.goldenQuarkUpgrades.singAmbrosiaLuck.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck2.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck3.level,
-            data.goldenQuarkUpgrades.singAmbrosiaLuck4.level,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck2.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck3.goldenQuarksInvested,
+            data.goldenQuarkUpgrades.singAmbrosiaLuck4.goldenQuarksInvested,
         ];
     }
 
@@ -522,10 +560,10 @@ export class LuckHelper {
         if (!data) return [0];
 
         return [
-            data.octUpgrades.octeractAmbrosiaLuck.level,
-            data.octUpgrades.octeractAmbrosiaLuck2.level,
-            data.octUpgrades.octeractAmbrosiaLuck3.level,
-            data.octUpgrades.octeractAmbrosiaLuck4.level,
+            data.octUpgrades.octeractAmbrosiaLuck.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaLuck2.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaLuck3.octeractsInvested,
+            data.octUpgrades.octeractAmbrosiaLuck4.octeractsInvested,
         ];
     }
 }

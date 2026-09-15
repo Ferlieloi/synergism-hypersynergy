@@ -105,10 +105,10 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         icon: "Pictures/Default/BlueberrySingReduction2.png",
     },
     gen: {
-        label: "Amb Gen (Gen1–Gen3)",
+        label: "Amb Gen (Gen1–Gen5)",
         section: "hybrid",
-        rowLabels: ["Gen 1 + Oct", "Gen 2 + Oct", "Gen 3 + Oct"],
-        rowIcons: Array(3).fill("Pictures/Default/BlueberryBrickOfLead.png"),
+        rowLabels: ["Gen 1 + Oct", "Gen 2 + Oct", "Gen 3 + Oct", "Gen 4 + Oct", "Gen 5 + Oct"],
+        rowIcons: Array(5).fill("Pictures/Default/BlueberryFreeGenerationLevels.png"),
     },
     ambOct: {
         label: "Max Amb + Oct",

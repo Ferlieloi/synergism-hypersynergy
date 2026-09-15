@@ -1,6 +1,13 @@
 import type { HeaterOptimizerInput } from "../../../types/data-types/hs-heater-types";
 
-type HeaterInputBase = Omit<HeaterOptimizerInput, 'heaterOptions'>;
+type HeaterInputBase = Omit<HeaterOptimizerInput,
+    | 'heaterOptions'
+    | 'ambrosiaUpgradeBonusLevels'
+    | 'ambrosiaUpgradeBlueberryCostReductions'
+    | 'shopUpgradeRawLevels'
+    | 'shopBonusLevelsNonAmbrosia'
+    | 'panthemaLevel'
+    | 'shopUpgradesDisabled'>;
 type HeaterInputKey = keyof HeaterInputBase;
 
 type HeaterFieldType = 'number' | 'percent' | 'boolean' | 'text' | 'select';
@@ -29,8 +36,10 @@ export type { HeaterInputField, HeaterInputKey, HeaterInputBase };
 export const inputDefinitions = [
     { key: "amb",                       label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "ramb",                      label: "Lifetime Red Ambrosia",     type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
+    { key: "bonusAmbrosiaPerFill",      label: "Bonus Ambrosia per Fill",  type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "ambSpeedNonAmbBerries",     label: "Blue Bar Speed/s",          type: "number",  url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
     { key: "blueberries",               label: "Blueberries Owned",         type: "number",  url: "Pictures/Default/Blueberries.png" },
+    { key: "purpleLeoLevel",            label: "Purple Leo Level",          type: "number",  url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Leo.png" },
     { key: "luckBaseNonAmb",            label: "Base Luck",                 type: "number",  url: "Pictures/Achievements/Rewards/AmbrosiaLuck.png" },
     { key: "luckMultNonAmb",            label: "Base Luck Mult",            type: "percent", url: "Pictures/PseudoShop/AMBROSIA_LUCK_BUFF.png" },
     { key: "redLuckBase",               label: "Base Red Luck",             type: "number",  url: "Pictures/Achievements/Rewards/RedAmbrosiaLuck.png" },
@@ -51,13 +60,18 @@ export const inputDefinitions = [
         { value: 7, label: "Exalt 7" },
         { value: 8, label: "Exalt 8" },
         { value: 9, label: "Exalt 9" },
+        { value: 10, label: "Exalt 10" },
     ] as const, url: "Pictures/Default/TinySChalTime.png" },
+    { key: "exalt9Unlocked",            label: "Exalt 9 Completed",        type: "boolean", url: "Pictures/Default/TinySChal9Completions.png" },
     { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",       type: "boolean", url: "Pictures/Runes/Antiquities.png" },
+    { key: "oneMindUnlocked",           label: "One Mind Unlocked",        type: "boolean", url: "Pictures/Default/OcteractOneMind.png" },
+    { key: "aquariusUnlocked",          label: "Aquarius Unlocked",       type: "boolean", url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Aquarius.png" },
     { key: "transcription",             label: "Transcription",             type: "number",  url: "Pictures/Default/OcteractOneMindImprover.png" },
     { key: "ascSpeed",                  label: "Asc. Speed",                type: "number",  url: "Pictures/Default/TinySpeedAscension.png" },
     { key: "ascSpread",                 label: "Asc. Spread",               type: "number",  url: "Pictures/Default/SingularityAscensionSpeed.png" },
     { key: "baseObt",                   label: "Base Obtainium",            type: "number",  url: "Pictures/Default/Obtainium.png" },
     { key: "baseOff",                   label: "Base Offering",             type: "number",  url: "Pictures/Default/Offering.png" },
+    { key: "bonusTutorial",             label: "Bonus Tutorial Levels",     type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaFreeTutorialLevels.png" },
     { key: "bonusRow2",                 label: "Bonus Row 2",               type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow2.png" },
     { key: "bonusRow3",                 label: "Bonus Row 3",               type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow3.png" },
     { key: "bonusRow4",                 label: "Bonus Row 4",               type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaFreeLevelsRow4.png" },
@@ -82,6 +96,7 @@ export const inputDefinitions = [
     { key: "shopRedLuck1",              label: "Shop Red Luck 1",           type: "number",  url: "Pictures/Default/ShopRedLuck1.png" },
     { key: "shopRedLuck2",              label: "Shop Red Luck 2",           type: "number",  url: "Pictures/Default/ShopRedLuck2.png" },
     { key: "shopRedLuck3",              label: "Shop Red Luck 3",           type: "number",  url: "Pictures/Default/ShopRedLuck3.png" },
+    { key: "shopRedLuck4",              label: "Shop Red Luck 4",           type: "number",  url: "Pictures/Default/ShopRedLuck4.png" },
     { key: "shopAmbrosiaGeneration1",   label: "Shop Ambrosia Gen 1",       type: "number",  url: "Pictures/Default/ShopAmbrosiaGeneration1.png" },
     { key: "shopAmbrosiaGeneration2",   label: "Shop Ambrosia Gen 2",       type: "number",  url: "Pictures/Default/ShopAmbrosiaGeneration2.png" },
     { key: "shopAmbrosiaGeneration3",   label: "Shop Ambrosia Gen 3",       type: "number",  url: "Pictures/Default/ShopAmbrosiaGeneration3.png" },
@@ -98,11 +113,15 @@ export const inputDefinitions = [
     { key: "viscount",                  label: "Viscount",                  type: "boolean", url: "Pictures/RedAmbrosia/RedAmbrosiaTutorial.png" },
     { key: "rBar",                      label: "Red Bar Capacity",          type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
     { key: "rSpeed",                    label: "Red Bar Speed/s",           type: "number",  url: "Pictures/PseudoShop/AMBROSIATimeSkip.png" },
+    { key: "blueBarMaxWithoutTwoMindAndBrick", label: "Blue Bar Max (No 2M/Brick)", type: "number", url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
+    { key: "blueBarRequirementBeforeRounding", label: "Blue Bar Pre-Round Requirement", type: "number", url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
+    { key: "redBarMaxWithoutTwoMind",   label: "Red Bar Max (No 2M)",       type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
 ] as const satisfies readonly HeaterInputField[];
 
 export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (hsData: any) => HeaterInputBase[K] }>> = {
     amb:                (hsData) => hsData.lifetimeAmbrosia,
     ramb:               (hsData) => hsData.lifetimeRedAmbrosia,
+    bonusAmbrosiaPerFill: (hsData) => hsData.bonusAmbrosiaPerFill,
     luckMultNonAmb:     (hsData) => hsData.luckMultNonAmb - 1,
     ossifiedTactics:    (hsData) => hsData.redAmbrosiaUpgrades.regularLuck,
     ossifiedTactics2:   (hsData) => hsData.redAmbrosiaUpgrades.regularLuck2,

@@ -5,8 +5,10 @@ export type { HeaterResultArrayKey } from "../../class/hs-modules/hs-heater/hs-h
 export interface HeaterOptimizerInput {
     amb: number;
     ramb: number;
+    bonusAmbrosiaPerFill: number;
     ambSpeedNonAmbBerries: number;
     blueberries: number;
+    purpleLeoLevel: number;
     luckBaseNonAmb: number;
     luckMultNonAmb: number;
     redLuckBase: number;
@@ -17,12 +19,16 @@ export interface HeaterOptimizerInput {
     currentSingularity: number;
     singularityReducers: number;
     exalt: number;
+    exalt9Unlocked: boolean;
     postAoag: boolean;
+    oneMindUnlocked: boolean;
+    aquariusUnlocked: boolean;
     transcription: number;
     ascSpeed: number;
     ascSpread: number;
     baseObt: number;
     baseOff: number;
+    bonusTutorial: number;
     bonusRow2: number;
     bonusRow3: number;
     bonusRow4: number;
@@ -30,6 +36,8 @@ export interface HeaterOptimizerInput {
     runeSiExp: Decimal;
     runeSiRC: number;
     runeSiBonusLevelsTotal: number;
+    runeSiBonusLevelsTalismanNonAmbrosia: number;
+    runeSiEffectiveLevelMultiplier: number;
     runeIaExp: Decimal;
     runeIaBonusLevelsTotal: Decimal;
     runeIaBonusLevelsTalisman: Decimal;
@@ -47,6 +55,7 @@ export interface HeaterOptimizerInput {
     shopRedLuck1: number;
     shopRedLuck2: number;
     shopRedLuck3: number;
+    shopRedLuck4: number;
     shopAmbrosiaGeneration1: number;
     shopAmbrosiaGeneration2: number;
     shopAmbrosiaGeneration3: number;
@@ -63,6 +72,25 @@ export interface HeaterOptimizerInput {
     viscount: boolean;
     rBar: number;
     rSpeed: number;
+    blueBarMaxWithoutTwoMindAndBrick: number;
+    blueBarRequirementBeforeRounding: number;
+    redBarMaxWithoutTwoMind: number;
+    ambrosiaUpgradeBonusLevels: Record<string, number>;
+    ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
+    shopUpgradeRawLevels: Record<string, number>;
+    shopBonusLevelsNonAmbrosia: {
+        offering: number;
+        obtainium: number;
+        cubes: number;
+        speed: number;
+        quark: number;
+        ambrosiaLuck: number;
+        redAmbrosiaLuck: number;
+        ambrosiaGeneration: number;
+        infinity: number;
+    };
+    panthemaLevel: number;
+    shopUpgradesDisabled: boolean;
     heaterOptions: Record<HeaterBranchId, boolean>;
 }
 

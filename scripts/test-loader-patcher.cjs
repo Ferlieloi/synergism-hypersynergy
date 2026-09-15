@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const { readFileSync } = require('node:fs')
 const vm = require('node:vm')
 const patchBundle = require('../synergism_modloader/lib/patcher')
 
@@ -107,12 +108,99 @@ async function main () {
     await context.window.__HS_exportSynergism()
     assert.equal(context.quarks, 2, 'normal export must still run exportSynergism')
     assert.equal(context.outputs, 1, 'normal export must still output the save')
+
+    const capSource = [
+      'player={researches:Array(106).fill(0),cubeUpgrades:Array(30).fill(0),singularityChallenges:{oneChallengeCap:{enabled:false}}};',
+      'player.cubeUpgrades[29]=3;',
+      'noise=(index)=>player.cubeUpgrades[29];',
+      'cap=(challenge)=>{',
+      'const nested=()=>player.singularityChallenges.oneChallengeCap.enabled;',
+      'if(nested())return 1;',
+      'if(player.researches[105])return 9001;',
+      'if(challenge>5)return 40+4*player.cubeUpgrades[29]+effect("reincarnationChallengeCap");',
+      'return 25;',
+      '};',
+      'function effect(){return 2}'
+    ].join('')
+    const capContext = { window: {}, console: { log () {}, warn () {}, error () {} } }
+    vm.runInNewContext(patchBundle(capSource), capContext)
+    assert.equal(capContext.cap(6), 54, 'challenge cap must retain the game behavior')
+    assert.equal(capContext.window.__HS_getMaxChallenges, capContext.cap, 'cap exposure must use the enclosing function')
+
+    const distantBody = '{const nested=()=>0;nested()}'.repeat(100)
+    const tackSource = [
+      'events=[];',
+      'timers=(name)=>events.push(name);',
+      'noise=()=>timers("autoPotion");',
+      `gameTick=(dt)=>{${distantBody}timers("prestige");timers("autoPotion");timers("ascension");timers("quarks");events.push("finished")};`
+    ].join('')
+    const tackContext = {
+      window: {},
+      queueMicrotask,
+      console: { log () {}, warn () {}, error () {} }
+    }
+    vm.runInNewContext(patchBundle(tackSource), tackContext)
+    tackContext.gameTick(1)
+    assert.equal(typeof tackContext.window.__HS_onAfterTack, 'function', 'tack hook must be exposed from a distant body header')
+    tackContext.events.length = 0
+    tackContext.window.__HS_onAfterTack(() => tackContext.events.push('hook'))
+    tackContext.gameTick(1)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.deepEqual(Array.from(tackContext.events.slice(-2)), ['finished', 'hook'], 'after-tack hook must run after game updates')
+
+    // Rocket Loader inserts a clone of out.js before a MutationObserver can
+    // react. Verify that each browser loader marks the clone inert first and
+    // still acknowledges its load so Rocket Loader can continue.
+    for (const loader of ['hypersynergism.user.js', 'hypersynergism.dev.js']) {
+      const loaderSource = readFileSync(`src/loader/${loader}`, 'utf8')
+      const start = loaderSource.indexOf('    function interceptInsertedGameScript(node)')
+      const end = loaderSource.indexOf('    // ─── Script interception', start)
+      assert.ok(start !== -1 && end !== -1, `${loader}: interception code missing`)
+      const snippet = loaderSource.slice(start, end)
+      let gameExecutions = 0
+      let loadAcknowledgements = 0
+      let patchStarts = 0
+      class FakeNode {
+        insertBefore (node) { if (node.type === 'text/javascript') node.execute(); return node }
+        appendChild (node) { if (node.type === 'text/javascript') node.execute(); return node }
+        replaceChild (node) { if (node.type === 'text/javascript') node.execute(); return node }
+      }
+      const interceptionContext = {
+        Node: FakeNode,
+        Event: class { constructor (type) { this.type = type } },
+        queueMicrotask,
+        debug () {},
+        injectPatchedBundle () { patchStarts++ }
+      }
+      vm.runInNewContext(`let gameScriptDetected=false;${snippet}`, interceptionContext)
+      const makeScript = () => ({
+        nodeType: 1,
+        localName: 'script',
+        src: 'https://synergism.cc/dist/out.js',
+        type: 'text/javascript',
+        getAttribute () { return this.src },
+        setAttribute () {},
+        execute () { gameExecutions++ },
+        dispatchEvent (event) { if (event.type === 'load') this.onload?.() },
+        remove () {}
+      })
+      for (const method of ['insertBefore', 'appendChild', 'replaceChild']) {
+        const script = makeScript()
+        const parent = new FakeNode()
+        parent[method](script, null)
+        script.onload = () => { loadAcknowledgements++ }
+      }
+      await new Promise(resolve => setImmediate(resolve))
+      assert.equal(gameExecutions, 0, `${loader}: Rocket Loader's original game copy must not execute`)
+      assert.equal(loadAcknowledgements, 3, `${loader}: blocked scripts must acknowledge load`)
+      assert.equal(patchStarts, 1, `${loader}: patched bundle fetch must start once`)
+    }
   } finally {
     console.log = originalLog
     console.warn = originalWarn
   }
 
-  console.log(`Export patch regression checks passed (${fixtures.length} variants).`)
+  console.log(`Loader patch regression checks passed (${fixtures.length} export variants, challenge cap, tack, and Rocket Loader interception).`)
 }
 
 main().catch(error => {

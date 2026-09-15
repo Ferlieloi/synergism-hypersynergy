@@ -477,7 +477,7 @@ const isTalismanUnlocked = (t: TalismanKeys, env: TalismanHelperContext): boolea
         case 'cookieGrandma':
             return (data.cubeUpgrades[80] ?? 0) > 0;
         case 'horseShoe':
-            return Boolean(env.getSingularityChallengeEffect('taxmanLastStand', 'talismanUnlock'));
+            return Boolean(env.getPurpleAmbrosiaUpgradeEffects('capricorn', 'horseshoeTalismanUnlocked'));
         default:
             return false;
     }

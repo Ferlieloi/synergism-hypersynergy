@@ -218,9 +218,9 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (!gameData) gameData = await gameDataAPI.getForcedGameData();
         if (!gameData) return;
 
-        this.#cachedPlatonicTau = (gameData.goldenQuarkUpgrades?.platonicTau?.level ?? 0) > 0;
-        this.#cachedCorruptionFourteenAmount = gameData.goldenQuarkUpgrades?.corruptionFourteen?.level ?? 0;
-        this.#cachedOcteractCorruptionAmount = gameData.octUpgrades?.octeractCorruption?.level ?? 0;
+        this.#cachedPlatonicTau = gameDataAPI.goldenQuark.getGQUpgradeLevel('platonicTau') > 0;
+        this.#cachedCorruptionFourteenAmount = gameDataAPI.goldenQuark.getGQUpgradeLevel('corruptionFourteen');
+        this.#cachedOcteractCorruptionAmount = gameDataAPI.octeract.getOcteractUpgradeLevel('octeractCorruption');
     }
 
     /** Observe relevant DOM state changes that affect max corruption calculations. */

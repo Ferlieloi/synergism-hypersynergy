@@ -39,9 +39,9 @@ export class HSHeaterInputModalController {
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
         autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
         autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obt"] },
-        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
+        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
+        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
+        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
         // RETIRED: Ambrosia AFK/idle swapper loadout recommendations.
         // ambrosiaIdleSwapOcteractLoadout:   { label: 'AFK Swapper Gen+Oct',   preferences: ["gen:2", "gen:1", "gen:0"] },
         // ambrosiaIdleSwapNormalLuckLoadout: { label: 'AFK Swapper Blue Luck', preferences: ["ambOct", "luck"] },
@@ -234,6 +234,13 @@ export class HSHeaterInputModalController {
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
                 const updatedInput = HSHeaterUIInput.readInputValues(modal);
+                if (!Number.isFinite(updatedInput.blueBarRequirementBeforeRounding)
+                    || updatedInput.blueBarRequirementBeforeRounding <= 0) {
+                    HSUI.Notify('Blue bar pre-round requirement is missing. Re-export current game data for Heater.', {
+                        position: 'top', notificationType: 'error'
+                    });
+                    return;
+                }
                 const updatedResult = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();

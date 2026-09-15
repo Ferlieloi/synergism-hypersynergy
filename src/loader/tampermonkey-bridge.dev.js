@@ -1,14 +1,12 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader (Local Dev)
 // @namespace    https://github.com/Ferlieloi
-// @version      1.2
-// @description  Local development bridge
+// @version      1.3
+// @description  Loads the local game loader synchronously at document-start
 // @author       Developer
 // @match        https://synergism.cc/*
 // @grant        none
 // @run-at       document-start
-// @updateURL    https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
-// @downloadURL  https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
 // ==/UserScript==
 
 (function () {

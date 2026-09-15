@@ -70,6 +70,7 @@ export const SHOP_UPGRADE_TYPE_KEYS: Record<ShopUpgradeGroups, string[]> = {
     'shopRedLuck1',
     'shopRedLuck2',
     'shopRedLuck3',
+    'shopRedLuck4',
     'shopPanthema'
   ],
   [ShopUpgradeGroups.AmbrosiaGeneration]: [
@@ -129,11 +130,11 @@ export const hepteractEffectiveValues: HepteractEffectiveValues = {
   },
   hyperrealism: {
     LIMIT: 1000,
-    DR: 0.33
+    DR: 1 / 3
   },
   quark: {
     LIMIT: 1000,
-    DR: 0.5
+    DR: 2
   },
   challenge: {
     LIMIT: 1000,
@@ -141,7 +142,7 @@ export const hepteractEffectiveValues: HepteractEffectiveValues = {
   },
   abyss: {
     LIMIT: 1,
-    DR: 0
+    DR: 1
   },
   accelerator: {
     LIMIT: 1000,
@@ -538,6 +539,16 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
     },
     url: 'Pictures/RedAmbrosia/RedAmbrosiaRedGenerationSpeed.png'
   },
+  redGenerationSpeed2: {
+    label: 'Ancient Red Ambrosia',
+    costFunction: (n: number, cpl: number) => cpl * (n + 1),
+    maxLevel: 250,
+    costPerLevel: 240,
+    effects: (n: number) => ({
+      redAmbrosiaGenerationSpeed: 1 + n / 1000
+    }),
+    url: 'Pictures/RedAmbrosia/RedAmbrosiaRedGenerationSpeed2.png'
+  },
   redLuck: {
     label: 'The Dice that Decide Your Fate',
     costFunction: (n: number, cpl: number) => cpl * (n + 1),
@@ -912,201 +923,240 @@ export const synergismLevelMilestones: Record<SynergismLevelMilestones, Synergis
 }
 
 // TODO: Add all effects (and other useful data) from singularity.ts > goldenQuarkUpgrades
+const MAX_PURCHASED_UPGRADE_LEVEL = 2 ** 31 - 1
+
+// Cost metadata mirrors SynergismOfficial/src/singularity.ts. Current saves persist
+// only the cumulative investment, so the purchased level must be reconstructed.
 export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQuarkUpgradeDef> = {
-  goldenQuarks1: { maxLevel: 15, canExceedCap: true },
-  goldenQuarks2: { maxLevel: 75, canExceedCap: true },
-  goldenQuarks3: { maxLevel: 1000 },
-  starterPack: { maxLevel: 1 },
-  wowPass: { maxLevel: 1 },
-  cookies: { maxLevel: 1 },
-  cookies2: { maxLevel: 1 },
-  cookies3: { maxLevel: 1 },
-  cookies4: { maxLevel: 1 },
-  cookies5: { maxLevel: 1 },
-  ascensions: { maxLevel: -1 },
+  goldenQuarks1: { maxLevel: 15, canExceedCap: true, qualityOfLife: true, costPerLevel: 12, specialCostForm: 'Default' },
+  goldenQuarks2: { maxLevel: 75, canExceedCap: true, qualityOfLife: true, costPerLevel: 60, specialCostForm: 'Default' },
+  goldenQuarks3: { maxLevel: 1000, costPerLevel: 1000, specialCostForm: 'Default' },
+  starterPack: { maxLevel: 1, costPerLevel: 10, specialCostForm: 'Default' },
+  wowPass: { maxLevel: 1, qualityOfLife: true, costPerLevel: 350, specialCostForm: 'Default' },
+  cookies: { maxLevel: 1, qualityOfLife: true, costPerLevel: 100, specialCostForm: 'Default' },
+  cookies2: { maxLevel: 1, qualityOfLife: true, costPerLevel: 500, specialCostForm: 'Default' },
+  cookies3: { maxLevel: 1, qualityOfLife: true, costPerLevel: 24_999, specialCostForm: 'Default' },
+  cookies4: { maxLevel: 1, qualityOfLife: true, costPerLevel: 499_999, specialCostForm: 'Default' },
+  cookies5: { maxLevel: 1, qualityOfLife: true, costPerLevel: 1.66e15, specialCostForm: 'Default' },
+  ascensions: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 5, specialCostForm: 'Default' },
   corruptionFourteen: {
-    maxLevel: 1,
+    maxLevel: 1, costPerLevel: 1000, specialCostForm: 'Default',
     effect: (n: number) => {
       return n > 0 ? 1 : 0
     },
   },
-  corruptionFifteen: { maxLevel: 1 },
-  singOfferings1: { maxLevel: -1 },
-  singOfferings2: { maxLevel: 25, canExceedCap: true },
-  singOfferings3: { maxLevel: 40, canExceedCap: true },
-  singObtainium1: { maxLevel: -1 },
-  singObtainium2: { maxLevel: 25, canExceedCap: true },
-  singObtainium3: { maxLevel: 40, canExceedCap: true },
-  singCubes1: { maxLevel: -1 },
-  singCubes2: { maxLevel: 25, canExceedCap: true },
-  singCubes3: { maxLevel: 40, canExceedCap: true },
-  singCitadel: { maxLevel: -1 },
-  singCitadel2: { maxLevel: 100 },
-  octeractUnlock: { maxLevel: 1 },
-  singOcteractPatreonBonus: { maxLevel: 1 },
-  offeringAutomatic: { maxLevel: -1 },
-  intermediatePack: { maxLevel: 1 },
-  advancedPack: { maxLevel: 1 },
-  expertPack: { maxLevel: 1 },
-  masterPack: { maxLevel: 1 },
-  divinePack: { maxLevel: 1 },
-  wowPass2: { maxLevel: 1 },
-  wowPass3: { maxLevel: 1 },
-  potionBuff: { maxLevel: 10, canExceedCap: true },
-  potionBuff2: { maxLevel: 10, canExceedCap: true },
-  potionBuff3: { maxLevel: 10, canExceedCap: true },
-  singChallengeExtension: { maxLevel: 4 },
-  singChallengeExtension2: { maxLevel: 3 },
-  singChallengeExtension3: { maxLevel: 3 },
-  singQuarkImprover1: { maxLevel: 30 },
-  singQuarkHepteract: { maxLevel: 10 },
-  singQuarkHepteract2: { maxLevel: 10 },
-  singQuarkHepteract3: { maxLevel: 10, canExceedCap: true },
-  singOcteractGain: { maxLevel: -1 },
-  singOcteractGain2: { maxLevel: 25, canExceedCap: true },
-  singOcteractGain3: { maxLevel: 50, canExceedCap: true },
-  singOcteractGain4: { maxLevel: 100, canExceedCap: true },
-  singOcteractGain5: { maxLevel: 200, canExceedCap: true },
+  corruptionFifteen: { maxLevel: 1, costPerLevel: 40_000, specialCostForm: 'Default' },
+  singOfferings1: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1, specialCostForm: 'Default' },
+  singOfferings2: { maxLevel: 25, canExceedCap: true, costPerLevel: 25, specialCostForm: 'Default' },
+  singOfferings3: { maxLevel: 40, canExceedCap: true, costPerLevel: 500, specialCostForm: 'Default' },
+  singObtainium1: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1, specialCostForm: 'Default' },
+  singObtainium2: { maxLevel: 25, canExceedCap: true, costPerLevel: 25, specialCostForm: 'Default' },
+  singObtainium3: { maxLevel: 40, canExceedCap: true, costPerLevel: 500, specialCostForm: 'Default' },
+  singCubes1: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1, specialCostForm: 'Default' },
+  singCubes2: { maxLevel: 25, canExceedCap: true, costPerLevel: 25, specialCostForm: 'Default' },
+  singCubes3: { maxLevel: 40, canExceedCap: true, costPerLevel: 500, specialCostForm: 'Default' },
+  singCitadel: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 500_000, specialCostForm: 'Default' },
+  singCitadel2: { maxLevel: 100, costPerLevel: 1e14, specialCostForm: 'Quadratic' },
+  octeractUnlock: { maxLevel: 1, qualityOfLife: true, costPerLevel: 8888, specialCostForm: 'Default' },
+  singOcteractPatreonBonus: { maxLevel: 1, costPerLevel: 9999, specialCostForm: 'Default' },
+  offeringAutomatic: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1e14, specialCostForm: 'Default' },
+  intermediatePack: {
+    maxLevel: 1, costPerLevel: 1, specialCostForm: 'Default',
+    effect: (n, key) => key === 'globalSpeedMult' ? (n > 0 ? 2 : 1)
+      : key === 'ascensionSpeedMult' ? (n > 0 ? 1.5 : 1)
+        : (n > 0 ? 0.02 : 0),
+  },
+  advancedPack: { maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default' },
+  expertPack: {
+    maxLevel: 1, costPerLevel: 800, specialCostForm: 'Default',
+    effect: (n, key) => key === 'addCodeAscensionTimeMult' ? (n > 0 ? 1.2 : 1)
+      : key === 'ascensionScoreMult' ? (n > 0 ? 1.5 : 1)
+        : (n > 0 ? 0.06 : 0),
+  },
+  masterPack: {
+    maxLevel: 1, costPerLevel: 3200, specialCostForm: 'Default',
+    effect: (n, key) => key === 'ascensionScoreMult' ? (n > 0 ? 2 : 1) : (n > 0 ? 0.08 : 0),
+  },
+  divinePack: { maxLevel: 1, costPerLevel: 12_800, specialCostForm: 'Default' },
+  wowPass2: { maxLevel: 1, qualityOfLife: true, costPerLevel: 12_500, specialCostForm: 'Default' },
+  wowPass3: { maxLevel: 1, qualityOfLife: true, costPerLevel: 3e7 - 1, specialCostForm: 'Default' },
+  potionBuff: { maxLevel: 10, canExceedCap: true, costPerLevel: 999, specialCostForm: 'Default' },
+  potionBuff2: { maxLevel: 10, canExceedCap: true, costPerLevel: 1e8, specialCostForm: 'Default' },
+  potionBuff3: { maxLevel: 10, canExceedCap: true, costPerLevel: 1e12, specialCostForm: 'Default' },
+  singChallengeExtension: { maxLevel: 4, costPerLevel: 999, specialCostForm: 'Default' },
+  singChallengeExtension2: { maxLevel: 3, costPerLevel: 29_999, specialCostForm: 'Default' },
+  singChallengeExtension3: { maxLevel: 3, costPerLevel: 749_999, specialCostForm: 'Default' },
+  singQuarkImprover1: { maxLevel: 30, canExceedCap: true, qualityOfLife: true, costPerLevel: 1, specialCostForm: 'Exponential2' },
+  singQuarkHepteract: { maxLevel: 10, qualityOfLife: true, costPerLevel: 14_999, specialCostForm: 'Quadratic', effect: (n) => n / 100 },
+  singQuarkHepteract2: { maxLevel: 10, qualityOfLife: true, costPerLevel: 449_999, specialCostForm: 'Cubic', effect: (n) => n / 100 },
+  singQuarkHepteract3: { maxLevel: 10, canExceedCap: true, qualityOfLife: true, costPerLevel: 13_370_000, specialCostForm: 'Exponential2', effect: (n) => n / 200 },
+  singOcteractGain: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 20_000, specialCostForm: 'Default' },
+  singOcteractGain2: { maxLevel: 25, canExceedCap: true, costPerLevel: 40_000, specialCostForm: 'Default' },
+  singOcteractGain3: { maxLevel: 50, canExceedCap: true, costPerLevel: 250_000, specialCostForm: 'Default' },
+  singOcteractGain4: { maxLevel: 100, canExceedCap: true, costPerLevel: 750_000, specialCostForm: 'Default' },
+  singOcteractGain5: { maxLevel: 200, canExceedCap: true, costPerLevel: 7_777_777, specialCostForm: 'Default' },
   platonicTau: {
-    maxLevel: 1,
+    maxLevel: 1, costPerLevel: 100_000, specialCostForm: 'Default',
     qualityOfLife: true,
-    effect: (n: number) => {
-      return n > 0 ? 1 : 0
+    effect: (n: number, key?: string) => {
+      return key === 'tauPower' ? (n > 0 ? 1.01 : 1) : +(n > 0)
     },
   },
-  platonicAlpha: { maxLevel: 1 },
-  platonicDelta: { maxLevel: 1 },
-  platonicPhi: { maxLevel: 1 },
-  singFastForward: { maxLevel: 1 },
-  singFastForward2: { maxLevel: 1 },
-  singAscensionSpeed: { maxLevel: 1 },
-  singAscensionSpeed2: { maxLevel: 30 },
-  ultimatePen: { maxLevel: 1 },
-  halfMind: { maxLevel: 1 },
-  oneMind: { maxLevel: 1 },
-  wowPass4: { maxLevel: 1 },
-  blueberries: { maxLevel: 10 },
-  singAmbrosiaLuck: { maxLevel: -1 },
-  singAmbrosiaLuck2: { maxLevel: 30 },
-  singAmbrosiaLuck3: { maxLevel: 30 },
-  singAmbrosiaLuck4: { maxLevel: 50 },
-  singAmbrosiaGeneration: { maxLevel: -1 },
-  singAmbrosiaGeneration2: { maxLevel: 20 },
-  singAmbrosiaGeneration3: { maxLevel: 35 },
-  singAmbrosiaGeneration4: { maxLevel: 50 },
-  singBonusTokens1: { maxLevel: 5 },
-  singBonusTokens2: { maxLevel: 5 },
-  singBonusTokens3: { maxLevel: 5 },
-  singBonusTokens4: { maxLevel: 30 },
-  singInfiniteShopUpgrades: { maxLevel: 80 },
+  platonicAlpha: { maxLevel: 1, qualityOfLife: true, costPerLevel: 2e7, specialCostForm: 'Default' },
+  platonicDelta: { maxLevel: 1, costPerLevel: 5e9, specialCostForm: 'Default' },
+  platonicPhi: { maxLevel: 1, qualityOfLife: true, costPerLevel: 2e11, specialCostForm: 'Default' },
+  singFastForward: { maxLevel: 1, qualityOfLife: true, costPerLevel: 7e6 - 1, specialCostForm: 'Default' },
+  singFastForward2: { maxLevel: 1, qualityOfLife: true, costPerLevel: 1e11 - 1, specialCostForm: 'Default' },
+  singAscensionSpeed: { maxLevel: 1, costPerLevel: 1e10, specialCostForm: 'Default', effect: (n) => n > 0 ? 0.03 : 0 },
+  singAscensionSpeed2: { maxLevel: 30, costPerLevel: 1e12, specialCostForm: 'Exponential2', effect: (n) => 0.001 * n },
+  ultimatePen: { maxLevel: 1, costPerLevel: 2.22e26, specialCostForm: 'Default' },
+  halfMind: { maxLevel: 1, qualityOfLife: true, costPerLevel: 1.66e12, specialCostForm: 'Default' },
+  oneMind: { maxLevel: 1, qualityOfLife: true, costPerLevel: 1.66e13, specialCostForm: 'Default', effect: (n) => +(n > 0) },
+  wowPass4: { maxLevel: 1, qualityOfLife: true, costPerLevel: 66_666_666_666, specialCostForm: 'Default' },
+  wowPass5: { maxLevel: 1, qualityOfLife: true, costPerLevel: 4e27, specialCostForm: 'Default' },
+  blueberries: { maxLevel: 10, qualityOfLife: true, costPerLevel: 1e16, specialCostForm: 'Exponential2', effect: (n) => n },
+  singAmbrosiaLuck: { maxLevel: 75, qualityOfLife: true, costPerLevel: 1e9, specialCostForm: 'Exponential2', effect: (n) => 4 * n },
+  singAmbrosiaLuck2: { maxLevel: 30, qualityOfLife: true, costPerLevel: 4e5, specialCostForm: 'Default', effect: (n) => 2 * n },
+  singAmbrosiaLuck3: { maxLevel: 30, qualityOfLife: true, costPerLevel: 2e8, specialCostForm: 'Default', effect: (n) => 3 * n },
+  singAmbrosiaLuck4: { maxLevel: 50, qualityOfLife: true, costPerLevel: 1e19, specialCostForm: 'Default', effect: (n) => 5 * n },
+  singAmbrosiaGeneration: { maxLevel: 75, qualityOfLife: true, costPerLevel: 1e9, specialCostForm: 'Exponential2', effect: (n) => 1 + n / 100 },
+  singAmbrosiaGeneration2: { maxLevel: 20, qualityOfLife: true, costPerLevel: 8e5, specialCostForm: 'Default', effect: (n) => 1 + n / 100 },
+  singAmbrosiaGeneration3: { maxLevel: 35, qualityOfLife: true, costPerLevel: 3e8, specialCostForm: 'Default', effect: (n) => 1 + n / 100 },
+  singAmbrosiaGeneration4: { maxLevel: 50, qualityOfLife: true, costPerLevel: 1e19, specialCostForm: 'Default', effect: (n) => 1 + 2 * n / 100 },
+  singBonusTokens1: { maxLevel: 5, costPerLevel: 25, specialCostForm: 'Exponential2' },
+  singBonusTokens2: { maxLevel: 5, costPerLevel: 10_000, specialCostForm: 'Exponential2' },
+  singBonusTokens3: { maxLevel: 5, costPerLevel: 1e8, specialCostForm: 'Exponential2' },
+  singBonusTokens4: { maxLevel: 30, costPerLevel: 1e13, specialCostForm: 'Exponential2' },
+  singInfiniteShopUpgrades: { maxLevel: 80, costPerLevel: 1e18, specialCostForm: 'Default', effect: (n) => n },
   singTalismanBonusRunes1: {
-    maxLevel: 5,
+    maxLevel: 5, costPerLevel: 25, specialCostForm: 'Default',
     effect: (n: number) => {
       return n / 100
     },
   },
   singTalismanBonusRunes2: {
-    maxLevel: 5,
+    maxLevel: 5, costPerLevel: 10_000, specialCostForm: 'Default',
     effect: (n: number) => {
       return n / 100
     },
   },
   singTalismanBonusRunes3: {
-    maxLevel: 5,
+    maxLevel: 5, costPerLevel: 1e8, specialCostForm: 'Default',
     effect: (n: number) => {
       return n / 100
     },
   },
   singTalismanBonusRunes4: {
-    maxLevel: 10,
+    maxLevel: 10, costPerLevel: 3e15, specialCostForm: 'Default',
     effect: (n: number) => {
       return n / 100
     },
   },
-  favoriteUpgrade: { maxLevel: 100 },
+  favoriteUpgrade: { maxLevel: 100, qualityOfLife: true, costPerLevel: 1, specialCostForm: 'Exponential2' },
 };
 
+const OCTERACT_BLUEBERRY_COSTS = [0, 1, 1e3, 1e9, 1e27, 1e81, 1e111]
+
+// Cost formulae mirror SynergismOfficial/src/Octeracts.ts for saved-level reconstruction.
 export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgradeDef> = {
-  octeractStarter: { maxLevel: 1 },
-  octeractGain: { maxLevel: 1e8 },
-  octeractGain2: { maxLevel: -1 },
-  octeractQuarkGain: { maxLevel: 20000 },
-  octeractQuarkGain2: { maxLevel: 5 },
-  octeractCorruption: { maxLevel: 2, effect: (n: number) => n },
-  octeractGQCostReduce: { maxLevel: 50 },
-  octeractExportQuarks: { maxLevel: 100 },
-  octeractImprovedDaily: { maxLevel: 50 },
-  octeractImprovedDaily2: { maxLevel: 50 },
-  octeractImprovedDaily3: { maxLevel: -1 },
-  octeractImprovedQuarkHept: { maxLevel: 25 },
-  octeractImprovedGlobalSpeed: { maxLevel: 1000 },
-  octeractImprovedAscensionSpeed: { maxLevel: 100 },
-  octeractImprovedAscensionSpeed2: { maxLevel: 250 },
+  octeractStarter: { maxLevel: 1, costFormula: (n) => 1e-15 * n },
+  octeractGain: { maxLevel: 1e8, costFormula: (n) => 1e-8 * Math.pow(n, 6) },
+  octeractGain2: { maxLevel: 200_000, costFormula: (n) => 1e10 * Math.pow(10, Math.sqrt(n) / 3) * Math.sqrt(n) },
+  octeractQuarkGain: {
+    maxLevel: 20_000,
+    costFormula: (n) => n < 1000
+      ? 1e-7 * Math.pow(n, 7)
+      : n < 10_000
+        ? 1e14 * Math.pow(10, (n - 1000) / 1000)
+        : 1e23 * Math.pow(10, (n - 10_000) / 125),
+  },
+  octeractQuarkGain2: { maxLevel: 5, costFormula: (n) => 1e2 * (Math.pow(1e20, n) - 1) },
+  octeractCorruption: { maxLevel: 2, costFormula: (n) => 10 * (Math.pow(1e10, n) - 1) / (1e10 - 1), effect: (n: number) => n },
+  octeractGQCostReduce: { maxLevel: 50, costFormula: (n) => 1e-9 * (Math.pow(2, n) - 1) },
+  octeractExportQuarks: { maxLevel: 100, costFormula: (n) => Math.pow(n * (n + 1) / 2, 2) },
+  octeractImprovedDaily: { maxLevel: 50, qualityOfLife: true, costFormula: (n) => 1e-3 * (Math.pow(1.6, n) - 1) / 0.6 },
+  octeractImprovedDaily2: { maxLevel: 50, qualityOfLife: true, costFormula: (n) => 1e-2 * (Math.pow(2, n) - 1) },
+  octeractImprovedDaily3: { maxLevel: 100, qualityOfLife: true, costFormula: (n) => 1e20 * (Math.pow(20, n) - 1) / 19 },
+  octeractImprovedQuarkHept: { maxLevel: 25, costFormula: (n) => 0.1 * (Math.pow(1e3, n) - 1) / 999, effect: (n) => n / 100 },
+  octeractImprovedGlobalSpeed: { maxLevel: 1000, costFormula: (n) => 1e-5 * Math.pow(n * (n + 1) / 2, 2) },
+  octeractImprovedAscensionSpeed: { maxLevel: 100, costFormula: (n) => 100 * (Math.pow(10 ** (9 / 100), n) - 1) / (10 ** (9 / 100) - 1), effect: (n) => 1 + n / 2000 },
+  octeractImprovedAscensionSpeed2: { maxLevel: 250, costFormula: (n) => 1e5 * (Math.pow(10 ** (12 / 250), n) - 1) / (10 ** (12 / 250) - 1), effect: (n) => 1 + n / 2000 },
   octeractImprovedFree: {
-    maxLevel: 1, effect: (n: number) => {
-      return n
+    maxLevel: 1, costFormula: (n) => 100 * n, effect: (n: number, effectKey?: string) => {
+      return effectKey === 'unlocked' ? +(n > 0) : 0.6 * n
     },
   },
   octeractImprovedFree2: {
-    maxLevel: 1, effect: (n: number) => {
+    maxLevel: 1, costFormula: (n) => 1e7 * n, effect: (n: number) => {
       return 0.05 * n
     },
   },
   octeractImprovedFree3: {
-    maxLevel: 1, effect: (n: number) => {
+    maxLevel: 1, costFormula: (n) => 1e17 * n, effect: (n: number) => {
       return 0.05 * n
     },
   },
   octeractImprovedFree4: {
-    maxLevel: 40, effect: (n: number) => {
+    maxLevel: 40, costFormula: (n) => 1e20 * (Math.pow(10 ** 0.5, n) - 1) / (10 ** 0.5 - 1), effect: (n: number) => {
       return 0.001 * n + ((n > 0) ? 0.01 : 0)
     },
   },
   octeractSingUpgradeCap: {
-    maxLevel: 10,
+    maxLevel: 10, qualityOfLife: true, costFormula: (n) => 1e10 * (Math.pow(1e3, n) - 1) / 999,
     effect: (n: number, effectKey?: string) => {
       return effectKey === 'goldenQuarkUpgradeCapIncrease' ? n : 0
     },
   },
-  octeractOfferings1: { maxLevel: -1 },
-  octeractObtainium1: { maxLevel: -1 },
-  octeractAscensions: { maxLevel: 1000000 },
-  octeractAscensions2: { maxLevel: -1 },
-  octeractAscensionsOcteractGain: { maxLevel: -1 },
-  octeractFastForward: { maxLevel: 2 },
-  octeractAutoPotionSpeed: { maxLevel: -1 },
-  octeractAutoPotionEfficiency: { maxLevel: 100 },
-  octeractOneMindImprover: { maxLevel: 20 },
-  octeractAmbrosiaLuck: { maxLevel: -1 },
-  octeractAmbrosiaLuck2: { maxLevel: 30 },
-  octeractAmbrosiaLuck3: { maxLevel: 30 },
-  octeractAmbrosiaLuck4: { maxLevel: 50 },
-  octeractAmbrosiaGeneration: { maxLevel: -1 },
-  octeractAmbrosiaGeneration2: { maxLevel: 20 },
-  octeractAmbrosiaGeneration3: { maxLevel: 35 },
-  octeractAmbrosiaGeneration4: { maxLevel: 50 },
-  octeractBonusTokens1: { maxLevel: 10 },
-  octeractBonusTokens2: { maxLevel: 5 },
-  octeractBonusTokens3: { maxLevel: 5 },
-  octeractBonusTokens4: { maxLevel: 50 },
-  octeractBlueberries: { maxLevel: 6 },
-  octeractInfiniteShopUpgrades: { maxLevel: 80 },
-  octeractTalismanLevelCap1: { maxLevel: 25, effect: (n: number) => n },
-  octeractTalismanLevelCap2: { maxLevel: 35, effect: (n: number) => n },
-  octeractTalismanLevelCap3: { maxLevel: 40, effect: (n: number) => n },
-  octeractTalismanLevelCap4: { maxLevel: -1, effect: (n: number) => n },
+  octeractOfferings1: { maxLevel: 4000, costFormula: (n) => (Math.pow(10 ** (1 / 25), n) - 1) / (10 ** (1 / 25) - 1) },
+  octeractObtainium1: { maxLevel: 4000, costFormula: (n) => (Math.pow(10 ** (1 / 25), n) - 1) / (10 ** (1 / 25) - 1) },
+  octeractAscensions: { maxLevel: 1_000_000, costFormula: (n) => Math.pow(n * (n + 1) / 2, 2) },
+  octeractAscensions2: { maxLevel: 250_000, costFormula: (n) => 1e12 * Math.pow(10, Math.sqrt(n) / 3) * Math.sqrt(n) },
+  octeractAscensionsOcteractGain: { maxLevel: 100, costFormula: (n) => 1000 * (Math.pow(40, n) - 1) / 39 },
+  octeractFastForward: { maxLevel: 2, costFormula: (n) => Math.pow(1e8, n) - 1 },
+  octeractAutoPotionSpeed: { maxLevel: 175, costFormula: (n) => 1e-10 * (Math.pow(10, n) - 1) / 9 },
+  octeractAutoPotionEfficiency: { maxLevel: 100, costFormula: (n) => 1e-10 * Math.sqrt(10) * (Math.pow(10, n) - 1) / 9 },
+  octeractOneMindImprover: {
+    maxLevel: 20,
+    qualityOfLife: true,
+    costFormula: (n) => n >= 10 ? 10 ** (55 + (n - 10) * 9.2) : 1e25 * (Math.pow(1e3, n) - 1),
+    effect: (n) => 0.55 + n / 150,
+  },
+  octeractAmbrosiaLuck: { maxLevel: 100, qualityOfLife: true, costFormula: (n) => 1e60 * (Math.pow(10, n) - 1) / 9, effect: (n) => 4 * n },
+  octeractAmbrosiaLuck2: { maxLevel: 30, qualityOfLife: true, costFormula: (n) => Math.pow(n, 6), effect: (n) => 2 * n },
+  octeractAmbrosiaLuck3: { maxLevel: 30, qualityOfLife: true, costFormula: (n) => 1e30 * Math.pow(n, 8), effect: (n) => 3 * n },
+  octeractAmbrosiaLuck4: { maxLevel: 50, qualityOfLife: true, costFormula: (n) => 1e70 * (Math.pow(3, n) - 1) / 2, effect: (n) => 5 * n },
+  octeractAmbrosiaGeneration: { maxLevel: 100, qualityOfLife: true, costFormula: (n) => 1e60 * (Math.pow(10, n) - 1), effect: (n) => 1 + n / 100 },
+  octeractAmbrosiaGeneration2: { maxLevel: 20, qualityOfLife: true, costFormula: (n) => Math.pow(n, 6), effect: (n) => 1 + n / 100 },
+  octeractAmbrosiaGeneration3: { maxLevel: 35, qualityOfLife: true, costFormula: (n) => 1e30 * Math.pow(n, 8), effect: (n) => 1 + n / 100 },
+  octeractAmbrosiaGeneration4: { maxLevel: 50, qualityOfLife: true, costFormula: (n) => 1e70 * (Math.pow(3, n) - 1), effect: (n) => 1 + 2 * n / 100 },
+  octeractBonusTokens1: { maxLevel: 10, costFormula: (n) => 1e-5 * (Math.pow(1e2, n) - 1) / 99 },
+  octeractBonusTokens2: { maxLevel: 5, costFormula: (n) => Math.pow(1e8, n) - 1 },
+  octeractBonusTokens3: { maxLevel: 5, costFormula: (n) => 1e40 * (Math.pow(1e10, n) - 1) },
+  octeractBonusTokens4: { maxLevel: 50, costFormula: (n) => 1e75 * (Math.pow(4, n) - 1) },
+  octeractBlueberries: { maxLevel: 6, qualityOfLife: true, costFormula: (n) => OCTERACT_BLUEBERRY_COSTS[n] ?? Number.POSITIVE_INFINITY, effect: (n) => n },
+  octeractInfiniteShopUpgrades: { maxLevel: 80, costFormula: (n) => 1e30 * (Math.pow(16, n) - 1), effect: (n) => n },
+  octeractTalismanLevelCap1: { maxLevel: 25, costFormula: (n) => 1e-5 * Math.pow(n, 6), effect: (n: number) => n },
+  octeractTalismanLevelCap2: { maxLevel: 35, costFormula: (n) => 1e10 * Math.pow(n, 10), effect: (n: number) => n },
+  octeractTalismanLevelCap3: { maxLevel: 40, costFormula: (n) => 1e20 * Math.pow(n, 20), effect: (n: number) => n },
+  octeractTalismanLevelCap4: { maxLevel: 120, costFormula: (n) => 1e40 * (Math.pow(10, n) - 1), effect: (n: number) => n },
 };
+
+export type GoldenQuarkCostForm = 'Default' | 'Quadratic' | 'Cubic' | 'Exponential2'
 
 type GoldenQuarkUpgradeDef = {
   maxLevel: number
   canExceedCap?: boolean
   effect?: (n: number, key?: string) => number
   qualityOfLife?: boolean
+  costPerLevel: number
+  specialCostForm: GoldenQuarkCostForm
 }
 
 type OcteractUpgradeDef = {
   maxLevel: number
   effect?: (n: number, effectKey?: string) => number
+  qualityOfLife?: boolean
+  costFormula: (level: number) => number
 }
 
 export const SINGULARITY_CHALLENGE_DATA: {
@@ -1349,6 +1399,22 @@ export const SINGULARITY_CHALLENGE_DATA: {
         horseShoeOOM: 1 / 20 * n / 10
       }
     },
+  },
+  barDependence: {
+    baseReq: 288,
+    maxCompletions: 10,
+    unlockSingularity: 290,
+    HTMLTag: 'barDependence',
+    singularityRequirement: (baseReq: number, completions: number) => baseReq + completions,
+    achievementPointValue: (n: number) => 50 * n,
+    scalingrewardcount: 2,
+    uniquerewardcount: 2,
+    effect: (n: number) => ({
+      purpleAmbrosiaCostReduction: 1 - 0.05 * n,
+      purpleHoneyLuck: 50 * +(n > 0),
+      blueberries: n,
+      shopUpgrade: n >= 2,
+    }),
   }
 }
 
