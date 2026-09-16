@@ -404,7 +404,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getCampaignTokens: () => this.campaignData?.tokens ?? 0,
             getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
             calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            isEvent: this.isEvent,
+            isEvent: () => this.isEvent,
             calculateEventSourceBuff: (buffType: EventBuffType) => this.calculateEventSourceBuff(buffType),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
@@ -533,7 +533,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const luckContext: LuckHelperContext = {
             getGameData: () => this.gameData,
-            isEvent: this.isEvent,
+            isEvent: () => this.isEvent,
             getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
             getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
             getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),

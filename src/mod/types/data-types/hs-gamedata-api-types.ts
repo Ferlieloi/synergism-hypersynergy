@@ -86,7 +86,7 @@ export interface AmbrosiaHelperContext {
   getCampaignTokens: () => number
   getEventBellAmount: () => number
   calculateSynergismLevel: () => number
-  isEvent: boolean
+  isEvent: () => boolean
   calculateEventSourceBuff: (buffType: EventBuffType) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
@@ -514,6 +514,7 @@ export type TalismanTypeMap = {
     plastic: { quarkBonus: number }
     wowSquare: { evenDimBonus: number; oddDimBonus: number }
     achievement: { positiveSalvageMult: number; negativeSalvageMult: number }
+    purpleGem: { purpleHoneyLuck: number; purpleAmbrosiaDiscount: number }
     cookieGrandma: { freeCorruptionLevel: number; cookieSix: boolean }
     horseShoe: { luckPercentage: number; redLuck: number }
 }

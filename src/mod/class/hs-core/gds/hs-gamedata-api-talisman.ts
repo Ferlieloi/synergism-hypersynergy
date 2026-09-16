@@ -313,6 +313,11 @@ const getTalismanEffects = <K extends TalismanKeys>(
                 positiveSalvageMult: TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES[rarityIndex] ?? 0,
                 negativeSalvageMult: rarityIndex >= 6 ? -0.02 : 0,
             } as TalismanTypeMap[K];
+        case 'purpleGem':
+            return {
+                purpleHoneyLuck: [0, 1, 2, 3, 4, 5, 6, 10, 20, 30, 40][rarityIndex] ?? 0,
+                purpleAmbrosiaDiscount: rarityIndex >= 6 ? 0.80 : 1,
+            } as TalismanTypeMap[K];
         case 'cookieGrandma':
             return {
                 freeCorruptionLevel: TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES[rarityIndex] ?? 0,
@@ -416,6 +421,9 @@ const getTalismanLevelCap = (t: TalismanKeys, env: TalismanHelperContext): numbe
         case 'achievement':
             increase += env.getLevelMilestone('achievementTalismanEnhancement');
             break;
+        case 'purpleGem':
+            increase += 54;
+            break;
         case 'cookieGrandma':
             increase += 54;
             break;
@@ -474,6 +482,8 @@ const isTalismanUnlocked = (t: TalismanKeys, env: TalismanHelperContext): boolea
         }
         case 'achievement':
             return env.getLevelMilestone('achievementTalismanUnlock') === 1;
+        case 'purpleGem':
+            return Boolean(env.getSingularityChallengeEffect('taxmanLastStand', 'talismanUnlock'));
         case 'cookieGrandma':
             return (data.cubeUpgrades[80] ?? 0) > 0;
         case 'horseShoe':

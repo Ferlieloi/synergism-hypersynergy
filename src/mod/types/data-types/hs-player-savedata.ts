@@ -554,6 +554,7 @@ export interface Talismans {
     plastic: TalismanShards;
     wowSquare: TalismanShards;
     achievement: TalismanShards;
+    purpleGem: TalismanShards;
     cookieGrandma: TalismanShards;
     horseShoe: TalismanShards;
 }

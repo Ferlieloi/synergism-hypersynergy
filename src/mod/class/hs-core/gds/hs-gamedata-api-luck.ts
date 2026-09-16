@@ -5,7 +5,7 @@ import type { CalculationCache, CalculationMode, CachedValue, RuneKeys, Singular
 
 export interface LuckHelperContext {
     getGameData: () => GameData | undefined;
-    isEvent: boolean;
+    isEvent: () => boolean;
     getPCoinUpgradeLevel: (upgradeKey: string) => number;
     getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number;
     getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean;
@@ -122,7 +122,7 @@ export class LuckHelper {
             ...this.#ctx.getShopLevelDependencies('shopAmbrosiaLuckMultiplier4'),
             data.singularityChallenges.noAmbrosiaUpgrades.completions,
             cube77,
-            this.#ctx.isEvent ? 1 : 0,
+            this.#ctx.isEvent() ? 1 : 0,
             this.#ctx.getVanillaGlobalEventAmbrosiaLuck(),
             this.#ctx.getEventBellAmount(),
             data.ambrosiaUpgrades.ambrosiaLuck4.ambrosiaInvested,
@@ -427,7 +427,7 @@ export class LuckHelper {
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaLuckMultiplier4', 'additiveAmbrosiaLuckMult') as number,
             this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'additiveLuckMult'),
             0.001 * cube77,
-            this.#ctx.isEvent ? this.#ctx.calculateEventSourceBuff(EventBuffType.AmbrosiaLuck) : 0,
+            this.#ctx.isEvent() ? this.#ctx.calculateEventSourceBuff(EventBuffType.AmbrosiaLuck) : 0,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck4', mode).ambrosiaLuckPercentage,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead', mode).additiveLuckMult,
             this.#ctx.getTalismanEffects('horseShoe').luckPercentage,

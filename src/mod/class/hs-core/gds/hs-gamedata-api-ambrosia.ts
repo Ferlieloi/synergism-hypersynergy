@@ -21,7 +21,7 @@ export interface AmbrosiaHelperContext {
     getCampaignTokens: () => number;
     getEventBellAmount: () => number;
     calculateSynergismLevel: () => number;
-    isEvent: boolean;
+    isEvent: () => boolean;
     calculateEventSourceBuff: (buffType: EventBuffType) => number;
     checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined;
     updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void;
@@ -1071,7 +1071,7 @@ export class AmbrosiaHelper {
         const panthemaAmbrosiaGenerationMult = this.#ctx.getShopUpgradeEffects('shopPanthema', 'ambrosiaGenerationMult', mode) as number;
         const oneChallengeCap = this.#ctx.getSingularityChallengeEffect('oneChallengeCap', 'blueberrySpeedMult');
         const noAmbrosiaUpgrades = this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'blueberrySpeedMult');
-        const eventBlueberryTimeBuff = this.#ctx.isEvent ? 1 + this.#ctx.calculateEventSourceBuff(EventBuffType.BlueberryTime) : 1;
+        const eventBlueberryTimeBuff = this.#ctx.isEvent() ? 1 + this.#ctx.calculateEventSourceBuff(EventBuffType.BlueberryTime) : 1;
         const cookie76Bonus = 1 + 0.02 * (data.cubeUpgrades[76] ?? 0);
         const purpleTutorial = this.#ctx.getPurpleReactorUpgradeEffects('tutorial', 'ambrosiaGeneration');
         const lifetimePurpleHoney = this.#ctx.getPurpleReactorUpgradeEffects('lifetimeHoneyAmbrosia', 'ambrosiaGenerationSpeed');
@@ -1109,7 +1109,7 @@ export class AmbrosiaHelper {
             data.lifetimeAmbrosia,
             this.#ctx.getShopUpgradeEffects('shopCashGrabUltra', 'ambrosiaGenerationMult') as number,
             data.shopUpgrades.shopPanthema,
-            this.#ctx.isEvent ? 1 : 0,
+            this.#ctx.isEvent() ? 1 : 0,
             eventBlueberryTimeBuff,
             data.purpleReactorUpgrades?.tutorial ?? 0,
             data.purpleReactorUpgrades?.lifetimeHoneyAmbrosia ?? 0,

@@ -36,10 +36,63 @@ async function main() {
   if (!heaterExport?.hs_data) throw new Error('Heater export returned no hs_data')
 
   const results = {}
+  const invalidExportNumbers = []
+  const unavailableExportValues = []
+  function inspectExport(value, at) {
+    if (value === undefined) unavailableExportValues.push(at)
+    if (typeof value === 'number' && !Number.isFinite(value)) invalidExportNumbers.push(at)
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [key, child] of Object.entries(value)) inspectExport(child, `${at}.${key}`)
+    }
+  }
+  inspectExport(heaterExport.hs_data, 'hs_data')
+  results.invalidExportNumbers = invalidExportNumbers
+  results.unavailableExportValues = unavailableExportValues
+  if (invalidExportNumbers.length > 0) {
+    throw new Error(`Heater export contains non-finite calculations: ${invalidExportNumbers.join(', ')}`)
+  }
+  const exported = heaterExport.hs_data
+  if (exported.luckTotal !== api.luck.calculateLuck().luckTotal
+      || exported.ambSpeed * exported.blueberries !== api.ambrosia.calculateAmbrosiaGenerationSpeed()
+        * api.ambrosia.calculateBlueberryInventory()
+      || exported.purpleHoneyBarMax !== api.ambrosia.calculatePurpleHoneyConversionFactor()) {
+    throw new Error('Heater export no longer matches current game-data API calculations')
+  }
+  if (exported.purpleHoneyBarMax !== 150_000) {
+    throw new Error('Purple bar requirement disagrees with the provided game benchmark')
+  }
+  // The official global event is fetched after helpers are constructed.
+  // Confirm they read its current state instead of the construction-time flag.
+  const noEventLuckMultiplier = api.luck.calculateLuck().luckMult
+  const noEventAmbrosiaSpeed = api.ambrosia.calculateAmbrosiaGenerationSpeed()
+  const noEventAscensionRaw = api.calculateRawAscensionSpeedMult()
+  api.vanillaGlobalEvent = {
+    name: 'local validation', start: 0, end: Number.MAX_SAFE_INTEGER,
+    blueberryTime: 0.25, ambrosiaLuck: 0.10, ascensionSpeed: 0.50,
+  }
+  api._updateEventData({ HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: '' } })
+  const eventLuckMultiplier = api.luck.calculateLuck().luckMult
+  const eventAmbrosiaSpeed = api.ambrosia.calculateAmbrosiaGenerationSpeed()
+  const eventAscensionRaw = api.calculateRawAscensionSpeedMult()
+  if (Math.abs(eventLuckMultiplier - noEventLuckMultiplier - 0.10) > 1e-10
+      || Math.abs(eventAmbrosiaSpeed / noEventAmbrosiaSpeed - 1.25) > 1e-10
+      || Math.abs(eventAscensionRaw / noEventAscensionRaw - 1.50) > 1e-10) {
+    throw new Error('Global event bonuses were not captured by the game-data calculations')
+  }
+  results.globalEventCapture = {
+    luckMultiplierIncrease: eventLuckMultiplier - noEventLuckMultiplier,
+    ambrosiaSpeedMultiplier: eventAmbrosiaSpeed / noEventAmbrosiaSpeed,
+    ascensionRawMultiplier: eventAscensionRaw / noEventAscensionRaw,
+  }
+  api.vanillaGlobalEvent = null
+  api._updateEventData({ HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: '' } })
   results.heaterExport = Object.fromEntries([
     'luckTotal', 'ambSpeed', 'blueberries', 'ascSpeed',
     'blueAmbrosiaBarMax', 'redAmbrosiaBarMax', 'purpleHoneyBarMax',
     'redLuckBase', 'blueBarRequirementBeforeRounding',
+    'runeSiRC', 'runeSiBonusLevelsTotal', 'runeSiBonusLevelsTalismanNonAmbrosia',
+    'baseTalismanPower', 'freeShopLevelsInfinity', 'chronometerLevel',
+    'redBarSpeed', 'blueBarMaxWithoutTwoMindAndBrick', 'baseOff', 'baseObt',
   ].map((key) => [key, heaterExport.hs_data[key]]))
   for (const [key, fn] of Object.entries({
     purpleBarPointsRequired: () => api.ambrosia.calculatePurpleHoneyConversionFactor(),
@@ -61,6 +114,15 @@ async function main() {
     ambrosiaBarPointsPerSecondWithoutOnlineBonuses: () => api.ambrosia.calculateAmbrosiaGenerationSpeed() * api.ambrosia.calculateBlueberryInventory(),
     ambrosiaGenerationComponentsWithoutOnlineBonuses: () => api.ambrosia.calculateAmbrosiaGenerationSpeed(false),
     ascensionSpeed: () => api.calculateAscensionSpeedMult(),
+    ascensionSpeedNonAmbrosia: () => api.calculateAscensionSpeedMult('non_ambrosia'),
+    ascensionSpreadNormal: () => api.calculateAscensionSpread(),
+    ascensionSpreadNonAmbrosia: () => api.calculateAscensionSpread(true, 'non_ambrosia'),
+    ascensionRawComponents: () => api.calculateRawAscensionSpeedMult(false),
+    freeInfinityLevelsNormal: () => api.freeInfinityLevels(),
+    runeSiLevelsPerOOMNormal: () => api.rune.getLevelsPerOOM('superiorIntellect'),
+    baseTalismanPowerNormal: () => api.talisman.allTalismanRuneBonusStatsSum(),
+    baseOfferingNormal: () => api.allBaseOfferingStats.reduce((sum, line) => sum + line.stat(), 0),
+    baseObtainiumNormal: () => api.allBaseObtainiumStats.reduce((sum, line) => sum + line.stat(), 0),
   })) {
     try {
       results[key] = fn()
@@ -120,6 +182,8 @@ async function main() {
     throw new Error('Free Cube shop group levels do not match the game formula')
   }
   console.log(JSON.stringify(results, null, 2))
+  // The bundled module manager can keep timers alive; validation is complete.
+  process.exit(0)
 }
 
 main().catch((error) => {

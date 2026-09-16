@@ -736,6 +736,7 @@ export const talismanMaxLevels: Record<TalismanKeys, number> = {
   plastic: 180,
   wowSquare: 210,
   achievement: 40,
+  purpleGem: 6,
   cookieGrandma: 6,
   horseShoe: 12,
 }
@@ -750,6 +751,7 @@ export const talismanBaseMultipliers: Record<TalismanKeys, string> = {
   plastic: '1e5',
   wowSquare: '1e5',
   achievement: '1e30',
+  purpleGem: '1e1100',
   cookieGrandma: '1e1000',
   horseShoe: '1e1200',
 }
@@ -764,6 +766,7 @@ export const talismanCostTypes: Record<TalismanKeys, 'regular' | 'exponential'> 
   plastic: 'regular',
   wowSquare: 'exponential',
   achievement: 'exponential',
+  purpleGem: 'exponential',
   cookieGrandma: 'exponential',
   horseShoe: 'exponential',
 }
@@ -778,6 +781,7 @@ export const talismanExponentialRatios: Record<TalismanKeys, number> = {
   plastic: 1,
   wowSquare: 2,
   achievement: 10,
+  purpleGem: 1e2,
   cookieGrandma: 1e8,
   horseShoe: 1e5,
 }
@@ -1500,6 +1504,7 @@ export const TALISMAN_BASE_COEFFICIENTS: Record<TalismanKeys, Record<RuneKeys, n
   plastic: { speed: 0.75, duplication: 0, prism: 1.5, thrift: 0, superiorIntellect: 0.75, infiniteAscent: 0.005, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
   wowSquare: { speed: 0, duplication: 1, prism: 1, thrift: 0, superiorIntellect: 1, infiniteAscent: 0, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
   achievement: { speed: 1.4, duplication: 1.4, prism: 1.4, thrift: 1.4, superiorIntellect: 1.4, infiniteAscent: 0.01, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
+  purpleGem: { speed: 1, duplication: 1, prism: 1, thrift: 1, superiorIntellect: 1, infiniteAscent: 0.01, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
   cookieGrandma: { speed: 1, duplication: 1, prism: 1, thrift: 1, superiorIntellect: 1, infiniteAscent: 0.01, antiquities: 0, horseShoe: 0, topHat: 0, finiteDescent: 0 },
   horseShoe: { speed: 1.2, duplication: 1.2, prism: 1.2, thrift: 1.2, superiorIntellect: 1.2, infiniteAscent: 0, antiquities: 0, horseShoe: 0.01, topHat: 0, finiteDescent: 0 }
 }
