@@ -255,7 +255,13 @@ export class ShopUpgradeHelper {
         }
         return this.#getCachedShopEffect(upgradeKey, key);
     }
-    getShopFreeLevelsQuark(): number { return getShopFreeLevelsQuark(this.#ctx) }
+    getShopFreeLevelsQuark(mode: CalculationMode = 'normal'): number {
+        if (mode === 'true_base') {
+            const env = this.#getFreeLevelsOnlyEnv();
+            return getShopFreeLevelsQuark(env, mode);
+        }
+        return getShopFreeLevelsQuark(this.#ctx);
+    }
     getShopFreeLevelsCube(): number { return getShopFreeLevelsCube(this.#ctx) }
     getShopFreeLevelsAscensionSpeed(): number { return getShopFreeLevelsAscensionSpeed(this.#ctx) }
 }
@@ -660,8 +666,8 @@ const getShopFreeLevelsAscensionSpeed = (env: ShopUpgradeHelperContext): number 
     return result;
 }
 
-const getShopFreeLevelsQuark = (env: ShopUpgradeHelperContext): number => {
-    const cacheName = getShopFreeLevelsQuarkCacheName() as keyof CalculationCache;
+const getShopFreeLevelsQuark = (env: ShopUpgradeHelperContext, mode: CalculationMode = 'normal'): number => {
+    const cacheName = (`${getShopFreeLevelsQuarkCacheName()}${mode === 'true_base' ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
     const data = env.getGameData();
     if (!data) return 0;
 

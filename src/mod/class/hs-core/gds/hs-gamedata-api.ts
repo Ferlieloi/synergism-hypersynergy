@@ -475,7 +475,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             isShopTalismanUnlocked: () => quarkShop.getShopUpgradeEffects('shopTalisman', 'unlocked') as boolean,
             getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
             getGQUpgradeEffect: (upgradeKey) => this.getGQUpgradeEffect(upgradeKey as any) as number | undefined,
-            getAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any),
+            getAmbrosiaUpgradeEffects: (upgradeKey, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
             getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
             getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
             getLevelMilestone: (name) => this.getLevelMilestone(name as any),
@@ -495,7 +495,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getRuneBonusLevels: (runeName) => this.getRuneBonusLevels(runeName),
             getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
             getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
-            getAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any),
+            getAmbrosiaUpgradeEffects: (upgradeKey, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
             getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
             getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
             getLevelMilestone: (name) => this.getLevelMilestone(name as any),
@@ -2381,8 +2381,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         try {
             const luck =                    this.luck.calculateLuck(true)       as { luckBase: number, luckMult: number, luckTotal: number };
-            const nonAmbLuck =              this.luck.calculateLuck(true, 'non_ambrosia') as { luckBase: number, luckMult: number, luckTotal: number };
-            const trueBaseLuck =            this.luck.calculateLuck(true, 'true_base') as { luckBase: number, luckMult: number, luckTotal: number };
+            // The game's no-purchased-Ambrosia baseline still applies free
+            // levels granted by Red Ambrosia upgrades. Purple enchantment
+            // levels remain inactive until their module is purchased.
+            const nonAmbLuck =              this.luck.calculateLuck(true, 'true_base') as { luckBase: number, luckMult: number, luckTotal: number };
             // SynergismOfficial/src/Calculate.ts calculateAmbrosiaRewardLuck:
             // Two Mind changes per-fill luck, while other luck-based effects
             // continue to use the unmodified total.
@@ -2400,15 +2402,20 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const rawTalismanRuneBonusIA =  currentTalismanPower > 0 ? talismanRuneBonuses.infiniteAscent / currentTalismanPower : 0;
             const nonAmbTalismanRuneBonusSI = rawTalismanRuneBonusSI * nonAmbTalismanPower;
             const nonAmbTalismanRuneBonusIA = rawTalismanRuneBonusIA * nonAmbTalismanPower;
-            const ambSpeedNonAmb =          (this.ambrosia.calculateAmbrosiaGenerationSpeed(true, 'non_ambrosia') as number);
+            const runeIaBonusLevelsTotal = this.getRuneBonusLevels('infiniteAscent')
+                - talismanRuneBonuses.infiniteAscent
+                + nonAmbTalismanRuneBonusIA;
+            const ambSpeedNonAmb =          (this.ambrosia.calculateAmbrosiaGenerationSpeed(true, 'true_base') as number);
             const blueberries =             (this.ambrosia.calculateBlueberryInventory() as number);
             const ambSpeedNonAmbBerries =   ambSpeedNonAmb * blueberries;
             const purpleLeoLevel =          this.purple.getPurpleAmbrosiaUpgradeLevel('leo');
             const currentPurpleLeoLuck =    this.purple.getPurpleAmbrosiaUpgradeEffects('leo', 'unassignedBlueberyLuck');
-            // These are Heater inputs in the same modes as the game/export
-            // contract.  The explicitly named *NonAmb fields below remain
-            // the loadout baseline; the unlabeled inputs use game values.
-            const luckConversion =          this.luck.calculateLuckConversion(true) as number;
+            // Heater inputs that represent a loadout with no purchased
+            // (yellow) Ambrosia use the game's true-base mode. This keeps
+            // Red Ambrosia free levels while excluding purchased Ambrosia
+            // levels and Purple enchantment free levels that require a
+            // purchased module.
+            const luckConversion =          this.luck.calculateLuckConversion(true, 'true_base') as number;
             const redLuck =                 this.luck.calculateRedAmbrosiaLuck(true, 'true_base') as number;
             const activeBells = this.isEvent ? (eventData?.HAPPY_HOUR_BELL.amount ?? 0) : 0;
             const ambrosiaUpgradeNames = Object.keys(this.ambrosia.ambrosiaUpgradeCalculationCollection) as AmbrosiaUpgradeNames[];
@@ -2430,15 +2437,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             // Heater. Candidate Ambrosia loadouts add their free shop levels
             // to this snapshot using the same group rules as Shop.ts.
             const shopBonusLevelsNonAmbrosia = {
-                offering: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Offering, 'non_ambrosia'),
-                obtainium: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Obtainium, 'non_ambrosia'),
-                cubes: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Cubes, 'non_ambrosia'),
-                speed: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Speed, 'non_ambrosia'),
-                quark: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Quark, 'non_ambrosia'),
-                ambrosiaLuck: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.AmbrosiaLuck, 'non_ambrosia'),
-                redAmbrosiaLuck: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.RedAmbrosiaLuck, 'non_ambrosia'),
-                ambrosiaGeneration: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.AmbrosiaGeneration, 'non_ambrosia'),
-                infinity: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.InfinityUpgrades, 'non_ambrosia'),
+                offering: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Offering, 'true_base'),
+                obtainium: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Obtainium, 'true_base'),
+                cubes: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Cubes, 'true_base'),
+                speed: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Speed, 'true_base'),
+                quark: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.Quark, 'true_base'),
+                ambrosiaLuck: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.AmbrosiaLuck, 'true_base'),
+                redAmbrosiaLuck: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.RedAmbrosiaLuck, 'true_base'),
+                ambrosiaGeneration: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.AmbrosiaGeneration, 'true_base'),
+                infinity: this.quarkShop.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.InfinityUpgrades, 'true_base'),
             };
             const heaterShopUpgradeKeys = [
                 'offeringEX', 'offeringEX2', 'offeringEX3',
@@ -2458,6 +2465,22 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const shopUpgradeRawLevels = Object.fromEntries(
                 heaterShopUpgradeKeys.map((name) => [name, Number(gameData.shopUpgrades[name] ?? 0)])
             );
+            const baseOff = this.allBaseOfferingStats.reduce((sum, line) => sum + (
+                line.i18n === 'AmbrosiaBaseOffering1'
+                    ? this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseOffering1', 'true_base').offering
+                    : line.i18n === 'AmbrosiaBaseOffering2'
+                        ? this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseOffering2', 'true_base').offering
+                        : line.i18n === 'OfferingEX3'
+                            ? this.quarkShop.getShopUpgradeEffects('offeringEX3', 'baseOfferings', 'true_base') as number
+                            : line.stat()
+            ), 0);
+            const baseObt = this.allBaseObtainiumStats.reduce((sum, line) => sum + (
+                line.i18n === 'AmbrosiaBaseObtainium1'
+                    ? this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseObtainium1', 'true_base').obtainium
+                    : line.i18n === 'AmbrosiaBaseObtainium2'
+                        ? this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseObtainium2', 'true_base').obtainium
+                        : line.stat()
+            ), 0);
             
             const heaterData = {
                 ...this.gameData,
@@ -2475,7 +2498,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     luckMult:               luck.luckMult,
                     luckTotal:              luck.luckTotal,
                     luckBaseNonAmb:         nonAmbLuck.luckBase - currentPurpleLeoLuck,
-                    luckMultNonAmb:         trueBaseLuck.luckMult,
+                    luckMultNonAmb:         nonAmbLuck.luckMult,
                     luckTotalNonAmb:        (nonAmbLuck.luckBase - currentPurpleLeoLuck) * nonAmbLuck.luckMult,
                     redLuckBase:            redLuck,
                     luckConversion:         luckConversion,
@@ -2496,32 +2519,32 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     oneMindUnlocked:        Boolean(this.getGQUpgradeEffect('oneMind', 'unlocked')),
                     aquariusUnlocked:       Boolean(this.purple.getPurpleAmbrosiaUpgradeLevel('aquarius')),
                     transcription:          this.octeract.getOcteractUpgradeLevel('octeractOneMindImprover'),
-                    ascSpeed:               this.calculateAscensionSpeedMult(),
-                    ascSpread:              this.calculateAscensionSpread(),
-                    baseObt:                this.allBaseObtainiumStats.reduce((a, b) => a + b.stat(), 0),
-                    baseOff:                this.allBaseOfferingStats.reduce((a, b) => a + b.stat(), 0),
+                    ascSpeed:               this.calculateAscensionSpeedMult('true_base'),
+                    ascSpread:              this.calculateAscensionSpread(true, 'true_base'),
+                    baseObt:                baseObt,
+                    baseOff:                baseOff,
                     bonusTutorial:          this.ambrosia.getRedAmbrosiaUpgradeEffects('freeTutorialLevels').freeLevels,
                     bonusRow2:              this.ambrosia.getRedAmbrosiaUpgradeEffects('freeLevelsRow2').freeLevels,
                     bonusRow3:              this.ambrosia.getRedAmbrosiaUpgradeEffects('freeLevelsRow3').freeLevels,
                     bonusRow4:              this.ambrosia.getRedAmbrosiaUpgradeEffects('freeLevelsRow4').freeLevels,
                     bonusRow5:              this.ambrosia.getRedAmbrosiaUpgradeEffects('freeLevelsRow5').freeLevels,
                     runeSiExp:                  parseGameDataDecimal(gameData.runes.superiorIntellect),
-                    runeSiRC:                   this.rune.getLevelsPerOOM('superiorIntellect'),
-                    runeSiBonusLevelsTotal:     this.firstFiveFreeLevels() + talismanRuneBonuses.superiorIntellect,
+                    runeSiRC:                   this.rune.getLevelsPerOOM('superiorIntellect', 'true_base'),
+                    runeSiBonusLevelsTotal:     this.firstFiveFreeLevels() + nonAmbTalismanRuneBonusSI,
                     runeSiBonusLevelsTalismanNonAmbrosia: nonAmbTalismanRuneBonusSI,
                     runeSiEffectiveLevelMultiplier: this.firstFiveEffectiveRuneLevelMult() * this.rune.SIEffectiveRuneLevelMult(),
                     runeIaExp:                  parseGameDataDecimal(gameData.runes.infiniteAscent),
-                    runeIaBonusLevelsTotal:     new Decimal(this.getRuneBonusLevels('infiniteAscent')),
-                    runeIaBonusLevelsTalisman:  new Decimal(talismanRuneBonuses.infiniteAscent),
-                    baseTalismanPower:          new Decimal(currentTalismanPower),
+                    runeIaBonusLevelsTotal:     new Decimal(runeIaBonusLevelsTotal),
+                    runeIaBonusLevelsTalisman:  new Decimal(nonAmbTalismanRuneBonusIA),
+                    baseTalismanPower:          new Decimal(nonAmbTalismanPower),
                     patreonBonus:               this.getPatreonBonus(),
                     activeBells:                activeBells,
                     jack:                       gameData.shopUpgrades.shopPanthema > 0,
-                    freeShopLevelsInfinity:     this.freeInfinityLevels(),
+                    freeShopLevelsInfinity:     this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),
                     freeShopLevelsSpeed:        this.quarkShop.getShopFreeLevelsAscensionSpeed(),
-                    freeShopLevelsQuark:        this.quarkShop.getShopFreeLevelsQuark(),
-                    chronometerLevel:           this.quarkShop.getShopLevel('chronometerInfinity'),
+                    freeShopLevelsQuark:        this.quarkShop.getShopFreeLevelsQuark('true_base'),
+                    chronometerLevel:           this.quarkShop.getShopLevel('chronometerInfinity', 'true_base'),
                     shopAmbrosiaLuck1:          gameData.shopUpgrades.shopAmbrosiaLuck1,
                     shopAmbrosiaLuck2:          gameData.shopUpgrades.shopAmbrosiaLuck2,
                     shopAmbrosiaLuck3:          gameData.shopUpgrades.shopAmbrosiaLuck3,

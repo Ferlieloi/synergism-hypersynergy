@@ -57,7 +57,7 @@ export interface TalismanHelperContext {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
   getGQUpgradeEffect: (upgradeKey: string) => number | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
   getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
   getLevelMilestone: (name: SynergismLevelMilestones) => number
@@ -97,7 +97,7 @@ export interface RuneHelperContext {
   getPCoinUpgradeLevel: (upgradeKey: string) => number
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
   getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
   getLevelMilestone: (name: SynergismLevelMilestones) => number

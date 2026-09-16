@@ -2,7 +2,7 @@ import Decimal from "break_infinity.js";
 import { calcECC, parseGameDataDecimal } from "./hs-gamedata-utils";
 import { AntUpgrades, RUNE_KEYS } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { CalculationCache, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
+import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
 
 const RUNE_KEY_INDEX = new Map<RuneKeys, number>(RUNE_KEYS.map((rune, index) => [rune, index]))
 
@@ -15,6 +15,7 @@ export class RuneHelper {
     readonly #costLog10Cache = new Map<RuneKeys, number>();
     readonly #levelsPerOOMIncreaseCache = new Map<RuneKeys, number>();
     readonly #levelsPerOOMCache = new Map<RuneKeys, number>();
+    readonly #levelsPerOOMModeCache = new Map<string, number>();
     #totalRuneLevelsCache?: number;
 
     constructor(context: RuneHelperContext) {
@@ -33,6 +34,7 @@ export class RuneHelper {
             this.#runeFreeLevelsCache.clear();
             this.#levelsPerOOMIncreaseCache.clear();
             this.#levelsPerOOMCache.clear();
+            this.#levelsPerOOMModeCache.clear();
             this.#totalRuneLevelsCache = undefined;
         }
     }
@@ -350,8 +352,23 @@ export class RuneHelper {
         return this.runes[rune].costCoefficient.times(Decimal.pow(10, level / levelPerOOM).minus(1))
     }
 
-    public getLevelsPerOOM = (rune: RuneKeys): number => {
+    public getLevelsPerOOM = (rune: RuneKeys, mode: CalculationMode = 'normal'): number => {
         this.#clearCachesIfGameDataChanged();
+        if (mode !== 'normal') {
+            const modeCacheKey = `${rune}:${mode}`;
+            const modeCached = this.#levelsPerOOMModeCache.get(modeCacheKey);
+            if (modeCached !== undefined) return modeCached;
+
+            const normalValue = this.getLevelsPerOOM(rune);
+            const ambrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', mode);
+            const normalAmbrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', 'normal');
+            const ambrosiaKey = rune === 'infiniteAscent' ? 'infiniteAscentOOMBonus' : 'runeOOMBonus';
+            const result = normalValue
+                - Number(normalAmbrosiaEffects?.[ambrosiaKey] ?? 0)
+                + Number(ambrosiaEffects?.[ambrosiaKey] ?? 0);
+            this.#levelsPerOOMModeCache.set(modeCacheKey, result);
+            return result;
+        }
         const cached = this.#levelsPerOOMCache.get(rune);
         if (cached !== undefined) {
             return cached;
