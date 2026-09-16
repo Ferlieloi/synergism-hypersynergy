@@ -55,7 +55,17 @@ async function main() {
   if (exported.luckTotal !== api.luck.calculateLuck().luckTotal
       || exported.ambSpeed * exported.blueberries !== api.ambrosia.calculateAmbrosiaGenerationSpeed()
         * api.ambrosia.calculateBlueberryInventory()
-      || exported.purpleHoneyBarMax !== api.ambrosia.calculatePurpleHoneyConversionFactor()) {
+      || exported.purpleHoneyBarMax !== api.ambrosia.calculatePurpleHoneyConversionFactor()
+      || Math.abs(exported.luckConversion - api.luck.calculateLuckConversion()) > 1e-12
+      || Math.abs(exported.redLuckBase - api.luck.calculateRedAmbrosiaLuck(true, 'true_base')) > 1e-9
+      || Math.abs(exported.ascSpeed - api.calculateAscensionSpeedMult()) / Math.max(1, Math.abs(api.calculateAscensionSpeedMult())) > 1e-12
+      || Math.abs(exported.ascSpread - api.calculateAscensionSpread()) > 1e-12
+      || exported.baseOff !== api.allBaseOfferingStats.reduce((a, b) => a + b.stat(), 0)
+      || exported.baseObt !== api.allBaseObtainiumStats.reduce((a, b) => a + b.stat(), 0)
+      || Math.abs(exported.runeSiRC - api.rune.getLevelsPerOOM('superiorIntellect')) > 1e-12
+      || Math.abs(exported.baseTalismanPower - api.talisman.allTalismanRuneBonusStatsSum()) > 1e-12
+      || Math.abs(exported.freeShopLevelsInfinity - api.freeInfinityLevels()) > 1e-12
+      || Math.abs(exported.chronometerLevel - api.quarkShop.getShopLevel('chronometerInfinity')) > 1e-12) {
     throw new Error('Heater export no longer matches current game-data API calculations')
   }
   if (exported.purpleHoneyBarMax !== 150_000) {
