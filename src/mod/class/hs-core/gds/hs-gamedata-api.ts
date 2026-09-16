@@ -2382,8 +2382,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         try {
             const luck =                    this.luck.calculateLuck(true)       as { luckBase: number, luckMult: number, luckTotal: number };
             // The game's no-purchased-Ambrosia baseline still applies free
-            // levels granted by Red Ambrosia upgrades. Purple enchantment
-            // levels remain inactive until their module is purchased.
+            // levels granted by Red Ambrosia upgrades. Purple Ambrosia
+            // enchantment free levels are tied to purchased yellow upgrades,
+            // so they are absent from this baseline.
             const nonAmbLuck =              this.luck.calculateLuck(true, 'true_base') as { luckBase: number, luckMult: number, luckTotal: number };
             // SynergismOfficial/src/Calculate.ts calculateAmbrosiaRewardLuck:
             // Two Mind changes per-fill luck, while other luck-based effects
@@ -2412,9 +2413,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const currentPurpleLeoLuck =    this.purple.getPurpleAmbrosiaUpgradeEffects('leo', 'unassignedBlueberyLuck');
             // Heater inputs that represent a loadout with no purchased
             // (yellow) Ambrosia use the game's true-base mode. This keeps
-            // Red Ambrosia free levels while excluding purchased Ambrosia
-            // levels and Purple enchantment free levels that require a
-            // purchased module.
+            // Red Ambrosia free levels while excluding purchased yellow
+            // levels. Purple Ambrosia enchantment free levels are likewise
+            // absent here because they only apply with those purchases.
             const luckConversion =          this.luck.calculateLuckConversion(true, 'true_base') as number;
             const redLuck =                 this.luck.calculateRedAmbrosiaLuck(true, 'true_base') as number;
             const activeBells = this.isEvent ? (eventData?.HAPPY_HOUR_BELL.amount ?? 0) : 0;
