@@ -56,6 +56,7 @@ async function main() {
       || exported.ambSpeed * exported.blueberries !== api.ambrosia.calculateAmbrosiaGenerationSpeed()
         * api.ambrosia.calculateBlueberryInventory()
       || exported.purpleHoneyBarMax !== api.ambrosia.calculatePurpleHoneyConversionFactor()
+      || Math.abs(exported.luckMultNonAmb - api.luck.calculateLuck(true, 'true_base').luckMult) > 1e-12
       || Math.abs(exported.luckConversion - api.luck.calculateLuckConversion()) > 1e-12
       || Math.abs(exported.redLuckBase - api.luck.calculateRedAmbrosiaLuck(true, 'true_base')) > 1e-9
       || Math.abs(exported.ascSpeed - api.calculateAscensionSpeedMult()) / Math.max(1, Math.abs(api.calculateAscensionSpeedMult())) > 1e-12
@@ -97,7 +98,7 @@ async function main() {
   api.vanillaGlobalEvent = null
   api._updateEventData({ HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: '' } })
   results.heaterExport = Object.fromEntries([
-    'luckTotal', 'ambSpeed', 'blueberries', 'ascSpeed',
+    'luckTotal', 'luckMultNonAmb', 'ambSpeed', 'blueberries', 'ascSpeed',
     'blueAmbrosiaBarMax', 'redAmbrosiaBarMax', 'purpleHoneyBarMax',
     'redLuckBase', 'blueBarRequirementBeforeRounding',
     'runeSiRC', 'runeSiBonusLevelsTotal', 'runeSiBonusLevelsTalismanNonAmbrosia',

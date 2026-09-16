@@ -2382,6 +2382,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         try {
             const luck =                    this.luck.calculateLuck(true)       as { luckBase: number, luckMult: number, luckTotal: number };
             const nonAmbLuck =              this.luck.calculateLuck(true, 'non_ambrosia') as { luckBase: number, luckMult: number, luckTotal: number };
+            const trueBaseLuck =            this.luck.calculateLuck(true, 'true_base') as { luckBase: number, luckMult: number, luckTotal: number };
             // SynergismOfficial/src/Calculate.ts calculateAmbrosiaRewardLuck:
             // Two Mind changes per-fill luck, while other luck-based effects
             // continue to use the unmodified total.
@@ -2410,7 +2411,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const luckConversion =          this.luck.calculateLuckConversion(true) as number;
             const redLuck =                 this.luck.calculateRedAmbrosiaLuck(true, 'true_base') as number;
             const activeBells = this.isEvent ? (eventData?.HAPPY_HOUR_BELL.amount ?? 0) : 0;
-            const activeBellLuckBonus = activeBells > 0 ? 0.09 + 0.01 * activeBells : 0;
             const ambrosiaUpgradeNames = Object.keys(this.ambrosia.ambrosiaUpgradeCalculationCollection) as AmbrosiaUpgradeNames[];
             const ambrosiaUpgradeBonusLevels = Object.fromEntries(
                 ambrosiaUpgradeNames.map((name) => [name, this.ambrosia.getPurpleAmbrosiaEnchantmentFreeLevels(name)])
@@ -2475,7 +2475,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     luckMult:               luck.luckMult,
                     luckTotal:              luck.luckTotal,
                     luckBaseNonAmb:         nonAmbLuck.luckBase - currentPurpleLeoLuck,
-                    luckMultNonAmb:         nonAmbLuck.luckMult - activeBellLuckBonus,
+                    luckMultNonAmb:         trueBaseLuck.luckMult,
                     luckTotalNonAmb:        (nonAmbLuck.luckBase - currentPurpleLeoLuck) * nonAmbLuck.luckMult,
                     redLuckBase:            redLuck,
                     luckConversion:         luckConversion,
