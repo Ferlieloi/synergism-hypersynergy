@@ -1136,6 +1136,7 @@ class Loadout {
 
     upgradeLevels: Record<string, number>;
     private costCache:  number | null;
+    private blueberryCostCache: number | null;
     private statCache:  Record<string, number>;
 
     constructor(loadout?: Loadout) {
@@ -1145,6 +1146,7 @@ class Loadout {
         }
         this.upgradeLevels.ambrosiaPatreon = 1; // Always buy 1 level of ambrosiaPatreon
         this.costCache = null;
+        this.blueberryCostCache = null;
         this.statCache = {};
     }
 
@@ -1165,6 +1167,9 @@ class Loadout {
 
     // Returns total blueberry cost of the entire loadout
     get blueberryCost(): number {
+        if (this.blueberryCostCache !== null)
+            return this.blueberryCostCache;
+
         let result = 0;
         for (const upgrade in this.upgradeLevels)
             if ((this.upgradeLevels[upgrade] ?? 0) > 0)
@@ -1173,7 +1178,14 @@ class Loadout {
                     (upgrades[upgrade]?.blueberryCost ?? 0)
                         - (stats.ambrosiaUpgradeBlueberryCostReductions[upgrade] ?? 0)
                 );
+        this.blueberryCostCache = result;
         return result;
+    }
+
+    invalidateCaches(): void {
+        this.costCache = null;
+        this.blueberryCostCache = null;
+        this.statCache = {};
     }
 
     // Returns effective level of an upgrade that accounts for bonus levels
@@ -1325,6 +1337,7 @@ class Loadout {
           for (let prerequisite in upgrades[upgrade].prerequisites) {
             if ((this.upgradeLevels[prerequisite] ?? 0) < (upgrades[upgrade].prerequisites[prerequisite] ?? 0)) {
               this.upgradeLevels[prerequisite] = upgrades[upgrade].prerequisites[prerequisite] ?? 0
+              this.invalidateCaches();
               repeat = true
             }
           }
@@ -1349,14 +1362,17 @@ class Loadout {
           this.upgradeLevels.ambrosiaBaseObtainium2 = 0
           this.upgradeLevels.ambrosiaBaseOffering2 = 0
       }
+      this.invalidateCaches()
       if (this.blueberryCost - stats.blueberries === 1)
         this.upgradeLevels.ambrosiaFreeLuckUpgrades = 0
+      this.invalidateCaches()
 
       // Remove the weakest/most expensive upgrades first
       if (this.blueberryCost > stats.blueberries) { // This frees 6 blueberries
         this.upgradeLevels.ambrosiaLuck4 = 0 // This frees 5 blueberries
         if (this.blueberryCost - stats.blueberries === 1)
           this.upgradeLevels.ambrosiaFreeLuckUpgrades = 0
+        this.invalidateCaches()
       }
 
       if (this.blueberryCost > stats.blueberries) { // This frees 6 blueberries
@@ -1365,6 +1381,7 @@ class Loadout {
         this.upgradeLevels.ambrosiaBaseOffering2 = 0
         if (this.blueberryCost - stats.blueberries === 1)
           this.upgradeLevels.ambrosiaFreeLuckUpgrades = 0
+        this.invalidateCaches()
       }
 
       if (this.blueberryCost > stats.blueberries) { // This frees 3 blueberries
@@ -1373,6 +1390,7 @@ class Loadout {
         this.upgradeLevels.ambrosiaBaseOffering1 = 0
         if (this.blueberryCost > stats.blueberries)
           this.upgradeLevels.ambrosiaFreeLuckUpgrades = 0
+        this.invalidateCaches()
       }
 
       // The older repair rules above predate the Exalt 9 modules.  A merged
@@ -1406,12 +1424,10 @@ class Loadout {
         if (upgradeToRemove === undefined)
           break
         this.upgradeLevels[upgradeToRemove] = 0
-        this.costCache = null
-        this.statCache = {}
+        this.invalidateCaches()
       }
 
-      this.costCache = null
-      this.statCache = {}
+      this.invalidateCaches()
 
     }
 
@@ -1425,7 +1441,7 @@ class Loadout {
 
     generateOutput(stat: string = "", maxLoadout: Loadout, p4x4: number | null = null): HeaterResultRow {
 
-        this.costCache = null;
+        this.invalidateCaches()
         if (this.cost > stats.amb || stat === "")
             return ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false];
 
@@ -1502,10 +1518,12 @@ function generateTable(selectedUpgrades: string[], stat: string, minLevels: Reco
           return
       }
       preLoadout.upgradeLevels[upgradeName] = 1
+      preLoadout.invalidateCaches()
       preLoadout.satisfyPrerequisites()
       if (preLoadout.blueberryCost > stats.blueberries)
         return
       preLoadout.upgradeLevels[upgradeName] = 0
+      preLoadout.invalidateCaches()
 
       for (let level = minLevels[upgradeName] ?? 1; level <= upgrade.maxLevel; level++) {
 
@@ -1948,13 +1966,25 @@ export class HSHeaterOptimizer {
           if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
             options.calculateOff || options.calculateGen) {
               // Local optima for cubes match local optima for quarks and octeracts
-              tableCache.tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2", "ambrosiaInfiniteShopUpgrades3"], "cube");
+              const tableVoucherBase = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube");
+              tableCache.tableVoucher = mergeTables(
+                tableVoucherBase,
+                generateTable(["ambrosiaInfiniteShopUpgrades3"], "cube"),
+                "cube"
+              );
           }
 
           // --- calculateQuarks ---
           if (options.calculateQuarks) { // Calculate Quarks
               HSLogger.debug(() => '[HeaterDiag] calculateQuarks', 'HSHeaterOptimizer');
-              let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3", "ambrosiaQuarks4"], "quark");
+              // Keep the new Exalt-9 tier separate while generating tables.
+              // Enumerating it together with Quarks 1–3 multiplies the
+              // recursive search by 100 levels before the Pareto trim can
+              // remove anything.  Merging the independently-priced tier is
+              // exact because Quarks 4 only depends on the completed Quarks
+              // 3 chain and has no feedback into those effects.
+              let tableQuark1   = generateTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
+              tableQuark1 = mergeTables(tableQuark1, generateTable(["ambrosiaQuarks4"], "quark"), "quark");
               let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
               let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
               let tableQuarkR   = mergeTables(tableQuark3, tableCache.tableRune, "quark");
@@ -1967,7 +1997,11 @@ export class HSHeaterOptimizer {
 
           // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
           if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
-            let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3", "ambrosiaCubes4"], "cube")
+            // As with Quarks 4, generate Cubes 4 separately.  This preserves
+            // the exact Pareto frontier while avoiding a 50x expansion of
+            // the recursive Cubes 1–3 table.
+            let tableCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "cube")
+            tableCube1 = mergeTables(tableCube1, generateTable(["ambrosiaCubes4"], "cube"), "cube")
             const tableFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "cube")
             let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
             tableCache.tableCube = mergeTables(mergeTables(tableCube1, tableFreeCube, "cube"), tableQuarkCube, "cube")
@@ -1975,7 +2009,8 @@ export class HSHeaterOptimizer {
             // affect Octeracts through extra tier-specific multipliers, so
             // their local maxima must be searched against the Oct objective.
             if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
-              const tableOctCube1 = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3", "ambrosiaCubes4"], "oct")
+              const tableOctCube1Base = generateTable(["ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3"], "oct")
+              const tableOctCube1 = mergeTables(tableOctCube1Base, generateTable(["ambrosiaCubes4"], "oct"), "oct")
               const tableOctFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "oct")
               const tableOctQuarkCube = generateTable(["ambrosiaQuarkCube1"], "oct")
               tableCache.tableOctCube = mergeTables(mergeTables(tableOctCube1, tableOctFreeCube, "oct"), tableOctQuarkCube, "oct")
@@ -2203,7 +2238,12 @@ export class HSHeaterOptimizer {
               let postAoAG = stats.postAoAG
               stats.postAoAG = false
 
-              let tableVoucher = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2", "ambrosiaInfiniteShopUpgrades3"], "cube")
+              const tableVoucherBase = generateTable(["ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2"], "cube")
+              let tableVoucher = mergeTables(
+                tableVoucherBase,
+                generateTable(["ambrosiaInfiniteShopUpgrades3"], "cube"),
+                "cube"
+              )
               let tableCubeV = mergeTables(tableCache.tableCubeR, tableVoucher, "cube")
               let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
               let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")
