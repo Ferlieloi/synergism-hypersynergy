@@ -1002,6 +1002,71 @@ export class HSAmbrosia extends HSModule
     // --- Ambrosia Loadouts (Quick) Import Rules ---
     // ==============================================
 
+    // The game includes every Ambrosia module in its blueberry-tree export.
+    // Older Heater/clipboard loadouts may omit keys, so the quick importer
+    // fills any missing module with level zero before handing it to the game.
+    static readonly #quickImportAmbrosiaKeys = [
+        'ambrosiaTutorial',
+        'ambrosiaQuarks1',
+        'ambrosiaCubes1',
+        'ambrosiaLuck1',
+        'ambrosiaQuarkCube1',
+        'ambrosiaLuckCube1',
+        'ambrosiaCubeQuark1',
+        'ambrosiaLuckQuark1',
+        'ambrosiaCubeLuck1',
+        'ambrosiaQuarkLuck1',
+        'ambrosiaQuarks2',
+        'ambrosiaCubes2',
+        'ambrosiaLuck2',
+        'ambrosiaQuarks3',
+        'ambrosiaQuarks4',
+        'ambrosiaCubes3',
+        'ambrosiaCubes4',
+        'ambrosiaFreeCubeUpgrades',
+        'ambrosiaLuck3',
+        'ambrosiaLuck4',
+        'ambrosiaPatreon',
+        'ambrosiaObtainium1',
+        'ambrosiaOffering1',
+        'ambrosiaHyperflux',
+        'ambrosiaBaseOffering1',
+        'ambrosiaBaseObtainium1',
+        'ambrosiaBaseOffering2',
+        'ambrosiaBaseObtainium2',
+        'ambrosiaFreeObtainiumUpgrades',
+        'ambrosiaFreeOfferingUpgrades',
+        'ambrosiaSingReduction1',
+        'ambrosiaInfiniteShopUpgrades1',
+        'ambrosiaInfiniteShopUpgrades2',
+        'ambrosiaInfiniteShopUpgrades3',
+        'ambrosiaSingReduction2',
+        'ambrosiaTalismanBonusRuneLevel',
+        'ambrosiaRuneOOMBonus',
+        'ambrosiaBrickOfLead',
+        'ambrosiaFreeLuckUpgrades',
+        'ambrosiaFreeGenerationUpgrades',
+        'ambrosiaFreeRedLuckUpgrades',
+        'ambrosiaFreeQuarkUpgrades',
+        'twoMind',
+    ] as const;
+
+    static #normalizeQuickImportLoadout(line: string): string {
+        try {
+            const parsed = JSON.parse(line) as unknown;
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return line;
+
+            const normalized = { ...(parsed as Record<string, unknown>) };
+            for (const key of HSAmbrosia.#quickImportAmbrosiaKeys) {
+                normalized[key] ??= 0;
+            }
+            return JSON.stringify(normalized);
+        } catch {
+            // Let the game's importer produce its normal invalid-file error.
+            return line;
+        }
+    }
+
     async #injectImportFromClipboardButton() {
         const importBtn = this.#importBlueberriesButton ?? await HSElementHooker.HookElement('#importBlueberriesButton') as HTMLButtonElement;
         if (!importBtn) return;
@@ -1171,7 +1236,8 @@ export class HSAmbrosia extends HSModule
             throw new Error('Import input element not found');
         }
 
-        const blob = new Blob([line], { type: 'application/json' });
+        const normalizedLine = HSAmbrosia.#normalizeQuickImportLoadout(line);
+        const blob = new Blob([normalizedLine], { type: 'application/json' });
         const file = new File([blob], 'quick-import.json', { type: 'application/json' });
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
