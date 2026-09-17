@@ -153,18 +153,18 @@ export class ShopUpgradeHelper {
         return freeEnv;
     }
 
-    #getNonAmbrosiaEnv(): ShopUpgradeHelperContext {
+    #getNoAmbrosiaEnv(): ShopUpgradeHelperContext {
         const baseEnv = this.#ctx;
-        const nonAmbrosiaEnv = {
+        const noAmbrosiaEnv = {
             ...baseEnv,
             getShopUpgradeTypeBonusLevels: (type: ShopUpgradeGroups) =>
-                SHOP_UPGRADE_GROUP_CONFIG[type]?.getBonusLevels(nonAmbrosiaEnv, 'non_ambrosia') ?? 0,
+                SHOP_UPGRADE_GROUP_CONFIG[type]?.getBonusLevels(noAmbrosiaEnv, 'non_ambrosia') ?? 0,
             getAmbrosiaUpgradeEffects: (upgradeKey: string) =>
                 baseEnv.getAmbrosiaUpgradeEffects(upgradeKey, 'non_ambrosia'),
             calculateFreeShopInfinityUpgrades: (reduce_vals: boolean) =>
                 baseEnv.calculateFreeShopInfinityUpgrades(reduce_vals, 'non_ambrosia'),
         } as ShopUpgradeHelperContext;
-        return nonAmbrosiaEnv;
+        return noAmbrosiaEnv;
     }
 
     #getShopLevelFreeLevelsOnly(upgradeKey: string): number {
@@ -224,7 +224,7 @@ export class ShopUpgradeHelper {
     getShopUpgradeTypeBonusLevels(type: ShopUpgradeGroups, mode: CalculationMode = 'normal'): number {
         if (mode === 'true_base') return getShopUpgradeTypeBonusLevelsFreeLevelsOnly(type, this.#ctx);
         if (mode === 'non_ambrosia') {
-            const env = this.#getNonAmbrosiaEnv();
+            const env = this.#getNoAmbrosiaEnv();
             return SHOP_UPGRADE_GROUP_CONFIG[type]?.getBonusLevels(env, mode) ?? 0;
         }
         return getShopUpgradeTypeBonusLevels(type, this.#ctx);
@@ -234,7 +234,7 @@ export class ShopUpgradeHelper {
         if (mode === 'true_base') return this.#getShopLevelFreeLevelsOnly(upgradeKey);
         if (mode === 'non_ambrosia') {
             const { rawLevel, gameData, isUtility } = this.#getShopLevelInputs(upgradeKey);
-            const env = this.#getNonAmbrosiaEnv();
+            const env = this.#getNoAmbrosiaEnv();
             return buildShopLevelResult(
                 upgradeKey,
                 rawLevel,
@@ -251,7 +251,7 @@ export class ShopUpgradeHelper {
         if (mode === 'true_base') return this.#getCachedShopEffectFreeLevelsOnly(upgradeKey, key);
         if (mode === 'non_ambrosia') {
             const level = this.getShopLevel(upgradeKey, mode);
-            return SHOP_UPGRADE_EFFECTS[upgradeKey]?.[key]?.(level, this.#getNonAmbrosiaEnv()) ?? 0;
+            return SHOP_UPGRADE_EFFECTS[upgradeKey]?.[key]?.(level, this.#getNoAmbrosiaEnv()) ?? 0;
         }
         return this.#getCachedShopEffect(upgradeKey, key);
     }
@@ -509,7 +509,7 @@ const getShopBonusLevels = (upgradeKey: string, env: ShopUpgradeHelperContext, m
     const cacheName = (mode === 'true_base'
         ? `${getShopBonusLevelsCacheName(upgradeKey)}_FREE`
         : mode === 'non_ambrosia'
-            ? `${getShopBonusLevelsCacheName(upgradeKey)}_NON_AMB`
+            ? `${getShopBonusLevelsCacheName(upgradeKey)}_NO_AMB`
             : getShopBonusLevelsCacheName(upgradeKey)) as keyof CalculationCache;
     const calculationVars = getShopLevelDependencies(upgradeKey, env);
     const cached = env.checkCalculationCache(cacheName, calculationVars);

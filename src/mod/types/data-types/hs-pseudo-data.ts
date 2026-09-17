@@ -15,6 +15,7 @@ export interface PseudoPlayerUpgrade {
 
 export interface PseudoGameData {
     coins: number;
-    upgrades: PseudoPlayerUpgrade[];
+    /** Upgrade metadata. Older responses may contain player-level entries here. */
+    upgrades: Array<PseudoUpgrade | PseudoPlayerUpgrade>;
     playerUpgrades: PseudoPlayerUpgrade[];
 }

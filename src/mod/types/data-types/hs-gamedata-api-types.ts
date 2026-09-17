@@ -669,6 +669,9 @@ export type PseudoCoinUpgradeNames =
     | 'BASE_OBTAINIUM_BUFF'
     | 'RED_GENERATION_BUFF'
     | 'RED_LUCK_BUFF'
+    | 'PURPLE_LUCK_BUFF'
+    | 'PURPLE_HONEY_BUFF'
+    | 'PURPLE_REACTOR_CAPACITY_BUFF'
 
 export type PseudoCoinUpgradeEffects = Record<PseudoCoinUpgradeNames, number>
 
@@ -689,7 +692,10 @@ export const PCoinUpgradeEffects: PseudoCoinUpgradeEffects = {
     BASE_OFFERING_BUFF: 0,
     BASE_OBTAINIUM_BUFF: 0,
     RED_GENERATION_BUFF: 1,
-    RED_LUCK_BUFF: 0
+    RED_LUCK_BUFF: 0,
+    PURPLE_LUCK_BUFF: 0,
+    PURPLE_HONEY_BUFF: 0,
+    PURPLE_REACTOR_CAPACITY_BUFF: 0
 }
 
 export type AmbrosiaUpgradeRewards = {
@@ -928,6 +934,7 @@ export interface ISingularityChallengeData<T = Record<string, number | boolean>>
 export type ProgressiveAchievements =
     | 'runeLevel'
     | 'freeRuneLevel'
+    | 'quarkUpgrades'
     | 'antMasteries'
     | 'rebornELO'
     | 'talismanRarities'
@@ -938,6 +945,8 @@ export type ProgressiveAchievements =
     | 'octeractUpgrades'
     | 'redAmbrosiaUpgrades'
     | 'exalts'
+    | 'purpleHoneyUpgrades'
+    | 'purpleAmbrosiaUpgrades'
 
 export interface ProgressiveAchievement {
     maxPointValue: number

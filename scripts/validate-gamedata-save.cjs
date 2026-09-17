@@ -30,7 +30,8 @@ async function main() {
     context: 'validation',
   })
   api._updateGameData(save)
-  // The export does not contain Discord/Pseudo/Campaign account state.
+  // Campaign tokens are derived from the saved campaign completions by the
+  // API, matching SynergismOfficial's CampaignManager.updateTokens().
   mod.exports.HSModuleManager.getModule = () => ({ forceUpdateAllData: async () => {} })
   const heaterExport = await api.dumpDataForHeater()
   if (!heaterExport?.hs_data) throw new Error('Heater export returned no hs_data')
@@ -52,16 +53,11 @@ async function main() {
     throw new Error(`Heater export contains non-finite calculations: ${invalidExportNumbers.join(', ')}`)
   }
   const exported = heaterExport.hs_data
-  const ambrosiaTalismanBonus = api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel
-  const currentTalismanPower = api.talisman.allTalismanRuneBonusStatsSum()
-  const nonAmbTalismanPower = currentTalismanPower - ambrosiaTalismanBonus
+  const noAmbTalismanPower = api.talisman.allTalismanRuneBonusStatsSum('true_base')
   const talismanRuneBonuses = api.talisman.getRuneBonusFromAllTalismansBatch()
-  const nonAmbTalismanRuneBonusSI = currentTalismanPower > 0
-    ? talismanRuneBonuses.superiorIntellect / currentTalismanPower * nonAmbTalismanPower
-    : 0
-  const nonAmbTalismanRuneBonusIA = currentTalismanPower > 0
-    ? talismanRuneBonuses.infiniteAscent / currentTalismanPower * nonAmbTalismanPower
-    : 0
+  const noAmbTalismanRuneBonuses = api.talisman.getRuneBonusFromAllTalismansBatch('true_base')
+  const noAmbTalismanRuneBonusSI = noAmbTalismanRuneBonuses.superiorIntellect
+  const noAmbTalismanRuneBonusIA = noAmbTalismanRuneBonuses.infiniteAscent
   const expectedBaseOff = api.allBaseOfferingStats.reduce((sum, line) => sum + (
     line.i18n === 'AmbrosiaBaseOffering1'
       ? api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseOffering1', 'true_base').offering
@@ -78,25 +74,29 @@ async function main() {
         ? api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBaseObtainium2', 'true_base').obtainium
         : line.stat()
   ), 0)
-  if (exported.luckTotal !== api.luck.calculateLuck().luckTotal
-      || exported.ambSpeed * exported.blueberries !== api.ambrosia.calculateAmbrosiaGenerationSpeed()
+  if (exported.totalAmbrosiaLuck !== api.luck.calculateLuck().luckTotal
+      || exported.ambrosiaBarPointsS * exported.blueberries !== api.ambrosia.calculateAmbrosiaGenerationSpeed()
         * api.ambrosia.calculateBlueberryInventory()
       || exported.purpleHoneyBarMax !== api.ambrosia.calculatePurpleHoneyConversionFactor()
-      || Math.abs(exported.luckMultNonAmb - api.luck.calculateLuck(true, 'true_base').luckMult) > 1e-12
-      || Math.abs(exported.luckConversion - api.luck.calculateLuckConversion(true, 'true_base')) > 1e-12
-      || Math.abs(exported.redLuckBase - api.luck.calculateRedAmbrosiaLuck(true, 'true_base')) > 1e-9
-      || Math.abs(exported.ascSpeed - api.calculateAscensionSpeedMult('true_base')) / Math.max(1, Math.abs(api.calculateAscensionSpeedMult('true_base'))) > 1e-12
-      || Math.abs(exported.ascSpread - api.calculateAscensionSpread(true, 'true_base')) > 1e-12
-      || exported.baseOff !== expectedBaseOff
-      || exported.baseObt !== expectedBaseObt
-      || Math.abs(exported.runeSiRC - api.rune.getLevelsPerOOM('superiorIntellect', 'true_base')) > 1e-12
-      || Math.abs(exported.runeSiBonusLevelsTotal - (api.firstFiveFreeLevels() + nonAmbTalismanRuneBonusSI)) > 1e-12
-      || Math.abs(exported.runeIaBonusLevelsTalisman - nonAmbTalismanRuneBonusIA) > 1e-12
-      || Math.abs(exported.runeIaBonusLevelsTotal - (api.getRuneBonusLevels('infiniteAscent') - talismanRuneBonuses.infiniteAscent + nonAmbTalismanRuneBonusIA)) > 1e-12
-      || Math.abs(exported.baseTalismanPower - nonAmbTalismanPower) > 1e-12
-      || Math.abs(exported.freeShopLevelsInfinity - api.freeInfinityLevels('true_base')) > 1e-12
-      || Math.abs(exported.freeShopLevelsQuark - api.quarkShop.getShopFreeLevelsQuark('true_base')) > 1e-12
-      || Math.abs(exported.chronometerLevel - api.quarkShop.getShopLevel('chronometerInfinity', 'true_base')) > 1e-12) {
+      || Math.abs(exported.totalAdditiveLuckMultiplierNoAmb - api.luck.calculateLuck(true, 'true_base').luckMult) > 1e-12
+      || Math.abs(exported.ambrosiaLuckPer1RedLuckNoAmb - api.luck.calculateLuckConversion(true, 'true_base')) > 1e-12
+      || Math.abs(exported.totalRedLuck - api.luck.calculateRedAmbrosiaLuck(true)) > 1e-9
+      || Math.abs(exported.totalRedLuckNoAmb - api.luck.calculateRedAmbrosiaLuck(true, 'true_base')) > 1e-9
+      || Math.abs(exported.baseAscensionSpeedMultiplierNoAmb - api.calculateRawAscensionSpeedMult(true, 'true_base')) / Math.max(1, Math.abs(api.calculateRawAscensionSpeedMult(true, 'true_base'))) > 1e-12
+      || Math.abs(exported.finalAscensionSpeedMultiplierNoAmb - api.calculateAscensionSpeedMult('true_base')) / Math.max(1, Math.abs(api.calculateAscensionSpeedMult('true_base'))) > 1e-12
+      || Math.abs(exported.ascensionSpeedExponentNoAmb - api.calculateAscensionSpread(true, 'true_base')) > 1e-12
+      || exported.totalBaseOfferingsNoAmb !== expectedBaseOff
+      || exported.totalBaseObtainiumNoAmb !== expectedBaseObt
+      || Math.abs(exported.runeSiRCNoAmb - api.rune.getLevelsPerOOM('superiorIntellect', 'true_base')) > 1e-12
+      || Math.abs(exported.runeSiBonusLevelsTotalNoAmb - (api.firstFiveFreeLevels() + noAmbTalismanRuneBonusSI)) > 1e-12
+      || Math.abs(exported.runeIaBonusLevelsTalismanNoAmb - noAmbTalismanRuneBonusIA) > 1e-12
+      || Math.abs(exported.runeIaBonusLevelsTotalNoAmb - (api.getRuneBonusLevels('infiniteAscent') - talismanRuneBonuses.infiniteAscent + noAmbTalismanRuneBonusIA)) > 1e-12
+      || Math.abs(exported.totalTalismanPowerMultiplierNoAmb - noAmbTalismanPower) > 1e-12
+      || Math.abs(exported.freeShopLevelsInfinityNoAmb - api.freeInfinityLevels('true_base')) > 1e-12
+      || Math.abs(exported.freeShopLevelsQuarkNoAmb - api.quarkShop.getShopFreeLevelsQuark('true_base')) > 1e-12
+      || Math.abs(exported.chronometerLevelNoAmb - api.quarkShop.getShopLevel('chronometerInfinity', 'true_base')) > 1e-12
+      || Math.abs(exported.totalRedBarPointsS - api.calculateRedAmbrosiaGenerationSpeed()) > 1e-12
+      || Math.abs(exported.totalRedBarPointsSNoAmb - api.calculateRedAmbrosiaGenerationSpeed('true_base')) > 1e-12) {
     throw new Error('Heater export no longer matches current game-data API calculations')
   }
   if (exported.purpleHoneyBarMax !== 150_000) {
@@ -128,14 +128,14 @@ async function main() {
   api.vanillaGlobalEvent = null
   api._updateEventData({ HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: '' } })
   results.heaterExport = Object.fromEntries([
-    'luckTotal', 'luckBaseNonAmb', 'luckMultNonAmb', 'luckTotalNonAmb',
-    'ambSpeed', 'ambSpeedNonAmb', 'ambSpeedNonAmbBerries', 'blueberries', 'ascSpeed',
+    'totalAmbrosiaLuck', 'ambrosiaLuckNoAmb', 'totalAdditiveLuckMultiplierNoAmb', 'totalAmbrosiaLuckNoAmb',
+    'ambrosiaBarPointsS', 'ambrosiaBarPointsSNoAmb', 'finalAmbrosiaBarPointsSNoAmb', 'blueberries', 'baseAscensionSpeedMultiplierNoAmb', 'finalAscensionSpeedMultiplierNoAmb',
     'blueAmbrosiaBarMax', 'redAmbrosiaBarMax', 'purpleHoneyBarMax',
-    'redLuckBase', 'blueBarRequirementBeforeRounding',
-    'runeSiRC', 'runeSiBonusLevelsTotal', 'runeSiBonusLevelsTalismanNonAmbrosia',
-    'runeIaBonusLevelsTotal', 'runeIaBonusLevelsTalisman', 'baseTalismanPower',
-    'freeShopLevelsInfinity', 'freeShopLevelsQuark', 'chronometerLevel',
-    'redBarSpeed', 'blueBarMaxWithoutTwoMindAndBrick', 'baseOff', 'baseObt',
+    'totalRedLuck', 'totalRedLuckNoAmb', 'ambrosiaLuckPer1RedLuckNoAmb', 'blueBarRequirementBeforeRounding',
+    'runeSiRCNoAmb', 'runeSiBonusLevelsTotalNoAmb', 'runeSiBonusLevelsTalismanNoAmbrosia',
+    'runeIaBonusLevelsTotalNoAmb', 'runeIaBonusLevelsTalismanNoAmb', 'totalTalismanPowerMultiplierNoAmb',
+    'freeShopLevelsInfinityNoAmb', 'freeShopLevelsQuarkNoAmb', 'chronometerLevelNoAmb',
+    'totalRedBarPointsS', 'totalRedBarPointsSNoAmb', 'blueBarMaxWithoutTwoMindAndBrick', 'totalBaseOfferingsNoAmb', 'totalBaseObtainiumNoAmb',
   ].map((key) => [key, heaterExport.hs_data[key]]))
   for (const [key, fn] of Object.entries({
     purpleBarPointsRequired: () => api.ambrosia.calculatePurpleHoneyConversionFactor(),
@@ -148,7 +148,7 @@ async function main() {
     luckModuleIII: () => api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaLuck3').ambrosiaLuck,
     ambrosiaRewardLuck: () => api.luck.calculateLuck().luckTotal * api.ambrosia.calculateRequiredBlueberryTime() / api.ambrosia.calculateRequiredBlueberryTime(true),
     ambrosiaLuckTrueBase: () => api.luck.calculateLuck(true, 'true_base').luckTotal,
-    ambrosiaLuckNonAmbrosia: () => api.luck.calculateLuck(true, 'non_ambrosia').luckTotal,
+    ambrosiaLuckNoAmbrosia: () => api.luck.calculateLuck(true, 'non_ambrosia').luckTotal,
     ambrosiaLuckComponents: () => api.luck.calculateLuck(false),
     redLuck: () => api.luck.calculateRedAmbrosiaLuck(),
     redLuckNormal: () => api.luck.calculateRedAmbrosiaLuck(true, 'normal'),
@@ -157,9 +157,9 @@ async function main() {
     ambrosiaBarPointsPerSecondWithoutOnlineBonuses: () => api.ambrosia.calculateAmbrosiaGenerationSpeed() * api.ambrosia.calculateBlueberryInventory(),
     ambrosiaGenerationComponentsWithoutOnlineBonuses: () => api.ambrosia.calculateAmbrosiaGenerationSpeed(false),
     ascensionSpeed: () => api.calculateAscensionSpeedMult(),
-    ascensionSpeedNonAmbrosia: () => api.calculateAscensionSpeedMult('non_ambrosia'),
+    ascensionSpeedNoAmbrosia: () => api.calculateAscensionSpeedMult('non_ambrosia'),
     ascensionSpreadNormal: () => api.calculateAscensionSpread(),
-    ascensionSpreadNonAmbrosia: () => api.calculateAscensionSpread(true, 'non_ambrosia'),
+    ascensionSpreadNoAmbrosia: () => api.calculateAscensionSpread(true, 'non_ambrosia'),
     ascensionRawComponents: () => api.calculateRawAscensionSpeedMult(false),
     freeInfinityLevelsNormal: () => api.freeInfinityLevels(),
     runeSiLevelsPerOOMNormal: () => api.rune.getLevelsPerOOM('superiorIntellect'),

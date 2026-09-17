@@ -124,7 +124,6 @@ export interface HSGlobalGameState {
 
 export interface HSGlobalGameData {
     fetchedDataRefreshInterval: number;
-    campaignTokenRefreshInterval: number;
     globalEventRefreshInterval: number;
     gdsSpeedMs: number;
     gdsCSSId: string;

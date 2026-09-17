@@ -200,6 +200,10 @@ export class AmbrosiaHelper {
         return low;
     }
 
+    getPurpleAmbrosiaEnchantmentMaxLevel(upgradeName: AmbrosiaUpgradeNames): number {
+        return AmbrosiaHelper.#PURPLE_AMBROSIA_ENCHANTMENTS[upgradeName]?.maxLevel ?? 0;
+    }
+
     getPurpleAmbrosiaEnchantmentFreeLevels(upgradeName: AmbrosiaUpgradeNames): number {
         const enchantment = AmbrosiaHelper.#PURPLE_AMBROSIA_ENCHANTMENTS[upgradeName];
         return enchantment.type === 'freeLevels'
@@ -977,7 +981,7 @@ export class AmbrosiaHelper {
         const mode: CalculationMode = typeof trueBaseOrMode === 'string'
             ? trueBaseOrMode
             : trueBaseOrMode ? 'true_base' : 'normal';
-        const cacheName = (`AmbrosiaGenerationShopUpgrade${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : ''}`) as keyof CalculationCache;
+        const cacheName = (`AmbrosiaGenerationShopUpgrade${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NO_AMB' : ''}`) as keyof CalculationCache;
         const calculationVars: number[] = [
             data.shopUpgrades.shopAmbrosiaGeneration1,
             data.shopUpgrades.shopAmbrosiaGeneration2,
@@ -1056,7 +1060,7 @@ export class AmbrosiaHelper {
         const mode: CalculationMode = typeof trueBaseOrMode === 'string'
             ? trueBaseOrMode
             : trueBaseOrMode ? 'true_base' : 'normal';
-        const cacheName = (`AmbrosiaGenerationSpeedRaw${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : ''}`) as keyof CalculationCache;
+        const cacheName = (`AmbrosiaGenerationSpeedRaw${mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NO_AMB' : ''}`) as keyof CalculationCache;
         const P_GEN_BUFF_LVL = this.#ctx.getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF');
         const campaignBlueberrySpeedBonus = this.calculateCampaignAmbrosiaSpeedBonus();
         const AMBROSIA_UNLOCKED_GATE = data.singularityChallenges.noSingularityUpgrades.completions > 0 ? 1 : 0;
@@ -1149,9 +1153,13 @@ export class AmbrosiaHelper {
     }
 
     // Mirrors allRedAmbrosiaGenerationSpeedStats in SynergismOfficial/src/Statistics.ts.
-    calculateRedAmbrosiaGenerationSpeed(reduce_vals = true) {
+    calculateRedAmbrosiaGenerationSpeed(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
+
+        const mode: CalculationMode = typeof trueBaseOrMode === 'string'
+            ? trueBaseOrMode
+            : trueBaseOrMode ? 'true_base' : 'normal';
 
         const synergismLevel = this.#ctx.calculateSynergismLevel();
         const vals = [
@@ -1159,7 +1167,9 @@ export class AmbrosiaHelper {
             1 + 0.02 * (data.cubeUpgrades[76] ?? 0),
             1 + 0.05 * this.#ctx.getPCoinUpgradeLevel('RED_GENERATION_BUFF'),
             synergismLevel >= 280 ? 1 + 0.01 * (synergismLevel - 279) : 1,
-            this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration,
+            mode === 'normal'
+                ? this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration
+                : 1,
             this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed').redAmbrosiaGenerationSpeed,
             this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed2').redAmbrosiaGenerationSpeed,
             this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed,
@@ -1200,7 +1210,7 @@ export class AmbrosiaHelper {
         if (cached !== undefined) return cached;
 
         if (twoMindEnabled) {
-            return 25_000_000;
+            return 10_000_000;
         }
 
         if (barDependence.enabled) {
@@ -1285,11 +1295,10 @@ export class AmbrosiaHelper {
         if (!data) return 0;
 
         if (!ignoreTwoMind && this.#isTwoMindEnabled(data)) {
-            return 150_000;
+            return 125_000;
         }
 
         const barDependence = this.#getBarDependence(data);
-        const purpleHoney = data.purpleReactor?.purpleHoney ?? 0;
         const lifetimePurpleHoney = data.purpleReactor?.lifetimePurpleHoney ?? 0;
 
         if (barDependence.enabled) {
@@ -1307,18 +1316,11 @@ export class AmbrosiaHelper {
         ].reduce((a, b) => a * b, 1);
         const singularitySizeMultiplier = 1
             - Math.max(0, Math.floor((data.highestSingularityCount - 280) / 2) / 100);
-        const lifetimeMultiplier = Math.min(25_000, lifetimePurpleHoney * 0.9 + 2_500) / 2_500;
-        const currentHoneyMultiplier = 1 + Math.min(
-            purpleHoney / 10_000,
-            Math.log(1 + purpleHoney / 100)
-        );
         const taxmanLastStandMultiplier = 1
             - 0.01 * data.singularityChallenges.taxmanLastStand.completions;
 
-        return 50_000
+        return 250_000
             * singularitySizeMultiplier
-            * lifetimeMultiplier
-            * currentHoneyMultiplier
             * requirementReduction
             * taxmanLastStandMultiplier;
     }

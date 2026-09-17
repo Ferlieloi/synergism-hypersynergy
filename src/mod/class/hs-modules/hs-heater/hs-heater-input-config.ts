@@ -5,7 +5,7 @@ type HeaterInputBase = Omit<HeaterOptimizerInput,
     | 'ambrosiaUpgradeBonusLevels'
     | 'ambrosiaUpgradeBlueberryCostReductions'
     | 'shopUpgradeRawLevels'
-    | 'shopBonusLevelsNonAmbrosia'
+    | 'shopBonusLevelsNoAmbrosia'
     | 'panthemaLevel'
     | 'shopUpgradesDisabled'>;
 type HeaterInputKey = keyof HeaterInputBase;
@@ -37,11 +37,11 @@ export const inputDefinitions = [
     { key: "amb",                       label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "ramb",                      label: "Lifetime Red Ambrosia",     type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
     { key: "bonusAmbrosiaPerFill",      label: "Bonus Ambrosia per Fill",  type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
-    { key: "ambSpeedNonAmbBerries",     label: "Blue Bar Speed/s",          type: "number",  url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
+    { key: "ambSpeedNoAmbBerries",     label: "Blue Bar Speed/s",          type: "number",  url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
     { key: "blueberries",               label: "Blueberries Owned",         type: "number",  url: "Pictures/Default/Blueberries.png" },
     { key: "purpleLeoLevel",            label: "Purple Leo Level",          type: "number",  url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Leo.png" },
-    { key: "luckBaseNonAmb",            label: "Base Luck",                 type: "number",  url: "Pictures/Achievements/Rewards/AmbrosiaLuck.png" },
-    { key: "luckMultNonAmb",            label: "Base Luck Mult",            type: "percent", url: "Pictures/PseudoShop/AMBROSIA_LUCK_BUFF.png" },
+    { key: "luckBaseNoAmb",            label: "Base Luck",                 type: "number",  url: "Pictures/Achievements/Rewards/AmbrosiaLuck.png" },
+    { key: "luckMultNoAmb",            label: "Base Luck Mult",            type: "percent", url: "Pictures/PseudoShop/AMBROSIA_LUCK_BUFF.png" },
     { key: "redLuckBase",               label: "Base Red Luck",             type: "number",  url: "Pictures/Achievements/Rewards/RedAmbrosiaLuck.png" },
     { key: "luckConversion",            label: "Luck Conversion",           type: "number",  url: "Pictures/RedAmbrosia/RedAmbrosiaConversionImprovement1.png" },
     { key: "quarksOwned",               label: "Quarks Owned",              type: "number",  url: "Pictures/Default/Quark.png" },
@@ -122,12 +122,29 @@ export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (h
     amb:                (hsData) => hsData.lifetimeAmbrosia,
     ramb:               (hsData) => hsData.lifetimeRedAmbrosia,
     bonusAmbrosiaPerFill: (hsData) => hsData.bonusAmbrosiaPerFill,
-    luckMultNonAmb:     (hsData) => hsData.luckMultNonAmb - 1,
+    ambSpeedNoAmbBerries: (hsData) => hsData.finalAmbrosiaBarPointsSNoAmb,
+    luckBaseNoAmb:     (hsData) => hsData.ambrosiaLuckNoAmb,
+    luckMultNoAmb:     (hsData) => hsData.totalAdditiveLuckMultiplierNoAmb - 1,
+    redLuckBase:        (hsData) => hsData.totalRedLuck,
+    luckConversion:     (hsData) => hsData.ambrosiaLuckPer1RedLuckNoAmb,
+    ascSpeed:           (hsData) => hsData.finalAscensionSpeedMultiplierNoAmb,
+    ascSpread:          (hsData) => hsData.ascensionSpeedExponentNoAmb,
+    baseObt:             (hsData) => hsData.totalBaseObtainiumNoAmb,
+    baseOff:             (hsData) => hsData.totalBaseOfferingsNoAmb,
+    runeSiRC:             (hsData) => hsData.runeSiRCNoAmb,
+    runeSiBonusLevelsTotal: (hsData) => hsData.runeSiBonusLevelsTotalNoAmb,
+    runeSiEffectiveLevelMultiplier: (hsData) => hsData.totalSIRunePowerMultiplier,
+    runeIaBonusLevelsTotal: (hsData) => hsData.runeIaBonusLevelsTotalNoAmb,
+    runeIaBonusLevelsTalisman: (hsData) => hsData.runeIaBonusLevelsTalismanNoAmb,
+    baseTalismanPower:   (hsData) => hsData.totalTalismanPowerMultiplierNoAmb,
+    freeShopLevelsInfinity: (hsData) => hsData.freeShopLevelsInfinityNoAmb,
+    freeShopLevelsQuark: (hsData) => hsData.freeShopLevelsQuarkNoAmb,
+    chronometerLevel:    (hsData) => hsData.chronometerLevelNoAmb,
     ossifiedTactics:    (hsData) => hsData.redAmbrosiaUpgrades.regularLuck,
     ossifiedTactics2:   (hsData) => hsData.redAmbrosiaUpgrades.regularLuck2,
     redberries:         (hsData) => hsData.redAmbrosiaUpgrades.blueberries,
     viscount:           (hsData) => Boolean(hsData.redAmbrosiaUpgrades.viscount),
     fusion:             (hsData) => hsData.redAmbrosiaUpgrades.redAmbrosiaAccelerator,
     rBar:               (hsData) => hsData.redBarCapacity,
-    rSpeed:             (hsData) => hsData.redBarSpeed,
+    rSpeed:             (hsData) => hsData.totalRedBarPointsSNoAmb,
 };

@@ -25,10 +25,10 @@ interface PurpleUpgradeDefinition {
 // cumulative Purple Honey investments, so levels must be reconstructed.
 const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDefinition> = {
     tutorial: { maxLevel: 15, costFormula: (level) => level * (level + 1) / 2 },
-    purpleHoneyRequirementReduction1: { maxLevel: 50, costFormula: (level) => 20 * level },
-    purpleHoneyRequirementReduction2: { maxLevel: 50, costFormula: (level) => 400 * level },
-    purpleHoneyRequirementReduction3: { maxLevel: 50, costFormula: (level) => 8_000 * level },
-    purpleHoneyRequirementReduction4: { maxLevel: 50, costFormula: (level) => 160_000 * level },
+    purpleHoneyRequirementReduction1: { maxLevel: 25, costFormula: (level) => 20 * level },
+    purpleHoneyRequirementReduction2: { maxLevel: 25, costFormula: (level) => 400 * level },
+    purpleHoneyRequirementReduction3: { maxLevel: 25, costFormula: (level) => 8_000 * level },
+    purpleHoneyRequirementReduction4: { maxLevel: 25, costFormula: (level) => 160_000 * level },
     lifetimeHoneyAscensionSpeed: { maxLevel: 10, costFormula: (level) => 2_000 * level },
     lifetimeHoneyAmbrosia: { maxLevel: 10, costFormula: (level) => 10_000 * level },
     lifetimeHoneyRedAmbrosia: { maxLevel: 15, costFormula: (level) => 10_000 * level },
@@ -37,13 +37,15 @@ const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDef
 const purpleAmbrosiaUpgradeData = {
     aries: { maxLevel: 25, costFormula: (level: number) => level * (level + 1) / 2 },
     taurus: { maxLevel: 10, costFormula: (level: number) => 50 * level },
-    gemini: { maxLevel: 10, costFormula: (level: number) => 80 * level },
-    cancer: { maxLevel: 10, costFormula: (level: number) => 80 * level },
+    gemini: { maxLevel: 10, costFormula: (level: number) => 8 * level },
+    cancer: { maxLevel: 10, costFormula: (level: number) => 8 * level },
     leo: { maxLevel: 25, costFormula: (level: number) => 125 * level },
     virgo: { maxLevel: 15, costFormula: (level: number) => 60 * level },
     libra: { maxLevel: 1, costFormula: (level: number) => 1001 * level },
     scorpio: { maxLevel: 10, costFormula: (level: number) => 750 * level },
-    sagittarius: { maxLevel: 11, costFormula: (level: number) => 200 * level },
+    // Mirrors SynergismOfficial/src/PurpleAmbrosiaUpgrades.ts: the first
+    // Sagittarius level costs 40 Purple Ambrosia, then each later level adds 200.
+    sagittarius: { maxLevel: 11, costFormula: (level: number) => level > 1 ? 40 + 200 * (level - 1) : 40 * level },
     capricorn: {
         maxLevel: 11,
         costFormula: (level: number) => level > 1 ? 1_000 + 300 * (level - 1) : 1_000 * level,
@@ -83,10 +85,7 @@ export class PurpleHelper {
         const lifetimePurpleHoney = Number(data.purpleReactor?.lifetimePurpleHoney ?? 0);
 
         if (upgradeKey === 'tutorial') return 1 + 0.01 * level;
-        if (upgradeKey === 'purpleHoneyRequirementReduction1') return 1 - 0.006 * level;
-        if (upgradeKey === 'purpleHoneyRequirementReduction2') return 1 - 0.005 * level;
-        if (upgradeKey === 'purpleHoneyRequirementReduction3') return 1 - 0.004 * level;
-        if (upgradeKey === 'purpleHoneyRequirementReduction4') return 1 - 0.003 * level;
+        if (upgradeKey.startsWith('purpleHoneyRequirementReduction')) return 1 - 0.004 * level;
 
         const logHoney = Math.log(1 + lifetimePurpleHoney / 100);
         if (upgradeKey === 'lifetimeHoneyAscensionSpeed' && effectKey === 'ascensionSpeedMultiplier') {
@@ -122,9 +121,9 @@ export class PurpleHelper {
         }
         if (upgradeKey === 'taurus' && effectKey === 'taxDivisor') return 1 + level / 10;
         if (upgradeKey === 'gemini') {
-            return effectKey === 'ambrosiaBarPointsOnFill' ? 125_000 * level : 37.5 * level;
+            return effectKey === 'ambrosiaBarPointsOnFill' ? 50_000 * level : 25 * level;
         }
-        if (upgradeKey === 'cancer' && effectKey === 'purpleBarPointsOnFill') return 750 * level;
+        if (upgradeKey === 'cancer' && effectKey === 'purpleBarPointsOnFill') return 500 * level;
         if (upgradeKey === 'virgo' && effectKey === 'assignedBlueberrySalvage') return data.spentBlueberries * level;
         if (upgradeKey === 'libra' && effectKey === 'overcapToggleUnlocked') return +(level > 0);
         if (upgradeKey === 'scorpio' && effectKey === 'purpleReactorConversionMult') return 1 + level / 10;

@@ -30,18 +30,18 @@ export class HSHeaterUIInput {
     static #optimizerMetadata: Pick<HeaterOptimizerInput,
         | 'ambrosiaUpgradeBonusLevels'
         | 'ambrosiaUpgradeBlueberryCostReductions'
-        | 'runeSiBonusLevelsTalismanNonAmbrosia'
+        | 'runeSiBonusLevelsTalismanNoAmbrosia'
         | 'runeSiEffectiveLevelMultiplier'
         | 'shopUpgradeRawLevels'
-        | 'shopBonusLevelsNonAmbrosia'
+        | 'shopBonusLevelsNoAmbrosia'
         | 'panthemaLevel'
         | 'shopUpgradesDisabled'> = {
             ambrosiaUpgradeBonusLevels: {},
             ambrosiaUpgradeBlueberryCostReductions: {},
-            runeSiBonusLevelsTalismanNonAmbrosia: 0,
+            runeSiBonusLevelsTalismanNoAmbrosia: 0,
             runeSiEffectiveLevelMultiplier: 1,
             shopUpgradeRawLevels: {},
-            shopBonusLevelsNonAmbrosia: {
+            shopBonusLevelsNoAmbrosia: {
                 offering: 0,
                 obtainium: 0,
                 cubes: 0,
@@ -65,10 +65,10 @@ export class HSHeaterUIInput {
         this.#optimizerMetadata = {
             ambrosiaUpgradeBonusLevels: hsData?.ambrosiaUpgradeBonusLevels ?? {},
             ambrosiaUpgradeBlueberryCostReductions: hsData?.ambrosiaUpgradeBlueberryCostReductions ?? {},
-            runeSiBonusLevelsTalismanNonAmbrosia: Number(hsData?.runeSiBonusLevelsTalismanNonAmbrosia ?? 0),
-            runeSiEffectiveLevelMultiplier: Number(hsData?.runeSiEffectiveLevelMultiplier ?? 1),
+            runeSiBonusLevelsTalismanNoAmbrosia: Number(hsData?.runeSiBonusLevelsTalismanNoAmbrosia ?? 0),
+            runeSiEffectiveLevelMultiplier: Number(hsData?.totalSIRunePowerMultiplier ?? 1),
             shopUpgradeRawLevels: hsData?.shopUpgradeRawLevels ?? {},
-            shopBonusLevelsNonAmbrosia: hsData?.shopBonusLevelsNonAmbrosia ?? {
+            shopBonusLevelsNoAmbrosia: hsData?.shopBonusLevelsNoAmbrosia ?? {
                 offering: 0,
                 obtainium: 0,
                 cubes: 0,

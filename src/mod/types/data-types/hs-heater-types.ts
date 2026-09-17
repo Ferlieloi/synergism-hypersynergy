@@ -6,11 +6,11 @@ export interface HeaterOptimizerInput {
     amb: number;
     ramb: number;
     bonusAmbrosiaPerFill: number;
-    ambSpeedNonAmbBerries: number;
+    ambSpeedNoAmbBerries: number;
     blueberries: number;
     purpleLeoLevel: number;
-    luckBaseNonAmb: number;
-    luckMultNonAmb: number;
+    luckBaseNoAmb: number;
+    luckMultNoAmb: number;
     redLuckBase: number;
     luckConversion: number;
     quarksOwned: number;
@@ -36,7 +36,7 @@ export interface HeaterOptimizerInput {
     runeSiExp: Decimal;
     runeSiRC: number;
     runeSiBonusLevelsTotal: number;
-    runeSiBonusLevelsTalismanNonAmbrosia: number;
+    runeSiBonusLevelsTalismanNoAmbrosia: number;
     runeSiEffectiveLevelMultiplier: number;
     runeIaExp: Decimal;
     runeIaBonusLevelsTotal: Decimal;
@@ -78,7 +78,7 @@ export interface HeaterOptimizerInput {
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;
-    shopBonusLevelsNonAmbrosia: {
+    shopBonusLevelsNoAmbrosia: {
         offering: number;
         obtainium: number;
         cubes: number;

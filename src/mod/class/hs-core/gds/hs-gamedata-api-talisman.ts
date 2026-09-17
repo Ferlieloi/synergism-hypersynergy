@@ -1,7 +1,7 @@
 import Decimal from "break_infinity.js";
 import { HSGlobal } from "../hs-global";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
-import { AntUpgrades, CalculationCache, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES, TALISMAN_CHRONOS_INSCRIPT_VALUES, TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES, TALISMAN_EXEMPTION_INSCRIPT_VALUES, TALISMAN_METAPHYSICS_INSCRIPT_VALUES, TALISMAN_MIDAS_INSCRIPT_VALUES, TALISMAN_MORTUUS_INSCRIPT_VALUES, TALISMAN_PLASTIC_INSCRIPT_VALUES, TALISMAN_POLYMATH_INSCRIPT_VALUES, TALISMAN_WOWSQUARE_INSCRIPT_VALUES, TALISMAN_HORSESHOE_INSCRIPT_VALUES } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./stored-vars-and-calculations";
 import { HSLogger } from "../hs-logger";
@@ -86,8 +86,8 @@ export class TalismanHelper {
         this.#statsComputed = true;
     }
 
-    #computeAllRuneBonuses(): Record<RuneKeys, number> {
-        if (this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
+    #computeAllRuneBonuses(mode: CalculationMode = 'normal'): Record<RuneKeys, number> {
+        if (mode === 'normal' && this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
         this.#computeAllTalismanStats();
 
         const totalBonuses = TALISMAN_RUNE_KEYS.reduce((acc, rune) => {
@@ -119,16 +119,16 @@ export class TalismanHelper {
             }
         }
 
-        const specialMultiplier = this.allTalismanRuneBonusStatsSum();
+        const specialMultiplier = this.allTalismanRuneBonusStatsSum(mode);
         for (const rune of TALISMAN_RUNE_KEYS) {
             totalBonuses[rune] *= specialMultiplier;
         }
 
-        this.#allRuneBonusesCache = totalBonuses;
+        if (mode === 'normal') this.#allRuneBonusesCache = totalBonuses;
         return totalBonuses;
     }
 
-    allTalismanRuneBonusStatsSum = (): number => {
+    allTalismanRuneBonusStatsSum = (mode: CalculationMode = 'normal'): number => {
         this.#clearCachesIfGameDataChanged();
         const data = this.#ctx.getGameData();
         const cacheName = 'AllTalismanRuneBonusStatsSum' as keyof CalculationCache;
@@ -144,15 +144,19 @@ export class TalismanHelper {
             this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0,
             this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0,
             this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0,
-            this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel ?? 0,
+            this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0,
             this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'talismanRuneEffect') ?? 0,
         ];
 
-        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
-        if (cached !== undefined) return cached;
+        if (mode === 'normal') {
+            const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
+            if (cached !== undefined) return cached;
+        }
 
-        const result = allTalismanRuneBonusStatsSum(this.#ctx);
-        this.#ctx.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
+        const result = allTalismanRuneBonusStatsSum(this.#ctx, mode);
+        if (mode === 'normal') {
+            this.#ctx.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
+        }
         return result;
     }
 
@@ -189,14 +193,14 @@ export class TalismanHelper {
         return Array.from(this.#talismanRarityCache.values()).reduce((sum, rarity) => sum + rarity, 0);
     }
 
-    getRuneBonusFromAllTalismansBatch = (): Record<RuneKeys, number> => {
+    getRuneBonusFromAllTalismansBatch = (mode: CalculationMode = 'normal'): Record<RuneKeys, number> => {
         this.#computeAllTalismanStats();
-        return this.#computeAllRuneBonuses();
+        return this.#computeAllRuneBonuses(mode);
     }
 
-    getRuneBonusFromAllTalismans = (rune: RuneKeys): number => {
+    getRuneBonusFromAllTalismans = (rune: RuneKeys, mode: CalculationMode = 'normal'): number => {
         this.#computeAllTalismanStats();
-        const bonuses = this.#computeAllRuneBonuses();
+        const bonuses = this.#computeAllRuneBonuses(mode);
         return bonuses[rune] ?? 0;
     }
 
@@ -218,7 +222,7 @@ export class TalismanHelper {
     }
 }
 
-const allTalismanRuneBonusStatsSum = (env: TalismanHelperContext): number => {
+const allTalismanRuneBonusStatsSum = (env: TalismanHelperContext, mode: CalculationMode = 'normal'): number => {
     const data = env.getGameData();
     if (!data) return 0;
 
@@ -234,7 +238,7 @@ const allTalismanRuneBonusStatsSum = (env: TalismanHelperContext): number => {
     const gqTalismanBonus2 = env.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0;
     const gqTalismanBonus3 = env.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0;
     const gqTalismanBonus4 = env.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0;
-    const ambrosiaTalismanBonus = env.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel ?? 0;
+    const ambrosiaTalismanBonus = env.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0;
     const taxmanTalismanEffect = taxmanTalismanRuneEffect ?? 0;
 
     const total = (

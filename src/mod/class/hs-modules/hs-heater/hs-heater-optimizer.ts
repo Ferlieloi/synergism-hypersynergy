@@ -108,7 +108,7 @@ interface Stats {
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;
-    shopBonusLevels: HeaterOptimizerInput['shopBonusLevelsNonAmbrosia'];
+    shopBonusLevels: HeaterOptimizerInput['shopBonusLevelsNoAmbrosia'];
     panthemaLevel: number;
     shopUpgradesDisabled: boolean;
 }
@@ -1584,8 +1584,8 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
 
 function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     const {
-        amb, ramb, bonusAmbrosiaPerFill, ambSpeedNonAmbBerries, blueberries, purpleLeoLevel,
-        luckBaseNonAmb, luckMultNonAmb, redLuckBase, luckConversion,
+        amb, ramb, bonusAmbrosiaPerFill, ambSpeedNoAmbBerries, blueberries, purpleLeoLevel,
+        luckBaseNoAmb, luckMultNoAmb, redLuckBase, luckConversion,
         quarksOwned, qHept, cubesExpTotal,
         currentSingularity, singularityReducers,
         exalt, exalt9Unlocked, postAoag, oneMindUnlocked, aquariusUnlocked, transcription,
@@ -1593,7 +1593,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         bonusTutorial,
         bonusRow2, bonusRow3, bonusRow4, bonusRow5,
         runeSiExp, runeSiRC, runeSiBonusLevelsTotal,
-        runeSiBonusLevelsTalismanNonAmbrosia, runeSiEffectiveLevelMultiplier,
+        runeSiBonusLevelsTalismanNoAmbrosia, runeSiEffectiveLevelMultiplier,
         runeIaExp, runeIaBonusLevelsTotal, runeIaBonusLevelsTalisman,
         baseTalismanPower,
         patreonBonus,
@@ -1607,7 +1607,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         fusion, rBar, rSpeed, blueBarMaxWithoutTwoMindAndBrick, blueBarRequirementBeforeRounding, redBarMaxWithoutTwoMind,
         ossifiedTactics, redberries, viscount, ossifiedTactics2,
         ambrosiaUpgradeBonusLevels, ambrosiaUpgradeBlueberryCostReductions,
-        shopUpgradeRawLevels, shopBonusLevelsNonAmbrosia, panthemaLevel, shopUpgradesDisabled,
+        shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel, shopUpgradesDisabled,
         heaterOptions,
     } = input;
 
@@ -1618,14 +1618,14 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     // separate, rounded-up digit counts of lifetime blue and red Ambrosia.
     stats.lifetimeAmbExp = Math.ceil(Math.log10(amb + 1)) + Math.ceil(Math.log10(ramb + 1));
 
-    stats.ambSpeed    = ambSpeedNonAmbBerries;
+    stats.ambSpeed    = ambSpeedNoAmbBerries;
     stats.blueberries = blueberries;
     stats.purpleLeoLevel = purpleLeoLevel;
     stats.tutorialBonus = bonusTutorial;
-    stats.baseLuck       = luckBaseNonAmb;
+    stats.baseLuck       = luckBaseNoAmb;
     // SynergismOfficial/Event.ts: the first bell is +10%, then each extra
     // bell is +1%. The exported base has this consumable contribution removed.
-    stats.baseMLuck      = luckMultNonAmb + (activeBells > 0 ? 0.09 + 0.01 * activeBells : 0);
+    stats.baseMLuck      = luckMultNoAmb + (activeBells > 0 ? 0.09 + 0.01 * activeBells : 0);
     let rLuck            = redLuckBase;
     stats.luckConversion = luckConversion;
 
@@ -1653,7 +1653,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.runeExp    = runeSiExp.eq(0) ? -1e10 : runeSiExp.log10();
     stats.runeCoefSI = runeSiRC;
     stats.bonusSI    = runeSiBonusLevelsTotal;
-    stats.talismanSI = runeSiBonusLevelsTalismanNonAmbrosia;
+    stats.talismanSI = runeSiBonusLevelsTalismanNoAmbrosia;
     stats.runeMultSI = runeSiEffectiveLevelMultiplier;
     stats.expIA      = runeIaExp.eq(0) ? -1e10 : runeIaExp.log10();
     stats.bonusIA    = runeIaBonusLevelsTotal.toNumber();
@@ -1669,7 +1669,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.ambrosiaUpgradeBonusLevels = ambrosiaUpgradeBonusLevels;
     stats.ambrosiaUpgradeBlueberryCostReductions = ambrosiaUpgradeBlueberryCostReductions;
     stats.shopUpgradeRawLevels = shopUpgradeRawLevels;
-    stats.shopBonusLevels = shopBonusLevelsNonAmbrosia;
+    stats.shopBonusLevels = shopBonusLevelsNoAmbrosia;
     stats.panthemaLevel = panthemaLevel;
     stats.shopUpgradesDisabled = shopUpgradesDisabled;
 
@@ -1692,7 +1692,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     let baseLoadout  = new Loadout();
     stats.baseRLuck  = rLuck - Math.floor((stats.baseLuck * (1 + stats.baseMLuck) - 100) / stats.luckConversion);
     // The export has already removed the Purple Leo contribution from its
-    // non-Ambrosia base.  The empty loadout re-adds Leo for its unassigned
+    // no-Ambrosia base.  The empty loadout re-adds Leo for its unassigned
     // blueberries, so exclude that contribution when removing the persistent
     // Red Ambrosia row bonuses from the exported base.
     const baseLeoLuck = stats.blueberries >= 5 ? stats.blueberries * stats.purpleLeoLevel : 0;

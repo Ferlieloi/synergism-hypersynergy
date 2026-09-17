@@ -45,7 +45,7 @@ export class LuckHelper {
     }
 
     private modeCacheSuffix(mode: CalculationMode): string {
-        return mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NON_AMB' : '';
+        return mode === 'true_base' ? '_TRUE_BASE' : mode === 'non_ambrosia' ? '_NO_AMB' : '';
     }
 
     calculateLuck(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false): { luckBase: number; luckMult: number; luckTotal: number } | { luckBase: number[]; luckMult: number[] } {
@@ -189,8 +189,6 @@ export class LuckHelper {
         const redLuck = this.#ctx.getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
         const viscount = this.#ctx.getRedAmbrosiaUpgradeEffects('viscount').redLuckBonus;
         const horseShoeLevel = this.#ctx.getRuneEffectiveLevel('horseShoe');
-        const { additiveComponents, rawLuckComponents } = this.getLuckCalculationComponentValues(mode);
-
         const effectiveShopRedLuck1 = this.#ctx.getShopLevel('shopRedLuck1', mode);
         const effectiveShopRedLuck2 = this.#ctx.getShopLevel('shopRedLuck2', mode);
         const effectiveShopRedLuck3 = this.#ctx.getShopLevel('shopRedLuck3', mode);
@@ -199,7 +197,12 @@ export class LuckHelper {
         const panthemaRedLuck = this.calculatePanthemaRedLuck(mode);
         const synergismLevelBonus = Math.max(0, (this.#ctx.calculateSynergismLevel() ?? 0) - 259);
 
-        const totalLuck = additiveComponents.reduce((a, b) => a + b, 0) * rawLuckComponents.reduce((a, b) => a + b, 0);
+        // SynergismOfficial's red-luck statistic uses calculateAmbrosiaLuck()
+        // as its conversion input.  Reuse the mode-aware Ambrosia Luck
+        // calculation here so the normal and No-Ambrosia heater exports use
+        // exactly the same source value as the game (including its additive
+        // multiplier), rather than maintaining a second summation.
+        const totalLuck = (this.calculateLuck(true, mode) as { luckBase: number; luckMult: number; luckTotal: number }).luckTotal;
         const vals = [
             100,
             pseudoLuck,
@@ -427,7 +430,12 @@ export class LuckHelper {
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaLuckMultiplier4', 'additiveAmbrosiaLuckMult') as number,
             this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'additiveLuckMult'),
             0.001 * cube77,
-            this.#ctx.isEvent() ? this.#ctx.calculateEventSourceBuff(EventBuffType.AmbrosiaLuck) : 0,
+            // `calculateEventSourceBuff` already combines the active vanilla
+            // global event and consumable event buffs.  Do not gate this on
+            // the consumable-event flag: a vanilla global event can be active
+            // while HAPPY_HOUR_BELL is zero, and the game still applies its
+            // Ambrosia Luck bonus in that case.
+            this.#ctx.calculateEventSourceBuff(EventBuffType.AmbrosiaLuck),
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck4', mode).ambrosiaLuckPercentage,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead', mode).additiveLuckMult,
             this.#ctx.getTalismanEffects('horseShoe').luckPercentage,
@@ -459,7 +467,11 @@ export class LuckHelper {
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck3', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaCubeLuck1', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaQuarkLuck1', mode).ambrosiaLuck,
-            this.#ctx.getPurpleAmbrosiaUpgradeEffects('leo', 'unassignedBlueberyLuck'),
+            // Purple Ambrosia levels are not part of the No-Ambrosia baseline;
+            // they are only active in the normal calculation mode.
+            mode === 'normal'
+                ? this.#ctx.getPurpleAmbrosiaUpgradeEffects('leo', 'unassignedBlueberyLuck')
+                : 0,
         ];
 
         return { additiveComponents, rawLuckComponents };

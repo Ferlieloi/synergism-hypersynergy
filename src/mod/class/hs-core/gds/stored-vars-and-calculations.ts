@@ -741,6 +741,7 @@ export const talismanMaxLevels: Record<TalismanKeys, number> = {
   horseShoe: 12,
 }
 
+// Talisman cost bases and progression ratios mirror SynergismOfficial/src/Talismans.ts.
 export const talismanBaseMultipliers: Record<TalismanKeys, string> = {
   exemption: '1',
   chronos: '10',
@@ -753,7 +754,7 @@ export const talismanBaseMultipliers: Record<TalismanKeys, string> = {
   achievement: '1e30',
   purpleGem: '1e1100',
   cookieGrandma: '1e1000',
-  horseShoe: '1e1200',
+  horseShoe: '1e1000',
 }
 
 export const talismanCostTypes: Record<TalismanKeys, 'regular' | 'exponential'> = {
@@ -782,8 +783,8 @@ export const talismanExponentialRatios: Record<TalismanKeys, number> = {
   wowSquare: 2,
   achievement: 10,
   purpleGem: 1e2,
-  cookieGrandma: 1e8,
-  horseShoe: 1e5,
+  cookieGrandma: 100,
+  horseShoe: 100,
 }
 
 export const getTalismanMaxLevel = (t: TalismanKeys): number => talismanMaxLevels[t] ?? 180;
@@ -1027,10 +1028,11 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   singAmbrosiaGeneration2: { maxLevel: 20, qualityOfLife: true, costPerLevel: 8e5, specialCostForm: 'Default', effect: (n) => 1 + n / 100 },
   singAmbrosiaGeneration3: { maxLevel: 35, qualityOfLife: true, costPerLevel: 3e8, specialCostForm: 'Default', effect: (n) => 1 + n / 100 },
   singAmbrosiaGeneration4: { maxLevel: 50, qualityOfLife: true, costPerLevel: 1e19, specialCostForm: 'Default', effect: (n) => 1 + 2 * n / 100 },
-  singBonusTokens1: { maxLevel: 5, costPerLevel: 25, specialCostForm: 'Exponential2' },
-  singBonusTokens2: { maxLevel: 5, costPerLevel: 10_000, specialCostForm: 'Exponential2' },
-  singBonusTokens3: { maxLevel: 5, costPerLevel: 1e8, specialCostForm: 'Exponential2' },
-  singBonusTokens4: { maxLevel: 30, costPerLevel: 1e13, specialCostForm: 'Exponential2' },
+  // Effects copied from SynergismOfficial/src/singularity.ts.
+  singBonusTokens1: { maxLevel: 5, costPerLevel: 25, specialCostForm: 'Exponential2', effect: (n) => n },
+  singBonusTokens2: { maxLevel: 5, costPerLevel: 10_000, specialCostForm: 'Exponential2', effect: (n) => 1 + n / 100 },
+  singBonusTokens3: { maxLevel: 5, costPerLevel: 1e8, specialCostForm: 'Exponential2', effect: (n) => 2 * n },
+  singBonusTokens4: { maxLevel: 30, costPerLevel: 1e13, specialCostForm: 'Exponential2', effect: (n) => 5 * n },
   singInfiniteShopUpgrades: { maxLevel: 80, costPerLevel: 1e18, specialCostForm: 'Default', effect: (n) => n },
   singTalismanBonusRunes1: {
     maxLevel: 5, costPerLevel: 25, specialCostForm: 'Default',
@@ -1133,10 +1135,11 @@ export const octeractUpgradeMaxLevels: Record<OcteractUpgradeKey, OcteractUpgrad
   octeractAmbrosiaGeneration2: { maxLevel: 20, qualityOfLife: true, costFormula: (n) => Math.pow(n, 6), effect: (n) => 1 + n / 100 },
   octeractAmbrosiaGeneration3: { maxLevel: 35, qualityOfLife: true, costFormula: (n) => 1e30 * Math.pow(n, 8), effect: (n) => 1 + n / 100 },
   octeractAmbrosiaGeneration4: { maxLevel: 50, qualityOfLife: true, costFormula: (n) => 1e70 * (Math.pow(3, n) - 1), effect: (n) => 1 + 2 * n / 100 },
-  octeractBonusTokens1: { maxLevel: 10, costFormula: (n) => 1e-5 * (Math.pow(1e2, n) - 1) / 99 },
-  octeractBonusTokens2: { maxLevel: 5, costFormula: (n) => Math.pow(1e8, n) - 1 },
-  octeractBonusTokens3: { maxLevel: 5, costFormula: (n) => 1e40 * (Math.pow(1e10, n) - 1) },
-  octeractBonusTokens4: { maxLevel: 50, costFormula: (n) => 1e75 * (Math.pow(4, n) - 1) },
+  // Effects copied from SynergismOfficial/src/Octeracts.ts.
+  octeractBonusTokens1: { maxLevel: 10, costFormula: (n) => 1e-5 * (Math.pow(1e2, n) - 1) / 99, effect: (n) => n },
+  octeractBonusTokens2: { maxLevel: 5, costFormula: (n) => Math.pow(1e8, n) - 1, effect: (n) => 1 + n / 100 },
+  octeractBonusTokens3: { maxLevel: 5, costFormula: (n) => 1e40 * (Math.pow(1e10, n) - 1), effect: (n) => n },
+  octeractBonusTokens4: { maxLevel: 50, costFormula: (n) => 1e75 * (Math.pow(4, n) - 1), effect: (n) => 2 * n },
   octeractBlueberries: { maxLevel: 6, qualityOfLife: true, costFormula: (n) => OCTERACT_BLUEBERRY_COSTS[n] ?? Number.POSITIVE_INFINITY, effect: (n) => n },
   octeractInfiniteShopUpgrades: { maxLevel: 80, costFormula: (n) => 1e30 * (Math.pow(16, n) - 1), effect: (n) => n },
   octeractTalismanLevelCap1: { maxLevel: 25, costFormula: (n) => 1e-5 * Math.pow(n, 6), effect: (n: number) => n },

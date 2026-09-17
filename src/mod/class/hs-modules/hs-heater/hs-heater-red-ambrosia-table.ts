@@ -146,7 +146,7 @@ function computeRedAmbrosiaEffectValue(
         case 'blueberryGenerationSpeed':
         case 'blueberryGenerationSpeed2': {
             if (!input) { return undefined; }
-            const fusion = input.ambSpeedNonAmbBerries * (1 + input.patreonBonus);
+            const fusion = input.ambSpeedNoAmbBerries * (1 + input.patreonBonus);
             const coefficient = upgradeKey === 'blueberryGenerationSpeed' ? 0.002 : 0.001;
             const speed = fusion * (1 + coefficient * level);
             if (!(speed > 0)) { return 1; }
@@ -252,7 +252,7 @@ function computeRedAmbrosiaRawToDisplay(
     }
 
     const { input } = context;
-    const speed = (input?.ambSpeedNonAmbBerries ?? 0) * (1 + (input?.patreonBonus ?? 0));
+    const speed = (input?.ambSpeedNoAmbBerries ?? 0) * (1 + (input?.patreonBonus ?? 0));
     const blueberries = input?.blueberries ?? 0;
     if (!(speed > 0 && blueberries > 0)) {
         return value;

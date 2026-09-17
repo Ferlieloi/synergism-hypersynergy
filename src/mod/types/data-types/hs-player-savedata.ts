@@ -1051,6 +1051,7 @@ export interface Campaigns {
 export interface progressiveAchievements {
     "runeLevel": number;
     "freeRuneLevel": number;
+    "quarkUpgrades": number;
     "antMasteries": number;
     "rebornELO": number;
     "singularityCount": number;
@@ -1061,6 +1062,8 @@ export interface progressiveAchievements {
     "singularityUpgrades": number;
     "octeractUpgrades": number;
     "redAmbrosiaUpgrades": number;
+    "purpleHoneyUpgrades": number;
+    "purpleAmbrosiaUpgrades": number;
 }
 
 /**
