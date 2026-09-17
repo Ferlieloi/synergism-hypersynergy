@@ -1375,6 +1375,41 @@ class Loadout {
           this.upgradeLevels.ambrosiaFreeLuckUpgrades = 0
       }
 
+      // The older repair rules above predate the Exalt 9 modules.  A merged
+      // candidate can therefore still exceed the blueberry budget after all
+      // of those rules have run (for example, Quarks 4 + Cubes 4 + Two Mind).
+      // Keep the established priority order, then use a deterministic safety
+      // pass so every loadout returned by findOpt is affordable.  Purple
+      // blueberry-cost reductions are included by blueberryCost, so this only
+      // removes a module when its effective cost is still positive.
+      while (this.blueberryCost > stats.blueberries) {
+        const candidates = Object.keys(this.upgradeLevels)
+          .filter((upgrade) =>
+            (this.upgradeLevels[upgrade] ?? 0) > 0
+            && (upgrades[upgrade]?.blueberryCost ?? 0) > 0
+          )
+          .sort((left, right) => {
+            const leftCost = Math.max(
+              0,
+              (upgrades[left].blueberryCost ?? 0)
+                - (stats.ambrosiaUpgradeBlueberryCostReductions[left] ?? 0)
+            )
+            const rightCost = Math.max(
+              0,
+              (upgrades[right].blueberryCost ?? 0)
+                - (stats.ambrosiaUpgradeBlueberryCostReductions[right] ?? 0)
+            )
+            return rightCost - leftCost || left.localeCompare(right)
+          })
+
+        const upgradeToRemove = candidates[0]
+        if (upgradeToRemove === undefined)
+          break
+        this.upgradeLevels[upgradeToRemove] = 0
+        this.costCache = null
+        this.statCache = {}
+      }
+
       this.costCache = null
       this.statCache = {}
 
