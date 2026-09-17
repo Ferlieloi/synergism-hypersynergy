@@ -125,7 +125,10 @@ export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (h
     ambSpeedNoAmbBerries: (hsData) => hsData.finalAmbrosiaBarPointsSNoAmb,
     luckBaseNoAmb:     (hsData) => hsData.ambrosiaLuckNoAmb,
     luckMultNoAmb:     (hsData) => hsData.totalAdditiveLuckMultiplierNoAmb - 1,
-    redLuckBase:        (hsData) => hsData.totalRedLuck,
+    // The optimizer's baseline is the no-purchased-Ambrosia state.  Using
+    // the active total here would bake yellow Ambrosia luck into the base and
+    // then apply it a second time when a candidate loadout is evaluated.
+    redLuckBase:        (hsData) => hsData.totalRedLuckNoAmb,
     luckConversion:     (hsData) => hsData.ambrosiaLuckPer1RedLuckNoAmb,
     ascSpeed:           (hsData) => hsData.finalAscensionSpeedMultiplierNoAmb,
     ascSpread:          (hsData) => hsData.ascensionSpeedExponentNoAmb,

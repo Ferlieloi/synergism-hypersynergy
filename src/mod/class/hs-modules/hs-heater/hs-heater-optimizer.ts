@@ -1245,8 +1245,13 @@ class Loadout {
                 ? Math.ceil(stats.blueBarRequirementBeforeRounding / brickBarSpeed)
                 : stats.blueBarRequirementBeforeRounding / brickBarSpeed
             const requirementRatio = stats.blueBarMaxWithoutTwoMindAndBrick / brickRequirement
+            // SynergismOfficial/src/Calculate.ts: TWO MIND fixes the blue
+            // bar at 10,000,000 points.  The luck-derived part is adjusted
+            // by calculateBarRewardLuck and therefore cancels against the
+            // shorter bar; the fixed Exalt-5 reward does not, so it needs
+            // the actual fixed-bar ratio here.
             const flatBonusRatio = this.twoMindEnabled
-              ? stats.blueBarMaxWithoutTwoMindAndBrick / 25_000_000
+              ? stats.blueBarMaxWithoutTwoMindAndBrick / 10_000_000
               : requirementRatio
             this.statCache[stat] = (this.luck / 100 * requirementRatio
               + stats.bonusAmbrosiaPerFill * flatBonusRatio)
@@ -1597,7 +1602,6 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         runeIaExp, runeIaBonusLevelsTotal, runeIaBonusLevelsTalisman,
         baseTalismanPower,
         patreonBonus,
-        activeBells,
         jack, freeShopLevelsInfinity, freeShopLevelsQuark,
         chronometerLevel,
         shopAmbrosiaLuck1, shopAmbrosiaLuck2, shopAmbrosiaLuck3, shopAmbrosiaLuck4,
@@ -1623,9 +1627,12 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.purpleLeoLevel = purpleLeoLevel;
     stats.tutorialBonus = bonusTutorial;
     stats.baseLuck       = luckBaseNoAmb;
-    // SynergismOfficial/Event.ts: the first bell is +10%, then each extra
-    // bell is +1%. The exported base has this consumable contribution removed.
-    stats.baseMLuck      = luckMultNoAmb + (activeBells > 0 ? 0.09 + 0.01 * activeBells : 0);
+    // SynergismOfficial/src/Statistics.ts and Event.ts:
+    // luckMultNoAmb already comes from calculateLuck(..., 'true_base'),
+    // whose event source includes both the vanilla event and consumable bell
+    // contribution. Do not add activeBells again here, or event luck is
+    // counted twice in every candidate loadout.
+    stats.baseMLuck      = luckMultNoAmb;
     let rLuck            = redLuckBase;
     stats.luckConversion = luckConversion;
 
