@@ -228,6 +228,11 @@ let singDebuffCache: { off: number[]; cube: number[] } = {
     cube: []
 }
 
+// Computed once per optimizer run.  fixBlueberryUpgrades is called from the
+// innermost merge loops, so rebuilding this order for every candidate would
+// dominate the actual stat calculations.
+let blueberryRemovalOrder: string[] = [];
+
 // ===========================================================================
 // Upgrade class
 // ===========================================================================
@@ -1400,29 +1405,11 @@ class Loadout {
       // pass so every loadout returned by findOpt is affordable.  Purple
       // blueberry-cost reductions are included by blueberryCost, so this only
       // removes a module when its effective cost is still positive.
-      while (this.blueberryCost > stats.blueberries) {
-        const candidates = Object.keys(this.upgradeLevels)
-          .filter((upgrade) =>
-            (this.upgradeLevels[upgrade] ?? 0) > 0
-            && (upgrades[upgrade]?.blueberryCost ?? 0) > 0
-          )
-          .sort((left, right) => {
-            const leftCost = Math.max(
-              0,
-              (upgrades[left].blueberryCost ?? 0)
-                - (stats.ambrosiaUpgradeBlueberryCostReductions[left] ?? 0)
-            )
-            const rightCost = Math.max(
-              0,
-              (upgrades[right].blueberryCost ?? 0)
-                - (stats.ambrosiaUpgradeBlueberryCostReductions[right] ?? 0)
-            )
-            return rightCost - leftCost || left.localeCompare(right)
-          })
-
-        const upgradeToRemove = candidates[0]
-        if (upgradeToRemove === undefined)
+      for (const upgradeToRemove of blueberryRemovalOrder) {
+        if (this.blueberryCost <= stats.blueberries)
           break
+        if ((this.upgradeLevels[upgradeToRemove] ?? 0) <= 0)
+          continue
         this.upgradeLevels[upgradeToRemove] = 0
         this.invalidateCaches()
       }
@@ -1728,6 +1715,21 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.jack      = jack;
     stats.ambrosiaUpgradeBonusLevels = ambrosiaUpgradeBonusLevels;
     stats.ambrosiaUpgradeBlueberryCostReductions = ambrosiaUpgradeBlueberryCostReductions;
+    blueberryRemovalOrder = Object.keys(upgrades)
+      .filter((upgrade) => (upgrades[upgrade]?.blueberryCost ?? 0) > 0)
+      .sort((left, right) => {
+        const leftCost = Math.max(
+          0,
+          (upgrades[left].blueberryCost ?? 0)
+            - (stats.ambrosiaUpgradeBlueberryCostReductions[left] ?? 0)
+        )
+        const rightCost = Math.max(
+          0,
+          (upgrades[right].blueberryCost ?? 0)
+            - (stats.ambrosiaUpgradeBlueberryCostReductions[right] ?? 0)
+        )
+        return rightCost - leftCost || left.localeCompare(right)
+      });
     stats.shopUpgradeRawLevels = shopUpgradeRawLevels;
     stats.shopBonusLevels = shopBonusLevelsNoAmbrosia;
     stats.panthemaLevel = panthemaLevel;
