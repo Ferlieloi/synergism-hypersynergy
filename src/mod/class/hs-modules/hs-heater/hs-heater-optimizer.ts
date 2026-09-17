@@ -2144,11 +2144,21 @@ export class HSHeaterOptimizer {
           if (options.calculateOff) {
               HSLogger.debug(() => '[HeaterDiag] calculateOff: obt', 'HSHeaterOptimizer');
               let tableSing    = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
-              let tableObt1    = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2", "ambrosiaFreeObtainiumUpgrades"], "obt");
+              const tableObtBase = generateTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
+              let tableObt1    = mergeTables(
+                tableObtBase,
+                generateTable(["ambrosiaFreeObtainiumUpgrades"], "obt"),
+                "obt"
+              );
               let tableObt2    = generateTable(["ambrosiaObtainium1"], "obt");
               let tableObt3    = mergeTables(tableObt1, tableObt2, "obt");
 
-              let tableOff1    = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2", "ambrosiaFreeOfferingUpgrades"], "off")
+              const tableOffBase = generateTable(["ambrosiaBaseOffering1", "ambrosiaBaseOffering2"], "off")
+              let tableOff1    = mergeTables(
+                tableOffBase,
+                generateTable(["ambrosiaFreeOfferingUpgrades"], "off"),
+                "off"
+              )
               let tableOff2    = generateTable(["ambrosiaOffering1"], "off")
               let tableOff3    = mergeTables(tableOff1, tableOff2, "off")
 
