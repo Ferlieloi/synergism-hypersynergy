@@ -1,7 +1,7 @@
 import { EventBuffType } from "./hs-event-data";
 import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, Runes, CorruptionLevels, GameData } from "./hs-player-savedata";
 
-export type CalculationMode = 'normal' | 'true_base';
+export type CalculationMode = 'normal' | 'true_base' | 'non_ambrosia';
 
 export enum ShopUpgradeGroups {
   Offering = 0,
@@ -36,7 +36,7 @@ export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getRuneEffects: (rune: RuneKeys) => any
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  calculateFreeShopInfinityUpgrades: (reduce_vals: boolean) => number[]
+  calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode?: CalculationMode) => number[]
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -57,7 +57,8 @@ export interface TalismanHelperContext {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
   getGQUpgradeEffect: (upgradeKey: string) => number | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
+  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
   getLevelMilestone: (name: SynergismLevelMilestones) => number
   getOcteractUpgradeEffect: (upgradeKey: string) => number | undefined
@@ -77,10 +78,15 @@ export interface AmbrosiaHelperContext {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  getGQUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
+  getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
+  getPurpleReactorUpgradeEffects: (upgradeKey: string, effectKey: string) => number
+  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getPCoinUpgradeLevel: (upgradeName: string) => number
   getCampaignTokens: () => number
   getEventBellAmount: () => number
-  isEvent: boolean
+  calculateSynergismLevel: () => number
+  isEvent: () => boolean
   calculateEventSourceBuff: (buffType: EventBuffType) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
@@ -91,7 +97,8 @@ export interface RuneHelperContext {
   getPCoinUpgradeLevel: (upgradeKey: string) => number
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
+  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
   getLevelMilestone: (name: SynergismLevelMilestones) => number
   CalcECC: (refinement: string, value: number) => number
@@ -430,7 +437,7 @@ export type RuneTypeMap = {
     horseShoe: {
         ambrosiaLuck: number
         redLuck: number
-        redLuckConversion: number
+        purpleHoneyLuck: number
     }
     topHat: {
         freeOfferingLevels: number
@@ -507,6 +514,7 @@ export type TalismanTypeMap = {
     plastic: { quarkBonus: number }
     wowSquare: { evenDimBonus: number; oddDimBonus: number }
     achievement: { positiveSalvageMult: number; negativeSalvageMult: number }
+    purpleGem: { purpleHoneyLuck: number; purpleAmbrosiaDiscount: number }
     cookieGrandma: { freeCorruptionLevel: number; cookieSix: boolean }
     horseShoe: { luckPercentage: number; redLuck: number }
 }
@@ -545,6 +553,7 @@ export type RedAmbrosiaUpgradeRewards = {
     blueberryGenerationSpeed: { blueberryGenerationSpeed: number }
     regularLuck: { ambrosiaLuck: number }
     redGenerationSpeed: { redAmbrosiaGenerationSpeed: number }
+    redGenerationSpeed2: { redAmbrosiaGenerationSpeed: number }
     redLuck: { redAmbrosiaLuck: number }
     redAmbrosiaCube: { unlockedRedAmbrosiaCube: boolean }
     redAmbrosiaObtainium: { unlockRedAmbrosiaObtainium: boolean }
@@ -604,7 +613,10 @@ export interface AmbrosiaUpgradeCalculationCollection {
     ambrosiaLuck2: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck2'>
 
     ambrosiaQuarks3: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks3'>
+    ambrosiaQuarks4: AmbrosiaUpgradeCalculationConfig<'ambrosiaQuarks4'>
     ambrosiaCubes3: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubes3'>
+    ambrosiaCubes4: AmbrosiaUpgradeCalculationConfig<'ambrosiaCubes4'>
+    ambrosiaFreeCubeUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeCubeUpgrades'>
     ambrosiaLuck3: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck3'>
     ambrosiaLuck4: AmbrosiaUpgradeCalculationConfig<'ambrosiaLuck4'>
 
@@ -625,6 +637,7 @@ export interface AmbrosiaUpgradeCalculationCollection {
 
     ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeCalculationConfig<'ambrosiaInfiniteShopUpgrades1'>
     ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeCalculationConfig<'ambrosiaInfiniteShopUpgrades2'>
+    ambrosiaInfiniteShopUpgrades3: AmbrosiaUpgradeCalculationConfig<'ambrosiaInfiniteShopUpgrades3'>
 
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeCalculationConfig<'ambrosiaTalismanBonusRuneLevel'>
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeCalculationConfig<'ambrosiaRuneOOMBonus'>
@@ -634,6 +647,9 @@ export interface AmbrosiaUpgradeCalculationCollection {
     ambrosiaFreeGenerationUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeGenerationUpgrades'>
     ambrosiaFreeRedLuckUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeRedLuckUpgrades'>
     ambrosiaFreeQuarkUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeQuarkUpgrades'>
+    ambrosiaFreeObtainiumUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeObtainiumUpgrades'>
+    ambrosiaFreeOfferingUpgrades: AmbrosiaUpgradeCalculationConfig<'ambrosiaFreeOfferingUpgrades'>
+    twoMind: AmbrosiaUpgradeCalculationConfig<'twoMind'>
 }
 
 export type PseudoCoinUpgradeNames =
@@ -653,6 +669,9 @@ export type PseudoCoinUpgradeNames =
     | 'BASE_OBTAINIUM_BUFF'
     | 'RED_GENERATION_BUFF'
     | 'RED_LUCK_BUFF'
+    | 'PURPLE_LUCK_BUFF'
+    | 'PURPLE_HONEY_BUFF'
+    | 'PURPLE_REACTOR_CAPACITY_BUFF'
 
 export type PseudoCoinUpgradeEffects = Record<PseudoCoinUpgradeNames, number>
 
@@ -673,7 +692,10 @@ export const PCoinUpgradeEffects: PseudoCoinUpgradeEffects = {
     BASE_OFFERING_BUFF: 0,
     BASE_OBTAINIUM_BUFF: 0,
     RED_GENERATION_BUFF: 1,
-    RED_LUCK_BUFF: 0
+    RED_LUCK_BUFF: 0,
+    PURPLE_LUCK_BUFF: 0,
+    PURPLE_HONEY_BUFF: 0,
+    PURPLE_REACTOR_CAPACITY_BUFF: 0
 }
 
 export type AmbrosiaUpgradeRewards = {
@@ -691,7 +713,10 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaCubes2: { cubes: number }
     ambrosiaLuck2: { ambrosiaLuck: number }
     ambrosiaQuarks3: { quarks: number }
+    ambrosiaQuarks4: { quarks: number }
     ambrosiaCubes3: { cubes: number }
+    ambrosiaCubes4: { cubes: number }
+    ambrosiaFreeCubeUpgrades: { freeCubeUpgrades: number }
     ambrosiaLuck3: { ambrosiaLuck: number }
     ambrosiaLuck4: { ambrosiaLuckPercentage: number }
     ambrosiaPatreon: { blueberryGeneration: number }
@@ -705,14 +730,18 @@ export type AmbrosiaUpgradeRewards = {
     ambrosiaSingReduction1: { singularityReduction: number }
     ambrosiaInfiniteShopUpgrades1: { freeLevels: number }
     ambrosiaInfiniteShopUpgrades2: { freeLevels: number }
+    ambrosiaInfiniteShopUpgrades3: { freeLevels: number }
     ambrosiaSingReduction2: { singularityReduction: number }
     ambrosiaTalismanBonusRuneLevel: { talismanBonusRuneLevel: number }
     ambrosiaRuneOOMBonus: { runeOOMBonus: number; infiniteAscentOOMBonus: number }
-    ambrosiaBrickOfLead: { barRequirementMult: number; additiveLuckMult: number; singularitySpeedMult: number }
+    ambrosiaBrickOfLead: { barRequirementMult: number; additiveLuckMult: number; singularitySpeedMult: number; globalSpeedMult: number; ascensionSpeedMult: number }
     ambrosiaFreeQuarkUpgrades: { freeQuarkUpgrades: number }
     ambrosiaFreeLuckUpgrades: { freeLuckUpgrades: number }
     ambrosiaFreeGenerationUpgrades: { freeGenerationUpgrades: number }
     ambrosiaFreeRedLuckUpgrades: { freeRedLuckUpgrades: number }
+    ambrosiaFreeObtainiumUpgrades: { freeObtainiumUpgrades: number }
+    ambrosiaFreeOfferingUpgrades: { freeOfferingUpgrades: number }
+    twoMind: { twoMindEnabled: number }
 }
 
 export type AmbrosiaUpgradeNames = keyof AmbrosiaUpgradeRewards
@@ -883,6 +912,7 @@ export type SingularityChallengeDataKeys =
     | 'limitedTime'
     | 'sadisticPrequel'
     | 'taxmanLastStand'
+    | 'barDependence'
 
 export interface ISingularityChallengeData<T = Record<string, number | boolean>> {
     baseReq: number
@@ -904,6 +934,7 @@ export interface ISingularityChallengeData<T = Record<string, number | boolean>>
 export type ProgressiveAchievements =
     | 'runeLevel'
     | 'freeRuneLevel'
+    | 'quarkUpgrades'
     | 'antMasteries'
     | 'rebornELO'
     | 'talismanRarities'
@@ -914,6 +945,8 @@ export type ProgressiveAchievements =
     | 'octeractUpgrades'
     | 'redAmbrosiaUpgrades'
     | 'exalts'
+    | 'purpleHoneyUpgrades'
+    | 'purpleAmbrosiaUpgrades'
 
 export interface ProgressiveAchievement {
     maxPointValue: number
@@ -978,6 +1011,7 @@ export interface RedAmbrosiaUpgradeCalculationCollection {
     blueberryGenerationSpeed: RedAmbrosiaUpgradeCalculationConfig<'blueberryGenerationSpeed'>;
     regularLuck: RedAmbrosiaUpgradeCalculationConfig<'regularLuck'>;
     redGenerationSpeed: RedAmbrosiaUpgradeCalculationConfig<'redGenerationSpeed'>;
+    redGenerationSpeed2: RedAmbrosiaUpgradeCalculationConfig<'redGenerationSpeed2'>;
     redLuck: RedAmbrosiaUpgradeCalculationConfig<'redLuck'>;
     redAmbrosiaCube: RedAmbrosiaUpgradeCalculationConfig<'redAmbrosiaCube'>;
     redAmbrosiaObtainium: RedAmbrosiaUpgradeCalculationConfig<'redAmbrosiaObtainium'>;

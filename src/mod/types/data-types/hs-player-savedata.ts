@@ -322,6 +322,7 @@ export interface ShopUpgrades {
     shopRedLuck1: number;
     shopRedLuck2: number;
     shopRedLuck3: number;
+    shopRedLuck4: number;
     shopInfiniteShopUpgrades: number;
     shopHorseShoe: number;
 }
@@ -553,6 +554,7 @@ export interface Talismans {
     plastic: TalismanShards;
     wowSquare: TalismanShards;
     achievement: TalismanShards;
+    purpleGem: TalismanShards;
     cookieGrandma: TalismanShards;
     horseShoe: TalismanShards;
 }
@@ -604,7 +606,8 @@ export interface AutoChallengeTimer {
  * Represents the common structure for singularity and octeract upgrade data.
  */
 export interface UpgradeData {
-    level: number;
+    /** Present only in legacy saves. Current saves reconstruct this from the invested resource. */
+    level?: number;
     toggleBuy: number; // Often 1, could potentially be boolean
     freeLevel: number;
 }
@@ -681,6 +684,7 @@ export interface goldenQuarkUpgrades {
     halfMind: SingularityUpgradeData;
     oneMind: SingularityUpgradeData;
     wowPass4: SingularityUpgradeData;
+    wowPass5: SingularityUpgradeData;
     blueberries: SingularityUpgradeData;
     singAmbrosiaLuck: SingularityUpgradeData;
     singAmbrosiaLuck2: SingularityUpgradeData;
@@ -849,6 +853,12 @@ export interface SingularityChallengeRewards {
         antiquityOOM: number;
         horseShoeOOM: number;
     };
+    barDependence: {
+        purpleAmbrosiaCostReduction: number;
+        purpleHoneyLuck: number;
+        blueberries: number;
+        shopUpgrade: boolean;
+    };
 }
 
 /**
@@ -864,6 +874,7 @@ export interface SingularityChallenges {
     limitedTime: SingularityChallengeStatus;
     sadisticPrequel: SingularityChallengeStatus;
     taxmanLastStand: SingularityChallengeStatus;
+    barDependence: SingularityChallengeStatus;
 }
 
 /**
@@ -872,6 +883,7 @@ export interface SingularityChallenges {
 export interface AmbrosiaUpgradeData extends UpgradeData {
     ambrosiaInvested: number;
     blueberriesInvested: number;
+    purpleAmbrosiaInvested?: number;
 }
 
 /**
@@ -892,7 +904,10 @@ export interface AmbrosiaUpgrades {
     ambrosiaCubes2: AmbrosiaUpgradeData;
     ambrosiaLuck2: AmbrosiaUpgradeData;
     ambrosiaQuarks3: AmbrosiaUpgradeData;
+    ambrosiaQuarks4: AmbrosiaUpgradeData;
     ambrosiaCubes3: AmbrosiaUpgradeData;
+    ambrosiaCubes4: AmbrosiaUpgradeData;
+    ambrosiaFreeCubeUpgrades: AmbrosiaUpgradeData;
     ambrosiaLuck3: AmbrosiaUpgradeData;
     ambrosiaLuck4: AmbrosiaUpgradeData;
     ambrosiaPatreon: AmbrosiaUpgradeData;
@@ -906,6 +921,7 @@ export interface AmbrosiaUpgrades {
     ambrosiaSingReduction1: AmbrosiaUpgradeData;
     ambrosiaInfiniteShopUpgrades1: AmbrosiaUpgradeData;
     ambrosiaInfiniteShopUpgrades2: AmbrosiaUpgradeData;
+    ambrosiaInfiniteShopUpgrades3: AmbrosiaUpgradeData;
     ambrosiaSingReduction2: AmbrosiaUpgradeData;
     ambrosiaTalismanBonusRuneLevel: AmbrosiaUpgradeData;
     ambrosiaRuneOOMBonus: AmbrosiaUpgradeData;
@@ -914,6 +930,9 @@ export interface AmbrosiaUpgrades {
     ambrosiaFreeLuckUpgrades: AmbrosiaUpgradeData;
     ambrosiaFreeGenerationUpgrades: AmbrosiaUpgradeData;
     ambrosiaFreeRedLuckUpgrades: AmbrosiaUpgradeData;
+    ambrosiaFreeObtainiumUpgrades: AmbrosiaUpgradeData;
+    ambrosiaFreeOfferingUpgrades: AmbrosiaUpgradeData;
+    twoMind: AmbrosiaUpgradeData;
 }
 /**
  * Represents a single saved blueberry loadout.
@@ -956,6 +975,7 @@ export interface RedAmbrosiaUpgrades {
     blueberryGenerationSpeed: number;
     regularLuck: number;
     redGenerationSpeed: number;
+    redGenerationSpeed2: number;
     redLuck: number;
     redAmbrosiaCube: number;
     redAmbrosiaObtainium: number;
@@ -1031,6 +1051,7 @@ export interface Campaigns {
 export interface progressiveAchievements {
     "runeLevel": number;
     "freeRuneLevel": number;
+    "quarkUpgrades": number;
     "antMasteries": number;
     "rebornELO": number;
     "singularityCount": number;
@@ -1041,6 +1062,8 @@ export interface progressiveAchievements {
     "singularityUpgrades": number;
     "octeractUpgrades": number;
     "redAmbrosiaUpgrades": number;
+    "purpleHoneyUpgrades": number;
+    "purpleAmbrosiaUpgrades": number;
 }
 
 /**
@@ -1528,13 +1551,13 @@ export interface PlayerData {
   notation: 'Pure Scientific' | 'Pure Engineering' | 'Default'
 
   goldenQuarkUpgrades: Record<SingularityDataKeys, {
-    level: number
+    level?: number
     freeLevel: number
     goldenQuarksInvested: number
   }>
 
   octUpgrades: Record<OcteractUpgrades, {
-    level: number
+    level?: number
     freeLevel: number
     octeractsInvested: number
   }>
@@ -1937,6 +1960,8 @@ export interface GameData {
 
     ambrosia: number;
     lifetimeAmbrosia: number;
+    purpleAmbrosia?: number;
+    lifetimePurpleAmbrosia?: number;
 
     blueberryTime: number;
     ambrosiaRNG: number; // DEPRECIATED, DO NOT USE
@@ -1949,6 +1974,18 @@ export interface GameData {
     lifetimeRedAmbrosia: number;
     redAmbrosiaTime: number;
     redAmbrosiaUpgrades: RedAmbrosiaUpgrades;
+
+    purpleHoneyProgress?: number;
+    purpleReactor?: {
+        purpleHoney: number;
+        lifetimePurpleHoney: number;
+        storedAmbrosiaBarPoints: number;
+        storedRedAmbrosiaBarPoints: number;
+        ambrosiaBarPointPercentage: number;
+        redAmbrosiaBarPointPercentage: number;
+    };
+    purpleReactorUpgrades?: Record<string, number>;
+    purpleAmbrosiaUpgrades?: Record<string, number>;
 
     singChallengeTimer: number;
 
