@@ -2,7 +2,7 @@ import Decimal from "break_infinity.js";
 import { calcECC, parseGameDataDecimal } from "./hs-gamedata-utils";
 import { AntUpgrades, RUNE_KEYS } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { CalculationCache, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
+import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
 
 const RUNE_KEY_INDEX = new Map<RuneKeys, number>(RUNE_KEYS.map((rune, index) => [rune, index]))
 
@@ -15,6 +15,7 @@ export class RuneHelper {
     readonly #costLog10Cache = new Map<RuneKeys, number>();
     readonly #levelsPerOOMIncreaseCache = new Map<RuneKeys, number>();
     readonly #levelsPerOOMCache = new Map<RuneKeys, number>();
+    readonly #levelsPerOOMModeCache = new Map<string, number>();
     #totalRuneLevelsCache?: number;
 
     constructor(context: RuneHelperContext) {
@@ -33,6 +34,7 @@ export class RuneHelper {
             this.#runeFreeLevelsCache.clear();
             this.#levelsPerOOMIncreaseCache.clear();
             this.#levelsPerOOMCache.clear();
+            this.#levelsPerOOMModeCache.clear();
             this.#totalRuneLevelsCache = undefined;
         }
     }
@@ -238,7 +240,7 @@ export class RuneHelper {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e206'),
             levelsPerOOM: 1 / 50,
-            levelsPerOOMIncrease: () => this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'antiquityOOM'),
+            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('capricorn', 'antiquitiesOfAntGodCoefficient'),
             effects: (level: number, key?: string) => {
                 if (key === 'addCodeCooldownReduction') {
                     return level > 0 ? 0.8 - 0.3 * (level - 1) / (level + 10) : 1
@@ -257,21 +259,21 @@ export class RuneHelper {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e500'),
             levelsPerOOM: 1 / 20,
-            levelsPerOOMIncrease: () => this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'horseShoeOOM'),
+            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseShoeRuneCoefficient'),
             effects: (level: number) => {
-                const ambrosiaLuck = level
-                const redLuck = level / 5
-                const redLuckConversion = -0.5 * level / (level + 50)
+                const ambrosiaLuck = 2 * level
+                const redLuck = 2 * level / 5
+                const purpleHoneyLuck = level / 5
                 return {
                     ambrosiaLuck,
                     redLuck,
-                    redLuckConversion,
+                    purpleHoneyLuck,
                 }
             },
             effectiveLevelMult: () => 1,
             freeLevels: () => this.#ctx.getRuneBonusLevels('horseShoe'),
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean((this.#ctx.getGameData()?.singularityChallenges.taxmanLastStand.completions ?? 0) > 0),
+            isUnlocked: () => Boolean(this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseshoeRuneUnlocked')),
         },
         finiteDescent: {
             ignoreChal9: true,
@@ -350,8 +352,23 @@ export class RuneHelper {
         return this.runes[rune].costCoefficient.times(Decimal.pow(10, level / levelPerOOM).minus(1))
     }
 
-    public getLevelsPerOOM = (rune: RuneKeys): number => {
+    public getLevelsPerOOM = (rune: RuneKeys, mode: CalculationMode = 'normal'): number => {
         this.#clearCachesIfGameDataChanged();
+        if (mode !== 'normal') {
+            const modeCacheKey = `${rune}:${mode}`;
+            const modeCached = this.#levelsPerOOMModeCache.get(modeCacheKey);
+            if (modeCached !== undefined) return modeCached;
+
+            const normalValue = this.getLevelsPerOOM(rune);
+            const ambrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', mode);
+            const normalAmbrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', 'normal');
+            const ambrosiaKey = rune === 'infiniteAscent' ? 'infiniteAscentOOMBonus' : 'runeOOMBonus';
+            const result = normalValue
+                - Number(normalAmbrosiaEffects?.[ambrosiaKey] ?? 0)
+                + Number(ambrosiaEffects?.[ambrosiaKey] ?? 0);
+            this.#levelsPerOOMModeCache.set(modeCacheKey, result);
+            return result;
+        }
         const cached = this.#levelsPerOOMCache.get(rune);
         if (cached !== undefined) {
             return cached;
@@ -438,10 +455,12 @@ export class RuneHelper {
     }
 
     getRuneLevelFromEXP = (rune: RuneKeys, runeEXP: Decimal): number => {
-        const expLog10 = runeEXP.gt(0) ? runeEXP.log10() : Number.NEGATIVE_INFINITY
-        const costLog10 = this.#costLog10Cache.get(rune) ?? this.runes[rune].costCoefficient.log10()
-        const log10ExpOverCostPlus1 = expLog10 - costLog10 + 1
-
+        // Mirrors SynergismOfficial/src/Runes.ts updateLevelsFromEXP.
+        // The previous log-domain shortcut used log10(EXP) - log10(cost) + 1,
+        // which is not log10(EXP / cost + 1) and overcounted almost every rune.
+        const log10ExpOverCostPlus1 = Decimal.log10(
+            runeEXP.div(this.runes[rune].costCoefficient).plus(1)
+        )
         return Math.max(0, Math.floor(this.getLevelsPerOOM(rune) * log10ExpOverCostPlus1))
     }
 

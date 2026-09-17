@@ -13,10 +13,10 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
-import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import { GameEventResponse, GameEventResponseType, ConsumableGameEvents, GameEventID } from "../../../types/data-types/hs-event-data";
 import { HSWebSocket } from "../hs-websocket";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 
 /**
  * Class: HSGameData
@@ -63,10 +63,10 @@ export class HSGameData extends HSModule {
     #manualSaveButton?: HTMLButtonElement;
     #saveinfoElement?: HTMLParagraphElement;
     #gameDataDebugElement?: HTMLDivElement;
+    #campaignTokenElement?: HTMLHeadingElement;
     #singularityButton?: HTMLImageElement;
     #importSaveButton?: HTMLLabelElement;
     #singularityChallengeButtons?: HTMLDivElement[];
-    #campaignTokenElement?: HTMLHeadingElement;
 
     // --- Event Handlers ---
     #singularityEventHandler?: (e: MouseEvent) => Promise<void>;
@@ -79,11 +79,10 @@ export class HSGameData extends HSModule {
     // --- Player/Me/Campaign Data ---
     #playerPseudoUpgrades?: PseudoGameData;
     #meBonuses?: MeData;
-    #campaignTokenRefreshInterval?: number;
     #campaignData: CampaignData = {
         tokens: 0,
         maxTokens: 0,
-        isAtMaxTokens: false,
+        isAtMaxTokens: false
     };
 
     // --- Game Events ---
@@ -132,9 +131,9 @@ export class HSGameData extends HSModule {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
         this.#manualSaveButton = document.querySelector('#savegame') as HTMLButtonElement;
         this.#saveinfoElement = document.querySelector('#saveinfo') as HTMLParagraphElement;
+        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
         this.#singularityButton = document.querySelector('#singularitybtn') as HTMLImageElement;
         this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
-        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
     }
 
     /**
@@ -212,6 +211,28 @@ export class HSGameData extends HSModule {
         this.#campaignDataUpdated();
     }
 
+    /** Reads the exact token total rendered by CampaignManager in the game. */
+    #refreshCampaignTokens() {
+        this.#campaignTokenElement ||= document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
+        const text = this.#campaignTokenElement?.textContent ?? '';
+        const match = text.match(/^You have\s+(\d+)\s+\/\s+(\d+)\s+/);
+        if (!match) return;
+
+        const tokens = Number.parseInt(match[1], 10);
+        const maxTokens = Number.parseInt(match[2], 10);
+        this.#campaignData = {
+            tokens,
+            maxTokens,
+            isAtMaxTokens: tokens > 0 && maxTokens > 0 && tokens === maxTokens
+        };
+    }
+
+    #campaignDataUpdated() {
+        if (this.#gameDataAPI) {
+            this.#gameDataAPI._updateCampaignData(this.#campaignData);
+        }
+    }
+
     /**
      * Forces a refresh of save-derived game data only, without updating fetched pseudo/me/campaign data.
      * @returns Promise<void>
@@ -224,6 +245,11 @@ export class HSGameData extends HSModule {
 
         if (saveBtn) {
             saveBtn.dispatchEvent(this.#saveTriggerEvent);
+            // The game's save handler calls btoa synchronously, while our
+            // capture hook schedules the data update in a microtask.  Yield
+            // once so the freshly serialized save (including campaigns) is
+            // available before parsing it below.
+            await new Promise<void>((resolve) => queueMicrotask(resolve));
         } else {
             HSLogger.warn('Could not find #savegame to force refresh game data', this.context);
         }
@@ -233,6 +259,28 @@ export class HSGameData extends HSModule {
                 this.#saveData = JSON.parse(this.#mitm_gamedata) as GameData;
             } catch (err) {
                 HSLogger.error(`Failed to parse save data during forceRefreshGameData: ${err}`, this.context);
+            }
+        }
+
+        // In browsers where the save button does not pass through the hooked
+        // btoa function, localStorage is still the game's authoritative save
+        // source. Prefer it when it contains the campaign manager so the
+        // heater cannot fall back to inheritance tokens alone.
+        const storedSave = localStorage.getItem(this.#saveDataLocalStorageKey);
+        if (storedSave) {
+            try {
+                const atobFn = this.#nativeAtob ?? window.atob;
+                const parsedStoredSave = JSON.parse(atobFn(storedSave)) as GameData;
+                const currentCampaignState = this.#saveData?.campaigns as unknown as
+                    { campaigns?: Record<string, number> } | Record<string, number> | undefined;
+                const currentCampaigns = currentCampaignState && 'campaigns' in currentCampaignState
+                    ? currentCampaignState.campaigns
+                    : currentCampaignState;
+                if ((!currentCampaigns || typeof currentCampaigns !== 'object') && parsedStoredSave?.campaigns) {
+                    this.#saveData = parsedStoredSave;
+                }
+            } catch (err) {
+                HSLogger.debug(() => `Could not parse localStorage save during force refresh: ${err}`, this.context);
             }
         }
 
@@ -314,16 +362,6 @@ export class HSGameData extends HSModule {
     #meDataUpdated() {
         if (this.#gameDataAPI && this.#meBonuses) {
             this.#gameDataAPI._updateMeData(this.#meBonuses);
-        }
-    }
-
-    /**
-     * Updates campaign data in the game data API.
-     * @returns void
-     */
-    #campaignDataUpdated() {
-        if (this.#gameDataAPI && this.#campaignData) {
-            this.#gameDataAPI._updateCampaignData(this.#campaignData);
         }
     }
 
@@ -562,15 +600,6 @@ export class HSGameData extends HSModule {
 
         this.#fetchedDataRefreshInterval = setInterval(() => { self.#refreshFetchedData(); }, HSGlobal.HSGameData.fetchedDataRefreshInterval);
 
-        this.#refreshCampaignTokens();
-
-        if (this.#campaignTokenRefreshInterval) {
-            clearInterval(this.#campaignTokenRefreshInterval);
-        }
-
-        if (!this.#campaignData.isAtMaxTokens)
-            this.#campaignTokenRefreshInterval = setInterval(() => { self.#refreshCampaignTokens(); }, HSGlobal.HSGameData.campaignTokenRefreshInterval);
-
         if (!this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
         }
@@ -636,9 +665,6 @@ export class HSGameData extends HSModule {
 
         if (this.#fetchedDataRefreshInterval)
             clearInterval(this.#fetchedDataRefreshInterval);
-
-        if (this.#campaignTokenRefreshInterval)
-            clearInterval(this.#campaignTokenRefreshInterval);
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.gdsCSSId);
 
@@ -968,45 +994,6 @@ export class HSGameData extends HSModule {
             }
         }
     }
-
-    /**
-     * Refreshes campaign token data from the DOM and updates campaign state.
-     * @returns void
-     */
-    #refreshCampaignTokens() {
-        // HSLogger.debug(() => `Refreshing campaign data`, this.context);
-
-        if (!this.#campaignTokenElement) {
-            const el = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
-
-            if (el) {
-                this.#campaignTokenElement = el;
-            } else {
-                return;
-            }
-        }
-
-        const TOKEN_EL = this.#campaignTokenElement;
-
-        if (TOKEN_EL) {
-            const match = TOKEN_EL.textContent?.match(/^You have (\d+) \/ (\d+) .+$/);
-
-            if (match && match[1] && match[2]) {
-                const leftValue = parseInt(match[1], 10);
-                const rightValue = parseInt(match[2], 10);
-                this.#campaignData.tokens = leftValue;
-                this.#campaignData.maxTokens = rightValue;
-                this.#campaignData.isAtMaxTokens = ((leftValue > 0 && rightValue > 0) && (leftValue === rightValue));
-                this.#campaignDataUpdated();
-            }
-        }
-
-        if (this.#campaignData.isAtMaxTokens && this.#campaignTokenRefreshInterval) {
-            HSLogger.debug(() => `Dynamic clear of campaign token refresh interval, player is at max`, this.context);
-            clearInterval(this.#campaignTokenRefreshInterval);
-        }
-    }
-
 
     // --- Subscription Management ---
 
