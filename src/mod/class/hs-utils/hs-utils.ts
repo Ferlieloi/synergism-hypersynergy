@@ -247,22 +247,31 @@ export class HSUtils {
     }
 
     // JS native float parsing is fucky and won't work for when the number uses , like "123,456"...
-    static parseFloat2(float: any) {
-        if (!float) return NaN;
+    static parseFloat2(value: any): number {
+        if (value === null || value === undefined) return NaN;
 
-        const posC = float.indexOf(',');
-        if (posC === -1) {
-            return parseFloat(float);
-        } else {
-            float = float.replace(/,/g, '');
+        let str = String(value).trim();
+        if (!str) return NaN;
+
+        const lastComma = str.lastIndexOf(',');
+        const lastDot = str.lastIndexOf('.');
+
+        if (lastComma !== -1 && lastDot !== -1) {
+            // Both separators exist.
+            // The last one is assumed to be the decimal separator.
+            if (lastComma > lastDot) {
+                // e.g. "1.234,56" -> "1234.56"
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                // e.g. "1,234.56" -> "1234.56"
+                str = str.replace(/,/g, '');
+            }
+        } else if (lastComma !== -1) {
+            // e.g. "1234,56" -> "1234.56"
+            str = str.replace(',', '.');
         }
 
-        const posFS = float.indexOf('.');
-        if (posFS === -1) return parseFloat(float.replace(/\,/g, '.'));
-
-        const parsed = ((posC < posFS) ? (float.replace(/\,/g, '')) : (float.replace(/\./g, '').replace(',', '.')));
-
-        return parseFloat(parsed);
+        return parseFloat(str);
     }
 
     static nullProxy<T>(proxyName: string): T {

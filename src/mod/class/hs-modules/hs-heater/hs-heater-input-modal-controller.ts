@@ -3,7 +3,7 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSHeaterOptimizer } from "./hs-heater-optimizer";
+import { HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIInput } from "./hs-heater-ui-input";
@@ -241,7 +241,7 @@ export class HSHeaterInputModalController {
                     });
                     return;
                 }
-                const updatedResult = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(updatedInput);
+                const updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
             } finally {

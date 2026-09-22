@@ -1,7 +1,15 @@
 import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
 import { formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
-import { HSLogger } from "../../hs-core/hs-logger";
+
+// Keep the optimizer bundle independent from DOM/UI modules so it can run in
+// a Web Worker. Diagnostics still reach the browser console; the worker also
+// forwards thrown errors to the main thread.
+const HSLogger = {
+    debug: (_message: () => string, _context?: string): void => {},
+    warn: (message: string, context = "HSHeaterOptimizer"): void => console.warn(`[${context}]: ${message}`),
+    error: (message: string, context = "HSHeaterOptimizer"): void => console.error(`[${context}]: ${message}`),
+};
 /*
     This file closely match the script on Rus9384's sheet (credits to him),
     in order to be easily updatable when the sheet updates (and vice-versa...)
@@ -91,6 +99,7 @@ interface Stats {
     patreon:         number;
     jack:            boolean;
     voucher:         number;
+    voucherRedLevelBaseline: number;
     shopQuark:       number;
     chronometer:     number;
     shopLuck:        number;
@@ -128,6 +137,74 @@ interface Options {
     calculateSR:        boolean;
     calculateAmbOct:    boolean;
     calculateGen:       boolean;
+}
+
+export type HeaterCubeExperimentUpgrade =
+    | "ambrosiaCubes1"
+    | "ambrosiaCubes2"
+    | "ambrosiaCubes3";
+
+export interface HeaterCubeExperimentConfig {
+    /** Retain only the final N affordable raw levels for the selected tiers. */
+    cubeLevelWindows?: Partial<Record<HeaterCubeExperimentUpgrade, number>>;
+    /** Keep shifted five-level effect breakpoints below the retained window. */
+    retainMilestonesBelowWindow?: boolean;
+    /** Limit pure-Luck plus Cube/Luck hybrid spending for the Cube objective. */
+    maxLuckSpendFraction?: number;
+    /** Benchmark-only reference path for validating the fast Offering join. */
+    useLegacyOfferingSearch?: boolean;
+    /** Benchmark-only reference path for validating the fast Quark join. */
+    useLegacyQuarkSearch?: boolean;
+    /** Benchmark-only reference path for validating the cached all-Amb merge. */
+    useLegacyAllAmbMerge?: boolean;
+    /** Benchmark-only reference path for validating independent Singularity tiers. */
+    useLegacyHyperfluxMerge?: boolean;
+    /** Benchmark-only reference path for the former voucher-tier endpoint shortcut. */
+    useLegacyVoucherEndpoints?: boolean;
+    /** Benchmark-only check that cached voucher effects match a full evaluation. */
+    validateVoucherMergeScores?: boolean;
+    /** Benchmark-only check that dependent-chain deltas match a full evaluation. */
+    validateChainScores?: boolean;
+}
+
+export interface HeaterCubeExperimentSpending {
+    directCube: number;
+    pureLuck: number;
+    cubeLuckHybrid: number;
+    vouchers: number;
+    sharedOrOther: number;
+    total: number;
+}
+
+export interface HeaterCubeExperimentDiagnostics {
+    stages: Array<{
+        name: string;
+        elapsedMs: number;
+        sizes: Record<string, number>;
+    }>;
+    chainTiers: Array<{
+        upgrade: string;
+        parentCount: number;
+        enumeratedLevels: number;
+        expandedCount: number;
+        frontierCount: number;
+        elapsedMs: number;
+    }>;
+    searchPartitions: Array<{
+        leftSize: number;
+        rightSize: number;
+        variableKeys: string[];
+        groupCount: number;
+        partitioned: boolean;
+    }>;
+    cubeWinner?: {
+        levels: Record<string, number>;
+        cost: number;
+        blueberryCost: number;
+        effect: number;
+        spending: HeaterCubeExperimentSpending;
+    };
+    elapsedMs: number;
 }
 
 // ===========================================================================
@@ -179,6 +256,7 @@ let stats: Stats = {
     patreon: 0,
     jack: false,
     voucher: 0,
+    voucherRedLevelBaseline: 0,
     shopQuark: 0,
     chronometer: 0,
     shopLuck: 0,
@@ -222,6 +300,21 @@ let options: Options = {
     calculateAmbOct: false,
     calculateGen: false,
 };
+
+let cubeExperimentConfig: HeaterCubeExperimentConfig | undefined;
+let cubeExperimentDiagnostics: HeaterCubeExperimentDiagnostics | undefined;
+
+function recordCubeExperimentStage(
+  name: string,
+  startedAt: number,
+  sizes: Record<string, number> = {},
+): void {
+  cubeExperimentDiagnostics?.stages.push({
+    name,
+    elapsedMs: experimentNow() - startedAt,
+    sizes,
+  })
+}
 
 let singDebuffCache: { off: number[]; cube: number[] } = {
     off: [],
@@ -1248,8 +1341,19 @@ class Loadout {
             || (!upgradeData.ignoresExalt && (stats.exalt === 6 || stats.exalt === 8)))
             return input;
         const fn = upgradeData.effects[effect] as ((input: number, level: number, loadout: Loadout) => number) | undefined;
-        if (fn !== undefined)
-            return fn(input, this.effectiveLevel(upgrade), this);
+        if (fn !== undefined) {
+            let level = this.effectiveLevel(upgrade);
+            if (effect === "vouchers") {
+                // freeShopLevelsInfinityNoAmb already contains the persistent
+                // Red Ambrosia row levels for all three voucher modules.  A
+                // candidate therefore adds only purchased levels and Purple
+                // enchantment levels activated by that purchase.  Subtracting
+                // the Red baseline also makes an unpurchased module contribute
+                // zero here, matching SynergismOfficial's true-base export.
+                level -= stats.voucherRedLevelBaseline;
+            }
+            return fn(input, level, this);
+        }
         return input;
     }
 
@@ -1534,10 +1638,150 @@ class Loadout {
 
 }
 
+const cubeExperimentDirectCube = new Set([
+  "ambrosiaCubes1", "ambrosiaCubes2", "ambrosiaCubes3", "ambrosiaCubes4",
+  "ambrosiaFreeCubeUpgrades", "ambrosiaQuarkCube1", "ambrosiaHyperflux",
+])
+const cubeExperimentPureLuck = new Set([
+  "ambrosiaLuck1", "ambrosiaLuck2", "ambrosiaLuck3", "ambrosiaLuck4",
+  "ambrosiaFreeLuckUpgrades", "ambrosiaCubeLuck1", "ambrosiaQuarkLuck1",
+])
+const cubeExperimentCubeLuckHybrid = new Set([
+  "ambrosiaLuckCube1", "ambrosiaBrickOfLead",
+])
+const cubeExperimentVouchers = new Set([
+  "ambrosiaInfiniteShopUpgrades1", "ambrosiaInfiniteShopUpgrades2",
+  "ambrosiaInfiniteShopUpgrades3",
+])
+
+function cubeExperimentSpending(loadout: Loadout): HeaterCubeExperimentSpending {
+  const spending: HeaterCubeExperimentSpending = {
+    directCube: 0,
+    pureLuck: 0,
+    cubeLuckHybrid: 0,
+    vouchers: 0,
+    sharedOrOther: 0,
+    total: 0,
+  }
+  for (const [upgradeName, level] of Object.entries(loadout.upgradeLevels)) {
+    if (level <= 0)
+      continue
+    const cost = upgrades[upgradeName].cost(level)
+    spending.total += cost
+    if (cubeExperimentDirectCube.has(upgradeName))
+      spending.directCube += cost
+    else if (cubeExperimentPureLuck.has(upgradeName))
+      spending.pureLuck += cost
+    else if (cubeExperimentCubeLuckHybrid.has(upgradeName))
+      spending.cubeLuckHybrid += cost
+    else if (cubeExperimentVouchers.has(upgradeName))
+      spending.vouchers += cost
+    else
+      spending.sharedOrOther += cost
+  }
+  return spending
+}
+
+function cubeExperimentLuckSpend(loadout: Loadout): number {
+  const spending = cubeExperimentSpending(loadout)
+  return spending.pureLuck + spending.cubeLuckHybrid
+}
+
 
 // ===========================================================================
 // Table helpers (mirrors sheet_script trimTable/generateTable/mergeTables/findOpt)
 // ===========================================================================
+
+// The overlap cost in 2*union - left - right is monotone in the right row
+// only when every upgrade shared with the left table has a fixed level in the
+// right table.  In that case the old early break is mathematically safe and
+// avoids scanning the remainder of a sorted cost frontier.  Variable shared
+// levels disable it because overlap savings could otherwise make a later row
+// affordable again.
+function fixedSharedLevels(table1: Loadout[], table2: Loadout[]): boolean {
+  if (table1.length === 0 || table2.length === 0)
+    return true
+  const leftKeys = new Set(Object.keys(table1[0].upgradeLevels))
+  const shared = new Set<string>()
+  for (const loadout of table1)
+    for (const key of Object.keys(loadout.upgradeLevels))
+      leftKeys.add(key)
+  for (const loadout of table2)
+    for (const key of Object.keys(loadout.upgradeLevels))
+      if (leftKeys.has(key)) shared.add(key)
+  for (const key of shared) {
+    let min = Infinity
+    let max = -Infinity
+    for (const loadout of table2) {
+      const level = loadout.upgradeLevels[key] ?? 0
+      min = Math.min(min, level)
+      max = Math.max(max, level)
+    }
+    if (min !== max)
+      return false
+  }
+  return true
+}
+
+// Split a large right frontier by every shared upgrade level that varies in
+// that frontier.  Within each group the overlap cost is fixed and union cost
+// is monotone, so the exact search can stop at the first unaffordable row.
+function groupBySharedLevels(table1: Loadout[], table2: Loadout[]): Loadout[][] | undefined {
+  const leftKeys = new Set<string>()
+  for (const loadout of table1)
+    for (const key of Object.keys(loadout.upgradeLevels))
+      leftKeys.add(key)
+
+  const first = table2[0]
+  const variableKeys: string[] = []
+  for (const key of leftKeys) {
+    const firstLevel = first.upgradeLevels[key] ?? 0
+    if (table2.some(loadout => (loadout.upgradeLevels[key] ?? 0) !== firstLevel))
+      variableKeys.push(key)
+  }
+  if (variableKeys.length === 0)
+    return undefined
+
+  const groups = new Map<string, Loadout[]>()
+  for (const loadout of table2) {
+    const signature = variableKeys.map(key => loadout.upgradeLevels[key] ?? 0).join(',')
+    const group = groups.get(signature)
+    if (group) group.push(loadout)
+    else groups.set(signature, [loadout])
+    // A very fragmented frontier gains nothing from partitioning.  Fall back
+    // to the original exact search instead of allocating hundreds of groups.
+    if (groups.size > 32) {
+      cubeExperimentDiagnostics?.searchPartitions.push({
+        leftSize: table1.length,
+        rightSize: table2.length,
+        variableKeys,
+        groupCount: groups.size,
+        partitioned: false,
+      })
+      return undefined
+    }
+  }
+  const partitioned = groups.size > 1
+  cubeExperimentDiagnostics?.searchPartitions.push({
+    leftSize: table1.length,
+    rightSize: table2.length,
+    variableKeys,
+    groupCount: groups.size,
+    partitioned,
+  })
+  return partitioned ? [...groups.values()] : undefined
+}
+
+// Partition whenever the ungrouped Cartesian search is large enough to make
+// fixed-overlap early exits worthwhile.  The old per-side thresholds missed
+// narrow-by-wide searches such as Offerings (roughly 500 x 9,000 candidates),
+// even though those contain millions of exact pair checks.
+function shouldGroupSharedLevelSearch(table1: Loadout[], table2: Loadout[]): boolean {
+  return table1.length > 100
+    && table2.length > 100
+    && (table1.length > 5000 && table2.length > 1000
+      || table1.length * table2.length > 1_000_000)
+}
 
 // Removes suboptimal loadouts from the table
 function trimTable(table: Loadout[], stat: string): Loadout[] {
@@ -1707,23 +1951,98 @@ function trimTableWithDependency(table: Loadout[], stat: string, dependency: str
 // each tier avoids materialising the full Cartesian product (which was the
 // dominant cost for the SR cube search), while the dependency-aware trim keeps
 // every state that can improve a later tier.
+function experimentNow(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now()
+}
+
+function effectiveBlueberryCost(upgradeName: string): number {
+  return Math.max(
+    0,
+    upgrades[upgradeName].blueberryCost
+      - (stats.ambrosiaUpgradeBlueberryCostReductions[upgradeName] ?? 0),
+  )
+}
+
+function cubeExperimentPrerequisiteLevels(upgradeName: string): Set<number> {
+  const levels = new Set<number>()
+  for (const upgrade of Object.values(upgrades)) {
+    const level = upgrade.prerequisites[upgradeName]
+    if (level !== undefined && level > 0)
+      levels.add(level)
+  }
+  return levels
+}
+
+function cubeExperimentRetainedLevels(
+  upgradeName: string,
+  preLoadout: Loadout,
+  minimumLevel: number,
+): Set<number> | undefined {
+  const window = cubeExperimentConfig?.cubeLevelWindows?.[upgradeName as HeaterCubeExperimentUpgrade]
+  if (window === undefined || window <= 0)
+    return undefined
+
+  const upgrade = upgrades[upgradeName]
+  let maximumAffordable = 0
+  for (let level = Math.max(1, minimumLevel); level <= upgrade.maxLevel; level++) {
+    if (preLoadout.cost + upgrade.cost(level) > stats.amb)
+      break
+    maximumAffordable = level
+  }
+  const retained = new Set<number>()
+  const firstHighLevel = Math.max(minimumLevel, maximumAffordable - Math.max(1, Math.floor(window)) + 1)
+  for (let level = firstHighLevel; level <= maximumAffordable; level++)
+    retained.add(level)
+
+  for (const level of cubeExperimentPrerequisiteLevels(upgradeName)) {
+    if (level >= minimumLevel && level <= maximumAffordable)
+      retained.add(level)
+  }
+
+  if (cubeExperimentConfig?.retainMilestonesBelowWindow) {
+    for (let level = minimumLevel; level < firstHighLevel; level++) {
+      const probe = new Loadout(preLoadout)
+      probe.upgradeLevels[upgradeName] = level
+      probe.invalidateCaches()
+      if (probe.effectiveLevel(upgradeName) % 5 === 0)
+        retained.add(level)
+    }
+  }
+  return retained
+}
+
 function generateDependentChainTable(
   selectedUpgrades: string[],
   stat: string,
   minLevels: Record<string, number> = {},
 ): Loadout[] {
+    const dependentEffect: Record<string, string> = {
+      ambrosiaLuck1: 'ambrosiaLuck2',
+      ambrosiaQuarks1: 'ambrosiaQuarks2',
+      ambrosiaQuarks2: 'ambrosiaQuarks3',
+      ambrosiaCubes1: 'ambrosiaCubes2',
+      ambrosiaCubes2: 'ambrosiaCubes3',
+      ambrosiaTalismanBonusRuneLevel: 'ambrosiaRuneOOMBonus',
+    }
     let table: Loadout[] = [new Loadout()]
     for (let index = 0; index < selectedUpgrades.length; index++) {
+      const startedAt = experimentNow()
       const upgradeName = selectedUpgrades[index]
       const upgrade = upgrades[upgradeName]
       const expanded: Loadout[] = []
+      const parentCount = table.length
+      let enumeratedLevels = 0
 
       for (const parentLoadout of table) {
         const parentStat = parentLoadout.getStat(stat)
         // Keep the branch where this tier is not purchased unless the caller
         // explicitly requires a minimum level (the sheet uses this for the
         // luck-I local-optimum table).
-        if ((minLevels[upgradeName] ?? 0) <= 0) {
+        const experimentWindow = cubeExperimentConfig?.cubeLevelWindows?.[upgradeName as HeaterCubeExperimentUpgrade]
+        const omitZeroExperimentCandidate = experimentWindow !== undefined
+          && experimentWindow > 0
+          && effectiveBlueberryCost(upgradeName) === 0
+        if ((minLevels[upgradeName] ?? 0) <= 0 && !omitZeroExperimentCandidate) {
           const loadout = new Loadout(parentLoadout)
           loadout.setCachedStat(stat, parentStat)
           expanded.push(loadout)
@@ -1741,29 +2060,66 @@ function generateDependentChainTable(
         preLoadout.upgradeLevels[upgradeName] = 0
         preLoadout.invalidateCaches()
         const prerequisiteStat = preLoadout.getStat(stat)
+        const minimumLevel = minLevels[upgradeName] ?? 1
+        const retainedLevels = cubeExperimentRetainedLevels(upgradeName, preLoadout, minimumLevel)
 
-        for (let level = minLevels[upgradeName] ?? 1; level <= upgrade.maxLevel; level++) {
+        for (let level = minimumLevel; level <= upgrade.maxLevel; level++) {
           const cost = preLoadout.cost + upgrade.cost(level)
           if (stats.amb < cost)
             break
+          if (retainedLevels !== undefined && !retainedLevels.has(level))
+            continue
+          enumeratedLevels++
           const loadout = new Loadout(preLoadout)
           loadout.upgradeLevels[upgradeName] = level
-          // The chain is ordered so this tier is the only newly introduced
-          // effect.  Apply it to the pre-final-multiplier value, then restore
-          // that multiplier.  Luck/offerings/obtainium are additive before
-          // their final multipliers; cube/quark/oct effects are multiplicative.
+          // Red free levels already affect an unpurchased tier. Apply only
+          // the difference between old and new effective effects, including
+          // the next tier's cross-effect (which can be active at raw 0), and
+          // the Purple free-level jump at raw 1.
+          const dependent = dependentEffect[upgradeName]
           let chainStat: number
-          if (stat === "luck") {
-            const multiplier = 1 + preLoadout.getStat("mLuck")
-            const additive = loadout.getEffect(prerequisiteStat / multiplier, upgradeName, "luck")
-            chainStat = additive * multiplier
-          } else if (stat === "obt" || stat === "off") {
-            const multiplier = preLoadout.getStat(stat === "obt" ? "mObt" : "mOff")
-            const additive = loadout.getEffect(prerequisiteStat / multiplier, upgradeName, stat)
-            chainStat = additive * multiplier
+          if (stat === 'luck') {
+            const multiplier = 1 + preLoadout.getStat('mLuck')
+            const effectDelta = (name: string): number => loadout.getEffect(0, name, 'luck')
+              - preLoadout.getEffect(0, name, 'luck')
+            const beforeUnassigned = stats.blueberries - preLoadout.blueberryCost
+            const afterUnassigned = stats.blueberries - loadout.blueberryCost
+            const beforeLeo = beforeUnassigned >= 5 ? beforeUnassigned * stats.purpleLeoLevel : 0
+            const afterLeo = afterUnassigned >= 5 ? afterUnassigned * stats.purpleLeoLevel : 0
+            chainStat = (prerequisiteStat / multiplier + effectDelta(upgradeName)
+              + (dependent ? effectDelta(dependent) : 0) + afterLeo - beforeLeo) * multiplier
+          } else if (stat === 'obt' || stat === 'off') {
+            const multiplierStat = stat === 'obt' ? 'mObt' : 'mOff'
+            const oldMultiplier = preLoadout.getStat(multiplierStat)
+            const newMultiplier = loadout.getStat(multiplierStat)
+            const oldEffect = preLoadout.getEffect(0, upgradeName, stat)
+            const newEffect = loadout.getEffect(0, upgradeName, stat)
+            chainStat = (prerequisiteStat / oldMultiplier + newEffect - oldEffect) * newMultiplier
           } else {
-            const effectMultiplier = loadout.getEffect(1, upgradeName, stat as keyof UpgradeEffectMap)
-            chainStat = prerequisiteStat * effectMultiplier
+            const effectRatio = (name: string): number => {
+              const oldEffect = preLoadout.getEffect(1, name, stat as keyof UpgradeEffectMap)
+              return oldEffect === 0 ? 1
+                : loadout.getEffect(1, name, stat as keyof UpgradeEffectMap) / oldEffect
+            }
+            let ratio = effectRatio(upgradeName)
+            if (dependent)
+              ratio *= effectRatio(dependent)
+            // Red-free Luck hybrids are active even with no raw purchase.
+            // Their factors can change when this tier consumes a blueberry
+            // and Purple Leo consequently changes unassigned-berry Luck.
+            if (stats.purpleLeoLevel > 0 && loadout.blueberryCost !== preLoadout.blueberryCost) {
+              const hybrid = stat === 'cube' ? 'ambrosiaLuckCube1'
+                : stat === 'quark' ? 'ambrosiaLuckQuark1' : undefined
+              if (hybrid)
+                ratio *= effectRatio(hybrid)
+            }
+            chainStat = prerequisiteStat * ratio
+          }
+          if (cubeExperimentConfig?.validateChainScores) {
+            const actual = loadout.getStat(stat)
+            if (Math.abs(actual - chainStat) > 1e-9 * Math.max(1, Math.abs(actual))) {
+              throw new Error(`Dependent ${stat} mismatch: cached=${chainStat}, actual=${actual}, loadout=${JSON.stringify(loadout.upgradeLevels)}`)
+            }
           }
           loadout.setCachedStat(stat, chainStat)
           expanded.push(loadout)
@@ -1777,15 +2133,24 @@ function generateDependentChainTable(
         table = trimTableWithDependency(expanded, stat, upgradeName)
       else
         table = trimTable(expanded, stat)
+      cubeExperimentDiagnostics?.chainTiers.push({
+        upgrade: upgradeName,
+        parentCount,
+        enumeratedLevels,
+        expandedCount: expanded.length,
+        frontierCount: table.length,
+        elapsedMs: experimentNow() - startedAt,
+      })
     }
     return table
 }
 
-// Infinite-shop voucher levels are fungible: every purchased level contributes
-// exactly one voucher, while tier 2/3 only add a higher price and require the
-// preceding tier to be full.  Therefore the cheapest exact representation of
-// N vouchers is always tier 1 first, then tier 2, then tier 3.  Generating that
-// canonical sequence avoids searching thousands of equivalent allocations.
+// SynergismOfficial checks purchased (not effective) levels for prerequisites:
+// tier 2 requires 20 purchased tier-1 levels and tier 3 requires 20 purchased
+// tier-2 levels.  The canonical tier-1 -> tier-2 -> tier-3 sequence is therefore
+// the complete legal purchase path, including the important tier-2/3 level-1
+// rows that activate their Purple Ambrosia enchantment levels.  Generating only
+// that path avoids searching impossible or equivalent allocations.
 function generateVoucherTable(stat: string): Loadout[] {
     if (stats.exalt === 4)
       return [new Loadout()]
@@ -1813,70 +2178,309 @@ function generateVoucherTable(stat: string): Loadout[] {
     return trimTable(result, stat)
 }
 
+// Luck builds buy vouchers after their direct modules. Some voucher levels
+// leave the displayed Red Luck unchanged because its conversion rounds down;
+// prefer the most purchased vouchers among equal-scoring affordable rows.
+function addLastPriorityVouchers(
+  loadout: Loadout,
+  voucherTable: Loadout[],
+  stat: "luck" | "rLuck" | "allAmb",
+): Loadout {
+  let best = new Loadout(loadout)
+  let bestValue = best.getStat(stat)
+  let bestVouchers = (best.upgradeLevels.ambrosiaInfiniteShopUpgrades1 ?? 0)
+    + (best.upgradeLevels.ambrosiaInfiniteShopUpgrades2 ?? 0)
+    + (best.upgradeLevels.ambrosiaInfiniteShopUpgrades3 ?? 0)
+  for (const row of voucherTable) {
+    const candidate = Loadout.union(loadout, row)
+    if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
+      continue
+    const value = candidate.getStat(stat)
+    const vouchers = (candidate.upgradeLevels.ambrosiaInfiniteShopUpgrades1 ?? 0)
+      + (candidate.upgradeLevels.ambrosiaInfiniteShopUpgrades2 ?? 0)
+      + (candidate.upgradeLevels.ambrosiaInfiniteShopUpgrades3 ?? 0)
+    if (value > bestValue || (value === bestValue && vouchers > bestVouchers)) {
+      best = candidate
+      bestValue = value
+      bestVouchers = vouchers
+    }
+  }
+  return best
+}
+
+// A rounded displayed score can leave an already-selected module one level
+// short despite spare Ambrosia. Spend only the remaining budget, retain every
+// existing module, and never reduce the exact objective value.
+function fillSelectedLuckModules(
+  loadout: Loadout,
+  stat: "luck" | "rLuck" | "allAmb",
+): Loadout {
+  let current = new Loadout(loadout)
+  let currentValue = current.getStat(stat)
+  const relevant = new Set([
+    ...(upgradeEffectKeys.luck ?? []),
+    ...(upgradeEffectKeys.mLuck ?? []),
+    ...(stat === "luck" ? [] : upgradeEffectKeys.rLuck ?? []),
+    ...(stat === "allAmb" ? upgradeEffectKeys.speed ?? [] : []),
+    ...(stat === "allAmb" ? upgradeEffectKeys.rSpeed ?? [] : []),
+  ])
+  for (const name of upgradeKeyOrder) {
+    if (!relevant.has(name) || (current.upgradeLevels[name] ?? 0) <= 0)
+      continue
+    while ((current.upgradeLevels[name] ?? 0) < upgrades[name].maxLevel) {
+      const candidate = new Loadout(current)
+      candidate.upgradeLevels[name] = (candidate.upgradeLevels[name] ?? 0) + 1
+      if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
+        break
+      const value = candidate.getStat(stat)
+      if (value < currentValue)
+        break
+      current = candidate
+      currentValue = value
+    }
+  }
+  return current
+}
+
 // Voucher rows include their prerequisite chain (Patreon, tutorial, and the
 // preceding voucher tiers).  The cube/oct table can contain some of those same
 // prerequisites, so merge by max level rather than adding the two totals.
 // Evaluating the incremental effects directly avoids re-running every upgrade
 // effect for every pair in the 2D merge.
 function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cube" | "oct"): Loadout[] {
-    const result: Loadout[] = []
+    type VoucherCandidate = {
+      item: Loadout;
+      voucher: Loadout;
+      cost: number;
+      blueberryCost: number;
+      value: number;
+      factor: number;
+    }
+    const candidates: VoucherCandidate[] = []
     const octeracts = stat === "oct"
-    for (const item of table) {
-      const baseStat = item.getStat(stat)
+    type VoucherMergeRow = {
+      loadout: Loadout;
+      entries: Array<{ name: string; level: number }>;
+      voucherDelta: number;
+    }
+    type VoucherTier = {
+      rows: VoucherMergeRow[];
+      adjustmentsBySignature: Map<string, { costs: Float64Array; blueberries: Uint16Array }>;
+      factorsBySignature: Map<string, Float64Array>;
+    }
+
+    // Voucher count rises with cost, so intermediate rows are not dominated:
+    // their saved Ambrosia can fund a stronger Cube or Luck upgrade later.
+    // In particular, Purple free levels activate at the first purchased level
+    // of a module, making that intermediate row especially valuable.
+    const tierRows = new Map<number, VoucherTier>()
+    const relevantUpgradeNames = new Set<string>()
+    for (const voucher of voucherTable) {
+      const entries = Object.entries(voucher.upgradeLevels)
+        .filter(([, level]) => level > 0)
+        .map(([name, level]) => ({ name, level }))
+      for (const { name } of entries)
+        relevantUpgradeNames.add(name)
+      const row: VoucherMergeRow = {
+        loadout: voucher,
+        entries,
+        // getStat includes purchased levels and Purple free levels only after
+        // their module is active. The persistent Red levels are already in the
+        // exported baseline and cancel out of this delta.
+        voucherDelta: voucher.getStat("vouchers") - stats.voucher,
+      }
+      const tier = voucher.blueberryCost
+      const group = tierRows.get(tier)
+      if (group) group.rows.push(row)
+      else tierRows.set(tier, {
+        rows: [row], adjustmentsBySignature: new Map(), factorsBySignature: new Map(),
+      })
+    }
+    // Voucher prerequisites may raise Cubes I, which changes Cubes II's
+    // effect. Free Cube shop levels and Brick affect the voucher-dependent
+    // shop/ascension factors. Voucher shop levels also change Luck through
+    // Panthema, which feeds the Red-free Luck-Cube effect even at raw level 0.
+    const relevantNames = [...new Set([
+      ...relevantUpgradeNames,
+      'ambrosiaCubes2', 'ambrosiaFreeCubeUpgrades', 'ambrosiaBrickOfLead',
+      'ambrosiaLuckCube1',
+    ])]
+
+    const adjustmentsFor = (
+      item: Loadout,
+      signature: string,
+      tier: VoucherTier,
+    ): { costs: Float64Array; blueberries: Uint16Array } => {
+      const cached = tier.adjustmentsBySignature.get(signature)
+      if (cached !== undefined)
+        return cached
+      const costs = new Float64Array(tier.rows.length)
+      const blueberries = new Uint16Array(tier.rows.length)
+      for (let index = 0; index < tier.rows.length; index++) {
+        for (const { name, level } of tier.rows[index].entries) {
+          const oldLevel = item.upgradeLevels[name] ?? 0
+          if (level <= oldLevel)
+            continue
+          costs[index] += upgrades[name].cost(level) - upgrades[name].cost(oldLevel)
+          if (oldLevel <= 0) {
+            blueberries[index] += Math.max(
+              0,
+              upgrades[name].blueberryCost
+                - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0),
+            )
+          }
+        }
+      }
+      const result = { costs, blueberries }
+      tier.adjustmentsBySignature.set(signature, result)
+      return result
+    }
+
+    const effectFactor = (
+      item: Loadout,
+      voucherRow: VoucherMergeRow,
+    ): number => {
+      const voucher = voucherRow.loadout
+      const union = Loadout.union(item, voucher)
+      let extraStatFactor = 1
+      for (const { name } of voucherRow.entries) {
+        if (name.startsWith("ambrosiaInfiniteShopUpgrades"))
+          continue
+        if (union.effectiveLevel(name) <= item.effectiveLevel(name))
+          continue
+        const oldEffect = item.getEffect(1, name, stat)
+        const newEffect = union.getEffect(1, name, stat)
+        if (oldEffect !== 0)
+          extraStatFactor *= newEffect / oldEffect
+      }
+      if (union.effectiveLevel('ambrosiaCubes1') > item.effectiveLevel('ambrosiaCubes1')) {
+        // Cubes II reads Cubes I's effective level, even when its own raw
+        // level is unchanged by the voucher prerequisite merge.
+        const oldCubes2 = item.getEffect(1, 'ambrosiaCubes2', stat)
+        if (oldCubes2 !== 0)
+          extraStatFactor *= union.getEffect(1, 'ambrosiaCubes2', stat) / oldCubes2
+      }
+      const oldLuckCube = item.getEffect(1, 'ambrosiaLuckCube1', stat)
+      if (oldLuckCube !== 0)
+        extraStatFactor *= union.getEffect(1, 'ambrosiaLuckCube1', stat) / oldLuckCube
       const baseInfinity = Upgrade.infinityCubeShopEffect(item, octeracts)
+      const infinity = Upgrade.infinityCubeShopEffect(union, octeracts)
       const baseAscension = octeracts
         ? Upgrade.octeractAscensionSpeedEffect(item)
         : Upgrade.cubeAscensionSpeedEffect(item)
+      const ascension = octeracts
+        ? Upgrade.octeractAscensionSpeedEffect(union)
+        : Upgrade.cubeAscensionSpeedEffect(union)
+      return extraStatFactor * (infinity / baseInfinity) * (ascension / baseAscension)
+    }
 
-      for (const voucher of voucherTable) {
-        let cost = item.cost
-        let blueberryCost = item.blueberryCost
-        for (const upgradeName in voucher.upgradeLevels) {
-          const oldLevel = item.upgradeLevels[upgradeName] ?? 0
-          const newLevel = voucher.upgradeLevels[upgradeName] ?? 0
-          if (newLevel <= oldLevel)
-            continue
-          cost += upgrades[upgradeName].cost(newLevel) - upgrades[upgradeName].cost(oldLevel)
-          if (oldLevel <= 0)
-            blueberryCost += Math.max(
-              0,
-              upgrades[upgradeName].blueberryCost
-                - (stats.ambrosiaUpgradeBlueberryCostReductions[upgradeName] ?? 0),
-            )
+    for (const item of table) {
+      const itemCost = item.cost
+      const itemBlueberries = item.blueberryCost
+      const itemValue = item.getStat(stat)
+      const signature = `${relevantNames.map(name => item.upgradeLevels[name] ?? 0).join(',')},${itemBlueberries},${item.luck}`
+      for (const tier of tierRows.values()) {
+        const { rows } = tier
+        const adjustments = adjustmentsFor(item, signature, tier)
+        let low = 0
+        let high = rows.length - 1
+        let bestIndex = -1
+        while (low <= high) {
+          const middle = (low + high) >> 1
+          const cost = itemCost + adjustments.costs[middle]
+          const blueberryCost = itemBlueberries + adjustments.blueberries[middle]
+          if (cost <= stats.amb && blueberryCost <= stats.blueberries) {
+            bestIndex = middle
+            low = middle + 1
+          } else {
+            high = middle - 1
+          }
         }
-        // Canonical voucher rows are ordered by voucher count.  Their cost and
-        // blueberry charge never decrease, so once a row is unaffordable all
-        // later (more expensive) voucher rows can be skipped for this item.
-        if (cost > stats.amb || blueberryCost > stats.blueberries)
-          break
-
-        const union = Loadout.union(item, voucher)
-        const voucherCount = voucher.upgradeLevels.ambrosiaInfiniteShopUpgrades1
-          + voucher.upgradeLevels.ambrosiaInfiniteShopUpgrades2
-          + voucher.upgradeLevels.ambrosiaInfiniteShopUpgrades3
-        union.setCachedStat("vouchers", stats.voucher + voucherCount)
-        union.setCachedCosts(cost, blueberryCost)
-        let extraStatFactor = 1
-        for (const upgradeName in voucher.upgradeLevels) {
-          if (upgradeName.startsWith("ambrosiaInfiniteShopUpgrades"))
-            continue
-          if (union.effectiveLevel(upgradeName) <= item.effectiveLevel(upgradeName))
-            continue
-          const oldEffect = item.getEffect(1, upgradeName, stat)
-          const newEffect = union.getEffect(1, upgradeName, stat)
-          if (oldEffect !== 0)
-            extraStatFactor *= newEffect / oldEffect
+        if (bestIndex >= 0) {
+          let factors = tier.factorsBySignature.get(signature)
+          if (factors === undefined) {
+            factors = new Float64Array(rows.length)
+            factors.fill(Number.NaN)
+            tier.factorsBySignature.set(signature, factors)
+          }
+          const start = cubeExperimentConfig?.useLegacyVoucherEndpoints ? bestIndex : 0
+          for (let index = start; index <= bestIndex; index++) {
+            let factor = factors[index]
+            if (Number.isNaN(factor)) {
+              factor = effectFactor(item, rows[index])
+              factors[index] = factor
+            }
+            candidates.push({
+              item,
+              voucher: rows[index].loadout,
+              cost: itemCost + adjustments.costs[index],
+              blueberryCost: itemBlueberries + adjustments.blueberries[index],
+              value: itemValue * factor,
+              factor,
+            })
+          }
         }
-        const infinity = Upgrade.infinityCubeShopEffect(union, octeracts)
-        const ascension = octeracts
-          ? Upgrade.octeractAscensionSpeedEffect(union)
-          : Upgrade.cubeAscensionSpeedEffect(union)
-        union.setCachedStat(stat, baseStat * extraStatFactor
-          * (infinity / baseInfinity) * (ascension / baseAscension))
-        result.push(union)
       }
     }
-    return trimTable(result, stat)
+    if (candidates.length === 0)
+      return [new Loadout()]
+
+    // Trim compact scalar candidates before constructing Loadouts. Each
+    // retained row is still the full (cost, blueberries, Cube/Octeract) Pareto
+    // frontier; no intermediate voucher prefix is discarded in advance.
+    const berryValues = [...new Set(candidates.map(row => row.blueberryCost))].sort((a, b) => a - b)
+    const berryIndices = new Map(berryValues.map((value, index) => [value, index + 1]))
+    const tree = new Float64Array(berryValues.length + 1)
+    tree.fill(-Infinity)
+    const query = (index: number): number => {
+      let best = -Infinity
+      while (index > 0) {
+        best = Math.max(best, tree[index])
+        index -= index & -index
+      }
+      return best
+    }
+    const update = (index: number, value: number): void => {
+      while (index < tree.length) {
+        tree[index] = Math.max(tree[index], value)
+        index += index & -index
+      }
+    }
+    candidates.sort((a, b) => a.cost - b.cost || b.value - a.value
+      || a.blueberryCost - b.blueberryCost)
+    const result: Loadout[] = []
+    for (const row of candidates) {
+      const index = berryIndices.get(row.blueberryCost)!
+      if (query(index) >= row.value)
+        continue
+      update(index, row.value)
+      const union = Loadout.union(row.item, row.voucher)
+      if (cubeExperimentConfig?.validateVoucherMergeScores) {
+        const actual = union.getStat(stat)
+        const actualBefore = new Loadout(row.item).getStat(stat)
+        const expected = actualBefore * row.factor
+        if (Math.abs(actual - expected) > 1e-9 * Math.max(1, Math.abs(actual))) {
+          const directFactor = effectFactor(row.item, {
+            loadout: row.voucher,
+            entries: Object.entries(row.voucher.upgradeLevels)
+              .filter(([, level]) => level > 0)
+              .map(([name, level]) => ({ name, level })),
+            voucherDelta: row.voucher.getStat('vouchers') - stats.voucher,
+          })
+          const changedEffects = (upgradeEffectKeys[stat] ?? []).map(name => {
+            const before = row.item.getEffect(1, name, stat)
+            const after = union.getEffect(1, name, stat)
+            return { name, ratio: after / before }
+          }).filter(entry => Math.abs(entry.ratio - 1) > 1e-12)
+          throw new Error(`Voucher ${stat} effect mismatch: expected=${expected}, actual=${actual}, cachedFactor=${row.factor}, directFactor=${directFactor}, changedEffects=${JSON.stringify(changedEffects)}, loadout=${JSON.stringify(union.upgradeLevels)}`)
+        }
+      }
+      union.setCachedCosts(row.cost, row.blueberryCost)
+      union.setCachedStat('vouchers', row.voucher.getStat('vouchers'))
+      union.setCachedStat(stat, row.value)
+      result.push(union)
+    }
+    return result
 }
 
 // Luck-Cube is the only cube/oct upgrade in this merge whose effect reads the
@@ -1886,19 +2490,79 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
 // a full getStat() pass for every pair while retaining the exact max-level
 // union semantics.
 function mergeLuckCubeTable(tableLuck: Loadout[], tableBrick: Loadout[], stat: "cube" | "oct"): Loadout[] {
-    const result: Loadout[] = []
     const octeracts = stat === "oct"
-    for (const luckLoadout of tableLuck) {
+    const brickRowsByBaseLevel = new Map<number, number[]>()
+    const rowsForBrickLevel = (baseBrickLevel: number): number[] => {
+      const cached = brickRowsByBaseLevel.get(baseBrickLevel)
+      if (cached !== undefined)
+        return cached
+
+      // A luck loadout can already contain Brick of Lead. All right-hand rows
+      // at or below that level produce the same union for a given Luck-Cube
+      // level, so evaluating every one only creates duplicate candidates.
+      const seen = new Set<string>()
+      const rows: number[] = []
+      for (let index = 0; index < tableBrick.length; index++) {
+        const row = tableBrick[index]
+        const luckCubeLevel = row.upgradeLevels.ambrosiaLuckCube1 ?? 0
+        const brickLevel = Math.max(baseBrickLevel, row.upgradeLevels.ambrosiaBrickOfLead ?? 0)
+        const key = `${luckCubeLevel},${brickLevel}`
+        if (seen.has(key))
+          continue
+        seen.add(key)
+        rows.push(index)
+      }
+      brickRowsByBaseLevel.set(baseBrickLevel, rows)
+      return rows
+    }
+
+    // This merge used to materialise roughly 2.4 million complete Loadout
+    // objects and then discard almost all of them in trimTable.  Keep the
+    // exact same three-dimensional candidates in compact numeric buffers,
+    // trim those buffers, and only construct the surviving loadouts.
+    const maximumCandidates = tableLuck.length * tableBrick.length
+    const luckIndices = new Uint32Array(maximumCandidates)
+    const brickIndices = new Uint16Array(maximumCandidates)
+    const costs = new Float64Array(maximumCandidates)
+    const blueberryCosts = new Uint16Array(maximumCandidates)
+    const values = new Float64Array(maximumCandidates)
+    let candidateCount = 0
+
+    const cube1Factors = new Float64Array(upgrades.ambrosiaCubes1.maxLevel + 1)
+    for (let level = 0; level <= upgrades.ambrosiaCubes1.maxLevel; level++) {
+      const loadout = new Loadout()
+      loadout.upgradeLevels.ambrosiaCubes1 = level
+      loadout.invalidateCaches()
+      cube1Factors[level] = loadout.getEffect(1, "ambrosiaCubes1", stat)
+    }
+    const luckCubeLevels = new Float64Array(upgrades.ambrosiaLuckCube1.maxLevel + 1)
+    for (let level = 0; level <= upgrades.ambrosiaLuckCube1.maxLevel; level++) {
+      const loadout = new Loadout()
+      loadout.upgradeLevels.ambrosiaLuckCube1 = level
+      luckCubeLevels[level] = loadout.effectiveLevel("ambrosiaLuckCube1")
+    }
+    const ascensionFactors = new Float64Array(upgrades.ambrosiaBrickOfLead.maxLevel + 1)
+    for (let level = 0; level <= upgrades.ambrosiaBrickOfLead.maxLevel; level++) {
+      const loadout = new Loadout()
+      loadout.upgradeLevels.ambrosiaBrickOfLead = level
+      loadout.setCachedStat("vouchers", stats.voucher)
+      ascensionFactors[level] = octeracts
+        ? Upgrade.octeractAscensionSpeedEffect(loadout)
+        : Upgrade.cubeAscensionSpeedEffect(loadout)
+    }
+    const baseAscension = ascensionFactors[0]
+
+    for (let luckIndex = 0; luckIndex < tableLuck.length; luckIndex++) {
+      const luckLoadout = tableLuck[luckIndex]
       const baseLuck = luckLoadout.getStat("luck")
       const baseMLuck = luckLoadout.getStat("mLuck")
       const baseAdditiveLuck = baseLuck / (1 + baseMLuck)
       const baseStat = luckLoadout.getStat(stat)
-      const baseAscension = octeracts
-        ? Upgrade.octeractAscensionSpeedEffect(luckLoadout)
-        : Upgrade.cubeAscensionSpeedEffect(luckLoadout)
       const luckBrickLevel = luckLoadout.effectiveLevel("ambrosiaBrickOfLead")
+      const brickRows = rowsForBrickLevel(luckLoadout.upgradeLevels.ambrosiaBrickOfLead ?? 0)
 
-      for (const brickLoadout of tableBrick) {
+      for (const brickIndex of brickRows) {
+        const brickLoadout = tableBrick[brickIndex]
         // Only a handful of prerequisite keys occur on the brick-side table.
         // Add their incremental max-level cost/blueberry charge instead of
         // rescanning every upgrade in union.cost/union.blueberryCost.
@@ -1920,39 +2584,78 @@ function mergeLuckCubeTable(tableLuck: Loadout[], tableBrick: Loadout[], stat: "
         if (cost > stats.amb || blueberryCost > stats.blueberries)
           continue
 
-        const union = Loadout.union(luckLoadout, brickLoadout)
-        union.setCachedCosts(cost, blueberryCost)
-        union.setCachedStat("vouchers", stats.voucher)
-        const unionBrickLevel = union.effectiveLevel("ambrosiaBrickOfLead")
+        const rawBrickLevel = Math.max(
+          luckLoadout.upgradeLevels.ambrosiaBrickOfLead ?? 0,
+          brickLoadout.upgradeLevels.ambrosiaBrickOfLead ?? 0,
+        )
+        const unionBrickLevel = rawBrickLevel > 0
+          ? rawBrickLevel + stats.bonus[upgrades.ambrosiaBrickOfLead.row]
+            + (stats.ambrosiaUpgradeBonusLevels.ambrosiaBrickOfLead ?? 0)
+          : stats.bonus[upgrades.ambrosiaBrickOfLead.row]
         const addedBrick = Math.max(0, unionBrickLevel - luckBrickLevel)
         const unionMLuck = baseMLuck + 0.02 * addedBrick
         const baseBlueberries = stats.blueberries - luckLoadout.blueberryCost
-        const unionBlueberries = stats.blueberries - union.blueberryCost
+        const unionBlueberries = stats.blueberries - blueberryCost
         const purpleLeoDelta = (unionBlueberries >= 5 ? unionBlueberries * stats.purpleLeoLevel : 0)
           - (baseBlueberries >= 5 ? baseBlueberries * stats.purpleLeoLevel : 0)
         const unionLuck = (baseAdditiveLuck + purpleLeoDelta) * (1 + unionMLuck)
         const luckCubeFactor = 1 + 0.0005 * unionLuck
-          * union.effectiveLevel("ambrosiaLuckCube1")
-        let extraCubeFactor = 1
-        for (const upgradeName in brickLoadout.upgradeLevels) {
-          if (upgradeName === "ambrosiaLuckCube1")
-            continue
-          if (union.effectiveLevel(upgradeName) <= luckLoadout.effectiveLevel(upgradeName))
-            continue
-          const oldEffect = luckLoadout.getEffect(1, upgradeName, stat)
-          const newEffect = union.getEffect(1, upgradeName, stat)
-          if (oldEffect !== 0)
-            extraCubeFactor *= newEffect / oldEffect
-        }
-        const unionAscension = octeracts
-          ? Upgrade.octeractAscensionSpeedEffect(union)
-          : Upgrade.cubeAscensionSpeedEffect(union)
+          * luckCubeLevels[brickLoadout.upgradeLevels.ambrosiaLuckCube1 ?? 0]
+        const baseCube1Level = luckLoadout.upgradeLevels.ambrosiaCubes1 ?? 0
+        const unionCube1Level = Math.max(baseCube1Level, brickLoadout.upgradeLevels.ambrosiaCubes1 ?? 0)
+        const extraCubeFactor = cube1Factors[unionCube1Level] / cube1Factors[baseCube1Level]
 
-        union.setCachedStat(stat, baseStat * extraCubeFactor * luckCubeFactor * (unionAscension / baseAscension))
-        result.push(union)
+        luckIndices[candidateCount] = luckIndex
+        brickIndices[candidateCount] = brickIndex
+        costs[candidateCount] = cost
+        blueberryCosts[candidateCount] = blueberryCost
+        values[candidateCount] = baseStat * extraCubeFactor * luckCubeFactor
+          * (ascensionFactors[rawBrickLevel] / baseAscension)
+        candidateCount++
       }
     }
-    return trimTable(result, stat)
+
+    const order = new Uint32Array(candidateCount)
+    for (let index = 0; index < candidateCount; index++)
+      order[index] = index
+    order.sort((left, right) => costs[left] - costs[right]
+      || values[right] - values[left]
+      || blueberryCosts[left] - blueberryCosts[right]
+      || left - right)
+
+    const tree = new Float64Array(stats.blueberries + 2)
+    tree.fill(Number.NEGATIVE_INFINITY)
+    const query = (index: number): number => {
+      let result = Number.NEGATIVE_INFINITY
+      while (index > 0) {
+        result = Math.max(result, tree[index])
+        index -= index & -index
+      }
+      return result
+    }
+    const update = (index: number, value: number): void => {
+      while (index < tree.length) {
+        tree[index] = Math.max(tree[index], value)
+        index += index & -index
+      }
+    }
+
+    const result: Loadout[] = []
+    for (const candidateIndex of order) {
+      const berryIndex = blueberryCosts[candidateIndex] + 1
+      if (query(berryIndex) >= values[candidateIndex])
+        continue
+      const union = Loadout.union(
+        tableLuck[luckIndices[candidateIndex]],
+        tableBrick[brickIndices[candidateIndex]],
+      )
+      union.setCachedCosts(costs[candidateIndex], blueberryCosts[candidateIndex])
+      union.setCachedStat("vouchers", stats.voucher)
+      union.setCachedStat(stat, values[candidateIndex])
+      result.push(union)
+      update(berryIndex, values[candidateIndex])
+    }
+    return result.length > 0 ? result : [new Loadout()]
 }
 
 // Generates a table of locally optimal loadouts for selected upgrades
@@ -2005,16 +2708,20 @@ function generateTable(selectedUpgrades: string[], stat: string, minLevels: Reco
     let emptyLoadout = new Loadout()
     table.push(emptyLoadout)
     processUpgrade(0, emptyLoadout)
-    return trimTable(table, stat)
+    const trimmed = trimTable(table, stat)
+    return trimmed
 
   }
 
 // Merges two tables with locally optimal loadouts
 function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadout[] {
     const result: Loadout[] = [];
+    const useOverlapBreak = fixedSharedLevels(table1, table2)
     for (let item1 of table1)
       for (let item2 of table2) {
         let union = Loadout.union(item1, item2)
+        if (useOverlapBreak && 2 * union.cost - item1.cost - item2.cost > stats.amb)
+          break
         // The union cost is not monotone in item2.cost when the two tables
         // share prerequisite upgrades.  Never use the old overlap heuristic
         // as a break condition: it could discard later affordable rows and
@@ -2031,7 +2738,8 @@ function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadou
       }
     if (result.length <= 0)
       result.push(new Loadout)
-    return trimTable(result, stat)
+    const trimmed = trimTable(result, stat)
+    return trimmed
   }
 
 // Merge tables whose upgrade sets are independent (the rune table is used in
@@ -2056,89 +2764,1184 @@ function mergeIndependentTables(table1: Loadout[], table2: Loadout[], stat: stri
         result.push(union)
       }
     }
-    return trimTable(result, stat)
+    const trimmed = trimTable(result, stat)
+    return trimmed
 }
 
-// Finds the globally optimal loadout among affordable ones
-function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = stats.amb): Loadout {
+// Exact all-Ambrosia merge with cached cross-table Luck work.  The right
+// frontier varies multiplicative Luck, generation and Red Luck, while any
+// additive-Luck prerequisites it introduces are fixed inside a shared-level
+// group.  Compute that additive base once per left row/group, then retain the
+// same full Cartesian candidate set and the same Pareto trim as mergeTables.
+function mergeAllAmbTables(table1: Loadout[], table2: Loadout[]): Loadout[] {
+    let groups: Loadout[][] = [table2]
+    if (!fixedSharedLevels(table1, table2)) {
+      const partitioned = groupBySharedLevels(table1, table2)
+      if (partitioned === undefined)
+        return mergeTables(table1, table2, "allAmb")
+      groups = partitioned
+    }
 
-    let power = 0, j = 0;
-    let upperBounds: Array<{ budget: number; loadout: Loadout }> = [];
-    // An optimization for large tables
-    if (stat !== "allAmb" && table1.length > 100 && table2.length > 100) {
-      // Only consider 100 points in each table
+    const result: Loadout[] = []
+    for (const group of groups) {
+      const rightMetadata = group.map(loadout => ({
+        loadout,
+        mLuck: loadout.getStat("mLuck"),
+        speed: loadout.getStat("speed"),
+        rSpeed: loadout.getStat("rSpeed"),
+      }))
+      for (const left of table1) {
+        const baseline = Loadout.union(left, group[0])
+        const baselineUnassigned = stats.blueberries - baseline.blueberryCost
+        const baselinePurpleLeo = baselineUnassigned >= 5
+          ? baselineUnassigned * stats.purpleLeoLevel
+          : 0
+        const baselineAdditiveLuck = baseline.getStat("luck") / (1 + rightMetadata[0].mLuck)
+        for (const right of rightMetadata) {
+          if (right.loadout.cost > stats.amb)
+            break
+          const union = Loadout.union(left, right.loadout)
+          if (union.cost > stats.amb || union.blueberryCost > stats.blueberries)
+            continue
+          const unassigned = stats.blueberries - union.blueberryCost
+          const purpleLeo = unassigned >= 5 ? unassigned * stats.purpleLeoLevel : 0
+          const luck = (baselineAdditiveLuck + purpleLeo - baselinePurpleLeo) * (1 + right.mLuck)
+          union.setCachedStat("luck", luck)
+          union.setCachedStat("mLuck", right.mLuck)
+          union.setCachedStat("speed", right.speed)
+          union.setCachedStat("rSpeed", right.rSpeed)
+          union.setCachedStat("allAmb", union.getStat("amb") * union.getStat("rAmb"))
+          result.push(union)
+        }
+      }
+    }
+    return trimTable(result.length > 0 ? result : [new Loadout()], "allAmb")
+}
+
+type FindOptState = {
+    budget: number;
+    power: number;
+    j: number;
+    upperBounds: Array<{ budget: number; table2Index: number }>;
+    upperBoundIndex: number;
+    opt: Loadout;
+};
+
+type CubeLuckEvaluation = {
+    left: Loadout;
+    right?: Loadout;
+    fixed?: Loadout;
+    cost: number;
+    blueberryCost: number;
+    value: number;
+};
+
+type LuckScaledResourceEvaluation = {
+    left: Loadout;
+    right?: Loadout;
+    fixed?: Loadout;
+    cost: number;
+    blueberryCost: number;
+    value: number;
+};
+
+type CubeLuckRightMetadata = {
+    loadout: Loadout;
+    entries: Array<{ name: string; level: number }>;
+    additiveLuck: number;
+    mLuck: number;
+    rawBrick: number;
+    rawLuckCube: number;
+    rawTutorial: number;
+    rawCube1: number;
+    freeLuckLevel: number;
+    vouchers: number;
+};
+
+// The large final Cube/Oct + Luck merge has a deliberately narrow overlap:
+// the right side can add Luck-Cube, Brick of Lead, and their Tutorial/Cubes-I
+// prerequisites. Evaluate those interactions numerically and only build a
+// complete Loadout for the winning candidate (or for the existing blueberry
+// repair fallback). This is the same game formula used by Loadout.getStat.
+function createCubeLuckEvaluator(table2: Loadout[], stat: "cube" | "oct", fixedShared: boolean) {
+    const octeracts = stat === "oct"
+    const effectsEnabled = stats.exalt !== 6 && stats.exalt !== 8
+    const rightMetadata: CubeLuckRightMetadata[] = table2.map(source => {
+      // Recompute once under the current Exalt/stat state. SR temporarily
+      // changes that state after the shared frontier was first generated.
+      const loadout = new Loadout(source)
+      const mLuck = loadout.getStat("mLuck")
+      return {
+        loadout: source,
+        entries: Object.entries(source.upgradeLevels).map(([name, level]) => ({ name, level })),
+        additiveLuck: loadout.getStat("luck") / (1 + mLuck),
+        mLuck,
+        rawBrick: source.upgradeLevels.ambrosiaBrickOfLead ?? 0,
+        rawLuckCube: source.upgradeLevels.ambrosiaLuckCube1 ?? 0,
+        rawTutorial: source.upgradeLevels.ambrosiaTutorial ?? 0,
+        rawCube1: source.upgradeLevels.ambrosiaCubes1 ?? 0,
+        freeLuckLevel: loadout.effectiveLevel("ambrosiaFreeLuckUpgrades"),
+        vouchers: loadout.getStat("vouchers"),
+      }
+    })
+    const ascensionCache = new Map<number, number>()
+    const leftLuckCache = new Map<string, number>()
+    let overlapLeft: Loadout | undefined
+    let overlapCost = 0
+    let overlapBlueberries = 0
+    const fixedRight = table2[0]
+    const ascension = (vouchers: number, rawBrick: number): number => {
+      const key = vouchers * (upgrades.ambrosiaBrickOfLead.maxLevel + 1) + rawBrick
+      const cached = ascensionCache.get(key)
+      if (cached !== undefined)
+        return cached
+      const loadout = new Loadout()
+      loadout.upgradeLevels.ambrosiaBrickOfLead = rawBrick
+      loadout.setCachedStat("vouchers", vouchers)
+      const value = octeracts
+        ? Upgrade.octeractAscensionSpeedEffect(loadout)
+        : Upgrade.cubeAscensionSpeedEffect(loadout)
+      ascensionCache.set(key, value)
+      return value
+    }
+    const effectiveLevel = (name: string, rawLevel: number): number => {
+      const upgrade = upgrades[name]
+      if (upgrade.requiresExalt9 && !stats.exalt9Unlocked)
+        return 0
+      let level = rawLevel
+      if (name === "ambrosiaTutorial")
+        level += stats.tutorialBonus
+      level += stats.bonus[upgrade.row] ?? 0
+      if (rawLevel > 0)
+        level += stats.ambrosiaUpgradeBonusLevels[name] ?? 0
+      return level
+    }
+    const tutorialFactor = (rawLevel: number): number => effectsEnabled
+      ? 1 + 0.05 * effectiveLevel("ambrosiaTutorial", rawLevel)
+      : 1
+    const cube1Factor = (rawLevel: number): number => {
+      if (!effectsEnabled)
+        return 1
+      const level = effectiveLevel("ambrosiaCubes1", rawLevel)
+      return (1 + 0.05 * level) * 1.1 ** Math.floor(level / 5)
+    }
+
+    const evaluate = (
+      left: Loadout,
+      rightIndex: number,
+      repairBlueberries: boolean,
+    ): CubeLuckEvaluation => {
+      const metadata = rightMetadata[rightIndex]
+      const right = metadata.loadout
+      let cost: number
+      let blueberryCost: number
+      if (fixedShared) {
+        if (overlapLeft !== left) {
+          overlapLeft = left
+          overlapCost = 0
+          overlapBlueberries = 0
+          for (const [name, rightLevel] of Object.entries(fixedRight.upgradeLevels)) {
+            const leftLevel = left.upgradeLevels[name] ?? 0
+            if (leftLevel <= 0 || rightLevel <= 0)
+              continue
+            overlapCost += upgrades[name].cost(Math.min(leftLevel, rightLevel))
+            overlapBlueberries += Math.max(
+              0,
+              upgrades[name].blueberryCost
+                - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0),
+            )
+          }
+        }
+        cost = left.cost + right.cost - overlapCost
+        blueberryCost = left.blueberryCost + right.blueberryCost - overlapBlueberries
+      } else {
+        cost = left.cost
+        blueberryCost = left.blueberryCost
+        for (const entry of metadata.entries) {
+          const oldLevel = left.upgradeLevels[entry.name] ?? 0
+          if (entry.level <= oldLevel)
+            continue
+          cost += upgrades[entry.name].cost(entry.level) - upgrades[entry.name].cost(oldLevel)
+          if (oldLevel <= 0)
+            blueberryCost += Math.max(
+              0,
+              upgrades[entry.name].blueberryCost
+                - (stats.ambrosiaUpgradeBlueberryCostReductions[entry.name] ?? 0),
+            )
+        }
+      }
+
+      if (repairBlueberries && blueberryCost > stats.blueberries) {
+        const fixed = Loadout.union(left, right)
+        fixed.fixBlueberryUpgrades()
+        return {
+          left,
+          right,
+          fixed,
+          cost: fixed.cost,
+          blueberryCost: fixed.blueberryCost,
+          value: fixed.getStat(stat),
+        }
+      }
+
+      const vouchers = left.getStat("vouchers")
+      const rightBlueberries = stats.blueberries - right.blueberryCost
+      const unionBlueberries = stats.blueberries - blueberryCost
+      const purpleLeoDelta = (unionBlueberries >= 5 ? unionBlueberries * stats.purpleLeoLevel : 0)
+        - (rightBlueberries >= 5 ? rightBlueberries * stats.purpleLeoLevel : 0)
+      let panthemaDelta = 0
+      if (effectsEnabled && stats.exalt !== 4 && stats.panthemaLevel > 0 && metadata.freeLuckLevel > 0) {
+        panthemaDelta = 0.2 * stats.panthemaLevel
+          * (stats.shopBonusLevels.ambrosiaLuck + metadata.freeLuckLevel)
+          * 0.01 * stats.panthemaLevel * (vouchers - metadata.vouchers)
+      }
+      const luck = (metadata.additiveLuck + purpleLeoDelta + panthemaDelta) * (1 + metadata.mLuck)
+      const luckCubeLevel = effectiveLevel("ambrosiaLuckCube1", metadata.rawLuckCube)
+      const leftLuckKey = `${left.blueberryCost},${vouchers}`
+      let leftLuck = leftLuckCache.get(leftLuckKey)
+      if (leftLuck === undefined) {
+        const luckLoadout = new Loadout()
+        luckLoadout.setCachedCosts(0, left.blueberryCost)
+        luckLoadout.setCachedStat("vouchers", vouchers)
+        leftLuck = luckLoadout.getStat("luck")
+        leftLuckCache.set(leftLuckKey, leftLuck)
+      }
+      const leftLuckCubeLevel = effectiveLevel("ambrosiaLuckCube1", 0)
+      const luckCubeFactor = effectsEnabled
+        ? (1 + 0.0005 * luck * luckCubeLevel)
+          / (1 + 0.0005 * leftLuck * leftLuckCubeLevel)
+        : 1
+      const leftTutorial = left.upgradeLevels.ambrosiaTutorial ?? 0
+      const leftCube1 = left.upgradeLevels.ambrosiaCubes1 ?? 0
+      const prerequisiteFactor = tutorialFactor(Math.max(leftTutorial, metadata.rawTutorial)) / tutorialFactor(leftTutorial)
+        * cube1Factor(Math.max(leftCube1, metadata.rawCube1)) / cube1Factor(leftCube1)
+      const rawBrick = Math.max(left.upgradeLevels.ambrosiaBrickOfLead ?? 0, metadata.rawBrick)
+      const ascensionFactor = ascension(vouchers, rawBrick)
+        / ascension(vouchers, left.upgradeLevels.ambrosiaBrickOfLead ?? 0)
+
+      return {
+        left,
+        right,
+        cost,
+        blueberryCost,
+        value: left.getStat(stat) * prerequisiteFactor * luckCubeFactor * ascensionFactor,
+      }
+    }
+
+    const materialize = (candidate: CubeLuckEvaluation): Loadout => {
+      if (candidate.fixed !== undefined)
+        return candidate.fixed
+      if (candidate.right === undefined)
+        return candidate.left
+      const union = Loadout.union(candidate.left, candidate.right)
+      union.setCachedCosts(candidate.cost, candidate.blueberryCost)
+      union.setCachedStat(stat, candidate.value)
+      return union
+    }
+
+    return { evaluate, materialize }
+}
+
+// Offerings I multiplies the left-side Offering result by a factor based on
+// the Luck supplied by the right frontier.  Constructing a complete Loadout
+// and recalculating every unrelated effect for each of the millions of pairs
+// dominated the Offering search.  The two tables have fixed shared levels, so
+// their cost/blueberry overlap is constant per left row and the only changing
+// cross-table effect is that Luck factor.  Evaluate that formula numerically,
+// while retaining the established full repair path for over-budget blueberry
+// combinations and materialising the exact winning Loadout at the end.
+function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[]) {
+    const rightMetadata = table2.map(loadout => {
+      const mLuck = loadout.getStat("mLuck")
+      return {
+        loadout,
+        additiveLuck: loadout.getStat("luck") / (1 + mLuck),
+        mLuck,
+      }
+    })
+    const fixedRight = table2[0]
+    const leftMetadata = new WeakMap<Loadout, {
+      overlapCost: number;
+      overlapBlueberries: number;
+      offeringLevel: number;
+      valueWithoutLuckModule: number;
+    }>()
+
+    for (const left of table1) {
+      let overlapCost = 0
+      let overlapBlueberries = 0
+      for (const [name, leftLevel] of Object.entries(left.upgradeLevels)) {
+        const rightLevel = fixedRight.upgradeLevels[name] ?? 0
+        if (leftLevel <= 0 || rightLevel <= 0)
+          continue
+        overlapCost += upgrades[name].cost(Math.min(leftLevel, rightLevel))
+        overlapBlueberries += Math.max(
+          0,
+          upgrades[name].blueberryCost
+            - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0),
+        )
+      }
+      const offeringLevel = left.effectiveLevel("ambrosiaOffering1")
+      const currentLuckFactor = 1 + 0.001 * left.luck * offeringLevel
+      leftMetadata.set(left, {
+        overlapCost,
+        overlapBlueberries,
+        offeringLevel,
+        valueWithoutLuckModule: left.getStat("off") / currentLuckFactor,
+      })
+    }
+
+    const evaluate = (
+      left: Loadout,
+      rightIndex: number,
+      repairBlueberries: boolean,
+    ): LuckScaledResourceEvaluation => {
+      const right = rightMetadata[rightIndex]
+      const metadata = leftMetadata.get(left)!
+      const cost = left.cost + right.loadout.cost - metadata.overlapCost
+      const blueberryCost = left.blueberryCost + right.loadout.blueberryCost
+        - metadata.overlapBlueberries
+
+      if (repairBlueberries && blueberryCost > stats.blueberries) {
+        const fixed = Loadout.union(left, right.loadout)
+        fixed.fixBlueberryUpgrades()
+        return {
+          left,
+          right: right.loadout,
+          fixed,
+          cost: fixed.cost,
+          blueberryCost: fixed.blueberryCost,
+          value: fixed.getStat("off"),
+        }
+      }
+
+      const rightUnassigned = stats.blueberries - right.loadout.blueberryCost
+      const unionUnassigned = stats.blueberries - blueberryCost
+      const purpleLeoDelta = (unionUnassigned >= 5 ? unionUnassigned * stats.purpleLeoLevel : 0)
+        - (rightUnassigned >= 5 ? rightUnassigned * stats.purpleLeoLevel : 0)
+      const luck = (right.additiveLuck + purpleLeoDelta) * (1 + right.mLuck)
+      return {
+        left,
+        right: right.loadout,
+        cost,
+        blueberryCost,
+        value: metadata.valueWithoutLuckModule * (1 + 0.001 * luck * metadata.offeringLevel),
+      }
+    }
+
+    const materialize = (candidate: LuckScaledResourceEvaluation): Loadout => {
+      if (candidate.fixed !== undefined)
+        return candidate.fixed
+      if (candidate.right === undefined)
+        return candidate.left
+      const union = Loadout.union(candidate.left, candidate.right)
+      union.setCachedCosts(candidate.cost, candidate.blueberryCost)
+      union.setCachedStat("off", candidate.value)
+      return union
+    }
+
+    return { evaluate, materialize }
+}
+
+function findLuckScaledOfferingOpt(
+  table1: Loadout[],
+  table2: Loadout[],
+  budget = stats.amb,
+): Loadout {
+    const evaluator = createLuckScaledOfferingEvaluator(table1, table2)
+    let power = 0
+    let j = 0
+    const upperBounds: Array<{ budget: number; table2Index: number }> = []
+    if (table1.length > 100 && table2.length > 100) {
       for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
         for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
-          let loadout1 = table1.at(-Math.round(i))!;
-          let loadout2 = table2[Math.round(next)]
-          let union = Loadout.union(loadout1, loadout2)
-          // The sampled pass must never seed `power` with a candidate that
-          // exceeds the blueberry budget.  Otherwise the exact pass can prune
-          // every affordable candidate below that inflated value.
-          if (union.blueberryCost > stats.blueberries)
-            union.fixBlueberryUpgrades()
+          const table2Index = Math.round(next)
+          const loadout1 = table1.at(-Math.round(i))!
+          const loadout2 = table2[table2Index]
+          if (loadout2.cost > budget)
+            break
+          const union = evaluator.evaluate(loadout1, table2Index, true)
           if (2 * union.cost - loadout1.cost - loadout2.cost > budget) {
-            // This unaffordable loadout serves as a local upper bound
-            upperBounds.push({budget: loadout1.cost, loadout: loadout2})
-            break // Every next loadout will be more expensive
+            upperBounds.push({ budget: loadout1.cost, table2Index })
+            break
           }
           if (union.cost > budget || union.blueberryCost > stats.blueberries)
-            continue // Can't afford this loadout, try the next one
-          power = Math.max(power, union.getStat(stat)) // The best approximate solution
+            continue
+          power = Math.max(power, union.value)
           j = next
         }
       }
     }
 
-    let opt = table1[0]; j = 0;
-    let upperBoundIndex = 0;
+    let opt: LuckScaledResourceEvaluation = {
+      left: table1[0],
+      cost: table1[0].cost,
+      blueberryCost: table1[0].blueberryCost,
+      value: table1[0].getStat("off"),
+    }
+    j = 0
+    let upperBoundIndex = 0
     for (let i = 1; i <= table1.length; i++) {
-        let ref = table1.at(-i)!;
-        // Find appropriate loadout2 from previously computed upper bounds
-        // budget denotes how much we would spend in loadout1, the rest goes to loadout2
-        // upperBounds are sorted by budget in a descending order
-        // Hence we need to find the first entry with budget <= loadout1.cost
-        // That way we ensure the loadout2 from upperBounds uses at least as much amb as we have to spare
-        // If it uses more, that's not a problem, this is an *upper* bound, after all
-        while (upperBoundIndex < upperBounds.length
-          && upperBounds[upperBoundIndex].budget > ref.cost)
-          upperBoundIndex++
-        let upperBound = upperBounds[upperBoundIndex]?.loadout
-        if (upperBound !== undefined) {
-            let boundUnion = Loadout.union(ref, upperBound);
-            if (boundUnion.getStat(stat) < power)
-                continue; // Every loadout generated with table.at(-i) will be suboptimal
+      const ref = table1.at(-i)!
+      while (upperBoundIndex < upperBounds.length
+        && upperBounds[upperBoundIndex].budget > ref.cost)
+        upperBoundIndex++
+      const upperBound = upperBounds[upperBoundIndex]
+      if (upperBound !== undefined) {
+        const boundUnion = evaluator.evaluate(ref, upperBound.table2Index, false)
+        if (boundUnion.value < power)
+          continue
+      }
+      if (table2[j].cost > budget)
+        continue
+      let union = evaluator.evaluate(ref, j, true)
+      if (union.cost > budget)
+        continue
+      for (let next = j + 1; next < table2.length; next++) {
+        if (table2[next].cost > budget)
+          break
+        const nextUnion = evaluator.evaluate(ref, next, budget < Number.POSITIVE_INFINITY)
+        if (2 * nextUnion.cost - ref.cost - table2[next].cost > budget)
+          break
+        if (nextUnion.cost > budget) {
+          if (nextUnion.blueberryCost <= stats.blueberries)
+            break
+          continue
         }
-        let union = Loadout.union(ref, table2[j]);
-        if (union.blueberryCost > stats.blueberries)
-            union.fixBlueberryUpgrades();
-        if (union.cost > budget)
-            continue; // Can't afford this loadout, try a cheaper one
-        for (let next = j + 1; next < table2.length; next++) {
-            let nextUnion = Loadout.union(ref, table2[next]);
-            if (budget < Number.POSITIVE_INFINITY && nextUnion.blueberryCost > stats.blueberries)
-              nextUnion.fixBlueberryUpgrades()
-            // Union cost is not monotone when prerequisite upgrades overlap;
-            // the former overlap heuristic could skip valid affordable rows.
-            // Only the independent table2 cost is a safe monotone bound.
-            if (table2[next].cost > budget)
-                break;
-            if (nextUnion.getStat(stat) <= union.getStat(stat))
-                continue;
-            if (nextUnion.cost > budget)
-                continue; // Can't afford this loadout, try the next one
-            union = nextUnion;
-            j = next;
-        }
-        let statDiff = union.getStat(stat) - opt.getStat(stat);
-        // If one loadout is stronger than the other, choose it
-        // If both are equally powerful, choose the cheaper one
-        if (statDiff > 0 || (statDiff === 0 && union.cost < opt.cost))
-            opt = union;
+        if (nextUnion.value <= union.value)
+          continue
+        union = nextUnion
+        j = next
+      }
+      const statDiff = union.value - opt.value
+      if (statDiff > 0 || (statDiff === 0 && union.cost < opt.cost))
+        opt = union
+    }
+    return evaluator.materialize(opt)
+}
+
+// Quark + Luck has a similarly small cross-table surface: the Luck side can
+// raise Tutorial/Quarks-I prerequisites and adds the Luck-Quark hybrid.  All
+// remaining Quark multipliers are already contained in the left frontier.
+// Evaluate just those ratios instead of rebuilding a full Loadout for every
+// candidate pair.
+function createQuarkLuckEvaluator(table1: Loadout[], table2: Loadout[]) {
+    const effectsEnabled = stats.exalt !== 6 && stats.exalt !== 8
+    const effectiveLevel = (name: string, rawLevel: number): number => {
+      const upgrade = upgrades[name]
+      if (upgrade.requiresExalt9 && !stats.exalt9Unlocked)
+        return 0
+      let level = rawLevel
+      if (name === "ambrosiaTutorial")
+        level += stats.tutorialBonus
+      level += stats.bonus[upgrade.row] ?? 0
+      if (rawLevel > 0)
+        level += stats.ambrosiaUpgradeBonusLevels[name] ?? 0
+      return level
+    }
+    const tutorialFactor = (rawLevel: number): number => effectsEnabled
+      ? 1 + 0.01 * effectiveLevel("ambrosiaTutorial", rawLevel)
+      : 1
+    const quarks1Factor = (rawLevel: number): number => effectsEnabled
+      ? 1 + 0.01 * effectiveLevel("ambrosiaQuarks1", rawLevel)
+      : 1
+    const quarks2Factor = (rawLevel: number, rawQuarks1: number): number => {
+      if (!effectsEnabled)
+        return 1
+      const level = effectiveLevel("ambrosiaQuarks2", rawLevel)
+      const quarks1 = effectiveLevel("ambrosiaQuarks1", rawQuarks1)
+      return 1 + (0.01 + Math.floor(quarks1 / 10) * 0.001) * level
+    }
+    const luckQuarkFactor = (luck: number, rawLevel: number): number => {
+      if (!effectsEnabled)
+        return 1
+      const level = effectiveLevel("ambrosiaLuckQuark1", rawLevel)
+      return 1 + 0.0001 * Math.min(luck, Math.sqrt(1000 * luck)) * level
     }
 
-    return opt;
+    const rightMetadata = table2.map(loadout => {
+      const mLuck = loadout.getStat("mLuck")
+      return {
+        loadout,
+        additiveLuck: loadout.getStat("luck") / (1 + mLuck),
+        mLuck,
+        rawTutorial: loadout.upgradeLevels.ambrosiaTutorial ?? 0,
+        rawQuarks1: loadout.upgradeLevels.ambrosiaQuarks1 ?? 0,
+        rawLuckQuark: loadout.upgradeLevels.ambrosiaLuckQuark1 ?? 0,
+      }
+    })
+    const fixedRight = table2[0]
+    const leftMetadata = new WeakMap<Loadout, {
+      overlapCost: number;
+      overlapBlueberries: number;
+      rawTutorial: number;
+      rawQuarks1: number;
+      rawQuarks2: number;
+      luck: number;
+      value: number;
+    }>()
+    for (const left of table1) {
+      let overlapCost = 0
+      let overlapBlueberries = 0
+      for (const [name, leftLevel] of Object.entries(left.upgradeLevels)) {
+        const rightLevel = fixedRight.upgradeLevels[name] ?? 0
+        if (leftLevel <= 0 || rightLevel <= 0)
+          continue
+        overlapCost += upgrades[name].cost(Math.min(leftLevel, rightLevel))
+        overlapBlueberries += Math.max(
+          0,
+          upgrades[name].blueberryCost
+            - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0),
+        )
+      }
+      leftMetadata.set(left, {
+        overlapCost,
+        overlapBlueberries,
+        rawTutorial: left.upgradeLevels.ambrosiaTutorial ?? 0,
+        rawQuarks1: left.upgradeLevels.ambrosiaQuarks1 ?? 0,
+        rawQuarks2: left.upgradeLevels.ambrosiaQuarks2 ?? 0,
+        luck: left.luck,
+        value: left.getStat("quark"),
+      })
+    }
 
+    const evaluate = (
+      left: Loadout,
+      rightIndex: number,
+      repairBlueberries: boolean,
+    ): LuckScaledResourceEvaluation => {
+      const right = rightMetadata[rightIndex]
+      const metadata = leftMetadata.get(left)!
+      const cost = left.cost + right.loadout.cost - metadata.overlapCost
+      const blueberryCost = left.blueberryCost + right.loadout.blueberryCost
+        - metadata.overlapBlueberries
+      if (repairBlueberries && blueberryCost > stats.blueberries) {
+        const fixed = Loadout.union(left, right.loadout)
+        fixed.fixBlueberryUpgrades()
+        return {
+          left,
+          right: right.loadout,
+          fixed,
+          cost: fixed.cost,
+          blueberryCost: fixed.blueberryCost,
+          value: fixed.getStat("quark"),
+        }
+      }
+
+      const rightUnassigned = stats.blueberries - right.loadout.blueberryCost
+      const unionUnassigned = stats.blueberries - blueberryCost
+      const purpleLeoDelta = (unionUnassigned >= 5 ? unionUnassigned * stats.purpleLeoLevel : 0)
+        - (rightUnassigned >= 5 ? rightUnassigned * stats.purpleLeoLevel : 0)
+      const luck = (right.additiveLuck + purpleLeoDelta) * (1 + right.mLuck)
+      const unionTutorial = Math.max(metadata.rawTutorial, right.rawTutorial)
+      const unionQuarks1 = Math.max(metadata.rawQuarks1, right.rawQuarks1)
+      const prerequisiteFactor = tutorialFactor(unionTutorial) / tutorialFactor(metadata.rawTutorial)
+        * quarks1Factor(unionQuarks1) / quarks1Factor(metadata.rawQuarks1)
+        * quarks2Factor(metadata.rawQuarks2, unionQuarks1)
+          / quarks2Factor(metadata.rawQuarks2, metadata.rawQuarks1)
+      const hybridFactor = luckQuarkFactor(luck, right.rawLuckQuark)
+        / luckQuarkFactor(metadata.luck, 0)
+      return {
+        left,
+        right: right.loadout,
+        cost,
+        blueberryCost,
+        value: metadata.value * prerequisiteFactor * hybridFactor,
+      }
+    }
+
+    const materialize = (candidate: LuckScaledResourceEvaluation): Loadout => {
+      if (candidate.fixed !== undefined)
+        return candidate.fixed
+      if (candidate.right === undefined)
+        return candidate.left
+      const union = Loadout.union(candidate.left, candidate.right)
+      union.setCachedCosts(candidate.cost, candidate.blueberryCost)
+      union.setCachedStat("quark", candidate.value)
+      return union
+    }
+    return { evaluate, materialize }
+}
+
+function findQuarkLuckOptSingleFixed(
+  table1: Loadout[],
+  table2: Loadout[],
+  budget: number,
+): Loadout {
+    const evaluator = createQuarkLuckEvaluator(table1, table2)
+    let power = 0
+    let j = 0
+    const upperBounds: Array<{ budget: number; table2Index: number }> = []
+    if (table1.length > 100 && table2.length > 100) {
+      for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
+        for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
+          const table2Index = Math.round(next)
+          const loadout1 = table1.at(-Math.round(i))!
+          const loadout2 = table2[table2Index]
+          if (loadout2.cost > budget)
+            break
+          const union = evaluator.evaluate(loadout1, table2Index, true)
+          if (2 * union.cost - loadout1.cost - loadout2.cost > budget) {
+            upperBounds.push({ budget: loadout1.cost, table2Index })
+            break
+          }
+          if (union.cost > budget || union.blueberryCost > stats.blueberries)
+            continue
+          power = Math.max(power, union.value)
+          j = next
+        }
+      }
+    }
+
+    let opt: LuckScaledResourceEvaluation = {
+      left: table1[0],
+      cost: table1[0].cost,
+      blueberryCost: table1[0].blueberryCost,
+      value: table1[0].getStat("quark"),
+    }
+    j = 0
+    let upperBoundIndex = 0
+    for (let i = 1; i <= table1.length; i++) {
+      const ref = table1.at(-i)!
+      while (upperBoundIndex < upperBounds.length
+        && upperBounds[upperBoundIndex].budget > ref.cost)
+        upperBoundIndex++
+      const upperBound = upperBounds[upperBoundIndex]
+      if (upperBound !== undefined) {
+        const boundUnion = evaluator.evaluate(ref, upperBound.table2Index, false)
+        if (boundUnion.value < power)
+          continue
+      }
+      if (table2[j].cost > budget)
+        continue
+      let union = evaluator.evaluate(ref, j, true)
+      if (union.cost > budget)
+        continue
+      for (let next = j + 1; next < table2.length; next++) {
+        if (table2[next].cost > budget)
+          break
+        const nextUnion = evaluator.evaluate(ref, next, budget < Number.POSITIVE_INFINITY)
+        if (2 * nextUnion.cost - ref.cost - table2[next].cost > budget)
+          break
+        if (nextUnion.cost > budget) {
+          if (nextUnion.blueberryCost <= stats.blueberries)
+            break
+          continue
+        }
+        if (nextUnion.value <= union.value)
+          continue
+        union = nextUnion
+        j = next
+      }
+      const statDiff = union.value - opt.value
+      if (statDiff > 0 || (statDiff === 0 && union.cost < opt.cost))
+        opt = union
+    }
+    return evaluator.materialize(opt)
+}
+
+function findQuarkLuckOpt(
+  table1: Loadout[],
+  table2: Loadout[],
+  budget = stats.amb,
+  sharedLevelsFixed = false,
+): Loadout {
+    if (!sharedLevelsFixed && !fixedSharedLevels(table1, table2)) {
+      const groups = groupBySharedLevels(table1, table2)
+      if (groups === undefined)
+        return findOpt(table1, table2, "quark", budget)
+      let best = findQuarkLuckOpt(table1, groups[0], budget, true)
+      for (let index = 1; index < groups.length; index++) {
+        const candidate = findQuarkLuckOpt(table1, groups[index], budget, true)
+        const statDiff = candidate.getStat("quark") - best.getStat("quark")
+        if (statDiff > 0 || (statDiff === 0 && candidate.cost < best.cost))
+          best = candidate
+      }
+      return best
+    }
+    return findQuarkLuckOptSingleFixed(table1, table2, budget)
+}
+
+function findOptSingleFixed(
+  table1: Loadout[],
+  table2: Loadout[],
+  stat: string,
+  budget: number,
+  useOverlapBreak: boolean,
+): Loadout {
+    let power = 0
+    let j = 0
+    const upperBounds: Array<{ budget: number; loadout: Loadout }> = []
+    if (stat !== "allAmb" && table1.length > 100 && table2.length > 100) {
+      for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
+        for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
+          const loadout1 = table1.at(-Math.round(i))!
+          const loadout2 = table2[Math.round(next)]
+          if (loadout2.cost > budget)
+            break
+          const union = Loadout.union(loadout1, loadout2)
+          if (union.blueberryCost > stats.blueberries)
+            union.fixBlueberryUpgrades()
+          if (2 * union.cost - loadout1.cost - loadout2.cost > budget) {
+            upperBounds.push({ budget: loadout1.cost, loadout: loadout2 })
+            break
+          }
+          if (union.cost > budget || union.blueberryCost > stats.blueberries)
+            continue
+          power = Math.max(power, union.getStat(stat))
+          j = next
+        }
+      }
+    }
+
+    let opt = table1[0]
+    j = 0
+    let upperBoundIndex = 0
+    for (let i = 1; i <= table1.length; i++) {
+      const ref = table1.at(-i)!
+      while (upperBoundIndex < upperBounds.length
+        && upperBounds[upperBoundIndex].budget > ref.cost)
+        upperBoundIndex++
+      const upperBound = upperBounds[upperBoundIndex]?.loadout
+      if (upperBound !== undefined) {
+        const boundUnion = Loadout.union(ref, upperBound)
+        if (boundUnion.getStat(stat) < power)
+          continue
+      }
+      if (table2[j].cost > budget)
+        continue
+      let union = Loadout.union(ref, table2[j])
+      if (union.blueberryCost > stats.blueberries)
+        union.fixBlueberryUpgrades()
+      if (union.cost > budget)
+        continue
+      for (let next = j + 1; next < table2.length; next++) {
+        if (table2[next].cost > budget)
+          break
+        const nextUnion = Loadout.union(ref, table2[next])
+        if (budget < Number.POSITIVE_INFINITY && nextUnion.blueberryCost > stats.blueberries)
+          nextUnion.fixBlueberryUpgrades()
+        if (useOverlapBreak && 2 * nextUnion.cost - ref.cost - table2[next].cost > budget)
+          break
+        if (nextUnion.cost > budget) {
+          if (useOverlapBreak && nextUnion.blueberryCost <= stats.blueberries)
+            break
+          continue
+        }
+        if (nextUnion.getStat(stat) <= union.getStat(stat))
+          continue
+        union = nextUnion
+        j = next
+      }
+      const statDiff = union.getStat(stat) - opt.getStat(stat)
+      if (statDiff > 0 || (statDiff === 0 && union.cost < opt.cost))
+        opt = union
+    }
+    return opt
+}
+
+function findCubeLuckOptSingleFixed(
+  table1: Loadout[],
+  table2: Loadout[],
+  stat: "cube" | "oct",
+  budget: number,
+  useOverlapBreak: boolean,
+): Loadout {
+    const evaluator = createCubeLuckEvaluator(table2, stat, useOverlapBreak)
+    let power = 0
+    let j = 0
+    const upperBounds: Array<{ budget: number; table2Index: number }> = []
+    if (table1.length > 100 && table2.length > 100) {
+      for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
+        for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
+          const table2Index = Math.round(next)
+          const loadout1 = table1.at(-Math.round(i))!
+          const loadout2 = table2[table2Index]
+          if (loadout2.cost > budget)
+            break
+          const union = evaluator.evaluate(loadout1, table2Index, true)
+          if (2 * union.cost - loadout1.cost - loadout2.cost > budget) {
+            upperBounds.push({ budget: loadout1.cost, table2Index })
+            break
+          }
+          if (union.cost > budget || union.blueberryCost > stats.blueberries)
+            continue
+          power = Math.max(power, union.value)
+          j = next
+        }
+      }
+    }
+
+    let opt: CubeLuckEvaluation = {
+      left: table1[0],
+      cost: table1[0].cost,
+      blueberryCost: table1[0].blueberryCost,
+      value: table1[0].getStat(stat),
+    }
+    j = 0
+    let upperBoundIndex = 0
+    for (let i = 1; i <= table1.length; i++) {
+      const ref = table1.at(-i)!
+      while (upperBoundIndex < upperBounds.length
+        && upperBounds[upperBoundIndex].budget > ref.cost)
+        upperBoundIndex++
+      const upperBound = upperBounds[upperBoundIndex]
+      if (upperBound !== undefined) {
+        const boundUnion = evaluator.evaluate(ref, upperBound.table2Index, false)
+        if (boundUnion.value < power)
+          continue
+      }
+      if (table2[j].cost > budget)
+        continue
+      let union = evaluator.evaluate(ref, j, true)
+      if (union.cost > budget)
+        continue
+      for (let next = j + 1; next < table2.length; next++) {
+        if (table2[next].cost > budget)
+          break
+        const nextUnion = evaluator.evaluate(ref, next, budget < Number.POSITIVE_INFINITY)
+        if (useOverlapBreak && 2 * nextUnion.cost - ref.cost - table2[next].cost > budget)
+          break
+        if (nextUnion.cost > budget) {
+          if (useOverlapBreak && nextUnion.blueberryCost <= stats.blueberries)
+            break
+          continue
+        }
+        if (nextUnion.value <= union.value)
+          continue
+        union = nextUnion
+        j = next
+      }
+      const statDiff = union.value - opt.value
+      if (statDiff > 0 || (statDiff === 0 && union.cost < opt.cost))
+        opt = union
+    }
+    return evaluator.materialize(opt)
+}
+
+function findCubeLuckOpt(
+  table1: Loadout[],
+  table2: Loadout[],
+  stat: "cube" | "oct",
+  budget = stats.amb,
+  sharedLevelsFixed = false,
+): Loadout {
+    if (!sharedLevelsFixed) {
+      // Frontier-building helpers cache factorised stats for their own merge.
+      // Refresh the direct side once before combining it with Luck-Cube so the
+      // evaluator starts from the same full formula as a newly unioned loadout.
+      for (const loadout of table1) {
+        loadout.invalidateCaches()
+        loadout.getStat(stat)
+      }
+    }
+    if (!sharedLevelsFixed && shouldGroupSharedLevelSearch(table1, table2)) {
+      const groups = groupBySharedLevels(table1, table2)
+      if (groups !== undefined) {
+        let best = findCubeLuckOpt(table1, groups[0], stat, budget, true)
+        for (let index = 1; index < groups.length; index++) {
+          const candidate = findCubeLuckOpt(table1, groups[index], stat, budget, true)
+          const statDiff = candidate.getStat(stat) - best.getStat(stat)
+          if (statDiff > 0 || (statDiff === 0 && candidate.cost < best.cost))
+            best = candidate
+        }
+        return best
+      }
+    }
+    return findCubeLuckOptSingleFixed(
+      table1,
+      table2,
+      stat,
+      budget,
+      sharedLevelsFixed || fixedSharedLevels(table1, table2),
+    )
+}
+
+type CubeLuckFindOptState = {
+    budget: number;
+    power: number;
+    j: number;
+    upperBounds: Array<{ budget: number; table2Index: number }>;
+    upperBoundIndex: number;
+    opt: CubeLuckEvaluation;
+};
+
+function findCubeLuckOptsForBudgets(
+  table1: Loadout[],
+  table2: Loadout[],
+  stat: "cube" | "oct",
+  budgets: readonly number[],
+  sharedLevelsFixed = false,
+): Loadout[] {
+    if (!sharedLevelsFixed) {
+      for (const loadout of table1) {
+        loadout.invalidateCaches()
+        loadout.getStat(stat)
+      }
+    }
+    if (!sharedLevelsFixed && shouldGroupSharedLevelSearch(table1, table2)) {
+      const groups = groupBySharedLevels(table1, table2)
+      if (groups !== undefined) {
+        const best = findCubeLuckOptsForBudgets(table1, groups[0], stat, budgets, true)
+        for (let index = 1; index < groups.length; index++) {
+          const candidates = findCubeLuckOptsForBudgets(table1, groups[index], stat, budgets, true)
+          for (let budgetIndex = 0; budgetIndex < budgets.length; budgetIndex++) {
+            const candidate = candidates[budgetIndex]
+            const statDiff = candidate.getStat(stat) - best[budgetIndex].getStat(stat)
+            if (statDiff > 0 || (statDiff === 0 && candidate.cost < best[budgetIndex].cost))
+              best[budgetIndex] = candidate
+          }
+        }
+        return best
+      }
+    }
+
+    const useOverlapBreak = sharedLevelsFixed || fixedSharedLevels(table1, table2)
+    if (budgets.length === 1)
+      return [findCubeLuckOptSingleFixed(table1, table2, stat, budgets[0], useOverlapBreak)]
+    const evaluator = createCubeLuckEvaluator(table2, stat, useOverlapBreak)
+    const states: CubeLuckFindOptState[] = budgets.map(budget => ({
+      budget,
+      power: 0,
+      j: 0,
+      upperBounds: [],
+      upperBoundIndex: 0,
+      opt: {
+        left: table1[0],
+        cost: table1[0].cost,
+        blueberryCost: table1[0].blueberryCost,
+        value: table1[0].getStat(stat),
+      },
+    }))
+
+    if (table1.length > 100 && table2.length > 100) {
+      for (const state of states) {
+        let sampledJ = 0
+        for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
+          for (let next = sampledJ; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
+            const table2Index = Math.round(next)
+            const loadout1 = table1.at(-Math.round(i))!
+            const loadout2 = table2[table2Index]
+            if (loadout2.cost > state.budget)
+              break
+            const union = evaluator.evaluate(loadout1, table2Index, true)
+            if (2 * union.cost - loadout1.cost - loadout2.cost > state.budget) {
+              state.upperBounds.push({ budget: loadout1.cost, table2Index })
+              break
+            }
+            if (union.cost > state.budget || union.blueberryCost > stats.blueberries)
+              continue
+            state.power = Math.max(state.power, union.value)
+            sampledJ = next
+          }
+        }
+      }
+    }
+
+    const rawUnionCache: Array<CubeLuckEvaluation | undefined> = new Array(table2.length)
+    const fixedUnionCache: Array<CubeLuckEvaluation | undefined> = new Array(table2.length)
+    const rawTouched: number[] = []
+    const fixedTouched: number[] = []
+    let currentRef = table1[0]
+    const unionAt = (table2Index: number, repairBlueberries: boolean): CubeLuckEvaluation => {
+      const cache = repairBlueberries ? fixedUnionCache : rawUnionCache
+      const cached = cache[table2Index]
+      if (cached !== undefined)
+        return cached
+      const union = evaluator.evaluate(currentRef, table2Index, repairBlueberries)
+      cache[table2Index] = union
+      ;(repairBlueberries ? fixedTouched : rawTouched).push(table2Index)
+      return union
+    }
+    for (let i = 1; i <= table1.length; i++) {
+      const ref = table1.at(-i)!
+      currentRef = ref
+      for (const state of states) {
+        while (state.upperBoundIndex < state.upperBounds.length
+          && state.upperBounds[state.upperBoundIndex].budget > ref.cost)
+          state.upperBoundIndex++
+        const upperBound = state.upperBounds[state.upperBoundIndex]
+        if (upperBound !== undefined) {
+          const boundUnion = unionAt(upperBound.table2Index, false)
+          if (boundUnion.value < state.power)
+            continue
+        }
+        if (table2[state.j].cost > state.budget)
+          continue
+        let union = unionAt(state.j, true)
+        if (union.cost > state.budget)
+          continue
+        for (let next = state.j + 1; next < table2.length; next++) {
+          if (table2[next].cost > state.budget)
+            break
+          const nextUnion = unionAt(next, state.budget < Number.POSITIVE_INFINITY)
+          if (useOverlapBreak && 2 * nextUnion.cost - ref.cost - table2[next].cost > state.budget)
+            break
+          if (nextUnion.cost > state.budget) {
+            if (useOverlapBreak && nextUnion.blueberryCost <= stats.blueberries)
+              break
+            continue
+          }
+          if (nextUnion.value <= union.value)
+            continue
+          union = nextUnion
+          state.j = next
+        }
+        const statDiff = union.value - state.opt.value
+        if (statDiff > 0 || (statDiff === 0 && union.cost < state.opt.cost))
+          state.opt = union
+      }
+      for (const index of rawTouched)
+        rawUnionCache[index] = undefined
+      for (const index of fixedTouched)
+        fixedUnionCache[index] = undefined
+      rawTouched.length = 0
+      fixedTouched.length = 0
+    }
+
+    return states.map(state => evaluator.materialize(state.opt))
+}
+
+// Finds the globally optimal loadout for several budgets in one traversal.
+// Hyperflux and generation request the same search at a handful of different
+// budgets. Keeping independent search cursors while sharing each constructed
+// union avoids rebuilding identical temporary Loadouts four to eight times.
+function findOptsForBudgets(
+  table1: Loadout[],
+  table2: Loadout[],
+  stat: string,
+  budgets: readonly number[],
+  sharedLevelsFixed = false,
+): Loadout[] {
+    if (!sharedLevelsFixed && shouldGroupSharedLevelSearch(table1, table2)) {
+      const groups = groupBySharedLevels(table1, table2)
+      if (groups !== undefined) {
+        const best = findOptsForBudgets(table1, groups[0], stat, budgets, true)
+        for (let index = 1; index < groups.length; index++) {
+          const candidates = findOptsForBudgets(table1, groups[index], stat, budgets, true)
+          for (let budgetIndex = 0; budgetIndex < budgets.length; budgetIndex++) {
+            const candidate = candidates[budgetIndex]
+            const statDiff = candidate.getStat(stat) - best[budgetIndex].getStat(stat)
+            if (statDiff > 0 || (statDiff === 0 && candidate.cost < best[budgetIndex].cost))
+              best[budgetIndex] = candidate
+          }
+        }
+        return best
+      }
+    }
+
+    const useOverlapBreak = sharedLevelsFixed || fixedSharedLevels(table1, table2)
+    if (budgets.length === 1)
+      return [findOptSingleFixed(table1, table2, stat, budgets[0], useOverlapBreak)]
+    const states: FindOptState[] = budgets.map(budget => ({
+      budget,
+      power: 0,
+      j: 0,
+      upperBounds: [],
+      upperBoundIndex: 0,
+      opt: table1[0],
+    }))
+
+    // Preserve the original sampled upper-bound pass independently for every
+    // budget. This is small compared with the exact pass and keeps pruning and
+    // tie-breaking identical to a standalone findOpt call.
+    if (stat !== "allAmb" && table1.length > 100 && table2.length > 100) {
+      for (const state of states) {
+        let sampledJ = 0
+        for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
+          for (let next = sampledJ; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
+            const table2Index = Math.round(next)
+            const loadout1 = table1.at(-Math.round(i))!
+            const loadout2 = table2[table2Index]
+            if (loadout2.cost > state.budget)
+              break
+            const union = Loadout.union(loadout1, loadout2)
+            if (union.blueberryCost > stats.blueberries)
+              union.fixBlueberryUpgrades()
+            if (2 * union.cost - loadout1.cost - loadout2.cost > state.budget) {
+              state.upperBounds.push({ budget: loadout1.cost, table2Index })
+              break
+            }
+            if (union.cost > state.budget || union.blueberryCost > stats.blueberries)
+              continue
+            state.power = Math.max(state.power, union.getStat(stat))
+            sampledJ = next
+          }
+        }
+      }
+    }
+
+    const rawUnionCache: Array<Loadout | undefined> = new Array(table2.length)
+    const fixedUnionCache: Array<Loadout | undefined> = new Array(table2.length)
+    const rawTouched: number[] = []
+    const fixedTouched: number[] = []
+    let currentRef = table1[0]
+    const unionAt = (table2Index: number, repairBlueberries: boolean): Loadout => {
+      const cache = repairBlueberries ? fixedUnionCache : rawUnionCache
+      const cached = cache[table2Index]
+      if (cached !== undefined)
+        return cached
+      const union = Loadout.union(currentRef, table2[table2Index])
+      if (repairBlueberries && union.blueberryCost > stats.blueberries)
+        union.fixBlueberryUpgrades()
+      cache[table2Index] = union
+      ;(repairBlueberries ? fixedTouched : rawTouched).push(table2Index)
+      return union
+    }
+    for (let i = 1; i <= table1.length; i++) {
+      const ref = table1.at(-i)!
+      currentRef = ref
+
+      for (const state of states) {
+        while (state.upperBoundIndex < state.upperBounds.length
+          && state.upperBounds[state.upperBoundIndex].budget > ref.cost)
+          state.upperBoundIndex++
+        const upperBound = state.upperBounds[state.upperBoundIndex]
+        if (upperBound !== undefined) {
+          const boundUnion = unionAt(upperBound.table2Index, false)
+          if (boundUnion.getStat(stat) < state.power)
+            continue
+        }
+        if (table2[state.j].cost > state.budget)
+          continue
+        let union = unionAt(state.j, true)
+        if (union.cost > state.budget)
+          continue
+        for (let next = state.j + 1; next < table2.length; next++) {
+          if (table2[next].cost > state.budget)
+            break
+          const repairBlueberries = state.budget < Number.POSITIVE_INFINITY
+          const nextUnion = unionAt(next, repairBlueberries)
+          if (useOverlapBreak && 2 * nextUnion.cost - ref.cost - table2[next].cost > state.budget)
+            break
+          if (nextUnion.cost > state.budget) {
+            if (useOverlapBreak && nextUnion.blueberryCost <= stats.blueberries)
+              break
+            continue
+          }
+          if (nextUnion.getStat(stat) <= union.getStat(stat))
+            continue
+          union = nextUnion
+          state.j = next
+        }
+        const statDiff = union.getStat(stat) - state.opt.getStat(stat)
+        if (statDiff > 0 || (statDiff === 0 && union.cost < state.opt.cost))
+          state.opt = union
+      }
+      for (const index of rawTouched)
+        rawUnionCache[index] = undefined
+      for (const index of fixedTouched)
+        fixedUnionCache[index] = undefined
+      rawTouched.length = 0
+      fixedTouched.length = 0
+    }
+
+    return states.map(state => state.opt)
+}
+
+// Finds the globally optimal loadout among affordable ones.
+function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = stats.amb): Loadout {
+    return findOptsForBudgets(table1, table2, stat, [budget])[0]
 }
 
 
@@ -2254,7 +4057,14 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.panthemaLevel = panthemaLevel;
     stats.shopUpgradesDisabled = shopUpgradesDisabled;
 
-    stats.voucher   = freeShopLevelsInfinity; // voucher = free shop levels (infinity line)
+    // The no-Ambrosia exports (shopBonusLevels.infinity, chronometer, and
+    // dependent game stats) already contain freeShopLevelsInfinity. Candidate
+    // loadouts contribute only the *additional* voucher levels they purchase.
+    stats.voucher = 0;
+    // The exported baseline includes Red row-3 levels for every voucher
+    // module; subtract those in getEffect so only purchased/Purple levels
+    // contribute to this delta.
+    stats.voucherRedLevelBaseline = bonusRow3;
     stats.shopQuark = freeShopLevelsQuark - 0.1 * bonusRow5; // removing 1981 Cut from base (bonus[4])
     stats.chronometer = chronometerLevel;
 
@@ -2308,6 +4118,44 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
 
 export class HSHeaterOptimizer {
 
+    static runExperiment(
+      input: HeaterOptimizerInput,
+      config: HeaterCubeExperimentConfig = {},
+    ): { result: HeaterOptimizationResult; diagnostics: HeaterCubeExperimentDiagnostics } {
+      const previousConfig = cubeExperimentConfig
+      const previousDiagnostics = cubeExperimentDiagnostics
+      const startedAt = experimentNow()
+      const diagnostics: HeaterCubeExperimentDiagnostics = {
+        stages: [],
+        chainTiers: [],
+        searchPartitions: [],
+        elapsedMs: 0,
+      }
+      cubeExperimentConfig = config
+      cubeExperimentDiagnostics = diagnostics
+      try {
+        const result = this.createHeaterOptimizerResultFromInput(input)
+        diagnostics.elapsedMs = experimentNow() - startedAt
+        return { result, diagnostics }
+      } finally {
+        cubeExperimentConfig = previousConfig
+        cubeExperimentDiagnostics = previousDiagnostics
+      }
+    }
+
+    static runCubeExperiment(
+      input: HeaterOptimizerInput,
+      config: HeaterCubeExperimentConfig = {},
+    ): { result: HeaterOptimizationResult; diagnostics: HeaterCubeExperimentDiagnostics } {
+      const cubeInput: HeaterOptimizerInput = {
+        ...input,
+        heaterOptions: Object.fromEntries(
+          Object.keys(input.heaterOptions).map(branch => [branch, branch === "cubes"]),
+        ) as HeaterOptimizerInput["heaterOptions"],
+      }
+      return this.runExperiment(cubeInput, config)
+    }
+
     static createHeaterOptimizerResultFromInput(input: HeaterOptimizerInput): HeaterOptimizationResult {
 
         if (!Number.isFinite(input.blueBarRequirementBeforeRounding)
@@ -2334,6 +4182,7 @@ export class HSHeaterOptimizer {
 
           HSLogger.debug(() => '[HeaterDiag] Building shared luck tables', 'HSHeaterOptimizer');
           // --- Shared luck tables (used by calculateAmb and calculateAmbOct) ---
+          const ambLuckTablesStartedAt = experimentNow()
           tableCache.tableLuck1      = generateTable(["ambrosiaFreeLuckUpgrades", "ambrosiaLuck3"], "luck");
           tableCache.tableLuckHybrid = generateTable(["ambrosiaQuarkLuck1", "ambrosiaCubeLuck1"], "luck");
           tableCache.tableLuck4      = generateTable(["ambrosiaLuck4"], "mLuck");
@@ -2348,20 +4197,27 @@ export class HSHeaterOptimizer {
           // deliberately last-priority source of luck, but still need to be
           // considered after the best direct luck loadout is found.
           if (options.calculateAmb || options.calculateAmbOct)
-              // Build the frontier using a stat vouchers actually improve.
-              // Building it with "luck" would trim every row after zero,
-              // since vouchers have no direct luck effect in the upgrade map.
-              tableCache.tableVoucher = generateVoucherTable("cube");
+              // Keep every distinct voucher count: cube value is not a safe
+              // proxy for Luck, Offering, or another build's voucher benefit.
+              tableCache.tableVoucher = generateVoucherTable("vouchers");
+          recordCubeExperimentStage("amb-shared-luck-tables", ambLuckTablesStartedAt, {
+            luck1: tableCache.tableLuck1.length,
+            luckHybrid: tableCache.tableLuckHybrid.length,
+            luck4: tableCache.tableLuck4.length,
+            luckAdd: tableCache.tableLuckAdd?.length ?? 0,
+          })
 
           const optimizeLuckWithVouchers = (table1: Loadout[], table2: Loadout[]): Loadout => {
               const base = findOpt(table1, table2, "luck");
-              return tableCache.tableVoucher === undefined
+              const withVouchers = tableCache.tableVoucher === undefined
                 ? base
-                : findOpt([base], tableCache.tableVoucher, "luck");
+                : addLastPriorityVouchers(base, tableCache.tableVoucher, "luck");
+              return fillSelectedLuckModules(withVouchers, "luck")
           };
 
           let luckLuck = 0;
           if (options.calculateAmb) { // Luck calculation
+              const ambLuckStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateAmb: luck', 'HSHeaterOptimizer');
               let loadoutLuck = optimizeLuckWithVouchers(tableCache.tableLuckAdd, tableCache.tableLuck4);
               if (!loadoutLuck) HSLogger.error('[HeaterDiag] calculateAmb: luck - findOpt returned undefined', 'HSHeaterOptimizer');
@@ -2369,9 +4225,11 @@ export class HSHeaterOptimizer {
               maxAmbLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
               output.luck = [loadoutLuck.generateOutput("luck", maxAmbLoadout)];
               luckLuck = loadoutLuck.luck;
+              recordCubeExperimentStage("amb-luck", ambLuckStartedAt)
           }
 
           let rLuckRLuck = 0;
+          const redLuckStartedAt = experimentNow()
           if (options.calculateAmb) { // Red Luck calculation
               HSLogger.debug(() => '[HeaterDiag] calculateAmb: rLuck', 'HSHeaterOptimizer');
               let tableLuckMult         = generateTable(["ambrosiaBrickOfLead", "ambrosiaLuck4"], "mLuck");
@@ -2383,7 +4241,9 @@ export class HSHeaterOptimizer {
               // apply them after the direct Red Luck optimum has been found.
               // This keeps their tiny contribution from distorting the main
               // luck/resource search while still allowing the final levels.
-              loadoutRLuck = findOpt([loadoutRLuck], tableCache.tableVoucher, "rLuck");
+              loadoutRLuck = fillSelectedLuckModules(
+                addLastPriorityVouchers(loadoutRLuck, tableCache.tableVoucher, "rLuck"), "rLuck",
+              )
               if (!loadoutRLuck) HSLogger.error('[HeaterDiag] calculateAmb: rLuck - findOpt returned undefined', 'HSHeaterOptimizer');
               output.rLuck = [loadoutRLuck.generateOutput("rLuck", maxLoadout)];
 
@@ -2465,27 +4325,52 @@ export class HSHeaterOptimizer {
                   stats.baseLuck -= 125;
                   stats.baseRLuck -= 25;
               }
+              recordCubeExperimentStage("amb-red-luck-and-effects", redLuckStartedAt)
           }
 
           let loadoutAllAmb: Loadout | undefined;
           let optLoadoutAllAmb: Loadout | undefined;
           if (options.calculateAmb || options.calculateAmbOct) { // All Amb calculation
+              const allAmbStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateAmb/calculateAmbOct: allAmb', 'HSHeaterOptimizer');
+              let allAmbSubstageStartedAt = experimentNow()
               let tableSpeed  = generateTable(["ambrosiaFreeGenerationUpgrades"], "amb");
               let tableAmb    = mergeTables(tableCache.tableLuck4, tableSpeed, "amb");
               let tableRLuck2 = generateTable(["ambrosiaFreeRedLuckUpgrades"], "rAmb");
               let tableRAmb   = mergeTables(tableAmb, tableRLuck2, "rAmb");
-              tableCache.tableAllAmb = mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb");
+              recordCubeExperimentStage("all-amb-components", allAmbSubstageStartedAt, {
+                amb: tableAmb.length,
+                redAmb: tableRAmb.length,
+              })
+              allAmbSubstageStartedAt = experimentNow()
+              tableCache.tableAllAmb = cubeExperimentConfig?.useLegacyAllAmbMerge
+                ? mergeTables(tableCache.tableLuckAdd, tableRAmb, "allAmb")
+                : mergeAllAmbTables(tableCache.tableLuckAdd, tableRAmb)
+              recordCubeExperimentStage("all-amb-luck-merge", allAmbSubstageStartedAt, {
+                luck: tableCache.tableLuckAdd.length,
+                frontier: tableCache.tableAllAmb.length,
+              })
+              allAmbSubstageStartedAt = experimentNow()
               tableCache.tableAllAmb = mergeTables(tableCache.tableAllAmb, generateTable(["twoMind"], "allAmb"), "allAmb");
+              recordCubeExperimentStage("all-amb-two-mind", allAmbSubstageStartedAt, {
+                frontier: tableCache.tableAllAmb.length,
+              })
+              allAmbSubstageStartedAt = experimentNow()
               let tableBrickOfLead = generateTable(["ambrosiaBrickOfLead"], "mLuck");
               loadoutAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
               // Jack of all Trades makes vouchers a small secondary source of
               // Ambrosia through active luck/generation modules.  Add them
               // only after the direct all-Ambrosia optimum is selected.
-              loadoutAllAmb = findOpt([loadoutAllAmb], tableCache.tableVoucher, "allAmb");
+              loadoutAllAmb = fillSelectedLuckModules(
+                addLastPriorityVouchers(loadoutAllAmb, tableCache.tableVoucher, "allAmb"), "allAmb",
+              )
               let optLoadout = new Loadout(maxLoadout);
               optLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
               optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb", Number.POSITIVE_INFINITY);
+              recordCubeExperimentStage("all-amb-final-search", allAmbSubstageStartedAt, {
+                frontier: tableCache.tableAllAmb.length,
+                brick: tableBrickOfLead.length,
+              })
               if (!loadoutAllAmb || !optLoadoutAllAmb) HSLogger.error('[HeaterDiag] allAmb - findOpt returned undefined', 'HSHeaterOptimizer');
               if (options.calculateAmb)
                   output.allAmb = [loadoutAllAmb.generateOutput("allAmb", optLoadoutAllAmb)];
@@ -2493,6 +4378,9 @@ export class HSHeaterOptimizer {
                   options.calculateAmbOct = false;
                   output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
               }
+              recordCubeExperimentStage("all-amb", allAmbStartedAt, {
+                frontier: tableCache.tableAllAmb.length,
+              })
           }
 
           // --- Shared luck/rune/voucher tables for cube-class calculations ---
@@ -2500,6 +4388,7 @@ export class HSHeaterOptimizer {
               options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
               options.calculateHyperflux || options.calculateOff || options.calculateGen
           ) {
+              const sharedLuckStartedAt = experimentNow()
               let luckMinLevel: Record<string, number> = { ambrosiaLuck1: 20 }; // This is necessary for correct local optima
               let tableLuck1  = generateDependentChainTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck", luckMinLevel);
               let tableLuck2  = mergeTables(tableLuck1, tableCache.tableLuck1, "luck");
@@ -2508,17 +4397,22 @@ export class HSHeaterOptimizer {
               tableCache.tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck");
               // Local optima for cubes match local optima for quarks
               tableCache.tableRune = generateDependentChainTable(["ambrosiaTalismanBonusRuneLevel", "ambrosiaRuneOOMBonus"], "cube");
+              recordCubeExperimentStage("shared-luck-rune", sharedLuckStartedAt, {
+                luck: tableCache.tableLuck.length,
+                rune: tableCache.tableRune.length,
+              })
           }
 
           if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-            options.calculateOff || options.calculateGen) {
+            options.calculateHyperflux || options.calculateOff || options.calculateGen) {
               // Local optima for cubes match local optima for quarks and octeracts
               if (tableCache.tableVoucher === undefined)
-                tableCache.tableVoucher = generateVoucherTable("cube");
+                tableCache.tableVoucher = generateVoucherTable("vouchers");
           }
 
           // --- calculateQuarks ---
           if (options.calculateQuarks) { // Calculate Quarks
+              const quarksStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateQuarks', 'HSHeaterOptimizer');
               // Keep the new Exalt-9 tier separate while generating tables.
               // Enumerating it together with Quarks 1–3 multiplies the
@@ -2526,23 +4420,43 @@ export class HSHeaterOptimizer {
               // remove anything.  Merging the independently-priced tier is
               // exact because Quarks 4 only depends on the completed Quarks
               // 3 chain and has no feedback into those effects.
+              let quarkSubstageStartedAt = experimentNow()
               let tableQuark1   = generateDependentChainTable(["ambrosiaQuarks1", "ambrosiaQuarks2", "ambrosiaQuarks3"], "quark");
               tableQuark1 = mergeTables(tableQuark1, generateTable(["ambrosiaQuarks4"], "quark"), "quark");
+              recordCubeExperimentStage("quarks-chain", quarkSubstageStartedAt, { frontier: tableQuark1.length })
+              quarkSubstageStartedAt = experimentNow()
               let tableQuark2   = generateTable(["ambrosiaCubeQuark1", "ambrosiaFreeQuarkUpgrades"], "quark");
               let tableQuark3   = mergeTables(tableQuark1, tableQuark2, "quark");
+              recordCubeExperimentStage("quarks-extra", quarkSubstageStartedAt, { frontier: tableQuark3.length })
+              quarkSubstageStartedAt = experimentNow()
               let tableQuarkR   = mergeIndependentTables(tableQuark3, tableCache.tableRune, "quark");
+              recordCubeExperimentStage("quarks-rune", quarkSubstageStartedAt, { frontier: tableQuarkR.length })
+              quarkSubstageStartedAt = experimentNow()
               let tableLuckQuark1 = generateTable(["ambrosiaLuckQuark1"], "quark");
               let tableLuckQuark  = mergeTables(tableCache.tableLuck, tableLuckQuark1, "quark");
-              let loadoutQuark  = findOpt(tableQuarkR, tableLuckQuark, "quark");
+              recordCubeExperimentStage("quarks-luck", quarkSubstageStartedAt, { frontier: tableLuckQuark.length })
+              quarkSubstageStartedAt = experimentNow()
+              let loadoutQuark  = cubeExperimentConfig?.useLegacyQuarkSearch
+                ? findOpt(tableQuarkR, tableLuckQuark, "quark")
+                : findQuarkLuckOpt(tableQuarkR, tableLuckQuark)
               // Vouchers are a weak quark source, so add them only after the
               // direct quark/luck optimum has been selected.
               loadoutQuark = findOpt([loadoutQuark], tableCache.tableVoucher, "quark");
+              recordCubeExperimentStage("quarks-final-search", quarkSubstageStartedAt, {
+                left: tableQuarkR.length,
+                right: tableLuckQuark.length,
+              })
               if (!loadoutQuark) HSLogger.error('[HeaterDiag] calculateQuarks - findOpt returned undefined', 'HSHeaterOptimizer');
               output.quarks = [loadoutQuark.generateOutput("quark", maxLoadout)];
+              recordCubeExperimentStage("quarks", quarksStartedAt, {
+                rune: tableCache.tableRune.length,
+                luck: tableCache.tableLuck.length,
+              })
           }
 
           // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
           if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
+            const cubeChainStartedAt = experimentNow()
             // As with Quarks 4, generate Cubes 4 separately.  This preserves
             // the exact Pareto frontier while avoiding a 50x expansion of
             // the recursive Cubes 1–3 table.
@@ -2551,6 +4465,10 @@ export class HSHeaterOptimizer {
             const tableFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "cube")
             let tableQuarkCube = generateTable(["ambrosiaQuarkCube1"], "cube")
             tableCache.tableCube = mergeTables(mergeTables(tableCube1, tableFreeCube, "cube"), tableQuarkCube, "cube")
+            recordCubeExperimentStage("cube-chain", cubeChainStartedAt, {
+              cubes1To4: tableCube1.length,
+              cube: tableCache.tableCube.length,
+            })
             // SynergismOfficial/src/Statistics.ts: Cube-group shop levels
             // affect Octeracts through extra tier-specific multipliers, so
             // their local maxima must be searched against the Oct objective.
@@ -2571,7 +4489,9 @@ export class HSHeaterOptimizer {
           }
 
           if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
+            const cubeRuneStartedAt = experimentNow()
             tableCache.tableCubeR = mergeIndependentTables(tableCache.tableCube, tableCache.tableRune, "cube")
+            recordCubeExperimentStage("cube-rune", cubeRuneStartedAt, { cubeRune: tableCache.tableCubeR.length })
           }
 
           if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
@@ -2579,7 +4499,27 @@ export class HSHeaterOptimizer {
             let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
             if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
               let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "cube")
+              const luckSpendFraction = cubeExperimentConfig?.maxLuckSpendFraction
+              if (luckSpendFraction !== undefined && Number.isFinite(luckSpendFraction)) {
+                const maximumLuckSpend = Math.max(0, luckSpendFraction) * stats.amb
+                tableLuck = tableLuck.filter(loadout => cubeExperimentLuckSpend(loadout) <= maximumLuckSpend)
+                tableBrick = tableBrick.filter(loadout => cubeExperimentLuckSpend(loadout) <= maximumLuckSpend)
+              }
+              const luckCubeStartedAt = experimentNow()
               tableCache.tableLuckCube = mergeLuckCubeTable(tableLuck, tableBrick, "cube")
+              if (luckSpendFraction !== undefined && Number.isFinite(luckSpendFraction)) {
+                const maximumLuckSpend = Math.max(0, luckSpendFraction) * stats.amb
+                tableCache.tableLuckCube = tableCache.tableLuckCube.filter(
+                  loadout => cubeExperimentLuckSpend(loadout) <= maximumLuckSpend,
+                )
+                if (tableCache.tableLuckCube.length === 0)
+                  tableCache.tableLuckCube = [new Loadout()]
+              }
+              recordCubeExperimentStage("luck-cube", luckCubeStartedAt, {
+                luck: tableLuck.length,
+                brick: tableBrick.length,
+                luckCube: tableCache.tableLuckCube.length,
+              })
             }
             if (options.calculateOct || options.calculateGen) {
               let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "oct")
@@ -2589,33 +4529,71 @@ export class HSHeaterOptimizer {
 
           // --- calculateCubes ---
           if (options.calculateCubes || options.calculateSR) {
-              let tableCubeV     = mergeVoucherTable(tableCache.tableCubeR, tableCache.tableVoucher, "cube");
+              const cubeVoucherStartedAt = experimentNow()
+              const tableCubeV = tableCache.tableCubeR;
               let tableCubeH     = generateTable(["ambrosiaHyperflux"], "cube");
-              tableCache.tableCubeTotal = mergeTables(tableCubeV, tableCubeH, "cube")
+              // At high Ambrosia budgets Hyperflux 7 is cheap enough that the
+              // intermediate levels only create a large cross-product without
+              // changing the selected Cube build. Benchmarks from 50M through
+              // 150M Ambrosia selected the identical H7 loadout after this
+              // reduction. Keep H0 as the alternative that saves 3 Blueberries.
+              // The dedicated Hyperflux report below still evaluates H0-H7.
+              if (upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaHyperflux.maxLevel) <= 0.05 * stats.amb) {
+                tableCubeH = tableCubeH.filter(loadout => {
+                  const level = loadout.upgradeLevels.ambrosiaHyperflux ?? 0
+                  return level === 0 || level === upgrades.ambrosiaHyperflux.maxLevel
+                })
+              }
+              tableCache.tableCubeTotal = mergeIndependentTables(tableCubeV, tableCubeH, "cube")
+              // Preserve the whole Cube frontier while considering every
+              // affordable voucher prefix. An intermediate prefix can leave
+              // enough Ambrosia for a better Cube or Luck purchase later.
+              tableCache.tableCubeVoucher = mergeVoucherTable(tableCache.tableCubeTotal, tableCache.tableVoucher, "cube")
+              recordCubeExperimentStage("cube-hyperflux-voucher", cubeVoucherStartedAt, {
+                cubeTotal: tableCache.tableCubeTotal.length,
+                cubeVoucher: tableCache.tableCubeVoucher.length,
+              })
           }
 
           if (options.calculateCubes) {
-            HSLogger.debug(() => '[HeaterDiag] calculateCubes', 'HSHeaterOptimizer');
-            let loadoutCube = findOpt(tableCache.tableCubeTotal, tableCache.tableLuckCube, "cube")
+              HSLogger.debug(() => '[HeaterDiag] calculateCubes', 'HSHeaterOptimizer');
+            const cubeSearchStartedAt = experimentNow()
+            const loadoutCube = findCubeLuckOpt(tableCache.tableCubeVoucher, tableCache.tableLuckCube, "cube")
+            recordCubeExperimentStage("cube-final-search", cubeSearchStartedAt, {
+              cubeVoucher: tableCache.tableCubeVoucher.length,
+              luckCube: tableCache.tableLuckCube.length,
+            })
             if (!loadoutCube) HSLogger.error('[HeaterDiag] calculateCubes - findOpt returned undefined', 'HSHeaterOptimizer');
+            if (cubeExperimentDiagnostics !== undefined) {
+              cubeExperimentDiagnostics.cubeWinner = {
+                levels: { ...loadoutCube.upgradeLevels },
+                cost: loadoutCube.cost,
+                blueberryCost: loadoutCube.blueberryCost,
+                effect: loadoutCube.getStat("cube"),
+                spending: cubeExperimentSpending(loadoutCube),
+              }
+            }
             output.cubes = [loadoutCube.generateOutput("cube", maxLoadout)];
           }
 
           // --- Shared oct table ---
           if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
+              const octVoucherStartedAt = experimentNow()
               tableCache.tableOctV = mergeVoucherTable(tableCache.tableOctCube, tableCache.tableVoucher, "oct");
+              recordCubeExperimentStage("oct-voucher", octVoucherStartedAt, { octVoucher: tableCache.tableOctV.length })
           }
 
           // --- calculateOct ---
           if (options.calculateOct) {
+              const octStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateOct', 'HSHeaterOptimizer');
-              let loadoutOct = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct")
+              const loadoutOct = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
               if (!loadoutOct) HSLogger.error('[HeaterDiag] calculateOct - findOpt returned undefined', 'HSHeaterOptimizer');
               output.oct = [loadoutOct.generateOutput("oct", maxLoadout)];
 
               if (stats.ossifiedTactics < redUpgrades.regularLuck.maxLevel || stats.ossifiedTactics2 < redUpgrades.regularLuck2.maxLevel) {
                   stats.baseLuck += 2;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.ossifiedTactics = {
                       ...(redAmbUpgradeEffects.ossifiedTactics ?? {}),
@@ -2626,7 +4604,7 @@ export class HSHeaterOptimizer {
 
               if (stats.redberries < redUpgrades.blueberries.maxLevel) {
                   stats.blueberries++;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.blueberries = {
                       ...(redAmbUpgradeEffects.blueberries ?? {}),
@@ -2637,7 +4615,7 @@ export class HSHeaterOptimizer {
 
               if (stats.bonus[1] < 5) {
                   stats.bonus[1]++;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.freeLevelsRow2 = {
                       ...(redAmbUpgradeEffects.freeLevelsRow2 ?? {}),
@@ -2648,7 +4626,7 @@ export class HSHeaterOptimizer {
 
               if (stats.bonus[2] < 5) {
                   stats.bonus[2]++;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.freeLevelsRow3 = {
                       ...(redAmbUpgradeEffects.freeLevelsRow3 ?? {}),
@@ -2659,7 +4637,7 @@ export class HSHeaterOptimizer {
 
               if (stats.bonus[3] < 5) {
                   stats.bonus[3]++;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.freeLevelsRow4 = {
                       ...(redAmbUpgradeEffects.freeLevelsRow4 ?? {}),
@@ -2670,7 +4648,7 @@ export class HSHeaterOptimizer {
 
               if (stats.bonus[4] < 5) {
                   stats.bonus[4]++;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.freeLevelsRow5 = {
                       ...(redAmbUpgradeEffects.freeLevelsRow5 ?? {}),
@@ -2681,7 +4659,7 @@ export class HSHeaterOptimizer {
 
               if (!stats.viscount) {
                   stats.baseLuck += 125;
-                  let loadoutNext = findOpt(tableCache.tableOctV, tableCache.tableLuckCube, "oct");
+                  let loadoutNext = findCubeLuckOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct");
                   let effect = loadoutNext.getStat("oct") / loadoutOct.getStat("oct");
                   redAmbUpgradeEffects.viscount = {
                       ...(redAmbUpgradeEffects.viscount ?? {}),
@@ -2689,10 +4667,15 @@ export class HSHeaterOptimizer {
                   };
                   stats.baseLuck -= 125;
               }
+              recordCubeExperimentStage("oct-and-red-effects", octStartedAt, {
+                octVoucher: tableCache.tableOctV.length,
+                luckOct: tableCache.tableLuckOct.length,
+              })
           }
 
           // --- calculateOff: Obt + Off ---
           if (options.calculateOff) {
+              const obtainiumOfferingStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateOff: obt', 'HSHeaterOptimizer');
               let tableSing    = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "mOff")
               const tableObtBase = generateDependentChainTable(["ambrosiaBaseObtainium1", "ambrosiaBaseObtainium2"], "obt");
@@ -2713,25 +4696,51 @@ export class HSHeaterOptimizer {
               let tableOff2    = generateTable(["ambrosiaOffering1"], "off")
               let tableOff3    = mergeTables(tableOff1, tableOff2, "off")
 
+              let offSubstageStartedAt = experimentNow()
               let tableObtOff  = mergeTables(tableObt3, tableOff3, "obt")
-              let tableObt4    = mergeTables(tableObtOff, tableCache.tableVoucher, "obt")
+              recordCubeExperimentStage("obtainium-combine", offSubstageStartedAt, { frontier: tableObtOff.length })
+              let tableObt4    = tableObtOff
+              offSubstageStartedAt = experimentNow()
               let tableObtSing = mergeTables(tableObt4, tableSing, "obt");
               let tableObtRune = mergeIndependentTables(tableObtSing, tableCache.tableRune, "obt")
+              recordCubeExperimentStage("obtainium-rune", offSubstageStartedAt, { frontier: tableObtRune.length })
+              offSubstageStartedAt = experimentNow()
               let loadoutObt   = findOpt(tableObtRune, tableCache.tableLuck, "obt");
+              loadoutObt = findOpt([loadoutObt], tableCache.tableVoucher, "obt");
+              recordCubeExperimentStage("obtainium-final-search", offSubstageStartedAt, {
+                left: tableObtRune.length,
+                right: tableCache.tableLuck.length,
+              })
               if (!loadoutObt) HSLogger.error('[HeaterDiag] calculateOff: obt - findOpt returned undefined', 'HSHeaterOptimizer');
               output.obt = [loadoutObt.generateOutput("obt", maxLoadout)];
 
               HSLogger.debug(() => '[HeaterDiag] calculateOff: off', 'HSHeaterOptimizer');
-              let tableOffObt  = mergeTables(tableObt3, tableOff3, "obt")
-              let tableOff4    = mergeTables(tableOffObt, tableCache.tableVoucher, "off")
+              // Obtainium and Offering have different Pareto frontiers. An
+              // Obtainium-trimmed frontier can omit Offering modules entirely.
+              let tableOff4    = mergeTables(tableObt3, tableOff3, "off")
+              offSubstageStartedAt = experimentNow()
               let tableOffSing = mergeTables(tableOff4, tableSing, "off")
               let tableOffRune = mergeIndependentTables(tableOffSing, tableCache.tableRune, "off")
-              let loadoutOff   = findOpt(tableOffRune, tableCache.tableLuck, "off")
+              recordCubeExperimentStage("offerings-rune", offSubstageStartedAt, { frontier: tableOffRune.length })
+              offSubstageStartedAt = experimentNow()
+              let loadoutOff   = cubeExperimentConfig?.useLegacyOfferingSearch
+                ? findOpt(tableOffRune, tableCache.tableLuck, "off")
+                : findLuckScaledOfferingOpt(tableOffRune, tableCache.tableLuck)
+              loadoutOff = findOpt([loadoutOff], tableCache.tableVoucher, "off")
+              recordCubeExperimentStage("offerings-final-search", offSubstageStartedAt, {
+                left: tableOffRune.length,
+                right: tableCache.tableLuck.length,
+              })
               if (!loadoutOff) HSLogger.error('[HeaterDiag] calculateOff: off - findOpt returned undefined', 'HSHeaterOptimizer');
               output.off = [loadoutOff.generateOutput("off", maxLoadout)];
+              recordCubeExperimentStage("obtainium-offerings", obtainiumOfferingStartedAt, {
+                rune: tableCache.tableRune.length,
+                luck: tableCache.tableLuck.length,
+              })
           }
 
           if (options.calculateSR) {
+            const singularityReductionStartedAt = experimentNow()
 
             HSLogger.debug(() => '[HeaterDiag] calculateSR: sr1', 'HSHeaterOptimizer');
             let exalt = stats.exalt
@@ -2741,7 +4750,7 @@ export class HSHeaterOptimizer {
             stats.exalt = 0
             let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)!
             let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
-            let tableSR1Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+            let tableSR1Cube = tableCache.tableCubeVoucher.map(loadout => new Loadout(loadout))
             tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
             tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
             if (tableSR1Cube.length === 0) {
@@ -2749,7 +4758,7 @@ export class HSHeaterOptimizer {
                 HSLogger.warn('[HeaterDiag] calculateSR: sr1 - no loadout with ambrosiaHyperflux >= 4 within budget, reporting Unaffordable', 'HSHeaterOptimizer');
                 output.sr1 = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
             } else {
-                loadoutSR1 = findOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
+                loadoutSR1 = findCubeLuckOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
                 if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
                 output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
             }
@@ -2758,44 +4767,70 @@ export class HSHeaterOptimizer {
             stats.exalt = 7
             let loadoutSR2 = generateTable(["ambrosiaSingReduction2"], "singReduction").at(-1)!
             let levelSR2 = loadoutSR2.upgradeLevels.ambrosiaSingReduction2
-            let tableSR2Cube = tableCache.tableCubeTotal.map(loadout => new Loadout(loadout))
+            let tableSR2Cube = tableCache.tableCubeVoucher.map(loadout => new Loadout(loadout))
             tableSR2Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction2 = levelSR2)
-            loadoutSR2 = findOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
+            loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
             if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
             output.sr2 = [loadoutSR2.generateOutput("singReduction", maxLoadout)];
             stats.exalt = exalt
             stats.postAoAG = postAoAG
+            recordCubeExperimentStage("singularity-reduction", singularityReductionStartedAt, {
+              cubeVoucher: tableCache.tableCubeVoucher.length,
+              luckCube: tableCache.tableLuckCube.length,
+            })
           }
 
           // --- calculateAmbOct ---
           if (options.calculateAmbOct) {
+              const ambOctStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateAmbOct', 'HSHeaterOptimizer');
               let loadoutAmbBase = findOpt(tableCache.tableLuckAdd, tableCache.tableAllAmb, "allAmb");
               let loadoutAmbOct  = findOpt([loadoutAmbBase], tableCache.tableOctV, "ambOct");
               if (!loadoutAmbBase || !loadoutAmbOct) HSLogger.error('[HeaterDiag] calculateAmbOct - findOpt returned undefined', 'HSHeaterOptimizer');
               output.ambOct = [loadoutAmbOct.generateOutput("oct", maxLoadout)];
+              recordCubeExperimentStage("amb-oct", ambOctStartedAt, {
+                allAmb: tableCache.tableAllAmb.length,
+                octVoucher: tableCache.tableOctV.length,
+              })
           }
 
           // --- calculateGen ---
           if (options.calculateGen) {
+              const generationStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateGen', 'HSHeaterOptimizer');
-              let genOutput: HeaterResultRowMatrix = [];
+              const genOutput: HeaterResultRowMatrix = new Array(upgrades.ambrosiaFreeGenerationUpgrades.maxLevel);
+              const requests: Array<{ level: number; budget: number }> = []
               for (let level = 1; level <= upgrades.ambrosiaFreeGenerationUpgrades.maxLevel; level++) {
-                  let budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
+                  const budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
                   if (budget < 0) {
-                      genOutput.push(maxLoadout.generateOutput("", maxLoadout));
+                      genOutput[level - 1] = maxLoadout.generateOutput("", maxLoadout);
                       continue;
                   }
-                  let loadoutGen = findOpt(tableCache.tableOctV, tableCache.tableLuckOct, "oct", budget)
+                  requests.push({ level, budget })
+              }
+              const results = findCubeLuckOptsForBudgets(
+                tableCache.tableOctV,
+                tableCache.tableLuckOct,
+                "oct",
+                requests.map(request => request.budget),
+              )
+              for (let index = 0; index < requests.length; index++) {
+                  const { level } = requests[index]
+                  const loadoutGen = new Loadout(results[index])
                   if (!loadoutGen) HSLogger.error(`[HeaterDiag] calculateGen level=${level} - findOpt returned undefined`, 'HSHeaterOptimizer');
                   loadoutGen.upgradeLevels.ambrosiaFreeGenerationUpgrades = level;
-                  genOutput.push(loadoutGen.generateOutput("oct", maxLoadout));
+                  genOutput[level - 1] = loadoutGen.generateOutput("oct", maxLoadout);
               }
               output.gen = genOutput;
+              recordCubeExperimentStage("generation", generationStartedAt, {
+                octVoucher: tableCache.tableOctV.length,
+                luckOct: tableCache.tableLuckOct.length,
+              })
           }
 
           // --- calculateHyperflux ---
           if (options.calculateHyperflux) {
+              const hyperfluxStartedAt = experimentNow()
 
               HSLogger.debug(() => '[HeaterDiag] calculateHyperflux', 'HSHeaterOptimizer');
               let postAoAG = stats.postAoAG
@@ -2805,26 +4840,127 @@ export class HSHeaterOptimizer {
               // Hyperflux repeats prerequisite/cost work without adding any
               // candidates.
               const tableVoucher = tableCache.tableVoucher
-              let tableCubeV = mergeVoucherTable(tableCache.tableCubeR, tableVoucher, "cube")
+              let hyperfluxSubstageStartedAt = experimentNow()
+              const tableCubeV = mergeVoucherTable(tableCache.tableCubeR, tableVoucher, "cube")
+              recordCubeExperimentStage("hyperflux-voucher-table", hyperfluxSubstageStartedAt, {
+                cubeRune: tableCache.tableCubeR.length,
+                cubeVoucher: tableCubeV.length,
+              })
+              hyperfluxSubstageStartedAt = experimentNow()
               let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
-              let tableCubeVS = mergeTables(tableCubeV, tableSing, "cube")
+              let tableCubeVS = cubeExperimentConfig?.useLegacyHyperfluxMerge
+                ? mergeTables(tableCubeV, tableSing, "cube")
+                : undefined
+              recordCubeExperimentStage("hyperflux-singularity-table", hyperfluxSubstageStartedAt, {
+                cubeVoucher: tableCubeV.length,
+                singularity: tableSing.length,
+                cubeVoucherSingularity: tableCubeVS?.length ?? 0,
+              })
+              recordCubeExperimentStage("hyperflux-tables", hyperfluxSubstageStartedAt, {
+                cubeVoucher: tableCubeV.length,
+                cubeVoucherSingularity: tableCubeVS?.length ?? 0,
+              })
 
               let loadoutsH: (Loadout | undefined)[] = new Array(8).fill(undefined);
               let thresholds: number[] = new Array(8).fill(0);
-
+              const directRequests: Array<{ level: number; budget: number }> = []
+              const singRequests: Array<{ level: number; budget: number }> = []
               for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
                   let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
-                  let tableCubeVX = tableCubeV
                   if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
-                    tableCubeVX = tableCubeVS
                     if (stats.exalt === 0)
                       budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
                   }
                   if (budget < 0)
-                      break;
-                  loadoutsH[h] = findOpt(tableCubeVX, tableCache.tableLuckCube, "cube", budget);
+                      continue;
+                  const request = { level: h, budget }
+                  if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0))
+                    singRequests.push(request)
+                  else
+                    directRequests.push(request)
+              }
+
+              const resolveRequests = (
+                name: string,
+                requests: Array<{ level: number; budget: number }>,
+                cubeTable: Loadout[],
+              ): void => {
+                if (requests.length === 0)
+                  return
+                hyperfluxSubstageStartedAt = experimentNow()
+                const results = findCubeLuckOptsForBudgets(
+                  cubeTable,
+                  tableCache.tableLuckCube,
+                  "cube",
+                  requests.map(request => request.budget),
+                )
+                for (let index = 0; index < requests.length; index++) {
+                  const request = requests[index]
+                  loadoutsH[request.level] = results[index]
+                }
+                recordCubeExperimentStage(`hyperflux-${name}-search`, hyperfluxSubstageStartedAt, {
+                  requests: requests.length,
+                  cube: cubeTable.length,
+                  luckCube: tableCache.tableLuckCube.length,
+                })
+              }
+              resolveRequests("direct", directRequests, tableCubeV)
+              if (tableCubeVS !== undefined) {
+                resolveRequests("singularity", singRequests, tableCubeVS)
+              } else if (singRequests.length > 0) {
+                // Each Singularity-reduction level has a fixed cost, berry
+                // cost and effect. Search its full Cube/Voucher frontier
+                // separately, then choose the best result per Hyperflux
+                // budget. This retains every candidate from the merged
+                // frontier without searching one much larger mixed table.
+                hyperfluxSubstageStartedAt = experimentNow()
+                const budgets = singRequests.map(request => request.budget)
+                for (const sing of tableSing) {
+                  const singLevel = sing.upgradeLevels.ambrosiaSingReduction1
+                    ?? sing.upgradeLevels.ambrosiaSingReduction2 ?? 0
+                  if (singLevel === 0)
+                    continue
+                  const tierTable = tableCubeV.map(row => Loadout.union(row, sing))
+                  const candidates = findCubeLuckOptsForBudgets(
+                    tierTable, tableCache.tableLuckCube, "cube", budgets,
+                  )
+                  for (let index = 0; index < singRequests.length; index++) {
+                    const candidate = candidates[index]
+                    const previous = loadoutsH[singRequests[index].level]
+                    if (previous === undefined
+                      || candidate.getStat("cube") > previous.getStat("cube")
+                      || (candidate.getStat("cube") === previous.getStat("cube")
+                        && candidate.cost < previous.cost))
+                      loadoutsH[singRequests[index].level] = candidate
+                  }
+                }
+                const noSingCandidates = findCubeLuckOptsForBudgets(
+                  tableCubeV, tableCache.tableLuckCube, "cube", budgets,
+                )
+                for (let index = 0; index < singRequests.length; index++) {
+                  const candidate = noSingCandidates[index]
+                  const previous = loadoutsH[singRequests[index].level]
+                  if (previous === undefined
+                    || candidate.getStat("cube") > previous.getStat("cube")
+                    || (candidate.getStat("cube") === previous.getStat("cube")
+                      && candidate.cost < previous.cost))
+                    loadoutsH[singRequests[index].level] = candidate
+                }
+                recordCubeExperimentStage("hyperflux-singularity-search", hyperfluxSubstageStartedAt, {
+                  requests: singRequests.length,
+                  tiers: tableSing.length,
+                  cube: tableCubeV.length,
+                  luckCube: tableCache.tableLuckCube.length,
+                })
+              }
+
+              for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
+                  if (loadoutsH[h] === undefined)
+                      continue
                   thresholds[h] = 0;
                   for (let p = h - 1; p >= 0; p--) {
+                      if (loadoutsH[p] === undefined)
+                          continue
                       if (thresholds[p] > 50)
                           continue;
                       thresholds[h] = loadoutsH[p]!.getStat("cube") / loadoutsH[h]!.getStat("cube");
@@ -2856,6 +4992,10 @@ export class HSHeaterOptimizer {
               output.hyperflux = hyperOutput;
 
               stats.postAoAG = postAoAG;
+              recordCubeExperimentStage("hyperflux", hyperfluxStartedAt, {
+                cubeRune: tableCache.tableCubeR.length,
+                luckCube: tableCache.tableLuckCube.length,
+              })
 
           }
 
