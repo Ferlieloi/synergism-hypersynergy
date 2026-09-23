@@ -154,6 +154,7 @@ async function main(): Promise<void> {
     { label: 'legacy-quark', config: { useLegacyQuarkSearch: true } },
     { label: 'legacy-all-amb', config: { useLegacyAllAmbMerge: true } },
     { label: 'legacy-hyperflux', config: { useLegacyHyperfluxMerge: true } },
+    { label: 'legacy-independent', config: { useLegacyIndependentMerge: true } },
     { label: 'legacy-voucher-endpoints', config: { useLegacyVoucherEndpoints: true } },
     { label: 'validate-voucher-scores', config: { validateVoucherMergeScores: true } },
     { label: 'validate-chain-scores', config: { validateChainScores: true } },

@@ -244,6 +244,14 @@ export class HSHeaterInputModalController {
                 const updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
+            } catch (error) {
+                const memoryLimit = error instanceof Error && error.message.includes('memory safety limit');
+                HSUI.Notify(memoryLimit
+                    ? 'Heater stopped before exceeding its memory limit. Try fewer builds at once.'
+                    : 'Heater could not finish. Check the console for details.', {
+                    position: 'top', notificationType: 'error'
+                });
+                console.error('Heater calculation failed:', error);
             } finally {
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';

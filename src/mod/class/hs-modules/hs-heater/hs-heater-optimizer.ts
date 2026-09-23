@@ -159,6 +159,8 @@ export interface HeaterCubeExperimentConfig {
     useLegacyAllAmbMerge?: boolean;
     /** Benchmark-only reference path for validating independent Singularity tiers. */
     useLegacyHyperfluxMerge?: boolean;
+    /** Benchmark-only reference path for validating compact independent merges. */
+    useLegacyIndependentMerge?: boolean;
     /** Benchmark-only reference path for the former voucher-tier endpoint shortcut. */
     useLegacyVoucherEndpoints?: boolean;
     /** Benchmark-only check that cached voucher effects match a full evaluation. */
@@ -1859,6 +1861,36 @@ function trimTable(table: Loadout[], stat: string): Loadout[] {
     return trimmed
 }
 
+// Pareto dominance is transitive: a row discarded from one batch cannot
+// become useful after later rows are added. This keeps Cartesian merges from
+// retaining millions of complete Loadout objects until the final sort.
+function createBatchedTable(stat: string) {
+  const BATCH_SIZE = 20_000
+  const MAX_FRONTIER = 500_000
+  let frontier: Loadout[] = []
+  let pending: Loadout[] = []
+  const flush = (): void => {
+    if (pending.length === 0)
+      return
+    frontier.push(...pending)
+    pending = []
+    frontier = trimTable(frontier, stat)
+    if (frontier.length > MAX_FRONTIER)
+      throw new Error(`Heater ${stat} search exceeded its ${MAX_FRONTIER}-build memory safety limit. Try fewer builds at once.`)
+  }
+  return {
+    add(loadout: Loadout): void {
+      pending.push(loadout)
+      if (pending.length >= BATCH_SIZE)
+        flush()
+    },
+    finish(): Loadout[] {
+      flush()
+      return frontier.length > 0 ? frontier : [new Loadout()]
+    },
+  }
+}
+
 // Trims a dependent upgrade chain without throwing away a loadout that can
 // unlock a stronger later tier.  A normal stat-only Pareto trim is unsafe for
 // chains such as Cubes I -> II -> III because a slightly weaker Cubes-I
@@ -2256,7 +2288,43 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
       value: number;
       factor: number;
     }
-    const candidates: VoucherCandidate[] = []
+    let candidates: VoucherCandidate[] = []
+    let untrimmedCandidateCount = 0
+    const trimCandidates = (): void => {
+      if (candidates.length === 0)
+        return
+      const berryValues = [...new Set(candidates.map(row => row.blueberryCost))].sort((a, b) => a - b)
+      const berryIndices = new Map(berryValues.map((value, index) => [value, index + 1]))
+      const tree = new Float64Array(berryValues.length + 1)
+      tree.fill(-Infinity)
+      const query = (index: number): number => {
+        let best = -Infinity
+        while (index > 0) {
+          best = Math.max(best, tree[index])
+          index -= index & -index
+        }
+        return best
+      }
+      const update = (index: number, value: number): void => {
+        while (index < tree.length) {
+          tree[index] = Math.max(tree[index], value)
+          index += index & -index
+        }
+      }
+      candidates.sort((a, b) => a.cost - b.cost || b.value - a.value
+        || a.blueberryCost - b.blueberryCost)
+      const kept: VoucherCandidate[] = []
+      for (const row of candidates) {
+        const index = berryIndices.get(row.blueberryCost)!
+        if (query(index) >= row.value)
+          continue
+        update(index, row.value)
+        kept.push(row)
+      }
+      candidates = kept
+      if (candidates.length > 500_000)
+        throw new Error('Heater voucher frontier exceeded its 500000-build memory safety limit. Try fewer builds at once.')
+    }
     const octeracts = stat === "oct"
     type VoucherMergeRow = {
       loadout: Loadout;
@@ -2333,6 +2401,8 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
       }
       const result = { costs, blueberries }
       tier.adjustmentsBySignature.set(signature, result)
+      if (tier.adjustmentsBySignature.size > 256)
+        tier.adjustmentsBySignature.delete(tier.adjustmentsBySignature.keys().next().value!)
       return result
     }
 
@@ -2402,6 +2472,8 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
             factors = new Float64Array(rows.length)
             factors.fill(Number.NaN)
             tier.factorsBySignature.set(signature, factors)
+            if (tier.factorsBySignature.size > 256)
+              tier.factorsBySignature.delete(tier.factorsBySignature.keys().next().value!)
           }
           const start = cubeExperimentConfig?.useLegacyVoucherEndpoints ? bestIndex : 0
           for (let index = start; index <= bestIndex; index++) {
@@ -2418,6 +2490,10 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
               value: itemValue * factor,
               factor,
             })
+            if (++untrimmedCandidateCount >= 20_000) {
+              trimCandidates()
+              untrimmedCandidateCount = 0
+            }
           }
         }
       }
@@ -2425,35 +2501,11 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
     if (candidates.length === 0)
       return [new Loadout()]
 
-    // Trim compact scalar candidates before constructing Loadouts. Each
-    // retained row is still the full (cost, blueberries, Cube/Octeract) Pareto
-    // frontier; no intermediate voucher prefix is discarded in advance.
-    const berryValues = [...new Set(candidates.map(row => row.blueberryCost))].sort((a, b) => a - b)
-    const berryIndices = new Map(berryValues.map((value, index) => [value, index + 1]))
-    const tree = new Float64Array(berryValues.length + 1)
-    tree.fill(-Infinity)
-    const query = (index: number): number => {
-      let best = -Infinity
-      while (index > 0) {
-        best = Math.max(best, tree[index])
-        index -= index & -index
-      }
-      return best
-    }
-    const update = (index: number, value: number): void => {
-      while (index < tree.length) {
-        tree[index] = Math.max(tree[index], value)
-        index += index & -index
-      }
-    }
-    candidates.sort((a, b) => a.cost - b.cost || b.value - a.value
-      || a.blueberryCost - b.blueberryCost)
+    // Batch trimming is exact because Pareto-dominated rows cannot become
+    // useful when another independent table is merged later.
+    trimCandidates()
     const result: Loadout[] = []
     for (const row of candidates) {
-      const index = berryIndices.get(row.blueberryCost)!
-      if (query(index) >= row.value)
-        continue
-      update(index, row.value)
       const union = Loadout.union(row.item, row.voucher)
       if (cubeExperimentConfig?.validateVoucherMergeScores) {
         const actual = union.getStat(stat)
@@ -2715,7 +2767,7 @@ function generateTable(selectedUpgrades: string[], stat: string, minLevels: Reco
 
 // Merges two tables with locally optimal loadouts
 function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadout[] {
-    const result: Loadout[] = [];
+    const result = createBatchedTable(stat)
     const useOverlapBreak = fixedSharedLevels(table1, table2)
     for (let item1 of table1)
       for (let item2 of table2) {
@@ -2733,13 +2785,10 @@ function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadou
           // trimTable removes duplicate equal-cost/equal-berry states while
           // building the Pareto frontier; avoid serializing every union just
           // to maintain a duplicate set in this hot Cartesian-product loop.
-          result.push(union)
+          result.add(union)
         }
       }
-    if (result.length <= 0)
-      result.push(new Loadout)
-    const trimmed = trimTable(result, stat)
-    return trimmed
+    return result.finish()
   }
 
 // Merge tables whose upgrade sets are independent (the rune table is used in
@@ -2747,25 +2796,113 @@ function mergeTables(table1: Loadout[], table2: Loadout[], stat: string): Loadou
 // compose as a ratio around the empty loadout, so cache that ratio and avoid a
 // full getStat pass for every union in the large Cartesian product.
 function mergeIndependentTables(table1: Loadout[], table2: Loadout[], stat: string): Loadout[] {
-    const result: Loadout[] = []
     const baseStat = new Loadout().getStat(stat)
-    const rightFactors = table2.map(loadout => loadout.getStat(stat) / baseStat)
+    const rightRows = table2.map(loadout => ({
+      cost: loadout.cost,
+      entries: Object.entries(loadout.upgradeLevels),
+      factor: loadout.getStat(stat) / baseStat,
+    }))
+
+    if (cubeExperimentConfig?.useLegacyIndependentMerge) {
+      const result = createBatchedTable(stat)
+      for (const item1 of table1) {
+        const leftStat = item1.getStat(stat)
+        for (let rightIndex = 0; rightIndex < table2.length; rightIndex++) {
+          if (rightRows[rightIndex].cost > stats.amb)
+            break
+          const union = Loadout.union(item1, table2[rightIndex])
+          if (union.cost > stats.amb || union.blueberryCost > stats.blueberries)
+            continue
+          union.setCachedStat(stat, leftStat * rightRows[rightIndex].factor)
+          result.add(union)
+        }
+      }
+      return result.finish()
+    }
+
+    type Candidate = {
+      leftIndex: number;
+      rightIndex: number;
+      cost: number;
+      blueberryCost: number;
+      value: number;
+    }
+    let frontier: Candidate[] = []
+    let pendingCount = 0
+    const trim = (): void => {
+      if (pendingCount === 0)
+        return
+      const berries = [...new Set(frontier.map(row => row.blueberryCost))].sort((a, b) => a - b)
+      const berryIndices = new Map(berries.map((value, index) => [value, index + 1]))
+      const tree = new Float64Array(berries.length + 1)
+      tree.fill(-Infinity)
+      const query = (index: number): number => {
+        let best = -Infinity
+        while (index > 0) {
+          best = Math.max(best, tree[index])
+          index -= index & -index
+        }
+        return best
+      }
+      const update = (index: number, value: number): void => {
+        while (index < tree.length) {
+          tree[index] = Math.max(tree[index], value)
+          index += index & -index
+        }
+      }
+      frontier.sort((a, b) => a.cost - b.cost || b.value - a.value
+        || a.blueberryCost - b.blueberryCost)
+      const retained: Candidate[] = []
+      for (const row of frontier) {
+        const index = berryIndices.get(row.blueberryCost)!
+        if (query(index) >= row.value)
+          continue
+        retained.push(row)
+        update(index, row.value)
+      }
+      frontier = retained
+      pendingCount = 0
+      if (frontier.length > 500_000)
+        throw new Error(`Heater ${stat} search exceeded its 500000-build memory safety limit. Try fewer builds at once.`)
+    }
+
     for (let leftIndex = 0; leftIndex < table1.length; leftIndex++) {
       const item1 = table1[leftIndex]
       const leftStat = item1.getStat(stat)
-      for (let rightIndex = 0; rightIndex < table2.length; rightIndex++) {
-        const item2 = table2[rightIndex]
-        if (item2.cost > stats.amb)
+      const leftCost = item1.cost
+      const leftBlueberries = item1.blueberryCost
+      for (let rightIndex = 0; rightIndex < rightRows.length; rightIndex++) {
+        const right = rightRows[rightIndex]
+        if (right.cost > stats.amb)
           break
-        const union = Loadout.union(item1, item2)
-        if (union.cost > stats.amb || union.blueberryCost > stats.blueberries)
+        let cost = leftCost
+        let blueberryCost = leftBlueberries
+        for (const [name, rightLevel] of right.entries) {
+          const oldLevel = item1.upgradeLevels[name] ?? 0
+          if (rightLevel <= oldLevel)
+            continue
+          cost += upgrades[name].cost(rightLevel) - upgrades[name].cost(oldLevel)
+          if (oldLevel <= 0)
+            blueberryCost += Math.max(0,
+              upgrades[name].blueberryCost - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0))
+        }
+        if (cost > stats.amb || blueberryCost > stats.blueberries)
           continue
-        union.setCachedStat(stat, leftStat * rightFactors[rightIndex])
-        result.push(union)
+        frontier.push({ leftIndex, rightIndex, cost, blueberryCost,
+          value: leftStat * right.factor })
+        if (++pendingCount >= 20_000)
+          trim()
       }
     }
-    const trimmed = trimTable(result, stat)
-    return trimmed
+    trim()
+    if (frontier.length === 0)
+      return [new Loadout()]
+    return frontier.map(row => {
+      const union = Loadout.union(table1[row.leftIndex], table2[row.rightIndex])
+      union.setCachedCosts(row.cost, row.blueberryCost)
+      union.setCachedStat(stat, row.value)
+      return union
+    })
 }
 
 // Exact all-Ambrosia merge with cached cross-table Luck work.  The right
@@ -2782,7 +2919,7 @@ function mergeAllAmbTables(table1: Loadout[], table2: Loadout[]): Loadout[] {
       groups = partitioned
     }
 
-    const result: Loadout[] = []
+    const result = createBatchedTable("allAmb")
     for (const group of groups) {
       const rightMetadata = group.map(loadout => ({
         loadout,
@@ -2811,11 +2948,11 @@ function mergeAllAmbTables(table1: Loadout[], table2: Loadout[]): Loadout[] {
           union.setCachedStat("speed", right.speed)
           union.setCachedStat("rSpeed", right.rSpeed)
           union.setCachedStat("allAmb", union.getStat("amb") * union.getStat("rAmb"))
-          result.push(union)
+          result.add(union)
         }
       }
     }
-    return trimTable(result.length > 0 ? result : [new Loadout()], "allAmb")
+    return result.finish()
 }
 
 type FindOptState = {
@@ -4553,6 +4690,12 @@ export class HSHeaterOptimizer {
                 cubeTotal: tableCache.tableCubeTotal.length,
                 cubeVoucher: tableCache.tableCubeVoucher.length,
               })
+              // These large intermediate frontiers are no longer needed by
+              // the final Cube/SR search. Hyperflux is the only later branch
+              // that still reads the pre-voucher Cube/Rune frontier.
+              delete tableCache.tableCubeTotal
+              if (!options.calculateHyperflux)
+                delete tableCache.tableCubeR
           }
 
           if (options.calculateCubes) {
@@ -4750,8 +4893,9 @@ export class HSHeaterOptimizer {
             stats.exalt = 0
             let loadoutSR1 = generateTable(["ambrosiaSingReduction1"], "singReduction").at(-1)!
             let levelSR1 = loadoutSR1.upgradeLevels.ambrosiaSingReduction1
-            let tableSR1Cube = tableCache.tableCubeVoucher.map(loadout => new Loadout(loadout))
-            tableSR1Cube = tableSR1Cube.filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
+            let tableSR1Cube = tableCache.tableCubeVoucher
+              .filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
+              .map(loadout => new Loadout(loadout))
             tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
             if (tableSR1Cube.length === 0) {
                 // No cube-optimal loadout reaches ambrosiaHyperflux >= 4 within budget - nothing affordable to report for sr1
@@ -4762,6 +4906,7 @@ export class HSHeaterOptimizer {
                 if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
                 output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
             }
+            tableSR1Cube.length = 0
 
             HSLogger.debug(() => '[HeaterDiag] calculateSR: sr2', 'HSHeaterOptimizer');
             stats.exalt = 7
@@ -4772,6 +4917,7 @@ export class HSHeaterOptimizer {
             loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
             if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
             output.sr2 = [loadoutSR2.generateOutput("singReduction", maxLoadout)];
+            tableSR2Cube.length = 0
             stats.exalt = exalt
             stats.postAoAG = postAoAG
             recordCubeExperimentStage("singularity-reduction", singularityReductionStartedAt, {

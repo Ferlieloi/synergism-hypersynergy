@@ -23,24 +23,18 @@ type SerializedHeaterOptimizerInput = Omit<
   baseTalismanPower: string
 }
 
-const PARALLEL_BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
-  // Start the longest measured jobs first so later short jobs can fill idle
-  // worker slots. The independent branch results are combined below.
+const BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
+  // Groups run sequentially in disposable workers. Cube/SR reuse their
+  // Cube/Voucher and Luck-Cube frontiers; Quarks/Obt/Off reuse their Luck,
+  // Rune and Voucher inputs but keep separate objective-specific frontiers.
   ['hyperflux'],
-  ['sr'],
-  ['cubes'],
+  ['cubes', 'sr'],
   ['oct', 'gen'],
   ['luck', 'ambOct'],
-  ['quarks'],
-  ['obtOff'],
+  ['quarks', 'obtOff'],
 ]
 
-const LOW_CORE_BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
-  ['obtOff', 'hyperflux', 'sr'],
-  ['quarks', 'luck', 'ambOct', 'cubes', 'oct', 'gen'],
-]
-
-const ALL_BRANCHES = PARALLEL_BRANCH_GROUPS.flat()
+const ALL_BRANCHES = BRANCH_GROUPS.flat()
 const RESULT_CACHE_LIMIT = 4
 const resultCache = new Map<string, HeaterOptimizationResult>()
 
@@ -68,14 +62,8 @@ function cacheResult(key: string, result: HeaterOptimizationResult): void {
 
 function activeBranchGroups(
   input: HeaterOptimizerInput,
-  concurrency: number,
 ): HeaterBranchId[][] {
-  const groups = concurrency <= 1
-    ? [ALL_BRANCHES]
-    : concurrency === 2
-      ? LOW_CORE_BRANCH_GROUPS
-      : PARALLEL_BRANCH_GROUPS
-  return groups
+  return BRANCH_GROUPS
     .map(group => group.filter(branch => input.heaterOptions[branch]))
     .filter(group => group.length > 0)
 }
@@ -161,23 +149,21 @@ export class HSHeaterOptimizerRunner {
       return result
     }
 
-    const availableConcurrency = Math.max(1, Math.min(
-      4,
-      Math.max(1, (navigator.hardwareConcurrency || 2) - 1),
-    ))
-    const activeGroups = activeBranchGroups(input, availableConcurrency)
+    // A branch keeps several large Pareto frontiers alive at once. Running
+    // multiple branches in parallel multiplies that peak and can exhaust the
+    // browser process even though each individual search fits. Terminating a
+    // worker between groups also releases its entire heap deterministically.
+    const activeGroups = activeBranchGroups(input)
     const sourceUrl = URL.createObjectURL(new Blob([HS_HEATER_WORKER_SOURCE], { type: 'text/javascript' }))
     try {
-      const concurrency = Math.min(availableConcurrency, activeGroups.length)
-      const results = new Array<HeaterOptimizationResult>(activeGroups.length)
-      let nextIndex = 0
-      const consume = async (): Promise<void> => {
-        while (nextIndex < activeGroups.length) {
-          const index = nextIndex++
-          results[index] = await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index]))
-        }
+      const results: HeaterOptimizationResult[] = []
+      for (let index = 0; index < activeGroups.length; index++) {
+        results.push(await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index])))
+        // Let the browser dispose of the terminated worker's heap before a
+        // second large branch starts allocating its own frontiers.
+        if (index + 1 < activeGroups.length)
+          await new Promise<void>(resolve => setTimeout(resolve, 50))
       }
-      await Promise.all(Array.from({ length: concurrency }, () => consume()))
       const result = mergeResults(input, results)
       cacheResult(cacheKey, result)
       return result
