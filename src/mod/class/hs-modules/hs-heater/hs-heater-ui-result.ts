@@ -47,7 +47,14 @@ const LOADOUT_UPGRADE_META_MAP = {
     ambrosiaLuck3:                 { iconFile: 'BlueberryLuck3.png' },
     ambrosiaSingReduction2:        { iconFile: 'BlueberrySingReduction2.png' },
     ambrosiaInfiniteShopUpgrades2: { iconFile: 'BlueberryInfiniteShopUpgrades2.png' },
+    ambrosiaInfiniteShopUpgrades3: { iconFile: 'BlueberryInfiniteShopUpgrades3.png' },
     ambrosiaLuck4:                 { iconFile: 'BlueberryLuck4.png' },
+    ambrosiaQuarks4:               { iconFile: 'BlueberryQuarks4.png' },
+    ambrosiaCubes4:                { iconFile: 'BlueberryCubes4.png' },
+    ambrosiaFreeCubeUpgrades:      { iconFile: 'BlueberryFreeCubeUpgrades.png' },
+    ambrosiaFreeObtainiumUpgrades: { iconFile: 'BlueberryFreeObtainiumUpgrades.png' },
+    ambrosiaFreeOfferingUpgrades:  { iconFile: 'BlueberryFreeOfferingUpgrades.png' },
+    twoMind:                       { iconFile: 'BlueberryMind.png' },
 } as const satisfies Record<string, LoadoutPreviewMeta>;
 
 // === Loadout Preview Upgrade Key Type ===
@@ -170,7 +177,7 @@ export class HSHeaterUIResult {
             null 
         ],
         [ 
-            { key: 'ambrosiaFreeGenerationUpgrades', maxLevel: 3 }, 
+            { key: 'ambrosiaFreeGenerationUpgrades', maxLevel: 5 },
             { key: 'ambrosiaCubeQuark1',             maxLevel: 25 }, 
             { key: 'ambrosiaLuckQuark1',             maxLevel: 25 }, 
             { key: 'ambrosiaLuckCube1',              maxLevel: 25 }, 
@@ -197,8 +204,19 @@ export class HSHeaterUIResult {
             { key: 'ambrosiaLuck3',                 maxLevel: 100 }, 
             { key: 'ambrosiaSingReduction2',        maxLevel: 2 }, 
             { key: 'ambrosiaInfiniteShopUpgrades2', maxLevel: 20 }, 
+            { key: 'ambrosiaInfiniteShopUpgrades3', maxLevel: 20 },
             { key: 'ambrosiaLuck4',                 maxLevel: 50 }, 
             null 
+        ],
+        [
+            { key: 'ambrosiaQuarks4', maxLevel: 100 },
+            { key: 'ambrosiaCubes4',  maxLevel: 50 },
+            { key: 'ambrosiaFreeCubeUpgrades', maxLevel: 30 },
+            { key: 'ambrosiaFreeObtainiumUpgrades', maxLevel: 50 },
+            { key: 'ambrosiaFreeOfferingUpgrades', maxLevel: 50 },
+            { key: 'twoMind',         maxLevel: 1 },
+            null,
+            null,
         ],
     ];
 

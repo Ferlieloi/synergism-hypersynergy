@@ -50,11 +50,28 @@ async function build(env) {
         process.exit(1);
     }
     try {
+        const workerBuild = await esbuild.build({
+            entryPoints: ['src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-worker.ts'],
+            bundle: true,
+            write: false,
+            platform: 'browser',
+            format: 'iife',
+            minify: env === 'release',
+            legalComments: 'none',
+            logLevel: 'silent',
+            plugins: baseOptions.plugins,
+            define: baseOptions.define,
+        });
+        const heaterWorkerSource = workerBuild.outputFiles[0].text;
         const options = {
             ...baseOptions,
             outfile: env === 'release' ? 'release/mod/hypersynergism_release.js' : 'build/hypersynergism.js',
             minify: env === 'release',
             sourcemap: false,
+            define: {
+                ...baseOptions.define,
+                HS_HEATER_WORKER_SOURCE: JSON.stringify(heaterWorkerSource),
+            },
         };
 
         if (env === 'dev') {

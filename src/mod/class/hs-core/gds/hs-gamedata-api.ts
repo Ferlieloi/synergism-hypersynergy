@@ -2903,6 +2903,33 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     blueBarMaxWithoutTwoMindAndBrick: this.ambrosia.calculateRequiredBlueberryTime(true, true),
                     blueBarRequirementBeforeRounding,
                     redBarMaxWithoutTwoMind:    this.ambrosia.calculateRequiredRedAmbrosiaTime(true),
+                    // SynergismOfficial/src/Calculate.ts, PurpleReactor.ts,
+                    // and Helper.ts: the optimizer needs the saved routing
+                    // settings and the fixed per-fill feedback effects.
+                    heaterReactor: {
+                        blueRoutingPercent: gameData.purpleReactor?.ambrosiaBarPointPercentage ?? 0,
+                        redRoutingPercent: gameData.purpleReactor?.redAmbrosiaBarPointPercentage ?? 0,
+                        blueStoredPoints: gameData.purpleReactor?.storedAmbrosiaBarPoints ?? 0,
+                        redStoredPoints: gameData.purpleReactor?.storedRedAmbrosiaBarPoints ?? 0,
+                        blueCapacity: 1_000_000_000
+                            + 250_000_000 * this.getPCoinUpgradeLevel('PURPLE_REACTOR_CAPACITY_BUFF')
+                            + (['purpleCapacityExpander1', 'purpleCapacityExpander2', 'purpleCapacityExpander3', 'purpleCapacityExpander4'] as const)
+                                .reduce((sum, key) => sum + this.purple.getPurpleReactorUpgradeEffects(key, 'ambrosiaCapacity'), 0),
+                        encabulatorSpeed: 12
+                            + (['purpleHalfLife1', 'purpleHalfLife2', 'purpleHalfLife3', 'purpleHalfLife4'] as const)
+                                .reduce((sum, key) => sum + this.purple.getPurpleReactorUpgradeEffects(key, 'encabulatorSpeed'), 0),
+                        purpleRequirementWithoutTwoMind: this.ambrosia.calculatePurpleHoneyConversionFactor(true),
+                        cancerPurplePointsPerBlueOrRedFill: this.purple.getPurpleAmbrosiaUpgradeEffects('cancer', 'purpleBarPointsOnFill'),
+                        purpleFillBluePoints: this.purple.getPurpleAmbrosiaUpgradeEffects('gemini', 'ambrosiaBarPointsOnFill')
+                            + this.quarkShop.getShopUpgradeEffects('shopPurpleBarRebate', 'ambrosiaBarPointsPerFill'),
+                        purpleFillRedPoints: this.purple.getPurpleAmbrosiaUpgradeEffects('gemini', 'redAmbrosiaBarPointsOnFill')
+                            + this.quarkShop.getShopUpgradeEffects('shopPurpleBarRebate', 'redAmbrosiaBarPointsPerFill'),
+                        scorpioConversionMultiplier: this.purple.getPurpleAmbrosiaUpgradeEffects('scorpio', 'purpleReactorConversionMult'),
+                        ariesBarPointMultiplier: this.purple.getPurpleAmbrosiaUpgradeEffects('aries', 'universalBarPointMult'),
+                        overcapEnabled: Boolean(gameData.encabulatorOvercapToggle
+                            && this.purple.getPurpleAmbrosiaUpgradeEffects('libra', 'overcapToggleUnlocked')),
+                        barDependenceEnabled: Boolean(gameData.singularityChallenges.barDependence.enabled),
+                    },
                     ambrosiaUpgradeBonusLevels,
                     ambrosiaUpgradeBlueberryCostReductions,
                     shopUpgradeRawLevels,

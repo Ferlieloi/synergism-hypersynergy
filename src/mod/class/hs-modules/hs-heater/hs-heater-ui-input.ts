@@ -27,14 +27,67 @@ export class HSHeaterUIInput {
     static readonly inputDefinitions = inputDefinitions;
     static readonly exportFieldExtractors = exportFieldExtractors;
     static #lockHandlersAttachedModals = new WeakSet<HTMLElement>();
+    static #optimizerMetadata: Pick<HeaterOptimizerInput,
+        | 'ambrosiaUpgradeBonusLevels'
+        | 'ambrosiaUpgradeBlueberryCostReductions'
+        | 'runeSiBonusLevelsTalismanNoAmbrosia'
+        | 'runeSiEffectiveLevelMultiplier'
+        | 'shopUpgradeRawLevels'
+        | 'shopBonusLevelsNoAmbrosia'
+        | 'panthemaLevel'
+        | 'reactor'
+        | 'shopUpgradesDisabled'> = {
+            ambrosiaUpgradeBonusLevels: {},
+            ambrosiaUpgradeBlueberryCostReductions: {},
+            runeSiBonusLevelsTalismanNoAmbrosia: 0,
+            runeSiEffectiveLevelMultiplier: 1,
+            shopUpgradeRawLevels: {},
+            shopBonusLevelsNoAmbrosia: {
+                offering: 0,
+                obtainium: 0,
+                cubes: 0,
+                speed: 0,
+                quark: 0,
+                ambrosiaLuck: 0,
+                redAmbrosiaLuck: 0,
+                ambrosiaGeneration: 0,
+                infinity: 0,
+            },
+            panthemaLevel: 0,
+            reactor: undefined,
+            shopUpgradesDisabled: false,
+        };
 
     static #cachedTypeSelects: HTMLSelectElement[] = [];
     static #cachedTypeIcons: HTMLButtonElement[] = [];
     static #iconOverrideChangeListener: HeaterIconOverrideChangeListener | null = null;
 
     static buildOptimizerInput(exportData: any): HeaterOptimizerInput {
+        const hsData = exportData?.hs_data;
+        this.#optimizerMetadata = {
+            ambrosiaUpgradeBonusLevels: hsData?.ambrosiaUpgradeBonusLevels ?? {},
+            ambrosiaUpgradeBlueberryCostReductions: hsData?.ambrosiaUpgradeBlueberryCostReductions ?? {},
+            runeSiBonusLevelsTalismanNoAmbrosia: Number(hsData?.runeSiBonusLevelsTalismanNoAmbrosia ?? 0),
+            runeSiEffectiveLevelMultiplier: Number(hsData?.totalSIRunePowerMultiplier ?? 1),
+            shopUpgradeRawLevels: hsData?.shopUpgradeRawLevels ?? {},
+            shopBonusLevelsNoAmbrosia: hsData?.shopBonusLevelsNoAmbrosia ?? {
+                offering: 0,
+                obtainium: 0,
+                cubes: 0,
+                speed: 0,
+                quark: 0,
+                ambrosiaLuck: 0,
+                redAmbrosiaLuck: 0,
+                ambrosiaGeneration: 0,
+                infinity: 0,
+            },
+            panthemaLevel: hsData?.panthemaLevel ?? 0,
+            reactor: hsData?.heaterReactor,
+            shopUpgradesDisabled: Boolean(hsData?.shopUpgradesDisabled),
+        };
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
+            ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
                 HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, true])
             ) as Record<HeaterBranchId, boolean>,
@@ -115,6 +168,7 @@ export class HSHeaterUIInput {
 
         return {
             ...this.parseInputBaseRawFromModal(modal),
+            ...this.#optimizerMetadata,
             heaterOptions,
         };
     }

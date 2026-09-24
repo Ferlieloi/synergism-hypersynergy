@@ -146,7 +146,7 @@ function computeRedAmbrosiaEffectValue(
         case 'blueberryGenerationSpeed':
         case 'blueberryGenerationSpeed2': {
             if (!input) { return undefined; }
-            const fusion = input.ambSpeedNonAmbBerries * input.patreonBonus;
+            const fusion = input.ambSpeedNoAmbBerries * (1 + input.patreonBonus);
             const coefficient = upgradeKey === 'blueberryGenerationSpeed' ? 0.002 : 0.001;
             const speed = fusion * (1 + coefficient * level);
             if (!(speed > 0)) { return 1; }
@@ -252,7 +252,7 @@ function computeRedAmbrosiaRawToDisplay(
     }
 
     const { input } = context;
-    const speed = (input?.ambSpeedNonAmbBerries ?? 0) * (input?.patreonBonus ?? 0);
+    const speed = (input?.ambSpeedNoAmbBerries ?? 0) * (1 + (input?.patreonBonus ?? 0));
     const blueberries = input?.blueberries ?? 0;
     if (!(speed > 0 && blueberries > 0)) {
         return value;
@@ -313,7 +313,9 @@ function computeOcteractFreeSpeedRaw(level: number, input: HeaterOptimizerInput)
         const denominator = 1 + effect * (baseValues[index] + 24.5 + level);
         return current * (1 + effect / denominator);
     }, 1);
-    const mind = input.transcription > 0 ? 0.55 + input.transcription / 150 : 0.5;
+    const mind = input.oneMindUnlocked && input.ascSpeed >= 1
+        ? 0.55 + input.transcription / 150
+        : 0.5;
     return Math.pow(product * 1.006, (1 + input.ascSpread) * mind);
 }
 
@@ -349,7 +351,9 @@ function computeOcteractEffectRawValue(
                 / (1 + Math.pow(input.ramb, 0.4 + level / 100) / 100);
         case 'infiniteShopUpgrades':
             if (!input) { return undefined; }
-            const infiniteMind = input.transcription > 0 ? 0.55 + input.transcription / 150 : 0.5;
+            const infiniteMind = input.oneMindUnlocked && input.ascSpeed >= 1
+                ? 0.55 + input.transcription / 150
+                : 0.5;
             return Math.pow(1.012, 1.25) * Math.pow(1.006, (1 + input.ascSpread) * infiniteMind);
         case 'freeCubeUpgrades':
             if (!input) { return undefined; }

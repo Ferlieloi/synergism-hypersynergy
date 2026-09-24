@@ -3,7 +3,7 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSHeaterOptimizer } from "./hs-heater-optimizer";
+import { HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIInput } from "./hs-heater-ui-input";
@@ -39,9 +39,9 @@ export class HSHeaterInputModalController {
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
         autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
         autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obt"] },
-        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:2", "gen:1", "gen:0"] },
+        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
+        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
+        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
         // RETIRED: Ambrosia AFK/idle swapper loadout recommendations.
         // ambrosiaIdleSwapOcteractLoadout:   { label: 'AFK Swapper Gen+Oct',   preferences: ["gen:2", "gen:1", "gen:0"] },
         // ambrosiaIdleSwapNormalLuckLoadout: { label: 'AFK Swapper Blue Luck', preferences: ["ambOct", "luck"] },
@@ -234,9 +234,24 @@ export class HSHeaterInputModalController {
                 await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
 
                 const updatedInput = HSHeaterUIInput.readInputValues(modal);
-                const updatedResult = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(updatedInput);
+                if (!Number.isFinite(updatedInput.blueBarRequirementBeforeRounding)
+                    || updatedInput.blueBarRequirementBeforeRounding <= 0) {
+                    HSUI.Notify('Blue bar pre-round requirement is missing. Re-export current game data for Heater.', {
+                        position: 'top', notificationType: 'error'
+                    });
+                    return;
+                }
+                const updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
+            } catch (error) {
+                const memoryLimit = error instanceof Error && error.message.includes('memory safety limit');
+                HSUI.Notify(memoryLimit
+                    ? 'Heater stopped before exceeding its memory limit. Try fewer builds at once.'
+                    : 'Heater could not finish. Check the console for details.', {
+                    position: 'top', notificationType: 'error'
+                });
+                console.error('Heater calculation failed:', error);
             } finally {
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';

@@ -1036,6 +1036,10 @@ const SHOP_UPGRADE_EFFECTS: Record<string, Record<string, (level: number, env: S
             return 1 - Math.min(300, horseShoeLevel * level) / 1000;
         },
     },
+    shopPurpleBarRebate: {
+        ambrosiaBarPointsPerFill: (level) => 50_000 * level,
+        redAmbrosiaBarPointsPerFill: (level) => 25 * level,
+    },
     shopPanthema: {
         infinityMetaBoost: (level, env) => 1 + 0.01 * level * env.getShopUpgradeTypeBonusLevels(ShopUpgradeGroups.InfinityUpgrades),
         offeringMult: (level, env) => {

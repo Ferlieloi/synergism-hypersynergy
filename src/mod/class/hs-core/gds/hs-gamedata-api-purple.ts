@@ -12,6 +12,14 @@ export type PurpleReactorUpgradeKey =
     | 'purpleHoneyRequirementReduction2'
     | 'purpleHoneyRequirementReduction3'
     | 'purpleHoneyRequirementReduction4'
+    | 'purpleHalfLife1'
+    | 'purpleHalfLife2'
+    | 'purpleHalfLife3'
+    | 'purpleHalfLife4'
+    | 'purpleCapacityExpander1'
+    | 'purpleCapacityExpander2'
+    | 'purpleCapacityExpander3'
+    | 'purpleCapacityExpander4'
     | 'lifetimeHoneyAscensionSpeed'
     | 'lifetimeHoneyAmbrosia'
     | 'lifetimeHoneyRedAmbrosia';
@@ -25,6 +33,14 @@ interface PurpleUpgradeDefinition {
 // cumulative Purple Honey investments, so levels must be reconstructed.
 const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDefinition> = {
     tutorial: { maxLevel: 15, costFormula: (level) => level * (level + 1) / 2 },
+    purpleHalfLife1: { maxLevel: 50, costFormula: (level) => 12 * level },
+    purpleHalfLife2: { maxLevel: 50, costFormula: (level) => 240 * level },
+    purpleHalfLife3: { maxLevel: 50, costFormula: (level) => 4_800 * level },
+    purpleHalfLife4: { maxLevel: 50, costFormula: (level) => 96_000 * level },
+    purpleCapacityExpander1: { maxLevel: 10_000, costFormula: (level) => Math.pow(level, 1.1) },
+    purpleCapacityExpander2: { maxLevel: 10_000, costFormula: (level) => 10 * Math.pow(level, 1.2) },
+    purpleCapacityExpander3: { maxLevel: 10_000, costFormula: (level) => 100 * Math.pow(level, 1.25) },
+    purpleCapacityExpander4: { maxLevel: 10_000, costFormula: (level) => 1_000 * Math.pow(level, 1.3) },
     purpleHoneyRequirementReduction1: { maxLevel: 25, costFormula: (level) => 20 * level },
     purpleHoneyRequirementReduction2: { maxLevel: 25, costFormula: (level) => 400 * level },
     purpleHoneyRequirementReduction3: { maxLevel: 25, costFormula: (level) => 8_000 * level },
@@ -85,6 +101,16 @@ export class PurpleHelper {
         const lifetimePurpleHoney = Number(data.purpleReactor?.lifetimePurpleHoney ?? 0);
 
         if (upgradeKey === 'tutorial') return 1 + 0.01 * level;
+        // SynergismOfficial/src/Purple.ts: all four catalysts add 3/50 per level.
+        if (upgradeKey.startsWith('purpleHalfLife') && effectKey === 'encabulatorSpeed') {
+            return 3 / 50 * level;
+        }
+        if (upgradeKey.startsWith('purpleCapacityExpander')) {
+            const capacityPerLevel = upgradeKey === 'purpleCapacityExpander1' ? 125_000
+                : upgradeKey === 'purpleCapacityExpander4' ? 175_000 : 150_000;
+            if (effectKey === 'ambrosiaCapacity') return capacityPerLevel * level;
+            if (effectKey === 'redCapacity') return capacityPerLevel / 1_000 * level;
+        }
         if (upgradeKey.startsWith('purpleHoneyRequirementReduction')) return 1 - 0.004 * level;
 
         const logHoney = Math.log(1 + lifetimePurpleHoney / 100);
