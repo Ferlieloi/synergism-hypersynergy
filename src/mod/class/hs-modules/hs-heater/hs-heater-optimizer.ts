@@ -140,7 +140,6 @@ interface Options {
     calculateHyperflux: boolean;
     calculateSR:        boolean;
     calculateAmbOct:    boolean;
-    calculateGen:       boolean;
 }
 
 export type HeaterCubeExperimentUpgrade =
@@ -335,7 +334,6 @@ let options: Options = {
     calculateHyperflux: false,
     calculateSR: false,
     calculateAmbOct: false,
-    calculateGen: false,
 };
 
 let cubeExperimentConfig: HeaterCubeExperimentConfig | undefined;
@@ -2322,6 +2320,26 @@ function addLastPriorityVouchers(
   return best
 }
 
+// The Max Amb + Oct base is the literal fully purchased All Ambrosia build.
+// Voucher prerequisites add Cube/Offering/Obtainium purchases to its cost.
+function fullAllAmbLoadout(): Loadout {
+  const loadout = new Loadout()
+  const allAmbUpgrades = [
+    'ambrosiaLuck1', 'ambrosiaLuck2', 'ambrosiaLuck3', 'ambrosiaLuck4',
+    'ambrosiaCubeLuck1', 'ambrosiaQuarkLuck1', 'ambrosiaFreeLuckUpgrades',
+    'ambrosiaFreeRedLuckUpgrades', 'ambrosiaFreeGenerationUpgrades',
+    'ambrosiaBrickOfLead', 'twoMind',
+    'ambrosiaInfiniteShopUpgrades1', 'ambrosiaInfiniteShopUpgrades2',
+    'ambrosiaInfiniteShopUpgrades3',
+  ] as const
+  for (const name of allAmbUpgrades) {
+    if (!upgrades[name].requiresExalt9 || stats.exalt9Unlocked)
+      loadout.upgradeLevels[name] = upgrades[name].maxLevel
+  }
+  loadout.satisfyPrerequisites()
+  return loadout
+}
+
 // A rounded displayed score can leave an already-selected module one level
 // short despite spare Ambrosia. Spend only the remaining budget, retain every
 // existing module, and never reduce the exact objective value.
@@ -4190,7 +4208,7 @@ function findCubeLuckOptsForBudgets(
 }
 
 // Finds the globally optimal loadout for several budgets in one traversal.
-// Hyperflux and generation request the same search at a handful of different
+// Hyperflux requests the same search at a handful of different
 // budgets. Keeping independent search cursors while sharing each constructed
 // union avoids rebuilding identical temporary Loadouts four to eight times.
 function findOptsForBudgets(
@@ -4600,17 +4618,23 @@ export class HSHeaterOptimizer {
         let output: HeaterOptimizationResult = { input };
         let redAmbUpgradeEffects: HeaterRedAmbUpgradeEffects = {};
         let tableCache: Record<string, Loadout[]> = {};
+        const maxAmbForOct = options.calculateAmbOct ? fullAllAmbLoadout() : undefined;
+        if (maxAmbForOct && (stats.amb < maxAmbForOct.cost
+          || stats.blueberries < maxAmbForOct.blueberryCost)) {
+            options.calculateAmbOct = false;
+            output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
+        }
 
         try {
 
           HSLogger.debug(() => '[HeaterDiag] Building shared luck tables', 'HSHeaterOptimizer');
-          // --- Shared luck tables (used by calculateAmb and calculateAmbOct) ---
+          // --- Shared luck tables ---
           const ambLuckTablesStartedAt = experimentNow()
           tableCache.tableLuck1      = generateTable(["ambrosiaFreeLuckUpgrades", "ambrosiaLuck3"], "luck");
           tableCache.tableLuckHybrid = generateTable(["ambrosiaQuarkLuck1", "ambrosiaCubeLuck1"], "luck");
           tableCache.tableLuck4      = generateTable(["ambrosiaLuck4"], "mLuck");
 
-          if (options.calculateAmb || options.calculateAmbOct) {
+          if (options.calculateAmb) {
               let tableLuck = generateDependentChainTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck");
               tableLuck = mergeTables(tableLuck, tableCache.tableLuck1, "luck");
               tableCache.tableLuckAdd = mergeTables(tableLuck, tableCache.tableLuckHybrid, "luck");
@@ -4619,7 +4643,7 @@ export class HSHeaterOptimizer {
           // Keep voucher levels out of the main luck frontier: they are a
           // deliberately last-priority source of luck, but still need to be
           // considered after the best direct luck loadout is found.
-          if (options.calculateAmb || options.calculateAmbOct)
+          if (options.calculateAmb)
               // Keep every distinct voucher count: cube value is not a safe
               // proxy for Luck, Offering, or another build's voucher benefit.
               tableCache.tableVoucher = generateVoucherTable("vouchers");
@@ -4785,16 +4809,15 @@ export class HSHeaterOptimizer {
 
           let loadoutAllAmb: Loadout | undefined;
           let optLoadoutAllAmb: Loadout | undefined;
-          if (barIncomeHighBudget && !options.calculateAmbOct) {
+          if (barIncomeHighBudget) {
               loadoutAllAmb = barIncomeHighBudget.incomeAll;
               const allOutput = loadoutAllAmb.generateOutput('incomeAll', loadoutAllAmb);
               allOutput[6] = true;
               output.allAmb = [allOutput];
           }
-          if ((options.calculateAmb || options.calculateAmbOct)
-            && (!barIncomeHighBudget || options.calculateAmbOct)) { // All Amb calculation
+          if (options.calculateAmb && !barIncomeHighBudget) { // All Amb calculation
               const allAmbStartedAt = experimentNow()
-              HSLogger.debug(() => '[HeaterDiag] calculateAmb/calculateAmbOct: allAmb', 'HSHeaterOptimizer');
+              HSLogger.debug(() => '[HeaterDiag] calculateAmb: allAmb', 'HSHeaterOptimizer');
               let allAmbSubstageStartedAt = experimentNow()
               let tableSpeed  = generateTable(["ambrosiaFreeGenerationUpgrades"], "amb");
               let tableAmb    = mergeTables(tableCache.tableLuck4, tableSpeed, "amb");
@@ -4896,18 +4919,15 @@ export class HSHeaterOptimizer {
                 })
               }
               const legacyAllAmb = findOpt(tableCache.tableAllAmb, tableBrickOfLead, "allAmb");
-              loadoutAllAmb = barIncomeHighBudget?.incomeAll ?? legacyAllAmb;
+              loadoutAllAmb = legacyAllAmb;
               // Vouchers have secondary Jack/Panthema effects; add them after
               // the primary bar-and-luck allocation, as requested.
-              if (!barIncomeHighBudget)
-                loadoutAllAmb = stats.reactor
-                  ? optimizeBarIncomeWithVouchers(loadoutAllAmb, 'incomeAll')
-                  : fillSelectedLuckModules(
-                    addLastPriorityVouchers(loadoutAllAmb, tableCache.tableVoucher, "allAmb"), "allAmb",
-                  )
-              let optLoadout = new Loadout(maxLoadout);
-              optLoadout.upgradeLevels.ambrosiaBrickOfLead = 0;
-              optLoadoutAllAmb = findOpt([optLoadout], tableBrickOfLead, "allAmb", Number.POSITIVE_INFINITY);
+              loadoutAllAmb = stats.reactor
+                ? optimizeBarIncomeWithVouchers(loadoutAllAmb, 'incomeAll')
+                : fillSelectedLuckModules(
+                  addLastPriorityVouchers(loadoutAllAmb, tableCache.tableVoucher, "allAmb"), "allAmb",
+                )
+              optLoadoutAllAmb = fullAllAmbLoadout();
               recordCubeExperimentStage("all-amb-final-search", allAmbSubstageStartedAt, {
                 frontier: tableCache.tableAllAmb.length,
                 brick: tableBrickOfLead.length,
@@ -4920,13 +4940,6 @@ export class HSHeaterOptimizer {
                   if (stats.reactor) allOutput[6] = Boolean(barIncomeHighBudget);
                   output.allAmb = [allOutput];
               }
-              // Amb-Oct retains its legacy objective. The bar-income winner
-              // is specific to the three luck builds and must not decide
-              // whether this separate Octeract build is affordable.
-              if (options.calculateAmbOct && (optLoadoutAllAmb.getStat("allAmb") > legacyAllAmb.getStat("allAmb"))) {
-                  options.calculateAmbOct = false;
-                  output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
-              }
               recordCubeExperimentStage("all-amb", allAmbStartedAt, {
                 frontier: tableCache.tableAllAmb.length,
               })
@@ -4935,7 +4948,7 @@ export class HSHeaterOptimizer {
           // --- Shared luck/rune/voucher tables for cube-class calculations ---
           if (
               options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-              options.calculateHyperflux || options.calculateOff || options.calculateGen
+              options.calculateHyperflux || options.calculateOff
           ) {
               const sharedLuckStartedAt = experimentNow()
               let luckMinLevel: Record<string, number> = { ambrosiaLuck1: 20 }; // This is necessary for correct local optima
@@ -4953,7 +4966,7 @@ export class HSHeaterOptimizer {
           }
 
           if (options.calculateQuarks || options.calculateCubes || options.calculateOct || options.calculateSR ||
-            options.calculateHyperflux || options.calculateOff || options.calculateGen) {
+            options.calculateHyperflux || options.calculateOff || options.calculateAmbOct) {
               // Local optima for cubes match local optima for quarks and octeracts
               if (tableCache.tableVoucher === undefined)
                 tableCache.tableVoucher = generateVoucherTable("vouchers");
@@ -5003,8 +5016,8 @@ export class HSHeaterOptimizer {
               })
           }
 
-          // --- Shared cube tables (cubes / oct / ambOct / hyperflux / gen) ---
-          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux || options.calculateGen) {
+          // --- Shared cube tables (cubes / oct / ambOct / hyperflux) ---
+          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateAmbOct || options.calculateHyperflux) {
             const cubeChainStartedAt = experimentNow()
             // As with Quarks 4, generate Cubes 4 separately.  This preserves
             // the exact Pareto frontier while avoiding a 50x expansion of
@@ -5021,7 +5034,7 @@ export class HSHeaterOptimizer {
             // SynergismOfficial/src/Statistics.ts: Cube-group shop levels
             // affect Octeracts through extra tier-specific multipliers, so
             // their local maxima must be searched against the Oct objective.
-            if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
+            if (options.calculateOct || options.calculateAmbOct) {
               // Cubes I-IV have identical cube and octeract effects.  Reuse
               // the already-trimmed cube frontier and copy its pre-shop stat
               // cache instead of expanding and trimming the same chain twice.
@@ -5043,7 +5056,7 @@ export class HSHeaterOptimizer {
             recordCubeExperimentStage("cube-rune", cubeRuneStartedAt, { cubeRune: tableCache.tableCubeR.length })
           }
 
-          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux || options.calculateGen) {
+          if (options.calculateCubes || options.calculateOct || options.calculateSR || options.calculateHyperflux) {
             let tableLuckMult = generateTable(["ambrosiaLuck4"], "mLuck")
             let tableLuck = mergeTables(tableCache.tableLuckAdd1, tableLuckMult, "luck")
             if (options.calculateCubes || options.calculateSR || options.calculateHyperflux) {
@@ -5070,7 +5083,7 @@ export class HSHeaterOptimizer {
                 luckCube: tableCache.tableLuckCube.length,
               })
             }
-            if (options.calculateOct || options.calculateGen) {
+            if (options.calculateOct) {
               let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "oct")
               tableCache.tableLuckOct = mergeLuckCubeTable(tableLuck, tableBrick, "oct")
             }
@@ -5132,7 +5145,7 @@ export class HSHeaterOptimizer {
           }
 
           // --- Shared oct table ---
-          if (options.calculateOct || options.calculateAmbOct || options.calculateGen) {
+          if (options.calculateOct || options.calculateAmbOct) {
               const octVoucherStartedAt = experimentNow()
               tableCache.tableOctV = mergeVoucherTable(tableCache.tableOctCube, tableCache.tableVoucher, "oct");
               recordCubeExperimentStage("oct-voucher", octVoucherStartedAt, { octVoucher: tableCache.tableOctV.length })
@@ -5342,47 +5355,23 @@ export class HSHeaterOptimizer {
           if (options.calculateAmbOct) {
               const ambOctStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateAmbOct', 'HSHeaterOptimizer');
-              let loadoutAmbBase = findOpt(tableCache.tableLuckAdd, tableCache.tableAllAmb, "allAmb");
-              let loadoutAmbOct  = findOpt([loadoutAmbBase], tableCache.tableOctV, "ambOct");
-              if (!loadoutAmbBase || !loadoutAmbOct) HSLogger.error('[HeaterDiag] calculateAmbOct - findOpt returned undefined', 'HSHeaterOptimizer');
+              let loadoutAmbOct = maxAmbForOct!;
+              let bestValue = loadoutAmbOct.getStat("ambOct");
+              for (const octLoadout of tableCache.tableOctV) {
+                  const candidate = Loadout.union(maxAmbForOct!, octLoadout);
+                  if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
+                      continue;
+                  const value = candidate.getStat("ambOct");
+                  if (value > bestValue || (value === bestValue && candidate.cost < loadoutAmbOct.cost)) {
+                      loadoutAmbOct = candidate;
+                      bestValue = value;
+                  }
+              }
               output.ambOct = [loadoutAmbOct.generateOutput("oct", maxLoadout)];
               recordCubeExperimentStage("amb-oct", ambOctStartedAt, {
-                allAmb: tableCache.tableAllAmb.length,
+                maxAmbCost: maxAmbForOct!.cost,
+                maxAmbBlueberries: maxAmbForOct!.blueberryCost,
                 octVoucher: tableCache.tableOctV.length,
-              })
-          }
-
-          // --- calculateGen ---
-          if (options.calculateGen) {
-              const generationStartedAt = experimentNow()
-              HSLogger.debug(() => '[HeaterDiag] calculateGen', 'HSHeaterOptimizer');
-              const genOutput: HeaterResultRowMatrix = new Array(upgrades.ambrosiaFreeGenerationUpgrades.maxLevel);
-              const requests: Array<{ level: number; budget: number }> = []
-              for (let level = 1; level <= upgrades.ambrosiaFreeGenerationUpgrades.maxLevel; level++) {
-                  const budget = stats.amb - upgrades.ambrosiaFreeGenerationUpgrades.cost(level);
-                  if (budget < 0) {
-                      genOutput[level - 1] = maxLoadout.generateOutput("", maxLoadout);
-                      continue;
-                  }
-                  requests.push({ level, budget })
-              }
-              const results = findCubeLuckOptsForBudgets(
-                tableCache.tableOctV,
-                tableCache.tableLuckOct,
-                "oct",
-                requests.map(request => request.budget),
-              )
-              for (let index = 0; index < requests.length; index++) {
-                  const { level } = requests[index]
-                  const loadoutGen = new Loadout(results[index])
-                  if (!loadoutGen) HSLogger.error(`[HeaterDiag] calculateGen level=${level} - findOpt returned undefined`, 'HSHeaterOptimizer');
-                  loadoutGen.upgradeLevels.ambrosiaFreeGenerationUpgrades = level;
-                  genOutput[level - 1] = loadoutGen.generateOutput("oct", maxLoadout);
-              }
-              output.gen = genOutput;
-              recordCubeExperimentStage("generation", generationStartedAt, {
-                octVoucher: tableCache.tableOctV.length,
-                luckOct: tableCache.tableLuckOct.length,
               })
           }
 

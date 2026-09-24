@@ -57,7 +57,7 @@ export function buildSheetRowsFromOutput(
 ): Partial<Record<HeaterResultArrayKey, HeaterResultSheetRowMatrix>> {
     const result: Partial<Record<HeaterResultArrayKey, HeaterResultSheetRowMatrix>> = {};
     const keys: HeaterResultArrayKey[] = [
-        'luck', 'rLuck', 'allAmb', 'quarks', 'cubes', 'oct', 'obt', 'off', 'hyperflux', 'ambOct', 'gen'
+        'luck', 'rLuck', 'allAmb', 'quarks', 'cubes', 'oct', 'obt', 'off', 'hyperflux', 'ambOct'
     ];
 
     for (const key of keys) {

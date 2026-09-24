@@ -104,12 +104,6 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         section: "p4x4",
         icon: "Pictures/Default/BlueberrySingReduction2.png",
     },
-    gen: {
-        label: "Amb Gen (Gen1–Gen5)",
-        section: "hybrid",
-        rowLabels: ["Gen 1 + Oct", "Gen 2 + Oct", "Gen 3 + Oct", "Gen 4 + Oct", "Gen 5 + Oct"],
-        rowIcons: Array(5).fill("Pictures/Default/BlueberryFreeGenerationLevels.png"),
-    },
     ambOct: {
         label: "Max Amb + Oct",
         section: "hybrid",
@@ -174,7 +168,6 @@ export const HEATER_BRANCH_DEFINITIONS = [
     { id: "obtOff",    label: "Obtainium + Offering",        resultKeys: ["obt", "off"],              optionKey: "calculateOff" },
     { id: "hyperflux", label: "Hyperflux (p4x4, pre-AoAG)",  resultKeys: ["hyperflux"],               optionKey: "calculateHyperflux" },
     { id: "sr",        label: "Max SR",                      resultKeys: ["sr1", "sr2"],              optionKey: "calculateSR" },
-    { id: "gen",       label: "Amb Generation + Oct",        resultKeys: ["gen"],                     optionKey: "calculateGen" },
     { id: "ambOct",    label: "Max Amb + Oct",               resultKeys: ["ambOct"],                  optionKey: "calculateAmbOct" },
 ] as const;
 

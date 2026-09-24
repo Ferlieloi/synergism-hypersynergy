@@ -1442,7 +1442,7 @@
   "enableGQDistributor": {
     "settingName": "enableGQDistributor",
     "settingDescription": "Enable GQ Distributor",
-    "settingHelpText": "When enabled, adds a GQ Distributor to the GQ page to distribute Golden Quarks among infinite upgrades.",
+    "settingHelpText": "When enabled, adds a GQ Distributor to the GQ page to distribute Golden Quarks among upgrades that are not maxed.",
     "settingType": "boolean",
     "enabled": true,
     "settingAction": "enableGQDistributorAction",
@@ -1452,6 +1452,14 @@
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
     }
+  },
+  "gqDistributorRatios": {
+    "settingName": "gqDistributorRatios",
+    "settingDescription": "GQ Distributor saved ratios",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": ""
   },
   "gqDistributorRatio1": {
     "settingName": "gqDistributorRatio1",
