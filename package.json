@@ -23,6 +23,7 @@
     "dev": "node esbuild.config.js dev",
     "dev:server": "node scripts/start-dev-server.cjs",
     "test:patcher": "node scripts/test-loader-patcher.cjs",
+    "test:version": "node scripts/test-version-check.cjs",
     "release-and-tag-helper": "node scripts/release-and-tag-helper.mjs"
   },
   "license": "ISC",
