@@ -205,7 +205,6 @@ export interface HeaterOptimizationResult {
     sr1?: HeaterResultRowMatrix;
     sr2?: HeaterResultRowMatrix;
     ambOct?: HeaterResultRowMatrix;
-    gen?: HeaterResultRowMatrix;
     redAmbUpgradeEffects?: HeaterRedAmbUpgradeEffects;
     redAmbCommonValues?: HeaterRedAmbCommonValues;
 }

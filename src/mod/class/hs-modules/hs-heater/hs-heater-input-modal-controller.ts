@@ -39,11 +39,10 @@ export class HSHeaterInputModalController {
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
         autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
         autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obt"] },
-        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
-        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb", "gen:4", "gen:3", "gen:2", "gen:1", "gen:0"] },
+        autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb"] },
+        autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb"] },
+        autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb"] },
         // RETIRED: Ambrosia AFK/idle swapper loadout recommendations.
-        // ambrosiaIdleSwapOcteractLoadout:   { label: 'AFK Swapper Gen+Oct',   preferences: ["gen:2", "gen:1", "gen:0"] },
         // ambrosiaIdleSwapNormalLuckLoadout: { label: 'AFK Swapper Blue Luck', preferences: ["ambOct", "luck"] },
         // ambrosiaIdleSwapRedLuckLoadout:    { label: 'AFK Swapper Red Luck',  preferences: ["rLuck"] },
     };

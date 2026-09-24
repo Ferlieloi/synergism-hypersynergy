@@ -9,7 +9,7 @@ import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { goldenQuarkUpgradeMaxLevels } from "../hs-core/gds/stored-vars-and-calculations";
+import { goldenQuarkUpgradeMaxLevels, goldenQuarkUpgradeMinimumSingularity } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
 import { HSQOLEventsQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarEvents";
@@ -44,6 +44,7 @@ export class HSQOLButtons extends HSModule {
     #offeringPotionObserver: MutationObserver;
     #obtainiumPotionObserver: MutationObserver;
     #maxedUpgradeToggleObserver: MutationObserver;
+    #scanningGQUpgrades = false;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
@@ -77,7 +78,10 @@ export class HSQOLButtons extends HSModule {
         // (with the current code, we need them to stay always ON)
         this.#subscribeToTabVisit(
             SINGULARITY_VIEW.SHOP,
-            async () => { this.setMaxedGQUpgradesVisibility(); }
+            async () => {
+                await this.setMaxedGQUpgradesVisibility();
+                if (HSSettings.getSetting('enableGQDistributor').isEnabled()) this.showGQDistributor();
+            }
         );
         this.#subscribeToTabVisit(
             SINGULARITY_VIEW.OCTERACTS,
@@ -297,6 +301,7 @@ export class HSQOLButtons extends HSModule {
 
     #syncMaxedUpgradeSettingFromButton(button: HTMLButtonElement): void {
         if (!(button.id in MAXED_UPGRADE_TOGGLES)) return;
+        if (this.#scanningGQUpgrades && button.id === 'toggleMaxedGoldenQuarkUpgrades') return;
 
         const buttonId = button.id as MaxedUpgradeToggleId;
         const settingName = MAXED_UPGRADE_TOGGLES[buttonId];
@@ -308,12 +313,59 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
+    #getUnmaxedGQUpgrades(): { id: string, src: string }[] {
+        const toggle = document.getElementById('toggleMaxedGoldenQuarkUpgrades') as HTMLButtonElement | null;
+        const container = document.getElementById('actualSingularityUpgradeContainer');
+        if (!toggle || !container) return [];
+        const highestSingularity = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')
+            ?.getGameData()?.highestSingularityCount ?? 0;
+
+        const wasHidden = toggle.getAttribute('aria-pressed') === 'true';
+        this.#scanningGQUpgrades = true;
+        try {
+            if (!wasHidden) toggle.click();
+            if (toggle.getAttribute('aria-pressed') !== 'true') return [];
+            // The game's toggle synchronously adds this class to maxed upgrades.
+            return Array.from(container.querySelectorAll<HTMLButtonElement>('button.singularityUpgrade'))
+                .filter(button => !button.classList.contains('upgradeHiddenByMaxLevel')
+                    && highestSingularity >= (goldenQuarkUpgradeMinimumSingularity[button.id as GoldenQuarkUpgradeKey] ?? 0))
+                .map(button => ({ id: button.id, src: button.querySelector('img')?.src ?? '' }))
+                .filter(upgrade => upgrade.id && upgrade.src);
+        } finally {
+            if (!wasHidden && toggle.getAttribute('aria-pressed') === 'true') toggle.click();
+            this.#scanningGQUpgrades = false;
+        }
+    }
+
+    #getGQDistributorRatios(): Record<string, number> {
+        const saved = HSSettings.getSetting('gqDistributorRatios').getValue();
+        if (typeof saved === 'string' && saved) {
+            try {
+                const ratios = JSON.parse(saved) as Record<string, unknown>;
+                if (ratios && typeof ratios === 'object' && !Array.isArray(ratios)) {
+                    return Object.fromEntries(Object.entries(ratios).filter(([, value]) =>
+                        typeof value === 'number' && Number.isFinite(value) && value >= 0
+                    )) as Record<string, number>;
+                }
+            } catch { /* Ignore malformed saved ratios. */ }
+        }
+
+        // Migrate the former eight positional settings using their original DOM order.
+        const legacyIds = Array.from(document.querySelectorAll<HTMLButtonElement>(
+            '#actualSingularityUpgradeContainer button.singularityUpgrade'
+        )).filter(button => goldenQuarkUpgradeMaxLevels[button.id as GoldenQuarkUpgradeKey]?.maxLevel === 2 ** 31 - 1)
+            .map(button => button.id);
+        const ratios: Record<string, number> = {};
+        legacyIds.slice(0, 8).forEach((id, index) => {
+            const value = HSSettings.getSetting(`gqDistributorRatio${index + 1}` as keyof HSSettingsDefinition)?.getValue();
+            if (typeof value === 'number' && value > 0) ratios[id] = value;
+        });
+        return ratios;
+    }
+
     showGQDistributor(): void {
         const existingDistributor = document.getElementById('hs-gq-distributor');
-        if (existingDistributor) {
-            existingDistributor.style.display = '';
-            return;
-        }
+        existingDistributor?.remove();
 
         const container = document.getElementById('goldenQuarksDisplay');
         if (!container) return;
@@ -341,23 +393,12 @@ export class HSQOLButtons extends HSModule {
         inputsContainer.style.gap = '10px';
         distributor.appendChild(inputsContainer);
 
-        const infiniteUpgrades: { id: string, src: string }[] = [];
-        const upgradeButtons = document.querySelectorAll<HTMLButtonElement>('#actualSingularityUpgradeContainer .singularityUpgrade');
-
-        upgradeButtons.forEach(btn => {
-            const upgradeKey = btn.id as GoldenQuarkUpgradeKey;
-            const maxLevel = goldenQuarkUpgradeMaxLevels[upgradeKey]?.maxLevel;
-            if (maxLevel === -1) {
-                const img = btn.querySelector('img');
-                if (img) {
-                    infiniteUpgrades.push({ id: btn.id, src: img.src });
-                }
-            }
-        });
+        const unmaxedUpgrades = this.#getUnmaxedGQUpgrades();
+        const savedRatios = this.#getGQDistributorRatios();
 
         const inputs: { [key: string]: HTMLInputElement } = {};
 
-        infiniteUpgrades.forEach((upgrade, idx) => {
+        unmaxedUpgrades.forEach((upgrade) => {
             const wrapper = document.createElement('div');
             wrapper.style.display = 'flex';
             wrapper.style.flexDirection = 'column';
@@ -365,6 +406,7 @@ export class HSQOLButtons extends HSModule {
 
             const img = document.createElement('img');
             img.src = upgrade.src;
+            img.alt = upgrade.id;
             img.style.width = '32px';
             img.style.height = '32px';
             img.style.marginBottom = '5px';
@@ -373,39 +415,23 @@ export class HSQOLButtons extends HSModule {
             const input = document.createElement('input');
             input.type = 'number';
             input.min = '0';
-            input.value = '0';
+            input.setAttribute('aria-label', `${upgrade.id} distribution ratio`);
+            input.value = (savedRatios[upgrade.id] ?? 0).toString();
             input.style.width = '60px';
             input.style.textAlign = 'center';
             inputs[upgrade.id] = input;
             wrapper.appendChild(input);
 
             input.addEventListener('input', () => {
-                const settingKey = `gqDistributorRatio${idx + 1}` as keyof HSSettingsDefinition;
-                const setting = HSSettings.getSetting(settingKey);
-                if (setting) {
-                    const val = parseFloat(input.value) || 0;
-                    setting.setValue(val);
-                }
+                const val = parseFloat(input.value) || 0;
+                savedRatios[upgrade.id] = Number.isFinite(val) ? Math.max(0, val) : 0;
+                HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
             });
 
             inputsContainer.appendChild(wrapper);
         });
 
-        // Load saved ratios from settings
         const upgradeIds = Object.keys(inputs);
-        for (let i = 0; i < 8; i++) {
-            const settingKey = `gqDistributorRatio${i + 1}` as keyof HSSettingsDefinition;
-            const inputKey = upgradeIds[i];
-            if (inputKey && inputs[inputKey]) {
-                const setting = HSSettings.getSetting(settingKey);
-                if (setting) {
-                    const ratio = setting.getValue();
-                    if (typeof ratio === 'number') {
-                        inputs[inputKey].value = ratio.toString();
-                    }
-                }
-            }
-        }
 
         const distributeBtn = document.createElement('button');
         distributeBtn.textContent = 'Distribute';
@@ -462,21 +488,8 @@ export class HSQOLButtons extends HSModule {
 
             for (const id in inputs) {
                 const val = parseFloat(inputs[id].value) || 0;
-                if (val > 0) {
+                if (Number.isFinite(val) && val > 0) {
                     ratios[id] = val;
-                }
-            }
-
-            // Save ratios to settings 
-            for (let i = 0; i < 8; i++) {
-                const settingKey = `gqDistributorRatio${i + 1}` as keyof HSSettingsDefinition;
-                const inputKey = upgradeIds[i];
-                if (inputKey && inputs[inputKey]) {
-                    const setting = HSSettings.getSetting(settingKey);
-                    if (setting) {
-                        const val = parseFloat(inputs[inputKey].value) || 0;
-                        setting.setValue(val);
-                    }
                 }
             }
 
@@ -575,13 +588,32 @@ export class HSQOLButtons extends HSModule {
                 const btn = document.getElementById(id) as HTMLButtonElement;
                 if (!btn) continue;
 
+                // The game's shift-click prompt asks for levels, not Golden Quarks.
+                const upgradeKey = id as GoldenQuarkUpgradeKey;
+                const currentLevel = gameDataAPI.goldenQuark.getGQUpgradeLevel(upgradeKey);
+                const maxLevel = gameDataAPI.goldenQuark.computeGQUpgradeMaxLevel(upgradeKey);
+                const currentCost = gameDataAPI.goldenQuark.getGQUpgradeCumulativeCost(upgradeKey, currentLevel);
+                let low = currentLevel;
+                let high = maxLevel;
+                while (low < high) {
+                    const middle = low + Math.ceil((high - low) / 2);
+                    const cost = gameDataAPI.goldenQuark.getGQUpgradeCumulativeCost(upgradeKey, middle) - currentCost;
+                    if (cost <= amountToSpend) low = middle;
+                    else high = middle - 1;
+                }
+                const levelsToBuy = low - currentLevel;
+                if (levelsToBuy <= 0) {
+                    setStatus(`Skipped ${current}/${ids.length} (allocation cannot buy a level)`);
+                    continue;
+                }
+
                 // Shift-click opens the game's "how many?" prompt
                 btn.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
 
                 // Wait until the prompt is actually visible before interacting with it
                 await waitForVisible(promptWrapper, 5000);
 
-                promptInput.value = amountToSpend.toString();
+                promptInput.value = levelsToBuy.toString();
                 promptInput.dispatchEvent(new Event('input', { bubbles: true }));
                 okPrompt.click();
 

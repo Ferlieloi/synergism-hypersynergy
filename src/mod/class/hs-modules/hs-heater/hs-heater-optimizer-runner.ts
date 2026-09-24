@@ -29,7 +29,7 @@ const BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
   // Rune and Voucher inputs but keep separate objective-specific frontiers.
   ['hyperflux'],
   ['cubes', 'sr'],
-  ['oct', 'gen'],
+  ['oct'],
   ['luck', 'ambOct'],
   ['quarks', 'obtOff'],
 ]
