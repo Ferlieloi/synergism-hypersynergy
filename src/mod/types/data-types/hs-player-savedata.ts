@@ -325,6 +325,7 @@ export interface ShopUpgrades {
     shopRedLuck4: number;
     shopInfiniteShopUpgrades: number;
     shopHorseShoe: number;
+    shopPurpleBarRebate?: number;
 }
 
 /**
@@ -1986,6 +1987,7 @@ export interface GameData {
     };
     purpleReactorUpgrades?: Record<string, number>;
     purpleAmbrosiaUpgrades?: Record<string, number>;
+    encabulatorOvercapToggle?: boolean;
 
     singChallengeTimer: number;
 

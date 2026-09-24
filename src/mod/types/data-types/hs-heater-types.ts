@@ -75,6 +75,23 @@ export interface HeaterOptimizerInput {
     blueBarMaxWithoutTwoMindAndBrick: number;
     blueBarRequirementBeforeRounding: number;
     redBarMaxWithoutTwoMind: number;
+    /** Fixed game-state inputs for the new bar-fill income objectives. */
+    reactor?: {
+        blueRoutingPercent: number;
+        redRoutingPercent: number;
+        blueStoredPoints: number;
+        redStoredPoints: number;
+        blueCapacity: number;
+        encabulatorSpeed: number;
+        purpleRequirementWithoutTwoMind: number;
+        cancerPurplePointsPerBlueOrRedFill: number;
+        purpleFillBluePoints: number;
+        purpleFillRedPoints: number;
+        scorpioConversionMultiplier: number;
+        ariesBarPointMultiplier: number;
+        overcapEnabled: boolean;
+        barDependenceEnabled: boolean;
+    };
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;

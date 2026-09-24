@@ -63,6 +63,21 @@ async function buildInput(save: JsonRecord): Promise<any> {
   if (!exportData?.hs_data)
     throw new Error('Failed to calculate hs_data from save')
   const hsData = exportData.hs_data
+  const savedLoadoutProbe = process.env.HS_EXPERIMENT_SAVED_LOADOUT === '1'
+    ? {
+      levels: Object.fromEntries(Object.keys(save.ambrosiaUpgrades).map((name) => {
+        const current = api.ambrosia.calculateAmbrosiaUpgradeValue(name)
+        const free = api.ambrosia.calculateAmbrosiaUpgradeValue(name, true)
+        return [name, current - free]
+      })),
+      official: {
+        blueBarPointsPerSecond: hsData.ambrosiaBarPointsS * hsData.blueberries,
+        redBarPointsPerSecond: hsData.totalRedBarPointsS,
+        blueLuck: hsData.totalAmbrosiaLuck,
+        redLuck: hsData.totalRedLuck,
+        luckConversion: api.luck.calculateLuckConversion(true),
+      },
+    } : undefined
   const base = Object.fromEntries(inputConfig.inputDefinitions.map((field: any) => {
     const extractor = inputConfig.exportFieldExtractors[field.key]
     return [field.key, extractor ? extractor(hsData) : hsData[field.key]]
@@ -77,7 +92,12 @@ async function buildInput(save: JsonRecord): Promise<any> {
     shopBonusLevelsNoAmbrosia: hsData.shopBonusLevelsNoAmbrosia,
     panthemaLevel: hsData.panthemaLevel ?? 0,
     shopUpgradesDisabled: Boolean(hsData.shopUpgradesDisabled),
-    heaterOptions: Object.fromEntries(HEATER_BRANCH_DEFINITIONS.map((branch: any) => [branch.id, branch.id === 'cubes'])),
+    reactor: hsData.heaterReactor,
+    savedLoadoutProbe,
+    heaterOptions: Object.fromEntries(HEATER_BRANCH_DEFINITIONS.map((branch: any) => [
+      branch.id,
+      (process.env.HS_EXPERIMENT_BRANCHES ?? 'cubes').split(',').includes(branch.id),
+    ])),
   }
 }
 
@@ -99,6 +119,9 @@ function summary(label: string, amb: number, blueberries: number, run: any): Jso
       ? (winner.spending.pureLuck + winner.spending.cubeLuckHybrid) / amb
       : 0,
     spending: winner?.spending,
+    barIncomeProbe: run.diagnostics.barIncomeProbe,
+    emptyLoadoutCheck: run.diagnostics.emptyLoadoutCheck,
+    savedLoadoutCheck: run.diagnostics.savedLoadoutCheck,
     stages: run.diagnostics.stages,
     chainTiers: run.diagnostics.chainTiers,
     searchPartitions: run.diagnostics.searchPartitions,
@@ -121,11 +144,47 @@ async function main(): Promise<void> {
   const savePath = process.argv[2]
   if (!savePath)
     throw new Error('Usage: run-heater-cube-experiments <save path>')
-  const input = await buildInput(readSave(savePath))
+  const save = readSave(savePath)
+  if (process.env.HS_EXPERIMENT_SAVE_AMBROSIA_INVESTMENTS) {
+    const investments = JSON.parse(process.env.HS_EXPERIMENT_SAVE_AMBROSIA_INVESTMENTS)
+    for (const [name, amount] of Object.entries(investments)) {
+      if (!save.ambrosiaUpgrades[name])
+        throw new Error(`Unknown saved Ambrosia upgrade: ${name}`)
+      save.ambrosiaUpgrades[name].ambrosiaInvested = Number(amount)
+    }
+  }
+  if (process.env.HS_EXPERIMENT_SAVE_PURPLE_INVESTMENTS) {
+    const investments = JSON.parse(process.env.HS_EXPERIMENT_SAVE_PURPLE_INVESTMENTS)
+    for (const [name, amount] of Object.entries(investments)) {
+      if (!save.ambrosiaUpgrades[name])
+        throw new Error(`Unknown saved Ambrosia upgrade: ${name}`)
+      save.ambrosiaUpgrades[name].purpleAmbrosiaInvested = Number(amount)
+    }
+  }
+  const input = await buildInput(save)
   if (process.env.HS_EXPERIMENT_PRINT_INPUT === '1') {
     console.log(JSON.stringify({
       ambrosiaUpgradeBonusLevels: input.ambrosiaUpgradeBonusLevels,
       ambrosiaUpgradeBlueberryCostReductions: input.ambrosiaUpgradeBlueberryCostReductions,
+      reactor: input.reactor,
+      baselines: {
+        ambSpeedNoAmbBerries: input.ambSpeedNoAmbBerries,
+        luckBaseNoAmb: input.luckBaseNoAmb,
+        luckMultNoAmb: input.luckMultNoAmb,
+        purpleLeoLevel: input.purpleLeoLevel,
+        redLuckBase: input.redLuckBase,
+        luckConversion: input.luckConversion,
+        bonusRow2: input.bonusRow2,
+        bonusRow3: input.bonusRow3,
+        shopAmbrosiaGeneration1: input.shopAmbrosiaGeneration1,
+        shopAmbrosiaGeneration2: input.shopAmbrosiaGeneration2,
+        shopAmbrosiaGeneration3: input.shopAmbrosiaGeneration3,
+        shopAmbrosiaGeneration4: input.shopAmbrosiaGeneration4,
+        shopRedLuck1: input.shopRedLuck1,
+        shopRedLuck2: input.shopRedLuck2,
+        shopRedLuck3: input.shopRedLuck3,
+        shopRedLuck4: input.shopRedLuck4,
+      },
     }))
     return
   }
@@ -141,6 +200,12 @@ async function main(): Promise<void> {
       ...JSON.parse(process.env.HS_EXPERIMENT_BERRY_REDUCTIONS),
     }
   }
+  if (process.env.HS_EXPERIMENT_REACTOR_OVERRIDES) {
+    input.reactor = {
+      ...input.reactor,
+      ...JSON.parse(process.env.HS_EXPERIMENT_REACTOR_OVERRIDES),
+    }
+  }
   const { HSHeaterOptimizer } = await import('../src/mod/class/hs-modules/hs-heater/hs-heater-optimizer')
   const ambValues = process.env.HS_EXPERIMENT_AMB
     ? process.env.HS_EXPERIMENT_AMB.split(',').map(Number)
@@ -150,6 +215,8 @@ async function main(): Promise<void> {
     : [input.blueberries]
   const policies: Array<{ label: string; config: any }> = [
     { label: 'exact', config: {} },
+    { label: 'bar-income-probe', config: { probeBarIncome: true } },
+    { label: 'bar-income-raw-probe', config: { probeRawBarIncome: true } },
     { label: 'legacy-offering', config: { useLegacyOfferingSearch: true } },
     { label: 'legacy-quark', config: { useLegacyQuarkSearch: true } },
     { label: 'legacy-all-amb', config: { useLegacyAllAmbMerge: true } },
@@ -199,9 +266,19 @@ async function main(): Promise<void> {
                 process.env.HS_EXPERIMENT_FULL === '1' || enabledBranches.has(branch),
               ]),
             ) as typeof scenarioInput.heaterOptions,
-          }, policy.config)
+          }, {
+            ...policy.config,
+            ...(scenarioInput.savedLoadoutProbe
+              ? { probeLoadoutLevels: scenarioInput.savedLoadoutProbe.levels } : {}),
+          })
           : HSHeaterOptimizer.runCubeExperiment(scenarioInput, policy.config)
         const row = summary(policy.label, amb, blueberries, run)
+        if (scenarioInput.savedLoadoutProbe)
+          row.savedLoadoutOfficial = scenarioInput.savedLoadoutProbe.official
+        if (scenarioInput.savedLoadoutProbe)
+          row.savedLoadoutLevels = Object.fromEntries(
+            Object.entries(scenarioInput.savedLoadoutProbe.levels).filter(([, level]) => Number(level) > 0),
+          )
         if (multiBranchExperiment) {
           const resultWithoutInput = Object.fromEntries(
             Object.entries(run.result).filter(([key]) => key !== 'input'),

@@ -35,6 +35,7 @@ export class HSHeaterUIInput {
         | 'shopUpgradeRawLevels'
         | 'shopBonusLevelsNoAmbrosia'
         | 'panthemaLevel'
+        | 'reactor'
         | 'shopUpgradesDisabled'> = {
             ambrosiaUpgradeBonusLevels: {},
             ambrosiaUpgradeBlueberryCostReductions: {},
@@ -53,6 +54,7 @@ export class HSHeaterUIInput {
                 infinity: 0,
             },
             panthemaLevel: 0,
+            reactor: undefined,
             shopUpgradesDisabled: false,
         };
 
@@ -80,6 +82,7 @@ export class HSHeaterUIInput {
                 infinity: 0,
             },
             panthemaLevel: hsData?.panthemaLevel ?? 0,
+            reactor: hsData?.heaterReactor,
             shopUpgradesDisabled: Boolean(hsData?.shopUpgradesDisabled),
         };
         return {
