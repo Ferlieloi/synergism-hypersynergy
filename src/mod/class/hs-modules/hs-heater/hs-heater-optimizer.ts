@@ -4622,7 +4622,9 @@ export class HSHeaterOptimizer {
         if (maxAmbForOct && (stats.amb < maxAmbForOct.cost
           || stats.blueberries < maxAmbForOct.blueberryCost)) {
             options.calculateAmbOct = false;
-            output.ambOct = [maxLoadout.generateOutput("", maxLoadout)];
+            // This objective requires the complete All Ambrosia base. Return
+            // an importable empty loadout when that base is out of reach.
+            output.ambOct = [["{}", null, 0, 0, "N / A", "", false]];
         }
 
         try {
