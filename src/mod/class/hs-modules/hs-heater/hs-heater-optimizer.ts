@@ -1678,7 +1678,7 @@ class Loadout {
         if (stat === "singReduction" || stat === "vouchers")
           effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat))
         else
-          effectStr = formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
+          effectStr = baseLoadout.getStat(stat) === 0 ? "N / A" : formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
 
         return [
             this.format,

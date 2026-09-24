@@ -8,6 +8,7 @@ export function escapeHtml(value: string): string {
 }
 
 export const formatNumber = (number: number): string => {
+    if (!Number.isFinite(number)) return 'N / A';
     if (number >= 1e6) {
         return number.toLocaleString(undefined, {
             maximumSignificantDigits: 3,
@@ -16,7 +17,7 @@ export const formatNumber = (number: number): string => {
         }).toLowerCase();
     }
 
-    const digits = Math.max(0, Math.min(2, 4 - Math.floor(Math.log10(number))));
+    const digits = Math.max(0, Math.min(2, 4 - Math.floor(Math.log10(Math.abs(number)))));
     return number.toLocaleString(undefined, {
         maximumFractionDigits: digits,
         roundingMode: 'trunc'
