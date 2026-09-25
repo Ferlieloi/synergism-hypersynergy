@@ -19,6 +19,7 @@ export interface HeaterOptimizerInput {
     currentSingularity: number;
     singularityReducers: number;
     exalt: number;
+    exalt5Unlocked: boolean;
     exalt9Unlocked: boolean;
     postAoag: boolean;
     oneMindUnlocked: boolean;

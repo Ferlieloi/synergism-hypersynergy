@@ -1257,6 +1257,20 @@ Object.assign(upgrades, {
     })
 });
 
+// SynergismOfficial's Exalt5x1 modules require a No Ambrosia Upgrades
+// completion. Exalt9x1 modules already carry requiresExalt9 in this table.
+const exalt5UpgradeNames = new Set([
+    'ambrosiaQuarks2', 'ambrosiaCubes2', 'ambrosiaLuck2',
+    'ambrosiaQuarks3', 'ambrosiaCubes3', 'ambrosiaFreeCubeUpgrades',
+    'ambrosiaLuck3', 'ambrosiaBaseOffering2', 'ambrosiaBaseObtainium2',
+    'ambrosiaInfiniteShopUpgrades1', 'ambrosiaInfiniteShopUpgrades2',
+    'ambrosiaSingReduction2', 'ambrosiaRuneOOMBonus',
+    'ambrosiaFreeRedLuckUpgrades', 'ambrosiaFreeQuarkUpgrades',
+]);
+const upgradeBaseMaxLevels = Object.fromEntries(
+    Object.entries(upgrades).map(([name, upgrade]) => [name, upgrade.maxLevel]),
+);
+
 // Red upgrades (used only for cap checks in the optimizer loop)
 const redUpgrades: Record<string, Upgrade> = {
     regularLuck:  new Upgrade({ maxLevel: 100  }),
@@ -2161,9 +2175,6 @@ function generateDependentChainTable(
           expanded.push(loadout)
         }
 
-        if (stats.rAmb <= 0 && upgrade.row > 2)
-          continue
-
         const preLoadout = new Loadout(parentLoadout)
         preLoadout.upgradeLevels[upgradeName] = 1
         preLoadout.invalidateCaches()
@@ -2994,9 +3005,6 @@ function generateTable(selectedUpgrades: string[], stat: string, minLevels: Reco
 
       if ((minLevels[upgradeName] ?? 0) <= 0)
         processUpgrade(upgradeIndex + 1, parentLoadout) // Process the next upgrade without having any levels in the current upgrade
-
-      if (stats.rAmb <= 0 && upgrade.row > 2) // This upgrade is not unlocked
-        return
 
       let preLoadout = new Loadout(parentLoadout)
       for (let prerequisite in upgrade.prerequisites) {
@@ -4363,7 +4371,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         luckBaseNoAmb, luckMultNoAmb, redLuckBase, luckConversion,
         quarksOwned, qHept, cubesExpTotal,
         currentSingularity, singularityReducers,
-        exalt, exalt9Unlocked, postAoag, oneMindUnlocked, aquariusUnlocked, transcription,
+        exalt, exalt5Unlocked, exalt9Unlocked, postAoag, oneMindUnlocked, aquariusUnlocked, transcription,
         ascSpeed, ascSpread, baseObt, baseOff,
         bonusTutorial,
         bonusRow2, bonusRow3, bonusRow4, bonusRow5,
@@ -4414,6 +4422,12 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.sing     = currentSingularity - singularityReducers;
     stats.exalt    = exalt;
     stats.exalt9Unlocked = exalt9Unlocked;
+    for (const [name, upgrade] of Object.entries(upgrades)) {
+        upgrade.maxLevel = (!exalt5Unlocked && exalt5UpgradeNames.has(name))
+            || (!exalt9Unlocked && upgrade.requiresExalt9)
+            ? 0
+            : upgradeBaseMaxLevels[name];
+    }
     stats.postAoAG = postAoag;
     stats.oneMindUnlocked = oneMindUnlocked;
     stats.aquariusExponent = aquariusUnlocked ? 0.01 * (0.55 + transcription / 150) : 0;

@@ -63,6 +63,7 @@ export const inputDefinitions = [
         { value: 9, label: "Exalt 9" },
         { value: 10, label: "Exalt 10" },
     ] as const, url: "Pictures/Default/TinySChalTime.png" },
+    { key: "exalt5Unlocked",            label: "Exalt 5 Completed",        type: "boolean", url: "Pictures/Default/TinySChal5Completions.png" },
     { key: "exalt9Unlocked",            label: "Exalt 9 Completed",        type: "boolean", url: "Pictures/Default/TinySChal9Completions.png" },
     { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",       type: "boolean", url: "Pictures/Runes/Antiquities.png" },
     { key: "oneMindUnlocked",           label: "One Mind Unlocked",        type: "boolean", url: "Pictures/Default/OcteractOneMind.png" },

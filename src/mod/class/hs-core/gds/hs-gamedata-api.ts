@@ -2841,6 +2841,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     currentSingularity:     gameData.singularityCount,
                     singularityReducers:    (this.calculateSingularityReductions(true, true) as number),
                     exalt:                  this.getActiveExalt(),
+                    exalt5Unlocked:         gameData.singularityChallenges.noAmbrosiaUpgrades.completions > 0,
                     exalt9Unlocked:         gameData.singularityChallenges.taxmanLastStand.completions > 0,
                     postAoag:               this.rune.getRuneLevelFromEXP('antiquities', parseGameDataDecimal(gameData.runes.antiquities)) > 0,
                     oneMindUnlocked:        Boolean(this.getGQUpgradeEffect('oneMind', 'unlocked')),

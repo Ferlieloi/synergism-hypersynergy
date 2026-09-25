@@ -140,6 +140,39 @@ export class HSHepteracts extends HSModule {
         });
     }
 
+    #parseForgeNumber(text: string): number {
+        const match = text.match(/[-+]?\d[\d.,]*(?:e[-+]?\d+)?/i);
+        if (!match) return NaN;
+
+        const value = match[0];
+        if (/e/i.test(value)) {
+            return parseFloat(HSUtils.unfuckNumericString(value));
+        }
+
+        if (value.includes(',') && value.includes('.')) {
+            return HSUtils.parseFloat2(value);
+        }
+
+        if (/^[-+]?\d{1,3}(?:,\d{3})+$/.test(value)) {
+            return Number(value.replace(/,/g, ''));
+        }
+
+        if (/^[-+]?\d{1,3}(?:\.\d{3}){2,}$/.test(value)) {
+            return Number(value.replace(/\./g, ''));
+        }
+
+        return Number(value.replace(',', '.'));
+    }
+
+    #refreshOwnedHepteracts(): void {
+        const quantity = document.querySelector<HTMLElement>('#hepteractQuantity');
+        if (!quantity) return;
+
+        const text = quantity.querySelector('span')?.textContent ?? quantity.textContent ?? '';
+        const amount = this.#parseForgeNumber(text);
+        if (!Number.isNaN(amount)) this.#ownedHepteracts = amount;
+    }
+
     async init(): Promise<void> {
         const self = this;
 
@@ -169,13 +202,18 @@ export class HSHepteracts extends HSModule {
                     HSLogger.debug(() => "Hepteract forge view opened, starting watch", this.context);
                     self.#ownedHepteractsElement = await HSElementHooker.HookElement('#hepteractQuantity') as HTMLElement;
 
+                    const initialHepteracts = self.#parseForgeNumber(
+                        self.#ownedHepteractsElement.querySelector('span')?.innerText ?? self.#ownedHepteractsElement.innerText
+                    );
+                    if (!Number.isNaN(initialHepteracts)) self.#ownedHepteracts = initialHepteracts;
+
                     // Sets up a watch to watch for changes in the element which shows owned hepteracts amount
                     self.#ownedHepteractsWatch = HSElementHooker.watchElement(self.#ownedHepteractsElement, (value) => {
-                        try {
-                            const hepts = parseFloat(HSUtils.unfuckNumericString(value));
-                            self.#ownedHepteracts = hepts;
-                        } catch (e) {
+                        const hepts = self.#parseForgeNumber(value ?? '');
+                        if (Number.isNaN(hepts)) {
                             HSLogger.error(`Failed to parse owned hepteracts`, self.context);
+                        } else {
+                            self.#ownedHepteracts = hepts;
                         }
 
                         self.#watchUpdatePending = false;
@@ -191,8 +229,8 @@ export class HSHepteracts extends HSModule {
                         });
 
                     self.#ownedQuarkElement = await HSElementHooker.HookElement('#quarkDisplay') as HTMLElement;
-                    const initialQuarks = parseFloat(HSUtils.unfuckNumericString(self.#ownedQuarkElement.innerText));
-                    self.#ownedQuarks = initialQuarks;
+                    const initialQuarks = self.#parseForgeNumber(self.#ownedQuarkElement.innerText);
+                    if (!Number.isNaN(initialQuarks)) self.#ownedQuarks = initialQuarks;
                     setInterval(() => {
                         const current = document.querySelector('#quarkDisplay');
 
@@ -204,11 +242,11 @@ export class HSHepteracts extends HSModule {
                         );
                     }, 5000);
                     self.#ownedQuarksWatch = HSElementHooker.watchElement(self.#ownedQuarkElement, (value) => {
-                        try {
-                            const quarks = parseFloat(HSUtils.unfuckNumericString(value));
-                            self.#ownedQuarks = quarks;
-                        } catch (e) {
+                        const quarks = self.#parseForgeNumber(value ?? '');
+                        if (Number.isNaN(quarks)) {
                             HSLogger.error(`Failed to parse quark amount`, self.context);
+                        } else {
+                            self.#ownedQuarks = quarks;
                         }
 
                         self.#watchUpdatePending = false;
@@ -263,7 +301,7 @@ export class HSHepteracts extends HSModule {
 
                                 try {
                                     if (id in self.#hepteractCosts) {
-                                        const floatCost = HSUtils.parseFloat2(cost);
+                                        const floatCost = self.#parseForgeNumber(cost);
                                         (self.#hepteractCosts as any)[id] = floatCost;
                                     }
                                 } catch (e) {
@@ -314,6 +352,7 @@ export class HSHepteracts extends HSModule {
                             //let percentObtOwned = null;
                             //let percentOfferingOwned = null;
 
+                            self.#refreshOwnedHepteracts();
                             if (self.#ownedHepteracts !== null && self.#ownedHepteracts !== undefined) {
                                 if (self.#ownedHepteracts === 0) {
                                     HSLogger.info(`Owned hepteracts is 0`, this.context);
@@ -438,7 +477,7 @@ export class HSHepteracts extends HSModule {
                             craftMaxBtn.click();
 
                             if (buyCost && percentHeptOwned) {
-                                await self.#updateCraftText(buyCost, percentHeptOwned, id);
+                                await self.#updateCraftText(buyCost, id);
                             }
 
                             await HSUtils.wait(5);
@@ -455,7 +494,7 @@ export class HSHepteracts extends HSModule {
 
                                         try {
                                             if (id in self.#hepteractCosts) {
-                                                const floatCost = HSUtils.parseFloat2(cost);
+                                                const floatCost = self.#parseForgeNumber(cost);
                                                 (self.#hepteractCosts as any)[id] = floatCost;
                                             }
                                         } catch (e) {
@@ -472,8 +511,8 @@ export class HSHepteracts extends HSModule {
 
                                 if (subElement) {
                                     const value = subElement.innerText;
-                                    const hepts = parseFloat(value);
-                                    self.#ownedHepteracts = hepts;
+                                    const hepts = self.#parseForgeNumber(value);
+                                    if (!Number.isNaN(hepts)) self.#ownedHepteracts = hepts;
                                 }
                             }
 
@@ -679,6 +718,7 @@ export class HSHepteracts extends HSModule {
     }
 
     async #refreshCraftText(hepteractId: string, isQuarkHepteract: boolean) {
+        this.#refreshOwnedHepteracts();
         if (this.#hoveredHepteractId !== hepteractId
             || this.#ownedHepteracts === null
             || this.#ownedHepteracts === undefined) {
@@ -694,11 +734,8 @@ export class HSHepteracts extends HSModule {
         const buyCost = hepteractDoubleCapSetting.getValue()
             ? (currentMax * 2) * cubeCost * 0.75
             : currentMax * 2 * cubeCost;
-        const percentOwned = this.#ownedHepteracts === 0
-            ? '∞'
-            : buyCost / this.#ownedHepteracts;
 
-        await this.#updateCraftText(buyCost, percentOwned, hepteractId, isQuarkHepteract);
+        await this.#updateCraftText(buyCost, hepteractId, isQuarkHepteract);
     }
 
     async #switchAscensionIncomeMode(
@@ -1014,21 +1051,10 @@ export class HSHepteracts extends HSModule {
         return parts.join(' ');
     }
 
-    async #updateCraftText(buyCost: number, percentOwned: number | string, hepteractId: string, isQuarkHepteract: boolean = false) {
+    async #updateCraftText(buyCost: number, hepteractId: string, isQuarkHepteract: boolean = false) {
         if (this.#hoveredHepteractId !== hepteractId) return;
 
         if (this.#hepteractCraftTexts) {
-            let persOwn;
-            if (isQuarkHepteract) {
-                percentOwned = this.#ownedQuarks && this.#ownedQuarks > 0 ? buyCost / this.#ownedQuarks : '∞';
-                console.log(`Quark hepteract cost: ${buyCost}, owned quarks: ${this.#ownedQuarks}, percent owned: ${percentOwned}`);
-            }
-
-            if (HSUtils.isNumeric(percentOwned)) {
-                persOwn = HSUtils.N(percentOwned as number * 100);
-            } else {
-                persOwn = percentOwned as string;
-            }
             const resource = isQuarkHepteract ? 'QUARK' : 'HEPT';
             let etaText = '';
 
@@ -1038,8 +1064,8 @@ export class HSHepteracts extends HSModule {
                 if (this.#hoveredHepteractId !== hepteractId) return;
 
                 if (income !== null) {
-                    const ownedHepteracts = this.#ownedHepteracts ?? 0;
-                    const remainingCost = Math.max(0, buyCost - ownedHepteracts - income.onAscension);
+                    this.#refreshOwnedHepteracts();
+                    const remainingCost = Math.max(0, buyCost - (this.#ownedHepteracts ?? 0) - income.onAscension);
                     const secondsUntilAffordable = income.perSecond > 0
                         ? remainingCost / income.perSecond
                         : Number.POSITIVE_INFINITY;
@@ -1052,6 +1078,11 @@ export class HSHepteracts extends HSModule {
             }
 
             if (this.#hoveredHepteractId !== hepteractId) return;
+
+            this.#refreshOwnedHepteracts();
+            const owned = isQuarkHepteract ? this.#ownedQuarks : this.#ownedHepteracts;
+            const percentOwned = owned && owned > 0 ? buyCost / owned : '∞';
+            const persOwn = typeof percentOwned === 'number' ? HSUtils.N(percentOwned * 100) : percentOwned;
 
             const hasCostText = this.#hepteractCraftTexts.querySelector('#hs-costText') as HTMLDivElement;
             const text = `[${this.context}]: Total ${resource} cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)${etaText}`;
