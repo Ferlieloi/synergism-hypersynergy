@@ -266,7 +266,7 @@ export class HSSettingActions {
                 if (params.disable && params.disable === true) {
                     qolButtonsMod.hideGQDistributor();
                 } else {
-                    qolButtonsMod.showGQDistributor();
+                    await qolButtonsMod.showGQDistributor();
                 }
             }
         },

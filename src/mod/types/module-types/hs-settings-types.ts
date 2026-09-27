@@ -88,6 +88,7 @@ export interface HSSettingsDefinition {
     enableTalismansModule: EnableTalismansModuleSetting;
     // GQ Distributor Ratio Settings
     gqDistributorRatios: GQDistributorRatiosSetting;
+    gqDistributorBalanceInvestments: GQDistributorBalanceInvestmentsSetting;
     gqDistributorRatio1: GQDistributorRatio1Setting;
     gqDistributorRatio2: GQDistributorRatio2Setting;
     gqDistributorRatio3: GQDistributorRatio3Setting;
@@ -238,6 +239,7 @@ export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
 // GQ Distributor Ratio Settings
 export interface GQDistributorRatio1Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatiosSetting extends HSSettingBase<string> { }
+export interface GQDistributorBalanceInvestmentsSetting extends HSSettingBase<boolean> { }
 export interface GQDistributorRatio2Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio3Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatio4Setting extends HSSettingBase<number> { }

@@ -1453,6 +1453,13 @@
       "controlEnabledId": "hs-setting-qol-enable-gq-distributor-btn"
     }
   },
+  "gqDistributorBalanceInvestments": {
+    "settingName": "gqDistributorBalanceInvestments",
+    "settingDescription": "Balance total GQ investments toward distributor ratios",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true
+  },
   "gqDistributorRatios": {
     "settingName": "gqDistributorRatios",
     "settingDescription": "GQ Distributor saved ratios",
