@@ -601,34 +601,40 @@ class Upgrade {
       return nextSpeed ** nextMind / stats.aSpeed ** oldMind
     }
 
-    static infinityCubeShopEffect(loadout: Loadout, octeracts = false): number {
-      const vouchers = loadout.getStat('vouchers')
-      const freeCubeLevels = stats.exalt === 6 || stats.exalt === 8
+    static addedFreeCubeLevels(loadout: Loadout): number {
+      // The exported shop baseline already includes persistent Red levels.
+      return stats.exalt === 6 || stats.exalt === 8
         ? 0
         : loadout.effectiveLevel('ambrosiaFreeCubeUpgrades')
+          - (stats.bonus[upgrades.ambrosiaFreeCubeUpgrades.row] ?? 0)
+    }
+
+    static infinityCubeShopEffect(loadout: Loadout, octeracts = false): number {
+      const vouchers = loadout.getStat('vouchers')
+      const freeCubeLevels = this.addedFreeCubeLevels(loadout)
       const baseLevel = this.shopLevel('seasonPassInfinity')
       const nextLevel = this.shopLevel('seasonPassInfinity', { cubes: freeCubeLevels, infinity: vouchers })
-      // SynergismOfficial/src/Statistics.ts: Octeracts receive both PassINF
-      // globalCubeMult and its octeract-specific wowOcteractMult.
-      const exponent = octeracts ? 2.25 : 1
+      // allOcteractCubeStats uses only wowOcteractMult. It does not include
+      // allCubeStats (globalCubeMult or Panthema's direct cube multiplier).
+      const exponent = octeracts ? 1.25 : 1
       return 1.012 ** (exponent * (nextLevel - baseLevel))
-        * this.panthemaMultiplier('cubes', freeCubeLevels, 0.005, loadout)
+        * (octeracts ? 1 : this.panthemaMultiplier('cubes', freeCubeLevels, 0.005, loadout))
     }
 
     static freeCubeShopEffect(loadout: Loadout, octeracts = false): number {
       // SynergismOfficial/src/Shop.ts and Statistics.ts: free Cube group
       // levels change only bought shop upgrades, not their purchase caps.
-      const freeCubeLevels = stats.exalt === 6 || stats.exalt === 8
-        ? 0
-        : loadout.effectiveLevel('ambrosiaFreeCubeUpgrades')
+      const freeCubeLevels = this.addedFreeCubeLevels(loadout)
       if (freeCubeLevels <= 0) return 1
-      const effectRatio = (key: string, coefficient: number, power = 1) => {
+      const effectRatio = (key: string, coefficient: number) => {
         const base = this.shopLevel(key)
         const next = this.shopLevel(key, { cubes: freeCubeLevels })
-        return ((1 + coefficient * next) / (1 + coefficient * base)) ** power
+        return (1 + coefficient * next) / (1 + coefficient * base)
       }
-      const globalY = effectRatio('seasonPassY', 0.0075, octeracts ? 2 : 1)
-      const globalZ = effectRatio('seasonPassZ', 0.01 * stats.rawSing, octeracts ? 2 : 1)
+      // Y and Z each occur once in both objectives. Octeracts use their
+      // dedicated effects rather than multiplying by the global effects too.
+      const globalY = effectRatio('seasonPassY', 0.0075)
+      const globalZ = effectRatio('seasonPassZ', 0.01 * stats.rawSing)
       if (octeracts) {
         return globalY * globalZ
           * effectRatio('seasonPass3', 0.015)
@@ -1400,9 +1406,10 @@ class Loadout {
         const fn = upgradeData.effects[effect] as ((input: number, level: number, loadout: Loadout) => number) | undefined;
         if (fn !== undefined) {
             let level = this.effectiveLevel(upgrade);
-            if (upgrade === 'ambrosiaFreeGenerationUpgrades' && effect === 'speed') {
-                // The exported no-Ambrosia bar speed already includes Red
-                // Ambrosia's row-one free levels. Apply only candidate
+            if ((upgrade === 'ambrosiaFreeGenerationUpgrades' && effect === 'speed')
+                || (upgrade === 'ambrosiaFreeLuckUpgrades' && effect === 'luck')) {
+                // The exported no-Ambrosia speed/luck already includes Red
+                // Ambrosia's shop free levels. Apply only candidate
                 // purchases and Purple enchantment levels activated by a
                 // purchase, or the Red bonus is counted twice.
                 level -= stats.bonus[upgradeData.row] ?? 0;
@@ -3296,7 +3303,8 @@ function createCubeLuckEvaluator(table2: Loadout[], stat: "cube" | "oct", fixedS
         rawLuckCube: source.upgradeLevels.ambrosiaLuckCube1 ?? 0,
         rawTutorial: source.upgradeLevels.ambrosiaTutorial ?? 0,
         rawCube1: source.upgradeLevels.ambrosiaCubes1 ?? 0,
-        freeLuckLevel: loadout.effectiveLevel("ambrosiaFreeLuckUpgrades"),
+        freeLuckLevel: loadout.effectiveLevel("ambrosiaFreeLuckUpgrades")
+          - (stats.bonus[upgrades.ambrosiaFreeLuckUpgrades.row] ?? 0),
         vouchers: loadout.getStat("vouchers"),
       }
     })
@@ -3406,7 +3414,8 @@ function createCubeLuckEvaluator(table2: Loadout[], stat: "cube" | "oct", fixedS
       const purpleLeoDelta = (unionBlueberries >= 5 ? unionBlueberries * stats.purpleLeoLevel : 0)
         - (rightBlueberries >= 5 ? rightBlueberries * stats.purpleLeoLevel : 0)
       let panthemaDelta = 0
-      if (effectsEnabled && stats.exalt !== 4 && stats.panthemaLevel > 0 && metadata.freeLuckLevel > 0) {
+      if (effectsEnabled && stats.exalt !== 4 && stats.panthemaLevel > 0
+          && stats.shopBonusLevels.ambrosiaLuck + metadata.freeLuckLevel > 0) {
         panthemaDelta = 0.2 * stats.panthemaLevel
           * (stats.shopBonusLevels.ambrosiaLuck + metadata.freeLuckLevel)
           * 0.01 * stats.panthemaLevel * (vouchers - metadata.vouchers)
@@ -5053,15 +5062,10 @@ export class HSHeaterOptimizer {
             // affect Octeracts through extra tier-specific multipliers, so
             // their local maxima must be searched against the Oct objective.
             if (options.calculateOct || options.calculateAmbOct) {
-              // Cubes I-IV have identical cube and octeract effects.  Reuse
-              // the already-trimmed cube frontier and copy its pre-shop stat
-              // cache instead of expanding and trimming the same chain twice.
-              const tableOctCube1Base = tableCube1.map(loadout => {
-                const clone = new Loadout(loadout)
-                clone.setCachedStat("oct", loadout.getStat("cube"))
-                return clone
-              })
-              const tableOctCube1 = tableOctCube1Base
+              // Cubes I-IV have identical variable effects, so their frontier
+              // can be reused. Recompute Oct scores: the Cube score also
+              // contains fixed rune/shop factors that do not apply to Oct.
+              const tableOctCube1 = tableCube1.map(loadout => new Loadout(loadout))
               const tableOctFreeCube = generateTable(["ambrosiaFreeCubeUpgrades"], "oct")
               const tableOctQuarkCube = generateTable(["ambrosiaQuarkCube1"], "oct")
               tableCache.tableOctCube = mergeTables(mergeTables(tableOctCube1, tableOctFreeCube, "oct"), tableOctQuarkCube, "oct")
