@@ -1,5 +1,6 @@
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSUI } from "../../hs-core/hs-ui";
+import { HSIcons, type HSIcon } from "../../hs-utils/hs-icons";
 
 export interface HSQuickbarIconPickerOptions<TSlotKey> {
     shouldIgnoreClickTarget: (target: Element) => boolean;
@@ -13,6 +14,7 @@ export class HSQuickbarIconPickerController<TSlotKey> {
     #targetSlot: TSlotKey | null = null;
     #docClickListener: ((event: MouseEvent) => void) | null = null;
     #wasGdsEnabled: boolean | null = null;
+    #pickSequence = 0;
     readonly #options: HSQuickbarIconPickerOptions<TSlotKey>;
 
     constructor(options: HSQuickbarIconPickerOptions<TSlotKey>) {
@@ -28,6 +30,7 @@ export class HSQuickbarIconPickerController<TSlotKey> {
             return;
         }
 
+        this.#pickSequence += 1;
         this.#wasGdsEnabled = HSSettings.getSetting("useGameData")?.isEnabled() ?? null;
         if (this.#wasGdsEnabled) {
             HSSettings.getSetting("useGameData")?.disable({ preserveGameDataDependents: true });
@@ -54,8 +57,8 @@ export class HSQuickbarIconPickerController<TSlotKey> {
                 return;
             }
 
-            const iconUrl = this.#findIconUrlFromEventTarget(target);
-            if (!iconUrl) {
+            const icon = this.#findIconFromEventTarget(target);
+            if (!icon) {
                 HSUI.Notify(
                     "No usable icon found on the clicked element.",
                     { notificationType: "warning" }
@@ -67,12 +70,17 @@ export class HSQuickbarIconPickerController<TSlotKey> {
             event.preventDefault();
             event.stopPropagation();
 
-            this.#options.assignIconToSlot(this.#targetSlot, iconUrl);
-            HSUI.Notify(
-                "Slot icon set successfully",
-                { notificationType: "success" }
-            );
+            const targetSlot = this.#targetSlot;
+            const pickSequence = this.#pickSequence;
             this.end();
+            void HSIcons.toUrl(icon).then(iconUrl => {
+                if (pickSequence !== this.#pickSequence) return;
+                this.#options.assignIconToSlot(targetSlot, iconUrl);
+                HSUI.Notify("Slot icon set successfully", { notificationType: "success" });
+            }).catch(() => {
+                if (pickSequence !== this.#pickSequence) return;
+                HSUI.Notify("Could not load the selected icon. Please try again.", { notificationType: "warning" });
+            });
         };
 
         document.addEventListener("click", this.#docClickListener, true);
@@ -104,16 +112,17 @@ export class HSQuickbarIconPickerController<TSlotKey> {
     }
 
     dispose(): void {
+        this.#pickSequence += 1;
         this.end();
     }
 
-    #findIconUrlFromEventTarget(target: EventTarget | null): string | null {
+    #findIconFromEventTarget(target: EventTarget | null): HSIcon | null {
         let element = target instanceof Element ? target : null;
         let depth = 0;
 
         while (element && element !== document.documentElement && depth < 8) {
-            const url = this.#getIconUrlFromElement(element);
-            if (url) return url;
+            const icon = HSIcons.fromElement(element);
+            if (icon) return icon;
             element = element.parentElement;
             depth += 1;
         }
@@ -121,20 +130,4 @@ export class HSQuickbarIconPickerController<TSlotKey> {
         return null;
     }
 
-    #getIconUrlFromElement(element: Element): string | null {
-        if (element instanceof HTMLImageElement && element.src) {
-            return element.src;
-        }
-
-        const style = window.getComputedStyle(element);
-        const bg = style.backgroundImage;
-        if (bg && bg !== "none") {
-            const match = /^url\(["']?(.*?)["']?\)$/.exec(bg);
-            if (match && match[1]) {
-                return match[1];
-            }
-        }
-
-        return null;
-    }
 }

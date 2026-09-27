@@ -77,7 +77,8 @@
 #automationQuickBar button.autoToggle.disabled { border-color: #bb0000; background-color: rgba(255, 0, 0, 0.2); }
 #automationQuickBar button.autoToggle.mixed { border-color: #dd8e01; background-color: rgba(220, 140, 0, 0.2); }
 
-#automationQuickBar button.autoToggle img {
+#automationQuickBar button.autoToggle img,
+#automationQuickBar button.autoToggle .hs-automation-icon {
    height: 18px;
    width: 18px;
    display: block;

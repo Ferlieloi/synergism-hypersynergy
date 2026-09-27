@@ -3,6 +3,7 @@ import { HSLogger } from "../../hs-core/hs-logger";
 import { HSElementHooker } from "../../hs-core/hs-elementhooker";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
+import { HSIcons } from "../../hs-utils/hs-icons";
 
 type AutomationSelectorExpectation = 'ON' | 'OFF' | string;
 type AutomationSelectorSpec = string | { selector: string; expected?: AutomationSelectorExpectation };
@@ -27,6 +28,7 @@ type AutomationQuickbarSoloConfig = {
     buttonId: string;
     label: string;
     iconSrc: string;
+    iconElementId?: string;
     minHighestSingularityCount?: number;
 };
 
@@ -38,6 +40,7 @@ type AutomationQuickbarGroupConfig = {
     buttonId: string;
     label: string;
     iconSrc: string;
+    iconElementId?: string;
     minHighestSingularityCount?: number;
 };
 
@@ -163,7 +166,8 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             checks: [{ selector: '#toggleAutoChallengeStart', expected: 'Auto Challenge Sweep [ON]' }],
             buttonId: 'automationQuickBar-autochallenge',
             label: 'Auto-Challenge',
-            iconSrc: './Pictures/Simplified/Challenge1.png'
+            iconSrc: './Pictures/Simplified/Challenge.png',
+            iconElementId: 'challenge1'
         },
         BuildingsAndUpgrades: {
             kind: 'group',
@@ -535,10 +539,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 btn.className = 'autoToggle';
                 btn.id = config.buttonId;
 
-                const img = document.createElement('img');
-                img.src = config.iconSrc;
-                img.loading = 'lazy';
-                btn.appendChild(img);
+                btn.appendChild(this.#createAutomationIcon(config));
 
                 btn.title = config.label;
                 btn.setAttribute('aria-label', config.label);
@@ -605,7 +606,6 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
                 config,
                 config.label,
                 config.label,
-                config.iconSrc,
                 requestAutomationUpdateUI
             );
             btn.id = config.buttonId;
@@ -675,6 +675,25 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         }
     }
 
+    /** Reuse native sprite artwork when available, with an individual-image fallback. */
+    #createAutomationIcon(config: AutomationQuickbarToggleConfig): HTMLElement {
+        const nativeElement = config.iconElementId ? document.getElementById(config.iconElementId) : null;
+        const icon = nativeElement ? HSIcons.fromElement(nativeElement) : null;
+        if (icon) {
+            const element = document.createElement('span');
+            element.className = 'hs-automation-icon';
+            element.setAttribute('aria-hidden', 'true');
+            HSIcons.applyBackground(element, icon, 18);
+            return element;
+        }
+
+        const image = document.createElement('img');
+        image.src = config.iconSrc;
+        image.loading = 'lazy';
+        image.alt = '';
+        return image;
+    }
+
     /**
      * Create a group button that toggles multiple selector targets.
      * The button reflects mixed/disabled/enabled states depending on targets.
@@ -684,7 +703,6 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         config: AutomationQuickbarToggleConfig,
         title: string,
         ariaLabel: string,
-        iconSrc: string,
         updateUI: () => void
     ): HTMLButtonElement {
         const compiledSelectors = selectors.map(selectorSpec => ({
@@ -697,10 +715,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         btn.title = title;
         btn.setAttribute('aria-label', ariaLabel);
 
-        const img = document.createElement('img');
-        img.src = iconSrc;
-        img.loading = 'lazy';
-        btn.appendChild(img);
+        btn.appendChild(this.#createAutomationIcon(config));
 
         // Gather visible target elements and compute their on/off state
         const getTargets = () =>

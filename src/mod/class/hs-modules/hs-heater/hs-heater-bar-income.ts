@@ -56,22 +56,19 @@ export function calculateHeaterBarIncome(input: HeaterBarIncomeInput): HeaterBar
     const recipeBlue = 1_000 * reactor.scorpioConversionMultiplier;
     const recipePurple = 100 * reactor.scorpioConversionMultiplier
         * reactor.ariesBarPointMultiplier;
-    const redProduction = Math.max(0, input.redPointsPerSecond);
-    const redBatches = redRoute * redProduction;
+    const baseRedProduction = Math.max(0, input.redPointsPerSecond);
     const throughputBatches = reactor.blueCapacity * reactor.encabulatorSpeed
         / 100 / 3_600 / recipeBlue;
-    const purpleToBlue = reactor.purpleFillBluePoints / blueRequirement
-        + Number(reactor.barDependenceEnabled);
-    const purpleToRed = reactor.purpleFillRedPoints / redRequirement
-        + Number(reactor.barDependenceEnabled);
     const cancer = reactor.cancerPurplePointsPerBlueOrRedFill;
-    const feedbackDenominator = purpleRequirement - cancer * (purpleToBlue + purpleToRed);
-    if (!(feedbackDenominator > 0)) {
-        throw new Error('Heater bar-fill feedback has no finite steady-state rate.');
-    }
 
-    const ratesAtBlueProduction = (blueProduction: number) => {
-        const blueBatches = blueRoute * blueProduction / recipeBlue;
+    const ratesAtBlueProduction = (blueProduction: number, purpleFills: number) => {
+        // v4.3.1 routes Gemini and Purple Bar Rebates through the tanks after
+        // each extraction. Their stored points react on the next tick; in a
+        // sustained-rate calculation they join the ordinary point supply.
+        const blueSupply = blueProduction + purpleFills * reactor.purpleFillBluePoints;
+        const redSupply = baseRedProduction + purpleFills * reactor.purpleFillRedPoints;
+        const blueBatches = blueRoute * blueSupply / recipeBlue;
+        const redBatches = redRoute * redSupply;
         // With overcap enabled the game routes blue before red each tick.
         // When red routing exceeds blue routing, the red overflow consumes
         // every blue batch after blue is stored, leaving none for the next
@@ -89,58 +86,91 @@ export function calculateHeaterBarIncome(input: HeaterBarIncomeInput): HeaterBar
                 Math.max(0, redBatches - normalBatches)) : 0;
         const totalRoutedBatches = normalBatches + overflowBatches;
         const regularBlueFills = Math.max(0,
-            (blueProduction - totalRoutedBatches * recipeBlue) / blueRequirement);
+            (blueSupply - totalRoutedBatches * recipeBlue) / blueRequirement);
         const regularRedFills = Math.max(0,
-            (redProduction - totalRoutedBatches) / redRequirement);
+            (redSupply - totalRoutedBatches) / redRequirement);
         const purplePoints = (normalBatches + 0.1 * overflowBatches) * recipePurple;
-        const purpleFills = (purplePoints + cancer * (regularBlueFills + regularRedFills))
-            / feedbackDenominator;
+        // Cancer points arrive after a blue/red fill and count toward the
+        // following extraction, so they contribute to the sustained rate.
+        const bonusFills = reactor.barDependenceEnabled ? 2 * purpleFills : 0;
         return {
-            blue: regularBlueFills + purpleToBlue * purpleFills,
-            red: regularRedFills + purpleToRed * purpleFills,
-            purple: purpleFills,
+            blue: regularBlueFills + Number(reactor.barDependenceEnabled) * purpleFills,
+            red: regularRedFills + Number(reactor.barDependenceEnabled) * purpleFills,
+            purple: (purplePoints + cancer * (regularBlueFills + regularRedFills + bonusFills))
+                / purpleRequirement,
         };
     };
 
-    // Red Ambrosia Accelerator calls addTimers('ambrosia') for each red
-    // reward, thereby producing additional blue points. The system is
+    // Red-Blue Ultrafusion calls addTimers('ambrosia') according to base Red
+    // Luck on each red fill, thereby producing additional blue points. It is
     // piecewise linear; its only breakpoints are where blue routing meets
     // the red-reactant or encabulator limits. Solve each region directly
     // instead of iterating over thousands of game ticks per candidate.
     const baseBlueProduction = Math.max(0, input.bluePointsPerSecond);
+    // Ultrafusion uses base Red Luck in v4.3.1, while the Red Ambrosia reward
+    // still uses TWO MIND's adjusted per-fill luck.
     const accelerator = Math.max(0, input.acceleratorSecondsPerRedAmbrosia)
-        * redAmbrosiaPerFill;
-    let blueProduction = baseBlueProduction;
-    if (accelerator > 0) {
-        const breakpoints = [0,
-            blueRoute > 0 ? redBatches * recipeBlue / blueRoute : Number.POSITIVE_INFINITY,
-            blueRoute > 0 ? throughputBatches * recipeBlue / blueRoute : Number.POSITIVE_INFINITY]
-            .filter((value) => Number.isFinite(value) && value >= 0)
-            .sort((left, right) => left - right);
-        const boundaries = [...new Set(breakpoints), Number.POSITIVE_INFINITY];
-        let solved = false;
-        for (let index = 0; index < boundaries.length - 1; index++) {
-            const left = boundaries[index];
-            const right = boundaries[index + 1];
-            const probe = Number.isFinite(right) ? right : left + Math.max(1, baseBlueProduction);
-            if (probe <= left) continue;
-            const leftRedFills = ratesAtBlueProduction(left).red;
-            const slope = (ratesAtBlueProduction(probe).red - leftRedFills) / (probe - left);
-            const denominator = 1 - baseBlueProduction * accelerator * slope;
-            if (denominator <= 0) continue;
-            const candidate = baseBlueProduction
-                * (1 + accelerator * (leftRedFills - slope * left)) / denominator;
-            if (candidate >= left - 1e-9 * Math.max(1, left)
-                && candidate <= right + 1e-9 * Math.max(1, right)) {
-                blueProduction = Math.max(0, candidate);
-                solved = true;
-                break;
+        * input.redLuck / 100;
+    const solveAtPurpleFills = (purpleFills: number) => {
+        let blueProduction = baseBlueProduction;
+        if (accelerator > 0) {
+            const redBatches = redRoute * (baseRedProduction + purpleFills * reactor.purpleFillRedPoints);
+            const rebatedBlue = purpleFills * reactor.purpleFillBluePoints;
+            const breakpoints = [0,
+                blueRoute > 0 ? redBatches * recipeBlue / blueRoute - rebatedBlue : Number.POSITIVE_INFINITY,
+                blueRoute > 0 ? throughputBatches * recipeBlue / blueRoute - rebatedBlue : Number.POSITIVE_INFINITY]
+                .filter((value) => Number.isFinite(value) && value >= 0)
+                .sort((left, right) => left - right);
+            const boundaries = [...new Set(breakpoints), Number.POSITIVE_INFINITY];
+            let solved = false;
+            for (let index = 0; index < boundaries.length - 1; index++) {
+                const left = boundaries[index];
+                const right = boundaries[index + 1];
+                const probe = Number.isFinite(right) ? right : left + Math.max(1, baseBlueProduction);
+                if (probe <= left) continue;
+                const leftRedFills = ratesAtBlueProduction(left, purpleFills).red;
+                const slope = (ratesAtBlueProduction(probe, purpleFills).red - leftRedFills) / (probe - left);
+                const denominator = 1 - baseBlueProduction * accelerator * slope;
+                if (denominator <= 0) continue;
+                const candidate = baseBlueProduction
+                    * (1 + accelerator * (leftRedFills - slope * left)) / denominator;
+                if (candidate >= left - 1e-9 * Math.max(1, left)
+                    && candidate <= right + 1e-9 * Math.max(1, right)) {
+                    blueProduction = Math.max(0, candidate);
+                    solved = true;
+                    break;
+                }
             }
+            if (!solved) blueProduction = Number.POSITIVE_INFINITY;
         }
-        if (!solved) blueProduction = Number.POSITIVE_INFINITY;
-    }
+        return ratesAtBlueProduction(blueProduction, purpleFills);
+    };
 
-    const rates = ratesAtBlueProduction(blueProduction);
+    // Rebate points and Cancer rewards form a feedback loop. A secant step
+    // solves each linear routing region directly, with fixed-point steps at
+    // routing boundaries. No rebate/Cancer case needs only one evaluation.
+    let purpleFills = 0;
+    let previousPurpleFills = Number.NaN;
+    let previousTarget = Number.NaN;
+    let rates = solveAtPurpleFills(purpleFills);
+    for (let iteration = 0; iteration < 32; iteration++) {
+        if (!Number.isFinite(rates.purple)) {
+            throw new Error('Heater bar-fill feedback has no finite steady-state rate.');
+        }
+        if (Math.abs(rates.purple - purpleFills) <= 1e-10 * Math.max(1, rates.purple)) break;
+        const slope = (rates.purple - previousTarget) / (purpleFills - previousPurpleFills);
+        const secant = (rates.purple - slope * purpleFills) / (1 - slope);
+        const next = Number.isFinite(secant) && slope < 1 && secant >= 0
+            && secant <= 4 * Math.max(1, purpleFills, rates.purple)
+            ? secant : rates.purple;
+        previousPurpleFills = purpleFills;
+        previousTarget = rates.purple;
+        purpleFills = next;
+        rates = solveAtPurpleFills(purpleFills);
+        if (iteration === 31) {
+            throw new Error('Heater bar-fill feedback did not converge.');
+        }
+    }
     return {
         blueAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.blue * blueAmbrosiaPerFill,
         redAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.red * redAmbrosiaPerFill,

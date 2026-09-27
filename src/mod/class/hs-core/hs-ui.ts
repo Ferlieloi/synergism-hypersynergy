@@ -1,5 +1,6 @@
 import { EPredefinedPosition, HSNotifyOptions, HSPanelTabDefinition, HSUIDOMCoordinates, HSUIModalOptions, HSUIXY } from "../../types/module-types/hs-ui-types";
 import { HSUtils } from "../hs-utils/hs-utils";
+import { HSIcons } from "../hs-utils/hs-icons";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
@@ -11,6 +12,7 @@ import autosingModalCSS from "inline:../../resource/css/module/hs-autosing-modal
 import animationsCSS from "inline:../../resource/css/hs-animations.css";
 import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
+import modPanelIconB64 from "inline:../../resource/txt/mod_panel_icon.txt";
 import { HSModuleOptions } from "../../types/hs-types";
 
 /**
@@ -326,6 +328,9 @@ export class HSUI extends HSModule {
         this.#uiPanelOpenBtn = document.createElement('div');
         this.#uiPanelOpenBtn.id = 'hs-panel-control';
         this.#uiPanelOpenBtn.style.display = 'none';
+        const nativeIcon = document.getElementById('octeractCorruptionImage');
+        const icon = nativeIcon ? HSIcons.fromElement(nativeIcon) : null;
+        HSIcons.applyBackground(this.#uiPanelOpenBtn, icon ?? { url: modPanelIconB64.trim() }, 35);
 
         this.#uiPanelOpenBtn.addEventListener('click', async () => {
             if (this.#uiQuickAccessMenu) {

@@ -302,7 +302,7 @@ select::-webkit-scrollbar-corner {
     left: 10px;
     width: 35px;
     height: 35px;
-    background-image: url(https://synergism.cc/Pictures/Default/OcteractCorruptions.png);
+    outline: 1px solid #aaa;
     background-repeat: no-repeat;
     background-size: contain;
     transform-origin: 50% 50%;

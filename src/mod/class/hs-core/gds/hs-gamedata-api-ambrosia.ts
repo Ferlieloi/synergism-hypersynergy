@@ -1102,10 +1102,14 @@ export class AmbrosiaHelper {
             data.goldenQuarkUpgrades.singAmbrosiaGeneration2.goldenQuarksInvested,
             data.goldenQuarkUpgrades.singAmbrosiaGeneration3.goldenQuarksInvested,
             data.goldenQuarkUpgrades.singAmbrosiaGeneration4.goldenQuarksInvested,
+            // Daily free levels can now change these four upgrades without
+            // changing their purchased investment.
+            ambrosiaGenerationSingularityUpgrade,
             data.octUpgrades.octeractAmbrosiaGeneration.octeractsInvested,
             data.octUpgrades.octeractAmbrosiaGeneration2.octeractsInvested,
             data.octUpgrades.octeractAmbrosiaGeneration3.octeractsInvested,
             data.octUpgrades.octeractAmbrosiaGeneration4.octeractsInvested,
+            ambrosiaGenerationOcteractUpgrade,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration,
             oneChallengeCap,
             noAmbrosiaUpgrades,

@@ -17,8 +17,8 @@ import { TalismanHelper } from "./hs-gamedata-api-talisman";
 import { RuneHelper } from "./hs-gamedata-api-rune";
 import { AchievementHelper } from "./hs-gamedata-api-achievement";
 import { AmbrosiaHelper } from "./hs-gamedata-api-ambrosia";
-import { GoldenQuarkHelper } from "./hs-gamedata-api-goldenQuark";
-import { OcteractHelper } from "./hs-gamedata-api-octeract";
+import { GoldenQuarkHelper, dailyFreeLevelCaps } from "./hs-gamedata-api-goldenQuark";
+import { OcteractHelper, dailyOcteractFreeLevelCaps } from "./hs-gamedata-api-octeract";
 import { LuckHelper } from "./hs-gamedata-api-luck";
 import { PurpleHelper } from "./hs-gamedata-api-purple";
 import type { ShopUpgradeHelperContext, AntUpgradeHelperContext, TalismanHelperContext, RuneHelperContext, AchievementHelperContext, AmbrosiaHelperContext, AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
@@ -632,6 +632,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const octeractContext: OcteractHelperContext = {
             getGameData: () => this.gameData,
             getSavedUpgradeFreeLevel: (upgrade) => this.getSavedUpgradeFreeLevel(upgrade),
+            getRedAmbrosiaFreeAccumulatorCapIncrease: () =>
+                ambrosia.getRedAmbrosiaUpgradeEffects('redAmbrosiaFreeAccumulator').freeAccumulatorLevelCapIncrease,
         };
         octeract = this.registerCalculationHelper(new OcteractHelper(octeractContext));
         this.octeract = octeract;
@@ -1273,6 +1275,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                         if (playerLevel >= maxLevel) {
                             pointValue += 6
                         }
+                        const freeCap = dailyFreeLevelCaps[upgradeKey];
+                        if (freeCap !== undefined && this.getSavedUpgradeFreeLevel(
+                            this.gameData.goldenQuarkUpgrades[upgradeKey]
+                        ) >= freeCap) {
+                            pointValue += 6;
+                        }
                     }
                     return pointValue;
                 },
@@ -1293,6 +1301,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                             this.octeract.getOcteractUpgradeLevel(upgradeKey)
                         if (maxLevel !== -1 && playerLevel >= maxLevel) {
                             pointValue += 8
+                        }
+                        const freeCap = dailyOcteractFreeLevelCaps[upgradeKey];
+                        if (freeCap !== undefined && this.getSavedUpgradeFreeLevel(
+                            this.gameData.octUpgrades[upgradeKey]
+                        ) >= freeCap) {
+                            pointValue += 8;
                         }
                     }
                     return pointValue
@@ -2291,14 +2305,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     // =========== Quark ===========
     // =============================
 
-    maxGoldenQuarkUpgradeAP = Object.values(goldenQuarkUpgradeMaxLevels).reduce((acc: number) => acc + 6, 0)
+    maxGoldenQuarkUpgradeAP = 6 * (
+        Object.keys(goldenQuarkUpgradeMaxLevels).length + Object.keys(dailyFreeLevelCaps).length
+    )
 
     maxOcteractUpgradeAP = Object.values(octeractUpgradeMaxLevels).reduce((acc: number, upgrade) => {
         if (upgrade.maxLevel === -1) {
             return acc
         }
         return acc + 8
-    }, 0)
+    }, 0) + 8 * Object.keys(dailyOcteractFreeLevelCaps).length
 
     computeFreeLevelMultiplierGQ(): number {
         return this.goldenQuark.computeFreeLevelMultiplierGQ()

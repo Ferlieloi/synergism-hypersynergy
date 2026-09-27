@@ -431,8 +431,6 @@ export class HSQOLButtons extends HSModule {
             inputsContainer.appendChild(wrapper);
         });
 
-        const upgradeIds = Object.keys(inputs);
-
         const distributeBtn = document.createElement('button');
         distributeBtn.textContent = 'Distribute';
         distributeBtn.style.marginTop = '10px';
@@ -448,33 +446,32 @@ export class HSQOLButtons extends HSModule {
 
         const setStatus = (text: string) => { statusLabel.textContent = text; };
 
-        const promptInput = document.querySelector('#prompt_text') as HTMLInputElement;
-        const okPrompt = document.querySelector('#ok_prompt') as HTMLButtonElement;
-        const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
+        const costInput = document.getElementById('purchasePromptCost') as HTMLInputElement | null;
+        const okPurchase = document.getElementById('ok_purchasePrompt') as HTMLButtonElement | null;
+        const cancelPurchase = document.getElementById('cancel_purchasePrompt') as HTMLButtonElement | null;
+        const okAlert = document.getElementById('ok_alert') as HTMLButtonElement | null;
         const alertWrapper = document.getElementById('alertWrapper') as HTMLElement | null;
-        const promptWrapper = document.getElementById('promptWrapper') as HTMLElement | null;
+        const purchaseWrapper = document.getElementById('purchasePromptWrapper');
+        const confirmationBox = document.getElementById('confirmationBox');
 
-        // Resolves as soon as the element's display becomes 'block', or after timeoutMs.
-        const waitForVisible = (el: HTMLElement | null, timeoutMs: number): Promise<void> =>
-            new Promise(resolve => {
-                if (!el) { resolve(); return; }
-                if (el.style.display === 'block') { resolve(); return; }
-
-                let done = false;
-                const finish = () => {
-                    if (done) return;
-                    done = true;
-                    clearTimeout(timer);
-                    observer.disconnect();
-                    resolve();
-                };
+        // An unaffordable or newly maxed upgrade can open an alert instead.
+        const waitForPurchaseDialog = (): Promise<void> =>
+            new Promise((resolve, reject) => {
+                const isVisible = () => purchaseWrapper?.style.display === 'block'
+                    || alertWrapper?.style.display === 'block';
+                if (isVisible()) { resolve(); return; }
 
                 const observer = new MutationObserver(() => {
-                    if (el.style.display === 'block') finish();
+                    if (isVisible()) finish();
                 });
-                observer.observe(el, { attributes: true, attributeFilter: ['style'] });
-
-                const timer = setTimeout(finish, timeoutMs);
+                const finish = (error?: Error) => {
+                    clearTimeout(timer);
+                    observer.disconnect();
+                    if (error) reject(error);
+                    else resolve();
+                };
+                observer.observe(confirmationBox!, { attributes: true, subtree: true, attributeFilter: ['style'] });
+                const timer = setTimeout(() => finish(new Error('Purchase dialog did not open.')), 5000);
             });
 
         distributeBtn.addEventListener('click', async () => {
@@ -493,7 +490,14 @@ export class HSQOLButtons extends HSModule {
                 }
             }
 
-            if (!promptInput || !okPrompt || !okAlert) return;
+            if (!costInput || !okPurchase || !cancelPurchase || !okAlert || !purchaseWrapper || !alertWrapper || !confirmationBox) {
+                setStatus('Purchase dialog unavailable.');
+                return;
+            }
+            if (confirmationBox.style.display === 'block') {
+                setStatus('Close the open game dialog before distributing.');
+                return;
+            }
 
             const ids = Object.keys(ratios);
             if (ids.length === 0) return;
@@ -541,7 +545,6 @@ export class HSQOLButtons extends HSModule {
                 const additional = Math.max(0, targetFinalInvested - entry.invested);
                 return {
                     id: entry.id,
-                    exactAdditional: additional,
                     floorAdditional: Math.floor(additional),
                     fraction: additional - Math.floor(additional)
                 };
@@ -576,65 +579,56 @@ export class HSQOLButtons extends HSModule {
             distributeBtn.style.opacity = '0.6';
             distributeBtn.style.cursor = 'not-allowed';
 
-            let current = 0;
+            try {
+                let current = 0;
+                for (const id of ids) {
+                    current++;
+                    const amountToSpend = plannedSpendById.get(id) ?? 0;
+                    setStatus(`Buying ${current}/${ids.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
 
-            for (const id of ids) {
-                current++;
-                const amountToSpend = plannedSpendById.get(id) ?? 0;
-                setStatus(`Buying ${current}/${ids.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
+                    if (amountToSpend <= 0) { setStatus(`Skipped ${current}/${ids.length} (0 GQ)`); continue; }
 
-                if (amountToSpend <= 0) { setStatus(`Skipped ${current}/${ids.length} (0 GQ)`); continue; }
+                    const btn = document.getElementById(id) as HTMLButtonElement;
+                    if (!btn) continue;
 
-                const btn = document.getElementById(id) as HTMLButtonElement;
-                if (!btn) continue;
+                    btn.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
+                    await waitForPurchaseDialog();
 
-                // The game's shift-click prompt asks for levels, not Golden Quarks.
-                const upgradeKey = id as GoldenQuarkUpgradeKey;
-                const currentLevel = gameDataAPI.goldenQuark.getGQUpgradeLevel(upgradeKey);
-                const maxLevel = gameDataAPI.goldenQuark.computeGQUpgradeMaxLevel(upgradeKey);
-                const currentCost = gameDataAPI.goldenQuark.getGQUpgradeCumulativeCost(upgradeKey, currentLevel);
-                let low = currentLevel;
-                let high = maxLevel;
-                while (low < high) {
-                    const middle = low + Math.ceil((high - low) / 2);
-                    const cost = gameDataAPI.goldenQuark.getGQUpgradeCumulativeCost(upgradeKey, middle) - currentCost;
-                    if (cost <= amountToSpend) low = middle;
-                    else high = middle - 1;
+                    if (purchaseWrapper.style.display === 'block') {
+                        // Let the game calculate affordable levels and enforce upgrade caps.
+                        costInput.value = amountToSpend.toString();
+                        costInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        if (okPurchase.disabled) {
+                            cancelPurchase.click();
+                            setStatus(`Skipped ${current}/${ids.length} (allocation cannot buy a level)`);
+                        } else {
+                            okPurchase.click();
+                        }
+                    }
+
+                    // Let the purchase settle; single-level purchases need no alert.
+                    // Drain queued purchase alerts before opening the next upgrade.
+                    await HSUtils.sleep(0);
+                    while (alertWrapper.style.display === 'block') {
+                        okAlert.click();
+                        await HSUtils.sleep(0);
+                    }
+
+                    // Dismiss any hover tooltip the programmatic click may have triggered
+                    btn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                    btn.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+                    btn.blur();
                 }
-                const levelsToBuy = low - currentLevel;
-                if (levelsToBuy <= 0) {
-                    setStatus(`Skipped ${current}/${ids.length} (allocation cannot buy a level)`);
-                    continue;
-                }
-
-                // Shift-click opens the game's "how many?" prompt
-                btn.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
-
-                // Wait until the prompt is actually visible before interacting with it
-                await waitForVisible(promptWrapper, 5000);
-
-                promptInput.value = levelsToBuy.toString();
-                promptInput.dispatchEvent(new Event('input', { bubbles: true }));
-                okPrompt.click();
-
-                // Wait until the confirmation alert has actually appeared before dismissing
-                await waitForVisible(alertWrapper, 5000);
-                okAlert.click();
-
-                // Dismiss any hover tooltip the programmatic click may have triggered
-                btn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-                btn.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-                btn.blur();
-
-                // Force a macrotask yield so the browser can paint between purchases
-                await new Promise(r => setTimeout(r, 0));
+                setStatus('Done!');
+                setTimeout(() => setStatus(''), 3000);
+            } catch (error) {
+                HSLogger.warn(`GQ distribution failed: ${error}`, this.context);
+                setStatus('Distribution stopped: purchase dialog did not open.');
+            } finally {
+                distributeBtn.disabled = false;
+                distributeBtn.style.opacity = '';
+                distributeBtn.style.cursor = 'pointer';
             }
-
-            distributeBtn.disabled = false;
-            distributeBtn.style.opacity = '';
-            distributeBtn.style.cursor = 'pointer';
-            setStatus('Done!');
-            setTimeout(() => setStatus(''), 3000);
         });
         distributor.appendChild(distributeBtn);
         distributor.appendChild(statusLabel);

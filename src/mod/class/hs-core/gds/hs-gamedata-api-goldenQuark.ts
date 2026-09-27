@@ -2,6 +2,35 @@ import { goldenQuarkUpgradeMaxLevels } from "./stored-vars-and-calculations";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CalculationMode, GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
 
+// SynergismOfficial/src/singularity.ts dailyFreeUpgradeTable (v4.3.1).
+// These are caps on the saved free levels, before any free-level multiplier.
+export const dailyFreeLevelCaps: Partial<Record<GoldenQuarkUpgradeKey, number>> = {
+    goldenQuarks1: 10_000,
+    goldenQuarks2: 2_000,
+    goldenQuarks3: 30_000,
+    singCubes1: 1_000_000,
+    singCubes2: 100_000,
+    singCubes3: 10_000,
+    singOfferings1: 1_000_000,
+    singOfferings2: 100_000,
+    singOfferings3: 10_000,
+    singObtainium1: 1_000_000,
+    singObtainium2: 100_000,
+    singObtainium3: 10_000,
+    ascensions: 1_000_000,
+    singAmbrosiaGeneration: 5,
+    singAmbrosiaGeneration2: 5,
+    singAmbrosiaGeneration3: 5,
+    singAmbrosiaGeneration4: 5,
+};
+
+const freeLevelMultiplierExemptUpgrades = new Set<GoldenQuarkUpgradeKey>([
+    'singAmbrosiaGeneration',
+    'singAmbrosiaGeneration2',
+    'singAmbrosiaGeneration3',
+    'singAmbrosiaGeneration4',
+]);
+
 export interface GoldenQuarkHelperContext {
     getGameData: () => GameData | undefined;
     getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean;
@@ -112,8 +141,11 @@ export class GoldenQuarkHelper {
         if (!data) return 0;
 
         const upgrade = data.goldenQuarkUpgrades[upgradeKey];
-        const freeLevelMult = this.computeFreeLevelMultiplierGQ();
-        const freeLevel = this.#ctx.getSavedUpgradeFreeLevel(upgrade);
+        const freeLevelMult = freeLevelMultiplierExemptUpgrades.has(upgradeKey)
+            ? 1 : this.computeFreeLevelMultiplierGQ();
+        const savedFreeLevel = this.#ctx.getSavedUpgradeFreeLevel(upgrade);
+        const cap = dailyFreeLevelCaps[upgradeKey] ?? Number.POSITIVE_INFINITY;
+        const freeLevel = Math.min(cap, Math.max(0, savedFreeLevel));
 
         const baseRealFreeLevels = freeLevelMult * freeLevel;
         const level = this.getGQUpgradeLevel(upgradeKey);
