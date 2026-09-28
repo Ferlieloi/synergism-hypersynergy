@@ -80,4 +80,4 @@ jobs:
           foreach ($asset in $assets) {
             if (-not (Test-Path -LiteralPath $asset)) { throw "Missing release asset: $asset" }
           }
-          gh release create $env:RELEASE_TAG $assets --repo $env:GITHUB_REPOSITORY --verify-tag --latest=false --title "Hypersynergism Loader $version" --notes-from-tag
+          gh release create $env:RELEASE_TAG $assets --verify-tag --latest=false --title "Hypersynergism Loader $version" --notes-from-tag
