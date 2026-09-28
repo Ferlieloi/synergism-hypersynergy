@@ -14,6 +14,5 @@ electron_loader_test
 
 synergism_modloader/node_modules/
 synergism_modloader/dist/
-synergism_modloader/package-lock.json
 /synergism_modloader/vendor
 hypersynergism_steam_modloader.zip

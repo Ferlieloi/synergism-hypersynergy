@@ -1,0 +1,83 @@
+name: Release Windows loader
+
+on:
+  push:
+    tags:
+      - 'loader-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'Ferlieloi/synergism-hypersynergy'
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: synergism_modloader
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: synergism_modloader/package-lock.json
+      - name: Verify the release tag matches the launcher version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:RELEASE_TAG -ne "loader-v$version") {
+            throw "Tag $env:RELEASE_TAG does not match launcher version $version"
+          }
+      - name: Install dependencies
+        run: npm ci
+      - name: Test launcher updates
+        run: npm test
+      - name: Build installer and update metadata
+        run: npm run dist -- --publish never
+      - name: Verify launcher and installer icons
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $sourceIcon = [Drawing.Icon]::new((Resolve-Path 'assets/favicon.ico').Path)
+          $expected = $sourceIcon.ToBitmap()
+          try {
+            foreach ($file in @("dist/win-unpacked/Hypersynergism Loader.exe", "dist/HypersynergismLoader-Setup-$version.exe")) {
+              $embeddedIcon = [Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path $file).Path)
+              if ($null -eq $embeddedIcon) { throw "No icon in $file" }
+              $actual = $embeddedIcon.ToBitmap()
+              try {
+                if ($actual.Width -ne $expected.Width -or $actual.Height -ne $expected.Height) { throw "Wrong icon size in $file" }
+                for ($y = 0; $y -lt $expected.Height; $y++) {
+                  for ($x = 0; $x -lt $expected.Width; $x++) {
+                    if ($actual.GetPixel($x, $y).ToArgb() -ne $expected.GetPixel($x, $y).ToArgb()) {
+                      throw "HS icon is missing from $file"
+                    }
+                  }
+                }
+              } finally {
+                $actual.Dispose()
+                $embeddedIcon.Dispose()
+              }
+            }
+          } finally {
+            $expected.Dispose()
+            $sourceIcon.Dispose()
+          }
+      - name: Publish launcher release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $assets = @(
+            "dist/HypersynergismLoader-Setup-$version.exe"
+            "dist/HypersynergismLoader-Setup-$version.exe.blockmap"
+            "dist/latest.yml"
+          )
+          foreach ($asset in $assets) {
+            if (-not (Test-Path -LiteralPath $asset)) { throw "Missing release asset: $asset" }
+          }
+          gh release create $env:RELEASE_TAG $assets --repo $env:GITHUB_REPOSITORY --verify-tag --latest=false --title "Hypersynergism Loader $version" --notes-from-tag

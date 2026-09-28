@@ -2,10 +2,10 @@
 
 A small Electron app that finds your Steam copy of Synergism, patches an
 extracted copy of it to load the Hypersynergism mod, and launches the
-patched copy. Your original Steam install is never modified — everything
-happens in a `__hs_work` folder next to it, which Steam ignores and which
-"Verify integrity of game files" will not touch (and which you can delete
-any time to fully reset).
+patched copy. Your original Steam executable is never modified — the patched
+copy lives in `__hs_work_current` next to it, which Steam ignores and which
+"Verify integrity of game files" will not touch. Close the patched game before
+patching again so the loader can replace that folder safely.
 
 ## Requirements (on the machine that *runs* the loader)
 
@@ -40,15 +40,44 @@ npm start
 dependencies — this needs network access to npmjs.org and (for `electron`
 itself) Electron's binary CDN.
 
-## Building a distributable .exe
+## Building the Windows installer
 
 ```
 npm run dist
 ```
 
-This uses `electron-builder` with the `portable` Windows target, producing
-a single `HypersynergismLoader.exe` under `dist/` that you can hand to
-other players — no install step, no Node/Electron required on their end.
+This uses `electron-builder` with the per-user NSIS Windows target, producing
+`HypersynergismLoader-Setup-<version>.exe` under `dist/`. Players run the
+installer once; it does not require administrator rights or a separate
+Node/Electron installation. The full 7-Zip application remains a separate
+requirement for patching the Steam game.
+
+The standard build applies the HS icon to the launcher and installer EXEs.
+Release builds verify both embedded icons before publishing.
+
+## Launcher updates
+
+The installed Windows launcher checks GitHub Releases on startup and when the
+player clicks **Check for updates**. It downloads a newer installer in the
+background, then offers **Restart to update**. Game patching must finish before
+the launcher restarts. The loader's version is separate from the mod version.
+
+To publish a launcher update, increase `version` in this directory's
+`package.json` and `package-lock.json`, then push a matching tag such as
+`loader-v0.2.4`. The `Release Windows loader` workflow builds the installer,
+uploads it with `latest.yml` and its block map. The launcher selects the
+newest published `loader-v*` release with update metadata, so mod releases
+can remain marked Latest. Until the first launcher release is published, the
+app reports that no launcher update has been published yet.
+
+Players using the earlier 0.1.0 installer need to install an updater-enabled
+release once. Future launcher releases can then update through the app.
+
+The mod build dropdown lists the newest builds first. Published GitHub
+releases use their publication date; other tags and branches use their latest
+commit date. The loader remembers the channel and build after the game starts
+successfully and selects that build on the next launch. Merely browsing the
+dropdown does not change the remembered build.
 
 ## How the patch pipeline works
 
@@ -63,6 +92,13 @@ other players — no install step, no Node/Electron required on their end.
    runs the mod script you picked, at whatever branch or tag you selected.
 6. Repacks `app.asar` and locates the launchable exe inside the extracted
    folder.
+
+The loader builds each replacement in `__hs_work_staging`, waits for the
+repacked archive to close, removes extraction inputs, and switches the game
+into `__hs_work_current` only after patching succeeds. It retries cleanup of
+old numbered folders left by earlier versions. If a file remains locked, it
+leaves that folder for a later cleanup attempt without creating another
+numbered folder. A failed patch leaves the current playable copy in place.
 
 The loader remembers the original exe's size/mtime at patch time, so it
 can tell you when Synergism has been updated by Steam and a re-patch is a

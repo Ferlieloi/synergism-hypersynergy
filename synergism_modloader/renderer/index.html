@@ -25,6 +25,12 @@
         <span id="statusPill" class="pill pill-idle">Idle</span>
       </div>
 
+      <div class="launcher-update" aria-live="polite">
+        <span id="launcherUpdateStatus">Launcher update status loading…</span>
+        <button id="checkLauncherUpdateBtn" class="btn-secondary" type="button">Check for updates</button>
+        <button id="installLauncherUpdateBtn" class="btn-primary is-hidden" type="button">Restart to update</button>
+      </div>
+
       <!-- Tab nav (styled exactly like hypersynergism tabs) -->
       <nav class="tab-nav">
         <div id="tabs">
@@ -80,7 +86,7 @@
           </div>
         </div>
         <p class="hint small">Needs the full 7-Zip install, not just the lightweight 7za tool — only it can unpack the
-          installer's NSIS wrapper. A 7-Zip executable is packaged with the mod; if not found, grab it free at <a
+          game's NSIS wrapper. If it isn't installed, get it free at <a
             href="#" data-external="https://www.7-zip.org/" class="link">7-zip.org</a>.</p>
         <p id="sevenZipStatus" class="status-line"></p>
 

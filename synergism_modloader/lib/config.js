@@ -76,6 +76,9 @@ function emptyConfig() {
         sevenZipPath: '',  // path to 7z.exe (full version, needed for NSIS extraction)
         channel: DEFAULTS.defaultChannel, // 'live' or 'dev' — picks which fork everything comes from
         modRef: '',        // branch/tag within that channel's repo ('' = let the UI pick the channel default)
+        lastPlayedChannel: '',
+        lastPlayedModRef: '',
+        refDateCache: {},   // commit dates keyed by SHA, to limit GitHub API requests
         lastPatchedExe: '',     // launchable exe produced by the last successful patch
         lastPatchedSourceStat: null, // { size, mtimeMs } of the original exe at patch time
         lastPatchedChannel: '',

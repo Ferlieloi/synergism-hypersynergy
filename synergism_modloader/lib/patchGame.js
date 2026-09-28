@@ -3,7 +3,16 @@ const path = require('path')
 const { execFile } = require('child_process')
 const asar = require('@electron/asar')
 const { buildInjectorCode } = require('./injectorTemplate')
+const { createPackageAndWait } = require('./archiveWriter')
 const { DEFAULTS, resolveChannel } = require('./config')
+const {
+    ensureNoRunningWorkGames,
+    prepareWorkspace,
+    promoteWorkspace,
+    discardExtractionInputs,
+    cleanupOldWorkspaces,
+    removeBestEffort
+} = require('./workspaceManager')
 
 function run(cmd, args, onLog) {
     return new Promise((resolve, reject) => {
@@ -24,50 +33,15 @@ async function fetchText(url, onLog) {
     return res.text()
 }
 
-// Removes a previous run's work folder. On Windows this can intermittently
-// fail with ENOTEMPTY/EBUSY/EPERM if something inside it is still held open —
-// most commonly because the previously-patched game is still running (it
-// keeps app.asar / files under resources/ locked), or an antivirus scan is
-// mid-read. fs.rmSync's maxRetries/retryDelay options handle short-lived
-// locks; if the lock is held for longer (e.g. the game is still open), we
-// fall back to renaming the stale folder out of the way — Windows allows
-// renaming a directory even while a file inside it is open, so this doesn't
-// require the lock to clear — and best-effort delete it afterwards instead
-// of failing the whole patch over a folder we no longer need.
-// Best-effort removal of a folder we no longer need. Never throws — if it's
-// still locked (AV scan, stubborn handle, etc.) we just leave it for next
-// time. This is intentionally NOT in the critical path of the current patch.
-function removeBestEffort(dir, log) {
+// Electron treats .asar files as virtual folders and can keep the game archive
+// open until the launcher exits. Access it as a normal file while patching.
+async function withRawArchiveAccess(action) {
+    const previous = process.noAsar
+    process.noAsar = true
     try {
-        fs.rmSync(dir, { recursive: true, force: true })
-    } catch (e) {
-        log?.(`WARNING: (leftover folder "${path.basename(dir)}" is still locked — leaving it for now, it'll be cleaned up on a future patch once it's free: ${e.message}), you can also manually delete it if you want (restart of your computer may be required)`)
-    }
-}
-
-// Finds every old work folder this loader has left behind (current and past
-// naming schemes all start with "__hs_work") and tries to clear each one out.
-// This NEVER blocks or throws: if an old folder is still locked by something,
-// we simply skip it and move on. The CURRENT run always gets its own
-// brand-new, uniquely-named folder regardless, so a stuck lock on an old
-// leftover can never prevent patching again.
-async function cleanupStaleWorkDirs(gameDir, log) {
-    let entries
-    try {
-        entries = fs.readdirSync(gameDir, { withFileTypes: true })
-    } catch {
-        return
-    }
-    const staleDirs = entries
-        .filter(e => e.isDirectory() && e.name.startsWith('__hs_work'))
-        .map(e => path.join(gameDir, e.name))
-
-    if (!staleDirs.length) return
-
-    log?.(`Found ${staleDirs.length} old work folder(s) from previous runs — clearing what's free...`)
-    for (const dir of staleDirs) {
-        await killLeftoverProcessesUnder(dir, log)
-        removeBestEffort(dir, log)
+        return await action()
+    } finally {
+        process.noAsar = previous
     }
 }
 
@@ -113,7 +87,11 @@ async function patchGame(opts) {
 
     const sourceStat = fs.statSync(exePath)
 
-    const workDir = path.join(gameDir, `__hs_work_${Date.now()}_${Math.floor(Math.random() * 1e6)}`)
+    // Build in a fixed staging folder, then swap it into place only after
+    // patching succeeds. Repeated failures cannot accumulate numbered copies.
+    await ensureNoRunningWorkGames(gameDir)
+    const dirs = prepareWorkspace(gameDir)
+    const workDir = dirs.staging
     const pluginDir = path.join(workDir, '$PLUGINSDIR')
     const app7zPath = path.join(pluginDir, 'app-64.7z')
     const extractedAppDir = path.join(workDir, 'app')
@@ -123,93 +101,96 @@ async function patchGame(opts) {
 
     log('Starting full patch process')
 
-    // If a previous launch left a background helper process running (common
-    // with Electron apps even after the window is closed), stop it now so
-    // it can't hold the work folder locked.
-    log('Checking for a still-running previous instance...')
-    await killLeftoverProcessesUnder(workDir, log)
-
-    // Clean previous work (tolerant of locked leftovers from a prior run)
-    await cleanupStaleWorkDirs(gameDir, log)
-    fs.mkdirSync(workDir, { recursive: true })
-
-    // 1. Extract the NSIS-packaged exe
-    log('Extracting game exe...')
-    await run(sevenZipPath, ['x', exePath, `-o${workDir}`, '-y'], log)
-    if (!fs.existsSync(app7zPath)) {
-        throw new Error('app-64.7z not found after exe extraction — installer layout may have changed')
-    }
-
-    // 2. Extract the embedded app archive
-    log('Extracting app-64.7z...')
-    await run(sevenZipPath, ['x', app7zPath, `-o${extractedAppDir}`, '-y'], log)
-    if (!fs.existsSync(asarPath)) {
-        throw new Error('app.asar not found — installer layout may have changed')
-    }
-
-    // 3. Extract app.asar
-    log('Extracting app.asar...')
-    await asar.extractAll(asarPath, extractAsarDir)
-
-    const outJsPath = path.join(extractAsarDir, 'dist', 'dist', 'out.js')
-    if (!fs.existsSync(outJsPath)) {
-        throw new Error(`out.js not found at: ${outJsPath}`)
-    }
-
-    // 4. Get the bundle patcher — prefer a fresh remote copy, fall back to the bundled one.
-    // Most refs (especially older ones, and most of the "live" channel's history)
-    // won't have electron_app/patcher.js at all, since this is a new addition to the
-    // mod repo — that's expected and not an error, it just means we use the copy
-    // shipped with the loader.
-    log('Loading bundle patcher...')
-    let patcherCode
     try {
-        if (!patcherUrl) throw new Error('no patcherUrl provided')
-        const fetched = await fetchText(patcherUrl, log)
-        if (!fetched.includes('module.exports')) {
-            throw new Error('fetched content doesn\'t look like patcher.js (no module.exports found)')
+        // 1. Extract the NSIS-packaged exe
+        log('Extracting game exe...')
+        await run(sevenZipPath, ['x', exePath, `-o${workDir}`, '-y'], log)
+        if (!fs.existsSync(app7zPath)) {
+            throw new Error('app-64.7z not found after exe extraction — installer layout may have changed')
         }
-        patcherCode = fetched
-    } catch (e) {
-        log(`patcher.js not available at that ref — falling back to the bundled copy (${e.message})`)
-        patcherCode = fs.readFileSync(path.join(__dirname, 'patcher.js'), 'utf-8')
+
+        // 2. Extract the embedded app archive
+        log('Extracting app-64.7z...')
+        await run(sevenZipPath, ['x', app7zPath, `-o${extractedAppDir}`, '-y'], log)
+        // 3. Extract app.asar as a real file, without Electron holding it open.
+        log('Extracting app.asar...')
+        await withRawArchiveAccess(async () => {
+            if (!fs.existsSync(asarPath)) {
+                throw new Error('app.asar not found — installer layout may have changed')
+            }
+            await asar.extractAll(asarPath, extractAsarDir)
+        })
+
+        const outJsPath = path.join(extractAsarDir, 'dist', 'dist', 'out.js')
+        if (!fs.existsSync(outJsPath)) {
+            throw new Error(`out.js not found at: ${outJsPath}`)
+        }
+
+        // 4. Get the bundle patcher — prefer a fresh remote copy, fall back to the bundled one.
+        // Most refs (especially older ones, and most of the "live" channel's history)
+        // won't have electron_app/patcher.js at all, since this is a new addition to the
+        // mod repo — that's expected and not an error, it just means we use the copy
+        // shipped with the loader.
+        log('Loading bundle patcher...')
+        let patcherCode
+        try {
+            if (!patcherUrl) throw new Error('no patcherUrl provided')
+            const fetched = await fetchText(patcherUrl, log)
+            if (!fetched.includes('module.exports')) {
+                throw new Error('fetched content doesn\'t look like patcher.js (no module.exports found)')
+            }
+            patcherCode = fetched
+        } catch (e) {
+            log(`patcher.js not available at that ref — falling back to the bundled copy (${e.message})`)
+            patcherCode = fs.readFileSync(path.join(__dirname, 'patcher.js'), 'utf-8')
+        }
+
+        log('Patching out.js...')
+        const moduleShim = { exports: {} }
+        const fn = new Function('module', 'exports', patcherCode + '\nreturn module.exports')
+        const patchBundle = fn(moduleShim, moduleShim.exports)
+
+        const original = fs.readFileSync(outJsPath, 'utf-8')
+        const patched = patchBundle(original)
+        fs.writeFileSync(outJsPath, patched)
+        log('out.js patched successfully')
+
+        // 5. Append the mod injector to preload.js
+        if (!fs.existsSync(preloadPath)) {
+            throw new Error('preload.js not found inside extracted asar')
+        }
+        let preloadContent = fs.readFileSync(preloadPath, 'utf-8')
+        if (!preloadContent.includes('HYPERSYNERGISM INJECTOR')) {
+            preloadContent += buildInjectorCode(modUrl)
+            fs.writeFileSync(preloadPath, preloadContent)
+            log('Injector appended to preload.js')
+        } else {
+            log('preload.js already patched, skipping')
+        }
+
+        // 6. Repack app.asar
+        log('Repacking app.asar...')
+        await withRawArchiveAccess(() => createPackageAndWait(asar, extractAsarDir, asarPath))
+
+        // 7. Locate the exe to launch
+        const launchExePath = findLaunchableExe(extractedAppDir)
+        if (!launchExePath) {
+            throw new Error('Patch finished, but no launchable .exe was found in the extracted app folder')
+        }
+
+        discardExtractionInputs(dirs.staging)
+        // A game launched while extraction was running would still lock the
+        // current copy. Check again before replacing it.
+        await ensureNoRunningWorkGames(gameDir)
+        await promoteWorkspace(dirs, log)
+        removeBestEffort(dirs.previous, log)
+        cleanupOldWorkspaces(gameDir, log)
+        const installedExePath = path.join(dirs.active, 'app', path.basename(launchExePath))
+        log(`Patch complete — launch exe: ${installedExePath}`)
+        return { launchExePath: installedExePath, sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs } }
+    } finally {
+        if (fs.existsSync(dirs.staging)) removeBestEffort(dirs.staging, log)
     }
-
-    log('Patching out.js...')
-    const moduleShim = { exports: {} }
-    const fn = new Function('module', 'exports', patcherCode + '\nreturn module.exports')
-    const patchBundle = fn(moduleShim, moduleShim.exports)
-
-    const original = fs.readFileSync(outJsPath, 'utf-8')
-    const patched = patchBundle(original)
-    fs.writeFileSync(outJsPath, patched)
-    log('out.js patched successfully')
-
-    // 5. Append the mod injector to preload.js
-    if (!fs.existsSync(preloadPath)) {
-        throw new Error('preload.js not found inside extracted asar')
-    }
-    let preloadContent = fs.readFileSync(preloadPath, 'utf-8')
-    if (!preloadContent.includes('HYPERSYNERGISM INJECTOR')) {
-        preloadContent += buildInjectorCode(modUrl)
-        fs.writeFileSync(preloadPath, preloadContent)
-        log('Injector appended to preload.js')
-    } else {
-        log('preload.js already patched, skipping')
-    }
-
-    // 6. Repack app.asar
-    log('Repacking app.asar...')
-    await asar.createPackage(extractAsarDir, asarPath)
-
-    // 7. Locate the exe to launch
-    const launchExePath = findLaunchableExe(extractedAppDir)
-    if (!launchExePath) {
-        throw new Error('Patch finished, but no launchable .exe was found in the extracted app folder')
-    }
-
-    log(`Patch complete — launch exe: ${launchExePath}`)
-    return { launchExePath, sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs } }
 }
 
 function buildModUrl(channelId, ref) {
@@ -224,24 +205,4 @@ function buildPatcherUrl(channelId, ref) {
     return `https://cdn.jsdelivr.net/gh/${ch.repo}@${r}/${DEFAULTS.patcherPath}`
 }
 
-function killLeftoverProcessesUnder(dirPath, log) {
-    if (process.platform !== 'win32') return Promise.resolve()
-    return new Promise((resolve) => {
-        const escaped = dirPath.replace(/'/g, "''")
-        const psCmd =
-            `$p = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${escaped}', 'OrdinalIgnoreCase') }; ` +
-            `$p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; ` +
-            `$p.Count`
-        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCmd], { windowsHide: true }, (err, stdout) => {
-            if (err) {
-                log?.(`(couldn't check for a still-running previous instance: ${err.message})`)
-            } else {
-                const count = parseInt((stdout || '0').trim(), 10) || 0
-                if (count > 0) log?.(`Stopped ${count} leftover process(es) from the previous launch.`)
-            }
-            resolve()
-        })
-    })
-}
-
-module.exports = { patchGame, findLaunchableExe, buildModUrl, buildPatcherUrl }
+module.exports = { patchGame, findLaunchableExe, buildModUrl, buildPatcherUrl, withRawArchiveAccess }

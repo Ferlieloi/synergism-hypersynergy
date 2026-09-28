@@ -1,13 +1,26 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
-const { spawn } = require('child_process')
+const { autoUpdater } = require('electron-updater')
 
 const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels } = require('./lib/config')
 const { detectSteamPathWindows, findGameDir, detectSevenZip, getBundledSevenZipPath } = require('./lib/steamLocator')
 const { patchGame, buildModUrl, buildPatcherUrl } = require('./lib/patchGame')
+const { createLauncherUpdater } = require('./lib/launcherUpdater')
+const { listModRefs } = require('./lib/modRefs')
+const { launchGame } = require('./lib/gameLauncher')
 
 let mainWindow
+let patchInProgress = false
+const launcherUpdater = createLauncherUpdater({
+    app,
+    updater: autoUpdater,
+    notify: status => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('launcher-update:status', status)
+        }
+    }
+})
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -29,19 +42,35 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'))
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+    createWindow()
+    setTimeout(() => { void launcherUpdater.check() }, 2000)
+})
 app.on('window-all-closed', () => app.quit())
 
 function sendLog(line) {
     mainWindow?.webContents.send('patch:log', line)
 }
 
+// ─── Launcher updates ──────────────────────────────────────────────────
+ipcMain.handle('launcher-update:status', () => launcherUpdater.getStatus())
+ipcMain.handle('launcher-update:check', () => launcherUpdater.check())
+ipcMain.handle('launcher-update:install', () => {
+    if (patchInProgress) return { ok: false, error: 'Wait for game patching to finish before restarting.' }
+    return launcherUpdater.install()
+})
+
 // ─── Config ─────────────────────────────────────────────────────────────
 ipcMain.handle('config:load', () => {
     const cfg = loadConfig(app)
+    if (!cfg.steamPath || !fs.existsSync(cfg.steamPath)) {
+        cfg.steamPath = detectSteamPathWindows() || ''
+    }
+    if (!cfg.gameDir || !fs.existsSync(path.join(cfg.gameDir, DEFAULTS.exeName))) {
+        cfg.gameDir = findGameDir(cfg.steamPath, DEFAULTS.steamAppName) || ''
+    }
     if (!cfg.sevenZipPath || !fs.existsSync(cfg.sevenZipPath)) {
-        const bundled = getBundledSevenZipPath(app)
-        if (bundled) cfg.sevenZipPath = bundled
+        cfg.sevenZipPath = getBundledSevenZipPath(app) || detectSevenZip() || ''
     }
     return cfg
 })
@@ -84,29 +113,34 @@ ipcMain.handle('dialog:select-7z', async () => {
 
 ipcMain.handle('sevenzip:autodetect', () => getBundledSevenZipPath(app) || detectSevenZip())
 
-// ─── Mod source: branches/tags from GitHub ──────────────────────────────
-async function fetchGithubRefs(repo, kind) {
-    const res = await fetch(`https://api.github.com/repos/${repo}/${kind}?per_page=50`, {
-        headers: { 'User-Agent': 'hypersynergism-loader', 'Accept': 'application/vnd.github+json' }
-    })
-    if (!res.ok) throw new Error(`GitHub API request failed (${res.status})`)
-    const json = await res.json()
-    return json.map(r => r.name)
-}
-
 // ─── Mod channels (dev/live), each its own repo ─────────────────────────
 ipcMain.handle('channels:list', () => listChannels())
 
 ipcMain.handle('mod:get-refs', async (_e, channelId) => {
     const ch = resolveChannel(channelId)
     try {
-        const [branches, tags] = await Promise.all([
-            fetchGithubRefs(ch.repo, 'branches'),
-            fetchGithubRefs(ch.repo, 'tags')
-        ])
-        return { branches, tags, defaultRef: ch.defaultRef, error: null }
+        const cfg = loadConfig(app)
+        const result = await listModRefs(ch.repo, cfg.refDateCache)
+        const latest = loadConfig(app)
+        const cachedDates = latest.refDateCache || {}
+        if (Object.keys(result.dates).some(sha => result.dates[sha] !== cachedDates[sha])) {
+            try {
+                saveConfig(app, { ...latest, refDateCache: { ...cachedDates, ...result.dates } })
+            } catch {
+                // A cache write failure should not hide the refs that were fetched.
+            }
+        }
+        const { dates, ...visibleResult } = result
+        return { ...visibleResult, defaultRef: ch.defaultRef, error: null }
     } catch (e) {
-        return { branches: [ch.defaultRef], tags: [], defaultRef: ch.defaultRef, error: e.message }
+        return {
+            refs: [{ name: ch.defaultRef, type: 'branch', date: null }],
+            branchCount: 1,
+            tagCount: 0,
+            defaultRef: ch.defaultRef,
+            datesIncomplete: true,
+            error: e.message
+        }
     }
 })
 
@@ -115,6 +149,8 @@ ipcMain.handle('patcher:resolve-url', (_e, channelId, ref) => buildPatcherUrl(ch
 
 // ─── Patch + launch ──────────────────────────────────────────────────────
 ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef }) => {
+    if (patchInProgress) return { ok: false, error: 'A game patch is already running.' }
+    patchInProgress = true
     try {
         const { launchExePath, sourceStat } = await patchGame({
             gameDir,
@@ -142,6 +178,8 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
     } catch (e) {
         sendLog(`ERROR: ${e.message}`)
         return { ok: false, error: e.message }
+    } finally {
+        patchInProgress = false
     }
 })
 
@@ -155,6 +193,7 @@ ipcMain.handle('game:check-update-needed', (_e, { gameDir, exeName }) => {
 })
 
 ipcMain.handle('mod:quick-switch', (_e, { modUrl, channel, modRef }) => {
+    if (patchInProgress) return { ok: false, error: 'Wait for game patching to finish before switching builds.' }
     const cfg = loadConfig(app)
     if (!cfg.lastPatchedExe || !fs.existsSync(cfg.lastPatchedExe)) {
         return { ok: false, error: 'No patched game found — run the full patch first.' }
@@ -174,18 +213,9 @@ ipcMain.handle('mod:check-version-mismatch', (_e, { channel, modRef }) => {
     return { mismatch, lastChannel: cfg.lastPatchedChannel, lastModRef: cfg.lastPatchedModRef }
 })
 
-ipcMain.handle('game:launch', (_e, exePath, modUrl) => {
-    if (!exePath || !fs.existsSync(exePath)) {
-        return { ok: false, error: 'Patched exe not found — run the patch step first.' }
-    }
-    try {
-        const env = modUrl ? { ...process.env, HS_MOD_URL: modUrl } : process.env
-        const child = spawn(exePath, [], { cwd: path.dirname(exePath), detached: true, stdio: 'ignore', env })
-        child.unref()
-        return { ok: true }
-    } catch (e) {
-        return { ok: false, error: e.message }
-    }
+ipcMain.handle('game:launch', (_e, exePath, modUrl, channel, modRef) => {
+    if (patchInProgress) return { ok: false, error: 'Wait for game patching to finish before launching.' }
+    return launchGame({ app, exePath, modUrl, channel, modRef })
 })
 
 ipcMain.handle('shell:open-path', (_e, target) => shell.openPath(target))

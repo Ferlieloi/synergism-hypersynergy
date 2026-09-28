@@ -166,6 +166,29 @@ header.titlebar {
   border-color: var(--danger);
 }
 
+.launcher-update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 14px 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.launcher-update span {
+  flex: 1;
+}
+
+.launcher-update button {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.launcher-update .is-hidden {
+  display: none;
+}
+
 /* Tab nav */
 nav.tab-nav {
   width: 100%;

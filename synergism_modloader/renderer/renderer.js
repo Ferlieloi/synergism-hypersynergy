@@ -1,5 +1,8 @@
 const els = {
   statusPill: document.getElementById('statusPill'),
+  launcherUpdateStatus: document.getElementById('launcherUpdateStatus'),
+  checkLauncherUpdateBtn: document.getElementById('checkLauncherUpdateBtn'),
+  installLauncherUpdateBtn: document.getElementById('installLauncherUpdateBtn'),
 
   steamPathInput: document.getElementById('steamPathInput'),
   browseSteamBtn: document.getElementById('browseSteamBtn'),
@@ -48,6 +51,61 @@ let state = {
   lastPatchedExe: '',
   channels: []
 }
+
+function renderLauncherUpdate(status) {
+  const version = `Launcher v${status.currentVersion}`
+  const available = status.availableVersion ? `v${status.availableVersion}` : 'the new version'
+  let message
+
+  switch (status.phase) {
+    case 'checking':
+      message = `${version} · Checking for updates…`
+      break
+    case 'downloading':
+      message = `${version} · Downloading ${available} (${status.percent}%)…`
+      break
+    case 'ready':
+      message = `${version} · ${available} is ready to install.`
+      break
+    case 'installing':
+      message = `${version} · Restarting to install ${available}…`
+      break
+    case 'up-to-date':
+      message = `${version} · Up to date.`
+      break
+    case 'no-release':
+      message = `${version} · No launcher update has been published yet.`
+      break
+    case 'error':
+      message = `${version} · Could not check for updates. Hover for details.`
+      break
+    case 'unavailable':
+      message = `${version} · Updates work in the installed Windows app.`
+      break
+    default:
+      message = `${version} · Updates are checked on startup.`
+  }
+
+  els.launcherUpdateStatus.textContent = message
+  els.launcherUpdateStatus.title = status.error || ''
+  els.checkLauncherUpdateBtn.disabled = ['checking', 'downloading', 'ready', 'installing', 'unavailable'].includes(status.phase)
+  els.installLauncherUpdateBtn.classList.toggle('is-hidden', status.phase !== 'ready')
+}
+
+window.loader.onLauncherUpdate(renderLauncherUpdate)
+
+els.checkLauncherUpdateBtn.addEventListener('click', () => {
+  void window.loader.checkLauncherUpdate()
+})
+
+els.installLauncherUpdateBtn.addEventListener('click', async () => {
+  els.installLauncherUpdateBtn.disabled = true
+  const result = await window.loader.installLauncherUpdate()
+  if (!result.ok) {
+    els.launcherUpdateStatus.textContent = result.error
+    els.installLauncherUpdateBtn.disabled = false
+  }
+})
 
 // ─── Step navigation ─────────────────────────────────────────────────────
 const TAB_NAMES = ['locate', 'build', 'patch']
@@ -236,25 +294,27 @@ function renderChannelToggle() {
 async function loadModRefs() {
   els.refsStatus.textContent = 'Loading branches and tags…'
   els.refsStatus.className = 'status-line'
-  const { branches, tags, defaultRef, error } = await window.loader.getModRefs(state.channel)
+  const requestedChannel = state.channel
+  const { refs, branchCount, tagCount, defaultRef, datesIncomplete, error } = await window.loader.getModRefs(requestedChannel)
+  if (requestedChannel !== state.channel) return
 
   els.modRefSelect.innerHTML = ''
-  const addGroup = (label, names) => {
-    if (!names.length) return
-    const group = document.createElement('optgroup')
-    group.label = label
-    for (const name of names) {
-      const opt = document.createElement('option')
-      opt.value = name
-      opt.textContent = name
-      group.appendChild(opt)
-    }
-    els.modRefSelect.appendChild(group)
+  for (const ref of refs) {
+    const opt = document.createElement('option')
+    opt.value = ref.name
+    const date = ref.date ? ` · ${new Date(ref.date).toLocaleDateString()}` : ''
+    opt.textContent = `${ref.name} (${ref.type})${date}`
+    els.modRefSelect.appendChild(opt)
   }
-  addGroup('Branches', branches)
-  addGroup('Tags', tags)
 
-  const options = [...els.modRefSelect.options]
+  let options = [...els.modRefSelect.options]
+  if (state.modRef && !options.some(o => o.value === state.modRef)) {
+    const saved = document.createElement('option')
+    saved.value = state.modRef
+    saved.textContent = `${state.modRef} (previously selected)`
+    els.modRefSelect.appendChild(saved)
+    options = [...els.modRefSelect.options]
+  }
   if (state.modRef && options.some(o => o.value === state.modRef)) {
     els.modRefSelect.value = state.modRef
   } else if (options.some(o => o.value === defaultRef)) {
@@ -268,7 +328,7 @@ async function loadModRefs() {
     els.refsStatus.textContent = `Couldn't reach GitHub (${error}) — showing the default branch only.`
     els.refsStatus.className = 'status-line error'
   } else {
-    els.refsStatus.textContent = `${branches.length} branch(es), ${tags.length} tag(s) available.`
+    els.refsStatus.textContent = `${branchCount} branch(es), ${tagCount} tag(s) · newest first${datesIncomplete ? ' (some dates unavailable)' : ''}.`
     els.refsStatus.className = 'status-line ok'
   }
   await updateUrlPreviews()
@@ -300,6 +360,13 @@ function appendConsoleLine(line, kind) {
   div.textContent = line
   els.console.appendChild(div)
   els.console.scrollTop = els.console.scrollHeight
+}
+
+async function launchSelectedGame(exePath, modUrl, channel, modRef) {
+  const result = await window.loader.launchGame(exePath, modUrl, channel, modRef)
+  if (!result.ok) appendConsoleLine(`Launch failed: ${result.error}`, 'error')
+  if (result.warning) appendConsoleLine(result.warning, 'error')
+  return result
 }
 
 window.loader.onPatchLog((line) => {
@@ -342,8 +409,7 @@ els.patchAndLaunchBtn.addEventListener('click', async () => {
     setPill('Patched', 'ok')
     appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
     const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
-    const launch = await window.loader.launchGame(result.launchExePath, modUrl)
-    if (!launch.ok) appendConsoleLine(`Launch failed: ${launch.error}`, 'error')
+    await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
   } else {
     setPill('Error', 'error')
     appendConsoleLine(`Patch failed: ${result.error}`, 'error')
@@ -356,12 +422,10 @@ els.patchAndLaunchBtn.addEventListener('click', async () => {
 els.launchOnlyBtn.addEventListener('click', async () => {
   if (!state.lastPatchedExe) return
   const cfg = await window.loader.loadConfig()
-  const modUrl = await window.loader.resolveModUrl(
-    cfg.lastPatchedChannel || state.channel,
-    cfg.lastPatchedModRef || state.modRef
-  )
-  const launch = await window.loader.launchGame(state.lastPatchedExe, modUrl)
-  if (!launch.ok) appendConsoleLine(`Launch failed: ${launch.error}`, 'error')
+  const channel = cfg.lastPatchedChannel || state.channel
+  const modRef = cfg.lastPatchedModRef || state.modRef
+  const modUrl = await window.loader.resolveModUrl(channel, modRef)
+  await launchSelectedGame(state.lastPatchedExe, modUrl, channel, modRef)
 })
 
 els.quickSwitchBtn.addEventListener('click', async () => {
@@ -373,8 +437,7 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     setPill('Switched', 'ok')
     appendConsoleLine(`Mod URL switched to ${modUrl} — launching now.`, 'ok')
     await refreshUpdateBanner()
-    const launch = await window.loader.launchGame(state.lastPatchedExe, modUrl)
-    if (!launch.ok) appendConsoleLine(`Launch failed: ${launch.error}`, 'error')
+    await launchSelectedGame(state.lastPatchedExe, modUrl, state.channel, state.modRef)
   } else {
     setPill('Error', 'error')
     appendConsoleLine(`Quick switch failed: ${result.error}`, 'error')
@@ -384,6 +447,7 @@ els.quickSwitchBtn.addEventListener('click', async () => {
 
   // ─── Startup: load persisted config and pre-fill everything ────────────
   ; (async function init() {
+    renderLauncherUpdate(await window.loader.getLauncherUpdateStatus())
     const cfg = await window.loader.loadConfig()
     state.steamPath = cfg.steamPath || ''
     state.gameDir = cfg.gameDir || ''
@@ -391,10 +455,11 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     state.lastPatchedExe = cfg.lastPatchedExe || ''
 
     state.channels = await window.loader.getChannels()
-    state.channel = (cfg.channel && state.channels.some(c => c.id === cfg.channel))
-      ? cfg.channel
+    const preferredChannel = cfg.lastPlayedChannel || cfg.lastPatchedChannel || cfg.channel
+    state.channel = (preferredChannel && state.channels.some(c => c.id === preferredChannel))
+      ? preferredChannel
       : (state.channels[0]?.id || 'live')
-    state.modRef = cfg.modRef || ''
+    state.modRef = cfg.lastPlayedModRef || cfg.lastPatchedModRef || cfg.modRef || ''
 
     els.steamPathInput.value = state.steamPath
     els.gameDirOutput.value = state.gameDir

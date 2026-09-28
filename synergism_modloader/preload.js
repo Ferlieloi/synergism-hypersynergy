@@ -4,6 +4,15 @@ contextBridge.exposeInMainWorld('loader', {
     loadConfig: () => ipcRenderer.invoke('config:load'),
     saveConfig: (partial) => ipcRenderer.invoke('config:save', partial),
 
+    getLauncherUpdateStatus: () => ipcRenderer.invoke('launcher-update:status'),
+    checkLauncherUpdate: () => ipcRenderer.invoke('launcher-update:check'),
+    installLauncherUpdate: () => ipcRenderer.invoke('launcher-update:install'),
+    onLauncherUpdate: (callback) => {
+        const listener = (_e, status) => callback(status)
+        ipcRenderer.on('launcher-update:status', listener)
+        return () => ipcRenderer.removeListener('launcher-update:status', listener)
+    },
+
     autodetectSteam: () => ipcRenderer.invoke('steam:autodetect'),
     locateGame: (steamPath) => ipcRenderer.invoke('steam:locate-game', steamPath),
     selectSteamFolder: () => ipcRenderer.invoke('dialog:select-steam-folder'),
@@ -20,7 +29,7 @@ contextBridge.exposeInMainWorld('loader', {
     checkUpdateNeeded: (args) => ipcRenderer.invoke('game:check-update-needed', args),
     checkVersionMismatch: (args) => ipcRenderer.invoke('mod:check-version-mismatch', args),
     quickSwitchMod: (args) => ipcRenderer.invoke('mod:quick-switch', args),
-    launchGame: (exePath, modUrl) => ipcRenderer.invoke('game:launch', exePath, modUrl),
+    launchGame: (exePath, modUrl, channel, modRef) => ipcRenderer.invoke('game:launch', exePath, modUrl, channel, modRef),
 
     openPath: (target) => ipcRenderer.invoke('shell:open-path', target),
     openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
