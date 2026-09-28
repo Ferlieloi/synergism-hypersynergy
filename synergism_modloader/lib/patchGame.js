@@ -128,7 +128,7 @@ async function patchGame(opts) {
 
         // 4. Get the bundle patcher — prefer a fresh remote copy, fall back to the bundled one.
         // Most refs (especially older ones, and most of the "live" channel's history)
-        // won't have electron_app/patcher.js at all, since this is a new addition to the
+        // won't have a shared patcher.js at all, since this is a new addition to the
         // mod repo — that's expected and not an error, it just means we use the copy
         // shipped with the loader.
         log('Loading bundle patcher...')
@@ -148,10 +148,12 @@ async function patchGame(opts) {
         log('Patching out.js...')
         const moduleShim = { exports: {} }
         const fn = new Function('module', 'exports', patcherCode + '\nreturn module.exports')
-        const patchBundle = fn(moduleShim, moduleShim.exports)
+        const patcher = fn(moduleShim, moduleShim.exports)
+        const patchBundle = typeof patcher === 'function' ? patcher : patcher.patchBundle
+        if (typeof patchBundle !== 'function') throw new Error('patcher.js did not export patchBundle')
 
         const original = fs.readFileSync(outJsPath, 'utf-8')
-        const patched = patchBundle(original)
+        const patched = patchBundle(original, { steam: true })
         fs.writeFileSync(outJsPath, patched)
         log('out.js patched successfully')
 

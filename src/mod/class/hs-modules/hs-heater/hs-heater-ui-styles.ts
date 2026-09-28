@@ -614,6 +614,35 @@ export class HSHeaterUIStyles {
                 margin-bottom: 4px;
             }
 
+            /* Match the game's grouped blueberry grid, including its general column. */
+            .hs-heater-loadout-preview-grid {
+                --ambrosia-cell-size: 32px;
+                --ambrosia-grid-gap: 4px;
+                display: grid;
+                grid-column: auto;
+                grid-row: auto;
+                grid-template-columns: 32px 248px;
+                grid-template-rows: repeat(6, 32px);
+                gap: 8px 4px;
+                width: 284px;
+            }
+
+            .hs-heater-loadout-preview-grid .blueberryUpgradeGroup {
+                display: grid;
+                grid-column: 2;
+                grid-template-columns: repeat(auto-fit, 32px);
+                justify-content: start;
+                gap: 4px;
+            }
+
+            .hs-heater-loadout-preview-grid .blueberryUpgradeGroup[data-upgrade-group="general"] {
+                grid-column: 1;
+                grid-row: 1 / span 6;
+                grid-template-columns: 32px;
+                grid-template-rows: repeat(6, 32px);
+                row-gap: 8px;
+            }
+
             /* === Floating Preview Item/Button === */
             .hs-heater-preview-button {
                 width: 32px;

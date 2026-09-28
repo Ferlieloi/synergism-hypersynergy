@@ -332,7 +332,12 @@ export class HSAmbrosia extends HSModule
             HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
             this.subscribeGameDataChanges();
             this.#berryMinibarsEnabled = true;
-            this.#updateBerryMinibars();
+            const gameDataAPI = this.#cachedGameDataAPI
+                ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+            const gameData = gameDataAPI?.getGameData() ?? await gameDataAPI?.getForcedGameData();
+            if (this.#berryMinibarsEnabled && gameData) {
+                this.#updateBerryMinibars(gameData, gameDataAPI);
+            }
 
             // Restore automation/corruption summary headers when minibars quickbar is enabled.
             HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
@@ -1583,7 +1588,11 @@ export class HSAmbrosia extends HSModule
             ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         gameData ??= gameDataAPI?.getGameData();
 
-        if (gameDataAPI && gameData && this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
+        // Enabling the quickbar can precede the first save-data refresh.
+        // The subscription will render the bars as soon as data arrives.
+        if (!gameDataAPI || !gameData) return;
+
+        if (this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
             const blueRequirement = gameDataAPI.ambrosia.calculateRequiredBlueberryTime();
             const redRequirement = gameDataAPI.ambrosia.calculateRequiredRedAmbrosiaTime();
             const blueProgress = blueRequirement > 0

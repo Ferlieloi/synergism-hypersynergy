@@ -43,5 +43,3 @@ The mod launcher includes the original 32px icon as a fallback for game versions
 that do not expose the native icon. Source: SynergismOfficial,
 `Pictures/Default/OcteractCorruptions.png` at commit
 `f9e5f2bc282901b1d4d7b3e4e374ad8263a4a13f`.
-
-Run the shared helper checks with `node scripts/test-icons.cjs`.

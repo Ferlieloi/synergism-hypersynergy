@@ -59,7 +59,7 @@ const LOADOUT_UPGRADE_META_MAP = {
 
 // === Loadout Preview Upgrade Key Type ===
 type LoadoutPreviewUpgradeKey = keyof typeof LOADOUT_UPGRADE_META_MAP;
-type LoadoutPreviewItem = { key: LoadoutPreviewUpgradeKey; maxLevel: number };
+type LoadoutPreviewItem = { key: string; maxLevel?: number; iconUrl?: string };
 
 // === Selector and ID Constants ===
 const HEATER_RESULT_UI_SELECTORS = {
@@ -443,9 +443,66 @@ export class HSHeaterUIResult {
     }
 
     static buildLoadoutPreviewHtml(loadout: Record<string, number>): string {
-        return this.#ambrosiaLoadoutPreviewRows
+        const currentGrid = this.#buildCurrentLoadoutPreviewGrid(loadout);
+        if (currentGrid) return currentGrid;
+
+        return this.#getLegacyAmbrosiaLoadoutPreviewRows()
             .map((row) => `<div class="${HEATER_RESULT_UI_SELECTORS.previewRow}">${row.map((item) => this.buildLoadoutPreviewCell(item, loadout)).join('')}</div>`)
             .join('');
+    }
+
+    static #buildCurrentLoadoutPreviewGrid(loadout: Record<string, number>): string | null {
+        const source = document.getElementById('blueberryUpgradeGroups');
+        if (!source?.querySelector('.blueberryUpgradeGroup')) return null;
+
+        // The current game groups blueberry upgrades by row and keeps the
+        // general upgrades in a separate column. Preserve those groups and
+        // replace only the buttons' levels with the proposed build.
+        const grid = source.cloneNode(true) as HTMLElement;
+        grid.removeAttribute('id');
+        grid.removeAttribute('hidden');
+        grid.removeAttribute('style');
+        grid.classList.add('hs-heater-loadout-preview-grid');
+
+        const maxLevels = new Map(this.#ambrosiaLoadoutPreviewRows
+            .flat()
+            .filter((item): item is LoadoutPreviewItem => item !== null)
+            .map(({ key, maxLevel }) => [key, maxLevel] as const));
+
+        grid.querySelectorAll<HTMLElement>('.blueberryUpgrade').forEach((button) => {
+            const key = button.id;
+            if (!key) return;
+            button.outerHTML = this.buildLoadoutPreviewCell({
+                key,
+                maxLevel: maxLevels.get(key),
+                iconUrl: button.querySelector('img')?.getAttribute('src') ?? undefined,
+            }, loadout);
+        });
+        grid.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+        return grid.outerHTML;
+    }
+
+    static #getLegacyAmbrosiaLoadoutPreviewRows(): Array<Array<LoadoutPreviewItem | null>> {
+        const container = document.getElementById('blueberryUpgradeContainer');
+        if (!container) return this.#ambrosiaLoadoutPreviewRows;
+
+        // Older game versions use upgrade tiers instead of grouped grid sections.
+        const maxLevels = new Map(this.#ambrosiaLoadoutPreviewRows
+            .flat()
+            .filter((item): item is LoadoutPreviewItem => item !== null)
+            .map(({ key, maxLevel }) => [key, maxLevel] as const));
+
+        const rows = Array.from(container.children)
+            .filter((element) => element.classList.contains('blueberryUpgradeTier'))
+            .map((row) => Array.from(row.children).flatMap((element): Array<LoadoutPreviewItem | null> => {
+                if (element.classList.contains('ambrosiaBorder')) return [null];
+                if (!element.classList.contains('blueberryUpgrade') || !element.id) return [];
+                const iconUrl = element.querySelector('img')?.getAttribute('src') ?? undefined;
+                return [{ key: element.id, maxLevel: maxLevels.get(element.id), iconUrl }];
+            }))
+            .filter((row) => row.length > 0);
+
+        return rows.length > 0 ? rows : this.#ambrosiaLoadoutPreviewRows;
     }
 
     static buildLoadoutPreviewCell(item: LoadoutPreviewItem | null, loadout: Record<string, number>): string {
@@ -459,16 +516,16 @@ export class HSHeaterUIResult {
 
         const { key, maxLevel } = item;
         const level = Number(loadout[key] ?? 0);
-        const upgradeMeta = this.#loadoutUpgradeMetaMap[key];
-        if (!upgradeMeta) {
+        const upgradeMeta = this.#loadoutUpgradeMetaMap[key as LoadoutPreviewUpgradeKey];
+        const imageUrl = item.iconUrl ?? (upgradeMeta ? `Pictures/Default/${upgradeMeta.iconFile}` : null);
+        if (!imageUrl) {
             return `<div class="${HEATER_RESULT_UI_SELECTORS.previewEmptyCell}"></div>`;
         }
 
-        const imageUrl = `Pictures/Default/${upgradeMeta.iconFile}`;
         const imageClass = level > 0 ? 'dimmed' : 'superDimmed';
         const overlayText = level > 0 ? escapeHtml(String(level)) : '';
 
-        const maxLevelClass = level >= maxLevel 
+        const maxLevelClass = maxLevel !== undefined && level >= maxLevel
             ? 'maxBlueberryLevel' 
             : '';
 

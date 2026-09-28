@@ -1,6 +1,6 @@
 {
   "name": "synergism-hypersynergy",
-  "version": "2.14.4a",
+  "version": "2.14.4b",
   "private": true,
   "description": "Hypersynergism mod for the Synergism browser game.",
   "repository": {
@@ -21,11 +21,6 @@
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
     "dev": "node esbuild.config.js dev",
-    "dev:server": "node scripts/start-dev-server.cjs",
-    "test:patcher": "node scripts/test-loader-patcher.cjs",
-    "test:heater": "node scripts/test-heater-v431.cjs",
-    "test:version": "node scripts/test-version-check.cjs",
-    "test:gq": "node scripts/test-gq-distributor.cjs",
     "release-and-tag-helper": "node scripts/release-and-tag-helper.mjs"
   },
   "license": "ISC",

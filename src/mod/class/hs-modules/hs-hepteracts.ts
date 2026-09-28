@@ -272,6 +272,14 @@ export class HSHepteracts extends HSModule {
 
         this.#heptGrid = await HSElementHooker.HookElement('#heptGrid');
         this.#hepteractCraftTexts = await HSElementHooker.HookElement('#hepteractCraftTexts') as HTMLDivElement;
+        HSUI.injectStyle(`
+            #hepteractCraftTexts > #hs-costText {
+                min-height: 3.6em;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+        `);
+        this.#getCraftTextSlot();
 
         this.#heptGrid.childNodes.forEach(node => {
             if (node.nodeType === 1) {
@@ -684,8 +692,22 @@ export class HSHepteracts extends HSModule {
         }
     }
 
+    #getCraftTextSlot(): HTMLDivElement | null {
+        if (!this.#hepteractCraftTexts) return null;
+
+        let costText = this.#hepteractCraftTexts.querySelector<HTMLDivElement>('#hs-costText');
+        if (!costText) {
+            costText = document.createElement('div');
+            costText.id = 'hs-costText';
+            // Keep the mod details visible above the game's longer hover description.
+            this.#hepteractCraftTexts.prepend(costText);
+        }
+        return costText;
+    }
+
     #removeCraftText() {
-        this.#hepteractCraftTexts?.querySelector('#hs-costText')?.remove();
+        const costText = this.#getCraftTextSlot();
+        if (costText) costText.textContent = '';
     }
 
     #startCraftTextRefresh(hepteractId: string, isQuarkHepteract: boolean) {
@@ -1084,18 +1106,9 @@ export class HSHepteracts extends HSModule {
             const percentOwned = owned && owned > 0 ? buyCost / owned : '∞';
             const persOwn = typeof percentOwned === 'number' ? HSUtils.N(percentOwned * 100) : percentOwned;
 
-            const hasCostText = this.#hepteractCraftTexts.querySelector('#hs-costText') as HTMLDivElement;
             const text = `[${this.context}]: Total ${resource} cost to max after next expand: ${HSUtils.N(buyCost)} (${persOwn}% of owned)${etaText}`;
-            if (!hasCostText) {
-                const costText = document.createElement('div');
-                costText.id = 'hs-costText';
-
-                costText.innerText = text;
-
-                this.#hepteractCraftTexts.appendChild(costText);
-            } else {
-                hasCostText.innerText = text;
-            }
+            const costText = this.#getCraftTextSlot();
+            if (costText) costText.textContent = text;
 
         }
     }

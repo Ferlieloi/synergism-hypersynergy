@@ -94,14 +94,16 @@ const esbuildScript = join(root, 'esbuild.config.js');
 const releaseFilePath = join(root, 'release', 'mod', 'hypersynergism_release.js');
 if (!existsSync(releaseFilePath)) fatal('Release file missing: ' + releaseFilePath);
 const releaseFileRel = relative(root, releaseFilePath).replace(/\\/g, '/');
+const purgePath = '/gh/Ferlieloi/synergism-hypersynergy@master/release/mod/hypersynergism_release.js';
+const purgeUrl = `https://purge.jsdelivr.net${purgePath}`;
 
 const argv = process.argv.slice(2);
 
 log('===============================================================');
-log('release-and-tag-helper.js — safe (overkill? ><) tag helper');
+log('release-and-tag-helper.mjs — release and tag helper');
 log('===============================================================');
 log('');
-log('Usage: node scripts/release-and-tag-helper.js [-h|--help] [-y|--yes]');
+log('Usage: node scripts/release-and-tag-helper.mjs [-h|--help] [-y|--yes]');
 log('');
 log('Description:');
 log('  This script asks for confirmation before ANY changes (unless --yes).');
@@ -112,15 +114,16 @@ log('    3) builds release artifact with esbuild');
 log('    4) stages release+package files and commits');
 log('    5) creates an annotated v<version> tag');
 log('    6) prompts to push branch and tag to origin at end');
+log('    7) waits 10 seconds, then requests a jsDelivr purge for the @master mod script');
 log('');
 log('Flags:');
 log('  -h, --help       Show this help and exit');
 log('  -y, --yes        Skip all prompts and proceed with defaults (non-interactive mode)');
 log('');
 log('Examples:');
-log('  node scripts/release-and-tag-helper.js          # run release workflow with interactive confirmation');
-log('  node scripts/release-and-tag-helper.js --yes    # run full workflow non-interactively (auto yes)');
-log('  node scripts/release-and-tag-helper.js --help   # show this help and exit');
+log('  node scripts/release-and-tag-helper.mjs          # run release workflow with interactive confirmation');
+log('  node scripts/release-and-tag-helper.mjs --yes    # run full workflow non-interactively (auto yes)');
+log('  node scripts/release-and-tag-helper.mjs --help   # show this help and exit');
 log('');
 log('Notes:');
 log('  - This script always includes a commit + tag phase');
@@ -281,8 +284,8 @@ function collectStatus() {
 
     const pkg = readPackage();
     const targetTag = `v${pkg.version}`;
-    const localTagExists = localTags.includes(targetTag);
-    const remoteTagExists = remoteTags.includes(targetTag);
+    const localTagExists = localTags.includes(pkg.version);
+    const remoteTagExists = remoteTags.includes(pkg.version);
 
     const tracked = [];
     const untracked = [];
@@ -427,8 +430,8 @@ async function chooseTarget(status) {
 
     status.localTags = semverSort(parseTagList(runAndCheck('git', ['tag']).stdout));
     status.remoteTags = semverSort(parseTagList(runAndCheck('git', ['ls-remote', '--tags', 'origin']).stdout));
-    status.localTagExists = status.localTags.includes(status.targetTag);
-    status.remoteTagExists = status.remoteTags.includes(status.targetTag);
+    status.localTagExists = status.localTags.includes(newVersion);
+    status.remoteTagExists = status.remoteTags.includes(newVersion);
 
     success(`Version bumped to ${newVersion}.`);
     info(`Target tag: ${status.targetTag}`);
@@ -579,12 +582,34 @@ async function pushFlow(status) {
         runAndCheck('git', ['push', '--set-upstream', 'origin', status.branch]);
         success('Set upstream and pushed branch.');
     } else {
-        runAndCheck('git', ['push']);
+        runAndCheck('git', ['push', 'origin', status.branch]);
         success('Pushed branch.');
     }
 
     runAndCheck('git', ['push', 'origin', `refs/tags/${status.targetTag}`]);
     success('Pushed tag.');
+}
+
+async function purgeModCache(status) {
+    if (status.branch !== 'master') {
+        info('Skipping @master jsDelivr purge because this release was pushed from another branch.');
+        return;
+    }
+
+    logWait('Waiting 10 seconds after the push before purging jsDelivr...');
+    await new Promise(resolve => setTimeout(resolve, 10_000));
+    try {
+        const response = await fetch(purgeUrl, { signal: AbortSignal.timeout(15_000) });
+        const body = await response.text();
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
+        const result = JSON.parse(body);
+        if (!result.paths?.[purgePath] || result.paths[purgePath].throttled || result.status === 'error') {
+            throw new Error(`Purge was throttled or rejected: ${body.slice(0, 200)}`);
+        }
+        success(`jsDelivr purge request accepted: ${purgeUrl}`);
+    } catch (error) {
+        warn(`jsDelivr purge could not be confirmed (${error.message || error}). Purge manually: ${purgeUrl}`);
+    }
 }
 
 // ==========================
@@ -608,6 +633,7 @@ async function pushFlow(status) {
     await commitFlow(status);
 
     await pushFlow(status);
+    await purgeModCache(status);
 
     success(`Completed: ${status.targetTag}`);
 })();

@@ -6,11 +6,12 @@ import { HSQuickbarManager } from "./class/hs-modules/hs-qol-quickbar/hs-qolQuic
 declare global {
     interface Window {
         hypersynergism: Hypersynergism;
+        __HS_INIT_PROMISE?: Promise<void>;
     }
 }
 
 // Essentially the "main" entrypoint
-(async () => {
+window.__HS_INIT_PROMISE = (async () => {
     /*
         WHEN ADDING NEW MODULES / CLASSES:
 
@@ -144,3 +145,4 @@ declare global {
     // Ensure all quickbar sections are injected after all modules are initialized
     // HSQuickbarManager.getInstance().injectAll();
 })();
+void window.__HS_INIT_PROMISE.catch(error => console.error('[HS] Mod initialization failed', error));

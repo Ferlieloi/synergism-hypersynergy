@@ -14,7 +14,7 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
 */
 export class HSTalismans extends HSModule {
     #talismanBuyButtons : HTMLButtonElement[] = []; 
-    #buyAllButton? : Element;
+    #buyAllButton? : HTMLButtonElement;
     #enhancedButton?: HTMLButtonElement;
 
     #currentButtonIndex = ETalismanFragmentIndex.BLUE;
@@ -52,14 +52,29 @@ export class HSTalismans extends HSModule {
             return;
         }
         
-        this.#buyAllButton = await HSElementHooker.HookElement('#buyTalismanAll') as HTMLButtonElement;
-        this.#talismanBuyButtons = await HSElementHooker.HookElements('.fragmentBtn') as HTMLButtonElement[];
+        const buyAllButton = await HSElementHooker.HookElement('#buyTalismanAll', undefined, 10_000);
+        if (!(buyAllButton instanceof HTMLButtonElement)) {
+            HSLogger.warn('Talisman Buy All button did not appear; skipping Cycle BUY', this.context);
+            this.isInitialized = true;
+            return;
+        }
+
+        const fragmentButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.fragmentBtn'));
+        if (fragmentButtons.length === 0) {
+            HSLogger.warn('Talisman fragment buttons did not appear; skipping Cycle BUY', this.context);
+            this.isInitialized = true;
+            return;
+        }
+
+        this.#buyAllButton = buyAllButton;
+        this.#talismanBuyButtons = fragmentButtons;
+        this.#currentButtonIndex %= fragmentButtons.length;
 
         // Create a new enhanced "Cycle BBUY" button next to the vanilla one
         const enhancedBuyAllButton = document.createElement('button');
         enhancedBuyAllButton.id = 'hs-enhanced-buy-talisman-all';
         this.#enhancedButton = enhancedBuyAllButton;
-        enhancedBuyAllButton.className = this.#buyAllButton.className; // Keep the class for any CSS rules
+        enhancedBuyAllButton.className = buyAllButton.getAttribute('class') ?? ''; // Keep the class for any CSS rules
         
         // Copy all styling from the vanilla button
         const vanillaStyle = window.getComputedStyle(this.#buyAllButton);

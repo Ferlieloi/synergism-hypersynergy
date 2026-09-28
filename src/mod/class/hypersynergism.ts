@@ -107,10 +107,10 @@ export class Hypersynergism {
         let attempts = 0;
         // Wait up to 30 seconds
         while (attempts < 300) {
-            // Check for key DOM element (buildingstab is usually first to appear)
-            // We used to check for (window as any).player but it seems flaky/unavailable in some contexts
-            // despite the game being ready. The DOM element is a reliable enough proxy.
-            if (document.getElementById('buildingstab')) {
+            // The tab appears before later game controls while the HTML is still
+            // parsing. Starting modules then can make their short element hooks
+            // time out on slower Steam launches.
+            if (document.readyState !== 'loading' && document.getElementById('buildingstab')) {
                 return true;
             }
             await new Promise(r => setTimeout(r, 100));

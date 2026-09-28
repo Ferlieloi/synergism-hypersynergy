@@ -1,6 +1,8 @@
-module.exports = function patchBundle(code) {
-    const log = (...a) => console.log('[PATCH]', ...a);
-    const warn = (...a) => console.warn('[PATCH]', ...a);
+// Shared bundle patcher for browser userscripts and the desktop launcher.
+// The browser startup code below uses this same function with Steam changes disabled.
+function patchBundle(code, options = {}) {
+    const log = options.log || ((...a) => console.log('[PATCH]', ...a));
+    const warn = options.warn || ((...a) => console.warn('[PATCH]', ...a));
     // ==================================================================================
     // ───────────────────────────────── BUNDLE PATCHES ─────────────────────────────────
 
@@ -278,39 +280,26 @@ module.exports = function patchBundle(code) {
     }
 
     // ==================================================================================
-    // ────── PLAYER PATCH ─ Detect the call `Object.defineProperties(window, { player: { value:<sym> }, ... })`
-    // and expose the player object via an obfuscated, non-enumerable Symbol property on window (window.symp)
+    // ────── PLAYER PATCH ─ Capture the game's player initializer regardless of its minified name.
     try {
-        // Match the full Object.defineProperties(...) call
-        const re = /Object\.defineProperties\(window,\s*\{\s*player\s*:\s*\{\s*value\s*:\s*([a-zA-Z_$][\w$]*)\s*\}[^}]*\}[^)]*\)/;
-        const m = re.exec(code);
-        if (m) {
-            const insertPos = m.index + m[0].length;
-            const playerVar = m[1];
-            if (playerVar) {
-                // Expose player using a Symbol property, with Symbol stored globally (symp = symbol player)
-                const expose =
-                    ',(' +
-                    'window.symp=window.symp||Symbol(),' +
-                    'Object.defineProperty(' +
-                    'window,window.symp,' +
-                    '{' +
-                    'enumerable:false,' +
-                    'configurable:true,' +
-                    'writable:true,' +
-                    'value:' + playerVar +
-                    '}' +
-                    '),console.log("[HS-PATCH] \u2705 Symbol exposed")' +
-                    ')';
-                code = code.slice(0, insertPos) + expose + code.slice(insertPos);
-            } else {
-                warn('❌ Error in defineProperties player patch: anchor found but symbol extraction failed');
-            }
-        } else {
-            warn('❌ Error while searching for defineProperties(player) anchor in bundle');
+        const re = /\b([a-zA-Z_$][\w$]*)\s*=\s*\{\s*firstPlayed\s*:\s*new Date\(\)\.toISOString\(\)\s*,\s*worlds\s*:/g;
+        let m;
+        let patched = false;
+        while ((m = re.exec(code)) !== null) {
+            const objectStart = m.index + m[0].lastIndexOf('{');
+            const objectEnd = findMatchingBrace(code, objectStart + 1);
+            if (objectEnd < 0 || !code.slice(objectStart, objectEnd).includes('challengecompletions:')) continue;
+            const capture = '(function(player){window.symp=window.symp||Symbol();' +
+                'Object.defineProperty(window,window.symp,{enumerable:false,configurable:true,writable:true,value:player});' +
+                'console.log("[HS-PATCH] \u2705 Symbol exposed");return player})(';
+            code = code.slice(0, objectStart) + capture + code.slice(objectStart, objectEnd + 1) + ')' + code.slice(objectEnd + 1);
+            log(`Patched player initializer (variable=${m[1]})`);
+            patched = true;
+            break;
         }
+        if (!patched) warn('Could not find player initializer in game bundle');
     } catch (e) {
-        warn('❌ Error while probing for defineProperties player patch', e);
+        warn('Error while patching player initializer', e);
     }
 
     // ==================================================================================
@@ -449,28 +438,449 @@ module.exports = function patchBundle(code) {
     }
 
     // ==================================================================================
-    // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
-    try {
-        const steamSyncRe = /\(\s*([a-zA-Z_$][\w$]*)\s*\|\|\s*([a-zA-Z_$][\w$]*)\s*-\s*([a-zA-Z_$][\w$]*)\s*>=\s*6e4\s*\)\s*&&/;
+    if (options.steam) {
+        // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
+        try {
+            const steamSyncRe = /\(\s*([a-zA-Z_$][\w$]*)\s*\|\|\s*([a-zA-Z_$][\w$]*)\s*-\s*([a-zA-Z_$][\w$]*)\s*>=\s*6e4\s*\)\s*&&/;
 
-        const m = steamSyncRe.exec(code);
-        if (m) {
-            const [, buttonVar, nowVar, lastVar] = m;
+            const m = steamSyncRe.exec(code);
+            if (m) {
+                const [, buttonVar, nowVar, lastVar] = m;
 
-            const replacement = `(${nowVar} - ${lastVar} >= 6e4)&&`;
+                const replacement = `(${nowVar} - ${lastVar} >= 6e4)&&`;
 
-            code = code.replace(steamSyncRe, replacement);
+                code = code.replace(steamSyncRe, replacement);
 
-            log(`Patched Steam auto-sync (removed ${buttonVar} trigger)`);
-        } else {
-            warn('Could not patch Steam auto-sync — pattern not found');
+                log(`Patched Steam auto-sync (removed ${buttonVar} trigger)`);
+            } else {
+                warn('Could not patch Steam auto-sync — pattern not found');
+            }
+        } catch (e) {
+            warn('Error while patching Steam auto-sync', e);
         }
-    } catch (e) {
-        warn('Error while patching Steam auto-sync', e);
+
     }
 
     // ==================================================================================
 
-    log(`Patch complete — waiting for DOM to be ready before injecting bundle`);
+    log('Bundle patching complete');
     return code;
 }
+
+function startBrowserLoader(options) {
+    'use strict';
+    const { dev = false } = options || {};
+    if (window.HS_LOADER_INITIALIZED) return;
+    window.HS_LOADER_INITIALIZED = true;
+
+    const loaderVersion = '4.0';
+    const startTime = performance.now();
+    const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
+    const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
+    const debug = (...a) => console.debug(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#aaa', ...a);
+
+    const originalFetch = window.fetch.bind(window);
+    const isFirefox = navigator.userAgent.includes('Firefox');
+    log(`Browser: ${isFirefox ? 'Firefox' : 'Not Firefox'}`);
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let gameScriptDetected = false;
+    let allowCustomElements = false;
+
+    // ─── customElements lock ──────────────────────────────────────────────────
+    // Block the original game script from registering Custom Elements.
+    // Our patched copy will register them once allowCustomElements is set.
+    const origDefine = customElements.define;
+    customElements.define = function (name, ctor, options) {
+        if (!allowCustomElements) {
+            if (!customElements.get(name)) {
+                debug(`Blocked original script from defining <${name}> (lock active)`);
+            }
+            return;
+        }
+        if (customElements.get(name)) return;
+        return origDefine.call(this, name, ctor, options);
+    };
+
+    // ─── Collision diagnostics ────────────────────────────────────────────────
+    // A late original out.js can throw while our custom-element lock is active.
+    // Reloading repeats the same timing race and can trap the page in a loop.
+    const illegalDivPattern = /Failed to construct\s*'?HTMLDivElement'?|Illegal constructor/i;
+
+    window.addEventListener('error', (event) => {
+        const text = `${String(event?.message || '')}\n${String(event?.error?.stack || '')}`;
+        if (illegalDivPattern.test(text)) {
+            warn(`Illegal constructor from ${event?.filename || 'unknown script'}; continuing without reloading.`, event?.error || event?.message);
+        }
+    }, true);
+
+    window.addEventListener('unhandledrejection', (event) => {
+        const reason = event?.reason;
+        const message = reason instanceof Error ? reason.message : String(reason);
+        const stack = reason instanceof Error ? reason.stack : '';
+        const text = `${message}\n${stack}`;
+        if (illegalDivPattern.test(text)) {
+            warn('Illegal constructor in rejected promise; continuing without reloading.', reason);
+        }
+    }, true);
+
+    // ─── Fetch block ──────────────────────────────────────────────────────────
+    window.fetch = async function (input, init) {
+        const url = typeof input === 'string' ? input
+            : input instanceof Request ? input.url
+                : '';
+        if (url.includes('rocket-loader') || (url.includes('/dist/out') && url.endsWith('.js'))) {
+            debug(`Fetch blocked: ${url.substring(0, 80)}`);
+            return new Response('', { status: 200 });
+        }
+        return originalFetch(input, init);
+    };
+
+    function shouldBlockScript(src) {
+        return src.includes('rocket-loader') || /\/dist\/out.*\.js/.test(src);
+    }
+
+    // Rocket Loader can clone the original out.js and insert it before our
+    // MutationObserver callback runs. Mark that clone inert before insertion.
+    // Fire a synthetic load so Rocket Loader can advance its script queue.
+    function interceptInsertedGameScript(node) {
+        if (node?.nodeType !== 1 || node.localName !== 'script') return false;
+        const src = node.src || node.getAttribute('src') || '';
+        if (!/\/dist\/out.*\.js(?:[?#]|$)/.test(src)) return false;
+        node.type = 'application/x-hs-blocked';
+        node.setAttribute('data-hs-inert', '');
+        if (!gameScriptDetected) {
+            gameScriptDetected = true;
+            injectPatchedBundle();
+        }
+        debug(`Blocked game script before DOM insertion: ${src.substring(0, 80)}`);
+        return true;
+    }
+
+    function acknowledgeBlockedScript(node) {
+        queueMicrotask(() => {
+            node.dispatchEvent(new Event('load'));
+            node.remove();
+        });
+    }
+
+    const nativeInsertBefore = Node.prototype.insertBefore;
+    Node.prototype.insertBefore = function (node, referenceNode) {
+        const blocked = interceptInsertedGameScript(node);
+        const inserted = nativeInsertBefore.call(this, node, referenceNode);
+        if (blocked) acknowledgeBlockedScript(node);
+        return inserted;
+    };
+    const nativeAppendChild = Node.prototype.appendChild;
+    Node.prototype.appendChild = function (node) {
+        const blocked = interceptInsertedGameScript(node);
+        const inserted = nativeAppendChild.call(this, node);
+        if (blocked) acknowledgeBlockedScript(node);
+        return inserted;
+    };
+    const nativeReplaceChild = Node.prototype.replaceChild;
+    Node.prototype.replaceChild = function (node, oldNode) {
+        const blocked = interceptInsertedGameScript(node);
+        const replaced = nativeReplaceChild.call(this, node, oldNode);
+        if (blocked) acknowledgeBlockedScript(node);
+        return replaced;
+    };
+
+    // ─── Script interception ──────────────────────────────────────────────────
+    // We need to intercept the game's <script src="…/dist/out….js"> tag,
+    // prevent it from running, then inject our patched version in its place.
+
+    let beforeScriptExecute;
+    if (isFirefox) {
+        // Firefox supports beforescriptexecute which fires before the script runs.
+        beforeScriptExecute = function (e) {
+            const src = e.target.src || '';
+            if (shouldBlockScript(src)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.target.remove();
+                log(`Blocked (beforescriptexecute): ${src.substring(0, 60)}`);
+                if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
+                    gameScriptDetected = true;
+                    injectPatchedBundle();
+                }
+            }
+        };
+        document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
+    }
+
+    // Chrome/Edge: use a MutationObserver to catch the tag before it executes.
+    const mo = new MutationObserver(muts => {
+        for (const m of muts) {
+            for (const n of m.addedNodes) {
+                if (n.tagName !== 'SCRIPT') continue;
+                if (n.hasAttribute('data-hs-inert')) continue;
+                const src = n.src || '';
+                if (shouldBlockScript(src)) {
+                    n.type = 'javascript/blocked';
+                    n.remove();
+                    debug(`Blocked (MutationObserver): ${src.substring(0, 60)}`);
+                    if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
+                        gameScriptDetected = true;
+                        injectPatchedBundle();
+                    }
+                }
+            }
+        }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+
+    // Also check scripts that may already exist in the DOM at injection time.
+    function checkExistingScripts() {
+        for (const script of document.getElementsByTagName('script')) {
+            if (script.src && /\/dist\/out.*\.js/.test(script.src)) {
+                script.type = 'javascript/blocked';
+                script.remove();
+                if (!gameScriptDetected) {
+                    gameScriptDetected = true;
+                    injectPatchedBundle();
+                }
+            }
+        }
+    }
+    checkExistingScripts();
+    setTimeout(checkExistingScripts, 10);
+
+    // ─── Utilities ────────────────────────────────────────────────────────────
+
+    // Resolves when condition() returns truthy, or rejects after timeoutMs.
+    // Uses setTimeout (not rAF) so it works reliably in background tabs.
+    function waitFor(condition, timeoutMs, label, intervalMs = 200) {
+        return new Promise((resolve, reject) => {
+            const deadline = performance.now() + timeoutMs;
+            (function poll() {
+                const result = condition();
+                if (result) { resolve(result); return; }
+                if (performance.now() >= deadline) {
+                    reject(new Error(`waitFor timed out: ${label}`));
+                    return;
+                }
+                setTimeout(poll, intervalMs);
+            })();
+        });
+    }
+
+    // Waits for #id to exist, then clicks it. Returns true on success.
+    async function clickWhenAvailable(id, timeoutMs = 20000) {
+        log(`Waiting for #${id}...`);
+        try {
+            await waitFor(() => document.getElementById(id), timeoutMs, `#${id} to appear`);
+        } catch {
+            warn(`Timed out waiting for #${id}`);
+            return false;
+        }
+        const el = document.getElementById(id);
+        // Dispatch the full mouse event sequence the game expects.
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+            el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        }
+        // Yield one tick so the game's event handler can run before we continue.
+        await new Promise(r => setTimeout(r, 0));
+        return true;
+    }
+
+
+    // ==================================================================================
+    // ─── Phase 1 & 2: Fetch, patch, and inject the game bundle ───────────────
+    // ==================================================================================
+
+    async function injectPatchedBundle() {
+        if (window.__HS_INJECTED__) return;
+        window.__HS_INJECTED__ = true;
+
+        log('Fetching game bundle...');
+        let code;
+        try {
+            const res = await originalFetch(`https://synergism.cc/dist/out.js?t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+            });
+            code = await res.text();
+            log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
+        } catch (e) {
+            warn('Failed to fetch game bundle:', e);
+            return;
+        }
+
+        // ==================================================================================
+        code = patchBundle(code, { log, warn });
+
+        // Wait until the browser has finished parsing the HTML (DOMContentLoaded).
+        // Checking document.body is not enough — the body element can exist while
+        // the rest of the DOM is still being built, causing querySelector calls
+        // inside the game bundle to hit null elements.
+        if (document.readyState === 'loading') {
+            await new Promise(resolve =>
+                document.addEventListener('DOMContentLoaded', resolve, { once: true })
+            );
+        }
+        await new Promise(r => setTimeout(r, 100));
+
+
+        // ==================================================================================
+        // ── Phase 2: Inject patched bundle ────────────────────────────────────────────────
+        // ==================================================================================
+
+        allowCustomElements = true;
+        log('Custom Elements unlocked — injecting patched bundle');
+
+        const gameScript = document.createElement('script');
+        gameScript.textContent = code;
+        (document.body || document.head || document.documentElement).appendChild(gameScript);
+        // The script has been parsed and executed — drop the source text so the
+        // ~1.6 MB string can be garbage-collected.
+        gameScript.textContent = '';
+
+        // Clean up interception machinery — we no longer need any of it.
+        try { mo.disconnect(); } catch { }
+        if (isFirefox && beforeScriptExecute) {
+            document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
+        }
+        customElements.define = origDefine;
+        // Restore fetch — the block on /dist/out*.js is no longer needed.
+        window.fetch = originalFetch;
+        log('Bundle injected; interception cleaned up');
+
+
+        // ==================================================================================
+        // ── Phase 3: Ensure the game initialises ──────────────────────────────────────────
+        // ==================================================================================
+
+        // The game hooks onto window's "load" event. When we inject the bundle
+        // after window.load has already fired, the game never receives it, so
+        // the player object is never set up. We fire a synthetic load event to
+        // guarantee the game always initialises, regardless of timing.
+        log('Dispatching synthetic load event to initialise game');
+        window.dispatchEvent(new Event('load'));
+
+        // ── Proceed to post-load phases ───────────────────────────────────────
+        initBackdoor();
+        runPostLoadSequence();
+    }
+
+    // ─── Phase 3 helper: expose __HS_BACKDOOR__ for external diagnostics ──────
+    function initBackdoor() {
+        const s = document.createElement('script');
+        s.textContent =
+            `window.__HS_BACKDOOR__ = {` +
+                `get exposed() {` +
+                    `return {` +
+                        `synergismStage:      typeof window.__HS_synergismStage,` +
+                        `DOMCacheGetOrSet:    typeof window.DOMCacheGetOrSet,` +
+                        `i18next:             typeof window.__HS_i18next,` +
+                        `exportSynergism:     typeof window.__HS_exportSynergism,` +
+                        `exportData:          typeof window.__HS_exportData,` +
+                        `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
+                        `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
+                        `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
+                        `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
+                    `};` +
+                `}` +
+            `};`;
+        (document.head || document.documentElement).appendChild(s);
+        log('Backdoor ready');
+    }
+
+    // ==================================================================================
+    // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ───────────
+    // ==================================================================================
+
+    async function runPostLoadSequence() {
+        try {
+            // Phase 4: Wait for the game to finish loading.
+            // The offline container is the game's own "loading done" signal —
+            // it only appears after the save has been read and the UI is ready.
+            log('Phase 4 — waiting for offlineContainer to appear...');
+            await waitFor(
+                () => {
+                    const el = document.getElementById('offlineContainer');
+                    return el && getComputedStyle(el).display !== 'none';
+                },
+                60000,
+                'offlineContainer to become visible'
+            );
+            log('offlineContainer visible — game is loaded');
+
+            // Dismiss the offline container.
+            const offlineContainer = document.getElementById('offlineContainer');
+            log('Dismissing offlineContainer...');
+            const exitBtn = document.getElementById('exitOffline')
+                || offlineContainer.querySelector('button');
+            if (exitBtn) exitBtn.click();
+
+            // Wait 100 ms for the dismissal animation and any post-modal setup.
+            await new Promise(r => setTimeout(r, 100));
+
+            // Phase 5: Trigger exposure by navigating to Settings → Misc → Export.
+            log('Phase 5 — navigating to Settings to trigger exposure...');
+            await clickWhenAvailable('settingstab');
+            await new Promise(r => setTimeout(r, 300));
+            await clickWhenAvailable('switchSettingSubTab4');
+            await new Promise(r => setTimeout(r, 300));
+            await clickWhenAvailable('kMisc');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Trigger exportSynergism silently to expose both export functions.
+            window.__HS_SILENT_EXPORT = true;
+            await clickWhenAvailable('exportgame');
+            window.__HS_SILENT_EXPORT = false;
+
+            // Wait for both exposure flags.
+            log('Waiting for stage and export exposure flags...');
+            await waitFor(
+                () => window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED,
+                20000,
+                '__HS_EXPOSED and __HS_EXPORT_EXPOSED'
+            );
+            log('Exposure complete — stage and export are ready');
+
+            // Return to Buildings tab so the game looks normal to the player.
+            await clickWhenAvailable('buildingstab');
+            await new Promise(r => setTimeout(r, 300));
+
+            // Phase 6: Load the mod.
+            await loadMod();
+
+        } catch (e) {
+            warn('Post-load sequence failed:', e);
+        }
+    }
+
+    function loadMod() {
+        const modSource = dev ? 'LOCAL DEV SERVER' : 'CDN';
+        log(`Phase 6 — loading mod from ${modSource}...`);
+        if (dev) window.__HS_IS_DEV = true;
+        window.__HS_REPO = window.__HS_REPO || (dev ? 'maenhiir' : 'Ferlieloi');
+        window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'master';
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            const url = dev
+                ? `http://127.0.0.1:8080/hypersynergism.js?t=${Date.now()}`
+                : `https://cdn.jsdelivr.net/gh/${window.__HS_REPO}/synergism-hypersynergy@${window.__HS_VERSION}/release/mod/hypersynergism_release.js?t=${Date.now()}`;
+            s.src = url;
+            s.onload = () => {
+                log(`✅ Mod script loaded from ${modSource}: ${url}`);
+                // src/mod/index.ts creates and initializes hypersynergism itself.
+                // Calling init() here races that asynchronous initialization and
+                // makes "Mod initialised" appear before the work has completed.
+                log('Mod entrypoint started initialization');
+                resolve();
+            };
+            s.onerror = () => {
+                warn(`❌ Mod failed to load from ${modSource}: ${url}`);
+                reject(new Error('Mod load failed'));
+            };
+            (document.head || document.documentElement).appendChild(s);
+        });
+    }
+
+    log(`HyperSynergism loader initialised`);
+
+}
+
+module.exports = { patchBundle, startBrowserLoader };

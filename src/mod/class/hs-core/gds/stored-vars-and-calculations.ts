@@ -540,7 +540,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
     url: 'Pictures/RedAmbrosia/RedAmbrosiaRedGenerationSpeed.png'
   },
   redGenerationSpeed2: {
-    label: 'Ancient Red Ambrosia',
+    label: 'Era of Red Ambrosia',
     costFunction: (n: number, cpl: number) => cpl * (n + 1),
     maxLevel: 250,
     costPerLevel: 240,

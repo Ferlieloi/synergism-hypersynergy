@@ -4,7 +4,7 @@ const path = require('path')
 // ─── Channels ────────────────────────────────────────────────────────────
 // The mod is published from two different forks: an in-progress "dev" build
 // and the stabilized "live" build. Each fork hosts BOTH the in-page mod
-// script and its matching electron_app/patcher.js at the same path, so a
+// script and its matching shared patcher.js at the same path, so a
 // given channel+ref always resolves both files from the SAME repo — never
 // mixing a mod script from one fork with a patcher.js from another.
 const CHANNELS = {

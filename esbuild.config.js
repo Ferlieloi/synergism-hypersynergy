@@ -38,6 +38,12 @@ function copyLoaderFiles() {
         fs.copyFileSync(srcPath, destPath);
         console.log(`Copied ${file} to build/src/loader/`);
     }
+
+    // Browser userscripts load the same patcher module packaged with the desktop loader.
+    const patcherSource = path.join(__dirname, 'synergism_modloader', 'lib', 'patcher.js');
+    const patcherDest = path.join(__dirname, 'build', 'synergism_modloader', 'lib', 'patcher.js');
+    fs.mkdirSync(path.dirname(patcherDest), { recursive: true });
+    fs.copyFileSync(patcherSource, patcherDest);
 }
 
 // Build function with environment-specific options
@@ -84,7 +90,8 @@ async function build(env) {
                     copyLoaderFiles();
                 }
             });
-            console.log('Watching src/loader/ for changes...');
+            fs.watch(path.join(__dirname, 'synergism_modloader', 'lib', 'patcher.js'), copyLoaderFiles);
+            console.log('Watching browser loaders and shared patcher for changes...');
             // For watch mode
             const ctx = await esbuild.context(options);
             await ctx.watch();

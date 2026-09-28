@@ -49,6 +49,7 @@ const BASE_AMBROSIA_EFFECT_KEYS = [
     'freeLevelsRow3',
     'conversionImprovement2',
     'redGenerationSpeed',
+    'redGenerationSpeed2',
     'redLuck',
     'freeLevelsRow4',
     'viscount',
@@ -101,17 +102,21 @@ function getCurrentHSGameDataAPI(): HSGameDataAPI | undefined {
     return HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
 }
 
-function getCurrentRedAmbrosiaOptimizerContext(): {
+function getCurrentRedAmbrosiaOptimizerContext(gameDataApi?: HSGameDataAPI): {
     input?: HeaterOptimizerInput;
     commonValues?: HeaterRedAmbCommonValues;
     redAmbUpgradeEffects?: HeaterRedAmbUpgradeEffects;
+    blueberryInventory?: number;
 } {
+    const inventory = (gameDataApi ?? getCurrentHSGameDataAPI())?.ambrosia.calculateBlueberryInventory(true);
+    const blueberryInventory = typeof inventory === 'number' ? inventory : undefined;
     const result = HSHeaterResultStore.getCurrentRawResult();
-    if (!result) { return {}; } 
+    if (!result) { return { blueberryInventory }; }
     return {
         input: result.input,
         commonValues: result.redAmbCommonValues,
         redAmbUpgradeEffects: result.redAmbUpgradeEffects,
+        blueberryInventory,
     };
 }
 
@@ -158,6 +163,9 @@ function computeRedAmbrosiaEffectValue(
         case 'redGenerationSpeed': {
             return 1 + 0.003 / (1 + 0.003 * level);
         }
+        case 'redGenerationSpeed2': {
+            return 1 + 0.001 / (1 + 0.001 * level);
+        }
         case 'redLuck': {
             if (totalRedLuck === undefined) { return undefined; }
             return 1 + 1 / totalRedLuck;
@@ -198,6 +206,7 @@ function computeAmbrosiaEffectRawValue(
         'conversionImprovement1',
         'conversionImprovement2',
         'redGenerationSpeed',
+        'redGenerationSpeed2',
         'redLuck',
         'conversionImprovement3',
         'blueberryGenerationSpeed',
@@ -212,6 +221,7 @@ function computeAmbrosiaEffectRawValue(
         case 'conversionImprovement1':
         case 'conversionImprovement2':
         case 'redGenerationSpeed':
+        case 'redGenerationSpeed2':
         case 'redLuck':
         case 'conversionImprovement3':
             return computeHeaterFusionGain(fusionValue, redAmbRawEffect!);
@@ -269,16 +279,16 @@ function computeAmbrosiaRawToDisplay(
     value: number | undefined,
     context: ReturnType<typeof getCurrentRedAmbrosiaOptimizerContext>,
 ): number | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-
     if (upgradeKey === 'blueberries') {
-        const blueberries = context.input?.blueberries ?? 0;
-        if (blueberries <= 0) {
+        const blueberries = [context.input?.blueberries, context.blueberryInventory]
+            .find(count => count !== undefined && Number.isFinite(count) && count > 0);
+        if (blueberries === undefined) {
             return value;
         }
-        return value * (1 + 1 / blueberries);
+        // One more blueberry always improves generation speed, even if the
+        // optimizer's additional luck gain is missing or invalid.
+        const optimizerGain = value !== undefined && Number.isFinite(value) && value > 1 ? value : 1;
+        return optimizerGain * (1 + 1 / blueberries);
     }
 
     return value;
@@ -492,7 +502,7 @@ function formatRedAmbrosiaUpgradeCefLogValue(value: RedAmbrosiaUpgradeCefLogValu
 export function computeRedAmbrosiaUpgradeRows(gameDataApi?: HSGameDataAPI): RedAmbrosiaUpgradeTableRow[] {
     const api = gameDataApi ?? getCurrentHSGameDataAPI();
     const gameData = api?.getGameData?.();
-    const optimizerContext = getCurrentRedAmbrosiaOptimizerContext();
+    const optimizerContext = getCurrentRedAmbrosiaOptimizerContext(api);
     const redAmbrosiaAcceleratorLevel = api?.ambrosia.calculateRedAmbrosiaUpgradeValue('redAmbrosiaAccelerator') ?? 0;
 
     return (Object.entries(redAmbrosiaUpgradeCalculationCollection) as [RedAmbrosiaUpgradeKey, RedAmbrosiaUpgradeCalculationConfig<any>][]) 
