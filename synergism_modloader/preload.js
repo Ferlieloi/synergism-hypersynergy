@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('loader', {
     loadConfig: () => ipcRenderer.invoke('config:load'),
     saveConfig: (partial) => ipcRenderer.invoke('config:save', partial),
+    cleanupLegacyWorkspaces: () => ipcRenderer.invoke('legacy:cleanup'),
 
     getLauncherUpdateStatus: () => ipcRenderer.invoke('launcher-update:status'),
     checkLauncherUpdate: () => ipcRenderer.invoke('launcher-update:check'),

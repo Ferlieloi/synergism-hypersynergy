@@ -439,6 +439,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .btn-primary {
   background: orange;
   border-color: orange;

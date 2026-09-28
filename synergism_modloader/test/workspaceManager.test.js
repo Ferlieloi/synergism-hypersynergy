@@ -71,14 +71,45 @@ test('retries a temporary Windows lock when activating a patch', async t => {
         fs.promises.rename = rename
     }
 })
-test('legacy numbered folders are removed without touching the active copy', t => {
+test('legacy numbered folders are removed without touching current, staging, previous, or unrelated folders', async t => {
     const root = gameDir(t)
     const dirs = workspacePaths(root)
     fs.mkdirSync(dirs.active)
+    fs.mkdirSync(dirs.staging)
+    fs.mkdirSync(dirs.previous)
+    fs.mkdirSync(path.join(root, '__hs_work_1785433843173_739326'))
+    fs.mkdirSync(path.join(root, '__hs_work_1790534836286_164623'))
     fs.mkdirSync(path.join(root, '__hs_work_123'))
-    fs.mkdirSync(path.join(root, '__hs_work_456'))
-    cleanupOldWorkspaces(root)
-    assert.deepEqual(fs.readdirSync(root), ['__hs_work_current'])
+    fs.mkdirSync(path.join(root, '__hs_work_custom'))
+    fs.writeFileSync(path.join(root, '__hs_work_111_222'), '')
+    const result = await cleanupOldWorkspaces(root)
+    assert.deepEqual(result, { found: 2, removed: 2, failed: 0, error: null })
+    assert.deepEqual(fs.readdirSync(root), [
+        '__hs_work_111_222', '__hs_work_123', '__hs_work_current', '__hs_work_custom', '__hs_work_previous', '__hs_work_staging'
+    ])
+})
+
+test('cleanup waits for the running-game check and leaves locked folders for retry', async t => {
+    const root = gameDir(t)
+    const locked = path.join(root, '__hs_work_123_456')
+    const free = path.join(root, '__hs_work_789_012')
+    fs.mkdirSync(locked)
+    fs.mkdirSync(free)
+    await assert.rejects(cleanupOldWorkspaces(root, null, {
+        beforeRemove: () => { throw new Error('game is running') }
+    }), /game is running/)
+    assert.equal(fs.existsSync(locked), true)
+    assert.equal(fs.existsSync(free), true)
+
+    const result = await cleanupOldWorkspaces(root, null, {
+        remove: async dir => {
+            if (dir === locked) throw Object.assign(new Error('in use'), { code: 'EPERM' })
+            await fs.promises.rm(dir, { recursive: true })
+        }
+    })
+    assert.deepEqual(result, { found: 2, removed: 1, failed: 1, error: null })
+    assert.equal(fs.existsSync(locked), true)
+    assert.equal(fs.existsSync(free), false)
 })
 
 test('finished patch keeps the game and discards extraction inputs', async t => {

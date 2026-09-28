@@ -76,6 +76,7 @@
           <input id="gameDirOutput" type="text" readonly placeholder="Not found yet" />
         </div>
         <p id="gameDirStatus" class="status-line"></p>
+        <p id="legacyCleanupStatus" class="status-line" aria-live="polite"></p>
 
         <div class="field">
           <span>7-Zip (7z.exe)</span>
@@ -92,6 +93,7 @@
 
         <div class="actions">
           <button id="toStep2Btn" class="btn-primary" disabled>Continue →</button>
+          <button id="retryLegacyCleanupBtn" class="btn-secondary is-hidden">Retry old folder cleanup</button>
           <button id="launchLastPlayedBtn" class="btn-secondary" disabled>Launch last played build</button>
         </div>
       </div>

@@ -9,6 +9,7 @@ const els = {
   autodetectSteamBtn: document.getElementById('autodetectSteamBtn'),
   gameDirOutput: document.getElementById('gameDirOutput'),
   gameDirStatus: document.getElementById('gameDirStatus'),
+  legacyCleanupStatus: document.getElementById('legacyCleanupStatus'),
 
   sevenZipInput: document.getElementById('sevenZipInput'),
   browse7zBtn: document.getElementById('browse7zBtn'),
@@ -16,6 +17,7 @@ const els = {
   sevenZipStatus: document.getElementById('sevenZipStatus'),
 
   toStep2Btn: document.getElementById('toStep2Btn'),
+  retryLegacyCleanupBtn: document.getElementById('retryLegacyCleanupBtn'),
   launchLastPlayedBtn: document.getElementById('launchLastPlayedBtn'),
   backTo1Btn: document.getElementById('backTo1Btn'),
   backTo2Btn: document.getElementById('backTo2Btn'),
@@ -56,6 +58,7 @@ let state = {
   channels: []
 }
 let refsRequestId = 0
+let cleanupUiPromise = null
 
 function renderLauncherUpdate(status) {
   const version = `Launcher v${status.currentVersion}`
@@ -163,6 +166,7 @@ els.toStep2Btn.addEventListener('click', async () => {
     gameDir: state.gameDir,
     sevenZipPath: state.sevenZipPath
   })
+  void cleanupLegacyFolders()
   goToStep(2)
 })
 els.backTo1Btn.addEventListener('click', () => goToStep(1))
@@ -264,6 +268,43 @@ els.autodetect7zBtn.addEventListener('click', async () => {
 function updateContinueButton() {
   els.toStep2Btn.disabled = !(state.gameDir && state.sevenZipPath)
 }
+
+function cleanupLegacyFolders() {
+  if (cleanupUiPromise) return cleanupUiPromise
+  cleanupUiPromise = runCleanupLegacyFolders().finally(() => { cleanupUiPromise = null })
+  return cleanupUiPromise
+}
+
+async function runCleanupLegacyFolders() {
+  els.retryLegacyCleanupBtn.disabled = true
+  els.legacyCleanupStatus.textContent = 'Checking for old patch folders…'
+  els.legacyCleanupStatus.className = 'status-line'
+  let result
+  try {
+    result = await window.loader.cleanupLegacyWorkspaces()
+  } catch (error) {
+    result = { error: error.message }
+  }
+  if (result.error) {
+    els.legacyCleanupStatus.textContent = `Old folder cleanup paused: ${result.error}`
+    els.legacyCleanupStatus.className = 'status-line error'
+    els.retryLegacyCleanupBtn.classList.remove('is-hidden')
+  } else if (result.failed) {
+    els.legacyCleanupStatus.textContent = `Removed ${result.removed} old patch folder(s); ${result.failed} could not be removed yet. Close Synergism or any old loader process, then retry.`
+    els.legacyCleanupStatus.className = 'status-line error'
+    els.retryLegacyCleanupBtn.classList.remove('is-hidden')
+  } else if (result.removed) {
+    els.legacyCleanupStatus.textContent = `Removed ${result.removed} old patch folder(s). Your current patch was kept.`
+    els.legacyCleanupStatus.className = 'status-line ok'
+    els.retryLegacyCleanupBtn.classList.add('is-hidden')
+  } else {
+    els.legacyCleanupStatus.textContent = ''
+    els.retryLegacyCleanupBtn.classList.add('is-hidden')
+  }
+  els.retryLegacyCleanupBtn.disabled = false
+}
+
+els.retryLegacyCleanupBtn.addEventListener('click', () => { void cleanupLegacyFolders() })
 
 function updateLastPlayedButton() {
   const available = Boolean(state.lastPatchedExe && state.lastPlayedChannel && state.lastPlayedModRef)
@@ -532,7 +573,8 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     renderChannelToggle()
     showRememberedRefs()
     updateSummary()
-    await refreshUpdateBanner()
     goToStep(1)
+    void cleanupLegacyFolders()
     void loadModRefs()
+    await refreshUpdateBanner()
   })()

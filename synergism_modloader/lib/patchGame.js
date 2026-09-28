@@ -184,7 +184,7 @@ async function patchGame(opts) {
         await ensureNoRunningWorkGames(gameDir)
         await promoteWorkspace(dirs, log)
         removeBestEffort(dirs.previous, log)
-        cleanupOldWorkspaces(gameDir, log)
+        await cleanupOldWorkspaces(gameDir, log)
         const installedExePath = path.join(dirs.active, 'app', path.basename(launchExePath))
         log(`Patch complete — launch exe: ${installedExePath}`)
         return { launchExePath: installedExePath, sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs } }

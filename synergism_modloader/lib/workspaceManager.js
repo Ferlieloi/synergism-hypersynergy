@@ -7,6 +7,7 @@ const { setTimeout: delay } = require('timers/promises')
 const ACTIVE_NAME = '__hs_work_current'
 const STAGING_NAME = '__hs_work_staging'
 const PREVIOUS_NAME = '__hs_work_previous'
+const LEGACY_NAME = /^__hs_work_\d+_\d+$/
 
 function workspacePaths(gameDir) {
     return {
@@ -108,20 +109,23 @@ function discardExtractionInputs(stagingDir) {
     }
 }
 
-function cleanupOldWorkspaces(gameDir, log) {
-    const preserved = new Set([ACTIVE_NAME, STAGING_NAME, PREVIOUS_NAME])
+async function cleanupOldWorkspaces(gameDir, log, {
+    remove = dir => rawFs.promises.rm(dir, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 }),
+    beforeRemove = async () => {}
+} = {}) {
     let entries
     try {
         entries = fs.readdirSync(gameDir, { withFileTypes: true })
     } catch (error) {
         log?.(`Could not scan old work folders: ${error.message}`)
-        return
+        return { found: 0, removed: 0, failed: 0, error: error.message }
     }
-    const oldDirs = entries.filter(entry => entry.isDirectory() && entry.name.startsWith('__hs_work') && !preserved.has(entry.name))
+    const oldDirs = entries.filter(entry => entry.isDirectory() && LEGACY_NAME.test(entry.name))
+    if (oldDirs.length) await beforeRemove()
     const failures = []
     for (const entry of oldDirs) {
         try {
-            removeDirectory(path.join(gameDir, entry.name))
+            await remove(path.join(gameDir, entry.name))
         } catch (error) {
             failures.push({ name: entry.name, error })
         }
@@ -132,6 +136,7 @@ function cleanupOldWorkspaces(gameDir, log) {
             log?.(`${failure.name}: ${failure.error.code || 'error'} — ${failure.error.message}`)
         }
     }
+    return { found: oldDirs.length, removed: oldDirs.length - failures.length, failed: failures.length, error: null }
 }
 
 module.exports = {

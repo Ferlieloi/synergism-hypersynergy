@@ -64,7 +64,7 @@ the launcher restarts. The loader's version is separate from the mod version.
 
 To publish a launcher update, increase `version` in this directory's
 `package.json` and `package-lock.json`, then push a matching tag such as
-`loader-v0.2.5`. The `Release Windows loader` workflow builds the installer,
+`loader-v0.2.6`. The `Release Windows loader` workflow builds the installer,
 uploads it with `latest.yml` and its block map. The launcher selects the
 newest published `loader-v*` release with update metadata, so mod releases
 can remain marked Latest.
@@ -102,9 +102,13 @@ does not provide fully offline play.
 The loader builds each replacement in `__hs_work_staging`, waits for the
 repacked archive to close, removes extraction inputs, and switches the game
 into `__hs_work_current` only after patching succeeds. It retries cleanup of
-old numbered folders left by earlier versions. If a file remains locked, it
-leaves that folder for a later cleanup attempt without creating another
-numbered folder. A failed patch leaves the current playable copy in place.
+old numbered folders left by earlier versions at startup and after patching.
+Only folders named `__hs_work_<number>_<number>` are eligible; the current,
+staging, and previous patch folders are kept. Startup cleanup checks for a
+running patched game before removing anything. If Windows still holds a file
+open, the loader reports how many folders remain and offers a retry button.
+It tries again at the next startup. A failed patch leaves the current playable
+copy in place.
 
 The loader remembers the original exe's size/mtime at patch time, so it
 can tell you when Synergism has been updated by Steam and a re-patch is a

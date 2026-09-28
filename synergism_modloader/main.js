@@ -10,9 +10,11 @@ const { createLauncherUpdater } = require('./lib/launcherUpdater')
 const { listModRefs } = require('./lib/modRefs')
 const { rememberedRefs } = require('./lib/modRefCache')
 const { launchGame } = require('./lib/gameLauncher')
+const { cleanupOldWorkspaces, ensureNoRunningWorkGames } = require('./lib/workspaceManager')
 
 let mainWindow
 let patchInProgress = false
+let legacyCleanupPromise = null
 const launcherUpdater = createLauncherUpdater({
     app,
     updater: autoUpdater,
@@ -62,7 +64,7 @@ ipcMain.handle('launcher-update:install', () => {
 })
 
 // ─── Config ─────────────────────────────────────────────────────────────
-ipcMain.handle('config:load', () => {
+function resolvedConfig() {
     const cfg = loadConfig(app)
     if (!cfg.steamPath || !fs.existsSync(cfg.steamPath)) {
         cfg.steamPath = detectSteamPathWindows() || ''
@@ -74,12 +76,34 @@ ipcMain.handle('config:load', () => {
         cfg.sevenZipPath = getBundledSevenZipPath(app) || detectSevenZip() || ''
     }
     return cfg
-})
+}
+
+ipcMain.handle('config:load', resolvedConfig)
 ipcMain.handle('config:save', (_e, partial) => {
     const current = loadConfig(app)
     const next = { ...current, ...partial }
     saveConfig(app, next)
     return next
+})
+
+ipcMain.handle('legacy:cleanup', () => {
+    if (legacyCleanupPromise) return legacyCleanupPromise
+    legacyCleanupPromise = (async () => {
+        if (patchInProgress) return { found: 0, removed: 0, failed: 0, error: 'Wait for patching to finish, then retry cleanup.' }
+        const gameDir = resolvedConfig().gameDir
+        if (!gameDir) return { found: 0, removed: 0, failed: 0, error: null }
+        try {
+            return await cleanupOldWorkspaces(gameDir, sendLog, {
+                beforeRemove: () => ensureNoRunningWorkGames(gameDir)
+            })
+        } catch (error) {
+            const message = error.message.startsWith('Close the running patched Synergism game')
+                ? 'Close the patched Synergism game, then retry old folder cleanup.'
+                : error.message
+            return { found: 0, removed: 0, failed: 0, error: message }
+        }
+    })().finally(() => { legacyCleanupPromise = null })
+    return legacyCleanupPromise
 })
 
 // ─── Steam / game / 7-Zip detection ─────────────────────────────────────
@@ -158,6 +182,10 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
     if (patchInProgress) return { ok: false, error: 'A game patch is already running.' }
     patchInProgress = true
     try {
+        if (legacyCleanupPromise) {
+            sendLog('Finishing old folder cleanup before patching...')
+            await legacyCleanupPromise
+        }
         const { launchExePath, sourceStat } = await patchGame({
             gameDir,
             exeName: DEFAULTS.exeName,
