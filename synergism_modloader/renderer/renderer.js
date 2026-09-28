@@ -16,6 +16,7 @@ const els = {
   sevenZipStatus: document.getElementById('sevenZipStatus'),
 
   toStep2Btn: document.getElementById('toStep2Btn'),
+  launchLastPlayedBtn: document.getElementById('launchLastPlayedBtn'),
   backTo1Btn: document.getElementById('backTo1Btn'),
   backTo2Btn: document.getElementById('backTo2Btn'),
   toStep3Btn: document.getElementById('toStep3Btn'),
@@ -49,8 +50,12 @@ let state = {
   channel: 'live',
   modRef: '',
   lastPatchedExe: '',
+  lastPlayedChannel: '',
+  lastPlayedModRef: '',
+  refListCache: {},
   channels: []
 }
+let refsRequestId = 0
 
 function renderLauncherUpdate(status) {
   const version = `Launcher v${status.currentVersion}`
@@ -260,6 +265,14 @@ function updateContinueButton() {
   els.toStep2Btn.disabled = !(state.gameDir && state.sevenZipPath)
 }
 
+function updateLastPlayedButton() {
+  const available = Boolean(state.lastPatchedExe && state.lastPlayedChannel && state.lastPlayedModRef)
+  els.launchLastPlayedBtn.disabled = !available
+  els.launchLastPlayedBtn.textContent = available
+    ? `Launch last played: ${state.lastPlayedModRef} (${state.lastPlayedChannel})`
+    : 'Launch last played build'
+}
+
 document.querySelectorAll('a[data-external]').forEach(a => {
   a.addEventListener('click', (e) => {
     e.preventDefault()
@@ -280,8 +293,9 @@ function renderChannelToggle() {
     btn.addEventListener('click', async () => {
       if (state.channel === ch.id) return
       state.channel = ch.id
-      state.modRef = '' // let loadModRefs pick this channel's default ref
+      state.modRef = ch.defaultRef
       renderChannelToggle()
+      showRememberedRefs()
       await loadModRefs()
     })
     els.channelToggle.appendChild(btn)
@@ -291,13 +305,14 @@ function renderChannelToggle() {
   els.channelStatus.className = 'status-line'
 }
 
-async function loadModRefs() {
-  els.refsStatus.textContent = 'Loading branches and tags…'
-  els.refsStatus.className = 'status-line'
-  const requestedChannel = state.channel
-  const { refs, branchCount, tagCount, defaultRef, datesIncomplete, error } = await window.loader.getModRefs(requestedChannel)
-  if (requestedChannel !== state.channel) return
+function showRememberedRefs() {
+  const channel = state.channels.find(ch => ch.id === state.channel)
+  const cached = state.refListCache[state.channel] || []
+  renderRefOptions(cached, channel?.defaultRef || 'master')
+  void updateUrlPreviews()
+}
 
+function renderRefOptions(refs, defaultRef) {
   els.modRefSelect.innerHTML = ''
   for (const ref of refs) {
     const opt = document.createElement('option')
@@ -322,10 +337,29 @@ async function loadModRefs() {
     els.modRefSelect.value = defaultRef
   } else if (options.length) {
     state.modRef = options[0].value
+  } else {
+    state.modRef = defaultRef
+    const fallback = document.createElement('option')
+    fallback.value = defaultRef
+    fallback.textContent = `${defaultRef} (default branch)`
+    els.modRefSelect.appendChild(fallback)
   }
+}
+
+async function loadModRefs() {
+  els.refsStatus.textContent = 'Loading branches and tags…'
+  els.refsStatus.className = 'status-line'
+  const requestedChannel = state.channel
+  const requestId = ++refsRequestId
+  const { refs, branchCount, tagCount, defaultRef, datesIncomplete, error } = await window.loader.getModRefs(requestedChannel)
+  if (requestedChannel !== state.channel || requestId !== refsRequestId) return
+
+  renderRefOptions(refs, defaultRef)
+  if (!error) state.refListCache[requestedChannel] = refs
 
   if (error) {
-    els.refsStatus.textContent = `Couldn't reach GitHub (${error}) — showing the default branch only.`
+    const saved = refs.length > 1 || state.lastPlayedChannel === state.channel
+    els.refsStatus.textContent = `Couldn't reach GitHub (${error}) — showing ${saved ? 'saved builds' : 'the default branch'}.`
     els.refsStatus.className = 'status-line error'
   } else {
     els.refsStatus.textContent = `${branchCount} branch(es), ${tagCount} tag(s) · newest first${datesIncomplete ? ' (some dates unavailable)' : ''}.`
@@ -366,8 +400,32 @@ async function launchSelectedGame(exePath, modUrl, channel, modRef) {
   const result = await window.loader.launchGame(exePath, modUrl, channel, modRef)
   if (!result.ok) appendConsoleLine(`Launch failed: ${result.error}`, 'error')
   if (result.warning) appendConsoleLine(result.warning, 'error')
+  if (result.ok && !result.warning) {
+    state.lastPlayedChannel = channel
+    state.lastPlayedModRef = modRef
+    updateLastPlayedButton()
+  }
   return result
 }
+
+els.launchLastPlayedBtn.addEventListener('click', async () => {
+  els.launchLastPlayedBtn.disabled = true
+  const cfg = await window.loader.loadConfig()
+  if (!cfg.lastPatchedExe || !cfg.lastPlayedChannel || !cfg.lastPlayedModRef) {
+    updateLastPlayedButton()
+    return
+  }
+  state.channel = cfg.lastPlayedChannel
+  state.modRef = cfg.lastPlayedModRef
+  renderChannelToggle()
+  showRememberedRefs()
+  goToStep(3)
+  appendConsoleLine(`Launching last played build "${cfg.lastPlayedModRef}"…`)
+  const modUrl = await window.loader.resolveModUrl(cfg.lastPlayedChannel, cfg.lastPlayedModRef)
+  const result = await launchSelectedGame(cfg.lastPatchedExe, modUrl, cfg.lastPlayedChannel, cfg.lastPlayedModRef)
+  setPill(result.ok ? 'Launched' : 'Error', result.ok ? 'ok' : 'error')
+  updateLastPlayedButton()
+})
 
 window.loader.onPatchLog((line) => {
   appendConsoleLine(line, /error|fail/i.test(line) ? 'error' : null)
@@ -406,6 +464,7 @@ els.patchAndLaunchBtn.addEventListener('click', async () => {
 
   if (result.ok) {
     state.lastPatchedExe = result.launchExePath
+    updateLastPlayedButton()
     setPill('Patched', 'ok')
     appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
     const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
@@ -453,6 +512,9 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     state.gameDir = cfg.gameDir || ''
     state.sevenZipPath = cfg.sevenZipPath || ''
     state.lastPatchedExe = cfg.lastPatchedExe || ''
+    state.lastPlayedChannel = cfg.lastPlayedChannel || ''
+    state.lastPlayedModRef = cfg.lastPlayedModRef || ''
+    state.refListCache = cfg.refListCache || {}
 
     state.channels = await window.loader.getChannels()
     const preferredChannel = cfg.lastPlayedChannel || cfg.lastPatchedChannel || cfg.channel
@@ -465,10 +527,12 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     els.gameDirOutput.value = state.gameDir
     els.sevenZipInput.value = state.sevenZipPath
     updateContinueButton()
+    updateLastPlayedButton()
 
     renderChannelToggle()
-    await loadModRefs()
+    showRememberedRefs()
     updateSummary()
     await refreshUpdateBanner()
     goToStep(1)
+    void loadModRefs()
   })()

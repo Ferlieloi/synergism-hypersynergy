@@ -79,6 +79,7 @@ function emptyConfig() {
         lastPlayedChannel: '',
         lastPlayedModRef: '',
         refDateCache: {},   // commit dates keyed by SHA, to limit GitHub API requests
+        refListCache: {},   // last successful branch/tag list for each channel
         lastPatchedExe: '',     // launchable exe produced by the last successful patch
         lastPatchedSourceStat: null, // { size, mtimeMs } of the original exe at patch time
         lastPatchedChannel: '',

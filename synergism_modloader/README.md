@@ -64,11 +64,10 @@ the launcher restarts. The loader's version is separate from the mod version.
 
 To publish a launcher update, increase `version` in this directory's
 `package.json` and `package-lock.json`, then push a matching tag such as
-`loader-v0.2.4`. The `Release Windows loader` workflow builds the installer,
+`loader-v0.2.5`. The `Release Windows loader` workflow builds the installer,
 uploads it with `latest.yml` and its block map. The launcher selects the
 newest published `loader-v*` release with update metadata, so mod releases
-can remain marked Latest. Until the first launcher release is published, the
-app reports that no launcher update has been published yet.
+can remain marked Latest.
 
 Players using the earlier 0.1.0 installer need to install an updater-enabled
 release once. Future launcher releases can then update through the app.
@@ -78,6 +77,13 @@ releases use their publication date; other tags and branches use their latest
 commit date. The loader remembers the channel and build after the game starts
 successfully and selects that build on the next launch. Merely browsing the
 dropdown does not change the remembered build.
+
+If GitHub's build list is unavailable, the loader shows the last successful
+list and keeps the last played build selected. The **Launch last played** button
+on the first screen starts the existing patched copy with that build without
+waiting for GitHub's build list or requiring 7-Zip. The mod script is still
+fetched from the selected build's CDN URL when the game starts, so this feature
+does not provide fully offline play.
 
 ## How the patch pipeline works
 

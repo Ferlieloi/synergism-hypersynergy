@@ -8,6 +8,7 @@ const { detectSteamPathWindows, findGameDir, detectSevenZip, getBundledSevenZipP
 const { patchGame, buildModUrl, buildPatcherUrl } = require('./lib/patchGame')
 const { createLauncherUpdater } = require('./lib/launcherUpdater')
 const { listModRefs } = require('./lib/modRefs')
+const { rememberedRefs } = require('./lib/modRefCache')
 const { launchGame } = require('./lib/gameLauncher')
 
 let mainWindow
@@ -120,23 +121,28 @@ ipcMain.handle('mod:get-refs', async (_e, channelId) => {
     const ch = resolveChannel(channelId)
     try {
         const cfg = loadConfig(app)
-        const result = await listModRefs(ch.repo, cfg.refDateCache)
+        const signal = AbortSignal.timeout(8000)
+        const result = await listModRefs(ch.repo, cfg.refDateCache,
+            (url, options) => fetch(url, { ...options, signal }))
         const latest = loadConfig(app)
         const cachedDates = latest.refDateCache || {}
-        if (Object.keys(result.dates).some(sha => result.dates[sha] !== cachedDates[sha])) {
-            try {
-                saveConfig(app, { ...latest, refDateCache: { ...cachedDates, ...result.dates } })
-            } catch {
-                // A cache write failure should not hide the refs that were fetched.
-            }
+        try {
+            saveConfig(app, {
+                ...latest,
+                refDateCache: { ...cachedDates, ...result.dates },
+                refListCache: { ...latest.refListCache, [channelId]: result.refs }
+            })
+        } catch {
+            // A cache write failure should not hide the refs that were fetched.
         }
         const { dates, ...visibleResult } = result
         return { ...visibleResult, defaultRef: ch.defaultRef, error: null }
     } catch (e) {
+        const refs = rememberedRefs(loadConfig(app), channelId, ch.defaultRef)
         return {
-            refs: [{ name: ch.defaultRef, type: 'branch', date: null }],
-            branchCount: 1,
-            tagCount: 0,
+            refs,
+            branchCount: refs.filter(ref => ref.type === 'branch').length,
+            tagCount: refs.filter(ref => ref.type === 'tag').length,
             defaultRef: ch.defaultRef,
             datesIncomplete: true,
             error: e.message
