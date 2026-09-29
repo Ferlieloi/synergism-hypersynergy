@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      4.0
+// @version      4.1
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
 // @grant        none

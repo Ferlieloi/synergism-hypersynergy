@@ -467,13 +467,55 @@ function patchBundle(code, options = {}) {
     return code;
 }
 
+// Removing an already prepared script cannot cancel its execution. Keep this
+// narrowly scoped guard for the page lifetime, including after injection.
+function guardBrowserGameElements(getPatchedScript, onBlocked) {
+    const gameElements = ['tab-row', 'sub-tab'];
+    const assertUnclaimed = () => {
+        if (gameElements.some(name => customElements.get(name))) {
+            throw new Error('The original game registered its UI before the loader started. Enable the userscript at document-start and refresh.');
+        }
+    };
+    assertUnclaimed();
+
+    const cancelled = new WeakSet();
+    window.addEventListener('error', event => {
+        // Suppress only our cancellation, never real errors matched by text.
+        if (event.error && cancelled.has(event.error)) event.preventDefault();
+    }, true);
+
+    const wrap = define => function (name, ctor, options) {
+        if (gameElements.includes(name) &&
+            (!getPatchedScript() || document.currentScript !== getPatchedScript())) {
+            const cancellation = new Error('Hypersynergism cancelled an unpatched game bundle');
+            cancelled.add(cancellation);
+            onBlocked();
+            // Returning would let new TabRow() run with an unregistered
+            // constructor, which causes the reported Illegal constructor.
+            throw cancellation;
+        }
+        return define.call(this, name, ctor, options);
+    };
+    let guardedDefine = wrap(customElements.define);
+    Object.defineProperty(customElements, 'define', {
+        configurable: true,
+        get: () => guardedDefine,
+        // Allow the game's polyfill to replace define without losing the guard.
+        // Each wrapper captures its own delegate to avoid recursive delegation.
+        set: define => { guardedDefine = wrap(define); }
+    });
+    // Leave the polyfill's extends-br support probe intact, along with unrelated
+    // registrations. A global define no-op invalidates feature detection.
+    return assertUnclaimed;
+}
+
 function startBrowserLoader(options) {
     'use strict';
     const { dev = false } = options || {};
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '4.0';
+    const loaderVersion = '4.1';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -485,51 +527,30 @@ function startBrowserLoader(options) {
 
     // ─── State ────────────────────────────────────────────────────────────────
     let gameScriptDetected = false;
-    let allowCustomElements = false;
-
-    // ─── customElements lock ──────────────────────────────────────────────────
-    // Block the original game script from registering Custom Elements.
-    // Our patched copy will register them once allowCustomElements is set.
-    const origDefine = customElements.define;
-    customElements.define = function (name, ctor, options) {
-        if (!allowCustomElements) {
-            if (!customElements.get(name)) {
-                debug(`Blocked original script from defining <${name}> (lock active)`);
-            }
-            return;
-        }
-        if (customElements.get(name)) return;
-        return origDefine.call(this, name, ctor, options);
+    let patchedScript = null;
+    const fail = error => {
+        window.__HS_LOADER_ERROR = String(error?.message || error);
+        warn('Loader stopped:', error);
     };
-
-    // ─── Collision diagnostics ────────────────────────────────────────────────
-    // A late original out.js can throw while our custom-element lock is active.
-    // Reloading repeats the same timing race and can trap the page in a loop.
-    const illegalDivPattern = /Failed to construct\s*'?HTMLDivElement'?|Illegal constructor/i;
-
-    window.addEventListener('error', (event) => {
-        const text = `${String(event?.message || '')}\n${String(event?.error?.stack || '')}`;
-        if (illegalDivPattern.test(text)) {
-            warn(`Illegal constructor from ${event?.filename || 'unknown script'}; continuing without reloading.`, event?.error || event?.message);
-        }
-    }, true);
-
-    window.addEventListener('unhandledrejection', (event) => {
-        const reason = event?.reason;
-        const message = reason instanceof Error ? reason.message : String(reason);
-        const stack = reason instanceof Error ? reason.stack : '';
-        const text = `${message}\n${stack}`;
-        if (illegalDivPattern.test(text)) {
-            warn('Illegal constructor in rejected promise; continuing without reloading.', reason);
-        }
-    }, true);
+    let assertUnclaimed;
+    try {
+        assertUnclaimed = guardBrowserGameElements(() => patchedScript, () => {
+            debug('Cancelled an escaped original game bundle before UI construction');
+            gameScriptDetected = true;
+            // Leave the original script's stack before beginning injection.
+            queueMicrotask(() => injectPatchedBundle().catch(fail));
+        });
+    } catch (error) {
+        fail(error);
+        return;
+    }
 
     // ─── Fetch block ──────────────────────────────────────────────────────────
     window.fetch = async function (input, init) {
         const url = typeof input === 'string' ? input
             : input instanceof Request ? input.url
                 : '';
-        if (url.includes('rocket-loader') || (url.includes('/dist/out') && url.endsWith('.js'))) {
+        if (shouldBlockScript(url)) {
             debug(`Fetch blocked: ${url.substring(0, 80)}`);
             return new Response('', { status: 200 });
         }
@@ -551,7 +572,7 @@ function startBrowserLoader(options) {
         node.setAttribute('data-hs-inert', '');
         if (!gameScriptDetected) {
             gameScriptDetected = true;
-            injectPatchedBundle();
+            injectPatchedBundle().catch(fail);
         }
         debug(`Blocked game script before DOM insertion: ${src.substring(0, 80)}`);
         return true;
@@ -602,14 +623,15 @@ function startBrowserLoader(options) {
                 log(`Blocked (beforescriptexecute): ${src.substring(0, 60)}`);
                 if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
                     gameScriptDetected = true;
-                    injectPatchedBundle();
+                    injectPatchedBundle().catch(fail);
                 }
             }
         };
         document.addEventListener('beforescriptexecute', beforeScriptExecute, true);
     }
 
-    // Chrome/Edge: use a MutationObserver to catch the tag before it executes.
+    // Best-effort cleanup: observers run AFTER insertion and cannot cancel an
+    // already prepared script. The custom-element guard handles escaped copies.
     const mo = new MutationObserver(muts => {
         for (const m of muts) {
             for (const n of m.addedNodes) {
@@ -622,23 +644,23 @@ function startBrowserLoader(options) {
                     debug(`Blocked (MutationObserver): ${src.substring(0, 60)}`);
                     if (!gameScriptDetected && /\/dist\/out.*\.js/.test(src)) {
                         gameScriptDetected = true;
-                        injectPatchedBundle();
+                        injectPatchedBundle().catch(fail);
                     }
                 }
             }
         }
     });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
+    mo.observe(document, { childList: true, subtree: true });
 
     // Also check scripts that may already exist in the DOM at injection time.
     function checkExistingScripts() {
-        for (const script of document.getElementsByTagName('script')) {
+        for (const script of Array.from(document.getElementsByTagName('script'))) {
             if (script.src && /\/dist\/out.*\.js/.test(script.src)) {
                 script.type = 'javascript/blocked';
                 script.remove();
                 if (!gameScriptDetected) {
                     gameScriptDetected = true;
-                    injectPatchedBundle();
+                    injectPatchedBundle().catch(fail);
                 }
             }
         }
@@ -700,10 +722,11 @@ function startBrowserLoader(options) {
                 cache: 'no-store',
                 headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
             });
+            if (!res.ok) throw new Error(`Game bundle returned HTTP ${res.status}`);
             code = await res.text();
             log(`Bundle fetched, size: ${(code.length / 1024).toFixed(0)}KB`);
         } catch (e) {
-            warn('Failed to fetch game bundle:', e);
+            fail(e);
             return;
         }
 
@@ -719,32 +742,36 @@ function startBrowserLoader(options) {
                 document.addEventListener('DOMContentLoaded', resolve, { once: true })
             );
         }
-        await new Promise(r => setTimeout(r, 100));
 
 
         // ==================================================================================
         // ── Phase 2: Inject patched bundle ────────────────────────────────────────────────
         // ==================================================================================
 
-        allowCustomElements = true;
-        log('Custom Elements unlocked — injecting patched bundle');
+        assertUnclaimed();
+        log('Injecting patched bundle');
 
         const gameScript = document.createElement('script');
-        gameScript.textContent = code;
+        patchedScript = gameScript;
+        window.__HS_BUNDLE_EXECUTED__ = false;
+        gameScript.textContent = code + '\n;window.__HS_BUNDLE_EXECUTED__ = true;\n//# sourceURL=hypersynergism-patched-game.js';
         (document.body || document.head || document.documentElement).appendChild(gameScript);
         // The script has been parsed and executed — drop the source text so the
         // ~1.6 MB string can be garbage-collected.
         gameScript.textContent = '';
+        if (!window.__HS_BUNDLE_EXECUTED__) {
+            throw new Error('Patched game bundle did not finish executing; see the preceding script error.');
+        }
 
-        // Clean up interception machinery — we no longer need any of it.
+        // Keep the element guard and insertion hooks: a prepared original can
+        // execute even after this point. Only the best-effort observer is done.
         try { mo.disconnect(); } catch { }
         if (isFirefox && beforeScriptExecute) {
             document.removeEventListener('beforescriptexecute', beforeScriptExecute, true);
         }
-        customElements.define = origDefine;
         // Restore fetch — the block on /dist/out*.js is no longer needed.
         window.fetch = originalFetch;
-        log('Bundle injected; interception cleaned up');
+        log('Bundle executed; late original game copies remain guarded');
 
 
         // ==================================================================================
@@ -753,10 +780,12 @@ function startBrowserLoader(options) {
 
         // The game hooks onto window's "load" event. When we inject the bundle
         // after window.load has already fired, the game never receives it, so
-        // the player object is never set up. We fire a synthetic load event to
-        // guarantee the game always initialises, regardless of timing.
-        log('Dispatching synthetic load event to initialise game');
-        window.dispatchEvent(new Event('load'));
+        // the player object is never set up. Replay only if load already fired;
+        // otherwise the real event will initialize the game once.
+        if (document.readyState === 'complete') {
+            log('Dispatching synthetic load event to initialise game');
+            window.dispatchEvent(new Event('load'));
+        }
 
         // ── Proceed to post-load phases ───────────────────────────────────────
         initBackdoor();
