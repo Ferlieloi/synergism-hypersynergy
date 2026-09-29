@@ -1,7 +1,7 @@
 {
   "name": "hypersynergism-loader",
   "productName": "Hypersynergism Loader",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Mod loader for Synergism that patches a copy of the game to load Hypersynergism mod builds.",
   "main": "main.js",
   "scripts": {
