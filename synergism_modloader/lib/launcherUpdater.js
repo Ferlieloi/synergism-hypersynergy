@@ -17,8 +17,8 @@ async function latestLauncherTag(fetchReleases = fetch) {
     return launcherReleases[0]?.tag_name || null
 }
 
-function createLauncherUpdater({ app, updater, notify, findRelease = latestLauncherTag }) {
-    const supported = app.isPackaged && process.platform === 'win32'
+function createLauncherUpdater({ app, updater, notify, findRelease = latestLauncherTag, platform = process.platform }) {
+    const supported = app.isPackaged && platform === 'win32'
     let status = {
         phase: supported ? 'idle' : 'unavailable',
         currentVersion: app.getVersion(),

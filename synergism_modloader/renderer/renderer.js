@@ -577,4 +577,8 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     void cleanupLegacyFolders()
     void loadModRefs()
     await refreshUpdateBanner()
-  })()
+  })().catch(error => {
+    setPill('Startup failed', 'error')
+    els.gameDirStatus.textContent = `Could not initialize the loader: ${error.message}`
+    void window.loader.reportStartupError(error.stack || error.message)
+  })

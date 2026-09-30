@@ -52,6 +52,10 @@ installer once; it does not require administrator rights or a separate
 Node/Electron installation. The full 7-Zip application remains a separate
 requirement for patching the Steam game.
 
+The installer lets players choose the launcher installation folder. This does
+not change where the patched game is stored: it still lives next to the Steam
+copy of Synergism. Automatic launcher updates continue to use silent installation.
+
 The standard build applies the HS icon to the launcher and installer EXEs.
 Release builds verify both embedded icons before publishing.
 
@@ -116,6 +120,37 @@ good idea (the bundle patcher's anchor strings can drift between game
 versions).
 
 ## Known limitations / things to be aware of
+
+### A blank launcher window or a loader that will not close
+
+The loader writes startup events, path detection progress, preload errors,
+renderer failures, and GPU feature status to
+`loader-startup.log` in Electron's user-data folder (normally
+`%APPDATA%\Hypersynergism Loader`). Startup failures that it
+can detect also show a Windows dialog with an option to open the log folder.
+No configuration contents or credentials are written to this log.
+
+Steam and 7-Zip registry queries run asynchronously, with a three-second limit
+per query, so a stalled registry command cannot block the window or its Close
+button. Detection falls back to common installation paths; players can still
+choose paths manually if detection fails.
+
+To help diagnose a white window, first end leftover **Hypersynergism Loader**
+processes in Task Manager. Find the installed executable using the shortcut's
+**Properties → Target**, and run it from PowerShell with Chromium logging:
+
+```powershell
+& 'C:\path\to\Hypersynergism Loader.exe' --enable-logging=file "--log-file=$env:TEMP\hypersynergism-chromium.log"
+```
+
+Repeat the same command with `--disable-gpu` added. If only that second run
+works, the graphics acceleration path is implicated. Include both log files,
+the loader installer filename/version, Windows version, and whether disabling
+GPU rendering helped when reporting the issue. The earlier portable loader
+working helps narrow the comparison, but does not by itself rule out a driver
+or installation-specific issue.
+
+### Patching limitations
 
 - **Anchor-based patching is inherently fragile.** `lib/patcher.js`
   recognizes specific strings in the minified `out.js` bundle. A Synergism
