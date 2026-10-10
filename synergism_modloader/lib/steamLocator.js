@@ -1,9 +1,22 @@
 const fs = require('fs')
 const path = require('path')
-const { execFileSync } = require('child_process')
+const { execFile } = require('child_process')
+
+async function queryRegistry(key, value, { run = execFile, platform = process.platform } = {}) {
+    if (platform !== 'win32') return null
+    return new Promise(resolve => {
+        run('reg.exe', ['query', key, '/v', value], {
+            encoding: 'utf-8', windowsHide: true, timeout: 3000
+        }, (error, stdout) => {
+            if (error) return resolve(null)
+            const match = stdout.match(new RegExp(`${value}\\s+REG_SZ\\s+(.+)`))
+            resolve(match ? match[1].trim() : null)
+        })
+    })
+}
 
 // ─── Steam install path (Windows registry) ─────────────────────────────────
-function detectSteamPathWindows() {
+async function detectSteamPathWindows(options) {
     const queries = [
         ['HKCU\\Software\\Valve\\Steam', 'SteamPath'],
         ['HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam', 'InstallPath'],
@@ -12,12 +25,8 @@ function detectSteamPathWindows() {
 
     for (const [key, value] of queries) {
         try {
-            const out = execFileSync('reg', ['query', key, '/v', value], { encoding: 'utf-8' })
-            const match = out.match(new RegExp(`${value}\\s+REG_SZ\\s+(.+)`))
-            if (match) {
-                const p = match[1].trim()
-                if (p && fs.existsSync(p)) return p
-            }
+            const p = await queryRegistry(key, value, options)
+            if (p && fs.existsSync(p)) return p
         } catch {
             // key not present, try next
         }
@@ -75,12 +84,11 @@ function getBundledSevenZipPath(app) {
 // Note: the lightweight "7za" binaries bundled by npm packages like
 // 7zip-bin do NOT include the NSIS module, so we specifically need a real
 // 7-Zip install (the one with 7z.exe + the Formats/NSIS plugin).
-function detectSevenZip() {
+async function detectSevenZip(options) {
     try {
-        const out = execFileSync('reg', ['query', 'HKLM\\SOFTWARE\\7-Zip', '/v', 'Path'], { encoding: 'utf-8' })
-        const match = out.match(/Path\s+REG_SZ\s+(.+)/)
-        if (match) {
-            const exe = path.join(match[1].trim(), '7z.exe')
+        const installPath = await queryRegistry('HKLM\\SOFTWARE\\7-Zip', 'Path', options)
+        if (installPath) {
+            const exe = path.join(installPath, '7z.exe')
             if (fs.existsSync(exe)) return exe
         }
     } catch {
