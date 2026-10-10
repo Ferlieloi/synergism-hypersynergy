@@ -285,7 +285,8 @@ export class HSHeaterInputModalController {
                         continue;
                     }
 
-                    // An unaffordable type has no loadout: its slot is left as it is
+                    // An unaffordable type has no loadout: its slot is left as it is.
+                    // Its checkbox is unticked after a heat, so this is one the player ticked again.
                     if (HSHeaterResultStore.isSemanticIdUnaffordable(semanticId)) {
                         unaffordable.push(`L${index + 1}: ${resolveHeaterTypeLabel(semanticId) ?? semanticId}`);
                         loadoutJsons.push('');

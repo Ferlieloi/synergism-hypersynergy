@@ -165,13 +165,15 @@ export class HSHeaterResultModalController {
             const select = typeSelects[i];
             const checkbox = typeCheckboxes[i];
             const isAvailable = semanticId !== '' && semanticId !== 'none' && availableSemanticIds.has(semanticId);
+            const isUnaffordable = HSHeaterResultStore.isSemanticIdUnaffordable(semanticId);
 
+            // Nothing to import for a missing or an unaffordable type
             if (checkbox) {
-                checkbox.checked = isAvailable;
+                checkbox.checked = isAvailable && !isUnaffordable;
             }
 
             select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
-            select.classList.toggle('hs-heater-type-select-unaffordable', HSHeaterResultStore.isSemanticIdUnaffordable(semanticId));
+            select.classList.toggle('hs-heater-type-select-unaffordable', isUnaffordable);
         }
     }
 

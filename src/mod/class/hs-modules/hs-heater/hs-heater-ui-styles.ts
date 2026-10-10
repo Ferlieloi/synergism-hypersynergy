@@ -436,6 +436,11 @@ export class HSHeaterUIStyles {
                 color: white;
             }
 
+            /* The browser's focus ring would cover the state border below */
+            .hs-heater-type-select:focus {
+                outline: none;
+            }
+
             .hs-heater-type-select-unavailable {
                 border: 1px solid #810b0b;
             }

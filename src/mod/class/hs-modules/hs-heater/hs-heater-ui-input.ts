@@ -316,10 +316,12 @@ export class HSHeaterUIInput {
 
         const semanticId = (select.value || '').trim();
         const isAvailable = HSHeaterResultStore.isSemanticIdAvailable(semanticId);
+        const isUnaffordable = HSHeaterResultStore.isSemanticIdUnaffordable(semanticId);
 
-        checkbox.checked = isAvailable;
+        // Nothing to import for a missing or an unaffordable type
+        checkbox.checked = isAvailable && !isUnaffordable;
         select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
-        select.classList.toggle('hs-heater-type-select-unaffordable', HSHeaterResultStore.isSemanticIdUnaffordable(semanticId));
+        select.classList.toggle('hs-heater-type-select-unaffordable', isUnaffordable);
     }
 
     static refreshHeaterTypeSelectIcons(modal: HTMLElement): void {
