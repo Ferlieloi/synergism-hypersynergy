@@ -6,7 +6,7 @@ import { HSUIC } from "./hs-core/hs-ui-components";
 import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
 import { HSGlobal } from "./hs-core/hs-global";
-import { HSStorage } from "./hs-core/hs-storage";
+import { HSBackup } from "./hs-core/hs-backup";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
@@ -310,7 +310,9 @@ export class Hypersynergism {
         hsui.replaceTabContents(2,
             HSUIC.Grid({
                 html: [
-                    this.#buildGridSectionHeader('Export tools'),
+                    this.#buildGridSectionHeader('Backup & Restore'),
+                    ...HSBackup.buildToolsSection(),
+                    this.#buildGridSectionHeader('Ambrosia Heater'),
                     this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater sheet</a>.`),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Copy Heater Data' }),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-compute-btn', text: 'Ambrosia Heater' }),
@@ -362,6 +364,8 @@ export class Hypersynergism {
         let p_idx = -1;
         let c_idx = -1;
 
+        HSBackup.bindToolsSection();
+
         this.#bindToolsButton('#hs-panel-amb-heater-btn', async () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
             if (!dataModule) return;
@@ -391,7 +395,7 @@ export class Hypersynergism {
 
         this.#bindToolsButton('#hs-panel-dump-settings-btn', () => HSSettings.dumpToConsole());
         this.#bindToolsButton('#hs-panel-dump-gamedata-btn', () => this.#dumpGameData());
-        this.#bindToolsButton('#hs-panel-clear-settings-btn', () => this.#clearStoredSettings());
+        this.#bindToolsButton('#hs-panel-clear-settings-btn', () => HSBackup.clearSettingsAndReload());
         this.#bindToolsButton('#hs-panel-check-version-btn', () => this.#checkVersion());
         this.#bindToolsButton('#hs-panel-exit-exalt-bug-btn', () => this.#fixExaltBug());
         this.#bindToolsButton('#hs-panel-test-calc-redu-btn', () => this.#runCalculation('reduced'));
@@ -431,14 +435,6 @@ export class Hypersynergism {
 
     #openUrl(url: string) {
         window.open(url, '_blank');
-    }
-
-    #clearStoredSettings() {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) return;
-
-        storageMod.clearData(HSGlobal.HSSettings.storageKey);
-        HSLogger.log('Stored settings cleared', this.#context);
     }
 
     async #checkVersion() {
