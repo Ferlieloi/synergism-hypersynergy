@@ -1559,14 +1559,14 @@ export class HSAutosing extends HSModule {
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
 
-        let q: number;
-        let gq: number;
+        let q = 0;
+        let gq = 0;
         let c15ScoreBeforeSinging: Decimal;
         if (this.#isExposureReady) {
-            q = Number(this.#exposedPlayer!.worlds);
-            gq = Number(this.#exposedPlayer!.goldenQuarks);
             c15ScoreBeforeSinging = new Decimal(this.#exposedPlayer!.challenge15Exponent);
         } else {
+            // A GDS fetch right after a singularity lags, so the amounts are read before it for bookmarklet:
+            // each golden quark gain recorded is then the previous singularity's
             const data = await this.#gameDataAPI?.getLatestAutosingData();
             q = data?.quarks ?? 0;
             gq = data?.goldenQuarks ?? 0;
@@ -1575,10 +1575,6 @@ export class HSAutosing extends HSModule {
         }
 
         const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
-        const qGain = Math.max(0, q - this.#previousQuarkAmount);
-        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
-        this.#previousQuarkAmount = q;
-        this.#previousGoldenQuarkAmount = gq;
 
         // antiBuyCoinBug setup (hard-coded inserted first step of the strategy should ensure this promise is resolved)
         this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
@@ -1610,7 +1606,20 @@ export class HSAutosing extends HSModule {
             this.#elevatorTeleportButton.click();
         }
 
-        if (!skipRecord) {
+        if (this.#isExposureReady) {
+            // Entering the Exalt pays this singularity's golden quarks: read them after it
+            q = Number(this.#exposedPlayer!.worlds);
+            gq = Number(this.#exposedPlayer!.goldenQuarks);
+        }
+        const qGain = Math.max(0, q - this.#previousQuarkAmount);
+        const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
+        this.#previousQuarkAmount = q;
+        this.#previousGoldenQuarkAmount = gq;
+
+        if (skipRecord) {
+            // The singularity done at start isn't recorded: the first recorded one starts after it
+            this.#autosingModal?.restartSingularityTimer();
+        } else {
             this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
 
