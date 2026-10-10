@@ -440,6 +440,11 @@ export class HSHeaterUIStyles {
                 border: 1px solid #810b0b;
             }
 
+            /* Heated, but the player can't afford it: nothing to import */
+            .hs-heater-type-select-unaffordable {
+                border: 1px solid #c96a00;
+            }
+
             .hs-heater-type-select-checkbox {
                 width: 16px;
                 height: 16px;
@@ -617,14 +622,60 @@ export class HSHeaterUIStyles {
                 border: 2px solid transparent;
             }
 
-            .hs-heater-purple-routing {
-                display: flex;
+            /* Purple rows: Effect and Routing are one cell spanning both
+               effect columns, split at a fixed width. As two real columns,
+               the routing's width would set the p4x4 section's columns too. */
+            .hs-heater-results-table .hs-heater-split-cell {
+                position: relative;
+                padding-left: 4px;
+                padding-right: 4px;
+                /* The "Effect" header in bold is about 3.35em wide */
+                --hs-heater-split-effect-width: 3.4em;
+            }
+
+            .hs-heater-split-cell::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: calc(8px + var(--hs-heater-split-effect-width));
+                border-left: 1px solid rgba(255,255,255,0.08);
+            }
+
+            .hs-heater-split {
+                display: grid;
+                grid-template-columns: var(--hs-heater-split-effect-width) 1fr;
+                column-gap: 9px;
                 align-items: center;
-                justify-content: center;
-                gap: 4px;
-                font-size: 0.85em;
+            }
+
+            /* Fixed tracks, so the four routings line up whatever their
+               percentages, with or without the Apply button. The icon tracks
+               are narrower than the icons, whose sides are transparent. */
+            .hs-heater-purple-routing {
+                display: grid;
+                grid-template-columns: 12px 2.8em 12px 2.5em auto;
+                column-gap: 1px;
+                align-items: center;
+                justify-content: start;
+                justify-items: start;
+                font-size: 0.9em;
                 white-space: nowrap;
                 cursor: help;
+            }
+
+            .hs-heater-purple-routing .hs-heater-apply-routing-btn {
+                padding: 0;
+                font-size: 1em;
+                line-height: 1;
+                color: var(--purple-text-color, #FF29FF);
+            }
+
+            .hs-heater-routing-icon {
+                width: 16px;
+                height: 16px;
+                margin: 0 -2px;
+                object-fit: contain;
             }
 
             .hs-heater-json-tooltip-trigger {

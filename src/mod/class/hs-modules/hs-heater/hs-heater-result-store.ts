@@ -86,6 +86,11 @@ export class HSHeaterResultStore {
         return normalizedResult.some((entry) => String(entry.semanticId) === semanticId);
     }
 
+    /** In the results, but as an "Unaffordable" row: there is no loadout to import. */
+    static isSemanticIdUnaffordable(semanticId: string): boolean {
+        return this.getLoadoutJsonBySemanticId(semanticId) === 'Unaffordable';
+    }
+
     static collectSelectedSemanticIds(modal: HTMLElement, options?: { enabledOnly?: boolean }): Set<string> {
         const typeSelects = Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
         const typeCheckboxes = Array.from(modal.querySelectorAll('.hs-heater-type-select-checkbox')) as HTMLInputElement[];

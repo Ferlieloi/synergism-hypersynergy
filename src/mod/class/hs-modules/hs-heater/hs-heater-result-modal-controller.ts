@@ -153,6 +153,7 @@ export class HSHeaterResultModalController {
         if (!normalizedResult) {
             typeSelects.forEach((select) => {
                 select.classList.add('hs-heater-type-select-unavailable');
+                select.classList.remove('hs-heater-type-select-unaffordable');
             });
             return;
         }
@@ -170,6 +171,7 @@ export class HSHeaterResultModalController {
             }
 
             select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
+            select.classList.toggle('hs-heater-type-select-unaffordable', HSHeaterResultStore.isSemanticIdUnaffordable(semanticId));
         }
     }
 

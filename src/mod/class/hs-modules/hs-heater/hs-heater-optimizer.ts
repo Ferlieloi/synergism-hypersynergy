@@ -1304,9 +1304,6 @@ for (const [upgradeName, upgrade] of Object.entries(upgrades)) {
 // The upgrade key order is fixed by the table above and is reused for
 // prerequisite bookkeeping below.
 const upgradeKeyOrder = Object.keys(upgrades);
-const zeroLevelLoadoutJson = JSON.stringify(Object.fromEntries(
-  upgradeKeyOrder.map(upgradeName => [upgradeName, 0]),
-));
 
 // Reverse prerequisite map used when a blueberry repair removes a module.
 // Removing a prerequisite must also remove every dependent module; otherwise
@@ -1721,7 +1718,8 @@ class Loadout {
         let baseLoadout = new Loadout();
         let effectStr: string;
         if (stat === "singReduction" || stat === "vouchers")
-          effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat))
+          // A number of levels gained, shown as an integer (3, not 3.00)
+          effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat), false)
         else
           effectStr = baseLoadout.getStat(stat) === 0 ? "N / A" : formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
 
@@ -4766,8 +4764,9 @@ export class HSHeaterOptimizer {
         if (maxAmbForOct && (stats.amb < maxAmbForOct.cost
           || stats.blueberries < maxAmbForOct.blueberryCost)) {
             options.calculateAmbOct = false;
-            // The game's importer expects every upgrade key, including zeroes.
-            output.ambOct = [[zeroLevelLoadoutJson, null, 0, 0, "N / A", "", false]];
+            // Needs the full All Ambrosia base: out of reach, there is no
+            // loadout to hand out (an empty one would wipe the player's slot).
+            output.ambOct = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
         }
 
         try {

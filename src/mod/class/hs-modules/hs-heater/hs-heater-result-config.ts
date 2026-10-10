@@ -4,6 +4,7 @@ export type { HeaterTypeSemanticId, HeaterResultSectionId } from "../../../types
 export type HeaterResultSectionConfig = {
     title: string;
     showP4x4: boolean;
+    showRouting: boolean;
     effectHeader: string;
     order: number;
 };
@@ -25,30 +26,35 @@ const HEATER_RESULT_SECTION_CONFIG: Record<HeaterResultSectionId, HeaterResultSe
     common: {
         title: "Common Loadouts",
         showP4x4: false,
+        showRouting: false,
         effectHeader: "Effect",
         order: 0,
     },
     obtOff: {
         title: "Obtainium & Offering Loadouts",
         showP4x4: false,
+        showRouting: false,
         effectHeader: "Effect",
         order: 1,
     },
     p4x4: {
         title: "p4x4 (pre-AoAG) Loadouts",
         showP4x4: true,
+        showRouting: false,
         effectHeader: "Effect",
         order: 2,
     },
     hybrid: {
         title: "Hybrid Loadouts",
         showP4x4: false,
+        showRouting: false,
         effectHeader: "Oct Effect",
         order: 3,
     },
     purple: {
         title: "Purple Loadouts",
         showP4x4: false,
+        showRouting: true,
         effectHeader: "Effect",
         order: 4,
     },
@@ -62,13 +68,13 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         icon: "Pictures/Default/BlueberryFreeGenerationLevels.png",
     },
     luck: {
-        label: "Blue Luck",
+        label: "Blue Ambrosia",
         description: "Blue Ambrosia generation focus.",
         section: "common",
         icon: "Pictures/Default/BlueberryLuck2.png",
     },
     rLuck: {
-        label: "Red Luck",
+        label: "Red Ambrosia",
         description: "Red Ambrosia generation focus.",
         section: "common",
         icon: "Pictures/Default/BlueberryFreeRedLuckUpgrades.png",
@@ -134,17 +140,17 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         section: "purple",
         icon: "Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png",
     },
-    purpleAmb: {
-        label: "Purple Ambrosia",
-        description: "Maximizes Purple Ambrosia crafted per second, at your current Purple Reactor routing percentages. Crafting needs both Red Ambrosia and Purple Honey, so this balances the two.",
-        section: "purple",
-        icon: "Pictures/PurpleAmbrosia/PurpleAmbrosia.png",
-    },
     purpleHoneyOpt: {
         label: "Purple Honey (best routing)",
         description: "Same goal as Purple Honey, but the loadout and the Purple Reactor routing are optimized together.\nRouting is not saved in Ambrosia loadouts: applying it also changes the income of your other loadouts.",
         section: "purple",
         icon: "Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png",
+    },
+    purpleAmb: {
+        label: "Purple Ambrosia",
+        description: "Maximizes Purple Ambrosia crafted per second, at your current Purple Reactor routing percentages. Crafting needs both Red Ambrosia and Purple Honey, so this balances the two.",
+        section: "purple",
+        icon: "Pictures/PurpleAmbrosia/PurpleAmbrosia.png",
     },
     purpleAmbOpt: {
         label: "Purple Ambrosia (best routing)",
@@ -204,7 +210,7 @@ export function getHeaterTypeBranchId(semanticId: string): HeaterBranchId | null
 }
 
 export const HEATER_BRANCH_DEFINITIONS = [
-    { id: "luck",      label: "Luck",                        resultKeys: ["luck", "rLuck", "allAmb"], optionKey: "calculateAmb" },
+    { id: "luck",      label: "Ambrosia",                    resultKeys: ["luck", "rLuck", "allAmb"], optionKey: "calculateAmb" },
     { id: "quarks",    label: "Quarks",                      resultKeys: ["quarks"],                  optionKey: "calculateQuarks" },
     { id: "cubes",     label: "3-7D Cubes",                  resultKeys: ["cubes"],                   optionKey: "calculateCubes" },
     { id: "oct",       label: "Octeracts",                   resultKeys: ["oct"],                     optionKey: "calculateOct" },

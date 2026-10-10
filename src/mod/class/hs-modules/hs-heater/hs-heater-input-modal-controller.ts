@@ -275,11 +275,19 @@ export class HSHeaterInputModalController {
                 const selectedSemanticIds = typeSelects.map(select => select.value ?? 'none');
 
                 const loadoutJsons: string[] = [];
+                const unaffordable: string[] = [];
                 for (let index = 0; index < selectedSemanticIds.length; index++) {
                     const semanticId = selectedSemanticIds[index];
                     const isEnabled = typeCheckboxes[index]?.checked ?? true;
 
                     if (!isEnabled || semanticId === 'none') {
+                        loadoutJsons.push('');
+                        continue;
+                    }
+
+                    // An unaffordable type has no loadout: its slot is left as it is
+                    if (HSHeaterResultStore.isSemanticIdUnaffordable(semanticId)) {
+                        unaffordable.push(`L${index + 1}: ${resolveHeaterTypeLabel(semanticId) ?? semanticId}`);
                         loadoutJsons.push('');
                         continue;
                     }
@@ -291,6 +299,12 @@ export class HSHeaterInputModalController {
                         HSUI.Notify(`Failed to find loadout for "${semanticId}"`, { position: 'top', notificationType: 'warning' });
                         loadoutJsons.push('');
                     }
+                }
+
+                if (unaffordable.length > 0) {
+                    const message = `Unaffordable, not imported: ${unaffordable.join(', ')}`;
+                    HSUI.Notify(message, { position: 'top', notificationType: 'warning' });
+                    HSLogger.warn(message, 'HSHeater');
                 }
 
                 const clipboardText = loadoutJsons.join('\n');

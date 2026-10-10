@@ -319,6 +319,7 @@ export class HSHeaterUIInput {
 
         checkbox.checked = isAvailable;
         select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
+        select.classList.toggle('hs-heater-type-select-unaffordable', HSHeaterResultStore.isSemanticIdUnaffordable(semanticId));
     }
 
     static refreshHeaterTypeSelectIcons(modal: HTMLElement): void {

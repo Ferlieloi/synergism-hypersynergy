@@ -7,10 +7,14 @@ export function escapeHtml(value: string): string {
         .replace(/'/g, '&#39;');
 }
 
-export const formatNumber = (number: number): string => {
+// The number of decimals depends only on the size of the number, and trailing
+// zeros are kept (552.00, not 552), so a column of values lines up. With
+// fixedDecimals off, trailing zeros are dropped: for values that are counts.
+export const formatNumber = (number: number, fixedDecimals = true): string => {
     if (!Number.isFinite(number)) return 'N / A';
     if (number >= 1e6) {
         return number.toLocaleString(undefined, {
+            minimumSignificantDigits: fixedDecimals ? 3 : 1,
             maximumSignificantDigits: 3,
             notation: 'scientific',
             roundingMode: 'trunc'
@@ -19,6 +23,7 @@ export const formatNumber = (number: number): string => {
 
     const digits = Math.max(0, Math.min(2, 4 - Math.floor(Math.log10(Math.abs(number)))));
     return number.toLocaleString(undefined, {
+        minimumFractionDigits: fixedDecimals ? digits : 0,
         maximumFractionDigits: digits,
         roundingMode: 'trunc'
     });

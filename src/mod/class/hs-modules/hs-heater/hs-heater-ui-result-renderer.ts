@@ -78,8 +78,13 @@ function buildHeaderTooltipLabel(label: string, tooltip: string): string {
     return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
 }
 
-function buildArraySectionHeaderRow(showP4x4: boolean, effectHeader: string): string {
+function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string {
+    const { showP4x4, showRouting, effectHeader } = sectionDef;
     const blueberryHeader = `<img src="Pictures/Default/Blueberries.png" class="hs-heater-header-icon" />`;
+    if (showRouting) {
+        const splitHeader = `<th colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${escapeHtml(effectHeader)}</span><span>Routing</span></div></th>`;
+        return `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${splitHeader}<th>Maxed?</th></tr>`;
+    }
     const effectLabel = showP4x4
         ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50")
         : `<th>${escapeHtml(effectHeader)}</th>`;
@@ -102,8 +107,9 @@ function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLa
     return `${copyButton}${importButton}`;
 }
 
-// Purple rows show the Purple Reactor routing they assume. Best-routing rows
-// also compare with the current routing and offer to apply theirs.
+// Purple rows show the Purple Reactor routing they assume, next to the effect.
+// Best-routing rows also compare with the current routing and offer to apply
+// theirs.
 function buildPurpleRoutingHtml(entry: NormalizedHeaterResultEntry): string {
     const routing = entry.purpleRouting;
     if (!routing) return "";
@@ -123,18 +129,22 @@ function buildPurpleRoutingHtml(entry: NormalizedHeaterResultEntry): string {
         ];
     const applyButton = current === undefined
         ? ""
-        : `<button class="hs-heater-apply-routing-btn" type="button" data-blue-routing="${blue}" data-red-routing="${red}">Apply</button>`;
+        : `<button class="hs-heater-apply-routing-btn" type="button" data-blue-routing="${blue}" data-red-routing="${red}" title="Set your Purple Reactor to this routing" aria-label="Apply this routing">➜</button>`;
+
+    const blueIcon = `<img class="hs-heater-routing-icon" src="Pictures/Default/Ambrosia.png" alt="Blue" />`;
+    const redIcon = `<img class="hs-heater-routing-icon" src="Pictures/RedAmbrosia/RedAmbrosia.png" alt="Red" />`;
 
     return `<div class="hs-heater-purple-routing" title="${escapeHtml(tooltipLines.join("\n"))}">`
-        + `<span>Blue ${blue}% / Red ${red}%</span>${applyButton}</div>`;
+        + `${blueIcon}<span>${blue}%</span>${redIcon}<span>${red}%</span>${applyButton}</div>`;
 }
 
 function buildArraySectionDataRow(
     entry: NormalizedHeaterResultEntry,
-    showP4x4: boolean,
+    sectionDef: HeaterResultSectionDef,
     rowSpan: number,
     selectedSemanticIds: Set<string> = new Set(),
 ): string {
+    const { showP4x4, showRouting } = sectionDef;
     const rowModel = normalizeArrayResultRow(entry.rowData);
     const loadoutValue = rowModel.loadoutValue;
     const isUnaffordable = loadoutValue === "Unaffordable";
@@ -156,11 +166,15 @@ function buildArraySectionDataRow(
             : "";
     const blueberryCostCell = `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
     const costCell = `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
-    const effectHtml = escapeHtml(String(rowModel.effectValue)) + buildPurpleRoutingHtml(entry);
-    const effectCell = showP4x4
-        ? `<td>${effectHtml}</td>`
-        : `<td colspan="2">${effectHtml}</td>`;
-    const p4x4Cell = showP4x4 ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
+    // Effect takes two columns, or shares them with p4x4 eq. With the routing,
+    // it stays one cell, split inside (see .hs-heater-split-cell).
+    const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectCell = showRouting
+        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
+        : showP4x4
+            ? `<td>${effectHtml}</td>`
+            : `<td colspan="2">${effectHtml}</td>`;
+    const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
     return `<tr>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }
@@ -172,11 +186,11 @@ function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey:
     if (matching.length === 0) return "";
 
     const titleRow = `<tr><td colspan="${RESULT_TABLE_TOTAL_COLS}" class="hs-heater-title-row">${escapeHtml(sectionDef.title)}</td></tr>`;
-    const headerRow = buildArraySectionHeaderRow(sectionDef.showP4x4, sectionDef.effectHeader);
+    const headerRow = buildArraySectionHeaderRow(sectionDef);
     const dataRows = matching
         .map(({ key, entries }) => {
             const rowSpan = entries[0].isRowBased ? 1 : entries.length;
-            return entries.map((entry) => buildArraySectionDataRow(entry, sectionDef.showP4x4, rowSpan, selectedSemanticIds)).join("");
+            return entries.map((entry) => buildArraySectionDataRow(entry, sectionDef, rowSpan, selectedSemanticIds)).join("");
         })
         .join("");
     return titleRow + headerRow + dataRows;
