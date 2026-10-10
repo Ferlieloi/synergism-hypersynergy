@@ -69,6 +69,10 @@ uploads it with `latest.yml` and its block map. The launcher selects the
 newest published `loader-v*` release with update metadata. The workflow marks
 the new loader release as GitHub's Latest release.
 
+Create the tag with `git tag -a`, with a message made of a title line, an
+empty line, then the release notes: the workflow publishes everything after
+the title line as the release's notes, and refuses a tag without a message.
+
 Players using the earlier 0.1.0 installer need to install an updater-enabled
 release once. Future launcher releases can then update through the app.
 
