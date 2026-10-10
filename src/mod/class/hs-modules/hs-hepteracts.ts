@@ -1,6 +1,7 @@
 import { CUBE_VIEW, MAIN_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSGameState } from "../hs-core/hs-gamestate";
+import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
@@ -12,6 +13,7 @@ import { HSNumberParser } from "../hs-utils/hs-number-parser";
 import { HSModuleOptions } from "../../types/hs-types";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import type { HSGameData } from "../hs-core/gds/hs-gamedata";
+import type { HepteractKeys } from "../../types/data-types/hs-player-savedata";
 import { parseGameDataNumber } from "../hs-core/gds/hs-gamedata-utils";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 
@@ -31,6 +33,12 @@ type HepteractQuickExpandEstimate = {
     expandsCapacity: boolean;
     currentBalance: number;
     currentCapacity: number;
+};
+
+type HepteractLiveState = {
+    balance: number;
+    baseCapacity: number;
+    finalCapacity: number;
 };
 
 /**
@@ -165,7 +173,38 @@ export class HSHepteracts extends HSModule {
         if (!Number.isNaN(cost)) this.#hepteractCosts[hepteractId] = cost;
     }
 
+    /**
+     * Reads a hepteract's exact balance and capacities from the live player object (patched game only).
+     * The game's display cuts numbers to 3 digits above 1e6, which is not enough to tell whether a click expands.
+     * Capacities follow the game's getHepteractCap and getFinalHepteractCap.
+     */
+    #readLiveHepteract(baseName: string): HepteractLiveState | null {
+        const player = HSGlobal.exposedPlayer;
+        const hepteract = player?.hepteracts?.[baseName as HepteractKeys];
+        const completions = player?.singularityChallenges?.limitedAscensions?.completions;
+        if (!hepteract || typeof completions !== 'number') return null;
+
+        const balance = hepteract.BAL;
+        const timesCapacityExtended = hepteract.TIMES_CAP_EXTENDED;
+        if (typeof balance !== 'number' || !Number.isFinite(balance)
+            || typeof timesCapacityExtended !== 'number' || !Number.isFinite(timesCapacityExtended)) {
+            return null;
+        }
+
+        const baseCapacity = Math.pow(2, timesCapacityExtended) * (baseName === 'abyss' ? 1 : 1000);
+        const finalCapacity = baseCapacity * (completions > 0 ? 2 : 1);
+        if (!Number.isFinite(finalCapacity)) return null;
+
+        return { balance, baseCapacity, finalCapacity };
+    }
+
     #refreshOwnedHepteracts(): void {
+        const liveAmount = HSGlobal.exposedPlayer?.wowAbyssals;
+        if (typeof liveAmount === 'number' && Number.isFinite(liveAmount)) {
+            this.#ownedHepteracts = liveAmount;
+            return;
+        }
+
         const quantity = document.querySelector<HTMLElement>('#hepteractQuantity');
         if (!quantity) return;
 
@@ -176,6 +215,9 @@ export class HSHepteracts extends HSModule {
 
     #beginForgeDataVisit(): void {
         if (this.#forgeDataVisitActive) return;
+
+        // The live player object already tells whether the capacity is doubled: no game data needed
+        if (this.#readLiveHepteract('chronos')) return;
 
         this.#forgeDataVisitActive = true;
         const visitId = ++this.#forgeDataVisitId;
@@ -224,22 +266,39 @@ export class HSHepteracts extends HSModule {
 
     #estimateQuickExpandCost(hepteractId: string): HepteractQuickExpandEstimate | null {
         const baseName = hepteractId.replace(/Hepteract$/, '');
-        const meterText = document.getElementById(`${baseName}ProgressBarText`)?.innerText ?? '';
-        const [balanceText, capacityText] = meterText.split('/');
-        if (balanceText === undefined || capacityText === undefined) return null;
-
-        const currentBalance = HSNumberParser.parse(balanceText);
-        const currentCapacity = HSNumberParser.parse(capacityText);
         const costPerHepteract = this.#hepteractCosts[hepteractId];
-        if (!Number.isFinite(currentBalance) || !Number.isFinite(currentCapacity) || currentCapacity <= 0
-            || costPerHepteract === null || costPerHepteract === undefined
+        if (costPerHepteract === null || costPerHepteract === undefined
             || !Number.isFinite(costPerHepteract) || costPerHepteract < 0) {
             return null;
         }
 
-        if (this.#hasDoubleHepteractCapacity === undefined) return null;
+        // A locked hepteract's meter has no "balance / capacity": no estimate for it
+        const meterText = document.getElementById(`${baseName}ProgressBarText`)?.innerText ?? '';
+        const [balanceText, capacityText] = meterText.split('/');
+        if (balanceText === undefined || capacityText === undefined) return null;
 
-        const baseCapacity = currentCapacity / (this.#hasDoubleHepteractCapacity ? 2 : 1);
+        let currentBalance: number;
+        let currentCapacity: number;
+        let baseCapacity: number;
+
+        const live = this.#readLiveHepteract(baseName);
+        if (live) {
+            currentBalance = live.balance;
+            currentCapacity = live.finalCapacity;
+            baseCapacity = live.baseCapacity;
+        } else {
+            // Unpatched game (bookmarklet): the meter's text, cut to 3 digits above 1e6
+            currentBalance = HSNumberParser.parse(balanceText);
+            currentCapacity = HSNumberParser.parse(capacityText);
+            if (!Number.isFinite(currentBalance) || !Number.isFinite(currentCapacity) || currentCapacity <= 0) {
+                return null;
+            }
+
+            if (this.#hasDoubleHepteractCapacity === undefined) return null;
+
+            baseCapacity = currentCapacity / (this.#hasDoubleHepteractCapacity ? 2 : 1);
+        }
+
         const expandsCapacity = currentBalance >= baseCapacity;
         const balanceAfterExpand = expandsCapacity
             ? Math.max(0, currentBalance - baseCapacity)
@@ -498,17 +557,7 @@ export class HSHepteracts extends HSModule {
                                 self.#readHepteractCost(id);
                             }
 
-                            const ownedHeptQuantElement = !self.#ownedHepteractsElement ? document.querySelector('#hepteractQuantity') as HTMLElement : self.#ownedHepteractsElement;
-
-                            if (ownedHeptQuantElement) {
-                                const subElement = ownedHeptQuantElement.querySelector('span') as HTMLSpanElement;
-
-                                if (subElement) {
-                                    const value = subElement.innerText;
-                                    const hepts = HSNumberParser.parse(value);
-                                    if (!Number.isNaN(hepts)) self.#ownedHepteracts = hepts;
-                                }
-                            }
+                            self.#refreshOwnedHepteracts();
 
                             if (self.#hoveredHepteractId === id) {
                                 await self.#refreshCraftText(id, isQuarkHepteract);
@@ -602,7 +651,13 @@ export class HSHepteracts extends HSModule {
 
                                 try {
                                     if (split && split[1]) {
-                                        return HSNumberParser.parse(split[1]);
+                                        const shownCapacity = HSNumberParser.parse(split[1]);
+                                        // The shown capacity is cut to 3 digits above 1e6, which puts large ratios off
+                                        // (128 becomes 127): the exact one is used when the live player object has it
+                                        const live = Number.isNaN(shownCapacity)
+                                            ? null
+                                            : self.#readLiveHepteract(boxName.replace(/Hepteract$/, ''));
+                                        return live ? live.finalCapacity : shownCapacity;
                                     }
                                 } catch (e) {
                                     HSLogger.warn(`Parsing failed for ${split}`, self.context);
@@ -1039,7 +1094,10 @@ export class HSHepteracts extends HSModule {
             if (this.#hoveredHepteractId !== hepteractId) return;
 
             this.#refreshOwnedHepteracts();
-            const owned = isQuarkHepteract ? this.#ownedQuarks : this.#ownedHepteracts;
+            // Number(QuarkHandler) is the quark amount; NaN on an unpatched game
+            const liveQuarks = Number(HSGlobal.exposedPlayer?.worlds);
+            const ownedQuarks = Number.isFinite(liveQuarks) ? liveQuarks : this.#ownedQuarks;
+            const owned = isQuarkHepteract ? ownedQuarks : this.#ownedHepteracts;
             const percentOwned = owned && owned > 0 ? buyCost / owned : '∞';
             const persOwn = typeof percentOwned === 'number' ? HSUtils.N(percentOwned * 100) : percentOwned;
 
