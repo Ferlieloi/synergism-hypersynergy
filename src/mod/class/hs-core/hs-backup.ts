@@ -13,10 +13,15 @@ import backupCSS from "inline:../../resource/css/module/hs-backup.css";
 const SAVE_KEY = 'Synergysave2';
 const FORMAT_VERSION = 1;
 const GDS_PAUSE_REASON = 'backup-import';
+// What the game keeps in localStorage outside its save, and reads at page load: language, colour theme,
+// stat symbols, tab order, export to the clipboard, dismissed announcements. A missing key is a value too
+// (the default theme, export to a file), so an import removes the ones the file doesn't have.
+const GAME_PREF_KEYS = ['language', 'theme', 'statSymbols', 'synergism-tab-order', 'copyToClipboard', 'dismissedAnnouncements'];
 
 interface HSBackupParts {
     save: boolean;
     modData: boolean;
+    gamePrefs: boolean;
     logs: boolean;
 }
 
@@ -44,8 +49,16 @@ interface HSBackupFile {
     info: HSBackupInfo;
     logs?: string[];
     // localStorage values as stored, by key
+    gamePrefs?: Record<string, string>;
     modData?: Record<string, string>;
     save?: string;
+}
+
+// What an import writes
+interface HSBackupWrite {
+    save?: string;
+    modData?: Record<string, string>;
+    gamePrefs?: Record<string, string>;
 }
 
 // What a chosen file holds, once checked
@@ -56,6 +69,7 @@ interface HSBackupImport {
     // The file has a save, but not one the game would load
     saveRefused: boolean;
     modData?: Record<string, string>;
+    gamePrefs?: Record<string, string>;
     logCount: number;
 }
 
@@ -67,6 +81,7 @@ interface HSBackupImport {
  *     - Mod data is every localStorage key under the mod's prefix (settings, strategies, hidden dialogs, icons...),
  *       copied as stored. The dev tools' key is left out.
  *     - The save is the game's own stored string, after a manual save: no export reward.
+ *     - Game preferences are the few options the game keeps outside its save (language, theme, tab order...).
  *     - An import writes localStorage, then reloads the page: the game and the mod load what was written,
  *       as at any page load. Until the page is gone, writes to the imported keys are blocked, so the game's
  *       autosave and the mod's own saves can't put the old values back.
@@ -78,9 +93,11 @@ export class HSBackup {
     static #context = 'HSBackup';
     static readonly #exportBtnId = 'hs-panel-backup-export-btn';
     static readonly #importBtnId = 'hs-panel-backup-import-btn';
+    static readonly #gamePrefsHint = 'Kept by the game outside its save: language, theme, stat symbols, tab order, export to clipboard, dismissed announcements';
     static readonly #partIds: Record<keyof HSBackupParts, string> = {
         save: 'hs-panel-backup-part-save',
         modData: 'hs-panel-backup-part-moddata',
+        gamePrefs: 'hs-panel-backup-part-gameprefs',
         logs: 'hs-panel-backup-part-logs',
     };
 
@@ -93,14 +110,14 @@ export class HSBackup {
     static buildToolsSection(): string[] {
         HSUI.injectStyle(backupCSS, 'hs-backup-css');
 
-        const part = (key: keyof HSBackupParts, label: string) =>
-            `<label><input type="checkbox" id="${HSBackup.#partIds[key]}" checked>${label}</label>`;
+        const part = (key: keyof HSBackupParts, label: string, title = '') =>
+            `<label title="${title}"><input type="checkbox" id="${HSBackup.#partIds[key]}" checked>${label}</label>`;
 
         return [
             HSUIC.Div({
                 class: 'hs-panel-grid-full-span',
-                html: `Your save, the mod's data (settings, strategies, hidden dialogs, icons) and the logs, in one file. Importing reloads the page.
-                    <div class="hs-backup-parts">${part('save', 'Save')}${part('modData', 'Mod settings')}${part('logs', 'Logs')}</div>`
+                html: `Your vanilla save, the mod's data (settings, strategies, hidden dialogs, icons), the game's preferences (language, theme, tab order, ...) and the current logs, all in one file. Importing reloads the page.
+                    <div class="hs-backup-parts">${part('save', 'Save')}${part('modData', 'Mod settings')}${part('gamePrefs', 'Game preferences', HSBackup.#gamePrefsHint)}${part('logs', 'Logs')}</div>`
             }),
             HSUIC.Button({ id: HSBackup.#exportBtnId, text: 'Export to file' }),
             HSUIC.Button({ id: HSBackup.#importBtnId, text: 'Import from file…' }),
@@ -112,7 +129,7 @@ export class HSBackup {
             (document.getElementById(HSBackup.#partIds[key]) as HTMLInputElement | null)?.checked ?? false;
 
         document.getElementById(HSBackup.#exportBtnId)?.addEventListener('click', () => {
-            HSBackup.#export({ save: isTicked('save'), modData: isTicked('modData'), logs: isTicked('logs') }, false);
+            HSBackup.#export({ save: isTicked('save'), modData: isTicked('modData'), gamePrefs: isTicked('gamePrefs'), logs: isTicked('logs') }, false);
         });
         document.getElementById(HSBackup.#importBtnId)?.addEventListener('click', () => HSBackup.#chooseImportFile());
     }
@@ -123,7 +140,7 @@ export class HSBackup {
 
         // The settings are also in memory, and written back at any setting change: hence the block and the reload
         localStorage.removeItem(`${HSGlobal.HSStorage.storagePrefix}${HSGlobal.HSSettings.storageKey}`);
-        HSBackup.#blockStorageWrites(false, true);
+        HSBackup.#blockStorageWrites({ modData: {} });
         HSBackup.#reload('Stored settings cleared');
     }
 
@@ -139,7 +156,7 @@ export class HSBackup {
      * @returns The file's name, or null when nothing was downloaded.
      */
     static #export(parts: HSBackupParts, beforeImport: boolean): string | null {
-        if (!parts.save && !parts.modData && !parts.logs) {
+        if (!parts.save && !parts.modData && !parts.gamePrefs && !parts.logs) {
             HSUI.Notify('Backup: nothing is ticked', { position: 'top', notificationType: 'warning' });
             return null;
         }
@@ -161,6 +178,7 @@ export class HSBackup {
                 info: HSBackup.#collectInfo(save ?? localStorage.getItem(SAVE_KEY)),
             };
             if (parts.logs) file.logs = HSLogger.getLogLines();
+            if (parts.gamePrefs) file.gamePrefs = HSBackup.#readGamePrefs();
             if (parts.modData) file.modData = HSBackup.#readModData();
             if (save) file.save = save;
 
@@ -205,6 +223,18 @@ export class HSBackup {
         }
 
         return data;
+    }
+
+    static #readGamePrefs(): Record<string, string> {
+        const prefs: Record<string, string> = {};
+
+        for (const key of GAME_PREF_KEYS) {
+            const value = localStorage.getItem(key);
+            // An empty value counts: the game stores "export to the clipboard" as one
+            if (value !== null) prefs[key] = value;
+        }
+
+        return prefs;
     }
 
     static #collectInfo(save: string | null): HSBackupInfo {
@@ -342,6 +372,15 @@ export class HSBackup {
                 }
                 if (Object.keys(modData).length > 0) content.modData = modData;
             }
+
+            // An empty list is a valid one: every preference at its default
+            if (file.gamePrefs && typeof file.gamePrefs === 'object' && !Array.isArray(file.gamePrefs)) {
+                const gamePrefs: Record<string, string> = {};
+                for (const [key, value] of Object.entries(file.gamePrefs)) {
+                    if (GAME_PREF_KEYS.includes(key) && typeof value === 'string') gamePrefs[key] = value;
+                }
+                content.gamePrefs = gamePrefs;
+            }
         } else {
             // Not a mod backup: taken as a save exported by the game
             save = text;
@@ -358,7 +397,7 @@ export class HSBackup {
             }
         }
 
-        if (!content.save && !content.modData) {
+        if (!content.save && !content.modData && !content.gamePrefs) {
             return content.saveRefused
                 ? 'this file is neither a mod backup nor a save the game would load'
                 : 'nothing to import in this file';
@@ -381,7 +420,8 @@ export class HSBackup {
                     <div class="hs-backup-details"></div>
                     ${row('save', 'Save', true)}
                     ${row('modData', 'Mod settings', true)}
-                    ${row('backup', 'Download a backup of my current save and mod settings first', true)}
+                    ${row('gamePrefs', 'Game preferences', true)}
+                    ${row('backup', 'Download a backup of my current save, settings and preferences first', true)}
                     <div>Importing replaces what is ticked, then reloads the page.</div>
                     <div class="hs-backup-status"></div>
                     <div class="hs-backup-actions">
@@ -433,12 +473,22 @@ export class HSBackup {
             unavailable('modData', '(not in this file)');
         }
 
+        if (content.gamePrefs) {
+            (box('gamePrefs').parentElement as HTMLElement).title = HSBackup.#gamePrefsHint;
+            note('gamePrefs').textContent = content.gamePrefs.language ? `(language: ${text(content.gamePrefs.language)})` : '';
+        } else {
+            unavailable('gamePrefs', '(not in this file)');
+        }
+
         let backupDownloaded = false;
         importBtn.addEventListener('click', async () => {
-            const save = box('save').checked ? content.save : undefined;
-            const modData = box('modData').checked ? content.modData : undefined;
+            const write: HSBackupWrite = {
+                save: box('save').checked ? content.save : undefined,
+                modData: box('modData').checked ? content.modData : undefined,
+                gamePrefs: box('gamePrefs').checked ? content.gamePrefs : undefined,
+            };
 
-            if (!save && !modData) {
+            if (!write.save && !write.modData && !write.gamePrefs) {
                 status.textContent = 'Nothing is ticked.';
                 return;
             }
@@ -446,7 +496,7 @@ export class HSBackup {
 
             // Two clicks: the page must not reload before the backup file is written (Steam asks where to save it)
             if (box('backup').checked && !backupDownloaded) {
-                const name = HSBackup.#export({ save: true, modData: true, logs: true }, true);
+                const name = HSBackup.#export({ save: true, modData: true, gamePrefs: true, logs: true }, true);
                 if (!name) {
                     status.textContent = 'The backup could not be made: nothing was imported.';
                     return;
@@ -456,11 +506,11 @@ export class HSBackup {
                 return;
             }
 
-            await HSBackup.#applyImport(save, modData, status);
+            await HSBackup.#applyImport(write, status);
         });
     }
 
-    static async #applyImport(save: string | undefined, modData: Record<string, string> | undefined, status: HTMLElement): Promise<void> {
+    static async #applyImport({ save, modData, gamePrefs }: HSBackupWrite, status: HTMLElement): Promise<void> {
         const gameData = HSModuleManager.getModule<HSGameData>('HSGameData');
         // The GDS engine reads the stored save at every frame: it must not take the imported one for the running game
         await gameData?.pauseGDS(GDS_PAUSE_REASON);
@@ -494,6 +544,13 @@ export class HSBackup {
                     localStorage.setItem(key, value);
                 }
             }
+            if (gamePrefs) {
+                for (const key of GAME_PREF_KEYS) {
+                    remember(key);
+                    if (key in gamePrefs) localStorage.setItem(key, gamePrefs[key]);
+                    else localStorage.removeItem(key);
+                }
+            }
             if (save) {
                 remember(SAVE_KEY);
                 localStorage.setItem(SAVE_KEY, save);
@@ -513,8 +570,8 @@ export class HSBackup {
             return;
         }
 
-        HSBackup.#blockStorageWrites(!!save, !!modData);
-        HSBackup.#reload(`Imported ${[save ? 'the save' : '', modData ? 'the mod settings' : ''].filter(Boolean).join(' and ')}`);
+        HSBackup.#blockStorageWrites({ save, modData, gamePrefs });
+        HSBackup.#reload(`Imported ${[save ? 'the save' : '', modData ? 'the mod settings' : '', gamePrefs ? 'the game preferences' : ''].filter(Boolean).join(', ')}`);
     }
 
 
@@ -532,11 +589,15 @@ export class HSBackup {
     /**
      * Until the page is gone, drops the writes to what was just written. The reload is not immediate, and
      * meanwhile the game's autosave would put the old save back, and the mod's own saves the old settings.
+     * @param written The parts that were written, whatever their content.
      */
-    static #blockStorageWrites(save: boolean, modData: boolean): void {
+    static #blockStorageWrites(written: HSBackupWrite): void {
         const prefix = HSGlobal.HSStorage.storagePrefix;
-        const isBlocked = (storage: Storage, key: string) =>
-            storage === window.localStorage && ((save && key === SAVE_KEY) || (modData && key.startsWith(prefix)));
+        const isBlocked = (storage: Storage, key: string) => storage === window.localStorage && (
+            (written.save !== undefined && key === SAVE_KEY)
+            || (written.modData !== undefined && key.startsWith(prefix))
+            || (written.gamePrefs !== undefined && GAME_PREF_KEYS.includes(key))
+        );
 
         const proto = Storage.prototype;
         const { setItem, removeItem, clear } = proto;
