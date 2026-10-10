@@ -693,6 +693,13 @@ export class HSHeaterUIStyles {
             .hs-heater-status-maxed { color: #08ba52; }
             .hs-heater-status-unmaxed { color: #962f2f; }
 
+            /* Same red as the ✘. The type's label is in a button when it has
+               an icon, and a button doesn't inherit the row's colour. */
+            .hs-heater-selected-unaffordable-row td,
+            .hs-heater-selected-unaffordable-row .hs-heater-type-icon-button {
+                color: #962f2f;
+            }
+
             .hs-heater-inputs-header { background-color: #472323; }
             .hs-heater-results-header { background-color: #232647; }
             .hs-heater-redamb-header { background-color: #472323; }

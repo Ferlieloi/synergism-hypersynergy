@@ -176,7 +176,9 @@ function buildArraySectionDataRow(
             : `<td colspan="2">${effectHtml}</td>`;
     const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
-    return `<tr>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
+    // A type picked in "Your loadout order" that can't be afforded: the whole row in red
+    const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
+    return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }
 
 function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set()): string {
