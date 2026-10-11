@@ -379,9 +379,9 @@ export class HSUI extends HSModule {
 
         quickMenu.appendChild(quickbarsSubmenu);
         quickMenu.appendChild(quickbarsBtn);
-        quickMenu.appendChild(autoSingBtn);
         quickMenu.appendChild(heaterHSBtn);
         quickMenu.appendChild(heaterExportBtn);
+        quickMenu.appendChild(autoSingBtn);
         document.body.appendChild(quickMenu);
 
         this.#attachQuickAccessMenuHandlers(quickMenu, quickbarsBtn, quickbarsSubmenu);
