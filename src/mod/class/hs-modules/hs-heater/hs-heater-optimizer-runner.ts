@@ -4,13 +4,18 @@ import type {
   HeaterRedAmbUpgradeEffects,
 } from '../../../types/data-types/hs-heater-types'
 import type { HeaterBranchId } from './hs-heater-result-config'
-import { HSHeaterOptimizer } from './hs-heater-optimizer'
+import { HSHeaterOptimizer, takeHeaterOptimizerLogs } from './hs-heater-optimizer'
+import type { HeaterOptimizerLog } from './hs-heater-optimizer'
+import { HSLogger } from '../../hs-core/hs-logger'
+import { escapeLogText } from './hs-heater-utils'
 
 declare const HS_HEATER_WORKER_SOURCE: string
 
+const LOG_CONTEXT = 'HSHeater'
+
 type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult }
-  | { id: number; ok: false; error: string }
+  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[] }
+  | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }
 
 type SerializedHeaterOptimizerInput = Omit<
   HeaterOptimizerInput,
@@ -109,6 +114,21 @@ function mergeResults(input: HeaterOptimizerInput, parts: HeaterOptimizationResu
   return merged
 }
 
+// The optimizer's warnings and errors, written to the mod's log. The log tab
+// renders a line as HTML, and a stack trace can hold "<anonymous>".
+function writeOptimizerLogs(logs: readonly HeaterOptimizerLog[]): void {
+  for (const log of logs) {
+    if (log.level === 'error')
+      HSLogger.error(escapeLogText(log.message), log.context)
+    else
+      HSLogger.warn(escapeLogText(log.message), log.context)
+  }
+}
+
+function formatSeconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`
+}
+
 function runWorker(sourceUrl: string, id: number, input: HeaterOptimizerInput): Promise<HeaterOptimizationResult> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(sourceUrl)
@@ -117,6 +137,7 @@ function runWorker(sourceUrl: string, id: number, input: HeaterOptimizerInput): 
       if (event.data.id !== id)
         return
       cleanup()
+      writeOptimizerLogs(event.data.logs)
       if (event.data.ok)
         resolve(event.data.result)
       else
@@ -136,40 +157,62 @@ export class HSHeaterOptimizerRunner {
       return { input }
 
     const cacheKey = JSON.stringify(serializeInput(input))
+    const activeGroups = activeBranchGroups(input)
+    const branchNames = activeGroups.map(group => group.join('+')).join(', ')
     const cached = resultCache.get(cacheKey)
     if (cached !== undefined) {
       resultCache.delete(cacheKey)
       resultCache.set(cacheKey, cached)
+      HSLogger.info(`Heat: ${branchNames} (same input as an earlier heat, result reused)`, LOG_CONTEXT)
       return { ...cached, input }
     }
 
-    if (typeof Worker === 'undefined' || typeof HS_HEATER_WORKER_SOURCE !== 'string' || !HS_HEATER_WORKER_SOURCE) {
-      await new Promise<void>(resolve => setTimeout(resolve, 0))
-      const result = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(input)
-      cacheResult(cacheKey, result)
-      return result
-    }
-
-    // A branch keeps several large Pareto frontiers alive at once. Running
-    // multiple branches in parallel multiplies that peak and can exhaust the
-    // browser process even though each individual search fits. Terminating a
-    // worker between groups also releases its entire heap deterministically.
-    const activeGroups = activeBranchGroups(input)
-    const sourceUrl = URL.createObjectURL(new Blob([HS_HEATER_WORKER_SOURCE], { type: 'text/javascript' }))
+    const startedAt = performance.now()
+    // What was running when a heat fails, for the log
+    let running = branchNames
     try {
-      const results: HeaterOptimizationResult[] = []
-      for (let index = 0; index < activeGroups.length; index++) {
-        results.push(await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index])))
-        // Let the browser dispose of the terminated worker's heap before a
-        // second large branch starts allocating its own frontiers.
-        if (index + 1 < activeGroups.length)
-          await new Promise<void>(resolve => setTimeout(resolve, 50))
+      if (typeof Worker === 'undefined' || typeof HS_HEATER_WORKER_SOURCE !== 'string' || !HS_HEATER_WORKER_SOURCE) {
+        await new Promise<void>(resolve => setTimeout(resolve, 0))
+        let result: HeaterOptimizationResult
+        try {
+          result = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(input)
+        } finally {
+          writeOptimizerLogs(takeHeaterOptimizerLogs())
+        }
+        cacheResult(cacheKey, result)
+        HSLogger.info(`Heat done in ${formatSeconds(performance.now() - startedAt)}, without a worker: ${branchNames}`, LOG_CONTEXT)
+        return result
       }
-      const result = mergeResults(input, results)
-      cacheResult(cacheKey, result)
-      return result
-    } finally {
-      URL.revokeObjectURL(sourceUrl)
+
+      // A branch keeps several large Pareto frontiers alive at once. Running
+      // multiple branches in parallel multiplies that peak and can exhaust the
+      // browser process even though each individual search fits. Terminating a
+      // worker between groups also releases its entire heap deterministically.
+      const sourceUrl = URL.createObjectURL(new Blob([HS_HEATER_WORKER_SOURCE], { type: 'text/javascript' }))
+      try {
+        const results: HeaterOptimizationResult[] = []
+        const groupTimes: string[] = []
+        for (let index = 0; index < activeGroups.length; index++) {
+          running = activeGroups[index].join('+')
+          const groupStartedAt = performance.now()
+          results.push(await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index])))
+          groupTimes.push(`${running} ${formatSeconds(performance.now() - groupStartedAt)}`)
+          // Let the browser dispose of the terminated worker's heap before a
+          // second large branch starts allocating its own frontiers.
+          if (index + 1 < activeGroups.length)
+            await new Promise<void>(resolve => setTimeout(resolve, 50))
+        }
+        const result = mergeResults(input, results)
+        cacheResult(cacheKey, result)
+        HSLogger.info(`Heat done in ${formatSeconds(performance.now() - startedAt)}: ${groupTimes.join(', ')}`, LOG_CONTEXT)
+        return result
+      } finally {
+        URL.revokeObjectURL(sourceUrl)
+      }
+    } catch (error) {
+      // The error itself is logged by the caller. The input is what reproduces it.
+      HSLogger.error(`Heat failed after ${formatSeconds(performance.now() - startedAt)}, while heating ${running}. Input: ${escapeLogText(cacheKey)}`, LOG_CONTEXT)
+      throw error
     }
   }
 }

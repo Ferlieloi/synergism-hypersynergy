@@ -12,7 +12,7 @@ import { HSHeaterResultModalController } from "./hs-heater-result-modal-controll
 import { HSHeaterRedAmbrosiaModalController } from "./hs-heater-red-ambrosia-modal-controller";
 import { HSHeaterUIResult } from "./hs-heater-ui-result";
 import { resolveHeaterTypeLabel } from "./hs-heater-result-config";
-import { escapeHtml } from "./hs-heater-utils";
+import { escapeHtml, escapeLogText } from "./hs-heater-utils";
 import { getHeaterTypeDropdownOptionsWithIcons } from "./hs-heater-icon-store";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
@@ -248,10 +248,12 @@ export class HSHeaterInputModalController {
                 const memoryLimit = error instanceof Error && error.message.includes('memory safety limit');
                 HSUI.Notify(memoryLimit
                     ? 'Heater stopped before exceeding its memory limit. Try fewer builds at once.'
-                    : 'Heater could not finish. Check the console for details.', {
+                    : 'Heater could not finish. Check the Log tab for details.', {
                     position: 'top', notificationType: 'error'
                 });
-                console.error('Heater calculation failed:', error);
+                // The log tab renders a line as HTML, and a stack trace can hold "<anonymous>"
+                const details = error instanceof Error ? error.stack ?? error.message : String(error);
+                HSLogger.error(`Heater calculation failed: ${escapeLogText(details)}`, 'HSHeater');
             } finally {
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';

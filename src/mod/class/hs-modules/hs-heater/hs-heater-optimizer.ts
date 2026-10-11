@@ -5,13 +5,35 @@ import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-in
 import type { AmbrosiaBarIncome, AmbrosiaBarIncomeReactor } from '../../../types/data-types/hs-ambrosia-income-types';
 
 // Keep the optimizer bundle independent from DOM/UI modules so it can run in
-// a Web Worker. Diagnostics still reach the browser console; the worker also
-// forwards thrown errors to the main thread.
+// a Web Worker. Warnings and errors reach the browser console, and are kept
+// until takeHeaterOptimizerLogs() is called: the worker sends them back with
+// its answer (thrown errors too), and the runner writes them to the mod's log.
+export type HeaterOptimizerLog = { level: 'warn' | 'error'; message: string; context: string };
+
+const PENDING_LOG_LIMIT = 200;
+const pendingLogs: HeaterOptimizerLog[] = [];
+
+function keepLog(level: HeaterOptimizerLog['level'], message: string, context: string): void {
+    if (pendingLogs.length < PENDING_LOG_LIMIT)
+        pendingLogs.push({ level, message, context });
+}
+
 const HSLogger = {
     debug: (_message: () => string, _context?: string): void => {},
-    warn: (message: string, context = "HSHeaterOptimizer"): void => console.warn(`[${context}]: ${message}`),
-    error: (message: string, context = "HSHeaterOptimizer"): void => console.error(`[${context}]: ${message}`),
+    warn: (message: string, context = "HSHeaterOptimizer"): void => {
+        console.warn(`[${context}]: ${message}`);
+        keepLog('warn', message, context);
+    },
+    error: (message: string, context = "HSHeaterOptimizer"): void => {
+        console.error(`[${context}]: ${message}`);
+        keepLog('error', message, context);
+    },
 };
+
+/** The warnings and errors logged since the last call, oldest first. */
+export function takeHeaterOptimizerLogs(): HeaterOptimizerLog[] {
+    return pendingLogs.splice(0);
+}
 /*
     This file closely match the script on Rus9384's sheet (credits to him),
     in order to be easily updatable when the sheet updates (and vice-versa...)
@@ -5785,9 +5807,11 @@ export class HSHeaterOptimizer {
           return output;
 
         } catch (e) {
-            HSLogger.error(`[HeaterDiag] createHeaterOptimizerResultFromInput crashed: ${e instanceof Error ? e.stack ?? e.message : e}`, 'HSHeaterOptimizer');
-            HSLogger.error(`[HeaterDiag] options at crash time: ${JSON.stringify(options)}`, 'HSHeaterOptimizer');
-            HSLogger.error(`[HeaterDiag] input at crash time: ${JSON.stringify(input)}`, 'HSHeaterOptimizer');
+            // Console only: the error is thrown again and its caller logs it, and
+            // the runner writes the input to the mod's log itself.
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] createHeaterOptimizerResultFromInput crashed: ${e instanceof Error ? e.stack ?? e.message : e}`);
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] options at crash time: ${JSON.stringify(options)}`);
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] input at crash time: ${JSON.stringify(input)}`);
             throw e;
         }
     }
