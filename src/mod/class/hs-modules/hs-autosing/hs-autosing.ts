@@ -18,6 +18,8 @@ import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIO
 import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
+import { HSSubtabMemory } from "../hs-subtab-memory";
+import { MAIN_VIEW_BUTTON_IDS } from "../../../types/module-types/hs-gamestate-types";
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -177,9 +179,13 @@ export class HSAutosing extends HSModule {
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
-    #mainViewRestoreSubscriptionId?: string;
-    #mainViewRestoreTimeoutId?: number;
-    #isReadingDOMStage = false;
+    #subtabMemory?: HSSubtabMemory;
+    // The tab the player was on, brought back after each Exalt (the game opens Buildings) and each DOM stage read
+    #playerTab?: MainView;
+    // Set while #playerTab is locked: the tab the game left the player on meanwhile
+    #parkedTab?: MainView;
+    // Stage of the last try to come back from #parkedTab
+    #tabReturnStage = '';
 
     #autosingModal?: HSAutosingModal;
 
@@ -371,6 +377,7 @@ export class HSAutosing extends HSModule {
             return false;
         }
         this.#gamestate = gamestate;
+        this.#subtabMemory = HSModuleManager.getModule<HSSubtabMemory>("HSSubtabMemory");
         return true;
     }
 
@@ -749,7 +756,8 @@ export class HSAutosing extends HSModule {
         this.#waitForInnerTextObserver = undefined;
         this.#waitForInnerTextObservedElement = undefined;
         this.#cleanupWaitForInnerText(false);
-        this.#cleanupScheduledMainViewRestore();
+        this.#playerTab = undefined;
+        this.#parkedTab = undefined;
 
         if (this.#endStagePromiseResolve) {
             try { this.#endStagePromiseResolve(); } catch (e) { /* ignore */ }
@@ -918,22 +926,16 @@ export class HSAutosing extends HSModule {
                 this.#autosingModal.show();
             }
 
-            // Read the live DOM rather than the observer cache. Rapid tab changes can
-            // occur around a singularity, and the game may redirect to another page.
-            let prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
             await this.#performSingularity(true);
             if (!this.#autosingEnabled) return;
-            this.#scheduleMainViewRestore(prevMainView);
 
             // Main autosing loop
             while (this.#autosingEnabled) {
                 if (this.#endStageDone || this.#antiquitiesObserverActivated) {
                     await this.#endStagePromise;
                     if (this.#autosingEnabled) {
-                        prevMainView = this.#gamestate.getCurrentMainViewFromDOM();
                         await this.#performSingularity();
                         if (!this.#autosingEnabled) return;
-                        this.#scheduleMainViewRestore(prevMainView);
                     }
                     continue;
                 }
@@ -946,8 +948,15 @@ export class HSAutosing extends HSModule {
                     if (!this.#autosingEnabled || this.#endStageDone || this.#antiquitiesObserverActivated) break;
                     const stage = await this.#getStage();
                     if (!this.#autosingEnabled) return;
-                    // Only the DOM stage fallback navigates to Settings on every phase.
-                    if (!this.#isExposureReady) this.#restoreMainView(prevMainView);
+                    if (!this.#isExposureReady) {
+                        // Only the DOM stage fallback navigates to Settings on every phase.
+                        this.#showPlayerTab();
+                    } else if (this.#parkedTab && stage !== this.#tabReturnStage) {
+                        // The player's tab is locked: tried again at each new stage, if they are still where the game left them
+                        this.#tabReturnStage = stage;
+                        this.#notePlayerTab();
+                        this.#showPlayerTab();
+                    }
 
                     try {
                         await this.#matchStageToStrategy(stage);
@@ -1507,7 +1516,6 @@ export class HSAutosing extends HSModule {
                 HSLogger.warn("Performance Warning: 'synergismStage' not exposed (no Tampermonkey?)", this.context);
                 this.#hasWarnedMissingStageFunc = true;
             }
-            this.#isReadingDOMStage = true;
             try {
                 // The label is translated ("Current Game Section: {{stage}}"): use the player's language,
                 // English kept as fallback. The stage value itself is an internal, untranslated id.
@@ -1528,6 +1536,8 @@ export class HSAutosing extends HSModule {
 
                 try {
                     if (!isOnStageTab) {
+                        // A tab the player opened since the last read is the one to bring back
+                        this.#notePlayerTab();
                         this.#settingsTab.click();
                         this.#settingsSubTab.click();
                         this.#misc.click();
@@ -1550,8 +1560,6 @@ export class HSAutosing extends HSModule {
                     HSLogger.warn(`Could not read a fresh game stage; Autosing stopped: ${e}`, this.context);
                     this.stopAutosing();
                 }
-            } finally {
-                this.#isReadingDOMStage = false;
             }
             return '';
         }
@@ -1586,6 +1594,7 @@ export class HSAutosing extends HSModule {
         this.#upg81Promise = new Promise<boolean>((resolve) => { this.#upg81PromiseResolve = resolve; });
         this.#upg81Observer?.observe(this.#upg81Btn, { attributes: true, attributeFilter: ['class'] });
 
+        this.#notePlayerTab();
         if (!await this.#enterAndLeaveExalt()) {
             if (this.#autosingEnabled) {
                 HSLogger.warn("Failed to enter and leave Exalt 2. Auto-Sing stopped.", this.context);
@@ -1596,6 +1605,9 @@ export class HSAutosing extends HSModule {
         // Stopped while leaving the Exalt: don't record the singularity or switch the loadout
         // (its Alert would be shown, autosing's answering has stopped)
         if (!this.#autosingEnabled) return;
+
+        // The Exalt left the player on Buildings: back to their tab before anything else is awaited
+        this.#showPlayerTab();
 
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
@@ -1644,6 +1656,8 @@ export class HSAutosing extends HSModule {
             stage = await this.#getStage();
         } while (this.#autosingEnabled && !this.#isAllowedStage(stage));
         if (!this.#autosingEnabled) return;
+        // The DOM stage fallback left the player on Settings
+        if (!this.#isExposureReady) this.#showPlayerTab();
         HSLogger.debug(() => `Reached allowed starting stage: ${stage} (performSingularity)`, this.context);
 
         this.#observeAntiquitiesRune();
@@ -1977,48 +1991,53 @@ export class HSAutosing extends HSModule {
             .filter((r) => r.startIndex !== -1 && r.endIndex !== -1);
     }
 
-    #restoreMainView(view: MainView): void {
-        if (this.#gamestate.getCurrentMainViewFromDOM().getId() !== view.getId()) {
-            view.goto();
+    /**
+     * Notes the tab to bring back: the one on screen, read from the live DOM (not the observer cache: tab changes
+     * come in bursts around a singularity). While the player's tab is locked and they are still where the game
+     * left them, that tab stays the one to bring back; any other tab they opened is their new choice.
+     */
+    #notePlayerTab(): void {
+        const current = this.#gamestate.getCurrentMainViewFromDOM();
+        if (this.#parkedTab && current.getId() === this.#parkedTab.getId()) return;
+        this.#parkedTab = undefined;
+        this.#playerTab = current;
+    }
+
+    /**
+     * Brings the player's tab back after the game or the mod moved them: an Exalt (Buildings), a DOM stage read
+     * (Settings). A locked tab is never clicked, the game would open the next unlocked one: the player is left
+     * where the game put them, and comes back once the tab is unlocked if the setting asks for it.
+     */
+    #showPlayerTab(): void {
+        const view = this.#playerTab;
+        if (!view) return;
+
+        const current = this.#gamestate.getCurrentMainViewFromDOM();
+        if (current.getId() === view.getId()) {
+            this.#parkedTab = undefined;
+            return;
+        }
+
+        const waiting = this.#parkedTab !== undefined;
+        const canOpen = (!waiting || !!HSSettings.getSetting("autosingReturnToTab")?.isEnabled()) && HSAutosing.#isTabVisible(view);
+        if (canOpen) {
+            this.#parkedTab = undefined;
+            if (this.#subtabMemory) this.#subtabMemory.openForPlayer(view);
+            else view.goto();
+            return;
+        }
+
+        if (!this.#parkedTab) {
+            this.#parkedTab = current;
+        } else if (current.getId() !== this.#parkedTab.getId()) {
+            this.#parkedTab.goto();
         }
     }
 
-    #scheduleMainViewRestore(view: MainView): void {
-        this.#cleanupScheduledMainViewRestore();
-        const targetViewId = view.getId();
-
-        const restore = (): void => {
-            // Bookmark mode intentionally visits Settings until its stage renders.
-            // Its caller restores the player's page once the read completes.
-            if (this.#autosingEnabled && !this.#isReadingDOMStage) this.#restoreMainView(view);
-        };
-
-        // Restore immediately if the Exalt transition already redirected the player,
-        // then briefly guard against a redirect queued after the game state changed.
-        restore();
-
-        this.#mainViewRestoreSubscriptionId = this.#gamestate.subscribeGameStateChange<MainView>(
-            'MAIN_VIEW',
-            (_previous, current) => {
-                if (current.getId() !== targetViewId) restore();
-            }
-        );
-
-        this.#mainViewRestoreTimeoutId = window.setTimeout(() => {
-            restore();
-            this.#cleanupScheduledMainViewRestore();
-        }, 250);
-    }
-
-    #cleanupScheduledMainViewRestore(): void {
-        if (this.#mainViewRestoreSubscriptionId) {
-            this.#gamestate.unsubscribeGameStateChange('MAIN_VIEW', this.#mainViewRestoreSubscriptionId);
-            this.#mainViewRestoreSubscriptionId = undefined;
-        }
-        if (this.#mainViewRestoreTimeoutId !== undefined) {
-            window.clearTimeout(this.#mainViewRestoreTimeoutId);
-            this.#mainViewRestoreTimeoutId = undefined;
-        }
+    /** A locked tab's button is hidden by the game's stylesheet (html[data-chal10="false"] .chal10 and the like). */
+    static #isTabVisible(view: MainView): boolean {
+        const button = document.getElementById(MAIN_VIEW_BUTTON_IDS[view.getId()]);
+        return !!button && getComputedStyle(button).display !== 'none';
     }
 
     #ensureElements<T extends Record<string, Element | null>>(elements: T): elements is { [K in keyof T]: NonNullable<T[K]> } {

@@ -139,25 +139,58 @@ export class HSSubtabMemory extends HSModule {
         if (byPlayer) {
             const fresh = this.#isPageLoad() && !this.#openedByPlayer.has(name);
             this.#openedByPlayer.add(name);
-            const note = this.#notes.get(name);
-
-            // Visibility needs a layout: only looked at when there may be something to restore
-            if (fresh || (note !== undefined && note !== shown)) {
-                const first = ids.find(id => HSSubtabMemory.#isVisible(id));
-                const noteVisible = note !== undefined && HSSubtabMemory.#isVisible(note);
-                const reset = fresh || shown === first;
-                lockedNote = note !== undefined && !noteVisible && reset;
-
-                const target = noteVisible && reset ? note : (fresh ? first : undefined);
-                if (target !== undefined && target !== shown) {
-                    document.getElementById(target)?.click();
-                    shown = HSSubtabMemory.#activeSubtab(ids);
-                    HSLogger.debug(() => `Subtab restored on ${name}: ${target}`, this.context);
-                }
-            }
+            ({ shown, lockedNote } = this.#restore(name, ids, fresh));
         }
 
         this.#current = { name, shown, byPlayer, lockedNote, initial: false };
+    }
+
+    /**
+     * Opens a tab on the player's behalf, on its remembered subtab: autosing bringing back the tab they were on.
+     * The caller checks that the tab's button is visible (the game opens another tab for a locked one).
+     */
+    openForPlayer(view: MainView): void {
+        const enabled = !!this.#gameState && !!HSSettings.getSetting('rememberSubtabs')?.isEnabled();
+        const name = view.getName();
+
+        // The tab was left within this same task (an Exalt entered and left in one go): its change of tab
+        // hasn't been reported yet, so it is noted here, before its buttons are rewritten
+        if (enabled && this.#current?.name === name) this.#leave(view);
+
+        view.goto();
+
+        const ids = HSSubtabMemory.#subtabIds(view);
+        if (!enabled || !ids || this.#gameState!.getCurrentMainViewFromDOM().getId() !== view.getId()) return;
+
+        this.#current = { name, byPlayer: false, initial: false, ...this.#restore(name, ids, false) };
+    }
+
+    /**
+     * On the tab shown: clicks the remembered subtab back when the game shows the tab's first one.
+     * @param fresh First time the player opens this tab since the page loaded
+     * @returns The subtab shown in the end, and whether the remembered one was locked
+     */
+    #restore(name: string, ids: string[], fresh: boolean): { shown: string | undefined; lockedNote: boolean } {
+        let shown = HSSubtabMemory.#activeSubtab(ids);
+        let lockedNote = false;
+        const note = this.#notes.get(name);
+
+        // Visibility needs a layout: only looked at when there may be something to restore
+        if (fresh || (note !== undefined && note !== shown)) {
+            const first = ids.find(id => HSSubtabMemory.#isVisible(id));
+            const noteVisible = note !== undefined && HSSubtabMemory.#isVisible(note);
+            const reset = fresh || shown === first;
+            lockedNote = note !== undefined && !noteVisible && reset;
+
+            const target = noteVisible && reset ? note : (fresh ? first : undefined);
+            if (target !== undefined && target !== shown) {
+                document.getElementById(target)?.click();
+                shown = HSSubtabMemory.#activeSubtab(ids);
+                HSLogger.debug(() => `Subtab restored on ${name}: ${target}`, this.context);
+            }
+        }
+
+        return { shown, lockedNote };
     }
 
     /** The setting is off: nothing is kept, so turning it back on doesn't bring back old subtabs. */

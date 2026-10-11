@@ -757,6 +757,19 @@
       }
     }
   },
+  "autosingReturnToTab": {
+    "settingName": "autosingReturnToTab",
+    "settingDescription": "Return to my tab when it unlocks again",
+    "settingHelpText": "Each singularity sends you to the Buildings tab, and Auto-Sing brings you back to the tab you were on. A tab that is locked again at the start of the singularity (Cubes, Runes, Research...) can't be opened: you stay on Buildings. When enabled, you are brought back to it once it is unlocked, unless you opened another tab meanwhile.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "auto-sing",
+      "controlPage": "auto-sing",
+      "controlEnabledId": "hs-setting-auto-sing-return-to-tab-btn"
+    }
+  },
   "autosingStrategy": {
     "settingName": "autosingStrategy",
     "settingDescription": "Auto-Sing Strategy",
