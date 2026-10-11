@@ -51,6 +51,21 @@ test('a patch uses the ref\'s patcher, and the bundled copy when there is none o
     assert.equal((await loadPatcher(undefined, { fetchImpl: neverCalled })).source, 'bundled')
 })
 
+test('a patch limits its download in time, and its log tells a missing patcher from a failed download', async () => {
+    let options
+    await loadPatcher(URL, { fetchImpl: async (_url, opts) => { options = opts; return respond(200, REMOTE)() }, timeoutMs: 15000 })
+    assert.ok(options.signal instanceof AbortSignal)
+
+    const logOf = async fetchImpl => {
+        const logs = []
+        await loadPatcher(URL, { fetchImpl, onLog: line => logs.push(line) })
+        return logs[1]
+    }
+    assert.match(await logOf(respond(404)), /^patcher\.js not available at that ref — falling back to the bundled copy \(/)
+    assert.match(await logOf(failing('The operation was aborted due to timeout')),
+        /^patcher\.js could not be downloaded — falling back to the bundled copy \(The operation was aborted due to timeout\)$/)
+})
+
 test('a game patched without a recorded patcher needs a patch, with no download', async () => {
     for (const lastHash of ['', undefined, null]) {
         const result = await checkPatcherChanged({ lastHash, patcherUrl: URL, fetchImpl: neverCalled })

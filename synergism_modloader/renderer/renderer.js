@@ -60,6 +60,8 @@ let state = {
   channels: []
 }
 let refsRequestId = 0
+// While a patch runs, the main process refuses a launch or a build switch: their buttons stay disabled.
+let patchRunning = false
 let cleanupUiPromise = null
 
 function renderLauncherUpdate(status) {
@@ -311,7 +313,7 @@ els.retryLegacyCleanupBtn.addEventListener('click', () => { void cleanupLegacyFo
 function updateLastPlayedButton() {
   const available = Boolean(state.lastPatchedExe && state.lastPlayedChannel && state.lastPlayedModRef)
   const needsPatch = available && state.lastPlayedNeedsPatch
-  els.launchLastPlayedBtn.disabled = !available
+  els.launchLastPlayedBtn.disabled = !available || patchRunning
   els.launchLastPlayedBtn.textContent = available
     ? `${needsPatch ? 'Patch & launch' : 'Launch'} last played: ${state.lastPlayedModRef} (${state.lastPlayedChannel})`
     : 'Launch last played build'
@@ -523,16 +525,17 @@ function renderRepatchState({ gameUpdated, mismatch, patcher }) {
   const checking = patcher === null
   const patcherChanged = Boolean(patcher?.needsRepatch)
   const needsRepatch = gameUpdated || patcherChanged
-  els.updateBanner.classList.toggle('is-hidden', !gameUpdated)
+  // Without a patched game there is no last patch to compare with: "Patch & launch" is the only way on.
+  els.updateBanner.classList.toggle('is-hidden', !gameUpdated || !state.lastPatchedExe)
   els.patcherBanner.classList.toggle('is-hidden', !patcherChanged)
   if (patcherChanged) els.patcherBanner.textContent = PATCHER_BANNER_TEXT[patcher.reason] || PATCHER_BANNER_TEXT.changed
 
   // The mismatch banner points at Quick switch, which can't be used while a re-patch is needed.
   els.mismatchBanner.classList.toggle('is-hidden', !mismatch || !state.lastPatchedExe || needsRepatch || checking)
   els.quickSwitchBtn.style.display = (mismatch && state.lastPatchedExe) ? '' : 'none'
-  els.quickSwitchBtn.disabled = needsRepatch || checking
+  els.quickSwitchBtn.disabled = needsRepatch || checking || patchRunning
 
-  els.launchOnlyBtn.disabled = needsRepatch || checking || !state.lastPatchedExe || mismatch
+  els.launchOnlyBtn.disabled = needsRepatch || checking || patchRunning || !state.lastPatchedExe || mismatch
 }
 
 function notePatcherCheckFailed(error) {
@@ -570,35 +573,45 @@ async function refreshUpdateBanner() {
 }
 
 async function patchAndLaunch() {
+  if (patchRunning) return
+  patchRunning = true
   els.console.innerHTML = ''
   els.patchAndLaunchBtn.disabled = true
   els.launchOnlyBtn.disabled = true
+  els.quickSwitchBtn.disabled = true
+  updateLastPlayedButton()
   setPill('Patching…', 'busy')
   appendConsoleLine(`Patching with "${state.channel}" build "${state.modRef}"…`)
 
-  const result = await window.loader.runPatch({
-    gameDir: state.gameDir,
-    sevenZipPath: state.sevenZipPath,
-    channel: state.channel,
-    modRef: state.modRef
-  })
+  try {
+    const result = await window.loader.runPatch({
+      gameDir: state.gameDir,
+      sevenZipPath: state.sevenZipPath,
+      channel: state.channel,
+      modRef: state.modRef
+    })
 
-  if (result.ok) {
-    state.lastPatchedExe = result.launchExePath
-    updateLastPlayedButton()
-    setPill('Patched', 'ok')
-    appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
-    const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
-    const launch = await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
-    // A launch that is remembered refreshes it itself.
-    if (!launch.ok || launch.warning) refreshLastPlayedCheck()
-  } else {
+    if (result.ok) {
+      state.lastPatchedExe = result.launchExePath
+      setPill('Patched', 'ok')
+      appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
+      const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
+      const launch = await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
+      // A launch that is remembered refreshes it itself.
+      if (!launch.ok || launch.warning) refreshLastPlayedCheck()
+    } else {
+      setPill('Error', 'error')
+      appendConsoleLine(`Patch failed: ${result.error}`, 'error')
+    }
+  } catch (error) {
     setPill('Error', 'error')
-    appendConsoleLine(`Patch failed: ${result.error}`, 'error')
+    appendConsoleLine(`Patch failed: ${error.message}`, 'error')
+  } finally {
+    patchRunning = false
+    els.patchAndLaunchBtn.disabled = false
+    updateLastPlayedButton()
+    await refreshUpdateBanner()
   }
-
-  els.patchAndLaunchBtn.disabled = false
-  await refreshUpdateBanner()
 }
 
 els.patchAndLaunchBtn.addEventListener('click', () => patchAndLaunch())

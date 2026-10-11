@@ -44,17 +44,18 @@ async function downloadPatcher(patcherUrl, { fetchImpl = fetch, timeoutMs } = {}
 
 /**
  * The patcher a patch of this ref uses: the ref's own, or the bundled copy when the ref has none or
- * the download fails.
+ * the download fails (or takes longer than `timeoutMs`).
  *
  * @returns {Promise<{ code: string, hash: string, source: 'remote' | 'bundled' }>}
  */
-async function loadPatcher(patcherUrl, { onLog, fetchImpl } = {}) {
+async function loadPatcher(patcherUrl, { onLog, fetchImpl, timeoutMs } = {}) {
     if (patcherUrl) onLog?.(`Fetching ${patcherUrl}`)
-    const download = await downloadPatcher(patcherUrl, { fetchImpl })
+    const download = await downloadPatcher(patcherUrl, { fetchImpl, timeoutMs })
     if (download.status === 'remote') {
         return { code: download.code, hash: hashPatcher(download.code), source: 'remote' }
     }
-    onLog?.(`patcher.js not available at that ref — falling back to the bundled copy (${download.reason})`)
+    const problem = download.status === 'missing' ? 'patcher.js not available at that ref' : 'patcher.js could not be downloaded'
+    onLog?.(`${problem} — falling back to the bundled copy (${download.reason})`)
     const code = readBundledPatcher()
     return { code, hash: hashPatcher(code), source: 'bundled' }
 }

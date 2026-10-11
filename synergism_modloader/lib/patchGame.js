@@ -15,6 +15,9 @@ const {
     removeBestEffort
 } = require('./workspaceManager')
 
+// A download that hangs must not hang the patch: past this, the bundled patcher is used.
+const PATCHER_DOWNLOAD_TIMEOUT_MS = 15000
+
 const quoteArg = (arg) => (/[\s"]/.test(arg) || arg === '' ? `"${arg.replace(/"/g, '\\"')}"` : arg)
 
 function run(cmd, args, onLog) {
@@ -125,7 +128,9 @@ async function patchGame(opts) {
 
         // 4. Get the bundle patcher: the selected ref's own, or the copy shipped with the loader.
         log('Loading bundle patcher...')
-        const { code: patcherCode, hash: patcherHash } = await loadPatcher(patcherUrl, { onLog: log })
+        const { code: patcherCode, hash: patcherHash } = await loadPatcher(patcherUrl, {
+            onLog: log, timeoutMs: PATCHER_DOWNLOAD_TIMEOUT_MS
+        })
 
         log('Patching out.js...')
         const moduleShim = { exports: {} }
