@@ -3467,28 +3467,33 @@ function createCubeLuckEvaluator(table2: Loadout[], stat: "cube" | "oct", fixedS
     return { evaluate, materialize }
 }
 
-// Offerings I multiplies the left-side Offering result by a factor based on
+// Offerings I and Obtainium I multiply the left-side result by a factor based on
 // the Luck supplied by the right frontier.  Constructing a complete Loadout
 // and recalculating every unrelated effect for each of the millions of pairs
 // dominated the Offering search.  The two tables have fixed shared levels, so
 // their cost/blueberry overlap is constant per left row and the only changing
-// cross-table effect is that Luck factor.  Evaluate that formula numerically,
-// while retaining the established full repair path for over-budget blueberry
+// cross-table effect is that Luck factor, including the voucher boost to Jack.
+// Evaluate that formula numerically while retaining the established full
+// repair path for over-budget blueberry
 // combinations and materialising the exact winning Loadout at the end.
-function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[]) {
+function createLuckScaledResourceEvaluator(table1: Loadout[], table2: Loadout[], stat: "obt" | "off") {
+    const effectsEnabled = stats.exalt !== 6 && stats.exalt !== 8
     const rightMetadata = table2.map(loadout => {
       const mLuck = loadout.getStat("mLuck")
       return {
         loadout,
         additiveLuck: loadout.getStat("luck") / (1 + mLuck),
         mLuck,
+        freeLuckLevel: loadout.effectiveLevel("ambrosiaFreeLuckUpgrades")
+          - (stats.bonus[upgrades.ambrosiaFreeLuckUpgrades.row] ?? 0),
+        vouchers: loadout.getStat("vouchers"),
       }
     })
     const fixedRight = table2[0]
     const leftMetadata = new WeakMap<Loadout, {
       overlapCost: number;
       overlapBlueberries: number;
-      offeringLevel: number;
+      resourceLevel: number;
       valueWithoutLuckModule: number;
     }>()
 
@@ -3506,13 +3511,15 @@ function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[])
             - (stats.ambrosiaUpgradeBlueberryCostReductions[name] ?? 0),
         )
       }
-      const offeringLevel = left.effectiveLevel("ambrosiaOffering1")
-      const currentLuckFactor = 1 + 0.001 * left.luck * offeringLevel
+      const resourceLevel = effectsEnabled
+        ? left.effectiveLevel(stat === "obt" ? "ambrosiaObtainium1" : "ambrosiaOffering1")
+        : 0
+      const currentLuckFactor = 1 + 0.001 * left.luck * resourceLevel
       leftMetadata.set(left, {
         overlapCost,
         overlapBlueberries,
-        offeringLevel,
-        valueWithoutLuckModule: left.getStat("off") / currentLuckFactor,
+        resourceLevel,
+        valueWithoutLuckModule: left.getStat(stat) / currentLuckFactor,
       })
     }
 
@@ -3536,7 +3543,7 @@ function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[])
           fixed,
           cost: fixed.cost,
           blueberryCost: fixed.blueberryCost,
-          value: fixed.getStat("off"),
+          value: fixed.getStat(stat),
         }
       }
 
@@ -3544,13 +3551,18 @@ function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[])
       const unionUnassigned = stats.blueberries - blueberryCost
       const purpleLeoDelta = (unionUnassigned >= 5 ? unionUnassigned * stats.purpleLeoLevel : 0)
         - (rightUnassigned >= 5 ? rightUnassigned * stats.purpleLeoLevel : 0)
-      const luck = (right.additiveLuck + purpleLeoDelta) * (1 + right.mLuck)
+      const panthemaDelta = effectsEnabled && stats.exalt !== 4
+        ? 0.2 * stats.panthemaLevel
+          * (stats.shopBonusLevels.ambrosiaLuck + right.freeLuckLevel)
+          * 0.01 * stats.panthemaLevel * (left.getStat("vouchers") - right.vouchers)
+        : 0
+      const luck = (right.additiveLuck + purpleLeoDelta + panthemaDelta) * (1 + right.mLuck)
       return {
         left,
         right: right.loadout,
         cost,
         blueberryCost,
-        value: metadata.valueWithoutLuckModule * (1 + 0.001 * luck * metadata.offeringLevel),
+        value: metadata.valueWithoutLuckModule * (1 + 0.001 * luck * metadata.resourceLevel),
       }
     }
 
@@ -3561,19 +3573,20 @@ function createLuckScaledOfferingEvaluator(table1: Loadout[], table2: Loadout[])
         return candidate.left
       const union = Loadout.union(candidate.left, candidate.right)
       union.setCachedCosts(candidate.cost, candidate.blueberryCost)
-      union.setCachedStat("off", candidate.value)
+      union.setCachedStat(stat, candidate.value)
       return union
     }
 
     return { evaluate, materialize }
 }
 
-function findLuckScaledOfferingOpt(
+function findLuckScaledResourceOpt(
   table1: Loadout[],
   table2: Loadout[],
+  stat: "obt" | "off",
   budget = stats.amb,
 ): Loadout {
-    const evaluator = createLuckScaledOfferingEvaluator(table1, table2)
+    const evaluator = createLuckScaledResourceEvaluator(table1, table2, stat)
     let power = 0
     let j = 0
     const upperBounds: Array<{ budget: number; table2Index: number }> = []
@@ -3602,7 +3615,7 @@ function findLuckScaledOfferingOpt(
       left: table1[0],
       cost: table1[0].cost,
       blueberryCost: table1[0].blueberryCost,
-      value: table1[0].getStat("off"),
+      value: table1[0].getStat(stat),
     }
     j = 0
     let upperBoundIndex = 0
@@ -3643,6 +3656,43 @@ function findLuckScaledOfferingOpt(
         opt = union
     }
     return evaluator.materialize(opt)
+}
+
+// Vouchers directly multiply these resources as well as increasing Jack's
+// Luck bonus. Reserve their cost before allocating Luck, and compare every
+// affordable voucher count. Keep counts and Luck-module levels separate when
+// trimming: their interaction with the remaining Luck can reverse dominance.
+// Luck-only searches retain their cheaper last-priority voucher allocation.
+function findResourceVoucherOpt(
+  resourceTable: Loadout[],
+  luckTable: Loadout[],
+  voucherTable: Loadout[],
+  stat: "obt" | "off",
+): Loadout {
+    let best = new Loadout()
+    const module = stat === "obt" ? "ambrosiaObtainium1" : "ambrosiaOffering1"
+    for (const vouchers of voucherTable) {
+      const groups = new Map<number, Loadout[]>()
+      for (const resource of resourceTable) {
+        const candidate = Loadout.union(resource, vouchers)
+        if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
+          continue
+        const level = candidate.effectiveLevel(module)
+        const group = groups.get(level) ?? []
+        group.push(candidate)
+        groups.set(level, group)
+      }
+      for (const group of groups.values()) {
+        const frontier = trimTable(group, stat)
+        const candidate = stat === "off" && cubeExperimentConfig?.useLegacyOfferingSearch
+          ? findOpt(frontier, luckTable, stat)
+          : findLuckScaledResourceOpt(frontier, luckTable, stat)
+        const difference = candidate.getStat(stat) - best.getStat(stat)
+        if (difference > 0 || (difference === 0 && candidate.cost < best.cost))
+          best = candidate
+      }
+    }
+    return best
 }
 
 // Quark + Luck has a similarly small cross-table surface: the Luck side can
@@ -5295,8 +5345,7 @@ export class HSHeaterOptimizer {
               let tableObtRune = mergeIndependentTables(tableObtSing, tableCache.tableRune, "obt")
               recordCubeExperimentStage("obtainium-rune", offSubstageStartedAt, { frontier: tableObtRune.length })
               offSubstageStartedAt = experimentNow()
-              let loadoutObt   = findOpt(tableObtRune, tableCache.tableLuck, "obt");
-              loadoutObt = findOpt([loadoutObt], tableCache.tableVoucher, "obt");
+              const loadoutObt = findResourceVoucherOpt(tableObtRune, tableCache.tableLuck, tableCache.tableVoucher, "obt");
               recordCubeExperimentStage("obtainium-final-search", offSubstageStartedAt, {
                 left: tableObtRune.length,
                 right: tableCache.tableLuck.length,
@@ -5313,10 +5362,7 @@ export class HSHeaterOptimizer {
               let tableOffRune = mergeIndependentTables(tableOffSing, tableCache.tableRune, "off")
               recordCubeExperimentStage("offerings-rune", offSubstageStartedAt, { frontier: tableOffRune.length })
               offSubstageStartedAt = experimentNow()
-              let loadoutOff   = cubeExperimentConfig?.useLegacyOfferingSearch
-                ? findOpt(tableOffRune, tableCache.tableLuck, "off")
-                : findLuckScaledOfferingOpt(tableOffRune, tableCache.tableLuck)
-              loadoutOff = findOpt([loadoutOff], tableCache.tableVoucher, "off")
+              const loadoutOff = findResourceVoucherOpt(tableOffRune, tableCache.tableLuck, tableCache.tableVoucher, "off")
               recordCubeExperimentStage("offerings-final-search", offSubstageStartedAt, {
                 left: tableOffRune.length,
                 right: tableCache.tableLuck.length,
