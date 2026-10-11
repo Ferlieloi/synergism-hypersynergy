@@ -506,25 +506,36 @@ export class HSBackup {
                 return;
             }
 
-            await HSBackup.#applyImport(write, status);
+            const failure = await HSBackup.#applyImport(write);
+            if (failure) status.textContent = failure;
         });
     }
 
-    static async #applyImport({ save, modData, gamePrefs }: HSBackupWrite, status: HTMLElement): Promise<void> {
+    /**
+     * Imports a save alone, then reloads the page. For the mod's own code: no modal, no backup first.
+     * @param save The save as the game stores it (base64).
+     * @returns Why nothing was imported. When it worked, the page reloads.
+     */
+    static async importSaveAndReload(save: string): Promise<string | null> {
+        if (!HSBackup.#readSave(save)) return 'Not a save the game would load.';
+        if (HSBackup.#isAutosingActive()) return 'Auto-Sing is active: stop it first.';
+
+        return HSBackup.#applyImport({ save });
+    }
+
+    /** @returns Why nothing was imported. When it worked, the page reloads. */
+    static async #applyImport({ save, modData, gamePrefs }: HSBackupWrite): Promise<string | null> {
         const gameData = HSModuleManager.getModule<HSGameData>('HSGameData');
         // The GDS engine reads the stored save at every frame: it must not take the imported one for the running game
         await gameData?.pauseGDS(GDS_PAUSE_REASON);
 
         const giveUp = (message: string) => {
             void gameData?.resumeGDS(GDS_PAUSE_REASON);
-            status.textContent = message;
+            return message;
         };
 
         // Autosing may have started during the pause above
-        if (HSBackup.#refusedDuringAutosing('Import')) {
-            giveUp('Nothing was imported.');
-            return;
-        }
+        if (HSBackup.#refusedDuringAutosing('Import')) return giveUp('Nothing was imported.');
 
         // From here to the reload nothing is awaited: no timer of the game or the mod runs in between
         const previous = new Map<string, string | null>();
@@ -566,12 +577,12 @@ export class HSBackup {
                 }
             }
             HSLogger.error(`Import failed, nothing was changed: ${error}`, HSBackup.#context);
-            giveUp('The import failed (see the Log tab): nothing was changed.');
-            return;
+            return giveUp('The import failed (see the Log tab): nothing was changed.');
         }
 
         HSBackup.#blockStorageWrites({ save, modData, gamePrefs });
         HSBackup.#reload(`Imported ${[save ? 'the save' : '', modData ? 'the mod settings' : '', gamePrefs ? 'the game preferences' : ''].filter(Boolean).join(', ')}`);
+        return null;
     }
 
 
@@ -579,8 +590,12 @@ export class HSBackup {
     // ----------- Helpers -----------
     // ===============================
 
+    static #isAutosingActive(): boolean {
+        return HSModuleManager.getModule<HSAutosing>('HSAutosing')?.isAutosingActive() ?? false;
+    }
+
     static #refusedDuringAutosing(action: string): boolean {
-        if (!(HSModuleManager.getModule<HSAutosing>('HSAutosing')?.isAutosingActive() ?? false)) return false;
+        if (!HSBackup.#isAutosingActive()) return false;
 
         HSUI.Notify(`${action} refused while Auto-Sing is active: stop it first`, { position: 'top', notificationType: 'warning' });
         return true;
