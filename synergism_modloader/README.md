@@ -77,7 +77,7 @@ the launcher restarts. The loader's version is separate from the mod version.
 
 To publish a launcher update, increase `version` in this directory's
 `package.json` and `package-lock.json`, then push a matching tag such as
-`loader-v0.2.8`. The `Release Windows loader` workflow builds the installer,
+`loader-v0.2.9`. The `Release Windows loader` workflow builds the installer,
 uploads it with `latest.yml` and its block map. The launcher selects the
 newest published `loader-v*` release with update metadata. The workflow marks
 the new loader release as GitHub's Latest release.
