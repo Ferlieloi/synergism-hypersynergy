@@ -62,6 +62,9 @@ const SUGGESTION_EXPONENT_STEP = 5;
 // The game caps cubes at 1e300, and a plain number ends at 1.8e308
 const MAX_NUMBER_EXPONENT = 300;
 const NUMERIC_INPUT = /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i;
+// The two singularity counts are kept in line with each other when one is set
+const SINGULARITY_PATH = 'singularityCount';
+const HIGHEST_SINGULARITY_PATH = 'highestSingularityCount';
 
 // Shown behind the "?" of the Snapshots title: what can't be seen on screen
 const SNAPSHOT_RULES = [
@@ -94,6 +97,15 @@ const ROW_GROUPS: { title: string, rows: HSDevRowDefinition[] }[] = [
             { label: 'Lifetime Ambrosia', path: 'lifetimeAmbrosia', suggest: true },
             { label: 'Red Ambrosia', path: 'redAmbrosia', suggest: true },
             { label: 'Lifetime Red Ambrosia', path: 'lifetimeRedAmbrosia', suggest: true },
+        ]
+    },
+    {
+        // Written into the running game, as the game's Elevator does going down and autosing at each singularity.
+        // What the highest one unlocks is shown or hidden again by the game at the next tab change.
+        title: 'Singularity (no reset; unlocks refresh at the next tab change)',
+        rows: [
+            { label: 'Singularity', path: SINGULARITY_PATH, suggest: false },
+            { label: 'Highest singularity', path: HIGHEST_SINGULARITY_PATH, suggest: false },
         ]
     },
     {
@@ -218,6 +230,11 @@ export class HSDevTools {
 
         const leaf = this.#resolve(path);
         if (typeof leaf === 'string') return this.#fail(leaf);
+
+        const key = this.#normalizePath(path);
+        const isSingularity = key === SINGULARITY_PATH || key === HIGHEST_SINGULARITY_PATH;
+        if (isSingularity && !/^\d+$/.test(value)) return this.#fail('A singularity is a whole number, 0 or more');
+
         if (!this.#ensureSnapshot()) return false;
 
         const before = this.#format(leaf);
@@ -226,8 +243,28 @@ export class HSDevTools {
 
         const after = this.#resolve(path);
         HSLogger.log(`${label}: ${before} -> ${typeof after === 'string' ? '?' : this.#format(after)}`, this.#context);
+        if (isSingularity) this.#alignSingularityCounts(key);
         this.#refresh();
         return true;
+    }
+
+    /**
+     * The current singularity is never above the highest one: setting one moves the other when needed.
+     * The game does the same on its own once Antiquities is bought, by raising the highest.
+     * Allowed inside an Exalt too (an easier one for a test): there the game sets the count from the Exalt's
+     * requirement when it is entered and at every load, so an edit lasts until the next reload.
+     */
+    #alignSingularityCounts(setKey: string): void {
+        const player = HSGlobal.exposedPlayer as any;
+        if (!player || player.singularityCount <= player.highestSingularityCount) return;
+
+        if (setKey === SINGULARITY_PATH) {
+            player.highestSingularityCount = player.singularityCount;
+            HSLogger.log(`Highest singularity raised to ${player.singularityCount}`, this.#context);
+        } else {
+            player.singularityCount = player.highestSingularityCount;
+            HSLogger.log(`Singularity lowered to ${player.highestSingularityCount}`, this.#context);
+        }
     }
 
     #fail(message: string): false {
