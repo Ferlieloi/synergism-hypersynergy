@@ -151,19 +151,6 @@
       ]
     }
   },
-  "autoDismissOfflinePopup": {
-    "settingName": "autoDismissOfflinePopup",
-    "settingDescription": "Auto-dismiss offline popup",
-    "settingHelpText": "When enabled, the offline progress popup shown when the game loads is closed automatically. Disable it to read your offline progress summary. Takes effect on the next game load.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ui",
-      "controlPage": "ui",
-      "controlEnabledId": "hs-setting-auto-dismiss-offline-popup-btn"
-    }
-  },
   "rememberSubtabs": {
     "settingName": "rememberSubtabs",
     "settingDescription": "Remember last used subtab",
@@ -175,6 +162,19 @@
       "controlGroup": "ui",
       "controlPage": "ui",
       "controlEnabledId": "hs-setting-remember-subtabs-btn"
+    }
+  },
+  "autoDismissOfflinePopup": {
+    "settingName": "autoDismissOfflinePopup",
+    "settingDescription": "Auto-dismiss offline popup",
+    "settingHelpText": "When enabled, the offline progress popup shown when the game loads is closed automatically. Disable it to read your offline progress summary. Takes effect on the next game load.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-auto-dismiss-offline-popup-btn"
     }
   },
   "syncNotificationOpacity": {
