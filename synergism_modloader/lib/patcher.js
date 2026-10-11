@@ -493,6 +493,38 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── SAVE IMPORT HOOK PATCH — tell the mod when the game is about to load a save
+    // ImportExport.ts importSynergism(input, reset) loads every save: a file, a cloud save, the Steam cloud, and with
+    // reset = true a singularity, an Exalt and the game reset. The mod stops autosing on the first three.
+    // Found by what it does, not by minified names or call shapes: the function holding the import's own error keys
+    // ("importexport.loadTestInLive", "importexport.unableImport") and the save's "exporttest" check.
+    // At the start of its body, with its second parameter (reset):
+    //   Ic=(e,t=!1)=>{  becomes  Ic=(e,t=!1)=>{try{window.__HS_onSaveImport?.(t)}catch(__hsE){}
+    // The try: importSynergism ends every singularity, and an error from the mod must not stop the game there.
+    try {
+        const importResult = findEnclosingFunction(code, /["']importexport\.loadTestInLive["']/g,
+            ['importexport.unableImport', 'exporttest']);
+        if (importResult) {
+            const header = code.slice(Math.max(0, importResult.bodyStart - 300), importResult.bodyStart);
+            const params = /\(([^)]*)\)\s*(?:=>\s*)?\{$/.exec(header);
+            const resetParam = params?.[1].split(',')[1]?.split('=')[0].trim();
+            if (resetParam && /^[\w$]+$/.test(resetParam)) {
+                code = code.slice(0, importResult.bodyStart) +
+                    `\ntry{window.__HS_onSaveImport?.(${resetParam})}catch(__hsE){}\n` +
+                    code.slice(importResult.bodyStart);
+                code = 'window.__HS_SAVE_IMPORT_HOOK_PATCHED = true;\n' + code;
+                log(`Patched importSynergism (save import hook, fn=${importResult.fnName})`);
+            } else {
+                warn('Could not patch the save import hook — importSynergism has no second (reset) parameter');
+            }
+        } else {
+            warn('Could not patch the save import hook — importSynergism not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching the save import hook', e);
+    }
+
+    // ==================================================================================
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
         try {
@@ -864,6 +896,7 @@ function startBrowserLoader(options) {
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
                         `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
                         `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
+                        `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
                     `};` +
                 `}` +

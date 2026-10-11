@@ -652,8 +652,10 @@ export class HSAutosing extends HSModule {
     /**
      * @param options.restarting Keeps the start toggle ON, GDS paused and the mod settings as autosing
      * set them, for the next start. A stop or a failed start restores them.
+     * @param options.saveReplaced The game is loading another save right now: nothing is clicked in the game,
+     * as the answer to a click would come once the new save is in place.
      */
-    public stopAutosing(options?: { showReviewModal?: boolean, restarting?: boolean }): void {
+    public stopAutosing(options?: { showReviewModal?: boolean, restarting?: boolean, saveReplaced?: boolean }): void {
         HSGlobal.HSLogger.logLevel = ELogLevel.ALL;
 
         window.clearTimeout(this.#restartTimer);
@@ -672,7 +674,10 @@ export class HSAutosing extends HSModule {
             this.#restoreHsSettings();
             return;
         }
-        void this.#stopAutosingCore({ modalDisposition: options?.showReviewModal ? 'review' : 'destroy' });
+        void this.#stopAutosingCore({
+            modalDisposition: options?.showReviewModal ? 'review' : 'destroy',
+            leaveExalt: !options?.saveReplaced
+        });
 
         if (options?.restarting) {
             HSLogger.log(`Autosing stopped for a restart.`, this.context);
@@ -702,13 +707,14 @@ export class HSAutosing extends HSModule {
         this.#hsSettingsToRestore = [];
     }
 
-    async #stopAutosingCore(options: { modalDisposition: 'review' | 'destroy' }): Promise<void> {
+    async #stopAutosingCore(options: { modalDisposition: 'review' | 'destroy', leaveExalt: boolean }): Promise<void> {
         this.#autosingEnabled = false;
 
         // Stopped between entering Exalt 2 and leaving it: leave it, or the player stays inside.
         // Its own session answers its dialogs: the exit Alert is queued after stopAutosing() has stopped
         // autosing's answering. Without the hook, the session answers them through the DOM.
-        if (this.#exaltStep === 'entering' && this.#isInExalt()) {
+        // Not when another save is being loaded: the game would leave the Exalt on that save.
+        if (options.leaveExalt && this.#exaltStep === 'entering' && this.#isInExalt()) {
             HSLogger.log('Autosing stopped inside Exalt 2: leaving it.', this.context);
             HSGameDialogs.act('autosing', { confirm: 'ok', alert: 'dismiss' }, () => this.#exalt2Btn.click());
         }

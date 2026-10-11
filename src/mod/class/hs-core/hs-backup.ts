@@ -257,6 +257,7 @@ export class HSBackup {
                 maxChallenges: has('__HS_getMaxChallenges'),
                 applyCorruptions: has('__HS_applyCorruptions'),
                 validateBlueberryTree: has('__HS_validateBlueberryTree'),
+                saveImportHook: has('__HS_SAVE_IMPORT_HOOK_PATCHED'),
                 tackHooks: has('__HS_tackHooks'),
             },
             gameLanguage: localStorage.getItem('language') ?? 'en',

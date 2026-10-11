@@ -155,6 +155,9 @@ export class HSGameData extends HSModule {
 
         this.#cacheDomElements();
 
+        // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
+        (window as any).__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
+
         try {
             const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
             const data = await upgradesQuery.json() as PseudoGameData;
@@ -195,6 +198,25 @@ export class HSGameData extends HSModule {
                 HSLogger.log("Save file import interceptor registered", this.context);
             }
         })();
+    }
+
+    /**
+     * The game is about to load a save, whatever the source (patched game only).
+     * A singularity, entering or leaving an Exalt and the game reset load one too, with reset = true:
+     * nothing to do for them, and autosing goes through here at every singularity, so that path stays one test.
+     * The other loads replace the save: autosing can't go on. A cloud save and the Steam cloud are only seen here;
+     * "Load from file" has already stopped autosing at its button's click.
+     */
+    #onSaveImport(reset: boolean): void {
+        if (reset) return;
+
+        const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+        if (!autosing?.isAutosingActive()) return;
+
+        autosing.stopAutosing({ saveReplaced: true });
+        // After the stop: autosing mutes the log while it runs
+        HSLogger.log("Auto-Sing stopped: the game is loading a save", this.context);
+        HSUI.Notify("Auto-Sing stopped: a save was loaded", { position: 'top', notificationType: 'warning' });
     }
 
 
