@@ -142,6 +142,8 @@ export class HSAutosing extends HSModule {
     #exaltStateObserver?: MutationObserver;
     // Step of #enterAndLeaveExalt(): a stop while 'entering' leaves the Exalt autosing entered
     #exaltStep: 'none' | 'entering' | 'leaving' = 'none';
+    // Exalt waits of the current #enterAndLeaveExalt() that a game tick ended, not the game's Exalt attribute (debug line)
+    #exaltWaitsEndedByTick = 0;
     #waitForExaltStateActive?: {
         targetState: boolean;
         resolve: (value: boolean) => void;
@@ -420,8 +422,8 @@ export class HSAutosing extends HSModule {
             });
         }
 
-        // Bookmark mode observes the public DOM state published by the game.
-        // Exposure-ready mode reads player.insideSingularityChallenge directly.
+        // The game sets its Exalt attribute on <html> within the reset itself. Bookmark mode reads it; exposure-ready
+        // mode reads player.insideSingularityChallenge, and is only woken up by it (see #waitForExaltState).
         if (!this.#exaltStateObserver) {
             this.#exaltStateObserver = new MutationObserver(() => {
                 if (!this.#waitForExaltStateActive) return;
@@ -1665,6 +1667,8 @@ export class HSAutosing extends HSModule {
     }
 
     async #enterAndLeaveExalt(): Promise<boolean> {
+        const startedAt = performance.now();
+        this.#exaltWaitsEndedByTick = 0;
         try {
             this.#exaltStep = 'entering';
             this.#exalt2Btn.click();
@@ -1673,7 +1677,9 @@ export class HSAutosing extends HSModule {
 
             this.#exaltStep = 'leaving';
             this.#exalt2Btn.click();
-            return await this.#waitForExaltState(false);
+            const left = await this.#waitForExaltState(false);
+            if (left) HSLogger.debug(() => `Exalt 2 entered and left in ${(performance.now() - startedAt).toFixed(1)} ms, ${this.#exaltWaitsEndedByTick === 0 ? "without waiting for a game tick" : `${this.#exaltWaitsEndedByTick} wait(s) ended by a game tick`}`, this.context);
+            return left;
         } finally {
             this.#exaltStep = 'none';
         }
@@ -2216,20 +2222,36 @@ export class HSAutosing extends HSModule {
             && this.#antiquitiesObserverActivated;
     }
 
+    /**
+     * Waits for the Exalt to be entered (true) or left (false).
+     * The game sets its Exalt attribute within the reset itself, so observing it ends the wait right after the reset:
+     * in the same task as the click when the dialogs are answered at once, before anything is painted.
+     * Exposure-ready mode keeps the player's state as its reference, read at each game tick as before: the attribute
+     * only makes the wait shorter, and without it (a game update) the tick still ends it.
+     */
     async #waitForExaltState(targetState: boolean): Promise<boolean> {
-        if (this.#isExposureReady) {
-            while (
-                this.#autosingEnabled
-                && this.#exposedPlayer!.insideSingularityChallenge !== targetState
-            ) {
-                await HSUtils.waitForNextTack();
-            }
-            return this.#exposedPlayer!.insideSingularityChallenge === targetState;
-        }
-
         if (this.#isInExalt() === targetState) return true;
 
-        return await new Promise<boolean>((resolve) => {
+        const observed = this.#observeExaltState(targetState);
+        if (!this.#isExposureReady) return await observed;
+
+        let done = false;
+        const polled = (async (): Promise<void> => {
+            while (!done && this.#autosingEnabled && this.#exposedPlayer!.insideSingularityChallenge !== targetState) {
+                await HSUtils.waitForNextTack();
+            }
+            if (!done) this.#exaltWaitsEndedByTick++;
+        })();
+        // An observed wait that ends without the state (no observer, autosing stopped) leaves it to the ticks
+        await Promise.race([observed.then(matched => matched ? undefined : polled), polled]);
+        done = true;
+        this.#cleanupWaitForExaltState(false);
+        return this.#exposedPlayer!.insideSingularityChallenge === targetState;
+    }
+
+    /** Resolves true once the game's Exalt attribute changes and the state is the one waited for, false if the wait is ended first. */
+    #observeExaltState(targetState: boolean): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
             if (this.#waitForExaltStateActive) {
                 this.#cleanupWaitForExaltState(false);
             }
