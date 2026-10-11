@@ -13,7 +13,6 @@ import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
-import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSWebSocket } from "../hs-websocket";
@@ -48,7 +47,6 @@ export class HSModuleManager {
         "HSAmbrosia": HSAmbrosia,
         "HSStats": HSStats,
         "HSGameState": HSGameState,
-        "HSPatches": HSPatches,
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
         "HSWebSocket": HSWebSocket,

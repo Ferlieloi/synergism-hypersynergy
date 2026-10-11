@@ -226,10 +226,6 @@ export abstract class HSSetting<T extends HSSettingType> {
                 value: this.definition.calculatedSettingValue ?? null
             }
 
-            if (this.definition.patchConfig && this.definition.patchConfig.patchName) {
-                actionConfig.patchConfig = this.definition.patchConfig;
-            }
-
             if (action && action instanceof Function) {
                 if (changeType === "state") {
                     if (newState) {

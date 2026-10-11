@@ -35,10 +35,6 @@
     "groupName": "Minibar settings",
     "order": 9
   },
-  "patch": {
-    "groupName": "Old Patch settings",
-    "order": 13
-  },
   "gamedata": {
     "groupName": "Game data settings",
     "order": 11

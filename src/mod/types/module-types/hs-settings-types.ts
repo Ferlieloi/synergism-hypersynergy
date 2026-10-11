@@ -46,10 +46,6 @@ export interface HSSettingsDefinition {
     // ambrosiaIdleSwapRedLuckLoadout: AmbrosiaIdleSwapRedLuckLoadoutSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
 
-    // Patch Settings
-    patch_testPatch: PATCH_TestPatch;
-    patch_shopItemNameMapping: PATCH_shopItemNameMapping;
-
     // Game Data Settings
     useGameData: UseGameDataSetting;
 
@@ -117,7 +113,6 @@ export interface HSSettingActionParams {
     contextName?: string,
     value?: any,
     disable?: boolean,
-    patchConfig?: HSPatchConfig;
 }
 
 export interface HSSettingControlGroup {
@@ -143,10 +138,6 @@ export interface HSSettingControlPage {
     pageColor: string;
 }
 
-export interface HSPatchConfig {
-    patchName: string;
-}
-
 export interface HSSettingBase<T> {
     enabled: boolean;
     settingName: string;
@@ -160,7 +151,6 @@ export interface HSSettingBase<T> {
     defaultValue?: T;
     settingControl?: HSSettingControl;
     settingAction?: string;
-    patchConfig?: HSPatchConfig;
     usesGameData?: boolean;
     skipInit?: boolean;
 }
@@ -199,10 +189,6 @@ export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 // export interface AmbrosiaIdleSwapNormalLuckLoadoutSetting extends HSSettingBase<string> { }
 // export interface AmbrosiaIdleSwapRedLuckLoadoutSetting extends HSSettingBase<string> { }
 
-
-// Patch Settings
-export interface PATCH_TestPatch extends HSSettingBase<boolean> { }
-export interface PATCH_shopItemNameMapping extends HSSettingBase<boolean> { }
 
 // Game Data Settings
 export interface UseGameDataSetting extends HSSettingBase<boolean> { }

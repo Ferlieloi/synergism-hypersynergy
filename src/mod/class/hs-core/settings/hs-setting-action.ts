@@ -1,8 +1,8 @@
 import { HSSettingActionParams } from "../../../types/module-types/hs-settings-types";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
-import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
+import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
@@ -13,6 +13,21 @@ import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
+
+// Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
+// Does nothing if the module isn't loaded.
+function moduleToggle<T extends HSModule>(
+    moduleName: string,
+    on: (mod: T) => unknown,
+    off: (mod: T) => unknown
+): (params: HSSettingActionParams) => Promise<void> {
+    return async (params: HSSettingActionParams) => {
+        const mod = HSModuleManager.getModule<T>(moduleName);
+        if (!mod) return;
+
+        await (params.disable === true ? off(mod) : on(mod));
+    };
+}
 
 /**
  * Class: HSSettingActions
@@ -94,90 +109,37 @@ export class HSSettingActions {
             }
         },
 
-        ambrosiaQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
+        ambrosiaQuickBarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.showQuickBar(),
+            (mod) => mod.hideQuickBar()
+        ),
 
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.hideQuickBar();
-                } else {
-                    await ambrosiaMod.showQuickBar();
+        ambrosiaMinibarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => {
+                // Auto-enable GDS if not already enabled
+                const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
+                if (!gdsSettingEnabled) {
+                    HSSettings.getSetting('useGameData')?.enable();
                 }
-            }
-        },
-
-        ambrosiaMinibarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.disableBerryMinibars();
-                } else {
-                    // Auto-enable GDS if not already enabled
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
-                    }
-                    await ambrosiaMod.enableBerryMinibars();
-                }
-            }
-        },
+                return mod.enableBerryMinibars();
+            },
+            (mod) => mod.disableBerryMinibars()
+        ),
 
         hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
             HSSettingsUI.applyHiddenVanillaTabsSetting();
         },
 
-        patch: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
+        // Not awaited: the GDS start and stop run on their own
+        useGameData: moduleToggle<HSGameData>('HSGameData',
+            (mod) => { void mod.enableGDS(); },
+            (mod) => { void mod.disableGDS(); }
+        ),
 
-            if (!params.patchConfig || !params.patchConfig.patchName) {
-                HSLogger.error("No patch config provided for setting action", context);
-                return;
-            }
-
-            const patchMod = HSModuleManager.getModule<HSPatches>('HSPatches');
-
-            if (patchMod) {
-                if (params.disable && params.disable === true) {
-                    HSLogger.debug(() => `Disabling patch ${params.patchConfig!.patchName}`, context);
-                    await patchMod.revertPatch(params.patchConfig.patchName);
-                } else {
-                    HSLogger.debug(() => `Enabling patch ${params.patchConfig!.patchName}`, context);
-                    await patchMod.applyPatch(params.patchConfig.patchName);
-                }
-            }
-        },
-
-        useGameData: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
-
-            if (gameDataMod) {
-                if (params.disable && params.disable === true) {
-                    gameDataMod.disableGDS();
-                } else {
-                    gameDataMod.enableGDS();
-                }
-            }
-        },
-
-        addTimeAutoLoadoutsAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.disableAutoLoadout();
-                } else {
-                    await ambrosiaMod.enableAutoLoadout();
-                }
-            }
-        },
+        addTimeAutoLoadoutsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.enableAutoLoadout(),
+            (mod) => mod.disableAutoLoadout()
+        ),
 
         /* RETIRED: The Ambrosia AFK/idle swapper is no longer useful after the
          * corresponding game update. Keep the old action here as commented
@@ -266,53 +228,25 @@ export class HSSettingActions {
             }
         },
 
-        enableGQDistributorAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (qolButtonsMod) {
-                if (params.disable && params.disable === true) {
-                    qolButtonsMod.hideGQDistributor();
-                } else {
-                    await qolButtonsMod.showGQDistributor();
-                }
-            }
-        },
+        enableGQDistributorAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.showGQDistributor(),
+            (mod) => mod.hideGQDistributor()
+        ),
 
-        enableAutomationQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
+        enableAutomationQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.enableAutomationQuickbar(),
+            (mod) => mod.disableAutomationQuickbar()
+        ),
 
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableAutomationQuickbar();
-            } else {
-                qolButtonsMod.enableAutomationQuickbar();
-            }
-        },
+        enableEventsQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.enableEventsQuickbar(),
+            (mod) => mod.disableEventsQuickbar()
+        ),
 
-        enableEventsQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
-
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableEventsQuickbar();
-            } else {
-                qolButtonsMod.enableEventsQuickbar();
-            }
-        },
-
-        enableCorruptionQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
-
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableCorruptionQuickbar();
-            } else {
-                qolButtonsMod.enableCorruptionQuickbar();
-            }
-        }
+        enableCorruptionQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.enableCorruptionQuickbar(),
+            (mod) => mod.disableCorruptionQuickbar()
+        )
     }
 
     constructor() { }
@@ -321,8 +255,13 @@ export class HSSettingActions {
         const self = this;
 
         if (actionName in this.#settingActions) {
+            // The action's promise is not returned, on purpose: no caller waits for a setting action
+            // (at load, each one would hold back the next settings). So a failure is logged here.
             return (params: HSSettingActionParams) => {
-                self.#settingActions[actionName](params);
+                void (async () => self.#settingActions[actionName](params))().catch((err) => {
+                    HSLogger.error(`Setting action ${actionName} failed: ${err}`, params.contextName ?? "HSSettings");
+                    console.error(err);
+                });
             };
         } else {
             return null;

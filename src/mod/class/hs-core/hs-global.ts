@@ -125,7 +125,6 @@ export const HSGlobal: IHSGlobal = class {
             'defaultValue',
             'settingControl',
             'settingAction',
-            'patchConfig',
             'usesGameData',
         ],
         gameDataRequiredTooltip: 'This feature requires Game Data Sniffing to be enabled.',
