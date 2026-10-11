@@ -30,6 +30,8 @@ function loadMain() {
         './lib/startupDiagnostics': { createStartupDiagnostics: () => ({ log() {}, report() {}, watchWindow() {} }) },
         './lib/config': {
             loadConfig: () => ({}),
+            // main.js calls it when it loads (the hidden "local" channel)
+            setLocalChannelEnabled: () => {},
             DEFAULTS: { exeName: 'game.exe', steamAppName: 'Synergism' }
         },
         './lib/steamLocator': {
