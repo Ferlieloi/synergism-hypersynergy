@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 const vm = require('node:vm')
-const { buildInjectorCode } = require('../lib/injectorTemplate')
+const { buildInjectorCode, injectorHash } = require('../lib/injectorTemplate')
 
 test('Steam injector waits for mod initialization and does not start it twice', async () => {
     let finishInitialization
@@ -50,4 +50,11 @@ test('Steam injector reports a failed mod download', async () => {
     await new Promise(resolve => setImmediate(resolve))
     assert.equal(appended, false)
     assert.match(String(errors[0]?.[1]), /HTTP 503/)
+})
+
+test('the injector hash follows the injector code, not the mod URL', () => {
+    assert.match(injectorHash(), /^[0-9a-f]{64}$/)
+    assert.equal(injectorHash(), injectorHash())
+    const withoutUrl = code => code.replace(/let resolvedUrl = .*;/, '')
+    assert.equal(withoutUrl(buildInjectorCode('https://example.test/a.js')), withoutUrl(buildInjectorCode('')))
 })

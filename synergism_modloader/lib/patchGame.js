@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { execFile } = require('child_process')
 const asar = require('@electron/asar')
-const { buildInjectorCode } = require('./injectorTemplate')
+const { buildInjectorCode, injectorHash } = require('./injectorTemplate')
 const { createPackageAndWait } = require('./archiveWriter')
 const { DEFAULTS, resolveChannel } = require('./config')
 const { loadPatcher } = require('./patcherSource')
@@ -17,6 +17,9 @@ const {
 
 // A download that hangs must not hang the patch: past this, the bundled patcher is used.
 const PATCHER_DOWNLOAD_TIMEOUT_MS = 15000
+
+// How a patcher warning starts in the patch log; the window shows these lines apart.
+const PATCH_WARNING_PREFIX = '[PATCH] WARNING:'
 
 const quoteArg = (arg) => (/[\s"]/.test(arg) || arg === '' ? `"${arg.replace(/"/g, '\\"')}"` : arg)
 
@@ -61,6 +64,36 @@ function findLaunchableExe(extractedAppDir) {
 }
 
 /**
+ * Runs a patcher.js source on the game bundle, with the patcher's own messages sent to the log.
+ * A warning is a patch step the patcher could not apply, usually after a game update: the patch
+ * still succeeds, and the mod lacks that hook.
+ *
+ * @param {string} patcherCode
+ * @param {string} original  The game's out.js
+ * @param {(line: string) => void} [log]
+ * @returns {{ patched: string, warnings: number }}
+ */
+function runPatcher(patcherCode, original, log) {
+    const moduleShim = { exports: {} }
+    const fn = new Function('module', 'exports', patcherCode + '\nreturn module.exports')
+    const patcher = fn(moduleShim, moduleShim.exports)
+    const patchBundle = typeof patcher === 'function' ? patcher : patcher.patchBundle
+    if (typeof patchBundle !== 'function') throw new Error('patcher.js did not export patchBundle')
+
+    const text = parts => parts.map(part => (part instanceof Error ? part.message : String(part))).join(' ')
+    let warnings = 0
+    const patched = patchBundle(original, {
+        steam: true,
+        log: (...parts) => log?.(`[PATCH] ${text(parts)}`),
+        warn: (...parts) => {
+            warnings++
+            log?.(`${PATCH_WARNING_PREFIX} ${text(parts)}`)
+        }
+    })
+    return { patched, warnings }
+}
+
+/**
  * Runs the full extract → patch → repack pipeline.
  *
  * @param {object} opts
@@ -70,8 +103,9 @@ function findLaunchableExe(extractedAppDir) {
  * @param {string} opts.modUrl         Resolved URL for the mod script to inject
  * @param {string} [opts.patcherUrl]   Optional remote URL for patcher.js; falls back to the bundled copy
  * @param {(line: string) => void} [opts.onLog]
- * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number }, patcherHash: string }>}
- *          `patcherHash` identifies the patcher used, see lib/patcherSource.js
+ * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number }, patcherHash: string, injectorHash: string, patchWarnings: number }>}
+ *          `patcherHash` and `injectorHash` identify what was written into the game (lib/patcherSource.js,
+ *          lib/injectorTemplate.js); `patchWarnings` counts the patch steps that could not be applied
  */
 async function patchGame(opts) {
     const { gameDir, exeName, sevenZipPath, modUrl, patcherUrl, onLog } = opts
@@ -133,16 +167,12 @@ async function patchGame(opts) {
         })
 
         log('Patching out.js...')
-        const moduleShim = { exports: {} }
-        const fn = new Function('module', 'exports', patcherCode + '\nreturn module.exports')
-        const patcher = fn(moduleShim, moduleShim.exports)
-        const patchBundle = typeof patcher === 'function' ? patcher : patcher.patchBundle
-        if (typeof patchBundle !== 'function') throw new Error('patcher.js did not export patchBundle')
-
         const original = fs.readFileSync(outJsPath, 'utf-8')
-        const patched = patchBundle(original, { steam: true })
+        const { patched, warnings: patchWarnings } = runPatcher(patcherCode, original, log)
         fs.writeFileSync(outJsPath, patched)
-        log('out.js patched successfully')
+        log(patchWarnings
+            ? `out.js patched with ${patchWarnings} warning(s): the mod will lack what those steps add`
+            : 'out.js patched successfully')
 
         // 5. Append the mod injector to preload.js
         if (!fs.existsSync(preloadPath)) {
@@ -179,7 +209,9 @@ async function patchGame(opts) {
         return {
             launchExePath: installedExePath,
             sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs },
-            patcherHash
+            patcherHash,
+            injectorHash: injectorHash(),
+            patchWarnings
         }
     } finally {
         if (fs.existsSync(dirs.staging)) removeBestEffort(dirs.staging, log)
@@ -204,4 +236,6 @@ function buildPatcherUrl(channelId, ref) {
     return `https://cdn.jsdelivr.net/gh/${ch.repo}@${r}/${DEFAULTS.patcherPath}`
 }
 
-module.exports = { patchGame, findLaunchableExe, buildModUrl, buildPatcherUrl, withRawArchiveAccess }
+module.exports = {
+    patchGame, runPatcher, findLaunchableExe, buildModUrl, buildPatcherUrl, withRawArchiveAccess, PATCH_WARNING_PREFIX
+}

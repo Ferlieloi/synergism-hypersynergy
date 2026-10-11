@@ -109,6 +109,7 @@ function emptyConfig() {
         lastPatchedExe: '',     // launchable exe produced by the last successful patch
         lastPatchedSourceStat: null, // { size, mtimeMs } of the original exe at patch time
         lastPatchedPatcherHash: '',  // patcher.js used by that patch (lib/patcherSource.js); '' = patched by a loader up to 0.2.8
+        lastPatchedInjectorHash: '', // injector written by that patch (lib/injectorTemplate.js)
         lastPatchedChannel: '',
         lastPatchedModRef: ''
     }

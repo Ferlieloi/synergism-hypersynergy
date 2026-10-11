@@ -5,7 +5,7 @@ const path = require('node:path')
 const vm = require('node:vm')
 const { EventEmitter } = require('node:events')
 
-function loadMain() {
+function loadMain(overrides = {}) {
     const handlers = new Map()
     const app = new EventEmitter()
     let quits = 0
@@ -44,7 +44,9 @@ function loadMain() {
         './lib/workspaceManager': {
             cleanupOldWorkspaces: async gameDir => { cleanedGameDir = gameDir; return { removed: 1 } }
         },
-        './lib/patchGame': {}, './lib/patcherSource': {}, './lib/modRefs': {}, './lib/modRefCache': {}, './lib/gameLauncher': {}
+        './lib/patchGame': {}, './lib/patcherSource': {}, './lib/injectorTemplate': {},
+        './lib/modRefs': {}, './lib/modRefCache': {}, './lib/gameLauncher': {},
+        ...overrides
     }
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf-8'), {
         require: name => {
@@ -89,4 +91,62 @@ test('manual Steam and 7-Zip IPC detection returns paths instead of promises ins
     assert.equal(result.steamPath, '/steam')
     assert.equal(result.gameDir, '/game')
     assert.equal(await main.handlers.get('sevenzip:autodetect')(), '/7zip/7z.exe')
+})
+
+// A loader whose config says the game was patched, with what that patch recorded.
+function loadPatchedMain({ config, existing = [], checkPatcherChanged = async () => ({ needsRepatch: false, reason: 'same' }) }) {
+    return loadMain({
+        fs: { existsSync: file => existing.includes(file), statSync: () => ({ size: 10, mtimeMs: 20 }) },
+        './lib/config': {
+            loadConfig: () => config,
+            setLocalChannelEnabled: () => {},
+            DEFAULTS: { exeName: 'game.exe', steamAppName: 'Synergism' }
+        },
+        './lib/patchGame': { buildPatcherUrl: (channel, ref) => `patcher:${channel}@${ref}` },
+        './lib/patcherSource': { checkPatcherChanged },
+        './lib/injectorTemplate': { injectorHash: () => 'injector-now' }
+    })
+}
+
+test('the patcher check gets the recorded patcher and the selected build, and a failing check asks for nothing', async () => {
+    const config = { lastPatchedExe: '/work/game.exe', lastPatchedPatcherHash: 'patcher-then', lastPatchedInjectorHash: 'injector-now' }
+    let received
+    const main = loadPatchedMain({ config, checkPatcherChanged: async args => { received = args; return { needsRepatch: true, reason: 'changed' } } })
+    const result = await main.handlers.get('patcher:check-changed')(null, { channel: 'dev', modRef: 'master' })
+    assert.equal(result.needsRepatch, true)
+    assert.equal(received.lastHash, 'patcher-then')
+    assert.equal(received.patcherUrl, 'patcher:dev@master')
+    assert.ok(received.timeoutMs > 0)
+
+    const broken = loadPatchedMain({ config, checkPatcherChanged: async () => { throw new Error('boom') } })
+    const failed = await broken.handlers.get('patcher:check-changed')(null, { channel: 'dev', modRef: 'master' })
+    assert.equal(failed.needsRepatch, false)
+    assert.equal(failed.reason, 'unknown')
+})
+
+test('a game patched with another injector needs a patch, without any download', async () => {
+    const neverCalled = async () => { assert.fail('the patcher should not be checked') }
+    const config = { lastPatchedExe: '/work/game.exe', lastPatchedPatcherHash: 'patcher-then', lastPatchedInjectorHash: 'injector-then' }
+    const main = loadPatchedMain({ config, checkPatcherChanged: neverCalled })
+    const result = await main.handlers.get('patcher:check-changed')(null, { channel: 'dev', modRef: 'master' })
+    assert.equal(result.needsRepatch, true)
+    assert.equal(result.reason, 'injector')
+
+    const unpatched = loadPatchedMain({ config: {}, checkPatcherChanged: neverCalled })
+    const nothing = await unpatched.handlers.get('patcher:check-changed')(null, { channel: 'dev', modRef: 'master' })
+    assert.equal(nothing.needsRepatch, false)
+    assert.equal(nothing.reason, 'not-patched')
+})
+
+test('a patched copy that is gone needs a patch, and so does a game exe that changed', () => {
+    const gameExe = path.join('/game', 'game.exe')
+    const config = { lastPatchedExe: '/work/game.exe', lastPatchedSourceStat: { size: 10, mtimeMs: 20 } }
+    const check = (cfg, existing) => {
+        const result = loadPatchedMain({ config: cfg, existing }).handlers.get('game:check-update-needed')(null, { gameDir: '/game', exeName: 'game.exe' })
+        return [result.needsRepatch, result.reason]
+    }
+    assert.deepEqual(check(config, [gameExe, '/work/game.exe']), [false, undefined])
+    assert.deepEqual(check(config, [gameExe]), [true, 'missing'])
+    assert.deepEqual(check({ ...config, lastPatchedSourceStat: { size: 11, mtimeMs: 20 } }, [gameExe, '/work/game.exe']), [true, undefined])
+    assert.deepEqual(check({}, [gameExe]), [true, undefined])
 })

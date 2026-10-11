@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+
 function buildInjectorCode(modUrl) {
     return `
 // ==== HYPERSYNERGISM INJECTOR START ====
@@ -41,4 +43,10 @@ try {
 `
 }
 
-module.exports = { buildInjectorCode }
+// Identifies the injector, whatever the mod URL: the game takes the URL from HS_MOD_URL at each launch.
+// The injector is only written by a patch, so a game patched with another one needs a patch.
+function injectorHash() {
+    return crypto.createHash('sha256').update(buildInjectorCode('')).digest('hex')
+}
+
+module.exports = { buildInjectorCode, injectorHash }

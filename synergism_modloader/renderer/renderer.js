@@ -318,7 +318,7 @@ function updateLastPlayedButton() {
     ? `${needsPatch ? 'Patch & launch' : 'Launch'} last played: ${state.lastPlayedModRef} (${state.lastPlayedChannel})`
     : 'Launch last played build'
   els.launchLastPlayedBtn.title = needsPatch
-    ? "The game was updated, or this build's patcher is not the one your game was patched with."
+    ? 'A re-patch is needed first — the last screen says why.'
     : ''
 }
 
@@ -330,7 +330,7 @@ function refreshLastPlayedCheck() {
   const { lastPlayedChannel: channel, lastPlayedModRef: modRef } = state
   const check = (state.lastPatchedExe && channel && modRef)
     ? (async () => {
-      if (await gameUpdatedSincePatch()) return true
+      if ((await checkGame()).needsRepatch) return true
       return (await window.loader.checkPatcherChanged({ channel, modRef })).needsRepatch
     })().catch(() => false)
     : Promise.resolve(false)
@@ -505,28 +505,40 @@ els.launchLastPlayedBtn.addEventListener('click', async () => {
   updateLastPlayedButton()
 })
 
+// A patcher warning is a patch step that could not be applied; lib/patchGame.js gives them this prefix.
+const PATCH_WARNING_PREFIX = '[PATCH] WARNING:'
+
 window.loader.onPatchLog((line) => {
-  appendConsoleLine(line, /error|fail/i.test(line) ? 'error' : null)
+  if (line.startsWith(PATCH_WARNING_PREFIX)) appendConsoleLine(line, 'warn')
+  else appendConsoleLine(line, /error|fail/i.test(line) ? 'error' : null)
 })
 
 const PATCHER_BANNER_TEXT = {
   changed: "This build's patcher is not the one your game was patched with — re-patch to keep the mod working.",
-  'no-hash': 'Your game was patched by an older loader, which did not record its patcher — re-patch once so the loader can tell when the patcher changes.'
+  'no-hash': 'Your game was patched by an older loader, which did not record its patcher — re-patch once so the loader can tell when the patcher changes.',
+  injector: 'This loader version changed what it adds to the game — re-patch to keep the mod working.'
 }
 
-async function gameUpdatedSincePatch() {
-  if (!state.gameDir) return false
-  const { needsRepatch } = await window.loader.checkUpdateNeeded({ gameDir: state.gameDir, exeName: EXE_NAME })
-  return needsRepatch
+const GAME_BANNER_TEXT = {
+  updated: 'The game has updated since your last patch — re-patch to keep the mod working.',
+  missing: 'The patched copy of the game is missing (the game was reinstalled or moved) — re-patch to create it again.'
 }
 
-// `patcher` is the patcher check's result, or null while it runs.
-function renderRepatchState({ gameUpdated, mismatch, patcher }) {
+// The game side of the re-patch check: the game was updated by Steam, or the patched copy is gone.
+async function checkGame() {
+  if (!state.gameDir) return { needsRepatch: false }
+  return window.loader.checkUpdateNeeded({ gameDir: state.gameDir, exeName: EXE_NAME })
+}
+
+// `game` is the game check's result; `patcher` is the patcher check's result, or null while it runs.
+function renderRepatchState({ game, mismatch, patcher }) {
   const checking = patcher === null
+  const gameUpdated = game.needsRepatch
   const patcherChanged = Boolean(patcher?.needsRepatch)
   const needsRepatch = gameUpdated || patcherChanged
   // Without a patched game there is no last patch to compare with: "Patch & launch" is the only way on.
   els.updateBanner.classList.toggle('is-hidden', !gameUpdated || !state.lastPatchedExe)
+  if (gameUpdated) els.updateBanner.textContent = GAME_BANNER_TEXT[game.reason] || GAME_BANNER_TEXT.updated
   els.patcherBanner.classList.toggle('is-hidden', !patcherChanged)
   if (patcherChanged) els.patcherBanner.textContent = PATCHER_BANNER_TEXT[patcher.reason] || PATCHER_BANNER_TEXT.changed
 
@@ -548,7 +560,7 @@ let repatchCheckId = 0
 async function refreshUpdateBanner() {
   if (!state.gameDir) return
   const checkId = ++repatchCheckId
-  const gameUpdated = await gameUpdatedSincePatch()
+  const game = await checkGame()
 
   // Check if the selected channel/ref differs from what was last patched
   const { mismatch } = await window.loader.checkVersionMismatch({
@@ -557,17 +569,17 @@ async function refreshUpdateBanner() {
   })
   if (checkId !== repatchCheckId) return
 
-  // A game update already asks for a patch. Otherwise the selected build's patcher is downloaded
+  // The game side may already ask for a patch. Otherwise the selected build's patcher is downloaded
   // and compared: the launch buttons wait for it, the caller doesn't.
-  const patcherCheckNeeded = !gameUpdated && Boolean(state.lastPatchedExe)
-  renderRepatchState({ gameUpdated, mismatch, patcher: patcherCheckNeeded ? null : { needsRepatch: false } })
+  const patcherCheckNeeded = !game.needsRepatch && Boolean(state.lastPatchedExe)
+  renderRepatchState({ game, mismatch, patcher: patcherCheckNeeded ? null : { needsRepatch: false } })
   if (!patcherCheckNeeded) return
 
   void window.loader.checkPatcherChanged({ channel: state.channel, modRef: state.modRef })
     .catch(error => ({ needsRepatch: false, reason: 'unknown', error: error.message }))
     .then(patcher => {
       if (checkId !== repatchCheckId) return
-      renderRepatchState({ gameUpdated, mismatch, patcher })
+      renderRepatchState({ game, mismatch, patcher })
       if (patcher.reason === 'unknown') notePatcherCheckFailed(patcher.error)
     })
 }
@@ -599,6 +611,9 @@ async function patchAndLaunch() {
       const launch = await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
       // A launch that is remembered refreshes it itself.
       if (!launch.ok || launch.warning) refreshLastPlayedCheck()
+      if (result.patchWarnings) {
+        appendConsoleLine(`The patch finished with ${result.patchWarnings} warning(s), the "${PATCH_WARNING_PREFIX}" lines above: some mod features may be missing or slower. This usually follows a game update — look for a newer mod build.`, 'warn')
+      }
     } else {
       setPill('Error', 'error')
       appendConsoleLine(`Patch failed: ${result.error}`, 'error')
