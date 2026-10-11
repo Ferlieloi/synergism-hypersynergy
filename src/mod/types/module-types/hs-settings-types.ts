@@ -53,7 +53,6 @@ export interface HSSettingsDefinition {
     // Auto Sing Settings
     startAutosing: StartAutosing;
     singularityNumber: SingularityNumber;
-    autosingReturnToTab: AutosingReturnToTab;
     autosingEarlyCubeLoadout: AutosingEarlyCubeLoadout;
     autosingLateCubeLoadout: AutosingLateCubeLoadout;
     autosingQuarkLoadout: AutosingQuarkLoadout;
@@ -199,7 +198,6 @@ export interface UseGameDataSetting extends HSSettingBase<boolean> { }
 // Auto Sing Settings
 export interface StartAutosing extends HSSettingBase<boolean> { }
 export interface SingularityNumber extends HSSettingBase<number> { }
-export interface AutosingReturnToTab extends HSSettingBase<boolean> { }
 export interface AutosingEarlyCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingLateCubeLoadout extends HSSettingBase<string> { }
 export interface AutosingQuarkLoadout extends HSSettingBase<string> { }

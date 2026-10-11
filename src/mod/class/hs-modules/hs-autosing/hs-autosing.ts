@@ -184,10 +184,6 @@ export class HSAutosing extends HSModule {
     #subtabMemory?: HSSubtabMemory;
     // The tab the player was on, brought back after each Exalt (the game opens Buildings) and each DOM stage read
     #playerTab?: MainView;
-    // Set while #playerTab is locked: the tab the game left the player on meanwhile
-    #parkedTab?: MainView;
-    // Stage of the last try to come back from #parkedTab
-    #tabReturnStage = '';
 
     #autosingModal?: HSAutosingModal;
 
@@ -759,7 +755,6 @@ export class HSAutosing extends HSModule {
         this.#waitForInnerTextObservedElement = undefined;
         this.#cleanupWaitForInnerText(false);
         this.#playerTab = undefined;
-        this.#parkedTab = undefined;
 
         if (this.#endStagePromiseResolve) {
             try { this.#endStagePromiseResolve(); } catch (e) { /* ignore */ }
@@ -950,15 +945,8 @@ export class HSAutosing extends HSModule {
                     if (!this.#autosingEnabled || this.#endStageDone || this.#antiquitiesObserverActivated) break;
                     const stage = await this.#getStage();
                     if (!this.#autosingEnabled) return;
-                    if (!this.#isExposureReady) {
-                        // Only the DOM stage fallback navigates to Settings on every phase.
-                        this.#showPlayerTab();
-                    } else if (this.#parkedTab && stage !== this.#tabReturnStage) {
-                        // The player's tab is locked: tried again at each new stage, if they are still where the game left them
-                        this.#tabReturnStage = stage;
-                        this.#notePlayerTab();
-                        this.#showPlayerTab();
-                    }
+                    // Only the DOM stage fallback navigates to Settings on every phase.
+                    if (!this.#isExposureReady) this.#showPlayerTab();
 
                     try {
                         await this.#matchStageToStrategy(stage);
@@ -1999,45 +1987,31 @@ export class HSAutosing extends HSModule {
 
     /**
      * Notes the tab to bring back: the one on screen, read from the live DOM (not the observer cache: tab changes
-     * come in bursts around a singularity). While the player's tab is locked and they are still where the game
-     * left them, that tab stays the one to bring back; any other tab they opened is their new choice.
+     * come in bursts around a singularity).
      */
     #notePlayerTab(): void {
-        const current = this.#gamestate.getCurrentMainViewFromDOM();
-        if (this.#parkedTab && current.getId() === this.#parkedTab.getId()) return;
-        this.#parkedTab = undefined;
-        this.#playerTab = current;
+        this.#playerTab = this.#gamestate.getCurrentMainViewFromDOM();
     }
 
     /**
      * Brings the player's tab back after the game or the mod moved them: an Exalt (Buildings), a DOM stage read
-     * (Settings). A locked tab is never clicked, the game would open the next unlocked one: the player is left
-     * where the game put them, and comes back once the tab is unlocked if the setting asks for it.
+     * (Settings). A locked tab is never clicked, the game would open the next unlocked one: the player stays where
+     * the game left them, and that tab becomes the one to bring back until they open another.
      */
     #showPlayerTab(): void {
         const view = this.#playerTab;
         if (!view) return;
 
         const current = this.#gamestate.getCurrentMainViewFromDOM();
-        if (current.getId() === view.getId()) {
-            this.#parkedTab = undefined;
+        if (current.getId() === view.getId()) return;
+
+        if (!HSAutosing.#isTabVisible(view)) {
+            this.#playerTab = current;
             return;
         }
 
-        const waiting = this.#parkedTab !== undefined;
-        const canOpen = (!waiting || !!HSSettings.getSetting("autosingReturnToTab")?.isEnabled()) && HSAutosing.#isTabVisible(view);
-        if (canOpen) {
-            this.#parkedTab = undefined;
-            if (this.#subtabMemory) this.#subtabMemory.openForPlayer(view);
-            else view.goto();
-            return;
-        }
-
-        if (!this.#parkedTab) {
-            this.#parkedTab = current;
-        } else if (current.getId() !== this.#parkedTab.getId()) {
-            this.#parkedTab.goto();
-        }
+        if (this.#subtabMemory) this.#subtabMemory.openForPlayer(view);
+        else view.goto();
     }
 
     /** A locked tab's button is hidden by the game's stylesheet (html[data-chal10="false"] .chal10 and the like). */
