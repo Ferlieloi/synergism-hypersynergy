@@ -266,7 +266,8 @@ export class HSBackup {
             userAgent: navigator.userAgent,
         };
 
-        // Set by the browser userscript: the repo and ref the patcher was taken from
+        // Set by the browser userscript (the repo and ref the patcher was taken from)
+        // and by the Steam injector (those of the mod, loader 0.2.9 and later)
         if (typeof w.__HS_REPO === 'string' || typeof w.__HS_VERSION === 'string') {
             info.loaderRef = `${w.__HS_REPO ?? '?'}@${w.__HS_VERSION ?? '?'}`;
         }

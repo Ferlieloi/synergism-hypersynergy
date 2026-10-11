@@ -446,10 +446,13 @@ export class Hypersynergism {
 
     async #checkVersion() {
         const isLatest = await HSGithub.isLatestTag();
+        // Dev channel players only
+        const liveTag = HSGithub.liveReleaseTag;
+        const liveRelease = liveTag ? ` Latest Live release: ${liveTag}.` : '';
 
-        HSUI.Notify(isLatest
+        HSUI.Notify((isLatest
             ? 'You are using the latest version of Hypersynergism!'
-            : 'You are NOT using the latest version of Hypersynergism!', {
+            : 'You are NOT using the latest version of Hypersynergism!') + liveRelease, {
             position: 'top',
             notificationType: isLatest ? 'success' : 'warning'
         });

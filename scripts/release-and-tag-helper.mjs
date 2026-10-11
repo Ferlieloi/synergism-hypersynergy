@@ -184,7 +184,8 @@ const versionCollator = new Intl.Collator('en', { numeric: true, sensitivity: 'b
 /**
  * Compare two version strings like "2.10.0", "2.14.4b" or "2.14.4b-dev1".
  * The part before the first "-" is compared numerically (a letter suffix comes after the plain
- * version: 2.10.2 < 2.10.2c); a version without pre-release ("-dev1") comes after its pre-releases.
+ * version: 2.10.2 < 2.10.2c); a dev build ("-dev1") is named from the release it is built on, so it
+ * comes after it: 2.14.4b < 2.14.4b-dev1. Same order as the mod's version check (hs-version-tags.ts).
  */
 function compareVersions(a, b) {
     const [aMain, ...aPreParts] = a.split('-');
@@ -195,8 +196,8 @@ function compareVersions(a, b) {
     const aPre = aPreParts.join('-');
     const bPre = bPreParts.join('-');
     if (aPre === bPre) return 0;
-    if (!aPre) return 1;
-    if (!bPre) return -1;
+    if (!aPre) return -1;
+    if (!bPre) return 1;
     return versionCollator.compare(aPre, bPre);
 }
 

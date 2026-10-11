@@ -16,7 +16,6 @@ export interface HSGlobalDebug {
 
 export interface HSGlobalRelease {
     githubOwner: string;
-    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 

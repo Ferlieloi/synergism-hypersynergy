@@ -21,6 +21,19 @@ try {
             return r.text();
         })
         .then(code => {
+            // The mod reads the repo and ref it was loaded from (its version check), as set by the
+            // browser loaders. The page doesn't see this preload's globals, so they go in a script
+            // of their own: one put in front of the mod's code would cancel its "use strict".
+            // A jsDelivr URL: https://cdn.jsdelivr.net/gh/<owner>/<repo>@<ref>/<path>?t=<timestamp>
+            const parts = String(resolvedUrl).split('?')[0].split('/');
+            const at = (parts[5] || '').indexOf('@');
+            if (parts[2] === 'cdn.jsdelivr.net' && parts[3] === 'gh' && parts[4] && at > 0 && parts[5].length > at + 1) {
+                const source = document.createElement('script');
+                source.textContent = 'window.__HS_REPO = ' + JSON.stringify(parts[4])
+                    + '; window.__HS_VERSION = ' + JSON.stringify(parts[5].slice(at + 1)) + ';';
+                document.head.appendChild(source);
+            }
+
             const script = document.createElement('script');
             script.textContent = code;
             document.head.appendChild(script);
