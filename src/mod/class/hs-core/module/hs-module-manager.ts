@@ -19,6 +19,7 @@ import { HSWebSocket } from "../hs-websocket";
 import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
 
 /**
  * Class: HSModuleManager
@@ -52,7 +53,8 @@ export class HSModuleManager {
         "HSWebSocket": HSWebSocket,
         "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
-        "HSQOLButtons": HSQOLButtons
+        "HSQOLButtons": HSQOLButtons,
+        "HSSubtabMemory": HSSubtabMemory
     };
 
     constructor(context: string, modulesToEnable: HSModuleDefinition[]) {

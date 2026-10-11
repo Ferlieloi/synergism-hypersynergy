@@ -164,6 +164,19 @@
       "controlEnabledId": "hs-setting-auto-dismiss-offline-popup-btn"
     }
   },
+  "rememberSubtabs": {
+    "settingName": "rememberSubtabs",
+    "settingDescription": "Remember last used subtab",
+    "settingHelpText": "The game goes back to the first subtab of every tab at each singularity, Exalt, save load and page load. When enabled, a tab you open comes back on the subtab you last used there. A subtab that is locked again comes back the next time you open its tab once it is unlocked.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ui",
+      "controlPage": "ui",
+      "controlEnabledId": "hs-setting-remember-subtabs-btn"
+    }
+  },
   "syncNotificationOpacity": {
     "settingName": "syncNotificationOpacity",
     "settingDescription": "Notification opacity",

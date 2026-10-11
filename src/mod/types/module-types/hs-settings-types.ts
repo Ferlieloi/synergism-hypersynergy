@@ -24,6 +24,7 @@ export interface HSSettingsDefinition {
     hideGameDialogsNotify: HideGameDialogsNotifySetting;
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
     autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
+    rememberSubtabs: RememberSubtabsSetting;
 
     // Log Settings
     logTimestamp: LogTimestampSetting;
@@ -177,6 +178,7 @@ export interface HideGameDialogsSetting extends HSSettingBase<boolean> { }
 export interface HideGameDialogsNotifySetting extends HSSettingBase<boolean> { }
 export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
 export interface AutoDismissOfflinePopupSetting extends HSSettingBase<boolean> { }
+export interface RememberSubtabsSetting extends HSSettingBase<boolean> { }
 
 // Ambrosia Settings
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }

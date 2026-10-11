@@ -106,6 +106,11 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: '#fbc531',
         },
         {
+            className: 'HSSubtabMemory',
+            context: 'HSSubtabMemory',
+            moduleColor: 'lightsalmon',
+        },
+        {
             className: 'HSAmbrosia',
             context: 'HSAmbrosia',
             moduleColor: 'blueviolet',
