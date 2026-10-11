@@ -54,9 +54,26 @@ Quick overview:
 
 # Using the mod
 
-## Create a bookmark
+## In a browser: Tampermonkey (recommended)
 
-Using the mod is simple. Just create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the following:
+The mod is loaded by a userscript, which starts it together with the game.
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/), a browser extension that runs userscripts: [Chrome](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo), [Firefox](https://addons.mozilla.org/firefox/addon/tampermonkey/), [Edge](https://microsoftedge.microsoft.com/addons/detail/iikmkjmpaadaobahmlepeloendndfphd), [Opera](https://addons.opera.com/extensions/details/tampermonkey-beta/). Other userscript managers may work too.
+2. Chrome, Edge and other Chrome-based browsers only: allow Tampermonkey to run scripts. Right-click its icon, choose "Manage extension" and turn on "Allow User Scripts" (or "Developer mode" if that switch isn't there). See [Tampermonkey's guide](https://www.tampermonkey.net/faq.php?q=Q209).
+3. Open the [loader script](https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js) and click "Install" on the page Tampermonkey shows.
+4. Load the game at https://synergism.cc/ (or reload it). The mod loads by itself, always in its latest version.
+
+If step 3 shows code instead of an install page, copy that code, choose "Create a new script" in Tampermonkey, replace everything with the copy and save.
+
+## On Steam
+
+Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
+
+## With a bookmark (not recommended)
+
+The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower or less reliable (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
+
+Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the following:
 
 ```JavaScript
 javascript:(function() {
@@ -65,7 +82,7 @@ javascript:(function() {
         return;
     };
 
-    const scriptSrc = `https://cdn.jsdelivr.net/gh/ahvonenj/synergism-hypersynergy@latest/release/mod/hypersynergism_release.js?r=${Math.floor(Math.random() * 1000000)}`;
+    const scriptSrc = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/release/mod/hypersynergism_release.js?r=${Math.floor(Math.random() * 1000000)}`;
     const script = document.createElement('script');
     script.src = scriptSrc;
 
@@ -82,17 +99,13 @@ javascript:(function() {
 })();
 ```
 
-Alertnatively the same loader code can be found in [here](https://github.com/ahvonenj/synergism-hypersynergy/blob/master/release/loader/loader.js).
+The same code is in [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js).
 
 **Example:**
 
-![image](https://github.com/ahvonenj/synergism-hypersynergy/blob/master/doc/img/bookmark_v2.png?raw=true)  
+![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/bookmark_v2.png?raw=true)  
 
-## Enable the mod
-
-Now just load up the game in your browser (or refresh the page if it's already running) and click on the bookmark **after** you've clicked away the "Since you were away" box.
-
-The bookmark will always load up the latest version of the mod, so once you're set up on your end, you're set for life!
+Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
 
 # Latest update(s)
 

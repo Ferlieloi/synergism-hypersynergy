@@ -7,6 +7,7 @@ import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
 import { HSGlobal } from "./hs-core/hs-global";
 import { HSBackup } from "./hs-core/hs-backup";
+import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
@@ -94,6 +95,7 @@ export class Hypersynergism {
         HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
         this.#startVanillaGlobalEventPolling();
         void this.#onGameLoaded();
+        void HSBookmarkletNotice.showIfBookmarklet();
     }
 
     /**
@@ -307,9 +309,13 @@ export class Hypersynergism {
                 value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
             }));
 
+        // Only for players who loaded the mod with the bookmark, hence at the very top
+        const bookmarkletSection = HSBookmarkletNotice.buildToolsSection();
+
         hsui.replaceTabContents(2,
             HSUIC.Grid({
                 html: [
+                    ...(bookmarkletSection.length > 0 ? [this.#buildGridSectionHeader('Recommended: Tampermonkey loader'), ...bookmarkletSection] : []),
                     this.#buildGridSectionHeader('Backup & Restore'),
                     ...HSBackup.buildToolsSection(),
                     this.#buildGridSectionHeader('Ambrosia Heater'),
@@ -364,6 +370,7 @@ export class Hypersynergism {
         let p_idx = -1;
         let c_idx = -1;
 
+        HSBookmarkletNotice.bindToolsSection();
         HSBackup.bindToolsSection();
 
         this.#bindToolsButton('#hs-panel-amb-heater-btn', async () => {
