@@ -57,7 +57,8 @@
     },
     "nsis": {
       "artifactName": "HypersynergismLoader-Setup-${version}.exe",
-      "oneClick": true,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "perMachine": false
     }
   }

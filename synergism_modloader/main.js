@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { createStartupDiagnostics } = require('./lib/startupDiagnostics')
+const diagnostics = createStartupDiagnostics({ app, dialog, shell })
+diagnostics.log(`Starting loader ${app.getVersion()}; Electron ${process.versions.electron}; ${process.platform} ${process.arch}`)
 const { autoUpdater } = require('electron-updater')
 
 const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels, setLocalChannelEnabled } = require('./lib/config')
@@ -45,17 +48,25 @@ function createWindow() {
         }
     })
     mainWindow.setMenuBarVisibility(false)
+    diagnostics.watchWindow(mainWindow)
+    mainWindow.on('closed', () => { mainWindow = null })
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+        .catch(error => diagnostics.report('Could not load the launcher page', error))
 }
 
 app.whenReady().then(() => {
     createWindow()
+    diagnostics.log(`GPU features: ${JSON.stringify(app.getGPUFeatureStatus())}`)
     setTimeout(() => { void launcherUpdater.check() }, 2000)
+}).catch(error => diagnostics.report('Could not start the launcher', error))
+app.on('window-all-closed', () => {
+    diagnostics.log('All windows closed; quitting')
+    app.quit()
 })
-app.on('window-all-closed', () => app.quit())
+app.on('child-process-gone', (_event, details) => diagnostics.log(`Child process stopped: ${JSON.stringify(details)}`))
 
 function sendLog(line) {
-    mainWindow?.webContents.send('patch:log', line)
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('patch:log', line)
 }
 
 // ─── Launcher updates ──────────────────────────────────────────────────
@@ -67,17 +78,21 @@ ipcMain.handle('launcher-update:install', () => {
 })
 
 // ─── Config ─────────────────────────────────────────────────────────────
-function resolvedConfig() {
+ipcMain.handle('startup:failed', (_event, message) => diagnostics.report('Could not initialize the launcher interface', new Error(String(message))))
+
+async function resolvedConfig() {
+    diagnostics.log('Resolving game and 7-Zip paths')
     const cfg = loadConfig(app)
     if (!cfg.steamPath || !fs.existsSync(cfg.steamPath)) {
-        cfg.steamPath = detectSteamPathWindows() || ''
+        cfg.steamPath = await detectSteamPathWindows() || ''
     }
     if (!cfg.gameDir || !fs.existsSync(path.join(cfg.gameDir, DEFAULTS.exeName))) {
         cfg.gameDir = findGameDir(cfg.steamPath, DEFAULTS.steamAppName) || ''
     }
     if (!cfg.sevenZipPath || !fs.existsSync(cfg.sevenZipPath)) {
-        cfg.sevenZipPath = getBundledSevenZipPath(app) || detectSevenZip() || ''
+        cfg.sevenZipPath = getBundledSevenZipPath(app) || await detectSevenZip() || ''
     }
+    diagnostics.log('Path detection finished')
     return cfg
 }
 
@@ -93,7 +108,7 @@ ipcMain.handle('legacy:cleanup', () => {
     if (legacyCleanupPromise) return legacyCleanupPromise
     legacyCleanupPromise = (async () => {
         if (patchInProgress) return { found: 0, removed: 0, failed: 0, error: 'Wait for patching to finish, then retry cleanup.' }
-        const gameDir = resolvedConfig().gameDir
+        const gameDir = (await resolvedConfig()).gameDir
         if (!gameDir) return { found: 0, removed: 0, failed: 0, error: null }
         try {
             return await cleanupOldWorkspaces(gameDir, sendLog, {
@@ -110,8 +125,8 @@ ipcMain.handle('legacy:cleanup', () => {
 })
 
 // ─── Steam / game / 7-Zip detection ─────────────────────────────────────
-ipcMain.handle('steam:autodetect', () => {
-    const steamPath = detectSteamPathWindows()
+ipcMain.handle('steam:autodetect', async () => {
+    const steamPath = await detectSteamPathWindows()
     const gameDir = steamPath ? findGameDir(steamPath, DEFAULTS.steamAppName) : null
     return { steamPath, gameDir }
 })
@@ -139,7 +154,7 @@ ipcMain.handle('dialog:select-7z', async () => {
     return result.filePaths[0]
 })
 
-ipcMain.handle('sevenzip:autodetect', () => getBundledSevenZipPath(app) || detectSevenZip())
+ipcMain.handle('sevenzip:autodetect', async () => getBundledSevenZipPath(app) || await detectSevenZip())
 
 // ─── Mod channels (dev/live), each its own repo ─────────────────────────
 ipcMain.handle('channels:list', () => listChannels())

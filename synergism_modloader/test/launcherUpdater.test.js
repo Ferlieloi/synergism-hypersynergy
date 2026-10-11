@@ -12,7 +12,8 @@ function setup(isPackaged = true, findRelease = async () => 'loader-v0.2.1') {
         app: { isPackaged, getVersion: () => '0.2.0' },
         updater,
         notify: state => states.push(state),
-        findRelease
+        findRelease,
+        platform: 'win32'
     })
     return { updater, states, controller, feeds }
 }
@@ -73,6 +74,17 @@ test('coalesces update checks and allows retry after an error', async () => {
 
 test('does not check for updates in the development app', async () => {
     const { controller } = setup(false)
+    assert.equal((await controller.check()).phase, 'unavailable')
+    assert.equal(controller.install().ok, false)
+})
+
+test('does not check for Windows installer updates on other platforms', async () => {
+    const controller = createLauncherUpdater({
+        app: { isPackaged: true, getVersion: () => '0.2.7' },
+        updater: {},
+        notify: () => assert.fail('Unexpected updater notification'),
+        platform: 'linux'
+    })
     assert.equal((await controller.check()).phase, 'unavailable')
     assert.equal(controller.install().ok, false)
 })
