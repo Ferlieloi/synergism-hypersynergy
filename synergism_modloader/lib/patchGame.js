@@ -5,6 +5,7 @@ const asar = require('@electron/asar')
 const { buildInjectorCode } = require('./injectorTemplate')
 const { createPackageAndWait } = require('./archiveWriter')
 const { DEFAULTS, resolveChannel } = require('./config')
+const { loadPatcher } = require('./patcherSource')
 const {
     ensureNoRunningWorkGames,
     prepareWorkspace,
@@ -26,13 +27,6 @@ function run(cmd, args, onLog) {
             resolve()
         })
     })
-}
-
-async function fetchText(url, onLog) {
-    onLog?.(`Fetching ${url}`)
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`Request failed (${res.status}) for ${url}`)
-    return res.text()
 }
 
 // Electron treats .asar files as virtual folders and can keep the game archive
@@ -73,7 +67,8 @@ function findLaunchableExe(extractedAppDir) {
  * @param {string} opts.modUrl         Resolved URL for the mod script to inject
  * @param {string} [opts.patcherUrl]   Optional remote URL for patcher.js; falls back to the bundled copy
  * @param {(line: string) => void} [opts.onLog]
- * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number } }>}
+ * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number }, patcherHash: string }>}
+ *          `patcherHash` identifies the patcher used, see lib/patcherSource.js
  */
 async function patchGame(opts) {
     const { gameDir, exeName, sevenZipPath, modUrl, patcherUrl, onLog } = opts
@@ -128,24 +123,9 @@ async function patchGame(opts) {
             throw new Error(`out.js not found at: ${outJsPath}`)
         }
 
-        // 4. Get the bundle patcher — prefer a fresh remote copy, fall back to the bundled one.
-        // Most refs (especially older ones, and most of the "live" channel's history)
-        // won't have a shared patcher.js at all, since this is a new addition to the
-        // mod repo — that's expected and not an error, it just means we use the copy
-        // shipped with the loader.
+        // 4. Get the bundle patcher: the selected ref's own, or the copy shipped with the loader.
         log('Loading bundle patcher...')
-        let patcherCode
-        try {
-            if (!patcherUrl) throw new Error('no patcherUrl provided')
-            const fetched = await fetchText(patcherUrl, log)
-            if (!fetched.includes('module.exports')) {
-                throw new Error('fetched content doesn\'t look like patcher.js (no module.exports found)')
-            }
-            patcherCode = fetched
-        } catch (e) {
-            log(`patcher.js not available at that ref — falling back to the bundled copy (${e.message})`)
-            patcherCode = fs.readFileSync(path.join(__dirname, 'patcher.js'), 'utf-8')
-        }
+        const { code: patcherCode, hash: patcherHash } = await loadPatcher(patcherUrl, { onLog: log })
 
         log('Patching out.js...')
         const moduleShim = { exports: {} }
@@ -191,7 +171,11 @@ async function patchGame(opts) {
         await cleanupOldWorkspaces(gameDir, log)
         const installedExePath = path.join(dirs.active, 'app', path.basename(launchExePath))
         log(`Patch complete — launch exe: ${installedExePath}`)
-        return { launchExePath: installedExePath, sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs } }
+        return {
+            launchExePath: installedExePath,
+            sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs },
+            patcherHash
+        }
     } finally {
         if (fs.existsSync(dirs.staging)) removeBestEffort(dirs.staging, log)
     }

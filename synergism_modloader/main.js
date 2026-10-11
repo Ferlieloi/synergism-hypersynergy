@@ -9,6 +9,7 @@ const { autoUpdater } = require('electron-updater')
 const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels, setLocalChannelEnabled } = require('./lib/config')
 const { detectSteamPathWindows, findGameDir, detectSevenZip, getBundledSevenZipPath } = require('./lib/steamLocator')
 const { patchGame, buildModUrl, buildPatcherUrl } = require('./lib/patchGame')
+const { checkPatcherChanged } = require('./lib/patcherSource')
 const { createLauncherUpdater } = require('./lib/launcherUpdater')
 const { listModRefs } = require('./lib/modRefs')
 const { rememberedRefs } = require('./lib/modRefCache')
@@ -17,6 +18,8 @@ const { cleanupOldWorkspaces, ensureNoRunningWorkGames } = require('./lib/worksp
 
 // The hidden "local" channel: only when running from source (npm start) or started with HS_LOADER_DEV=1.
 setLocalChannelEnabled(!app.isPackaged || process.env.HS_LOADER_DEV === '1')
+
+const PATCHER_CHECK_TIMEOUT_MS = 5000
 
 let mainWindow
 let patchInProgress = false
@@ -215,7 +218,7 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             sendLog('Finishing old folder cleanup before patching...')
             await legacyCleanupPromise
         }
-        const { launchExePath, sourceStat } = await patchGame({
+        const { launchExePath, sourceStat, patcherHash } = await patchGame({
             gameDir,
             exeName: DEFAULTS.exeName,
             sevenZipPath,
@@ -233,6 +236,7 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             modRef,
             lastPatchedExe: launchExePath,
             lastPatchedSourceStat: sourceStat,
+            lastPatchedPatcherHash: patcherHash,
             lastPatchedChannel: channel,
             lastPatchedModRef: modRef
         })
@@ -253,6 +257,24 @@ ipcMain.handle('game:check-update-needed', (_e, { gameDir, exeName }) => {
     const stat = fs.statSync(exePath)
     const changed = stat.size !== cfg.lastPatchedSourceStat.size || stat.mtimeMs !== cfg.lastPatchedSourceStat.mtimeMs
     return { needsRepatch: changed }
+})
+
+// The patcher is only applied by a patch: "Launch only", "Launch last played" and "Quick switch" reuse
+// the game as last patched. So a build whose patcher isn't the one the game was patched with needs a
+// patch, like a game update does. A check that can't be done never asks for one.
+ipcMain.handle('patcher:check-changed', async (_e, { channel, modRef }) => {
+    if (patchInProgress) return { needsRepatch: false, reason: 'busy' }
+    const cfg = loadConfig(app)
+    if (!cfg.lastPatchedExe) return { needsRepatch: false, reason: 'not-patched' }
+    try {
+        return await checkPatcherChanged({
+            lastHash: cfg.lastPatchedPatcherHash,
+            patcherUrl: buildPatcherUrl(channel, modRef),
+            timeoutMs: PATCHER_CHECK_TIMEOUT_MS
+        })
+    } catch (e) {
+        return { needsRepatch: false, reason: 'unknown', error: e.message }
+    }
 })
 
 ipcMain.handle('mod:quick-switch', (_e, { modUrl, channel, modRef }) => {

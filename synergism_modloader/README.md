@@ -91,7 +91,9 @@ list and keeps the last played build selected. The **Launch last played** button
 on the first screen starts the existing patched copy with that build without
 waiting for GitHub's build list or requiring 7-Zip. The mod script is still
 fetched from the selected build's CDN URL when the game starts, so this feature
-does not provide fully offline play.
+does not provide fully offline play. When that build needs a re-patch (see
+below), the button reads **Patch & launch last played** and patches first,
+which does need 7-Zip.
 
 ## How the patch pipeline works
 
@@ -122,6 +124,14 @@ The loader remembers the original exe's size/mtime at patch time, so it
 can tell you when Synergism has been updated by Steam and a re-patch is a
 good idea (the bundle patcher's anchor strings can drift between game
 versions).
+
+It also remembers which `patcher.js` that patch used. The patcher is only
+applied by a patch, so when the selected build's patcher is not that one (a
+mod release changed it, or you picked a build with another patcher), the
+loader asks for a re-patch the same way: a banner on the last screen, with
+**Launch only** and **Quick switch** disabled. A game patched by loader 0.2.8
+or older has no recorded patcher and is asked to re-patch once. When the
+patcher can't be downloaded for the check, nothing is asked.
 
 ## Known limitations / things to be aware of
 

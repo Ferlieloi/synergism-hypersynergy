@@ -44,7 +44,7 @@ function loadMain() {
         './lib/workspaceManager': {
             cleanupOldWorkspaces: async gameDir => { cleanedGameDir = gameDir; return { removed: 1 } }
         },
-        './lib/patchGame': {}, './lib/modRefs': {}, './lib/modRefCache': {}, './lib/gameLauncher': {}
+        './lib/patchGame': {}, './lib/patcherSource': {}, './lib/modRefs': {}, './lib/modRefCache': {}, './lib/gameLauncher': {}
     }
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf-8'), {
         require: name => {
