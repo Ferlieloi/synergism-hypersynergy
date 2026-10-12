@@ -15,7 +15,7 @@ Hypersynergism adds quality-of-life tools, game information, interface options, 
 
 ## Features
 
-An extensive feature guide is (not yet) available in the wiki's [Mod Features](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Features) section. Highlights include:
+Here are some of Hypersynergism’s standout features:
 
 - **AutoSing:** (S216+) Run configurable strategies to farm singularities (this can be considered as "not strictly QoL". You do you.)
 - **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
@@ -44,33 +44,7 @@ If step 3 shows code instead of an install page, copy that code, choose "Create 
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
-Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the following:
-
-```JavaScript
-javascript:(function() {
-    if('hypersynergism' in window) {
-        alert('Hypersynergism is already loaded on the page, please refresh if you want to reload the mod');
-        return;
-    };
-
-    const scriptSrc = `https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/release/mod/hypersynergism_release.js?r=${Math.floor(Math.random() * 1000000)}`;
-    const script = document.createElement('script');
-    script.src = scriptSrc;
-
-    script.onload = function() {
-        console.log('[HSMain] Script loaded successfully!');
-        window.hypersynergism.init();
-    };
-
-    script.onerror = function() {
-        console.error('[HSMain] Failed to load the mod!');
-    };
-
-    document.head.appendChild(script);
-})();
-```
-
-The same code is in [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js).
+Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the code in [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js).
 
 **Example:**
 
