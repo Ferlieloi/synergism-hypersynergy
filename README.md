@@ -2,55 +2,26 @@
 
 A QoL mod for the [Synergism](https://synergism.cc/) game.
 
-Mod homepage: https://ahvonenj.github.io/synergism-hypersynergy  
+Mod homepage: https://Ferlieloi.github.io/synergism-hypersynergy
 Game's Github: https://github.com/Pseudo-Corp/SynergismOfficial
 
-![image](https://github.com/ahvonenj/synergism-hypersynergy/blob/master/doc/img/logo.gif?raw=true)  
+![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/logo.gif?raw=true)
 
 # About the mod
 
 ## In general
 
-The goal of this mod is to offer different "Quality of Life" features for the game, so features which:
-- Gather, calculate, format and display extra information about the game and it's features
-    - Examples: [Corruption reference sheet](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#in-game-corruptions--runs-reference-sheet) and [Hepteract ratios](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#in-game-hepteract-ratios)
-- Reduce the amount of excessive clicking without fully automating anything
-    - For example, the [promotion code injection](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#promotion-code-injection) feature only displays the codes and copies them into the input box on click, but doesn't do it all automatically
-- Allow for adjusting or configuring things in the game
-    - For example, the [notification opacity control](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#game-notification-opacity-control) feature changes the opacity of the in-game notifications
-- Provide hotkeys or shortcuts for the game's functions
-    - Examples: [Hepteract quick expand and max](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#quick-expand--max-for-hepteracts) and [Additional mouse functionality](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#reactive-mouse-hover-and-auto-click)
-- Warn, remind or notify the player of some things
-    - Example: [Hepteract quick expand and max](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features#quick-expand--max-for-hepteracts) feature's "Cost Protection" setting prevents hepteract expansion if the hepteract cost is over a set threshold
-
-In other words, the goal here is to build features which are not too game breaking, automating or streamlining. Even with the mod, players will still need to play the game, but ideally without developing carpal tunnel syndrome or getting fed up about meaningless busywork and clicking around.
+Hypersynergism adds quality-of-life tools, game information, interface options, and configurable automation to Synergism. Most features are optional and configurable; some provide information or shortcuts, while AutoSing can automate progression using player-configured strategies.
 
 ## Features
 
-Extensive list of the mod's features can be found in the [Mod Features](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Features) section of the wiki.
+An extensive feature guide is available in the wiki's [Mod Features](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Features) section. Highlights include:
 
-Quick overview:
-- Promotion code injection
-- Enhanced talisman fragment BUY ALL button 
-- Potion buttons
-- Quick expand + max for hepteracts
-- Hepteract expand cost protection
-- Mod panel
-- In-game corruptions / runs reference sheet
-- In-game hepteract ratios
-- Game notification opacity control
-- Reactive mouse hover and Auto click
-- Reactive mouse hover
-- Auto click
-- Mod log
-- Ambrosia loadout icons
-- Ambrosia Loadout Quickbar (with equipped loadout indicator)
-- Ambrosia loadout auto switcher when using ADD or TIME codes
-- Toggleable patches (such as overflow fix on ambrosia page)
-- Patch to add visible names for Quark Shop items
-<!-- RETIRED: Ambrosia Loadout Idle Swapper -->
-- Game data access via GDS™
-- Ambrosia minibars
+- **AutoSing:** (S216+) Run configurable strategies to farm singularities (this can be considered as "not strictly QoL". You do you.)
+- **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
+- **Ambrosia tools:** Manage and quick-switch loadouts, automatically switch loadouts when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
+- **Quickbars:** View and interact with Ambrosia, Corruption and Automation controls from the game header.
+- **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts. (Soon to be: Hept Optimizer + Hept Distributor)
 
 # Using the mod
 
@@ -107,103 +78,19 @@ The same code is in [release/loader/loader.js](https://github.com/Ferlieloi/syne
 
 Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
 
-# Latest update(s)
+# Version history
 
-## Hypersynergism version 2.8.0
-
-Released: 21.5.2025
-
-**Ambrosia Heater data export**
-
-You can now find a button in the mod panel's Tools-tab to export an extended
-version of your save data for the Ambrosia Heater.
-
-This extended version of save data contains various useful calculations done by the mod
-to make the Ambrosia Heater calculate even better results and with less effort from you!
-
-The data export button will automatically copy a Base64 save string to your clipboard, which you can
-then paste in to the heater.
-
-**GDS has gone rogue!**
-
-The mod's Game Data Sniffing (GDS) feature, which the mod uses to enable features like Ambrosia Minibars,
-no longer requires being violent with the browser's local storage system.
-
-While the... uhh... new hack still (unfortunately) has to perform writes to the local storage,
-the mod doesn't need it for anything anymore. Through the magic of some ""creative coding"",
-the mod is able to access the data it needs without having to read (or decode!) it from the local storage.
-
-This means that there is now vastly less overhead and performance cost with using GDS, so much so that
-I'll probably turn the update frequency up a notch later.
-
-**Automatic version check**
-
-The mod will now perform regular version check every 15 minutes or so.
-
-If a new version is detected, the mod's icon in the top right will shoot rainbows and the mod's panel's
-header will say that there is a new version available.
-
-There is also a new button in the Tools-tab should someone want to perform a manual version check.
-
-**Other changes**
-
-- Settings are now split into subtabs (was getting messy)
-- Dump game vars button now dumps event, campaign, etc. data as well
-- Fixed some bugs with (happy hour) event fetching and buff calculation
-- Fixed a potential memory leak issue with how custom prototype-based CSS-transitions were done (sorry!)
-- Fixed another potential memory leak issue with how notifications were disposed (sorry!)
-- The mod can now calculate a huge number of things from the game data (more on this in the wiki)
-- The mod's panel is now resizable! Look for the pink arrow thingy on the bottom-right corner
-- Fixed various (minor) bugs here and there with the GDS-based calculations
-- Added some tools into the mod's panel to test calculations with
-
-
-## Hypersynergism version 2.7.4
-
-Released: 17.5.2025
-
-**WebSocket connections**
-
-Implemented a HSWebSocket module for WebSocket connections. A WebSocket connection is needed for the mod to be able to receive e.g. event data such as when (and how many) HAPPY HOURS are up.
-
-This is to say that the mod can now take HAPPY HOUR event(s) into account with it's calculations. Luck and ambrosia generation speed calculations have been updated accordingly.
-
-Note that this is a bit experimental for now, but worry not, if the WebSocket fails, the mod
-will just ignore the event buffs like it has done thus far.
-
-**Changes**
-
-- New feature: Ambrosia minibars
-- Heavily optimized campaign token fetching for game data related tasks
-- Optimized game data display and debug rendering
-
-## Hypersynergism version 2.7.1-2.7.3 - Pirates and Caching
-
-Released: 14.5.2025
-
-**Caching**
-
-The game itself implements caching for most of it's calculations.
-Many of these calculations have been pirated into the mod (v2.7.0) which meant pulling them out of the game's caching system.
-The mod now implements it's own caching for all the stolen calculations.
-
-**Fixes and stuff**
-
-- Loadout Idle Swapper should now work with Ambrosia Acceleration
-- Loadout Idle Swapper will turn itself off, if one or both of the loadouts for it are unconfigured
-- Restructured the project a bit for this new data-driven era
-- GDS will be auto disabled on save file import
-- Mod now displays a very cool notification when it has loaded and initialized
+Browse the [version tags](https://github.com/Ferlieloi/synergism-hypersynergy/tags) to see published mod versions.
 
 # For developers
 
-Developer documentation can be found in the wiki: [Wiki](https://github.com/ahvonenj/synergism-hypersynergy/wiki)
+Developer documentation can be found in the wiki: [Wiki](https://github.com/Ferlieloi/synergism-hypersynergy/wiki)
 
-[**Quick Reference**](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Mod-Framework-Quick-Reference)
+[**Quick Reference**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Framework-Quick-Reference)
 
-[**Core Module Documentation**](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Project-structure-and-Modules#core-modules)
+[**Core Module Documentation**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Project-structure-and-Modules#core-modules)
 
-[**Using Game Data (non-computed and computed)**](https://github.com/ahvonenj/synergism-hypersynergy/wiki/Game-Data-and-Calculations)
+[**Using Game Data (non-computed and computed)**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Game-Data-and-Calculations)
 
 In addition to the documentation in the wiki, the source code itself should be relatively well commented.
 
