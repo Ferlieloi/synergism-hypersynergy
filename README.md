@@ -25,6 +25,10 @@ An extensive feature guide is available in the wiki's [Mod Features](https://git
 
 # Using the mod
 
+## On Steam
+
+Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
+
 ## In a browser: Tampermonkey (recommended)
 
 The mod is loaded by a userscript, which starts it together with the game.
@@ -36,13 +40,9 @@ The mod is loaded by a userscript, which starts it together with the game.
 
 If step 3 shows code instead of an install page, copy that code, choose "Create a new script" in Tampermonkey, replace everything with the copy and save.
 
-## On Steam
+## With a bookmark (NOT RECOMMENDED)
 
-Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
-
-## With a bookmark (not recommended)
-
-The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower or less reliable (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
+The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
 Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the following:
 
