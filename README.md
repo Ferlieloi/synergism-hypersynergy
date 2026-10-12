@@ -2,8 +2,8 @@
 
 A QoL mod for the [Synergism](https://synergism.cc/) game.
 
-Mod homepage: https://Ferlieloi.github.io/synergism-hypersynergy
-Game's Github: https://github.com/Pseudo-Corp/SynergismOfficial
+- Mod homepage: https://Ferlieloi.github.io/synergism-hypersynergy
+- Game's Github: https://github.com/Pseudo-Corp/SynergismOfficial
 
 ![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/logo.gif?raw=true)
 
@@ -15,7 +15,7 @@ Hypersynergism adds quality-of-life tools, game information, interface options, 
 
 ## Features
 
-An extensive feature guide is available in the wiki's [Mod Features](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Features) section. Highlights include:
+An extensive feature guide is (not yet) available in the wiki's [Mod Features](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Features) section. Highlights include:
 
 - **AutoSing:** (S216+) Run configurable strategies to farm singularities (this can be considered as "not strictly QoL". You do you.)
 - **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
