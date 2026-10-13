@@ -373,7 +373,7 @@ export class HSUI extends HSModule {
         this.#uiQuickAccessMenu = quickMenu;
         const quickbarsSubmenu = this.#buildQuickbarsSubmenu();
         const quickbarsBtn     = this.#buildQuickbarsButton();
-        const autoSingBtn     = this.#buildQuickAccessButton('autosing',   '▶', 'Start Auto-Sing (S256+)', () => this.#toggleAutoSing());
+        const autoSingBtn     = this.#buildQuickAccessButton('autosing',   '▶', 'Start Auto-Sing (S216+)', () => this.#toggleAutoSing());
         const heaterHSBtn     = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater (HS)',         () => this.#triggerHeaterHS());
         const heaterExportBtn = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater (Export)',     () => this.#triggerHeaterExport());
 

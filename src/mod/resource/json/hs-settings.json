@@ -724,7 +724,7 @@
   },
   "startAutosing": {
     "settingName": "startAutosing",
-    "settingDescription": "Start/Stop Auto-Sing (S256+)",
+    "settingDescription": "Start/Stop Auto-Sing (S216+)",
     "settingHelpText": "When enabled, the mod will automatically perform singularities.",
     "settingType": "boolean",
     "enabled": false,

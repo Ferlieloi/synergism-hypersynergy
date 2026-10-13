@@ -798,7 +798,7 @@ export class HSAutosing extends HSModule {
             return false;
         }
         if (gameData.highestSingularityCount < 40) {
-            HSUI.Notify("AutoSing is an end-game QoL feature. S256+ is expected. Not available until you unlock EXALT2.", { notificationType: "warning" });
+            HSUI.Notify("AutoSing is an end-game QoL feature. S216+ is expected. Not available until you unlock EXALT2.", { notificationType: "warning" });
             return false;
         }
         if (gameData.highestSingularityCount < 216) {
