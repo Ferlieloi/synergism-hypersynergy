@@ -112,6 +112,7 @@ const ROW_GROUPS: { title: string, rows: HSDevRowDefinition[] }[] = [
         title: 'Other',
         rows: [
             { label: 'Cx11 level (0 to 100)', path: 'cubeUpgrades.61', suggest: false },
+            { label: 'C15 score (exponent: 60 = 1e60)', path: 'challenge15Exponent', suggest: false },
         ]
     },
 ];
