@@ -443,6 +443,14 @@ export class HSQOLButtons extends HSModule {
         const savedRatios = this.#getGQDistributorRatios();
 
         const inputs: { [key: string]: HTMLInputElement } = {};
+        // The inputs show 2 decimals at most; savedRatios keeps the exact values, and Distribute reads those
+        const shownRatio = (ratio: number): string => (Math.round(ratio * 100) / 100).toString();
+        // No spin buttons: they take room on the right, which pushes the number off the icon's axis
+        HSUI.injectStyle(`
+            #hs-gq-distributor input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+            #hs-gq-distributor input[type="number"]::-webkit-outer-spin-button,
+            #hs-gq-distributor input[type="number"]::-webkit-inner-spin-button { appearance: none; -webkit-appearance: none; margin: 0; }
+        `, 'hs-gq-distributor-css');
         // The game's name of each upgrade, for the skip summary (the id until resolved)
         const upgradeNames = new Map<string, string>();
 
@@ -470,9 +478,11 @@ export class HSQOLButtons extends HSModule {
             input.min = '0';
             input.step = 'any';
             input.setAttribute('aria-label', `${upgrade.id} distribution ratio`);
-            input.value = (savedRatios[upgrade.id] ?? 0).toString();
+            input.value = shownRatio(savedRatios[upgrade.id] ?? 0);
             input.style.width = '60px';
             input.style.textAlign = 'center';
+            // The game gives every input a left padding, which shifts centred text to the right
+            input.style.padding = '0';
             inputs[upgrade.id] = input;
             wrapper.appendChild(input);
 
@@ -480,6 +490,10 @@ export class HSQOLButtons extends HSModule {
                 const val = parseFloat(input.value) || 0;
                 savedRatios[upgrade.id] = Number.isFinite(val) ? Math.max(0, val) : 0;
                 HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
+            });
+            // Once the player is done typing (blur or Enter), not at each key
+            input.addEventListener('change', () => {
+                input.value = shownRatio(savedRatios[upgrade.id] ?? 0);
             });
 
             inputsContainer.appendChild(wrapper);
@@ -583,7 +597,7 @@ export class HSQOLButtons extends HSModule {
             // Normalize to a largest weight of 100 for readable inputs and huge balances.
             for (const { id, invested } of investments) {
                 savedRatios[id] = invested / largest * 100;
-                inputs[id].value = savedRatios[id].toString();
+                inputs[id].value = shownRatio(savedRatios[id]);
             }
             HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
             return true;
@@ -649,7 +663,7 @@ export class HSQOLButtons extends HSModule {
                     const totalGQ = gameData.goldenQuarks;
                     const ratios: Record<string, number> = {};
                     for (const id in inputs) {
-                        const val = parseFloat(inputs[id].value) || 0;
+                        const val = savedRatios[id] ?? 0;
                         if (Number.isFinite(val) && val > 0) ratios[id] = val;
                     }
                     if (Object.keys(ratios).length === 0) {
