@@ -140,6 +140,7 @@ export class HSAmbrosia extends HSModule
     #purpleIncomeElement?: HTMLParagraphElement;
     #barIncomeRefreshQueue: Promise<void> = Promise.resolve();
     #barIncomeRefreshTimer?: ReturnType<typeof setTimeout>;
+    #lastBarIncomeDataRefresh = 0;
 
     #hasPerformedInitialLoadoutMatch = false;
 
@@ -1206,13 +1207,25 @@ export class HSAmbrosia extends HSModule
             }
         };
 
-        // Every refresh restarts the 10s cycle, so loadout loads and tab entry reset the cadence.
+        // Every refresh restarts the timer, so it only fires when GDS delivers nothing
+        // (setting off, or paused): with GDS running, #refreshBarIncomeOnGameData refreshes every 500ms.
         const queuedRefresh = this.#barIncomeRefreshQueue.then(refresh, refresh)
             .finally(() => this.#scheduleBarIncomeRefresh());
         this.#barIncomeRefreshQueue = queuedRefresh.catch((error) => {
             HSLogger.warn(`Ambrosia income refresh failed: ${error}`, this.context);
         });
         return queuedRefresh;
+    }
+
+    /** With GDS running, new save data comes about 15 times a second: refresh the rates from it, every 500ms at most. */
+    #refreshBarIncomeOnGameData(): void {
+        if (!this.#isAmbrosiaTabActive) return;
+
+        const now = performance.now();
+        if (now - this.#lastBarIncomeDataRefresh < 500) return;
+        this.#lastBarIncomeDataRefresh = now;
+
+        void this.#queueBarIncomeRefresh(false);
     }
 
     #setBarIncomeUnavailable(): void {
@@ -1229,6 +1242,9 @@ export class HSAmbrosia extends HSModule
     ): void {
         if (!element) return;
 
+        // The element is aria-live: an unchanged rate must not be written again
+        if (element.textContent === `[HS] ${amount} ${resource} / hour`) return;
+
         const amountElement = document.createElement('span');
         amountElement.style.color = color;
         amountElement.textContent = amount;
@@ -1243,10 +1259,15 @@ export class HSAmbrosia extends HSModule
         this.#clearScheduledBarIncomeRefresh();
         if (!this.#isAmbrosiaTabActive) return;
 
+        // Without GDS each refresh forces a save: every 2s, but 10s while autosing runs (it pauses GDS, and its speed comes first).
+        // With GDS running the timer is only a safety net.
+        const autosingActive = HSModuleManager.getModule<HSAutosing>('HSAutosing')?.isAutosingActive() ?? false;
+        const delay = this.#isGDSRunning() || autosingActive ? 10_000 : 2_000;
+
         this.#barIncomeRefreshTimer = setTimeout(() => {
             this.#barIncomeRefreshTimer = undefined;
             void this.#queueBarIncomeRefresh(!this.#isGDSRunning());
-        }, 10_000);
+        }, delay);
     }
 
     #clearScheduledBarIncomeRefresh(): void {
@@ -2153,6 +2174,7 @@ export class HSAmbrosia extends HSModule
         if (!gameData) return;
 
         this.#refreshPersistentAmbrosiaLevelsOnTreeChange(gameData);
+        this.#refreshBarIncomeOnGameData();
 
         if (this.#berryMinibarsEnabled) {
             this.#updateBerryMinibars(gameData, gameDataAPI);
