@@ -107,7 +107,8 @@ function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLa
     return `${copyButton}${importButton}`;
 }
 
-// Purple rows show the Purple Reactor routing they assume, next to the effect.
+// Purple rows show the Purple Reactor routing they assume, next to the effect
+// (the other rows of their section have none).
 // Best-routing rows also compare with the current routing and offer to apply
 // theirs.
 function buildPurpleRoutingHtml(entry: NormalizedHeaterResultEntry): string {
@@ -187,12 +188,16 @@ function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey:
         .map((key) => ({ key, entries: entriesByKey.get(key)! }));
     if (matching.length === 0) return "";
 
+    // The Routing column is only there when a row has a routing to show (the
+    // Purple branch was heated); the section's other rows leave it empty.
+    const hasRouting = matching.some(({ entries }) => entries.some((entry) => entry.purpleRouting));
+    const shownDef = sectionDef.showRouting && !hasRouting ? { ...sectionDef, showRouting: false } : sectionDef;
     const titleRow = `<tr><td colspan="${RESULT_TABLE_TOTAL_COLS}" class="hs-heater-title-row">${escapeHtml(sectionDef.title)}</td></tr>`;
-    const headerRow = buildArraySectionHeaderRow(sectionDef);
+    const headerRow = buildArraySectionHeaderRow(shownDef);
     const dataRows = matching
         .map(({ key, entries }) => {
             const rowSpan = entries[0].isRowBased ? 1 : entries.length;
-            return entries.map((entry) => buildArraySectionDataRow(entry, sectionDef, rowSpan, selectedSemanticIds)).join("");
+            return entries.map((entry) => buildArraySectionDataRow(entry, shownDef, rowSpan, selectedSemanticIds)).join("");
         })
         .join("");
     return titleRow + headerRow + dataRows;

@@ -37,6 +37,27 @@ export class HSHeaterUIStyles {
                 padding-right: 6px;
             }
 
+            /* Start Heater, with the cancel button on its right while a heat runs */
+            .hs-heater-start-row {
+                display: flex;
+                gap: 4px;
+            }
+
+            /* Full width, less the cancel button when it is shown */
+            #hs-heater-recalculate-btn {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            #hs-heater-cancel-btn {
+                width: 30px;
+                flex: 0 0 auto;
+            }
+
+            #hs-heater-cancel-btn[hidden] {
+                display: none;
+            }
+
             /* === Shared Table Base Styles === */
             .hs-heater-input-table,
             .hs-heater-results-table,
@@ -627,7 +648,7 @@ export class HSHeaterUIStyles {
                 border: 2px solid transparent;
             }
 
-            /* Purple rows: Effect and Routing are one cell spanning both
+            /* Common section with Purple rows: Effect and Routing are one cell spanning both
                effect columns, split at a fixed width. As two real columns,
                the routing's width would set the p4x4 section's columns too. */
             .hs-heater-results-table .hs-heater-split-cell {

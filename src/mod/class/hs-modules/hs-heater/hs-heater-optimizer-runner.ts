@@ -129,10 +129,29 @@ function formatSeconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`
 }
 
+// A heat the player cancelled: not a failure, and nothing of it is kept.
+export class HSHeatCancelledError extends Error {
+  constructor() {
+    super('Heat cancelled')
+    this.name = 'HSHeatCancelledError'
+  }
+}
+
+// Stops the worker of the heat in progress, if any
+let stopRunningWorker: (() => void) | null = null
+let heatCancelled = false
+
 function runWorker(sourceUrl: string, id: number, input: HeaterOptimizerInput): Promise<HeaterOptimizationResult> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(sourceUrl)
-    const cleanup = (): void => worker.terminate()
+    const cleanup = (): void => {
+      stopRunningWorker = null
+      worker.terminate()
+    }
+    stopRunningWorker = (): void => {
+      cleanup()
+      reject(new HSHeatCancelledError())
+    }
     worker.onmessage = (event: MessageEvent<HeaterWorkerResponse>): void => {
       if (event.data.id !== id)
         return
@@ -152,6 +171,20 @@ function runWorker(sourceUrl: string, id: number, input: HeaterOptimizerInput): 
 }
 
 export class HSHeaterOptimizerRunner {
+  // A heat can only be cancelled when it runs in a worker: without one it
+  // runs on the page, which is frozen until it ends.
+  static get canCancel(): boolean {
+    return typeof Worker !== 'undefined' && typeof HS_HEATER_WORKER_SOURCE === 'string' && !!HS_HEATER_WORKER_SOURCE
+  }
+
+  // Cancels the heat in progress: its worker is terminated, the groups
+  // already heated are dropped, and createResult rejects with
+  // HSHeatCancelledError.
+  static cancel(): void {
+    heatCancelled = true
+    stopRunningWorker?.()
+  }
+
   static async createResult(input: HeaterOptimizerInput): Promise<HeaterOptimizationResult> {
     if (!ALL_BRANCHES.some(branch => input.heaterOptions[branch]))
       return { input }
@@ -168,6 +201,7 @@ export class HSHeaterOptimizerRunner {
     }
 
     const startedAt = performance.now()
+    heatCancelled = false
     // What was running when a heat fails, for the log
     let running = branchNames
     try {
@@ -193,6 +227,9 @@ export class HSHeaterOptimizerRunner {
         const results: HeaterOptimizationResult[] = []
         const groupTimes: string[] = []
         for (let index = 0; index < activeGroups.length; index++) {
+          // Cancelled between two groups, while no worker was running
+          if (heatCancelled)
+            throw new HSHeatCancelledError()
           running = activeGroups[index].join('+')
           const groupStartedAt = performance.now()
           results.push(await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index])))
@@ -210,6 +247,10 @@ export class HSHeaterOptimizerRunner {
         URL.revokeObjectURL(sourceUrl)
       }
     } catch (error) {
+      if (error instanceof HSHeatCancelledError) {
+        HSLogger.info(`Heat cancelled after ${formatSeconds(performance.now() - startedAt)}, while heating ${running}`, LOG_CONTEXT)
+        throw error
+      }
       // The error itself is logged by the caller. The input is what reproduces it.
       HSLogger.error(`Heat failed after ${formatSeconds(performance.now() - startedAt)}, while heating ${running}. Input: ${escapeLogText(cacheKey)}`, LOG_CONTEXT)
       throw error

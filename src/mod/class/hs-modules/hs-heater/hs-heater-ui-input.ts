@@ -94,7 +94,9 @@ export class HSHeaterUIInput {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
-                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, true])
+                // Purple Ambrosia unlocks with the first Exalt 9 completion,
+                // the same condition as the "Exalt 9x1 Done" input
+                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, branch.id !== 'purple' || Boolean(hsData?.exalt9Unlocked)])
             ) as Record<HeaterBranchId, boolean>,
         };
     }
@@ -132,8 +134,10 @@ export class HSHeaterUIInput {
         }
     }
 
+    // The Purple checkbox is left out while Purple Ambrosia is locked (its
+    // branch comes in as off); a missing checkbox reads as off.
     static buildHeaterOptionToggleGrid(active: Record<HeaterBranchId, boolean>): string {
-        const checkboxRows = HEATER_BRANCH_DEFINITIONS.map((branch) => {
+        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || active.purple).map((branch) => {
             const fieldId = `hs-heater-input-active-${branch.id}`;
             const checked = active[branch.id] ? 'checked' : '';
             return `

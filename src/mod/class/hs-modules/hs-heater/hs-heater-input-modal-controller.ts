@@ -3,7 +3,7 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
+import { HSHeatCancelledError, HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIInput } from "./hs-heater-ui-input";
@@ -103,7 +103,7 @@ export class HSHeaterInputModalController {
             <div id="hs-heater-inputs-body-right" class="hs-scrollbar-themed">
                 <div>${HSUIC.Button({ id: 'hs-heater-update-inputs-btn', class: 'redButton',  text: 'Update 🔓 Inputs' })}</div>
                 <div>${HSHeaterUIInput.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
-                <div>${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}</div>
+                <div class="hs-heater-start-row">${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}${HSUIC.Button({ id: 'hs-heater-cancel-btn', class: 'redButton', text: '✖', props: { title: 'Cancel this heat', hidden: '' } })}</div>
                 <div id="hs-heater-type-selects" class="hs-heater-type-selects-grid">${heaterTypeDropdowns}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-import-all-btn',    class: 'blueButton', text: 'Import All <span style="color: #338eef;">☑</span> Loadouts' })}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-sync-icons-btn',    class: 'blueButton', text:   'Sync All Icons' })}</div>
@@ -213,6 +213,9 @@ export class HSHeaterInputModalController {
             recalcButton.addEventListener('blur', () => this.removeStartHeaterTooltip());
         }
 
+        const cancelButton = modal.querySelector('#hs-heater-cancel-btn') as HTMLElement | null;
+        cancelButton?.addEventListener('click', () => HSHeaterOptimizerRunner.cancel());
+
         recalcButton?.addEventListener('click', async () => {
             const branchCheckboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
             const hasActiveBranch = branchCheckboxes.some((checkbox) => checkbox.checked);
@@ -241,10 +244,18 @@ export class HSHeaterInputModalController {
                     });
                     return;
                 }
-                const updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
+                // Cancel is only offered while the optimizer itself runs
+                if (cancelButton) cancelButton.hidden = !HSHeaterOptimizerRunner.canCancel;
+                let updatedResult;
+                try {
+                    updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
+                } finally {
+                    if (cancelButton) cancelButton.hidden = true;
+                }
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
             } catch (error) {
+                if (error instanceof HSHeatCancelledError) return;
                 const memoryLimit = error instanceof Error && error.message.includes('memory safety limit');
                 HSUI.Notify(memoryLimit
                     ? 'Heater stopped before exceeding its memory limit. Try fewer builds at once.'
