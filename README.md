@@ -1,19 +1,14 @@
 # Hypersynergism
 
-A QoL mod for the [Synergism](https://synergism.cc/) game.
-
-- Mod homepage: https://Ferlieloi.github.io/synergism-hypersynergy
-- Game's Github: https://github.com/Pseudo-Corp/SynergismOfficial
+A QoL mod for the [Synergism](https://synergism.cc/) game ([game's GitHub](https://github.com/Pseudo-Corp/SynergismOfficial)).
 
 ![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/logo.gif?raw=true)
 
-# About the mod
-
-## In general
+## About the mod
 
 Hypersynergism adds quality-of-life tools, game information, interface options, and configurable automation to Synergism. Most features are optional and configurable; some provide information or shortcuts, while AutoSing can automate progression using player-configured strategies.
 
-## Features
+### Features
 
 Here are some of Hypersynergism’s standout features:
 
@@ -22,14 +17,20 @@ Here are some of Hypersynergism’s standout features:
 - **Ambrosia tools:** Manage and quick-switch loadouts, automatically switch loadouts when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
 - **Quickbars:** View and interact with Ambrosia, Corruption and Automation controls from the game header.
 - **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts. (Soon to be: Hept Optimizer + Hept Distributor)
+- **Golden Quark tools:** Split your Golden Quarks between upgrades with the GQ Distributor, using ratios you set.
+- **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the "Since you were away" box at load.
+- **Interface options:** Each tab reopens on the subtab you last used, unused game tabs can be hidden, and notifications can be made more transparent.
+- **Backup & Restore:** Save the game save, the mod's settings and the logs in one file, and load it back later or on another device.
 
-# Using the mod
+## Using the mod
 
-## On Steam
+### On Steam (Windows only)
 
 Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
 
-## In a browser: Tampermonkey (recommended)
+The mod is downloaded at each launch, always in its latest version. The loader updates itself, and tells you when the game has to be patched again.
+
+### In a browser: Tampermonkey (recommended)
 
 The mod is loaded by a userscript, which starts it together with the game.
 
@@ -40,7 +41,9 @@ The mod is loaded by a userscript, which starts it together with the game.
 
 If step 3 shows code instead of an install page, copy that code, choose "Create a new script" in Tampermonkey, replace everything with the copy and save.
 
-## With a bookmark (NOT RECOMMENDED)
+While the game is running, a rainbow border around the mod's icon means a newer version is out: reload the page to get it.
+
+### With a bookmark (NOT RECOMMENDED)
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
@@ -52,22 +55,30 @@ Create a new bookmark in your browser and name it as you wish. For the URL, copy
 
 Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
 
-# Version history
+## Help and bug reports
+
+- Discord: the [HyperSynergism thread](https://discord.com/channels/677271830838640680/1456904896099127367) on the game's Discord server. The link only opens once you have [joined the server](https://www.discord.gg/ameCknq).
+- GitHub: the [issues page](https://github.com/Ferlieloi/synergism-hypersynergy/issues).
+
+For a bug, attach a backup file when you can (mod panel, Tools tab, "Backup & Restore"): it holds the mod's logs, your save, as well as the game and mod settings.
+
+## Version history
 
 Browse the [version tags](https://github.com/Ferlieloi/synergism-hypersynergy/tags) to see published mod versions.
 
-# For developers
+## For developers
 
-Developer documentation can be found in the wiki: [Wiki](https://github.com/Ferlieloi/synergism-hypersynergy/wiki)
+The mod is written in TypeScript and bundled with esbuild. It needs [Node.js](https://nodejs.org/).
 
-[**Quick Reference**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Mod-Framework-Quick-Reference)
+1. `npm install`
+2. `npm install -g http-server` (once, for the local server)
+3. `start-dev-server.bat`: rebuilds the mod at each change and serves it on `http://127.0.0.1:8080`.
+4. In Tampermonkey, turn the regular loader script off and install [src/loader/hypersynergism.dev.js](src/loader/hypersynergism.dev.js), which loads the mod from that local server. Reload the game after each change.
 
-[**Core Module Documentation**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Project-structure-and-Modules#core-modules)
+`npm run dev` rebuilds at each change without the server, and `npm run build` builds once. The build doesn't check types: use your editor or `npx tsc --noEmit`.
 
-[**Using Game Data (non-computed and computed)**](https://github.com/Ferlieloi/synergism-hypersynergy/wiki/Game-Data-and-Calculations)
+The Steam loader is a separate package, described in the [loader's README](synergism_modloader/README.md).
 
-In addition to the documentation in the wiki, the source code itself should be relatively well commented.
+## Credits
 
-**Keywords:** synergism, mod, modification, modding, modded, extension, tampermonkey, greasemonkey, chrome, firefox, incremental_games, incremental, idle, idle game, idler, incremental game, synergism wiki, synergism help, synergism tool, wiki, corruption, corruptions, help, ascension, singularity, reincarnation, challenge, userscript
-
-**Keywords 2:** Synergism mod, Synergism game mod, Synergism QoL mod, Hypersynergism, Synergism enhancements, Synergism script, Synergism automation, Synergism bookmarklet, Synergism improvements, Synergism JavaScript mod, Synergism user script, Synergism modifications, Synergism GitHub mod, Synergism UI improvements, Synergism game tweaks, Synergism game features, Synergism gameplay enhancements, idle game mods, incremental game mods, Synergism quality of life, Synergism hepteracts, Synergism corruption sheet, Synergism potion buttons, Synergism promotion codes, Synergism mod panel, Synergism reference sheet, Synergism ratios, Synergism notification opacity, Synergism log viewer, Synergism enhancement mod
+Hypersynergism was created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy), who no longer works on it. This repository was forked from theirs and is where the mod is now maintained.
