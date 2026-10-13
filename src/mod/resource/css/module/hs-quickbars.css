@@ -107,6 +107,7 @@
    width: 25px;
    border-radius: 8px;
    margin-left: 2px;
+   align-self: flex-end;
 }
 
 #events-quickbar-happy-hour-span,
