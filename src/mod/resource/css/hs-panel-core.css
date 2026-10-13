@@ -636,6 +636,23 @@ select::-webkit-scrollbar-corner {
     width: auto;
 }
 
+/* Timed save export: the two folder buttons share a line, the first one shows the folder's name */
+#hs-setting-auto-export-save-folder-button,
+#hs-setting-auto-export-save-forget-folder-button {
+    width: auto;
+    min-width: 150px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+#hs-setting-auto-export-save-folder-button {
+    min-width: 300px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .hs-panel-setting-block-gamedata-icon {
     margin-left: 5px;
 }

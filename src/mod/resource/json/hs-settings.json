@@ -323,8 +323,8 @@
   },
   "autoExportSave": {
     "settingName": "autoExportSave",
-    "settingDescription": "Export the save every (minutes)",
-    "settingHelpText": "When enabled, the mod presses the game's Export button once your last export is older than this many minutes. It is the game's own export: the export rewards (quarks, golden quarks) are collected and the file is downloaded by your browser. An export you do yourself restarts the count. A file is downloaded even if you export to the clipboard. Skipped while Auto-Sing is active. Not available on Steam yet.",
+    "settingDescription": "Export the save every X minutes",
+    "settingHelpText": "When enabled, the mod presses the game's Export button once your last export is older than this many minutes. It is the game's own export: the export rewards (quarks, golden quarks) are collected and the file is downloaded by your browser, or written into the export folder if you chose one. An export you do yourself restarts the count. A file is made even if you export to the clipboard. Skipped while Auto-Sing is active. On Steam, choose an export folder first.",
     "settingType": "numeric",
     "enabled": false,
     "settingValue": 30,
@@ -337,6 +337,56 @@
       "controlOptions": {
         "min": 1,
         "max": 1440,
+        "step": 1
+      }
+    }
+  },
+  "autoExportSaveFolder": {
+    "settingName": "autoExportSaveFolder",
+    "settingDescription": "Choose folder",
+    "settingHelpText": "Picks the folder the timed export writes its files into, in place of a download. Needed on Steam, where a download opens a Save as dialog each time. Optional in Chrome and Edge, not available in Firefox. Your browser may refuse some system folders (Downloads, Documents, Desktop): pick or create a folder inside one of them. After each game start, the folder is given back at your first click or key press in the game.",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "autoExportSaveFolderAction",
+    "settingControl": {
+      "controlId": "hs-setting-auto-export-save-folder-button",
+      "controlType": "button",
+      "controlGroup": "save-export",
+      "controlPage": "gamedata"
+    }
+  },
+  "autoExportSaveForgetFolder": {
+    "settingName": "autoExportSaveForgetFolder",
+    "settingDescription": "Forget folder",
+    "settingHelpText": "The timed export no longer writes into the folder. The files already there are left as they are. In a browser, files are downloaded as usual again. On Steam, nothing is exported until a folder is chosen.",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "autoExportSaveForgetFolderAction",
+    "settingControl": {
+      "controlId": "hs-setting-auto-export-save-forget-folder-button",
+      "controlType": "button",
+      "controlGroup": "save-export",
+      "controlPage": "gamedata"
+    }
+  },
+  "autoExportSaveKeep": {
+    "settingName": "autoExportSaveKeep",
+    "settingDescription": "Keep only the last X files",
+    "settingHelpText": "With an export folder: once a timed export is written, the oldest files it wrote are removed so that this many are left. Only files written by the timed export are ever removed, nothing else in the folder. Without an export folder (plain downloads), nothing is removed.",
+    "settingType": "numeric",
+    "enabled": true,
+    "settingValue": 20,
+    "settingControl": {
+      "controlId": "hs-setting-auto-export-save-keep-value",
+      "controlType": "number",
+      "controlGroup": "save-export",
+      "controlPage": "gamedata",
+      "controlEnabledId": "hs-setting-auto-export-save-keep-btn",
+      "controlOptions": {
+        "min": 1,
+        "max": 1000,
         "step": 1
       }
     }

@@ -46,6 +46,7 @@ export interface HSSettingsDefinition {
     // Timed save export
     autoExportSave: AutoExportSaveSetting;
     autoExportSaveLoadout: AutoExportSaveLoadoutSetting;
+    autoExportSaveKeep: AutoExportSaveKeepSetting;
 
     // Ambrosia Settings
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
@@ -203,6 +204,7 @@ export interface RememberSubtabsSetting extends HSSettingBase<boolean> { }
 // Timed save export
 export interface AutoExportSaveSetting extends HSSettingBase<number> { }
 export interface AutoExportSaveLoadoutSetting extends HSSettingBase<string> { }
+export interface AutoExportSaveKeepSetting extends HSSettingBase<number> { }
 
 // Ambrosia Settings
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }

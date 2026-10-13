@@ -648,7 +648,8 @@ export class HSSettingsUI {
         } else if (controls.controlType === 'button') {
             components.push(HSUIC.Button({
                 id: controls.controlId!,
-                text: setting.settingDescription || 'Error: No button text'
+                text: setting.settingDescription || 'Error: No button text',
+                props: setting.settingHelpText ? { title: setting.settingHelpText } : undefined
             }));
         } else {
             const convertedType = this.#resolveControlTypeInput(controls.controlType);
@@ -672,7 +673,7 @@ export class HSSettingsUI {
         }
 
         let blockClass = 'hs-panel-setting-block';
-        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+        if (controls.controlType === 'button' && (controls.controlGroup === 'auto-sing-strategy-controls' || controls.controlGroup === 'save-export')) {
             blockClass += ' hs-inline-button';
         }
 

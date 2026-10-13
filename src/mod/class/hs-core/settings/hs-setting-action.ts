@@ -11,6 +11,7 @@ import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
+import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
@@ -233,6 +234,14 @@ export class HSSettingActions {
             (mod) => mod.showGQDistributor(),
             (mod) => mod.hideGQDistributor()
         ),
+
+        autoExportSaveFolderAction: async (params: HSSettingActionParams) => {
+            await HSModuleManager.getModule<HSAutoExport>('HSAutoExport')?.chooseFolder();
+        },
+
+        autoExportSaveForgetFolderAction: async (params: HSSettingActionParams) => {
+            await HSModuleManager.getModule<HSAutoExport>('HSAutoExport')?.forgetFolder();
+        },
 
         enableHepteractDistributorAction: moduleToggle<HSHepteractDistributor>('HSHepteractDistributor',
             (mod) => mod.showDistributor(),
