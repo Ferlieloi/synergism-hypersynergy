@@ -60,6 +60,13 @@
     "enabled": false,
     "hidden": true
   },
+  "hepteractDistributorUseReducers": {
+    "settingName": "hepteractDistributorUseReducers",
+    "settingDescription": "Hepteract Distributor: use singularity reducers",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
   "hepteractDistributorRatios": {
     "settingName": "hepteractDistributorRatios",
     "settingDescription": "Hepteract Distributor saved ratios",

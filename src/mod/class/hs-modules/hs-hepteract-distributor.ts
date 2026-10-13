@@ -10,6 +10,7 @@ import { HSNumberParser } from "../hs-utils/hs-number-parser";
 import { HSUtils } from "../hs-utils/hs-utils";
 import type { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
+import type { HSAmbrosia, HSSingReducerSwap } from "./hs-ambrosia";
 import type { HepteractKeys } from "../../types/data-types/hs-player-savedata";
 import { HepteractPlan, HepteractPlanState, HepteractPlanType, planHepteractDistribution } from "./hs-hepteract-distributor-plan";
 import { HEPTERACT_DATA, HepteractState, readHepteract } from "./hs-hepteract-state";
@@ -58,13 +59,23 @@ const ASCENSION_AUTOMATIONS: GameSwitch[] = [
 
 const ORB_COST = 250000;
 const OPENED_CLASS = 'hs-hept-distributor-opened';
-const LOCKED_CLASS = 'hs-hept-distributor-locked';
 const SETTLE_TIME_LIMIT_MS = 2000;
 // The game's auto-craft stops on a full meter as long as what is left can't pay back one more expansion, which
 // takes at least a third more than the planned cost: 5% above it absorbs a cost slightly off (the cost check
 // allows 1%) without ever reaching that
 const AMOUNT_MARGIN = 1.05;
+// The most singularity reducers the ambrosia tree gives (reducer 1 or reducer 2, 2 levels each)
+const MOST_TREE_REDUCERS = 2;
 const ASCENSION_WARNING = 'Distribute ascends several times in a row: your current ascension ends.';
+// The feature in a few lines, shown by the "?" after the panel's title. Each control has its own tooltip
+const HELP_LINES = [
+    'Spends your hepteracts between the hepteract types, following your ratios.',
+    'A ratio is the balance a type should hold compared with the others: 4 and 1 means four times as much. 0 leaves a type alone.',
+    'Each step goes to the type furthest behind its ratio: its meter is filled, or expanded then filled. It stops when that type can\'t pay.',
+    'It crafts through the game\'s Auto craft, so only hepteracts are spent. For that it ascends several times in a row: your current ascension ends.',
+    'Orbs: that part of your hepteracts buys Overflux Orbs first.',
+    'Your Auto switches, autocraft percentage and ascension confirmation are put back at the end.',
+];
 
 /**
  * Class: HSHepteractDistributor
@@ -78,6 +89,8 @@ const ASCENSION_WARNING = 'Distribute ascends several times in a row: your curre
  *     than hepteracts: the Distributor ascends once per type, with only that type's Auto on and the game's
  *     autocraft percentage set to that type's exact share. The player's switches and percentage are put back
  *     at the end. Needs the live player object (patched game).
+ *     "Use singularity reducers" (off by default): for the time of the crafts, the ambrosia tree is replaced
+ *     by one holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap), so hepteracts cost less.
  * Author: maenhiir
  */
 export class HSHepteractDistributor extends HSModule {
@@ -158,10 +171,18 @@ export class HSHepteractDistributor extends HSModule {
         const title = document.createElement('div');
         title.className = 'hs-hept-distributor-title';
         title.textContent = 'Hepteract Distributor';
-        title.title = 'A ratio is the balance a hepteract should hold, compared with the others (0: left alone).\n'
-            + 'Distribute gives the hepteract furthest behind its ratio its next step (fill to the top, or expand then '
-            + 'fill to the top), again and again, until that one can\'t pay.\n'
-            + 'It crafts through the game\'s Auto craft, so only hepteracts are spent.';
+        const help = document.createElement('span');
+        help.className = 'hs-hept-distributor-help';
+        help.textContent = '?';
+        const helpBox = document.createElement('ul');
+        helpBox.className = 'hs-hept-distributor-help-box';
+        for (const line of HELP_LINES) {
+            const item = document.createElement('li');
+            item.textContent = line;
+            helpBox.appendChild(item);
+        }
+        help.appendChild(helpBox);
+        title.appendChild(help);
         panel.appendChild(title);
 
         const cells = document.createElement('div');
@@ -218,23 +239,35 @@ export class HSHepteractDistributor extends HSModule {
         orbsInput.addEventListener('change', () => { orbsInput.value = String(this.#orbsPercent()); });
         orbsField.append(orbsInput, '% first');
         orbsCell.appendChild(orbsField);
-        cells.appendChild(orbsCell);
+        // Bought first, so shown first
+        cells.prepend(orbsCell);
         this.#controls.push(orbsInput);
 
-        const partialLabel = document.createElement('label');
-        partialLabel.className = 'hs-hept-distributor-option';
-        partialLabel.title = 'Off: only whole steps, so every meter ends full, and what can\'t pay a whole step stays unspent.\n'
+        const option = (text: string, hint: string, setting: 'hepteractDistributorUseReducers' | 'hepteractDistributorAllowPartial') => {
+            const label = document.createElement('label');
+            label.className = 'hs-hept-distributor-option';
+            label.title = hint;
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = HSSettings.getSetting(setting).getValue() === true;
+            checkbox.addEventListener('change', () => {
+                HSSettings.getSetting(setting).setValue(checkbox.checked);
+            });
+            label.append(checkbox, text);
+            panel.appendChild(label);
+            this.#controls.push(checkbox);
+        };
+        option('Use singularity reducers',
+            'For the time of the crafts, your ambrosia tree is replaced by one holding the singularity reducers '
+            + '(reducer 1 outside an Exalt, reducer 2 inside), so hepteracts cost less. Your own tree is loaded back at the end.\n'
+            + 'As at any loadout load, the progress of your ambrosia bars is lost.\n'
+            + 'Needs the reducers unlocked, enough ambrosia and blueberries for them alone, and a loaded ambrosia loadout.',
+            'hepteractDistributorUseReducers');
+        option('Allow partly filled meters',
+            'Off: only whole steps, so every meter ends full, and what can\'t pay a whole step stays unspent.\n'
             + 'On: what is left goes into the hepteract furthest behind anyway. It only expands when at least what the '
-            + 'expansion consumes can be crafted back, so a balance never goes down.';
-        const partial = document.createElement('input');
-        partial.type = 'checkbox';
-        partial.checked = HSSettings.getSetting('hepteractDistributorAllowPartial').getValue() === true;
-        partial.addEventListener('change', () => {
-            HSSettings.getSetting('hepteractDistributorAllowPartial').setValue(partial.checked);
-        });
-        partialLabel.append(partial, 'Allow partly filled meters');
-        panel.appendChild(partialLabel);
-        this.#controls.push(partial);
+            + 'expansion consumes can be crafted back, so a balance never goes down.',
+            'hepteractDistributorAllowPartial');
 
         const actions = document.createElement('div');
         actions.className = 'hs-hept-distributor-actions';
@@ -296,17 +329,10 @@ export class HSHepteractDistributor extends HSModule {
         copy(this.#orbsIcon, 'hepteractToQuarkImage', 'Overflux Orbs');
     }
 
-    #refreshLocked(): void {
-        for (const info of HEPTERACTS) {
-            this.#cells.get(info.key)?.classList.toggle(LOCKED_CLASS, HSHepteractDistributor.#isLocked(info.key));
-        }
-    }
-
     #setOpened(opened: boolean, save = true): void {
         this.#tab?.classList.toggle(OPENED_CLASS, opened);
         if (opened) {
             this.#refreshIcons();
-            this.#refreshLocked();
             this.#refreshAvailability();
         }
         if (save) HSSettings.getSetting('hepteractDistributorOpen').setValue(opened);
@@ -402,7 +428,6 @@ export class HSHepteractDistributor extends HSModule {
 
     /** Ratios from the current capacities (the smallest one counts for 1). Locked hepteracts keep theirs. */
     #matchCurrent(): void {
-        this.#refreshLocked();
         const capacities = new Map<HepteractKey, number>();
         for (const info of HEPTERACTS) {
             if (HSHepteractDistributor.#isLocked(info.key)) continue;
@@ -454,18 +479,35 @@ export class HSHepteractDistributor extends HSModule {
 
     /**
      * The singularity debuff on hepteract costs, from a fresh save read, then checked against the cost the game
-     * itself shows for a Chronos unit (3 digits): a game update changing the formula must not spend anything.
+     * itself shows (#checkShownCost).
+     * @returns the debuff with this many more singularity reducers than the save has (0: as it is now). It reads
+     * the save data of this read: to call before anything else is awaited.
      */
-    async #readCostMultiplier(): Promise<number> {
+    async #readCostMultiplier(): Promise<(addedReducers: number) => number> {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         const gameData = await gameDataAPI?.getForcedGameData();
         if (!gameDataAPI || !gameData) throw new Error('Could not read your current save.');
 
-        const multiplier = gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
-        if (typeof multiplier !== 'number' || !Number.isFinite(multiplier) || multiplier <= 0) {
-            throw new Error('Could not compute the hepteract cost.');
-        }
+        const singularityCount = gameData.singularityCount;
+        const multiplierWith = (addedReducers: number): number => {
+            // A reducer counts as one singularity less. Never below 0: the calculation reads -1 as "the current count"
+            const multiplier = addedReducers > 0
+                ? gameDataAPI.calculateSingularityDebuff('Hepteract Costs', Math.max(0, singularityCount - addedReducers))
+                : gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
+            if (typeof multiplier !== 'number' || !Number.isFinite(multiplier) || multiplier <= 0) {
+                throw new Error('Could not compute the hepteract cost.');
+            }
+            return multiplier;
+        };
+        HSHepteractDistributor.#checkShownCost(multiplierWith(0));
+        return multiplierWith;
+    }
 
+    /**
+     * Checks a cost multiplier against the cost the game itself shows for a Chronos unit (3 digits), which
+     * follows the live state at once: a game update changing the formula must not spend anything.
+     */
+    static #checkShownCost(multiplier: number): void {
         // The game fills the forge's description for the hepteract under the mouse. The sentence is translated:
         // its first number is the hepteract cost in every language ({{x}} of "oneCost")
         document.getElementById('chronosHepteract')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
@@ -475,7 +517,6 @@ export class HSHepteractDistributor extends HSModule {
             throw new Error(`Cost check failed (a Chronos unit: the game shows ${Number.isNaN(shown) ? 'nothing' : HSUtils.N(shown, 0)}, `
                 + `the mod computes ${HSUtils.N(computed, 0)}). Nothing was spent.`);
         }
-        return multiplier;
     }
 
     // ── Distribution ─────────────────────────────────────────────────────────────────────────────────
@@ -496,18 +537,17 @@ export class HSHepteractDistributor extends HSModule {
         this.#setControlsDisabled(true);
         this.#setStatus('Distributing…');
         try {
-            const costMultiplier = await this.#readCostMultiplier();
+            const costMultiplierWith = await this.#readCostMultiplier();
             // The save read takes a moment: autosing may have started, or an Exalt been entered, meanwhile
             const lateReason = this.#unavailableReason();
             if (lateReason !== undefined) throw new Error(lateReason);
-            this.#setStatus(await this.#run(costMultiplier));
+            this.#setStatus(await this.#run(costMultiplierWith));
         } catch (error) {
             HSLogger.warn(`Hepteract distribution stopped: ${error}`, this.context);
             this.#setStatus(`Stopped: ${error instanceof Error ? error.message : error}`);
         } finally {
             this.#running = false;
             this.#setControlsDisabled(false);
-            this.#refreshLocked();
             if (this.#matchButton) this.#matchButton.disabled = !HSGlobal.exposedPlayer;
         }
     }
@@ -516,22 +556,41 @@ export class HSHepteractDistributor extends HSModule {
      * The crafting, through ascensions. Every ascension resets at once when the game's ascension confirmation is
      * off, with no dialog: the whole run is one go, before the game ticks, paints or saves, so the player's
      * switches and percentage are never seen changed.
+     * @param costMultiplierWith the cost multiplier with this many more singularity reducers (#readCostMultiplier).
      * @returns the summary for the status line.
      */
-    async #run(costMultiplier: number): Promise<string> {
+    async #run(costMultiplierWith: (addedReducers: number) => number): Promise<string> {
         const startedAt = performance.now();
         const allowPartial = HSSettings.getSetting('hepteractDistributorAllowPartial').getValue() === true;
         const orbsPercent = this.#orbsPercent();
         const orbsToBuy = (owned: number) => Math.floor(Math.floor(owned * orbsPercent / 100) / ORB_COST);
+        const notes: string[] = [];
+
+        // The singularity reducers, when asked for and when they make hepteracts cheaper here (they don't up to
+        // singularity 50, nor with the Antiquities rune). Only prepared: the tree changes after the reward
+        const plainCostMultiplier = costMultiplierWith(0);
+        let costMultiplier = plainCostMultiplier;
+        let reducerSwap: HSSingReducerSwap | undefined;
+        if (HSSettings.getSetting('hepteractDistributorUseReducers').getValue() === true
+            && costMultiplierWith(MOST_TREE_REDUCERS) < plainCostMultiplier) {
+            const reducers = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.prepareSingReducerSwap()
+                ?? { note: 'Singularity reducers not used: the mod\'s ambrosia module is not loaded.' };
+            if (reducers.stop) throw new Error(reducers.stop);
+            if (reducers.note) notes.push(reducers.note);
+            if (reducers.swap && costMultiplierWith(reducers.swap.added) < plainCostMultiplier) {
+                reducerSwap = reducers.swap;
+                costMultiplier = costMultiplierWith(reducerSwap.added);
+            }
+        }
 
         // Nothing to craft with what is owned: the player's ascension is left alone (its reward isn't known)
         const firstPlan = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
         const player = HSGlobal.exposedPlayer;
         if (!player) throw new Error('Could not read the game.');
         if (firstPlan.targets.length === 0 && !(orbsToBuy(HSHepteractDistributor.#ownedHepteracts()) >= 1)) {
-            const notes = player.challengecompletions?.[10] > 0
-                ? ['The reward of your current ascension is not counted: ascend, then press Distribute again.']
-                : [];
+            if (player.challengecompletions?.[10] > 0) {
+                notes.push('The reward of your current ascension is not counted: ascend, then press Distribute again.');
+            }
             return this.#summary({ plan: firstPlan, orbsPercent, ascensions: 0, notes });
         }
 
@@ -542,10 +601,11 @@ export class HSHepteractDistributor extends HSModule {
         };
         const originalPercentage = player.hepteractAutoCraftPercentage;
         const balances = new Map<HepteractKey, { before: number, after: number }>();
-        const notes: string[] = [];
         let orbsBought: number | undefined;
         let ascensions = 0;
         let plan = firstPlan;
+        let treeChanged = false;
+        let reducersAdded = 0;
 
         try {
             for (const gameSwitch of [...HEPTERACT_AUTOS, ORBS_AUTO, ASCENSION_CONFIRMATION]) {
@@ -561,6 +621,18 @@ export class HSHepteractDistributor extends HSModule {
 
             // Not fatal: below singularity 10 the game ignores these clicks, and doesn't auto-open either
             for (const gameSwitch of ASCENSION_AUTOMATIONS) turn(gameSwitch, false);
+
+            // After the reward, which the player's own tree earns. The game's shown cost follows the tree at once
+            if (reducerSwap) {
+                treeChanged = true;
+                if (reducerSwap.apply()) {
+                    HSHepteractDistributor.#checkShownCost(costMultiplier);
+                    reducersAdded = reducerSwap.added;
+                } else {
+                    notes.push('Singularity reducers not used: the game did not load them.');
+                    costMultiplier = plainCostMultiplier;
+                }
+            }
 
             if (orbsPercent > 0) {
                 orbsBought = 0;
@@ -600,16 +672,28 @@ export class HSHepteractDistributor extends HSModule {
                 }
             }
         } finally {
+            // Also when the run stops on an error, where the notes are not shown: said in a notification too
+            if (treeChanged && !reducerSwap?.restore()) {
+                const failure = 'Could not load your ambrosia tree back: load your loadout again.';
+                notes.push(failure);
+                HSLogger.warn(failure, this.context);
+                HSUI.Notify(`Hepteract Distributor: ${failure}`, { notificationType: 'warning' });
+            }
             player.hepteractAutoCraftPercentage = originalPercentage;
             for (const [gameSwitch, on] of original) {
                 if (!HSHepteractDistributor.#setSwitch(gameSwitch, on)) notes.push(`Could not put the game's switch #${gameSwitch.id} back.`);
             }
         }
 
-        // What the last type could not afford, on what is left now
+        // What the last type could not afford, on what is left now (at the cost of the next press, reducers included)
         const left = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
         HSLogger.debug(() => `Hepteract distribution: ${plan.steps} steps over ${ascensions} ascensions in `
-            + `${Math.round(performance.now() - startedAt)} ms, cost multiplier ${costMultiplier}`, this.context);
+            + `${Math.round(performance.now() - startedAt)} ms, cost multiplier ${costMultiplier}`
+            + (reducersAdded > 0 ? ` (${plainCostMultiplier} without the ${reducersAdded} added singularity reducers)` : ''), this.context);
+        if (reducersAdded > 0) {
+            const saved = Math.round((1 - costMultiplier / plainCostMultiplier) * 1000) / 10;
+            notes.unshift(`Singularity reducers: ${reducersAdded} added for the crafts, hepteracts cost ${saved.toLocaleString()}% less.`);
+        }
         return this.#summary({ plan: left, balances, orbsPercent, orbsBought, ascensions, notes });
     }
 

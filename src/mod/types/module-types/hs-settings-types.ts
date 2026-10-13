@@ -19,6 +19,7 @@ export interface HSSettingsDefinition {
     enableHepteractDistributor: EnableHepteractDistributorSetting;
     hepteractDistributorOpen: HepteractDistributorOpenSetting;
     hepteractDistributorAllowPartial: HepteractDistributorAllowPartialSetting;
+    hepteractDistributorUseReducers: HepteractDistributorUseReducersSetting;
     hepteractDistributorRatios: HepteractDistributorRatiosSetting;
     hepteractDistributorOrbsPercent: HepteractDistributorOrbsPercentSetting;
 
@@ -173,6 +174,7 @@ export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean
 export interface EnableHepteractDistributorSetting extends HSSettingBase<boolean> { }
 export interface HepteractDistributorOpenSetting extends HSSettingBase<boolean> { }
 export interface HepteractDistributorAllowPartialSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorUseReducersSetting extends HSSettingBase<boolean> { }
 export interface HepteractDistributorRatiosSetting extends HSSettingBase<string> { }
 export interface HepteractDistributorOrbsPercentSetting extends HSSettingBase<number> { }
 

@@ -30,6 +30,28 @@ interface HSQuickImportSummary {
     failures: { index: number; reason: string }[];
 }
 
+type HSAmbrosiaTree = Record<string, number>;
+
+/** A temporary ambrosia tree holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap). */
+export interface HSSingReducerSwap {
+    /** How many singularity reducers the temporary tree has more than the player's own tree. */
+    added: number;
+    /** Loads the temporary tree. @returns whether the game took it. */
+    apply(): boolean;
+    /** Loads the player's own tree back, unless it is still there. @returns whether it is there now. */
+    restore(): boolean;
+}
+
+/**
+ * `swap`: the reducers can be used. `stop`: they could be, once the player has done what the text says.
+ * Neither: they can't be used here, and `note` says why when the player should know.
+ */
+export interface HSSingReducerPlan {
+    swap?: HSSingReducerSwap;
+    note?: string;
+    stop?: string;
+}
+
 /**
  * Class: HSAmbrosia
  * IsExplicitHSModule: Yes
@@ -1493,6 +1515,173 @@ export class HSAmbrosia extends HSModule
         HSAmbrosiaHelper.ensureLoadoutMode('loadTree');
         HSGameDialogs.act(owner, { alert: 'dismiss' }, () => slot.click());
         this.#queuePersistentAmbrosiaLevelsRefresh();
+    }
+
+    // ==============================================
+    // ---- Temporary tree: singularity reducers ----
+    // ==============================================
+
+    /**
+     * For the Hepteract Distributor: a tree holding the singularity reducer that counts where the player is
+     * (reducer 1 outside an Exalt, with its Hyperflux prerequisite; reducer 2 inside), to load for the time of
+     * the crafts. Nothing else is kept, except the talisman rune bonus when the Horseshoe shop upgrade is owned:
+     * it raises the Horseshoe rune, which lowers every singularity penalty.
+     * The game only loads a tree from a loadout slot (#loadTreeThroughSlot). The slot used is the one the game
+     * marks; it marks none after a save load (every singularity), and then the one the quickbar remembers is
+     * used, if it holds exactly the live tree. So the live tree, the slots and the game's mark end as they were
+     * (or the mark on a slot holding the live tree).
+     * Only reads the game: nothing changes before apply().
+     */
+    prepareSingReducerSwap(): HSSingReducerPlan {
+        const player = HSGlobal.exposedPlayer;
+        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        if (!player || typeof gameValidate !== 'function') {
+            return { note: 'Singularity reducers not used: the game\'s patch is too old (patch the game again).' };
+        }
+        const validate = (tree: HSAmbrosiaTree): boolean => {
+            try { return gameValidate(tree) === true; } catch { return false; }
+        };
+
+        const liveTree = this.#readLiveTree();
+        if (!liveTree) return { note: 'Singularity reducers not used: could not read your ambrosia tree.' };
+
+        const insideExalt = Boolean(player.insideSingularityChallenge);
+        const reducer = insideExalt ? 'ambrosiaSingReduction2' : 'ambrosiaSingReduction1';
+        const liveLevel = liveTree[reducer] ?? 0;
+        const maxLevel = this.#ambrosiaUpgradeConfigs()?.[reducer]?.maxLevel ?? 0;
+
+        const base: HSAmbrosiaTree = Object.fromEntries(Object.keys(liveTree).map(key => [key, 0]));
+        if (!insideExalt) base.ambrosiaHyperflux = 4;
+        if (player.shopUpgrades?.shopHorseShoe > 0) base.ambrosiaTalismanBonusRuneLevel = liveTree.ambrosiaTalismanBonusRuneLevel ?? 0;
+
+        // The highest level the game accepts (unlocked, ambrosia and blueberries), above the live one
+        let tree: HSAmbrosiaTree | undefined;
+        for (let level = maxLevel; level > liveLevel && !tree; level--) {
+            const candidate = { ...base, [reducer]: level };
+            if (validate(candidate)) tree = candidate;
+        }
+        if (!tree) {
+            if (liveLevel >= maxLevel) return {};
+            const exalt = insideExalt ? 'noAmbrosiaUpgrades' : 'noSingularityUpgrades';
+            return {
+                note: player.singularityChallenges?.[exalt]?.completions > 0
+                    ? 'Singularity reducers not used: your ambrosia or blueberries can\'t pay for more of them.'
+                    : `Singularity reducers not used: locked (Exalt ${insideExalt ? 5 : 1} not completed).`
+            };
+        }
+        if (!validate(liveTree)) {
+            return { note: 'Singularity reducers not used: the game would not load your current ambrosia tree back.' };
+        }
+
+        const slot = this.#getGameActiveSlot() ?? this.#rememberedSlotHolding(liveTree);
+        if (!slot) {
+            return {
+                stop: 'Singularity reducers: the game marks no ambrosia loadout, and your tree is not the quickbar\'s loadout. '
+                    + 'Load or save a loadout, then press Distribute again. Nothing was spent.'
+            };
+        }
+
+        const temporaryTree = tree;
+        const isLive = (expected: HSAmbrosiaTree): boolean => {
+            const now = this.#readLiveTree();
+            return now !== undefined && this.#isSameTree(now, expected);
+        };
+        return {
+            swap: {
+                added: temporaryTree[reducer] - liveLevel,
+                apply: () => this.#loadTreeThroughSlot(slot, temporaryTree) && isLive(temporaryTree),
+                restore: () => isLive(liveTree) || (this.#loadTreeThroughSlot(slot, liveTree) && isLive(liveTree)),
+            }
+        };
+    }
+
+    #ambrosiaUpgradeConfigs(): Record<string, AmbrosiaUpgradeCalculationConfig<any> | undefined> | undefined {
+        return HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.ambrosia.ambrosiaUpgradeCalculationCollection as
+            Record<string, AmbrosiaUpgradeCalculationConfig<any> | undefined> | undefined;
+    }
+
+    /**
+     * The live tree as the game would save it ({ upgrade: level }), from what the live player has invested in
+     * each upgrade: the levels themselves are not in the player object. Undefined when an amount is not the
+     * exact price of a level (an upgrade the mod doesn't know, a formula changed by a game update).
+     */
+    #readLiveTree(): HSAmbrosiaTree | undefined {
+        const upgrades = HSGlobal.exposedPlayer?.ambrosiaUpgrades as Record<string, Partial<AmbrosiaUpgradeData> | undefined> | undefined;
+        const configs = this.#ambrosiaUpgradeConfigs();
+        if (!upgrades || !configs) return undefined;
+
+        const tree: HSAmbrosiaTree = {};
+        for (const [key, state] of Object.entries(upgrades)) {
+            // Two Mind only costs blueberries (the game reads its level the same way)
+            if (key === 'twoMind') {
+                tree[key] = (state?.blueberriesInvested ?? 0) > 0 ? 1 : 0;
+                continue;
+            }
+
+            const invested = state?.ambrosiaInvested ?? 0;
+            const config = configs[key];
+            let level = 0;
+            let spent = 0;
+            while (config && level < config.maxLevel) {
+                const cost = config.costFormula(level, config.costPerLevel);
+                if (!(cost > 0) || spent + cost > invested * (1 + 1e-9)) break;
+                spent += cost;
+                level++;
+            }
+            if (!(Math.abs(invested - spent) <= invested * 1e-9)) return undefined;
+            tree[key] = level;
+        }
+        return tree;
+    }
+
+    /** Whether a saved loadout loads as this tree. As the game does at a load, a saved level above the maximum counts as the maximum. */
+    #isSameTree(saved: Record<string, unknown>, tree: HSAmbrosiaTree): boolean {
+        const configs = this.#ambrosiaUpgradeConfigs();
+        for (const key of new Set([...Object.keys(saved), ...Object.keys(tree)])) {
+            const savedLevel = Math.min(Number(saved[key] ?? 0), configs?.[key]?.maxLevel ?? Infinity);
+            if (savedLevel !== (tree[key] ?? 0)) return false;
+        }
+        return true;
+    }
+
+    /** The slot the quickbar shows as loaded, when its saved loadout is exactly this tree. */
+    #rememberedSlotHolding(tree: HSAmbrosiaTree): HTMLButtonElement | undefined {
+        const slot = this.#loadoutsSlots.find(loadoutSlot => loadoutSlot.id === this.activeLoadout) as HTMLButtonElement | undefined;
+        if (!slot || slot.style.display === 'none') return undefined;
+
+        const slotNumber = this.#getSlotNumber(slot);
+        const saved = slotNumber === undefined ? undefined : HSGlobal.exposedPlayer?.blueberryLoadouts?.[slotNumber];
+        if (!saved || typeof saved !== 'object' || Object.keys(saved).length === 0) return undefined;
+        return this.#isSameTree(saved as Record<string, unknown>, tree) ? slot : undefined;
+    }
+
+    /**
+     * Loads a tree that is in no slot: it is written into this slot for the time of the click, then the slot's
+     * own loadout is put back. The game reads the slot at the click and loads at once, so all of it is one
+     * synchronous step, and the slot is the one the game marks afterwards. The Alert (loaded, or refused) is
+     * dismissed. The player's loadout mode is put back.
+     * @returns false when nothing was clicked.
+     */
+    #loadTreeThroughSlot(slot: HTMLButtonElement, tree: HSAmbrosiaTree): boolean {
+        const player = HSGlobal.exposedPlayer;
+        const slotNumber = this.#getSlotNumber(slot);
+        if (!player?.blueberryLoadouts || slotNumber === undefined) return false;
+
+        const playerMode = player.blueberryLoadoutMode;
+        HSAmbrosiaHelper.ensureLoadoutMode('loadTree');
+        // In SAVE mode, the click would save the live tree into the slot
+        if (player.blueberryLoadoutMode !== 'loadTree') return false;
+
+        const saved = player.blueberryLoadouts[slotNumber];
+        player.blueberryLoadouts[slotNumber] = { ...tree };
+        try {
+            HSGameDialogs.act('temporaryTree', { alert: 'dismiss' }, () => slot.click());
+        } finally {
+            player.blueberryLoadouts[slotNumber] = saved;
+            if (playerMode === 'saveTree') HSAmbrosiaHelper.ensureLoadoutMode('saveTree');
+        }
+        this.#queuePersistentAmbrosiaLevelsRefresh();
+        return true;
     }
 
     /** Without the patched game, imports go through the game's import and loadout clicks: not while autosing runs. */

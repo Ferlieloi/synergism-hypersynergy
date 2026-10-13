@@ -13,6 +13,7 @@
     min-height: 0;
     height: 22px;
     padding: 0 10px;
+    border: 2px solid pink;
     cursor: pointer;
 }
 
@@ -39,7 +40,9 @@
     box-sizing: border-box;
     width: 100%;
     padding: 8px 34px;
-    border: 1px solid #ccc;
+    /* The game's own box border, which follows its theme */
+    border: 3px solid;
+    border-color: var(--boxmain-bordercolor);
     border-radius: 5px;
     background-color: rgba(0, 0, 0, 0.5);
     font-size: 0.85em;
@@ -64,6 +67,54 @@
     font-weight: bold;
 }
 
+/* The "?" after the title: the feature in a few lines, shown on hover */
+.hs-hept-distributor-help {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    margin-left: 8px;
+    border: 1px solid #aaa;
+    border-radius: 50%;
+    color: #ccc;
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 16px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* Placed against the panel, not the "?", so it is as wide as the panel's content.
+   It lets the mouse through: it closes as soon as the "?" is left, and never keeps the fields under it out of reach */
+.hs-hept-distributor-help-box {
+    display: none;
+    position: absolute;
+    top: 34px;
+    left: 34px;
+    right: 34px;
+    z-index: 10;
+    margin: 0;
+    padding: 8px 12px 8px 28px;
+    border: 1px solid #888;
+    border-radius: 5px;
+    background-color: #101828;
+    color: white;
+    font-size: 13px;
+    line-height: 1.4;
+    list-style: disc;
+    text-align: left;
+    pointer-events: none;
+}
+
+.hs-hept-distributor-help-box li {
+    margin: 2px 0;
+}
+
+.hs-hept-distributor-help:hover .hs-hept-distributor-help-box {
+    display: block;
+}
+
 .hs-hept-distributor-cells {
     display: flex;
     flex-wrap: wrap;
@@ -79,14 +130,10 @@
     gap: 4px;
 }
 
-.hs-hept-distributor-cell.hs-hept-distributor-locked {
-    opacity: 0.4;
-}
-
 .hs-hept-distributor-orbs {
-    margin-left: 12px;
-    padding-left: 18px;
-    border-left: 1px solid #666;
+    margin-right: 12px;
+    padding-right: 18px;
+    border-right: 1px solid #666;
 }
 
 /* The game's icons are 56px sprites: shown at 40px */
