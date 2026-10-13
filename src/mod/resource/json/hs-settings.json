@@ -321,6 +321,110 @@
       "controlEnabledId": "hs-setting-use-game-data-btn"
     }
   },
+  "autoExportSave": {
+    "settingName": "autoExportSave",
+    "settingDescription": "Export the save every (minutes)",
+    "settingHelpText": "When enabled, the mod presses the game's Export button once your last export is older than this many minutes. It is the game's own export: the export rewards (quarks, golden quarks) are collected and the file is downloaded by your browser. An export you do yourself restarts the count. A file is downloaded even if you export to the clipboard. Skipped while Auto-Sing is active. Not available on Steam yet.",
+    "settingType": "numeric",
+    "enabled": false,
+    "settingValue": 30,
+    "settingControl": {
+      "controlId": "hs-setting-auto-export-save-value",
+      "controlType": "number",
+      "controlGroup": "save-export",
+      "controlPage": "gamedata",
+      "controlEnabledId": "hs-setting-auto-export-save-btn",
+      "controlOptions": {
+        "min": 1,
+        "max": 1440,
+        "step": 1
+      }
+    }
+  },
+  "autoExportSaveLoadout": {
+    "settingName": "autoExportSaveLoadout",
+    "settingDescription": "Export loadout",
+    "settingHelpText": "The Ambrosia loadout to load for the timed export, so the export rewards are collected with it. Your tree is put back right after. With None, nothing is loaded. Each load restarts the progress of the ambrosia bars. When the game marks no loadout as active (after a singularity or a page load) and your tree is not the loadout shown on the quickbar, the export loadout stays loaded.",
+    "settingType": "selectstring",
+    "enabled": true,
+    "settingValue": "",
+    "settingControl": {
+      "controlId": "hs-setting-auto-export-save-loadout-value",
+      "controlType": "select",
+      "controlGroup": "save-export",
+      "controlPage": "gamedata",
+      "selectOptions": [
+        {
+          "text": "None",
+          "value": ""
+        },
+        {
+          "text": "Loadout 1",
+          "value": "1"
+        },
+        {
+          "text": "Loadout 2",
+          "value": "2"
+        },
+        {
+          "text": "Loadout 3",
+          "value": "3"
+        },
+        {
+          "text": "Loadout 4",
+          "value": "4"
+        },
+        {
+          "text": "Loadout 5",
+          "value": "5"
+        },
+        {
+          "text": "Loadout 6",
+          "value": "6"
+        },
+        {
+          "text": "Loadout 7",
+          "value": "7"
+        },
+        {
+          "text": "Loadout 8",
+          "value": "8"
+        },
+        {
+          "text": "Loadout 9",
+          "value": "9"
+        },
+        {
+          "text": "Loadout 10",
+          "value": "10"
+        },
+        {
+          "text": "Loadout 11",
+          "value": "11"
+        },
+        {
+          "text": "Loadout 12",
+          "value": "12"
+        },
+        {
+          "text": "Loadout 13",
+          "value": "13"
+        },
+        {
+          "text": "Loadout 14",
+          "value": "14"
+        },
+        {
+          "text": "Loadout 15",
+          "value": "15"
+        },
+        {
+          "text": "Loadout 16",
+          "value": "16"
+        }
+      ]
+    }
+  },
   "addTimeAutoLoadouts": {
     "settingName": "addTimeAutoLoadouts",
     "settingDescription": "Add+Time Amb loadouts auto-switch",

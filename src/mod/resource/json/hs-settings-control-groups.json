@@ -39,6 +39,10 @@
     "groupName": "Game data settings",
     "order": 11
   },
+  "save-export": {
+    "groupName": "Timed save export settings",
+    "order": 11.5
+  },
   "shop": {
     "groupName": "Shop settings",
     "order": 12

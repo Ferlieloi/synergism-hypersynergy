@@ -43,6 +43,10 @@ export interface HSSettingsDefinition {
     autoClick: AutoclickSetting;
     autoClickIgnoreElements: AutoClickIgnoreElementsSetting;
 
+    // Timed save export
+    autoExportSave: AutoExportSaveSetting;
+    autoExportSaveLoadout: AutoExportSaveLoadoutSetting;
+
     // Ambrosia Settings
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
@@ -195,6 +199,10 @@ export interface HideGameDialogsNotifySetting extends HSSettingBase<boolean> { }
 export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
 export interface AutoDismissOfflinePopupSetting extends HSSettingBase<boolean> { }
 export interface RememberSubtabsSetting extends HSSettingBase<boolean> { }
+
+// Timed save export
+export interface AutoExportSaveSetting extends HSSettingBase<number> { }
+export interface AutoExportSaveLoadoutSetting extends HSSettingBase<string> { }
 
 // Ambrosia Settings
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }

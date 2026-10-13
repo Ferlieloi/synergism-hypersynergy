@@ -131,6 +131,11 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: '#c0c0c0',
         },
         {
+            className: 'HSAutoExport',
+            context: 'HSAutoExport',
+            moduleColor: '#7fb3d5',
+        },
+        {
             className: 'Chartist',
             context: 'Chartist',
             moduleColor: '#e8d7bf',

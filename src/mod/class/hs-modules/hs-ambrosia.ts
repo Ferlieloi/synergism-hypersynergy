@@ -1684,6 +1684,77 @@ export class HSAmbrosia extends HSModule
         return true;
     }
 
+    // ==============================================
+    // ------ A loadout for one action's time -------
+    // ==============================================
+
+    /**
+     * Runs a synchronous action with a loadout loaded, then puts the player's tree back (the timed save export).
+     * The tree comes back through a slot: the one the game marks, else the one the quickbar remembers when it
+     * holds exactly the live tree (the game marks none after a save load, so after every singularity). With no
+     * such slot the loadout is loaded all the same and stays loaded (the user's choice).
+     * Unsaved changes to the tree are kept when it can be read from the live player and the game accepts it;
+     * otherwise (bookmark load, older patch) the marked slot's own loadout is loaded back.
+     * The action always runs, and the player's loadout mode is put back.
+     * @returns undefined when the loadout was used and the tree put back, else what happened.
+     */
+    runWithLoadout(loadoutSetting: string, owner: string, action: () => void): string | undefined {
+        const skip = (reason: string): string => {
+            action();
+            return reason;
+        };
+
+        const slotId = HSAmbrosiaHelper.convertSettingLoadoutToSlot(loadoutSetting);
+        const target = this.#loadoutsSlots.find(slot => slot.id === slotId) as HTMLButtonElement | undefined;
+        if (!target || target.style.display === 'none') return skip(`loadout ${loadoutSetting} is locked`);
+
+        const player = HSGlobal.exposedPlayer;
+        const slotNumber = this.#getSlotNumber(target);
+        const saved = slotNumber === undefined ? undefined : player?.blueberryLoadouts?.[slotNumber];
+        if (player && (!saved || Object.keys(saved).length === 0)) return skip(`loadout ${loadoutSetting} is empty`);
+
+        const liveTree = this.#readLiveTree();
+        const backSlot = this.#getGameActiveSlot() ?? (liveTree ? this.#rememberedSlotHolding(liveTree) : undefined);
+        // Already the loaded one
+        if (backSlot === target) {
+            action();
+            return undefined;
+        }
+
+        // The tree is only written into a slot when the game's check (patcher) accepts it: else the slot is loaded back
+        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        let treeToRestore: HSAmbrosiaTree | undefined;
+        if (liveTree && typeof gameValidate === 'function') {
+            try { if (gameValidate(liveTree) === true) treeToRestore = liveTree; } catch { treeToRestore = undefined; }
+        }
+
+        const wasSaveMode = HSAmbrosiaHelper.isLoadoutMode('saveTree');
+        let result: string | undefined;
+        try {
+            this.#reloadLoadoutSlot(target, owner);
+            if (this.#getGameActiveSlot() !== target) {
+                // Refused by the game: the tree and the mark are as they were
+                result = skip(`the game refused to load loadout ${loadoutSetting}`);
+            } else {
+                try {
+                    action();
+                } finally {
+                    if (!backSlot) {
+                        result = `loadout ${loadoutSetting} stays loaded (the game marked no loadout to come back to)`;
+                    } else {
+                        if (treeToRestore) this.#loadTreeThroughSlot(backSlot, treeToRestore);
+                        else this.#reloadLoadoutSlot(backSlot, owner);
+                        if (this.#getGameActiveSlot() !== backSlot) result = `loadout ${loadoutSetting} stays loaded (your previous loadout could not be loaded back)`;
+                    }
+                }
+            }
+        } finally {
+            // In SAVE mode, the player's next slot click must still save
+            if (wasSaveMode) HSAmbrosiaHelper.ensureLoadoutMode('saveTree');
+        }
+        return result;
+    }
+
     /** Without the patched game, imports go through the game's import and loadout clicks: not while autosing runs. */
     #refuseGameImportDuringAutosing(): boolean {
         if (!HSModuleManager.getModule<HSAutosing>('HSAutosing')?.isAutosingActive()) return false;

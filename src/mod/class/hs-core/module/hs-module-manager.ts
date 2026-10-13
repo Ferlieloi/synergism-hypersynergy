@@ -21,6 +21,7 @@ import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
+import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 
 /**
  * Class: HSModuleManager
@@ -56,7 +57,8 @@ export class HSModuleManager {
         "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
         "HSQOLButtons": HSQOLButtons,
-        "HSSubtabMemory": HSSubtabMemory
+        "HSSubtabMemory": HSSubtabMemory,
+        "HSAutoExport": HSAutoExport
     };
 
     constructor(context: string, modulesToEnable: HSModuleDefinition[]) {
