@@ -142,10 +142,12 @@ loader asks for a re-patch the same way: a banner on the last screen, with
 or older has no recorded patcher and is asked to re-patch once. When the
 patcher can't be downloaded for the check, nothing is asked.
 
-Two more cases ask for a re-patch: the injector snippet written into the game
-is not the one this loader version writes (a loader update changed it), and
+Three more cases ask for a re-patch: the injector snippet written into the
+game is not the one this loader version writes (a loader update changed it),
 the patched copy is missing (the game was reinstalled, or moved to another
-Steam library).
+Steam library), and the patched copy was built by a loader version that built
+it another way (a game patched by loader 0.2.9 or older is asked once: its
+native modules were packed into `app.asar`, which broke logging in).
 
 ## Known limitations / things to be aware of
 

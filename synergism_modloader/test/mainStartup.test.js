@@ -102,7 +102,7 @@ function loadPatchedMain({ config, existing = [], checkPatcherChanged = async ()
             setLocalChannelEnabled: () => {},
             DEFAULTS: { exeName: 'game.exe', steamAppName: 'Synergism' }
         },
-        './lib/patchGame': { buildPatcherUrl: (channel, ref) => `patcher:${channel}@${ref}` },
+        './lib/patchGame': { buildPatcherUrl: (channel, ref) => `patcher:${channel}@${ref}`, PATCH_FORMAT: 7 },
         './lib/patcherSource': { checkPatcherChanged },
         './lib/injectorTemplate': { injectorHash: () => 'injector-now' }
     })
@@ -138,9 +138,9 @@ test('a game patched with another injector needs a patch, without any download',
     assert.equal(nothing.reason, 'not-patched')
 })
 
-test('a patched copy that is gone needs a patch, and so does a game exe that changed', () => {
+test('a patched copy that is gone needs a patch, and so do a game exe that changed and a copy built another way', () => {
     const gameExe = path.join('/game', 'game.exe')
-    const config = { lastPatchedExe: '/work/game.exe', lastPatchedSourceStat: { size: 10, mtimeMs: 20 } }
+    const config = { lastPatchedExe: '/work/game.exe', lastPatchedSourceStat: { size: 10, mtimeMs: 20 }, lastPatchedFormat: 7 }
     const check = (cfg, existing) => {
         const result = loadPatchedMain({ config: cfg, existing }).handlers.get('game:check-update-needed')(null, { gameDir: '/game', exeName: 'game.exe' })
         return [result.needsRepatch, result.reason]
@@ -149,4 +149,7 @@ test('a patched copy that is gone needs a patch, and so does a game exe that cha
     assert.deepEqual(check(config, [gameExe]), [true, 'missing'])
     assert.deepEqual(check({ ...config, lastPatchedSourceStat: { size: 11, mtimeMs: 20 } }, [gameExe, '/work/game.exe']), [true, undefined])
     assert.deepEqual(check({}, [gameExe]), [true, undefined])
+    // Patched by a loader up to 0.2.9 (no number), or by one that built the copy another way
+    assert.deepEqual(check({ ...config, lastPatchedFormat: undefined }, [gameExe, '/work/game.exe']), [true, 'format'])
+    assert.deepEqual(check({ ...config, lastPatchedFormat: 6 }, [gameExe, '/work/game.exe']), [true, 'format'])
 })

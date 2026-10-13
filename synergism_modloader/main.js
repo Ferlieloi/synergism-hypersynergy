@@ -8,7 +8,7 @@ const { autoUpdater } = require('electron-updater')
 
 const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels, setLocalChannelEnabled } = require('./lib/config')
 const { detectSteamPathWindows, findGameDir, detectSevenZip, getBundledSevenZipPath } = require('./lib/steamLocator')
-const { patchGame, buildModUrl, buildPatcherUrl } = require('./lib/patchGame')
+const { patchGame, buildModUrl, buildPatcherUrl, PATCH_FORMAT } = require('./lib/patchGame')
 const { checkPatcherChanged } = require('./lib/patcherSource')
 const { injectorHash } = require('./lib/injectorTemplate')
 const { createLauncherUpdater } = require('./lib/launcherUpdater')
@@ -219,7 +219,7 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             sendLog('Finishing old folder cleanup before patching...')
             await legacyCleanupPromise
         }
-        const { launchExePath, sourceStat, patcherHash, injectorHash: patchedInjectorHash, patchWarnings } = await patchGame({
+        const { launchExePath, sourceStat, patcherHash, injectorHash: patchedInjectorHash, patchFormat, patchWarnings } = await patchGame({
             gameDir,
             exeName: DEFAULTS.exeName,
             sevenZipPath,
@@ -239,6 +239,7 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             lastPatchedSourceStat: sourceStat,
             lastPatchedPatcherHash: patcherHash,
             lastPatchedInjectorHash: patchedInjectorHash,
+            lastPatchedFormat: patchFormat,
             lastPatchedChannel: channel,
             lastPatchedModRef: modRef
         })
@@ -260,7 +261,10 @@ ipcMain.handle('game:check-update-needed', (_e, { gameDir, exeName }) => {
     if (!cfg.lastPatchedExe || !fs.existsSync(cfg.lastPatchedExe)) return { needsRepatch: true, reason: 'missing' }
     const stat = fs.statSync(exePath)
     const changed = stat.size !== cfg.lastPatchedSourceStat.size || stat.mtimeMs !== cfg.lastPatchedSourceStat.mtimeMs
-    return { needsRepatch: changed }
+    if (changed) return { needsRepatch: true }
+    // The copy was built by a loader that patched another way (no number: a loader up to 0.2.9).
+    if (cfg.lastPatchedFormat !== PATCH_FORMAT) return { needsRepatch: true, reason: 'format' }
+    return { needsRepatch: false }
 })
 
 // The patcher is only applied by a patch: "Launch only", "Launch last played" and "Quick switch" reuse

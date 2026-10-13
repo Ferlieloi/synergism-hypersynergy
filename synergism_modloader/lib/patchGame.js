@@ -3,7 +3,7 @@ const path = require('path')
 const { execFile } = require('child_process')
 const asar = require('@electron/asar')
 const { buildInjectorCode, injectorHash } = require('./injectorTemplate')
-const { createPackageAndWait } = require('./archiveWriter')
+const { createPackageAndWait, readUnpackedDirs } = require('./archiveWriter')
 const { DEFAULTS, resolveChannel } = require('./config')
 const { loadPatcher } = require('./patcherSource')
 const {
@@ -20,6 +20,11 @@ const PATCHER_DOWNLOAD_TIMEOUT_MS = 15000
 
 // How a patcher warning starts in the patch log; the window shows these lines apart.
 const PATCH_WARNING_PREFIX = '[PATCH] WARNING:'
+
+// How the patched copy is built, apart from the patcher and the injector, which have their own hashes.
+// Raise it when a loader change needs the game patched again: a copy with another number asks for a patch.
+// 1: the game's native modules stay outside app.asar, as in the original (loader 0.2.10).
+const PATCH_FORMAT = 1
 
 const quoteArg = (arg) => (/[\s"]/.test(arg) || arg === '' ? `"${arg.replace(/"/g, '\\"')}"` : arg)
 
@@ -103,9 +108,10 @@ function runPatcher(patcherCode, original, log) {
  * @param {string} opts.modUrl         Resolved URL for the mod script to inject
  * @param {string} [opts.patcherUrl]   Optional remote URL for patcher.js; falls back to the bundled copy
  * @param {(line: string) => void} [opts.onLog]
- * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number }, patcherHash: string, injectorHash: string, patchWarnings: number }>}
+ * @returns {Promise<{ launchExePath: string, sourceStat: { size: number, mtimeMs: number }, patcherHash: string, injectorHash: string, patchFormat: number, patchWarnings: number }>}
  *          `patcherHash` and `injectorHash` identify what was written into the game (lib/patcherSource.js,
- *          lib/injectorTemplate.js); `patchWarnings` counts the patch steps that could not be applied
+ *          lib/injectorTemplate.js), `patchFormat` how the copy was built (PATCH_FORMAT);
+ *          `patchWarnings` counts the patch steps that could not be applied
  */
 async function patchGame(opts) {
     const { gameDir, exeName, sevenZipPath, modUrl, patcherUrl, onLog } = opts
@@ -148,10 +154,15 @@ async function patchGame(opts) {
         await run(sevenZipPath, ['x', app7zPath, `-o${extractedAppDir}`, '-y'], log)
         // 3. Extract app.asar as a real file, without Electron holding it open.
         log('Extracting app.asar...')
+        let unpackedDirs = []
         await withRawArchiveAccess(async () => {
             if (!fs.existsSync(asarPath)) {
                 throw new Error('app.asar not found — installer layout may have changed')
             }
+            // The library keeps each archive's file list by path, and the staging path never changes:
+            // without this, a second patch would read the game with the first patch's list.
+            asar.uncache(asarPath)
+            unpackedDirs = readUnpackedDirs(asar, asarPath)
             await asar.extractAll(asarPath, extractAsarDir)
         })
 
@@ -187,9 +198,10 @@ async function patchGame(opts) {
             log('preload.js already patched, skipping')
         }
 
-        // 6. Repack app.asar
+        // 6. Repack app.asar, with the same directories outside it as in the original
         log('Repacking app.asar...')
-        await withRawArchiveAccess(() => createPackageAndWait(asar, extractAsarDir, asarPath))
+        if (unpackedDirs.length) log(`Kept outside app.asar, as in the original: ${unpackedDirs.join(', ')}`)
+        await withRawArchiveAccess(() => createPackageAndWait(asar, extractAsarDir, asarPath, unpackedDirs))
 
         // 7. Locate the exe to launch
         const launchExePath = findLaunchableExe(extractedAppDir)
@@ -211,6 +223,7 @@ async function patchGame(opts) {
             sourceStat: { size: sourceStat.size, mtimeMs: sourceStat.mtimeMs },
             patcherHash,
             injectorHash: injectorHash(),
+            patchFormat: PATCH_FORMAT,
             patchWarnings
         }
     } finally {
@@ -237,5 +250,6 @@ function buildPatcherUrl(channelId, ref) {
 }
 
 module.exports = {
-    patchGame, runPatcher, findLaunchableExe, buildModUrl, buildPatcherUrl, withRawArchiveAccess, PATCH_WARNING_PREFIX
+    patchGame, runPatcher, findLaunchableExe, buildModUrl, buildPatcherUrl, withRawArchiveAccess,
+    PATCH_WARNING_PREFIX, PATCH_FORMAT
 }

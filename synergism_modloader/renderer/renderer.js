@@ -521,10 +521,12 @@ const PATCHER_BANNER_TEXT = {
 
 const GAME_BANNER_TEXT = {
   updated: 'The game has updated since your last patch — re-patch to keep the mod working.',
-  missing: 'The patched copy of the game is missing (the game was reinstalled or moved) — re-patch to create it again.'
+  missing: 'The patched copy of the game is missing (the game was reinstalled or moved) — re-patch to create it again.',
+  format: 'This loader version changed how it builds the patched game — re-patch to keep the mod working.'
 }
 
-// The game side of the re-patch check: the game was updated by Steam, or the patched copy is gone.
+// The game side of the re-patch check: the game was updated by Steam, the patched copy is gone,
+// or it was built by a loader that patched another way.
 async function checkGame() {
   if (!state.gameDir) return { needsRepatch: false }
   return window.loader.checkUpdateNeeded({ gameDir: state.gameDir, exeName: EXE_NAME })

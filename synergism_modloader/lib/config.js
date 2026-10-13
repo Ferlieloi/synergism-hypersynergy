@@ -110,6 +110,7 @@ function emptyConfig() {
         lastPatchedSourceStat: null, // { size, mtimeMs } of the original exe at patch time
         lastPatchedPatcherHash: '',  // patcher.js used by that patch (lib/patcherSource.js); '' = patched by a loader up to 0.2.8
         lastPatchedInjectorHash: '', // injector written by that patch (lib/injectorTemplate.js)
+        lastPatchedFormat: 0,        // PATCH_FORMAT of that patch (lib/patchGame.js); 0 = patched by a loader up to 0.2.9
         lastPatchedChannel: '',
         lastPatchedModRef: ''
     }
