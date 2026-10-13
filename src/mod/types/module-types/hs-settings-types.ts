@@ -15,6 +15,13 @@ export interface HSSettingsDefinition {
     expandCostProtection: ExpandCostProtectionSetting;
     expandCostProtectionNotifications: ExpandCostProtectionNotifications;
 
+    // Hepteract Distributor Settings
+    enableHepteractDistributor: EnableHepteractDistributorSetting;
+    hepteractDistributorOpen: HepteractDistributorOpenSetting;
+    hepteractDistributorAllowPartial: HepteractDistributorAllowPartialSetting;
+    hepteractDistributorRatios: HepteractDistributorRatiosSetting;
+    hepteractDistributorOrbsPercent: HepteractDistributorOrbsPercentSetting;
+
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
     autoConfirmPopups: AutoConfirmPopupsSetting;
@@ -161,6 +168,13 @@ export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
 export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean> { }
+
+// Hepteract Distributor Settings
+export interface EnableHepteractDistributorSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorOpenSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorAllowPartialSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorRatiosSetting extends HSSettingBase<string> { }
+export interface HepteractDistributorOrbsPercentSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }

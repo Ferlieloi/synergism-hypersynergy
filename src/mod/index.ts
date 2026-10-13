@@ -116,6 +116,11 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: 'blueviolet',
         },
         {
+            className: 'HSHepteractDistributor',
+            context: 'HSHepteractDistributor',
+            moduleColor: 'mediumslateblue',
+        },
+        {
             className: 'HSAutosing',
             context: 'HSAutosing',
             moduleColor: '#00ff7f',

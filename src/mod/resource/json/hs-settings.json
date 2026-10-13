@@ -32,6 +32,50 @@
       "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
     }
   },
+  "enableHepteractDistributor": {
+    "settingName": "enableHepteractDistributor",
+    "settingDescription": "Enable Hepteract Distributor",
+    "settingHelpText": "Adds a Distributor button to the Hepteract Forge. It opens a panel that spends your hepteracts on the hepteract types following the ratios you set. It crafts through the game's Auto craft, so it ascends several times in a row and only hepteracts are spent.",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "enableHepteractDistributorAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "hepteracts",
+      "controlPage": "hepteract",
+      "controlEnabledId": "hs-setting-hepteract-distributor-btn"
+    }
+  },
+  "hepteractDistributorOpen": {
+    "settingName": "hepteractDistributorOpen",
+    "settingDescription": "Hepteract Distributor panel open",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
+  "hepteractDistributorAllowPartial": {
+    "settingName": "hepteractDistributorAllowPartial",
+    "settingDescription": "Hepteract Distributor: allow partly filled meters",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
+  "hepteractDistributorRatios": {
+    "settingName": "hepteractDistributorRatios",
+    "settingDescription": "Hepteract Distributor saved ratios",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": ""
+  },
+  "hepteractDistributorOrbsPercent": {
+    "settingName": "hepteractDistributorOrbsPercent",
+    "settingDescription": "Hepteract Distributor: percentage of hepteracts for Overflux Orbs",
+    "settingType": "numeric",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": 0
+  },
   "autoConfirmPopups": {
     "settingName": "autoConfirmPopups",
     "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",

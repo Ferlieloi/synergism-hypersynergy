@@ -16,6 +16,7 @@ import type { HSGameData } from "../hs-core/gds/hs-gamedata";
 import type { HepteractKeys } from "../../types/data-types/hs-player-savedata";
 import { parseGameDataNumber } from "../hs-core/gds/hs-gamedata-utils";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
+import { HEPTERACT_DATA, hepteractCapacities, HepteractState, hepteractUnitsToReach, readHepteract } from "./hs-hepteract-state";
 
 type AscensionIncomeSnapshot = {
     perSecond: number;
@@ -33,12 +34,6 @@ type HepteractQuickExpandEstimate = {
     expandsCapacity: boolean;
     currentBalance: number;
     currentCapacity: number;
-};
-
-type HepteractLiveState = {
-    balance: number;
-    baseCapacity: number;
-    finalCapacity: number;
 };
 
 /**
@@ -174,28 +169,12 @@ export class HSHepteracts extends HSModule {
     }
 
     /**
-     * Reads a hepteract's exact balance and capacities from the live player object (patched game only).
+     * A hepteract's exact balance and capacities from the live player object (patched game only).
      * The game's display cuts numbers to 3 digits above 1e6, which is not enough to tell whether a click expands.
-     * Capacities follow the game's getHepteractCap and getFinalHepteractCap.
      */
-    #readLiveHepteract(baseName: string): HepteractLiveState | null {
-        const player = HSGlobal.exposedPlayer;
-        const hepteract = player?.hepteracts?.[baseName as HepteractKeys];
-        const completions = player?.singularityChallenges?.limitedAscensions?.completions;
-        if (!hepteract || typeof completions !== 'number') return null;
-
-        const balance = hepteract.BAL;
-        const timesCapacityExtended = hepteract.TIMES_CAP_EXTENDED;
-        if (typeof balance !== 'number' || !Number.isFinite(balance)
-            || typeof timesCapacityExtended !== 'number' || !Number.isFinite(timesCapacityExtended)) {
-            return null;
-        }
-
-        const baseCapacity = Math.pow(2, timesCapacityExtended) * (baseName === 'abyss' ? 1 : 1000);
-        const finalCapacity = baseCapacity * (completions > 0 ? 2 : 1);
-        if (!Number.isFinite(finalCapacity)) return null;
-
-        return { balance, baseCapacity, finalCapacity };
+    #readLiveHepteract(baseName: string): HepteractState | null {
+        if (!(baseName in HEPTERACT_DATA)) return null;
+        return readHepteract(HSGlobal.exposedPlayer, baseName as HepteractKeys);
     }
 
     #refreshOwnedHepteracts(): void {
@@ -888,7 +867,7 @@ export class HSHepteracts extends HSModule {
             estimateElement.style.color = 'cyan';
             this.#platonicUpgradeDescriptions.appendChild(estimateElement);
         }
-        estimateElement.innerText = text;
+        estimateElement.innerText = `[HS] ${text}`;
     }
 
     #removePlatonicUpgradeEstimate() {
@@ -917,40 +896,6 @@ export class HSHepteracts extends HSModule {
                 ? remainingAfterAscension / income.perSecond
                 : Number.POSITIVE_INFINITY;
         return { resource, seconds };
-    }
-
-    #calculateAbyssHepteractsToCraft(
-        requiredBalance: number,
-        currentBalance: number,
-        timesCapacityExtended: number,
-        hasDoubleCapacity: boolean
-    ): number {
-        if (requiredBalance <= currentBalance) return 0;
-
-        let balance = Math.max(0, currentBalance);
-        let baseCapacity = Math.pow(2, Math.max(0, Math.floor(timesCapacityExtended)));
-        const capacityMultiplier = hasDoubleCapacity ? 2 : 1;
-        let finalCapacity = baseCapacity * capacityMultiplier;
-        let amountToCraft = 0;
-
-        // Mirrors autoCraftHepteracts: fill the current final capacity, spend
-        // the old base capacity to expand, then double both capacities. The
-        // double-capacity reward therefore retains 1/4 of the new final cap.
-        while (requiredBalance > finalCapacity) {
-            const amountToFill = Math.max(0, finalCapacity - balance);
-            amountToCraft += amountToFill;
-            balance += amountToFill;
-
-            balance = Math.max(0, balance - baseCapacity);
-            baseCapacity *= 2;
-            finalCapacity = baseCapacity * capacityMultiplier;
-
-            if (!Number.isFinite(amountToCraft) || !Number.isFinite(finalCapacity)) {
-                return Number.POSITIVE_INFINITY;
-            }
-        }
-
-        return amountToCraft + Math.max(0, requiredBalance - balance);
     }
 
     async #updatePlatonicUpgradeEstimate(upgradeId: number) {
@@ -1001,14 +946,12 @@ export class HSHepteracts extends HSModule {
         const hasDoubleCapacity = Boolean(
             gameDataAPI.getSingularityChallengeEffect('limitedAscensions', 'hepteractCap')
         );
-        const abyssalsToCraft = this.#calculateAbyssHepteractsToCraft(
-            requiredAbyssals,
-            ownedAbyssals,
-            abyssHepteract?.TIMES_CAP_EXTENDED ?? 0,
-            hasDoubleCapacity
+        const abyssalsToCraft = hepteractUnitsToReach(
+            { balance: ownedAbyssals, ...hepteractCapacities('abyss', abyssHepteract?.TIMES_CAP_EXTENDED ?? 0, hasDoubleCapacity) },
+            requiredAbyssals
         );
         const hepteractCostMultiplier = gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
-        const rawHepteractsNeeded = abyssalsToCraft * 1e8 * hepteractCostMultiplier;
+        const rawHepteractsNeeded = abyssalsToCraft * HEPTERACT_DATA.abyss.conversion * hepteractCostMultiplier;
         const abyssCraftCubeCost = abyssalsToCraft * 69 * hepteractCostMultiplier;
 
         const estimates: PlatonicResourceEstimate[] = [

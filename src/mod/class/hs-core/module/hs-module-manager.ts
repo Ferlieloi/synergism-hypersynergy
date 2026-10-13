@@ -2,6 +2,7 @@ import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
@@ -39,6 +40,7 @@ export class HSModuleManager {
         "HSUI": HSUI,
         "HSCodes": HSCodes,
         "HSHepteracts": HSHepteracts,
+        "HSHepteractDistributor": HSHepteractDistributor,
         "HSTalismans": HSTalismans,
         "HSSettings": HSSettings,
         "HSPrototypes": HSPrototypes,

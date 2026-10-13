@@ -10,6 +10,7 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
@@ -231,6 +232,11 @@ export class HSSettingActions {
         enableGQDistributorAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
             (mod) => mod.showGQDistributor(),
             (mod) => mod.hideGQDistributor()
+        ),
+
+        enableHepteractDistributorAction: moduleToggle<HSHepteractDistributor>('HSHepteractDistributor',
+            (mod) => mod.showDistributor(),
+            (mod) => mod.hideDistributor()
         ),
 
         enableAutomationQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
