@@ -120,7 +120,6 @@ export class HSAutosing extends HSModule {
     #antSacrifice!: HTMLButtonElement;
     #AOAG!: HTMLButtonElement;
     #exalt2Btn!: HTMLButtonElement;
-    #saveType!: HTMLInputElement;
     #addCodeAllBtn!: HTMLButtonElement;
     #timeCodeBtn!: HTMLButtonElement;
     #upg81Btn!: HTMLButtonElement;
@@ -361,12 +360,10 @@ export class HSAutosing extends HSModule {
 
     #cacheMiscElements(): boolean {
         const elements = {
-            saveType: document.getElementById('saveType') as HTMLInputElement | null,
             antiquitiesRuneLockedContainer: document.getElementById('antiquitiesRuneLockedContainer') as HTMLDivElement | null,
         };
         if (!this.#ensureElements(elements)) return false;
 
-        this.#saveType = elements.saveType;
         this.#antiquitiesRuneLockedContainer = elements.antiquitiesRuneLockedContainer;
 
         const gamestate = HSModuleManager.getModule<HSGameState>("HSGameState");
@@ -724,7 +721,6 @@ export class HSAutosing extends HSModule {
             HSGameDialogs.act('autosing', { confirm: 'ok', alert: 'dismiss' }, () => this.#exalt2Btn.click());
         }
         this.#exaltStep = 'none';
-        this.#saveType.checked = false;
 
         this.#antiquitiesObserver?.disconnect();
         this.#antiquitiesObserver = undefined;
