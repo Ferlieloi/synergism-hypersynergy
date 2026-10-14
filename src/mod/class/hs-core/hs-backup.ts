@@ -4,6 +4,7 @@ import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
 import { HSModuleManager } from "./module/hs-module-manager";
 import { HSGameData } from "./gds/hs-gamedata";
+import type { HSGameDataAPI } from "./gds/hs-gamedata-api";
 import { HSGameDialogs } from "./dialogs/hs-game-dialogs";
 import { HSAutosing } from "../hs-modules/hs-autosing/hs-autosing";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -44,9 +45,17 @@ interface HSBackupInfo extends HSBackupSaveSummary {
     userAgent: string;
 }
 
+// Written by the manual backup only, never imported: what the mod computes from data that isn't in the save
+interface HSBackupDiagnostics {
+    // The heater export's hs_data: PseudoCoin levels, quark bonus, events, and the mod's own results
+    heater?: unknown;
+    heaterError?: string;
+}
+
 interface HSBackupFile {
     hsBackup: number;
     info: HSBackupInfo;
+    diagnostics?: HSBackupDiagnostics;
     logs?: string[];
     // localStorage values as stored, by key
     gamePrefs?: Record<string, string>;
@@ -71,6 +80,7 @@ interface HSBackupImport {
     modData?: Record<string, string>;
     gamePrefs?: Record<string, string>;
     logCount: number;
+    hasHeaterData: boolean;
 }
 
 /**
@@ -82,6 +92,7 @@ interface HSBackupImport {
  *       copied as stored. The dev tools' key is left out.
  *     - The save is the game's own stored string, after a manual save: no export reward.
  *     - Game preferences are the few options the game keeps outside its save (language, theme, tab order...).
+ *     - The manual backup also holds the heater export's data (diagnostics), never imported.
  *     - An import writes localStorage, then reloads the page: the game and the mod load what was written,
  *       as at any page load. Until the page is gone, writes to the imported keys are blocked, so the game's
  *       autosave and the mod's own saves can't put the old values back.
@@ -93,6 +104,7 @@ export class HSBackup {
     static #context = 'HSBackup';
     static readonly #exportBtnId = 'hs-panel-backup-export-btn';
     static readonly #importBtnId = 'hs-panel-backup-import-btn';
+    static #exporting = false;
     static readonly #gamePrefsHint = 'Kept by the game outside its save: language, theme, stat symbols, tab order, export to clipboard, dismissed announcements';
     static readonly #partIds: Record<keyof HSBackupParts, string> = {
         save: 'hs-panel-backup-part-save',
@@ -116,7 +128,7 @@ export class HSBackup {
         return [
             HSUIC.Div({
                 class: 'hs-panel-grid-full-span',
-                html: `Your vanilla save, the mod's data (settings, strategies, hidden dialogs, icons), the game's preferences (language, theme, tab order, ...) and the current logs, all in one file. Importing reloads the page.
+                html: `Your vanilla save, the mod's data (settings, strategies, hidden dialogs, icons), the game's preferences (language, theme, tab order, ...) and the current logs, all in one file, with the heater data for bug reports. Importing reloads the page.
                     <div class="hs-backup-parts">${part('save', 'Save')}${part('modData', 'Mod settings')}${part('gamePrefs', 'Game preferences', HSBackup.#gamePrefsHint)}${part('logs', 'Logs')}</div>`
             }),
             HSUIC.Button({ id: HSBackup.#exportBtnId, text: 'Export to file' }),
@@ -129,7 +141,7 @@ export class HSBackup {
             (document.getElementById(HSBackup.#partIds[key]) as HTMLInputElement | null)?.checked ?? false;
 
         document.getElementById(HSBackup.#exportBtnId)?.addEventListener('click', () => {
-            HSBackup.#export({ save: isTicked('save'), modData: isTicked('modData'), gamePrefs: isTicked('gamePrefs'), logs: isTicked('logs') }, false);
+            void HSBackup.#export({ save: isTicked('save'), modData: isTicked('modData'), gamePrefs: isTicked('gamePrefs'), logs: isTicked('logs') }, false);
         });
         document.getElementById(HSBackup.#importBtnId)?.addEventListener('click', () => HSBackup.#chooseImportFile());
     }
@@ -152,17 +164,25 @@ export class HSBackup {
     /**
      * Downloads the chosen parts as one file.
      * @param beforeImport The automatic backup taken before an import: named as such, and it settles for
-     *     the last stored save when the game can't save right now.
+     *     the last stored save when the game can't save right now. It has no heater data (no wait before the import).
      * @returns The file's name, or null when nothing was downloaded.
      */
-    static #export(parts: HSBackupParts, beforeImport: boolean): string | null {
+    static async #export(parts: HSBackupParts, beforeImport: boolean): Promise<string | null> {
         if (!parts.save && !parts.modData && !parts.gamePrefs && !parts.logs) {
             HSUI.Notify('Backup: nothing is ticked', { position: 'top', notificationType: 'warning' });
             return null;
         }
         if (HSBackup.#refusedDuringAutosing('Export')) return null;
+        // The heater data waits on the network: a second click meanwhile would download a second file
+        if (HSBackup.#exporting) return null;
+        HSBackup.#exporting = true;
 
         try {
+            // First, so the save below is taken after it: building the heater data clicks the game's save
+            const diagnostics = beforeImport ? undefined : await HSBackup.#collectDiagnostics();
+            // Autosing may have started while the heater data was built
+            if (HSBackup.#refusedDuringAutosing('Export')) return null;
+
             let save: string | null = null;
             if (parts.save) {
                 save = HSBackup.#captureSave() ?? (beforeImport ? localStorage.getItem(SAVE_KEY) : null);
@@ -177,6 +197,7 @@ export class HSBackup {
                 // The save's own numbers when it's in the file, else the stored save's
                 info: HSBackup.#collectInfo(save ?? localStorage.getItem(SAVE_KEY)),
             };
+            if (diagnostics) file.diagnostics = diagnostics;
             if (parts.logs) file.logs = HSLogger.getLogLines();
             if (parts.gamePrefs) file.gamePrefs = HSBackup.#readGamePrefs();
             if (parts.modData) file.modData = HSBackup.#readModData();
@@ -189,6 +210,25 @@ export class HSBackup {
             HSLogger.error(`Export failed: ${error}`, HSBackup.#context);
             HSUI.Notify('Backup: export failed (see the Log tab)', { position: 'top', notificationType: 'error' });
             return null;
+        } finally {
+            HSBackup.#exporting = false;
+        }
+    }
+
+    /** The heater export's data, or why it is missing: a failure never stops the backup. */
+    static async #collectDiagnostics(): Promise<HSBackupDiagnostics> {
+        const api = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!api) return { heaterError: 'HSGameDataAPI not loaded' };
+
+        try {
+            // Refreshes the save, the PseudoCoin levels, the quark bonus and the events first
+            const heaterData = await api.dumpDataForHeater();
+            // The rest of it is the save, already in the file when ticked
+            if (heaterData?.hs_data) return { heater: heaterData.hs_data };
+            return { heaterError: 'no heater data (no save data yet, or the calculation failed: see the logs)' };
+        } catch (error) {
+            HSLogger.warn(`Backup: no heater data: ${error}`, HSBackup.#context);
+            return { heaterError: String(error) };
         }
     }
 
@@ -355,7 +395,7 @@ export class HSBackup {
             parsed = undefined;
         }
 
-        const content: HSBackupImport = { saveRefused: false, logCount: 0 };
+        const content: HSBackupImport = { saveRefused: false, logCount: 0, hasHeaterData: false };
         let save: unknown;
 
         if (parsed && typeof parsed === 'object' && typeof (parsed as HSBackupFile).hsBackup === 'number') {
@@ -364,6 +404,8 @@ export class HSBackup {
 
             if (file.info && typeof file.info === 'object') content.info = file.info;
             if (Array.isArray(file.logs)) content.logCount = file.logs.length;
+            content.hasHeaterData = !!file.diagnostics && typeof file.diagnostics === 'object'
+                && file.diagnostics.heater !== undefined;
             save = file.save;
 
             if (file.modData && typeof file.modData === 'object') {
@@ -454,6 +496,7 @@ export class HSBackup {
             details.push('A save exported by the game');
         }
         if (content.logCount > 0) details.push(`Logs: ${content.logCount} lines (kept in the file, never imported)`);
+        if (content.hasHeaterData) details.push('Heater data (kept in the file, never imported)');
         (modal.querySelector('.hs-backup-details') as HTMLElement).textContent = details.join('\n');
 
         const unavailable = (part: string, reason: string) => {
@@ -498,7 +541,7 @@ export class HSBackup {
 
             // Two clicks: the page must not reload before the backup file is written (Steam asks where to save it)
             if (box('backup').checked && !backupDownloaded) {
-                const name = HSBackup.#export({ save: true, modData: true, gamePrefs: true, logs: true }, true);
+                const name = await HSBackup.#export({ save: true, modData: true, gamePrefs: true, logs: true }, true);
                 if (!name) {
                     status.textContent = 'The backup could not be made: nothing was imported.';
                     return;
