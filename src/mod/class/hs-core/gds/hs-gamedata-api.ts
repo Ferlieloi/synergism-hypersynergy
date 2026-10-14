@@ -503,8 +503,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             case 'speed': {
                 return (
                     talismanRuneBonuses.speed
-                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 10))
-                        + Math.max(0, Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 50) - 10))))
+                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 10))
+                        + Math.max(0, Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 50) - 10))))
                     + ((this.gameData.upgrades[29] ?? 0) * Math.floor(
                         Math.min(
                             100,
@@ -524,8 +524,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                                 + (this.gameData.fifthOwnedCoin ?? 0)) / 400
                         )
                     ))
-                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 30))
-                        + Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 300))))
+                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 30))
+                        + Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 300))))
                 )
             }
             case 'prism':
@@ -1068,6 +1068,39 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             corruptionMultiplier: scores.corruptionMultiplier,
             effectiveScore: Math.floor(scores.effectiveScore),
         };
+    }
+
+    /**
+     * The ascension score multiplier of a corruption loadout.
+     * Mirrors SynergismOfficial/src/Corruptions.ts calculateIndividualRawMultiplier, multiplied over the 8 corruptions
+     * (totalCorruptionAscensionMultiplier).
+     */
+    calculateCorruptionScoreMultiplier(loadout: CorruptionLevels): number {
+        if (!this.gameData) return 1;
+        const data = this.gameData;
+        const scoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35];
+
+        const bonusVal = this.getGQUpgradeEffect('advancedPack', 'corruptionScoreIncrease')
+            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'corrScoreIncrease') ?? 0)
+            + 0.3 * (data.cubeUpgrades[74] ?? 0);
+        const bonusLevels = this.getGQUpgradeEffect('corruptionFifteen', 'freeCorruptionLevel')
+            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'freeCorruptionLevel') ?? 0)
+            + Number(this.talisman.getTalismanEffects('cookieGrandma').freeCorruptionLevel ?? 0)
+            + Number(this.rune.getRuneEffects('finiteDescent').corruptionFreeLevels ?? 0);
+        const p4x2 = data.platonicUpgrades[17] ?? 0;
+
+        const corruptions: (keyof CorruptionLevels)[] = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'];
+        return corruptions.reduce((product, corruption) => {
+            // P4x2: exponent 3 + 0.04 per level on viscosity's multiplier, from viscosity 10
+            const power = (p4x2 > 0 && loadout.viscosity >= 10 && corruption === 'viscosity') ? 3 + 0.04 * p4x2 : 1;
+            const totalLevel = (loadout[corruption] ?? 0) + bonusLevels;
+            const last = scoreMults.length - 1;
+            const multiplier = totalLevel < last
+                ? scoreMults[Math.floor(totalLevel)] + bonusVal
+                    + (totalLevel % 1) * (scoreMults[Math.ceil(totalLevel)] - scoreMults[Math.floor(totalLevel)])
+                : (scoreMults[last] + bonusVal) * Math.pow(1.2, totalLevel - last);
+            return product * Math.pow(multiplier, power);
+        }, 1);
     }
 
     calculateCorruptionEffect(loadout: CorruptionLevels, corruption: string): number {
@@ -2065,16 +2098,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         ];
 
         return this.memoizeCalculation<AscensionScoreResult>('calculateAscensionScore', calculationVars, () => {
-            const corruptionMultiplier = [
-                'viscosity',
-                'drought',
-                'deflation',
-                'extinction',
-                'illiteracy',
-                'recession',
-                'dilation',
-                'hyperchallenge'
-            ].reduce((product, corruption) => product * this.calculateCorruptionEffect(data.corruptions.used, corruption), 1);
+            const corruptionMultiplier = this.calculateCorruptionScoreMultiplier(data.corruptions.used);
 
             const challengeScoreArrays1 = [0, 8, 10, 12, 15, 20, 60, 80, 120, 180, 300];
             const challengeScoreArrays2 = [0, 10, 12, 15, 20, 30, 80, 120, 180, 300, 450];

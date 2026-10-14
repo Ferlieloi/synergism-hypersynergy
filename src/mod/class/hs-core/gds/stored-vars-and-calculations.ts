@@ -1015,7 +1015,7 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
       return n > 0 ? 1 : 0
     },
   },
-  corruptionFifteen: { maxLevel: 1, costPerLevel: 40_000, specialCostForm: 'Default' },
+  corruptionFifteen: { maxLevel: 1, costPerLevel: 40_000, specialCostForm: 'Default', effect: (n) => n },
   singOfferings1: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1, specialCostForm: 'Default' },
   singOfferings2: { maxLevel: 25, canExceedCap: true, costPerLevel: 25, specialCostForm: 'Default' },
   singOfferings3: { maxLevel: 40, canExceedCap: true, costPerLevel: 500, specialCostForm: 'Default' },
@@ -1036,7 +1036,10 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
       : key === 'ascensionSpeedMult' ? (n > 0 ? 1.5 : 1)
         : (n > 0 ? 0.02 : 0),
   },
-  advancedPack: { maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default' },
+  advancedPack: {
+    maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default',
+    effect: (n, key) => key === 'corruptionScoreIncrease' ? (n > 0 ? 0.33 : 0) : (n > 0 ? 0.04 : 0),
+  },
   expertPack: {
     maxLevel: 1, costPerLevel: 800, specialCostForm: 'Default',
     effect: (n, key) => key === 'addCodeAscensionTimeMult' ? (n > 0 ? 1.2 : 1)
