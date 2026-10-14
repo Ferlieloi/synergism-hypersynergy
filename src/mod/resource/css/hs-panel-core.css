@@ -392,7 +392,7 @@ select::-webkit-scrollbar-corner {
     transition: background-color 0.15s, border-color 0.15s;
     cursor: pointer;
     background-color: #101828;
-    width: 130px;
+    width: 150px;
     height: 30px;
     line-height: 30px;
     text-align: center;
