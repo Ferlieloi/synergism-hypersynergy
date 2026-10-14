@@ -681,8 +681,26 @@ export class HSSettingsUI {
             blockClass += ' hs-button-group-autosing-strategy';
         }
 
+        // A setting that belongs to another one (controlParent) is indented under its label. With
+        // controlHideWhenParentOff it is hidden while the parent is off: a CSS rule on the parent's switch, which
+        // the settings UI keeps marked .hs-disabled while off
+        let blockId = setting.settingBlockId;
+        if (controls.controlParent) {
+            blockClass += ' hs-panel-setting-block-child';
+            blockId ??= `hs-setting-block-${setting.settingName}`;
+            if (controls.controlHideWhenParentOff) {
+                const parentSwitchId = HSSettings.getSetting(controls.controlParent)?.getDefinition().settingControl?.controlEnabledId;
+                if (parentSwitchId) {
+                    HSUI.injectStyle(`.hs-panel-setting-block:has(#${parentSwitchId}.hs-disabled) ~ #${blockId} { display: none; }`,
+                        `hs-setting-child-${setting.settingName}`);
+                } else {
+                    HSLogger.warn(`Setting ${setting.settingName}: its parent ${controls.controlParent} has no switch, it is always shown`, this.#context);
+                }
+            }
+        }
+
         return HSUIC.Div({
-            id: setting.settingBlockId,
+            id: blockId,
             class: blockClass,
             html: components
         });

@@ -29,15 +29,14 @@
     cursor: pointer;
 }
 
-/* "Show hidden dialogs as notifications" and the "Hidden dialogs" list belong to "Hide game dialogs":
-   indented under its label (block padding + switch width + gap) */
-#hs-setting-block-hide-game-dialogs-notify,
+/* The "Hidden dialogs" list belongs to "Hide game dialogs", as "Show hidden dialogs as notifications" does
+   (controlParent in hs-settings.json). The list is built by the module, not by the settings UI, so it has its
+   own rules: indented under its label (block padding + switch width + gap)... */
 #hs-hidden-dialogs-block {
     padding-left: calc(40px + 0.5em);
 }
 
 /* ...and hidden while it's off: its switch has .hs-disabled then, kept up to date by the settings UI */
-.hs-panel-setting-block:has(#hs-setting-hide-game-dialogs-btn.hs-disabled) ~ #hs-setting-block-hide-game-dialogs-notify,
 .hs-panel-setting-block:has(#hs-setting-hide-game-dialogs-btn.hs-disabled) ~ #hs-hidden-dialogs-block {
     display: none;
 }

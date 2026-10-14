@@ -128,6 +128,8 @@
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "ui",
+      "controlParent": "hideGameDialogs",
+      "controlHideWhenParentOff": true,
       "controlPage": "ui",
       "controlEnabledId": "hs-setting-hide-game-dialogs-notify-btn"
     }
@@ -360,6 +362,7 @@
       "controlId": "hs-setting-auto-export-save-folder-button",
       "controlType": "button",
       "controlGroup": "save-export",
+      "controlParent": "autoExportSave",
       "controlPage": "gamedata"
     }
   },
@@ -375,6 +378,7 @@
       "controlId": "hs-setting-auto-export-save-forget-folder-button",
       "controlType": "button",
       "controlGroup": "save-export",
+      "controlParent": "autoExportSave",
       "controlPage": "gamedata"
     }
   },
@@ -389,6 +393,7 @@
       "controlId": "hs-setting-auto-export-save-keep-value",
       "controlType": "number",
       "controlGroup": "save-export",
+      "controlParent": "autoExportSave",
       "controlPage": "gamedata",
       "controlEnabledId": "hs-setting-auto-export-save-keep-btn",
       "controlOptions": {
@@ -409,6 +414,7 @@
       "controlId": "hs-setting-auto-export-save-loadout-value",
       "controlType": "select",
       "controlGroup": "save-export",
+      "controlParent": "autoExportSave",
       "controlPage": "gamedata",
       "selectOptions": [
         {
@@ -507,6 +513,8 @@
       "controlId": "hs-setting-add-loadout-value",
       "controlType": "select",
       "controlGroup": "ambrosia",
+      "controlParent": "addTimeAutoLoadouts",
+      "controlHideWhenParentOff": true,
       "controlPage": "ambrosia",
       "selectOptions": [
         {
@@ -591,6 +599,8 @@
       "controlId": "hs-setting-time-loadout-value",
       "controlType": "select",
       "controlGroup": "ambrosia",
+      "controlParent": "addTimeAutoLoadouts",
+      "controlHideWhenParentOff": true,
       "controlPage": "ambrosia",
       "selectOptions": [
         {

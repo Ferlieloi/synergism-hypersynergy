@@ -141,6 +141,10 @@ export interface HSSettingControl {
     controlGroup: string;
     controlPage: keyof HSSettingControlPage;
     controlEnabledId?: string;
+    /** The setting this one belongs to: shown indented under its label. It must come before this one on the page */
+    controlParent?: keyof HSSettingsDefinition;
+    /** With controlParent: hidden while the parent's switch is off */
+    controlHideWhenParentOff?: boolean;
     controlOptions?: HSSettingControlOptions;
     selectOptions?: HSUICSelectOption[];
     props?: HTMLProps;
