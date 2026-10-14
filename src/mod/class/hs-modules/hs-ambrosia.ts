@@ -36,15 +36,30 @@ type HSAmbrosiaTree = Record<string, number>;
 export interface HSSingReducerSwap {
     /** How many singularity reducers the temporary tree has more than the player's own tree. */
     added: number;
+    /** The level of the Talisman Power upgrade (ambrosiaTalismanBonusRuneLevel) in the temporary tree. */
+    talismanLevel: number;
+    /** How many levels that is more than in the player's own tree. Negative: fewer, the ambrosia was short. */
+    talismanAdded: number;
     /** Loads the temporary tree. @returns whether the game took it. */
     apply(): boolean;
     /** Loads the player's own tree back, unless it is still there. @returns whether it is there now. */
     restore(): boolean;
 }
 
+/** What the temporary tree is asked to hold (HSAmbrosia.prepareSingReducerSwap). */
+export interface HSSingReducerSwapOptions {
+    /** Raise the singularity reducer. Off where one brings nothing: the player's own level is kept. */
+    reducers: boolean;
+    /** Raise Talisman Power as far as the ambrosia left by the reducer allows. Off: the player's own level is kept. */
+    raiseTalisman: boolean;
+    /** Swap even when no reducer can be added, for Talisman Power alone. */
+    talismanAlone: boolean;
+}
+
 /**
- * `swap`: the reducers can be used. `stop`: they could be, once the player has done what the text says.
- * Neither: they can't be used here, and `note` says why when the player should know.
+ * `swap`: a temporary tree is worth loading. `stop`: it would be, once the player has done what the text says.
+ * `note`: why the reducers can't be raised here, when the player should know (also with a `swap` made for
+ * Talisman Power alone).
  */
 export interface HSSingReducerPlan {
     swap?: HSSingReducerSwap;
@@ -1545,15 +1560,17 @@ export class HSAmbrosia extends HSModule
     /**
      * For the Hepteract Distributor: a tree holding the singularity reducer that counts where the player is
      * (reducer 1 outside an Exalt, with its Hyperflux prerequisite; reducer 2 inside), to load for the time of
-     * the crafts. Nothing else is kept, except the talisman rune bonus when the Horseshoe shop upgrade is owned:
-     * it raises the Horseshoe rune, which lowers every singularity penalty.
+     * the crafts. Nothing else is kept, except Talisman Power (ambrosiaTalismanBonusRuneLevel): with the Horseshoe
+     * shop upgrade it raises the Horseshoe rune, which lowers every singularity penalty. It is chosen after the
+     * reducer, which it must never cost a level: raised as far as the ambrosia left allows when asked, else kept
+     * at the player's own level.
      * The game only loads a tree from a loadout slot (#loadTreeThroughSlot). The slot used is the one the game
      * marks; it marks none after a save load (every singularity), and then the one the quickbar remembers is
      * used, if it holds exactly the live tree. So the live tree, the slots and the game's mark end as they were
      * (or the mark on a slot holding the live tree).
      * Only reads the game: nothing changes before apply().
      */
-    prepareSingReducerSwap(): HSSingReducerPlan {
+    prepareSingReducerSwap(options: HSSingReducerSwapOptions): HSSingReducerPlan {
         const player = HSGlobal.exposedPlayer;
         const gameValidate = (window as any).__HS_validateBlueberryTree;
         if (!player || typeof gameValidate !== 'function') {
@@ -1569,27 +1586,54 @@ export class HSAmbrosia extends HSModule
         const insideExalt = Boolean(player.insideSingularityChallenge);
         const reducer = insideExalt ? 'ambrosiaSingReduction2' : 'ambrosiaSingReduction1';
         const liveLevel = liveTree[reducer] ?? 0;
-        const maxLevel = this.#ambrosiaUpgradeConfigs()?.[reducer]?.maxLevel ?? 0;
+        const configs = this.#ambrosiaUpgradeConfigs();
+        const maxLevel = configs?.[reducer]?.maxLevel ?? 0;
+        const talisman = 'ambrosiaTalismanBonusRuneLevel';
+        const liveTalisman = liveTree[talisman] ?? 0;
 
-        const base: HSAmbrosiaTree = Object.fromEntries(Object.keys(liveTree).map(key => [key, 0]));
-        if (!insideExalt) base.ambrosiaHyperflux = 4;
-        if (player.shopUpgrades?.shopHorseShoe > 0) base.ambrosiaTalismanBonusRuneLevel = liveTree.ambrosiaTalismanBonusRuneLevel ?? 0;
+        const treeWith = (reducerLevel: number, talismanLevel: number): HSAmbrosiaTree => {
+            const tree: HSAmbrosiaTree = Object.fromEntries(Object.keys(liveTree).map(key => [key, 0]));
+            tree[reducer] = reducerLevel;
+            // Reducer 1's prerequisite
+            if (!insideExalt && reducerLevel > 0) tree.ambrosiaHyperflux = 4;
+            if (talisman in liveTree) tree[talisman] = talismanLevel;
+            return tree;
+        };
 
-        // The highest level the game accepts (unlocked, ambrosia and blueberries), above the live one
-        let tree: HSAmbrosiaTree | undefined;
-        for (let level = maxLevel; level > liveLevel && !tree; level--) {
-            const candidate = { ...base, [reducer]: level };
-            if (validate(candidate)) tree = candidate;
-        }
-        if (!tree) {
-            if (liveLevel >= maxLevel) return {};
-            const exalt = insideExalt ? 'noAmbrosiaUpgrades' : 'noSingularityUpgrades';
-            return {
-                note: player.singularityChallenges?.[exalt]?.completions > 0
+        // The highest reducer level the game accepts (unlocked, ambrosia and blueberries), above the live one
+        let reducerLevel: number | undefined;
+        let note: string | undefined;
+        if (options.reducers) {
+            for (let level = maxLevel; level > liveLevel && reducerLevel === undefined; level--) {
+                if (validate(treeWith(level, 0))) reducerLevel = level;
+            }
+            if (reducerLevel === undefined && liveLevel < maxLevel) {
+                const exalt = insideExalt ? 'noAmbrosiaUpgrades' : 'noSingularityUpgrades';
+                note = player.singularityChallenges?.[exalt]?.completions > 0
                     ? 'Singularity reducers not used: your ambrosia or blueberries can\'t pay for more of them.'
-                    : `Singularity reducers not used: locked (Exalt ${insideExalt ? 5 : 1} not completed).`
-            };
+                    : `Singularity reducers not used: locked (Exalt ${insideExalt ? 5 : 1} not completed).`;
+            }
         }
+        if (reducerLevel === undefined) {
+            // No reducer to add: the player's own level, in a tree only worth loading for Talisman Power
+            if (!options.talismanAlone || !validate(treeWith(liveLevel, 0))) return { note };
+            reducerLevel = liveLevel;
+        }
+
+        // Talisman Power costs no blueberries: the highest level the ambrosia left by the reducer pays for, up to
+        // its maximum when it is to be raised, else up to the player's own level (so the swap doesn't lose it)
+        let talismanLevel = 0;
+        let highest = options.raiseTalisman
+            ? configs?.[talisman]?.maxLevel ?? 0
+            : player.shopUpgrades?.shopHorseShoe > 0 ? liveTalisman : 0;
+        while (talismanLevel < highest) {
+            const middle = talismanLevel + Math.ceil((highest - talismanLevel) / 2);
+            if (validate(treeWith(reducerLevel, middle))) talismanLevel = middle;
+            else highest = middle - 1;
+        }
+        if (reducerLevel === liveLevel && talismanLevel <= liveTalisman) return { note };
+
+        const tree = treeWith(reducerLevel, talismanLevel);
         if (!validate(liveTree)) {
             return { note: 'Singularity reducers not used: the game would not load your current ambrosia tree back.' };
         }
@@ -1608,8 +1652,11 @@ export class HSAmbrosia extends HSModule
             return now !== undefined && this.#isSameTree(now, expected);
         };
         return {
+            note,
             swap: {
-                added: temporaryTree[reducer] - liveLevel,
+                added: reducerLevel - liveLevel,
+                talismanLevel,
+                talismanAdded: talismanLevel - liveTalisman,
                 apply: () => this.#loadTreeThroughSlot(slot, temporaryTree) && isLive(temporaryTree),
                 restore: () => isLive(liveTree) || (this.#loadTreeThroughSlot(slot, liveTree) && isLive(liveTree)),
             }

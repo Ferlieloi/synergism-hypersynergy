@@ -191,6 +191,15 @@
     margin: 0;
 }
 
+/* A sub-option belongs to the option above it, and is only offered while that one is ticked */
+.hs-hept-distributor-suboption {
+    margin-left: 22px;
+}
+
+.hs-hept-distributor-option:has(input:not(:checked)) + .hs-hept-distributor-suboption {
+    display: none;
+}
+
 .hs-hept-distributor-actions {
     display: flex;
     justify-content: center;

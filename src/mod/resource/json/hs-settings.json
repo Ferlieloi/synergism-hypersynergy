@@ -67,6 +67,13 @@
     "enabled": false,
     "hidden": true
   },
+  "hepteractDistributorTalismanAlone": {
+    "settingName": "hepteractDistributorTalismanAlone",
+    "settingDescription": "Hepteract Distributor: replace the ambrosia tree for Talisman Power alone",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
   "hepteractDistributorRatios": {
     "settingName": "hepteractDistributorRatios",
     "settingDescription": "Hepteract Distributor saved ratios",

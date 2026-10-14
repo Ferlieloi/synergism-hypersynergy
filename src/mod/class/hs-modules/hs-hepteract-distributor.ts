@@ -66,6 +66,8 @@ const SETTLE_TIME_LIMIT_MS = 2000;
 const AMOUNT_MARGIN = 1.05;
 // The most singularity reducers the ambrosia tree gives (reducer 1 or reducer 2, 2 levels each)
 const MOST_TREE_REDUCERS = 2;
+/** The hepteract cost multiplier with another ambrosia tree (#readCostMultiplier). */
+type CostMultiplierWith = (addedReducers: number, talismanLevel?: number) => number;
 const ASCENSION_WARNING = 'Distribute ascends several times in a row: your current ascension ends.';
 // The feature in a few lines, shown by the "?" after the panel's title. Each control has its own tooltip
 const HELP_LINES = [
@@ -89,8 +91,10 @@ const HELP_LINES = [
  *     than hepteracts: the Distributor ascends once per type, with only that type's Auto on and the game's
  *     autocraft percentage set to that type's exact share. The player's switches and percentage are put back
  *     at the end. Needs the live player object (patched game).
- *     "Use singularity reducers" (off by default): for the time of the crafts, the ambrosia tree is replaced
- *     by one holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap), so hepteracts cost less.
+ *     "Use singularity reducers and Talisman Power" (off by default): for the time of the crafts, the ambrosia
+ *     tree is replaced by one holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap), so
+ *     hepteracts cost less. That tree also gets Talisman Power where it lowers the cost, and "Also when only
+ *     Talisman Power can be added" (off by default) loads it when no reducer can be added.
  * Author: maenhiir
  */
 export class HSHepteractDistributor extends HSModule {
@@ -243,9 +247,11 @@ export class HSHepteractDistributor extends HSModule {
         cells.prepend(orbsCell);
         this.#controls.push(orbsInput);
 
-        const option = (text: string, hint: string, setting: 'hepteractDistributorUseReducers' | 'hepteractDistributorAllowPartial') => {
+        type OptionSetting = 'hepteractDistributorUseReducers' | 'hepteractDistributorTalismanAlone' | 'hepteractDistributorAllowPartial';
+        // A sub-option is only shown while the option above it is ticked (CSS)
+        const option = (text: string, hint: string, setting: OptionSetting, subOption = false) => {
             const label = document.createElement('label');
-            label.className = 'hs-hept-distributor-option';
+            label.className = subOption ? 'hs-hept-distributor-option hs-hept-distributor-suboption' : 'hs-hept-distributor-option';
             label.title = hint;
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -257,12 +263,20 @@ export class HSHepteractDistributor extends HSModule {
             panel.appendChild(label);
             this.#controls.push(checkbox);
         };
-        option('Use singularity reducers',
+        option('Use singularity reducers and Talisman Power',
             'For the time of the crafts, your ambrosia tree is replaced by one holding the singularity reducers '
             + '(reducer 1 outside an Exalt, reducer 2 inside), so hepteracts cost less. Your own tree is loaded back at the end.\n'
             + 'As at any loadout load, the progress of your ambrosia bars is lost.\n'
-            + 'Needs the reducers unlocked, enough ambrosia and blueberries for them alone, and a loaded ambrosia loadout.',
+            + 'Needs the reducers unlocked, enough ambrosia and blueberries for them alone, and a loaded ambrosia loadout.\n'
+            + 'With the Horseshoe shop upgrade, that tree also gets as much Talisman Power as the ambrosia left pays for: '
+            + 'it lowers every singularity penalty a little more.',
             'hepteractDistributorUseReducers');
+        option('Also when only Talisman Power can be added',
+            'Off: the tree is only replaced when it adds a singularity reducer.\n'
+            + 'On: also when it can\'t (reducers already in your tree, locked, too expensive, or of no use here), '
+            + 'to raise Talisman Power alone. With the Horseshoe shop upgrade, hepteracts then cost a fraction of a percent less, '
+            + 'and the progress of your ambrosia bars is lost for it.',
+            'hepteractDistributorTalismanAlone', true);
         option('Allow partly filled meters',
             'Off: only whole steps, so every meter ends full, and what can\'t pay a whole step stays unspent.\n'
             + 'On: what is left goes into the hepteract furthest behind anyway. It only expands when at least what the '
@@ -480,20 +494,20 @@ export class HSHepteractDistributor extends HSModule {
     /**
      * The singularity debuff on hepteract costs, from a fresh save read, then checked against the cost the game
      * itself shows (#checkShownCost).
-     * @returns the debuff with this many more singularity reducers than the save has (0: as it is now). It reads
-     * the save data of this read: to call before anything else is awaited.
+     * @returns the debuff with this many more singularity reducers than the save has (0: as it is now), and with
+     * the ambrosia tree's Talisman Power upgrade at this level (left out: as it is now; Infinity: its maximum).
+     * It reads the save data of this read: to call before anything else is awaited.
      */
-    async #readCostMultiplier(): Promise<(addedReducers: number) => number> {
+    async #readCostMultiplier(): Promise<CostMultiplierWith> {
         const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         const gameData = await gameDataAPI?.getForcedGameData();
         if (!gameDataAPI || !gameData) throw new Error('Could not read your current save.');
 
         const singularityCount = gameData.singularityCount;
-        const multiplierWith = (addedReducers: number): number => {
+        const multiplierWith: CostMultiplierWith = (addedReducers, talismanLevel) => {
             // A reducer counts as one singularity less. Never below 0: the calculation reads -1 as "the current count"
-            const multiplier = addedReducers > 0
-                ? gameDataAPI.calculateSingularityDebuff('Hepteract Costs', Math.max(0, singularityCount - addedReducers))
-                : gameDataAPI.calculateSingularityDebuff('Hepteract Costs');
+            const multiplier = gameDataAPI.calculateSingularityDebuff('Hepteract Costs',
+                addedReducers > 0 ? Math.max(0, singularityCount - addedReducers) : -1, talismanLevel);
             if (typeof multiplier !== 'number' || !Number.isFinite(multiplier) || multiplier <= 0) {
                 throw new Error('Could not compute the hepteract cost.');
             }
@@ -556,10 +570,10 @@ export class HSHepteractDistributor extends HSModule {
      * The crafting, through ascensions. Every ascension resets at once when the game's ascension confirmation is
      * off, with no dialog: the whole run is one go, before the game ticks, paints or saves, so the player's
      * switches and percentage are never seen changed.
-     * @param costMultiplierWith the cost multiplier with this many more singularity reducers (#readCostMultiplier).
+     * @param costMultiplierWith the cost multiplier with another ambrosia tree (#readCostMultiplier).
      * @returns the summary for the status line.
      */
-    async #run(costMultiplierWith: (addedReducers: number) => number): Promise<string> {
+    async #run(costMultiplierWith: CostMultiplierWith): Promise<string> {
         const startedAt = performance.now();
         const allowPartial = HSSettings.getSetting('hepteractDistributorAllowPartial').getValue() === true;
         const orbsPercent = this.#orbsPercent();
@@ -567,19 +581,27 @@ export class HSHepteractDistributor extends HSModule {
         const notes: string[] = [];
 
         // The singularity reducers, when asked for and when they make hepteracts cheaper here (they don't up to
-        // singularity 50, nor with the Antiquities rune). Only prepared: the tree changes after the reward
+        // singularity 50, nor with the Antiquities rune). Their tree also gets Talisman Power where that makes
+        // hepteracts cheaper (Horseshoe shop upgrade, its rune below the cap), and is loaded for that alone only
+        // when asked. Only prepared: the tree changes after the reward
         const plainCostMultiplier = costMultiplierWith(0);
         let costMultiplier = plainCostMultiplier;
         let reducerSwap: HSSingReducerSwap | undefined;
-        if (HSSettings.getSetting('hepteractDistributorUseReducers').getValue() === true
-            && costMultiplierWith(MOST_TREE_REDUCERS) < plainCostMultiplier) {
-            const reducers = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.prepareSingReducerSwap()
-                ?? { note: 'Singularity reducers not used: the mod\'s ambrosia module is not loaded.' };
-            if (reducers.stop) throw new Error(reducers.stop);
-            if (reducers.note) notes.push(reducers.note);
-            if (reducers.swap && costMultiplierWith(reducers.swap.added) < plainCostMultiplier) {
-                reducerSwap = reducers.swap;
-                costMultiplier = costMultiplierWith(reducerSwap.added);
+        if (HSSettings.getSetting('hepteractDistributorUseReducers').getValue() === true) {
+            const reducersHelp = costMultiplierWith(MOST_TREE_REDUCERS) < plainCostMultiplier;
+            const talismanHelps = costMultiplierWith(0, Infinity) < plainCostMultiplier;
+            const talismanAlone = talismanHelps && HSSettings.getSetting('hepteractDistributorTalismanAlone').getValue() === true;
+            if (reducersHelp || talismanAlone) {
+                const reducers = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')
+                    ?.prepareSingReducerSwap({ reducers: reducersHelp, raiseTalisman: talismanHelps, talismanAlone })
+                    ?? { note: 'Singularity reducers not used: the mod\'s ambrosia module is not loaded.' };
+                if (reducers.stop) throw new Error(reducers.stop);
+                if (reducers.note) notes.push(reducers.note);
+                const withSwap = reducers.swap ? costMultiplierWith(reducers.swap.added, reducers.swap.talismanLevel) : plainCostMultiplier;
+                if (withSwap < plainCostMultiplier) {
+                    reducerSwap = reducers.swap;
+                    costMultiplier = withSwap;
+                }
             }
         }
 
@@ -605,7 +627,7 @@ export class HSHepteractDistributor extends HSModule {
         let ascensions = 0;
         let plan = firstPlan;
         let treeChanged = false;
-        let reducersAdded = 0;
+        let swapApplied = false;
 
         try {
             for (const gameSwitch of [...HEPTERACT_AUTOS, ORBS_AUTO, ASCENSION_CONFIRMATION]) {
@@ -627,9 +649,9 @@ export class HSHepteractDistributor extends HSModule {
                 treeChanged = true;
                 if (reducerSwap.apply()) {
                     HSHepteractDistributor.#checkShownCost(costMultiplier);
-                    reducersAdded = reducerSwap.added;
+                    swapApplied = true;
                 } else {
-                    notes.push('Singularity reducers not used: the game did not load them.');
+                    notes.push('Singularity reducers not used: the game did not load their tree.');
                     costMultiplier = plainCostMultiplier;
                 }
             }
@@ -687,12 +709,18 @@ export class HSHepteractDistributor extends HSModule {
 
         // What the last type could not afford, on what is left now (at the cost of the next press, reducers included)
         const left = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
+        const added: string[] = [];
+        if (swapApplied && reducerSwap) {
+            const count = (amount: number, what: string) => `${amount} ${what}${amount > 1 ? 's' : ''}`;
+            if (reducerSwap.added > 0) added.push(count(reducerSwap.added, 'singularity reducer'));
+            if (reducerSwap.talismanAdded > 0) added.push(count(reducerSwap.talismanAdded, 'Talisman Power level'));
+        }
         HSLogger.debug(() => `Hepteract distribution: ${plan.steps} steps over ${ascensions} ascensions in `
             + `${Math.round(performance.now() - startedAt)} ms, cost multiplier ${costMultiplier}`
-            + (reducersAdded > 0 ? ` (${plainCostMultiplier} without the ${reducersAdded} added singularity reducers)` : ''), this.context);
-        if (reducersAdded > 0) {
-            const saved = Math.round((1 - costMultiplier / plainCostMultiplier) * 1000) / 10;
-            notes.unshift(`Singularity reducers: ${reducersAdded} added for the crafts, hepteracts cost ${saved.toLocaleString()}% less.`);
+            + (swapApplied ? ` (${plainCostMultiplier} without the added ${added.join(' and ')})` : ''), this.context);
+        if (swapApplied) {
+            const saved = Math.round((1 - costMultiplier / plainCostMultiplier) * 10000) / 100;
+            notes.unshift(`Ambrosia tree: ${added.join(' and ')} added for the crafts, hepteracts cost ${saved.toLocaleString()}% less.`);
         }
         return this.#summary({ plan: left, balances, orbsPercent, orbsBought, ascensions, notes });
     }

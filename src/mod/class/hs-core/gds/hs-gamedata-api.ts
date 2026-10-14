@@ -1480,7 +1480,30 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduce_vals ? reduced : vals;
     }
 
-    calculateSingularityDebuff(debuff: SingularityDebuffs, singularityCount: number = -1) {
+    /**
+     * The Horseshoe shop upgrade's singularity penalty multiplier (Shop.ts) as if the ambrosia upgrade "Talisman
+     * Power" (ambrosiaTalismanBonusRuneLevel) had this many bought levels: it multiplies what the talismans give
+     * to the Horseshoe rune, whose level sets that multiplier.
+     */
+    #horseShoePenaltyWithTalismanUpgrade(talismanUpgradeLevel: number): number {
+        const shopLevel = this.quarkShop.getShopLevel('shopHorseShoe');
+        let runeLevel = this.rune.getRuneEffectiveLevel('horseShoe');
+        // 0: the rune is locked, and stays at 0 whatever the talismans give
+        if (runeLevel > 0) {
+            const talismanMultiplier = this.talisman.allTalismanRuneBonusStatsSum();
+            const fromTalismans = this.talisman.getRuneBonusFromAllTalismans('horseShoe');
+            const current = this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel;
+            const wanted = this.ambrosia.getAmbrosiaUpgradeEffectsAtLevel('ambrosiaTalismanBonusRuneLevel', talismanUpgradeLevel).talismanBonusRuneLevel;
+            if (talismanMultiplier > 0) runeLevel += fromTalismans / talismanMultiplier * (wanted - current);
+        }
+        return 1 - Math.min(300, runeLevel * shopLevel) / 1000;
+    }
+
+    /**
+     * @param talismanUpgradeLevel the debuff as if the ambrosia upgrade "Talisman Power" had this many bought
+     * levels (#horseShoePenaltyWithTalismanUpgrade). Left out: the save's own level.
+     */
+    calculateSingularityDebuff(debuff: SingularityDebuffs, singularityCount: number = -1, talismanUpgradeLevel?: number) {
         if (!this.gameData) return 1;
         const data = this.gameData;
         const resolvedSingularityCount = singularityCount === -1 ? data.singularityCount : singularityCount;
@@ -1498,7 +1521,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             'Platonic Costs',
             'Hepteract Costs',
         ].indexOf(debuff);
-        const shopPenalty = this.quarkShop.getShopUpgradeEffects('shopHorseShoe', 'singularityPenaltyMult') as number;
+        const shopPenalty = talismanUpgradeLevel === undefined
+            ? this.quarkShop.getShopUpgradeEffects('shopHorseShoe', 'singularityPenaltyMult') as number
+            : this.#horseShoePenaltyWithTalismanUpgrade(talismanUpgradeLevel);
         const antiquitiesLevel = this.rune.getRuneLevelFromEXP('antiquities', parseGameDataDecimal(data.runes.antiquities));
         const cacheName = 'SingularityDebuff' as keyof CalculationCache;
         const calculationVars = [

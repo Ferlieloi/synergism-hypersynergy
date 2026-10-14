@@ -945,6 +945,20 @@ export class AmbrosiaHelper {
             .effects(this.getAmbrosiaUpgradeEffectiveLevels(upgradeKey)) as AmbrosiaUpgradeRewards[T];
     };
 
+    /**
+     * An upgrade's effects as if this many of its levels were bought (above its maximum: the maximum), the rest
+     * of the save unchanged: its free levels, and an Exalt turning it off. Only for an upgrade whose effect
+     * reads no other upgrade's level.
+     */
+    getAmbrosiaUpgradeEffectsAtLevel = <T extends AmbrosiaUpgradeNames>(upgradeKey: T, purchasedLevel: number): AmbrosiaUpgradeRewards[T] => {
+        const upgradeConfig = this.ambrosiaUpgradeCalculationCollection[upgradeKey];
+        const level = Math.min(upgradeConfig.maxLevel, Math.max(0, Math.floor(purchasedLevel)));
+        const effectiveLevels = this.#isAmbrosiaUpgradeSuppressed(upgradeKey)
+            ? 0
+            : level + this.#getAmbrosiaUpgradeExtraLevels(upgradeKey, level);
+        return upgradeConfig.effects(effectiveLevels) as AmbrosiaUpgradeRewards[T];
+    };
+
     get maxRedAmbrosiaUpgradeAP(): number {
         return Object.values(this.redAmbrosiaUpgradeCalculationCollection).reduce((acc: number, upgrade) => {
             if (upgrade.maxLevel === -1) {
