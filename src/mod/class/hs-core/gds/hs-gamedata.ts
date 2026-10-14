@@ -158,25 +158,11 @@ export class HSGameData extends HSModule {
         // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
         (window as any).__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
 
-        try {
-            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
-            const data = await upgradesQuery.json() as PseudoGameData;
-
-            this.#playerPseudoUpgrades = data;
-            this.#pseudoDataUpdated();
-        } catch (err) {
-            HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
-        }
-
-        try {
-            const meQuery = await fetch(HSGlobal.Common.meAPIurl);
-            const data = await meQuery.json() as MeData;
-
-            this.#meBonuses = data;
-            this.#meDataUpdated();
-        } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
-
+        // Set before the fetches: the fetched data only reaches the API through this reference,
+        // and with GDS off nothing else fetches it again (the 60 s refresh runs with the engine only)
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
+        await this.#refreshFetchedData();
+
         this.#registerWebSocket();
         this.isInitialized = true;
 
@@ -343,7 +329,7 @@ export class HSGameData extends HSModule {
     async #refreshFetchedData() {
         // HSLogger.debug(() => `Refreshing fetched data`, this.context);
         try {
-            const upgradesQuery = await fetch('https://synergism.cc/stripe/upgrades');
+            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
             const data = await upgradesQuery.json() as PseudoGameData;
 
             this.#playerPseudoUpgrades = data;
@@ -351,7 +337,7 @@ export class HSGameData extends HSModule {
         } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
 
         try {
-            const meQuery = await fetch('https://synergism.cc/api/v1/users/me');
+            const meQuery = await fetch(HSGlobal.Common.meAPIurl);
             const data = await meQuery.json() as MeData;
 
             this.#meBonuses = data;
