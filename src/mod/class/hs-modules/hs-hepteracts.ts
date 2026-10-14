@@ -87,15 +87,6 @@ export class HSHepteracts extends HSModule {
         multiplierHepteract: null
     };
 
-    #chronosToMinChrHypChaRatio = 0;
-    #hyperToMinChrHypChaRatio = 0;
-    #challengeToMinChrHypChaRatio = 0;
-    #acceleratorToMinAccBooMulRatio = 0;
-    #boostToMinAccBooMulRatio = 0;
-    #multiplierToMinAccBooMulRatio = 0;
-    #chronosToMinChrAccRatio = 0;
-    #acceleratorToMinChrAccRatio = 0;
-
 
     #ratioElementHtml = `
         <div id="hs-ratio-container">
@@ -127,13 +118,7 @@ export class HSHepteracts extends HSModule {
     #platonicUpgradeDescriptions?: HTMLElement;
     #hoveredPlatonicUpgradeId: number | null = null;
 
-    #ownedHepteractsElement?: HTMLElement;
     #ownedHepteracts?: number;
-    #ownedHepteractsWatch?: string;
-
-    #ownedQuarkElement?: HTMLElement;
-    #ownedQuarks?: number;
-    #ownedQuarksWatch?: string;
 
     // Quick expand is expected to be spam clicked
     // We need to make sure that hepteract expansion + max goes through
@@ -190,6 +175,16 @@ export class HSHepteracts extends HSModule {
         const text = quantity.querySelector('span')?.textContent ?? quantity.textContent ?? '';
         const amount = HSNumberParser.parse(text);
         if (!Number.isNaN(amount)) this.#ownedHepteracts = amount;
+    }
+
+    /** Quarks owned: the live player, else the header's quark count, which the game updates on every tab. */
+    #readOwnedQuarks(): number | undefined {
+        // Number(QuarkHandler) is the quark amount; NaN on an unpatched game
+        const liveQuarks = Number(HSGlobal.exposedPlayer?.worlds);
+        if (Number.isFinite(liveQuarks)) return liveQuarks;
+
+        const quarks = HSNumberParser.parse(document.querySelector<HTMLElement>('#quarkDisplay')?.textContent ?? '');
+        return Number.isNaN(quarks) ? undefined : quarks;
     }
 
     #beginForgeDataVisit(): void {
@@ -309,84 +304,9 @@ export class HSHepteracts extends HSModule {
                 }
             };
 
-            gameStateMod.subscribeGameStateChange("MAIN_VIEW", (prevView, currentView) => {
-                syncForgeDataVisit();
-
-                if (prevView.getId() === MAIN_VIEW.CUBES &&
-                    currentView.getId() !== MAIN_VIEW.CUBES &&
-                    gameStateMod.getCurrentUIView("CUBE_VIEW").getId() === CUBE_VIEW.HEPTERACT_FORGE
-                ) {
-                    if (self.#ownedHepteractsWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping hepteract watch", this.context);
-                        HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
-                    }
-                    if (self.#ownedQuarksWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping quark watch", this.context);
-                        HSElementHooker.stopWatching(self.#ownedQuarksWatch);
-                    }
-                }
-            });
-
-            gameStateMod.subscribeGameStateChange("CUBE_VIEW", async (prevView, currentView) => {
-                syncForgeDataVisit();
-
-                if (currentView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
-                    HSLogger.debug(() => "Hepteract forge view opened, starting watch", this.context);
-                    self.#ownedHepteractsElement = await HSElementHooker.HookElement('#hepteractQuantity') as HTMLElement;
-
-                    const initialHepteracts = HSNumberParser.parse(
-                        self.#ownedHepteractsElement.querySelector('span')?.innerText ?? self.#ownedHepteractsElement.innerText
-                    );
-                    if (!Number.isNaN(initialHepteracts)) self.#ownedHepteracts = initialHepteracts;
-
-                    // Sets up a watch to watch for changes in the element which shows owned hepteracts amount
-                    self.#ownedHepteractsWatch = HSElementHooker.watchElement(self.#ownedHepteractsElement, (value) => {
-                        const hepts = HSNumberParser.parse(value ?? '');
-                        if (Number.isNaN(hepts)) {
-                            HSLogger.error(`Failed to parse owned hepteracts`, self.context);
-                        } else {
-                            self.#ownedHepteracts = hepts;
-                        }
-
-                    },
-                        {
-                            greedy: true,
-                            overrideThrottle: true,
-                            valueParser: (element) => {
-                                const subElement = element.querySelector('span');
-                                const value = subElement?.innerText;
-                                return value;
-                            }
-                        });
-
-                    self.#ownedQuarkElement = await HSElementHooker.HookElement('#quarkDisplay') as HTMLElement;
-                    const initialQuarks = HSNumberParser.parse(self.#ownedQuarkElement.innerText);
-                    if (!Number.isNaN(initialQuarks)) self.#ownedQuarks = initialQuarks;
-                    self.#ownedQuarksWatch = HSElementHooker.watchElement(self.#ownedQuarkElement, (value) => {
-                        const quarks = HSNumberParser.parse(value ?? '');
-                        if (Number.isNaN(quarks)) {
-                            HSLogger.error(`Failed to parse quark amount`, self.context);
-                        } else {
-                            self.#ownedQuarks = quarks;
-                        }
-                    },
-                        {
-                            greedy: true,
-                            overrideThrottle: true,
-                            valueParser: (element) => element.innerText
-                        }
-                    );
-                } else if (prevView.getId() === CUBE_VIEW.HEPTERACT_FORGE) {
-                    if (self.#ownedHepteractsWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping hepteract watch", this.context);
-                        HSElementHooker.stopWatching(self.#ownedHepteractsWatch);
-                    }
-                    if (self.#ownedQuarksWatch) {
-                        HSLogger.debug(() => "Hepteract forge view closed, stopping quark watch", this.context);
-                        HSElementHooker.stopWatching(self.#ownedQuarksWatch);
-                    }
-                }
-            });
+            // Owned hepteracts and quarks are read when needed (#refreshOwnedHepteracts, #readOwnedQuarks): no watch to keep
+            gameStateMod.subscribeGameStateChange("MAIN_VIEW", syncForgeDataVisit);
+            gameStateMod.subscribeGameStateChange("CUBE_VIEW", syncForgeDataVisit);
 
             syncForgeDataVisit();
         }
@@ -590,31 +510,29 @@ export class HSHepteracts extends HSModule {
                     if (boxName in self.#boxCounts) {
                         (self.#boxCounts as any)[boxName] = value;
 
-                        if (Object.values(self.#boxCounts).every(v => v > 0)) {
-                            const box = self.#boxCounts;
-                            if (!Object.values(box).every(v => v > 0)) return;
-
+                        const box = self.#boxCounts;
+                        if (Object.values(box).every(v => v > 0)) {
                             // group 1: CHR / HYP / CHL
                             const min1 = Math.min(box.chronosHepteract, box.hyperrealismHepteract, box.challengeHepteract);
-                            self.#chronosToMinChrHypChaRatio = Math.round(box.chronosHepteract / min1);
-                            self.#hyperToMinChrHypChaRatio = Math.round(box.hyperrealismHepteract / min1);
-                            self.#challengeToMinChrHypChaRatio = Math.round(box.challengeHepteract / min1);
+                            const chronosToMinChrHypCha = Math.round(box.chronosHepteract / min1);
+                            const hyperToMinChrHypCha = Math.round(box.hyperrealismHepteract / min1);
+                            const challengeToMinChrHypCha = Math.round(box.challengeHepteract / min1);
 
                             // group 2: ACC / BST / MLT
                             const min2 = Math.min(box.acceleratorHepteract, box.acceleratorBoostHepteract, box.multiplierHepteract);
-                            self.#acceleratorToMinAccBooMulRatio = Math.round(box.acceleratorHepteract / min2);
-                            self.#boostToMinAccBooMulRatio = Math.round(box.acceleratorBoostHepteract / min2);
-                            self.#multiplierToMinAccBooMulRatio = Math.round(box.multiplierHepteract / min2);
+                            const acceleratorToMinAccBooMul = Math.round(box.acceleratorHepteract / min2);
+                            const boostToMinAccBooMul = Math.round(box.acceleratorBoostHepteract / min2);
+                            const multiplierToMinAccBooMul = Math.round(box.multiplierHepteract / min2);
 
                             // group 3: CHR / ACC
                             const min3 = Math.min(box.chronosHepteract, box.acceleratorHepteract);
-                            self.#chronosToMinChrAccRatio = Math.round(box.chronosHepteract / min3);
-                            self.#acceleratorToMinChrAccRatio = Math.round(box.acceleratorHepteract / min3);
+                            const chronosToMinChrAcc = Math.round(box.chronosHepteract / min3);
+                            const acceleratorToMinChrAcc = Math.round(box.acceleratorHepteract / min3);
 
                             if (this.#ratioElementA && this.#ratioElementB && this.#ratioElementC) {
-                                this.#ratioElementA.innerText = `CHR/HYP/CHL: ${HSUtils.N(self.#chronosToMinChrHypChaRatio, 0)} / ${HSUtils.N(self.#hyperToMinChrHypChaRatio, 0)} / ${HSUtils.N(self.#challengeToMinChrHypChaRatio, 0)}`;
-                                this.#ratioElementB.innerText = `ACC/BST/MLT: ${HSUtils.N(self.#acceleratorToMinAccBooMulRatio, 0)} / ${HSUtils.N(self.#boostToMinAccBooMulRatio, 0)} / ${HSUtils.N(self.#multiplierToMinAccBooMulRatio, 0)}`;
-                                this.#ratioElementC.innerText = `CHR/ACC: ${HSUtils.N(self.#chronosToMinChrAccRatio, 0)} / ${HSUtils.N(self.#acceleratorToMinChrAccRatio, 0)}`;
+                                this.#ratioElementA.innerText = `CHR/HYP/CHL: ${HSUtils.N(chronosToMinChrHypCha, 0)} / ${HSUtils.N(hyperToMinChrHypCha, 0)} / ${HSUtils.N(challengeToMinChrHypCha, 0)}`;
+                                this.#ratioElementB.innerText = `ACC/BST/MLT: ${HSUtils.N(acceleratorToMinAccBooMul, 0)} / ${HSUtils.N(boostToMinAccBooMul, 0)} / ${HSUtils.N(multiplierToMinAccBooMul, 0)}`;
+                                this.#ratioElementC.innerText = `CHR/ACC: ${HSUtils.N(chronosToMinChrAcc, 0)} / ${HSUtils.N(acceleratorToMinChrAcc, 0)}`;
                             }
                         }
                     } else {
@@ -1037,10 +955,7 @@ export class HSHepteracts extends HSModule {
             if (this.#hoveredHepteractId !== hepteractId) return;
 
             this.#refreshOwnedHepteracts();
-            // Number(QuarkHandler) is the quark amount; NaN on an unpatched game
-            const liveQuarks = Number(HSGlobal.exposedPlayer?.worlds);
-            const ownedQuarks = Number.isFinite(liveQuarks) ? liveQuarks : this.#ownedQuarks;
-            const owned = isQuarkHepteract ? ownedQuarks : this.#ownedHepteracts;
+            const owned = isQuarkHepteract ? this.#readOwnedQuarks() : this.#ownedHepteracts;
             const percentOwned = owned && owned > 0 ? buyCost / owned : '∞';
             const persOwn = typeof percentOwned === 'number' ? HSUtils.N(percentOwned * 100) : percentOwned;
 
