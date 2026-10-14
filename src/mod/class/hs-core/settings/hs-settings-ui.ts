@@ -676,6 +676,10 @@ export class HSSettingsUI {
         if (controls.controlType === 'button' && (controls.controlGroup === 'auto-sing-strategy-controls' || controls.controlGroup === 'save-export')) {
             blockClass += ' hs-inline-button';
         }
+        // The strategy buttons keep a width of their own (hs-panel-core.css)
+        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+            blockClass += ' hs-button-group-autosing-strategy';
+        }
 
         return HSUIC.Div({
             id: setting.settingBlockId,

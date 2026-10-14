@@ -636,6 +636,11 @@ select::-webkit-scrollbar-corner {
     width: auto;
 }
 
+/* Auto-Sing strategy buttons (Edit, Create, Delete, Import, Export): narrower than the other panel buttons */
+.hs-button-group-autosing-strategy .hs-panel-btn {
+    width: 130px;
+}
+
 /* Timed save export: the two folder buttons share a line, the first one shows the folder's name */
 #hs-setting-auto-export-save-folder-button,
 #hs-setting-auto-export-save-forget-folder-button {
