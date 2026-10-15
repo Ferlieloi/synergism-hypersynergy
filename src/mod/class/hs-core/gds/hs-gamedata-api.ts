@@ -2047,6 +2047,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return 1 + effectPerBlessing * limitMult1 * limitMult2 * Math.pow(globalSpeedBlessing, DR2);
     }
 
+    /** Mirrors CampaignManager.ascensionScoreMultiplier in SynergismOfficial/src/Campaign.ts. */
+    calculateCampaignAscensionScoreBonus(): number {
+        const tokens = this.campaignData?.tokens ?? 0;
+        return 1
+            + 0.2 * 1 / 100 * Math.min(tokens, 100)
+            + 0.3 * (1 - Math.exp(-Math.max(tokens - 100, 0) / 1000))
+            + 0.5 * (1 - Math.exp(-Math.max(tokens - 2500, 0) / 5000));
+    }
+
     calculateAscensionScore() {
         if (!this.gameData) {
             return { baseScore: 0, corruptionMultiplier: 0, bonusMultiplier: 0, effectiveScore: 0 };
@@ -2064,6 +2073,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const challenge15ScoreBonus = this.calculateChallenge15Reward('score') || 1;
         const masterPackAscensionScoreMult = this.getGQUpgradeEffect('masterPack', 'ascensionScoreMult') || 1;
         const expertPackAscensionScoreMult = this.getGQUpgradeEffect('expertPack', 'ascensionScoreMult') || 1;
+        const campaignScoreBonus = this.calculateCampaignAscensionScoreBonus();
         const finiteDescentScore = this.rune.getRuneEffects('finiteDescent').ascensionScore;
         const achievementAscensionScoreBonus = Number(this.achievement.AchRewards['ascensionScore']()) || 1;
         const eventAscensionScoreBonus = this.isEvent ? this.calculateEventSourceBuff(EventBuffType.AscensionScore) : 0;
@@ -2091,6 +2101,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             challenge15ScoreBonus,
             masterPackAscensionScoreMult,
             expertPackAscensionScoreMult,
+            campaignScoreBonus,
             finiteDescentScore,
             achievementAscensionScoreBonus,
             this.isEvent ? 1 : 0,
@@ -2145,6 +2156,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const bonusMultiplier =
                 challenge15ScoreBonus *
                 this.calculateAscensionScorePlatonicBlessing() *
+                campaignScoreBonus *
                 finiteDescentScore *
                 (1 + 0.05 * cube21) *
                 (1 + 0.05 * cube31) *
