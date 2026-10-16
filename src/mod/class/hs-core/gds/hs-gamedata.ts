@@ -281,7 +281,9 @@ export class HSGameData extends HSModule {
     async #refreshFetchedData() {
         // HSLogger.debug(() => `Refreshing fetched data`, this.context);
         try {
-            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
+            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl, {
+                headers: { 'X-HyperSynergism-Version': HSGlobal.General.currentModVersion }
+            });
             const data = await upgradesQuery.json() as PseudoGameData;
 
             this.#playerPseudoUpgrades = data;
@@ -289,7 +291,9 @@ export class HSGameData extends HSModule {
         } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
 
         try {
-            const meQuery = await fetch(HSGlobal.Common.meAPIurl);
+            const meQuery = await fetch(HSGlobal.Common.meAPIurl, {
+                headers: { 'X-HyperSynergism-Version': HSGlobal.General.currentModVersion }
+            });
             const data = await meQuery.json() as MeData;
 
             this.#meBonuses = data;
