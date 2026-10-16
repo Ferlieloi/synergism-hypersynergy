@@ -386,7 +386,7 @@ export class HSGameData extends HSModule {
 
         if (wsMod) {
             wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
-                url: HSGlobal.Common.eventAPIUrl,
+                url: `${HSGlobal.Common.eventAPIUrl}?hypersynergism-version=${HSGlobal.General.currentModVersion}`,
                 onMessage: async (msg) => {
                     HSLogger.debug(() => `onMessage received: ${JSON.stringify(msg)}`, this.context);
                     switch (msg?.type) {
