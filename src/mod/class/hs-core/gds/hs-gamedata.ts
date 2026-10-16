@@ -57,7 +57,6 @@ export class HSGameData extends HSModule {
         }
     `;
     #saveInterval?: number;
-    #fetchedDataRefreshInterval?: number;
 
     // --- DOM Elements ---
     #manualSaveButton?: HTMLButtonElement;
@@ -147,8 +146,10 @@ export class HSGameData extends HSModule {
 
         this.#cacheDomElements();
 
-        // Set before the fetches: the fetched data only reaches the API through this reference,
-        // and with GDS off nothing else fetches it again (the 60 s refresh runs with GDS only)
+        // Set before the fetches: the fetched data only reaches the API through this reference.
+        // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
+        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater export).
+        // A PseudoCoin purchase or a login after the page load is seen at the next reload.
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         await this.#refreshFetchedData();
 
@@ -571,20 +572,11 @@ export class HSGameData extends HSModule {
      * @returns Promise<void>
      */
     async enableGDS() {
-        const self = this;
-
         if (this.#gdsEnabled) return;
 
         HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
 
         if (this.#saveInterval) clearInterval(this.#saveInterval);
-
-        await this.#refreshFetchedData();
-
-        if (this.#fetchedDataRefreshInterval)
-            clearInterval(this.#fetchedDataRefreshInterval);
-
-        this.#fetchedDataRefreshInterval = setInterval(() => { self.#refreshFetchedData(); }, HSGlobal.HSGameData.fetchedDataRefreshInterval);
 
         if (!this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
@@ -648,9 +640,6 @@ export class HSGameData extends HSModule {
             clearInterval(this.#saveInterval);
             this.#saveInterval = undefined;
         }
-
-        if (this.#fetchedDataRefreshInterval)
-            clearInterval(this.#fetchedDataRefreshInterval);
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.gdsCSSId);
 

@@ -404,7 +404,6 @@ export const HSGlobal: IHSGlobal = class {
 
     // HSGameData
     static HSGameData = {
-        fetchedDataRefreshInterval: 60000,
         globalEventRefreshInterval: 1000 * 60 * 10, // 10 minutes
         gdsSpeedMs: 66,
         gdsCSSId: 'hs-game-data-turbo-css'
