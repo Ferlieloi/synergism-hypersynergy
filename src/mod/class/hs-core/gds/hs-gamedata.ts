@@ -70,7 +70,6 @@ export class HSGameData extends HSModule {
         }
     `;
     #saveInterval?: number;
-    #fetchedDataRefreshInterval?: number;
 
     // --- DOM Elements ---
     #manualSaveButton?: HTMLButtonElement;
@@ -158,8 +157,10 @@ export class HSGameData extends HSModule {
         // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
         (window as any).__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
 
-        // Set before the fetches: the fetched data only reaches the API through this reference,
-        // and with GDS off nothing else fetches it again (the 60 s refresh runs with the engine only)
+        // Set before the fetches: the fetched data only reaches the API through this reference.
+        // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
+        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater, backup).
+        // A PseudoCoin purchase or a login after the page load is seen at the next reload.
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         await this.#refreshFetchedData();
 
@@ -657,12 +658,7 @@ export class HSGameData extends HSModule {
     }
 
     async #startEngine(generation: number) {
-        const self = this;
-
         // Every wait happens before anything is installed: the start can be cancelled meanwhile
-        // (refreshFetchedData() waits on the network, possibly for seconds)
-        await this.#refreshFetchedData();
-
         if (!this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
         }
@@ -679,9 +675,6 @@ export class HSGameData extends HSModule {
 
         HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
         if (this.#saveInterval) clearInterval(this.#saveInterval);
-        if (this.#fetchedDataRefreshInterval) clearInterval(this.#fetchedDataRefreshInterval);
-
-        this.#fetchedDataRefreshInterval = setInterval(() => { self.#refreshFetchedData(); }, HSGlobal.HSGameData.fetchedDataRefreshInterval);
 
         this.#saveInterval = setInterval(() => {
             if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
@@ -732,9 +725,6 @@ export class HSGameData extends HSModule {
             clearInterval(this.#saveInterval);
             this.#saveInterval = undefined;
         }
-
-        if (this.#fetchedDataRefreshInterval)
-            clearInterval(this.#fetchedDataRefreshInterval);
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.gdsCSSId);
 
