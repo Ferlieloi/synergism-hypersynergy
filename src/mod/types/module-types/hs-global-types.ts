@@ -32,7 +32,6 @@ export interface HSGlobalGeneral {
 }
 
 export interface HSGlobalCommon {
-    eventAPIUrl: string;
     pseudoAPIurl: string;
     meAPIurl: string;
     experimentalGDS: boolean,
