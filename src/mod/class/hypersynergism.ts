@@ -444,8 +444,6 @@ export class Hypersynergism {
         console.log(dataModule.getCampaignData());
         console.log('----- ME DATA -----');
         console.log(dataModule.getMeData());
-        console.log('----- EVENT DATA -----');
-        console.log(dataModule.getEventData());
     }
 
 

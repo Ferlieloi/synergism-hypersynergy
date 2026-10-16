@@ -1380,7 +1380,6 @@ export class HSAutosing extends HSModule {
             this.#lastBookmarkC15Score = HSAutosing.#DECIMAL_0;
         }
 
-        const happyHourStackAmount = this.#gameDataAPI?.getEventData()?.HAPPY_HOUR_BELL.amount ?? 0;
         const qGain = Math.max(0, q - this.#previousQuarkAmount);
         const gqGain = Math.max(0, gq - this.#previousGoldenQuarkAmount);
         this.#previousQuarkAmount = q;
@@ -1414,7 +1413,7 @@ export class HSAutosing extends HSModule {
         }
 
         if (!skipRecord) {
-            this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
+            this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, c15ScoreBeforeSinging);
         }
 
         HSLogger.debug(() => "===== Singularity performed =====", this.context);

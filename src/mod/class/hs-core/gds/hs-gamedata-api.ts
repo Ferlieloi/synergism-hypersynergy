@@ -1,4 +1,4 @@
-import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
+import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { AchievementRewards, AmbrosiaUpgradeNames, AntProducers, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, SingularityChallengeDataKeys, SingularityDebuffs, PCoinUpgradeEffects, NumberStatLine, RuneKeys, TalismanKeys, SynergismLevelMilestones, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus, CorruptionLevels } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
@@ -241,11 +241,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     override _updateCampaignData(data: CampaignData) {
         super._updateCampaignData(data);
-        this.clearCache();
-    }
-
-    override _updateEventData(data: ConsumableGameEvents) {
-        super._updateEventData(data);
         this.clearCache();
     }
 
@@ -593,7 +588,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
             getPCoinUpgradeLevel: (upgradeName: string) => this.getPCoinUpgradeLevel(upgradeName as any),
             getCampaignTokens: () => this.campaignData?.tokens ?? 0,
-            getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
             calculateSynergismLevel: () => this.calculateSynergismLevel(),
             isEvent: () => this.isEvent,
             calculateEventSourceBuff: (buffType: EventBuffType) => this.calculateEventSourceBuff(buffType),
@@ -749,7 +743,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             updateCalculationCache: cacheProvider.updateCalculationCache,
             getCampaignTokens: () => this.campaignData?.tokens ?? 0,
             getVanillaGlobalEventAmbrosiaLuck: () => this.vanillaGlobalEvent?.ambrosiaLuck ?? 0,
-            getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
         };
         luck = this.registerCalculationHelper(new LuckHelper(luckContext));
         this.luck = luck;
@@ -2436,86 +2429,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     // ====== Event =======
     // =============================
 
-    calculateConsumableEventBuff(buff: EventBuffType) {
-        if (!this.eventData) return 0;
-
-        const data = this.eventData;
-        const cacheName = `EVENTBUFF_${HSUtils.eventBuffNumToName(buff)}` as keyof CalculationCache;
-
-        const calculationVars: number[] = [
-            data.HAPPY_HOUR_BELL.amount,
-            buff
-        ]
-
-        const cached = checkCalculationCache(this.#calculationCache, cacheName, calculationVars);
-
-        if (cached !== undefined) return cached;
-
-        const { HAPPY_HOUR_BELL } = this.eventData;
-
-        const happyHourInterval = HAPPY_HOUR_BELL.amount - 1
-
-        if (HAPPY_HOUR_BELL.amount === 0) {
-            updateCalculationCache(this.#calculationCache, cacheName, { value: 0, cachedBy: calculationVars });
-            return 0;
-        }
-
-        let val = 0;
-
-        switch (buff) {
-            case EventBuffType.Quark:
-                val = HAPPY_HOUR_BELL ? 0.25 + 0.025 * happyHourInterval : 0;
-                break;
-            case EventBuffType.GoldenQuark:
-                val = 0;
-                break;
-            case EventBuffType.Cubes:
-                val = HAPPY_HOUR_BELL ? 0.5 + 0.05 * happyHourInterval : 0;
-                break;
-            case EventBuffType.PowderConversion:
-                val = 0;
-                break;
-            case EventBuffType.AscensionSpeed:
-                val = 0;
-                break;
-            case EventBuffType.GlobalSpeed:
-                val = 0;
-                break;
-            case EventBuffType.AscensionScore:
-                val = 0;
-                break;
-            case EventBuffType.AntSacrifice:
-                val = 0;
-                break;
-            case EventBuffType.Offering:
-                val = HAPPY_HOUR_BELL ? 0.5 + 0.05 * happyHourInterval : 0;
-                break;
-            case EventBuffType.Obtainium:
-                val = HAPPY_HOUR_BELL ? 0.5 + 0.05 * happyHourInterval : 0;
-                break;
-            case EventBuffType.Octeract:
-                val = 0;
-                break;
-            case EventBuffType.OneMind:
-                val = 0;
-                break;
-            case EventBuffType.BlueberryTime:
-                val = HAPPY_HOUR_BELL ? 0.1 + 0.01 * happyHourInterval : 0;
-                break;
-            case EventBuffType.AmbrosiaLuck:
-                val = HAPPY_HOUR_BELL ? 0.1 + 0.01 * happyHourInterval : 0;
-                break;
-        }
-
-        updateCalculationCache(this.#calculationCache, cacheName, { value: val, cachedBy: calculationVars });
-
-        return val;
-    }
-
     calculateEventSourceBuff(buffType: EventBuffType) {
-        const baseBuff = this.getVanillaGlobalEventBuff(buffType);
-        const consumableBuff = this.calculateConsumableEventBuff(buffType);
-        return baseBuff + consumableBuff;
+        return this.getVanillaGlobalEventBuff(buffType);
     }
 
     calculateLeaderboardValue = (leaderboard: Array<{ elo: number; sacrificeId: number }>): number => {
@@ -2716,7 +2631,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (!this.gameData) return undefined;
         const gameData = this.gameData;
         const meData = this.meData;
-        const eventData = this.eventData;
 
         try {
             const luck =                    this.luck.calculateLuck(true)       as { luckBase: number, luckMult: number, luckTotal: number };
@@ -2759,7 +2673,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             // use the game's normal Red Ambrosia luck calculation.
             const redLuck =                 this.luck.calculateRedAmbrosiaLuck(true) as number;
             const redLuckNoAmb =            this.luck.calculateRedAmbrosiaLuck(true, 'true_base') as number;
-            const activeBells = this.isEvent ? (eventData?.HAPPY_HOUR_BELL.amount ?? 0) : 0;
             const ambrosiaUpgradeNames = Object.keys(this.ambrosia.ambrosiaUpgradeCalculationCollection) as AmbrosiaUpgradeNames[];
             const ambrosiaUpgradeBonusLevels = Object.fromEntries(
                 ambrosiaUpgradeNames.map((name) => [name, this.ambrosia.getPurpleAmbrosiaEnchantmentFreeLevels(name)])
@@ -2886,7 +2799,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     runeIaBonusLevelsTalismanNoAmb: new Decimal(noAmbTalismanRuneBonusIA),
                     totalTalismanPowerMultiplierNoAmb: new Decimal(noAmbTalismanPower),
                     patreonBonus:               this.getPatreonBonus(),
-                    activeBells:                activeBells,
+                    activeBells:                0,
                     jack:                       gameData.shopUpgrades.shopPanthema > 0,
                     freeShopLevelsInfinityNoAmb: this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),
@@ -2964,7 +2877,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     maxTokens:              this.campaignData?.maxTokens,
                     isAtMaxTokens:          this.campaignData?.isAtMaxTokens,
                     isEvent:                this.isEvent,
-                    bellStacks:             eventData?.HAPPY_HOUR_BELL.amount ?? 0,
+                    bellStacks:             0,
                     blueAmbrosiaBarValue:   gameData.blueberryTime,
                     redAmbrosiaBarValue:    gameData.redAmbrosiaTime,
                     blueAmbrosiaBarMax:     this.ambrosia.calculateRequiredBlueberryTime(),

@@ -37,24 +37,3 @@ export interface VanillaGlobalEvent {
     oneMind: number;
     color: string[];
 }
-
-/**
- * Internal identifiers for tracked game events.
- * Notes: The LOTUS_OF_REJUVENATION isn't technically part of the vanilla "event" system (it's not in info-all);
- */
-export enum GameEventID {
-    HAPPY_HOUR_BELL = "HAPPY_HOUR_BELL",
-    LOTUS_OF_REJUVENATION = "LOTUS_OF_REJUVENATION"
-}
-
-/** State for a single consumable game event (amount, end times, display name). */
-export interface ConsumableGameEvent {
-    amount: number;
-    ends: number[];
-    displayName: string;
-}
-
-/** Mapping of GameEventID to their corresponding ConsumableGameEvent state. */
-export type ConsumableGameEvents = {
-    [key in GameEventID]: ConsumableGameEvent;
-};

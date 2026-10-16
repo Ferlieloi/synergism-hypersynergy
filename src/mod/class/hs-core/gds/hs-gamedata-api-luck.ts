@@ -28,7 +28,6 @@ export interface LuckHelperContext {
     updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void;
     getCampaignTokens: () => number;
     getVanillaGlobalEventAmbrosiaLuck: () => number;
-    getEventBellAmount: () => number;
 }
 
 export class LuckHelper {
@@ -124,7 +123,6 @@ export class LuckHelper {
             cube77,
             this.#ctx.isEvent() ? 1 : 0,
             this.#ctx.getVanillaGlobalEventAmbrosiaLuck(),
-            this.#ctx.getEventBellAmount(),
             data.ambrosiaUpgrades.ambrosiaLuck4.ambrosiaInvested,
             data.ambrosiaUpgrades.ambrosiaLuck4.purpleAmbrosiaInvested ?? 0,
             data.lifetimeAmbrosia,
@@ -430,11 +428,6 @@ export class LuckHelper {
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaLuckMultiplier4', 'additiveAmbrosiaLuckMult') as number,
             this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'additiveLuckMult'),
             0.001 * cube77,
-            // `calculateEventSourceBuff` already combines the active vanilla
-            // global event and consumable event buffs.  Do not gate this on
-            // the consumable-event flag: a vanilla global event can be active
-            // while HAPPY_HOUR_BELL is zero, and the game still applies its
-            // Ambrosia Luck bonus in that case.
             this.#ctx.calculateEventSourceBuff(EventBuffType.AmbrosiaLuck),
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck4', mode).ambrosiaLuckPercentage,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead', mode).additiveLuckMult,

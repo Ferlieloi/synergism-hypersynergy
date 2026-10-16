@@ -10,7 +10,6 @@ export interface SparklineMetric {
     runningAvgDuration: number;
     runningAvgQuarksPerSecond: number;
     runningAvgGoldenQuarksPerSecond: number;
-    happyHourStackAmount: number;
 }
 
 /**

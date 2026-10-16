@@ -2,18 +2,6 @@ import { HSCalculationDefinition } from "../../../types/data-types/hs-gamedata-a
 
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
-        calculationName: "Consumable Event Buff",
-        fnName: "calculateConsumableEventBuff",
-        fnParams: [
-            {
-                paramName: "buff",
-                paramType: "EventBuffType"
-            }
-        ],
-        supportsReduce: false,
-        toolingSupport: false
-    },
-    {
         calculationName: "Ambrosia Generation Shop Upgrade",
         fnName: "calculateAmbrosiaGenerationShopUpgrade",
         fnParams: [

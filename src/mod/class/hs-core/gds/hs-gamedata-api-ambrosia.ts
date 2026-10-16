@@ -19,7 +19,6 @@ export interface AmbrosiaHelperContext {
     getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number;
     getPCoinUpgradeLevel: (upgradeName: string) => number;
     getCampaignTokens: () => number;
-    getEventBellAmount: () => number;
     calculateSynergismLevel: () => number;
     isEvent: () => boolean;
     calculateEventSourceBuff: (buffType: EventBuffType) => number;

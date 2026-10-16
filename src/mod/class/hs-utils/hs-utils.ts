@@ -1,4 +1,3 @@
-import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
@@ -497,31 +496,6 @@ export class HSUtils {
                 okConfirm.click();
             }
         }
-    }
-
-    static async Noop() {
-        return;
-    }
-
-    static eventBuffNumToName(buff: EventBuffType) {
-        const reverse = {
-            0: 'Quark',
-            1: 'GoldenQuark',
-            2: 'Cubes',
-            3: 'PowderConversion',
-            4: 'AscensionSpeed',
-            5: 'GlobalSpeed',
-            6: 'AscensionScore',
-            7: 'AntSacrifice',
-            8: 'Offering',
-            9: 'Obtainium',
-            10: 'Octeract',
-            11: 'BlueberryTime',
-            12: 'AmbrosiaLuck',
-            13: 'OneMind',
-        }
-
-        return reverse[buff];
     }
 
     static asString(settingValue: HSSettingType): string {

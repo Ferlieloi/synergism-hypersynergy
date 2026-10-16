@@ -1,5 +1,5 @@
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
-import { ConsumableGameEvents, VanillaGlobalEvent } from "../../../types/data-types/hs-event-data";
+import { VanillaGlobalEvent } from "../../../types/data-types/hs-event-data";
 import { HSCalculationDefinition } from "../../../types/data-types/hs-gamedata-api-types";
 import { MeData } from "../../../types/data-types/hs-me-data";
 import { GameData } from "../../../types/data-types/hs-player-savedata";
@@ -42,12 +42,8 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     protected meData: MeData | undefined;
     protected pseudoData: PseudoGameData | undefined;
     protected campaignData: CampaignData | undefined;
-    protected eventData: ConsumableGameEvents | undefined;
     protected vanillaGlobalEvent: VanillaGlobalEvent | null = null;
     protected isEvent: boolean = false;
-
-    // Subscribers for event data changes
-    #eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
 
     // Subscribers for vanilla global event data changes
     #vanillaGlobalEventSubscribers: Set<(eventData: VanillaGlobalEvent | null) => void> = new Set();
@@ -84,29 +80,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         this.campaignData = data;
     }
 
-    // TODO: clean that...
-    _updateEventData(data: ConsumableGameEvents) {
-        this.eventData = data;
-
-        this.isEvent = false;
-        if (this.eventData && "HAPPY_HOUR_BELL" in this.eventData) {
-            this.isEvent = this.eventData.HAPPY_HOUR_BELL.amount > 0;
-        }
-
-        if (!this.isEvent && this.vanillaGlobalEvent) {
-            this.isEvent = true;
-        }
-
-        // Notify subscribers
-        for (const cb of this.#eventDataSubscribers) {
-            try {
-                cb(this.eventData);
-            } catch (e) {
-                HSLogger.error("EventData subscriber error: " + e, this.context);
-            }
-        }
-    }
-
     // These get methods are meant to be the public methods to get data
     getCampaignData(): CampaignData | undefined {
         return this.campaignData;
@@ -133,10 +106,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         return this.pseudoData;
     }
 
-    getEventData(): ConsumableGameEvents | undefined {
-        return this.eventData;
-    }
-
     async fetchVanillaGlobalEventData(): Promise<VanillaGlobalEvent | null> {
         const response = await fetch("https://synergism.cc/events/get", {
             headers: { "X-HyperSynergism-Version": HSGlobal.General.currentModVersion }
@@ -152,13 +121,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
             this.vanillaGlobalEvent = null;
         }
 
-        this.isEvent = false;
-        if (this.eventData && "HAPPY_HOUR_BELL" in this.eventData) {
-            this.isEvent = this.eventData.HAPPY_HOUR_BELL.amount > 0;
-        }
-        if (!this.isEvent && this.vanillaGlobalEvent) {
-            this.isEvent = true;
-        }
+        this.isEvent = this.vanillaGlobalEvent !== null;
 
         for (const cb of this.#vanillaGlobalEventSubscribers) {
             try {
@@ -196,18 +159,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number; } | null> {
         return await this.gameDataModule?.getLatestAutosingData() || null;
-    }
-
-    /**
-     * Subscribe to event data changes. Returns an unsubscribe function.
-     */
-    public subscribeEventDataChange(cb: (eventData: ConsumableGameEvents | undefined) => void): () => void {
-        this.#eventDataSubscribers.add(cb);
-        // Immediately call with current data
-        cb(this.eventData);
-        return () => {
-            this.#eventDataSubscribers.delete(cb);
-        };
     }
 
     static getCalculationDefinitions(filter?: {

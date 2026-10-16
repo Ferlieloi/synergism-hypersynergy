@@ -60,7 +60,6 @@ export class HSAutosingModal {
     #singTargetSpan: HTMLElement | null = null;
     #singHighestSpan: HTMLElement | null = null;
     #completedSingAmountSpan: HTMLElement | null = null;
-    #completedSingHHPercentSpan: HTMLElement | null = null;
     #c15TopSpan: HTMLElement | null = null;
     #c15SigmaSpan: HTMLElement | null = null;
     #quarksCurrentAmountSpan: HTMLElement | null = null;
@@ -115,7 +114,6 @@ export class HSAutosingModal {
     // --- All-Time Statistical Summary ---
     #allTimeStats = {
         singCompleted: 0,
-        singCompletedWithHappyHour: 0,
         totalDuration: 0,
         meanDuration: 0,
         sumSqDuration: 0,
@@ -327,10 +325,6 @@ export class HSAutosingModal {
                     <div class="hs-label-cell" id="hs-completed-sing-full-div">
                         <span class="hs-timer-label">Completed:</span>
                         <span id="hs-completed-sing-amount">0</span>
-                        <span class="hs-value-cell hs-detailed-data hs-secondary-data-style">
-                            <span id="hs-completed-sing-with-happy-hour-percent">(0.00%</span>
-                            <span> \uD83D\uDD14)</span>
-                        </span>
                     </div>
                     <div class="hs-value-cell hs-detailed-data"><span id="hs-c15-sigma" class="hs-secondary-data-style"></span></div>
                 </div>
@@ -458,7 +452,6 @@ export class HSAutosingModal {
         this.#singHighestSpan = document.getElementById('hs-sing-highest');
         this.#phaseNameSpan   = document.getElementById('hs-phase-name-val');
         this.#completedSingAmountSpan    = document.getElementById('hs-completed-sing-amount');
-        this.#completedSingHHPercentSpan = document.getElementById('hs-completed-sing-with-happy-hour-percent');
 
         this.#c15TopSpan      = document.getElementById('hs-c15-top');
         this.#c15SigmaSpan    = document.getElementById('hs-c15-sigma');
@@ -914,7 +907,7 @@ export class HSAutosingModal {
 
     /** Records the completion of a singularity, updating metrics and stats.
      *  Stores running averages for duration, quarks, and golden quarks. */
-    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number, happyHourStackAmount: number, c15Score?: Decimal): void {
+    public recordSingularity(gainedGoldenQuarks: number, currentGoldenQuarks: number, gainedQuarks: number, currentQuarks: number, c15Score?: Decimal): void {
         const now = performance.now();
         const singularityDuration = (now - this.#lastSingularityTimestamp) / 1000;
         this.#lastSingularityTimestamp = now;
@@ -932,13 +925,11 @@ export class HSAutosingModal {
             realQuarksGain,
             gainedGoldenQuarks,
             this.#currentSingularityPhases,
-            happyHourStackAmount,
             c15Score
         );
 
         // --- Update all-time statistical summary (Welford's algorithm)
         this.#allTimeStats.singCompleted++;
-        this.#allTimeStats.singCompletedWithHappyHour += happyHourStackAmount > 0 ? 1 : 0;
         // Duration
         const deltaDuration = singularityDuration - this.#allTimeStats.meanDuration;
         this.#allTimeStats.meanDuration  += deltaDuration / this.#allTimeStats.singCompleted;
@@ -1023,7 +1014,6 @@ export class HSAutosingModal {
         realQuarksGain: number,
         gainedGoldenQuarks: number,
         phases: Map<string, number>,
-        happyHourStackAmount: number,
         c15Score?: Decimal
     ): void {
         // Prune oldest entry first if at capacity, subtracting its values from running sums
@@ -1057,8 +1047,7 @@ export class HSAutosingModal {
             c15: c15Score ? c15Score.toString() : undefined,
             runningAvgDuration,
             runningAvgQuarksPerSecond,
-            runningAvgGoldenQuarksPerSecond,
-            happyHourStackAmount
+            runningAvgGoldenQuarksPerSecond
         });
     }
 
@@ -1272,7 +1261,6 @@ export class HSAutosingModal {
         if (this.#isMinimized) return;
 
         const singCompleted       = this.#allTimeStats.singCompleted;
-        const singCompletedWithHH = this.#allTimeStats.singCompletedWithHappyHour;
 
         const avg1   = this.#getLastDuration();
         const avgAll = this.#getAllTimeAvgDuration();
@@ -1286,9 +1274,6 @@ export class HSAutosingModal {
 
         // Farming section
         this.#setTextEl(this.#completedSingAmountSpan, singCompleted ? `${singCompleted}` : '-');
-        this.#setTextEl(this.#completedSingHHPercentSpan, singCompleted > 0 && singCompletedWithHH > 0
-            ? `(${((singCompletedWithHH / singCompleted) * 100).toFixed(2)}%`
-            : '(0.00%');
 
         // Times section
         this.#setTextEl(this.#avg1Span,        avg1 !== null ? `${avg1.toFixed(2)}s` : '-');
@@ -1428,7 +1413,6 @@ export class HSAutosingModal {
         this.#phaseRenderOrder = [];
         this.#allTimeStats = {
             singCompleted: 0,
-            singCompletedWithHappyHour: 0,
             totalDuration: 0,
             meanDuration: 0,
             sumSqDuration: 0,
