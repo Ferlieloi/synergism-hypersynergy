@@ -1,3 +1,5 @@
+import { HSUtils } from "./hs-utils";
+
 export interface HSSpriteRegion {
     /** Coordinates in the sheet's displayed CSS pixels, before scaling the icon. */
     x: number;
@@ -55,7 +57,7 @@ export class HSIcons {
 
     /** Paint a tile at any size without downloading or cropping another copy of the sheet. */
     static applyBackground(element: HTMLElement, icon: HSIcon, width: number, height = width): void {
-        element.style.backgroundImage = `url(${JSON.stringify(icon.url)})`;
+        element.style.backgroundImage = HSUtils.cssUrl(icon.url);
         element.style.backgroundRepeat = 'no-repeat';
         if (icon.sprite) {
             const region = icon.sprite;

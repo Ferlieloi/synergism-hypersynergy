@@ -62,8 +62,9 @@ export class TalismanHelper {
     }
 
     #computeAllTalismanStats(): void {
-        if (this.#statsComputed) return;
+        // Before the early return: stats computed from an older save must not be kept
         this.#clearCachesIfGameDataChanged();
+        if (this.#statsComputed) return;
 
         const keys = this.#getTalismanKeys();
         for (const key of keys) {
@@ -87,8 +88,8 @@ export class TalismanHelper {
     }
 
     #computeAllRuneBonuses(mode: CalculationMode = 'normal'): Record<RuneKeys, number> {
-        if (mode === 'normal' && this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
         this.#computeAllTalismanStats();
+        if (mode === 'normal' && this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
 
         const totalBonuses = TALISMAN_RUNE_KEYS.reduce((acc, rune) => {
             acc[rune] = 0;

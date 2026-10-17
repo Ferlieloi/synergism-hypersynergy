@@ -22,6 +22,7 @@ async function launchGame({ app, exePath, modUrl, channel, modRef, spawnProcess 
         return { ok: false, error: error.message }
     }
 
+    // Public channels only: the hidden local channel is never remembered as "last played".
     if (DEFAULTS.channels[channel] && typeof modRef === 'string' && modRef) {
         try {
             const cfg = loadConfig(app)

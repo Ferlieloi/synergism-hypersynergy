@@ -1,5 +1,5 @@
 import { buildHeaterTypeSemanticId, getHeaterTypeBranchId, getHeaterTypeConfig, getHeaterTypeRowCount, resolveHeaterTypeLabel } from "./hs-heater-result-config";
-import type { HeaterOptimizationResult, HeaterResultArrayKey, NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
+import type { HeaterOptimizationResult, HeaterPurpleRoutedResultKey, HeaterResultArrayKey, NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
 import type { HeaterBranchId } from "./hs-heater-result-config";
 
 export type { NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
@@ -55,6 +55,7 @@ export function normalizeHeaterOptimizationResult(
                 key,
                 rowIndex: 0,
                 isRowBased: false,
+                purpleRouting: result.purpleRouting?.[key as HeaterPurpleRoutedResultKey],
             });
         }
     }
@@ -83,6 +84,11 @@ export class HSHeaterResultStore {
         const normalizedResult = this.getCurrentNormalizedResult();
         if (!normalizedResult) return false;
         return normalizedResult.some((entry) => String(entry.semanticId) === semanticId);
+    }
+
+    /** In the results, but as an "Unaffordable" row: there is no loadout to import. */
+    static isSemanticIdUnaffordable(semanticId: string): boolean {
+        return this.getLoadoutJsonBySemanticId(semanticId) === 'Unaffordable';
     }
 
     static collectSelectedSemanticIds(modal: HTMLElement, options?: { enabledOnly?: boolean }): Set<string> {

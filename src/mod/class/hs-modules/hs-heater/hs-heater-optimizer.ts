@@ -1,16 +1,39 @@
-import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
+import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
 import { formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
-import { calculateHeaterBarIncome } from './hs-heater-bar-income';
+import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-income';
+import type { AmbrosiaBarIncome, AmbrosiaBarIncomeReactor } from '../../../types/data-types/hs-ambrosia-income-types';
 
 // Keep the optimizer bundle independent from DOM/UI modules so it can run in
-// a Web Worker. Diagnostics still reach the browser console; the worker also
-// forwards thrown errors to the main thread.
+// a Web Worker. Warnings and errors reach the browser console, and are kept
+// until takeHeaterOptimizerLogs() is called: the worker sends them back with
+// its answer (thrown errors too), and the runner writes them to the mod's log.
+export type HeaterOptimizerLog = { level: 'warn' | 'error'; message: string; context: string };
+
+const PENDING_LOG_LIMIT = 200;
+const pendingLogs: HeaterOptimizerLog[] = [];
+
+function keepLog(level: HeaterOptimizerLog['level'], message: string, context: string): void {
+    if (pendingLogs.length < PENDING_LOG_LIMIT)
+        pendingLogs.push({ level, message, context });
+}
+
 const HSLogger = {
     debug: (_message: () => string, _context?: string): void => {},
-    warn: (message: string, context = "HSHeaterOptimizer"): void => console.warn(`[${context}]: ${message}`),
-    error: (message: string, context = "HSHeaterOptimizer"): void => console.error(`[${context}]: ${message}`),
+    warn: (message: string, context = "HSHeaterOptimizer"): void => {
+        console.warn(`[${context}]: ${message}`);
+        keepLog('warn', message, context);
+    },
+    error: (message: string, context = "HSHeaterOptimizer"): void => {
+        console.error(`[${context}]: ${message}`);
+        keepLog('error', message, context);
+    },
 };
+
+/** The warnings and errors logged since the last call, oldest first. */
+export function takeHeaterOptimizerLogs(): HeaterOptimizerLog[] {
+    return pendingLogs.splice(0);
+}
 /*
     This file closely match the script on Rus9384's sheet (credits to him),
     in order to be easily updatable when the sheet updates (and vice-versa...)
@@ -118,6 +141,7 @@ interface Stats {
     redBarPointsPerSecond: number;
     acceleratorSecondsPerRedAmbrosia: number;
     reactor: HeaterOptimizerInput['reactor'];
+    purple: HeaterOptimizerInput['purple'];
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;
@@ -140,6 +164,7 @@ interface Options {
     calculateHyperflux: boolean;
     calculateSR:        boolean;
     calculateAmbOct:    boolean;
+    calculatePurple:    boolean;
 }
 
 export type HeaterCubeExperimentUpgrade =
@@ -306,6 +331,7 @@ let stats: Stats = {
     redBarPointsPerSecond: 0,
     acceleratorSecondsPerRedAmbrosia: 0,
     reactor: undefined,
+    purple: undefined,
     ossifiedTactics2: 0,
     ambrosiaUpgradeBonusLevels: {},
     ambrosiaUpgradeBlueberryCostReductions: {},
@@ -334,6 +360,7 @@ let options: Options = {
     calculateHyperflux: false,
     calculateSR: false,
     calculateAmbOct: false,
+    calculatePurple: false,
 };
 
 let cubeExperimentConfig: HeaterCubeExperimentConfig | undefined;
@@ -1299,9 +1326,6 @@ for (const [upgradeName, upgrade] of Object.entries(upgrades)) {
 // The upgrade key order is fixed by the table above and is reused for
 // prerequisite bookkeeping below.
 const upgradeKeyOrder = Object.keys(upgrades);
-const zeroLevelLoadoutJson = JSON.stringify(Object.fromEntries(
-  upgradeKeyOrder.map(upgradeName => [upgradeName, 0]),
-));
 
 // Reverse prerequisite map used when a blueberry repair removes a module.
 // Removing a prerequisite must also remove every dependent module; otherwise
@@ -1439,6 +1463,36 @@ class Loadout {
             && (this.upgradeLevels.twoMind ?? 0) > 0;
     }
 
+    // Sustained bar income for this loadout. Routing defaults to the saved
+    // Purple Reactor percentages; passing other values evaluates the same
+    // loadout under a different routing without touching the stat cache.
+    barIncome(routing?: Pick<AmbrosiaBarIncomeReactor, 'blueRoutingPercent' | 'redRoutingPercent'>): AmbrosiaBarIncome {
+        if (!stats.reactor)
+            throw new Error('Heater bar-income optimization needs a fresh game-data export with Purple Reactor settings.')
+        const brickLevel = stats.exalt === 6 || stats.exalt === 8
+            ? 0 : this.effectiveLevel('ambrosiaBrickOfLead')
+        const brickFactor = 1 - brickLevel / 50
+        const blueRequirementWithoutTwoMind = stats.exalt === 10
+            ? stats.blueBarMaxWithoutTwoMindAndBrick
+            : stats.amb >= 10_000
+                ? Math.ceil(stats.blueBarRequirementBeforeRounding / brickFactor)
+                : stats.blueBarRequirementBeforeRounding / brickFactor
+        return calculateAmbrosiaBarIncome({
+            reactor: routing ? { ...stats.reactor, ...routing } : stats.reactor,
+            bluePointsPerSecond: stats.ambSpeed * this.getStat('speed'),
+            redPointsPerSecond: stats.redBarPointsPerSecond * this.getStat('rSpeed'),
+            blueRequirementWithoutTwoMind,
+            redRequirementWithoutTwoMind: stats.redBarMaxWithoutTwoMind,
+            blueLuck: this.luck,
+            redLuck: this.getStat('rLuck'),
+            purpleHoneyLuck: stats.purple?.purpleHoneyLuck ?? 0,
+            purpleHoneyPerExtraction: stats.purple?.purpleHoneyPerExtraction ?? 0,
+            flatAmbrosiaPerBlueFill: stats.bonusAmbrosiaPerFill,
+            acceleratorSecondsPerRedAmbrosia: stats.acceleratorSecondsPerRedAmbrosia,
+            twoMind: this.twoMindEnabled,
+        })
+    }
+
     // Returns the total value of a given stat for the loadout
     getStat(stat: string, override = false): number {
       if (this.statCache[stat] == null || override) {
@@ -1497,33 +1551,16 @@ class Loadout {
             break
           case 'incomeBlue':
           case 'incomeRed':
-          case 'incomeAll': {
+          case 'incomeAll':
+          case 'incomeHoney':
+          case 'incomePurpleAmb': {
             if (!this.statCache.__barIncomeReady) {
-              if (!stats.reactor)
-                throw new Error('Heater bar-income optimization needs a fresh game-data export with Purple Reactor settings.')
-              const brickLevel = stats.exalt === 6 || stats.exalt === 8
-                ? 0 : this.effectiveLevel('ambrosiaBrickOfLead')
-              const brickFactor = 1 - brickLevel / 50
-              const blueRequirementWithoutTwoMind = stats.exalt === 10
-                ? stats.blueBarMaxWithoutTwoMindAndBrick
-                : stats.amb >= 10_000
-                  ? Math.ceil(stats.blueBarRequirementBeforeRounding / brickFactor)
-                  : stats.blueBarRequirementBeforeRounding / brickFactor
-              const income = calculateHeaterBarIncome({
-                reactor: stats.reactor,
-                bluePointsPerSecond: stats.ambSpeed * this.getStat('speed'),
-                redPointsPerSecond: stats.redBarPointsPerSecond * this.getStat('rSpeed'),
-                blueRequirementWithoutTwoMind,
-                redRequirementWithoutTwoMind: stats.redBarMaxWithoutTwoMind,
-                blueLuck: this.luck,
-                redLuck: this.getStat('rLuck'),
-                flatAmbrosiaPerBlueFill: stats.bonusAmbrosiaPerFill,
-                acceleratorSecondsPerRedAmbrosia: stats.acceleratorSecondsPerRedAmbrosia,
-                twoMind: this.twoMindEnabled,
-              })
+              const income = this.barIncome()
               this.statCache.incomeBlue = income.blueAmbrosiaPerSecond
               this.statCache.incomeRed = income.redAmbrosiaPerSecond
               this.statCache.incomeAll = income.blueAmbrosiaPerSecond * income.redAmbrosiaPerSecond
+              this.statCache.incomeHoney = purpleIncomeObjective(income, 'incomeHoney')
+              this.statCache.incomePurpleAmb = purpleIncomeObjective(income, 'incomePurpleAmb')
               this.statCache.__barIncomeReady = 1
             }
             break
@@ -1693,11 +1730,18 @@ class Loadout {
         this.invalidateCaches()
         if (this.cost > stats.amb || stat === "")
             return ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false];
+        // Safety net: the game refuses to load a tree that needs more
+        // Blueberries than owned, so never hand one out.
+        if (this.blueberryCost > stats.blueberries) {
+            HSLogger.warn(`[HeaterDiag] ${stat} loadout needs ${this.blueberryCost} Blueberries, ${stats.blueberries} owned: reported Unaffordable`, 'HSHeaterOptimizer');
+            return ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false];
+        }
 
         let baseLoadout = new Loadout();
         let effectStr: string;
         if (stat === "singReduction" || stat === "vouchers")
-          effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat))
+          // A number of levels gained, shown as an integer (3, not 3.00)
+          effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat), false)
         else
           effectStr = baseLoadout.getStat(stat) === 0 ? "N / A" : formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
 
@@ -2374,9 +2418,9 @@ function fillSelectedLuckModules(
     ...(upgradeEffectKeys.luck ?? []),
     ...(upgradeEffectKeys.mLuck ?? []),
     ...(stat === "luck" ? [] : upgradeEffectKeys.rLuck ?? []),
-    ...(['allAmb', 'incomeBlue', 'incomeRed', 'incomeAll'].includes(stat)
+    ...(stat === 'allAmb' || isBarIncomeStat(stat)
       ? upgradeEffectKeys.speed ?? [] : []),
-    ...(['allAmb', 'incomeBlue', 'incomeRed', 'incomeAll'].includes(stat)
+    ...(stat === 'allAmb' || isBarIncomeStat(stat)
       ? upgradeEffectKeys.rSpeed ?? [] : []),
   ])
   for (const name of upgradeKeyOrder) {
@@ -2397,7 +2441,10 @@ function fillSelectedLuckModules(
   return current
 }
 
-type BarIncomeStat = 'incomeBlue' | 'incomeRed' | 'incomeAll';
+const BAR_INCOME_STATS = ['incomeBlue', 'incomeRed', 'incomeAll', 'incomeHoney', 'incomePurpleAmb'] as const;
+type BarIncomeStat = typeof BAR_INCOME_STATS[number];
+const isBarIncomeStat = (stat: string): stat is BarIncomeStat =>
+  (BAR_INCOME_STATS as readonly string[]).includes(stat);
 
 // When every direct luck/bar module can be fully purchased with the available
 // Ambrosia, luck-producing raw levels are monotone within a fixed set of
@@ -2450,11 +2497,11 @@ function findAffordableFullLevelBarIncomeOpts(): Record<BarIncomeStat, Loadout> 
   if (highestFullCost > stats.amb)
     return null;
 
-  const objectives: BarIncomeStat[] = ['incomeBlue', 'incomeRed', 'incomeAll'];
+  const objectives = BAR_INCOME_STATS;
   const best = {} as Record<BarIncomeStat, Loadout>;
-  const bestValue: Record<BarIncomeStat, number> = {
-    incomeBlue: -Infinity, incomeRed: -Infinity, incomeAll: -Infinity,
-  };
+  const bestValue = Object.fromEntries(
+    objectives.map(stat => [stat, -Infinity]),
+  ) as Record<BarIncomeStat, number>;
   for (let mask = 0; mask < 1 << barIncomeOptionalModules.length; mask++) {
     const base = maxedSubset(mask);
     if (base.blueberryCost > stats.blueberries)
@@ -2560,6 +2607,72 @@ function improveBarIncomeLoadout(seed: Loadout, stat: BarIncomeStat): Loadout {
     const candidate = ascend(start);
     if (score(candidate) > score(best) * (1 + 1e-12)) best = candidate;
   }
+  return best;
+}
+
+type PurpleIncomeStat = 'incomeHoney' | 'incomePurpleAmb';
+type ReactorRouting = Pick<AmbrosiaBarIncomeReactor, 'blueRoutingPercent' | 'redRoutingPercent'>;
+
+// SynergismOfficial/src/Synthesis.ts craftPurpleAmbrosia: each craft spends
+// both Red Ambrosia and Purple Honey, so the scarcer of the two limits the
+// sustained crafting rate.
+function purpleIncomeObjective(income: AmbrosiaBarIncome, stat: PurpleIncomeStat): number {
+  if (stat === 'incomeHoney')
+    return income.purpleHoneyPerSecond;
+  if (!stats.purple)
+    return 0;
+  return Math.min(
+    income.purpleHoneyPerSecond / stats.purple.craftPurpleHoneyCost,
+    income.redAmbrosiaPerSecond / stats.purple.craftRedAmbrosiaCost,
+  );
+}
+
+// Runs fn with the Purple Reactor routing replaced. Loadout stat caches are
+// not routing-aware, so fn must only score loadouts it creates itself.
+function withReactorRouting<T>(routing: ReactorRouting, fn: () => T): T {
+  const saved = stats.reactor;
+  if (!saved)
+    return fn();
+  stats.reactor = { ...saved, ...routing };
+  try {
+    return fn();
+  } finally {
+    stats.reactor = saved;
+  }
+}
+
+// The game's routing sliders take whole percentages (SynergismOfficial
+// index.html, step="1"), so all 101 x 101 settings are scanned exactly; one
+// bar-income evaluation takes a few microseconds. The current routing wins
+// ties, so the result is never worse than keeping it; other ties prefer less
+// routing.
+function findBestReactorRouting(loadout: Loadout, stat: PurpleIncomeStat): ReactorRouting {
+  const current: ReactorRouting = {
+    blueRoutingPercent: stats.reactor!.blueRoutingPercent,
+    redRoutingPercent: stats.reactor!.redRoutingPercent,
+  };
+  const evaluate = (routing: ReactorRouting): number => {
+    try {
+      return purpleIncomeObjective(loadout.barIncome(routing), stat);
+    } catch {
+      return -Infinity;
+    }
+  };
+  let best = current;
+  let bestValue = evaluate(current);
+  const consider = (blueRoutingPercent: number, redRoutingPercent: number): void => {
+    const value = evaluate({ blueRoutingPercent, redRoutingPercent });
+    const isTie = Math.abs(value - bestValue) <= Math.abs(bestValue) * 1e-12;
+    if ((!isTie && value > bestValue)
+        || (isTie && best !== current
+          && blueRoutingPercent + redRoutingPercent < best.blueRoutingPercent + best.redRoutingPercent)) {
+      best = { blueRoutingPercent, redRoutingPercent };
+      bestValue = value;
+    }
+  };
+  for (let blue = 0; blue <= 100; blue++)
+    for (let red = 0; red <= 100; red++)
+      consider(blue, red);
   return best;
 }
 
@@ -4139,6 +4252,8 @@ type CubeLuckFindOptState = {
     upperBounds: Array<{ budget: number; table2Index: number }>;
     upperBoundIndex: number;
     opt: CubeLuckEvaluation;
+    // Blueberries this budget's row still has to pay after the search.
+    reserve: number;
 };
 
 function findCubeLuckOptsForBudgets(
@@ -4147,6 +4262,7 @@ function findCubeLuckOptsForBudgets(
   stat: "cube" | "oct",
   budgets: readonly number[],
   sharedLevelsFixed = false,
+  blueberryReserves?: readonly number[],
 ): Loadout[] {
     if (!sharedLevelsFixed) {
       for (const loadout of table1) {
@@ -4154,16 +4270,27 @@ function findCubeLuckOptsForBudgets(
         loadout.getStat(stat)
       }
     }
+    // With reserves, a budget's row still has to pay that many Blueberries
+    // after the search (Hyperflux itself), so each budget has its own
+    // Blueberry limit. A pair over a limit is then skipped, not repaired:
+    // the repair only knows the global limit, and one repaired union can't
+    // be shared by budgets with different limits.
+    const strict = blueberryReserves !== undefined
+    const fitsBlueberries = (blueberryCost: number, budgetIndex: number): boolean =>
+      blueberryCost + (blueberryReserves?.[budgetIndex] ?? 0) <= stats.blueberries
     if (!sharedLevelsFixed && shouldGroupSharedLevelSearch(table1, table2)) {
       const groups = groupBySharedLevels(table1, table2)
       if (groups !== undefined) {
-        const best = findCubeLuckOptsForBudgets(table1, groups[0], stat, budgets, true)
+        const best = findCubeLuckOptsForBudgets(table1, groups[0], stat, budgets, true, blueberryReserves)
         for (let index = 1; index < groups.length; index++) {
-          const candidates = findCubeLuckOptsForBudgets(table1, groups[index], stat, budgets, true)
+          const candidates = findCubeLuckOptsForBudgets(table1, groups[index], stat, budgets, true, blueberryReserves)
           for (let budgetIndex = 0; budgetIndex < budgets.length; budgetIndex++) {
             const candidate = candidates[budgetIndex]
+            if (!fitsBlueberries(candidate.blueberryCost, budgetIndex))
+              continue
             const statDiff = candidate.getStat(stat) - best[budgetIndex].getStat(stat)
-            if (statDiff > 0 || (statDiff === 0 && candidate.cost < best[budgetIndex].cost))
+            if (!fitsBlueberries(best[budgetIndex].blueberryCost, budgetIndex)
+              || statDiff > 0 || (statDiff === 0 && candidate.cost < best[budgetIndex].cost))
               best[budgetIndex] = candidate
           }
         }
@@ -4172,10 +4299,10 @@ function findCubeLuckOptsForBudgets(
     }
 
     const useOverlapBreak = sharedLevelsFixed || fixedSharedLevels(table1, table2)
-    if (budgets.length === 1)
+    if (budgets.length === 1 && !strict)
       return [findCubeLuckOptSingleFixed(table1, table2, stat, budgets[0], useOverlapBreak)]
     const evaluator = createCubeLuckEvaluator(table2, stat, useOverlapBreak)
-    const states: CubeLuckFindOptState[] = budgets.map(budget => ({
+    const states: CubeLuckFindOptState[] = budgets.map((budget, budgetIndex) => ({
       budget,
       power: 0,
       j: 0,
@@ -4185,8 +4312,10 @@ function findCubeLuckOptsForBudgets(
         left: table1[0],
         cost: table1[0].cost,
         blueberryCost: table1[0].blueberryCost,
-        value: table1[0].getStat(stat),
+        value: fitsBlueberries(table1[0].blueberryCost, budgetIndex)
+          ? table1[0].getStat(stat) : Number.NEGATIVE_INFINITY,
       },
+      reserve: blueberryReserves?.[budgetIndex] ?? 0,
     }))
 
     if (table1.length > 100 && table2.length > 100) {
@@ -4199,12 +4328,12 @@ function findCubeLuckOptsForBudgets(
             const loadout2 = table2[table2Index]
             if (loadout2.cost > state.budget)
               break
-            const union = evaluator.evaluate(loadout1, table2Index, true)
+            const union = evaluator.evaluate(loadout1, table2Index, !strict)
             if (2 * union.cost - loadout1.cost - loadout2.cost > state.budget) {
               state.upperBounds.push({ budget: loadout1.cost, table2Index })
               break
             }
-            if (union.cost > state.budget || union.blueberryCost > stats.blueberries)
+            if (union.cost > state.budget || union.blueberryCost + state.reserve > stats.blueberries)
               continue
             state.power = Math.max(state.power, union.value)
             sampledJ = next
@@ -4243,27 +4372,35 @@ function findCubeLuckOptsForBudgets(
         }
         if (table2[state.j].cost > state.budget)
           continue
-        let union = unionAt(state.j, true)
+        // In strict mode the unions are never repaired, and one over this
+        // budget's Blueberry limit counts as worthless.
+        const blueberryLimit = stats.blueberries - state.reserve
+        let union = unionAt(state.j, !strict)
         if (union.cost > state.budget)
           continue
+        let unionValue = strict && union.blueberryCost > blueberryLimit
+          ? Number.NEGATIVE_INFINITY : union.value
         for (let next = state.j + 1; next < table2.length; next++) {
           if (table2[next].cost > state.budget)
             break
-          const nextUnion = unionAt(next, state.budget < Number.POSITIVE_INFINITY)
+          const nextUnion = unionAt(next, !strict && state.budget < Number.POSITIVE_INFINITY)
           if (useOverlapBreak && 2 * nextUnion.cost - ref.cost - table2[next].cost > state.budget)
             break
           if (nextUnion.cost > state.budget) {
-            if (useOverlapBreak && nextUnion.blueberryCost <= stats.blueberries)
+            if (useOverlapBreak && nextUnion.blueberryCost <= blueberryLimit)
               break
             continue
           }
-          if (nextUnion.value <= union.value)
+          const nextValue = strict && nextUnion.blueberryCost > blueberryLimit
+            ? Number.NEGATIVE_INFINITY : nextUnion.value
+          if (nextValue <= unionValue)
             continue
           union = nextUnion
+          unionValue = nextValue
           state.j = next
         }
-        const statDiff = union.value - state.opt.value
-        if (statDiff > 0 || (statDiff === 0 && union.cost < state.opt.cost))
+        if (unionValue > state.opt.value
+          || (unionValue === state.opt.value && union.cost < state.opt.cost))
           state.opt = union
       }
       for (const index of rawTouched)
@@ -4588,6 +4725,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.redBarPointsPerSecond = rSpeed;
     stats.acceleratorSecondsPerRedAmbrosia = (fusion > 0 ? 1 : 0) + 0.02 * fusion;
     stats.reactor = input.reactor;
+    stats.purple = input.purple;
     stats.ossifiedTactics2 = ossifiedTactics2;
 
     const optionsState = input.heaterOptions;
@@ -4698,8 +4836,9 @@ export class HSHeaterOptimizer {
         if (maxAmbForOct && (stats.amb < maxAmbForOct.cost
           || stats.blueberries < maxAmbForOct.blueberryCost)) {
             options.calculateAmbOct = false;
-            // The game's importer expects every upgrade key, including zeroes.
-            output.ambOct = [[zeroLevelLoadoutJson, null, 0, 0, "N / A", "", false]];
+            // Needs the full All Ambrosia base: out of reach, there is no
+            // loadout to hand out (an empty one would wipe the player's slot).
+            output.ambOct = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
         }
 
         try {
@@ -4711,7 +4850,15 @@ export class HSHeaterOptimizer {
           tableCache.tableLuckHybrid = generateTable(["ambrosiaQuarkLuck1", "ambrosiaCubeLuck1"], "luck");
           tableCache.tableLuck4      = generateTable(["ambrosiaLuck4"], "mLuck");
 
-          if (options.calculateAmb) {
+          // Purple Honey needs reactor routing and Purple data, and Bar
+          // Dependence turns extractions into bar fills instead of Honey.
+          const calculatePurple = options.calculatePurple && stats.reactor !== undefined
+            && stats.purple !== undefined && !stats.reactor.barDependenceEnabled;
+          if (options.calculatePurple && !calculatePurple)
+            HSLogger.warn('Purple loadouts skipped: they need a fresh game-data export with Purple Reactor data, outside Bar Dependence.');
+          const calculateBarIncomeSeeds = options.calculateAmb || calculatePurple;
+
+          if (calculateBarIncomeSeeds) {
               let tableLuck = generateDependentChainTable(["ambrosiaLuck1", "ambrosiaLuck2"], "luck");
               tableLuck = mergeTables(tableLuck, tableCache.tableLuck1, "luck");
               tableCache.tableLuckAdd = mergeTables(tableLuck, tableCache.tableLuckHybrid, "luck");
@@ -4720,7 +4867,7 @@ export class HSHeaterOptimizer {
           // Keep voucher levels out of the main luck frontier: they are a
           // deliberately last-priority source of luck, but still need to be
           // considered after the best direct luck loadout is found.
-          if (options.calculateAmb)
+          if (calculateBarIncomeSeeds)
               // Keep every distinct voucher count: cube value is not a safe
               // proxy for Luck, Offering, or another build's voucher benefit.
               tableCache.tableVoucher = generateVoucherTable("vouchers");
@@ -4731,10 +4878,10 @@ export class HSHeaterOptimizer {
             luckAdd: tableCache.tableLuckAdd?.length ?? 0,
           })
 
-          const barIncomeHighBudget = options.calculateAmb && stats.reactor
+          const barIncomeHighBudget = calculateBarIncomeSeeds && stats.reactor
             ? findAffordableFullLevelBarIncomeOpts() : null;
           if (barIncomeHighBudget && tableCache.tableVoucher) {
-            for (const stat of ['incomeBlue', 'incomeRed', 'incomeAll'] as const)
+            for (const stat of BAR_INCOME_STATS)
               barIncomeHighBudget[stat] = addLastPriorityVouchers(
                 barIncomeHighBudget[stat], tableCache.tableVoucher, stat,
               );
@@ -4886,7 +5033,7 @@ export class HSHeaterOptimizer {
 
           let loadoutAllAmb: Loadout | undefined;
           let optLoadoutAllAmb: Loadout | undefined;
-          if (barIncomeHighBudget) {
+          if (options.calculateAmb && barIncomeHighBudget) {
               loadoutAllAmb = barIncomeHighBudget.incomeAll;
               const allOutput = loadoutAllAmb.generateOutput('incomeAll', loadoutAllAmb);
               allOutput[6] = true;
@@ -5020,6 +5167,91 @@ export class HSHeaterOptimizer {
               recordCubeExperimentStage("all-amb", allAmbStartedAt, {
                 frontier: tableCache.tableAllAmb.length,
               })
+          }
+
+          if (calculatePurple) { // Purple Honey and Purple Ambrosia calculation
+              const purpleStartedAt = experimentNow()
+              HSLogger.debug(() => '[HeaterDiag] calculatePurple', 'HSHeaterOptimizer');
+              // Purple income depends only on bar speeds, fills and Red
+              // income, all of which the bar-income search modules cover.
+              // Start from the luck optimum (and the All Ambrosia result
+              // when available); improveBarIncomeLoadout also restarts from
+              // an empty loadout, so a low-luck build is still reachable.
+              const luckSeed = barIncomeHighBudget
+                ? undefined : findOpt(tableCache.tableLuckAdd, tableCache.tableLuck4, 'luck')
+              const optimizePurple = (stat: PurpleIncomeStat, extraSeed?: Loadout): Loadout => {
+                  if (barIncomeHighBudget)
+                      return barIncomeHighBudget[stat]
+                  let best: Loadout | undefined
+                  for (const seed of [luckSeed, loadoutAllAmb, extraSeed]) {
+                      if (seed === undefined) continue
+                      const candidate = optimizeBarIncomeWithVouchers(seed, stat)
+                      if (best === undefined || candidate.getStat(stat) > best.getStat(stat)
+                        || (candidate.getStat(stat) === best.getStat(stat) && candidate.cost < best.cost))
+                          best = candidate
+                  }
+                  return best!
+              }
+              const maxPurpleLoadout = fullAllAmbLoadout()
+              const purpleOutput = (loadout: Loadout, stat: PurpleIncomeStat): HeaterResultRow => {
+                  const row = loadout.generateOutput(stat, barIncomeHighBudget ? loadout : maxPurpleLoadout)
+                  if (barIncomeHighBudget) row[6] = true
+                  return row
+              }
+
+              const currentRouting: ReactorRouting = {
+                  blueRoutingPercent: stats.reactor!.blueRoutingPercent,
+                  redRoutingPercent: stats.reactor!.redRoutingPercent,
+              }
+              const purpleRouting: NonNullable<HeaterOptimizationResult['purpleRouting']> = {}
+
+              const loadoutHoney = optimizePurple('incomeHoney')
+              output.purpleHoney = [purpleOutput(loadoutHoney, 'incomeHoney')]
+              purpleRouting.purpleHoney = { ...currentRouting, perHour: loadoutHoney.getStat('incomeHoney') * 3_600 }
+              const loadoutPurpleAmb = optimizePurple('incomePurpleAmb', loadoutHoney)
+              output.purpleAmb = [purpleOutput(loadoutPurpleAmb, 'incomePurpleAmb')]
+              purpleRouting.purpleAmb = { ...currentRouting, perHour: loadoutPurpleAmb.getStat('incomePurpleAmb') * 3_600 }
+
+              // Best routing: alternate between the best routing for the
+              // loadout and the best loadout at that routing. Neither step
+              // can lower the objective, so this never ends below the
+              // current-routing row; stop once the routing settles.
+              const optimizeWithRouting = (seed: Loadout, stat: PurpleIncomeStat) => {
+                  let loadout = seed
+                  let routing = currentRouting
+                  for (let round = 0; round < 4; round++) {
+                      const next = findBestReactorRouting(loadout, stat)
+                      if (next.blueRoutingPercent === routing.blueRoutingPercent
+                          && next.redRoutingPercent === routing.redRoutingPercent)
+                          break
+                      routing = next
+                      const base = loadout
+                      loadout = withReactorRouting(routing, () => optimizeBarIncomeWithVouchers(new Loadout(base), stat))
+                  }
+                  return { loadout, routing }
+              }
+              // The Effect column stays relative to an empty loadout at the
+              // *current* routing, so routing gains show up in it and the
+              // best-routing rows compare directly with the rows above.
+              const emptyLoadout = new Loadout()
+              const routedOutput = (
+                  key: 'purpleHoneyOpt' | 'purpleAmbOpt', seed: Loadout, stat: PurpleIncomeStat, currentPerHour: number,
+              ): HeaterResultRow => {
+                  const { loadout, routing } = optimizeWithRouting(seed, stat)
+                  const { row, value } = withReactorRouting(routing, () => ({
+                      row: loadout.generateOutput(stat, new Loadout(maxPurpleLoadout)),
+                      value: loadout.getStat(stat),
+                  }))
+                  const base = emptyLoadout.getStat(stat)
+                  if (row[0] !== 'Unaffordable')
+                      (row as HeaterResultAffordableRow)[4] = base === 0 ? 'N / A' : formatNumber(value / base)
+                  purpleRouting[key] = { ...routing, perHour: value * 3_600, currentRoutingPerHour: currentPerHour }
+                  return row
+              }
+              output.purpleHoneyOpt = [routedOutput('purpleHoneyOpt', loadoutHoney, 'incomeHoney', purpleRouting.purpleHoney.perHour)]
+              output.purpleAmbOpt = [routedOutput('purpleAmbOpt', loadoutPurpleAmb, 'incomePurpleAmb', purpleRouting.purpleAmb.perHour)]
+              output.purpleRouting = purpleRouting
+              recordCubeExperimentStage("purple", purpleStartedAt)
           }
 
           // --- Shared luck/rune/voucher tables for cube-class calculations ---
@@ -5462,114 +5694,117 @@ export class HSHeaterOptimizer {
                 cubeVoucher: tableCubeV.length,
               })
               hyperfluxSubstageStartedAt = experimentNow()
-              let tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
-              let tableCubeVS = cubeExperimentConfig?.useLegacyHyperfluxMerge
-                ? mergeTables(tableCubeV, tableSing, "cube")
-                : undefined
+              const hyperflux = upgrades.ambrosiaHyperflux
+              // Only the rows that buy Singularity Reduction: builds without
+              // it are searched on their own tables below.
+              const tableSing = generateTable([stats.exalt > 0 ? "ambrosiaSingReduction2" : "ambrosiaSingReduction1"], "cube")
+                .filter(sing => (sing.upgradeLevels.ambrosiaSingReduction1 ?? 0)
+                  + (sing.upgradeLevels.ambrosiaSingReduction2 ?? 0) > 0)
+              const affordable = (loadout: Loadout): boolean =>
+                loadout.cost <= stats.amb && loadout.blueberryCost <= stats.blueberries
+
+              // Hyperflux is added to a row's winner after the search. Only its
+              // Ambrosia used to be taken off the row's budget: its Blueberries
+              // were never counted, so rows H1+ could need more than are owned.
+              // Each request now also reserves them. Singularity Reduction I
+              // already contains its Hyperflux prerequisite: those tables carry
+              // it, reserve nothing, and only pay the Ambrosia above it.
+              const hyperfluxBlueberries = effectiveBlueberryCost("ambrosiaHyperflux")
+              type HyperfluxSource = { table: Loadout[]; carried: number }
+              const plainSource: HyperfluxSource = { table: tableCubeV, carried: 0 }
+              const singSources: HyperfluxSource[] = []
+              if (tableSing.length > 0) {
+                const carried = tableSing[0].upgradeLevels.ambrosiaHyperflux ?? 0
+                if (cubeExperimentConfig?.useLegacyHyperfluxMerge)
+                  singSources.push({ table: mergeTables(tableCubeV, tableSing, "cube"), carried })
+                else
+                  // Each Singularity-reduction level has a fixed cost, berry
+                  // cost and effect. Search its full Cube/Voucher frontier
+                  // separately, then choose the best result per Hyperflux
+                  // row. This retains every candidate from the merged
+                  // frontier without searching one much larger mixed table.
+                  for (const sing of tableSing)
+                    singSources.push({
+                      table: tableCubeV.map(row => Loadout.union(row, sing)).filter(affordable),
+                      carried,
+                    })
+              }
               recordCubeExperimentStage("hyperflux-singularity-table", hyperfluxSubstageStartedAt, {
                 cubeVoucher: tableCubeV.length,
                 singularity: tableSing.length,
-                cubeVoucherSingularity: tableCubeVS?.length ?? 0,
+                cubeVoucherSingularity: singSources.reduce((sum, source) => sum + source.table.length, 0),
               })
               recordCubeExperimentStage("hyperflux-tables", hyperfluxSubstageStartedAt, {
                 cubeVoucher: tableCubeV.length,
-                cubeVoucherSingularity: tableCubeVS?.length ?? 0,
+                cubeVoucherSingularity: singSources.reduce((sum, source) => sum + source.table.length, 0),
               })
 
-              let loadoutsH: (Loadout | undefined)[] = new Array(8).fill(undefined);
-              let thresholds: number[] = new Array(8).fill(0);
-              const directRequests: Array<{ level: number; budget: number }> = []
-              const singRequests: Array<{ level: number; budget: number }> = []
-              for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
-                  let budget = stats.amb - upgrades.ambrosiaHyperflux.cost(h);
-                  if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)) {
-                    if (stats.exalt === 0)
-                      budget += upgrades.ambrosiaHyperflux.cost(upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0)
-                  }
-                  if (budget < 0)
-                      continue;
-                  const request = { level: h, budget }
-                  if (stats.exalt !== 0 || h >= (upgrades.ambrosiaSingReduction1.prerequisites.ambrosiaHyperflux ?? 0))
-                    singRequests.push(request)
-                  else
-                    directRequests.push(request)
-              }
-
-              const resolveRequests = (
-                name: string,
-                requests: Array<{ level: number; budget: number }>,
-                cubeTable: Loadout[],
-              ): void => {
+              const loadoutsH: (Loadout | undefined)[] = new Array(hyperflux.maxLevel + 1).fill(undefined);
+              const thresholds: number[] = new Array(hyperflux.maxLevel + 1).fill(0);
+              // A table serves every row from the Hyperflux level it carries.
+              const searchSource = (source: HyperfluxSource): void => {
+                if (source.table.length === 0)
+                  return
+                const requests: Array<{ level: number; budget: number; reserve: number }> = []
+                for (let h = source.carried; h <= hyperflux.maxLevel; h++) {
+                  const budget = stats.amb - hyperflux.cost(h) + hyperflux.cost(source.carried)
+                  const reserve = h > 0 && source.carried === 0 ? hyperfluxBlueberries : 0
+                  if (budget >= 0 && reserve <= stats.blueberries)
+                    requests.push({ level: h, budget, reserve })
+                }
                 if (requests.length === 0)
                   return
-                hyperfluxSubstageStartedAt = experimentNow()
                 const results = findCubeLuckOptsForBudgets(
-                  cubeTable,
+                  source.table,
                   tableCache.tableLuckCube,
                   "cube",
                   requests.map(request => request.budget),
+                  false,
+                  requests.map(request => request.reserve),
                 )
                 for (let index = 0; index < requests.length; index++) {
-                  const request = requests[index]
-                  loadoutsH[request.level] = results[index]
-                }
-                recordCubeExperimentStage(`hyperflux-${name}-search`, hyperfluxSubstageStartedAt, {
-                  requests: requests.length,
-                  cube: cubeTable.length,
-                  luckCube: tableCache.tableLuckCube.length,
-                })
-              }
-              resolveRequests("direct", directRequests, tableCubeV)
-              if (tableCubeVS !== undefined) {
-                resolveRequests("singularity", singRequests, tableCubeVS)
-              } else if (singRequests.length > 0) {
-                // Each Singularity-reduction level has a fixed cost, berry
-                // cost and effect. Search its full Cube/Voucher frontier
-                // separately, then choose the best result per Hyperflux
-                // budget. This retains every candidate from the merged
-                // frontier without searching one much larger mixed table.
-                hyperfluxSubstageStartedAt = experimentNow()
-                const budgets = singRequests.map(request => request.budget)
-                for (const sing of tableSing) {
-                  const singLevel = sing.upgradeLevels.ambrosiaSingReduction1
-                    ?? sing.upgradeLevels.ambrosiaSingReduction2 ?? 0
-                  if (singLevel === 0)
+                  // The search scores a candidate without the row's Hyperflux
+                  // (its reserved Blueberries still count as unassigned for
+                  // Purple Leo), and tables carry different Hyperflux levels:
+                  // re-score every candidate at the row's level, on full costs.
+                  const level = requests[index].level
+                  const candidate = new Loadout(results[index])
+                  candidate.upgradeLevels.ambrosiaHyperflux = level
+                  if (!affordable(candidate))
                     continue
-                  const tierTable = tableCubeV.map(row => Loadout.union(row, sing))
-                  const candidates = findCubeLuckOptsForBudgets(
-                    tierTable, tableCache.tableLuckCube, "cube", budgets,
-                  )
-                  for (let index = 0; index < singRequests.length; index++) {
-                    const candidate = candidates[index]
-                    const previous = loadoutsH[singRequests[index].level]
-                    if (previous === undefined
-                      || candidate.getStat("cube") > previous.getStat("cube")
-                      || (candidate.getStat("cube") === previous.getStat("cube")
-                        && candidate.cost < previous.cost))
-                      loadoutsH[singRequests[index].level] = candidate
-                  }
-                }
-                const noSingCandidates = findCubeLuckOptsForBudgets(
-                  tableCubeV, tableCache.tableLuckCube, "cube", budgets,
-                )
-                for (let index = 0; index < singRequests.length; index++) {
-                  const candidate = noSingCandidates[index]
-                  const previous = loadoutsH[singRequests[index].level]
+                  const previous = loadoutsH[level]
                   if (previous === undefined
                     || candidate.getStat("cube") > previous.getStat("cube")
                     || (candidate.getStat("cube") === previous.getStat("cube")
                       && candidate.cost < previous.cost))
-                    loadoutsH[singRequests[index].level] = candidate
+                    loadoutsH[level] = candidate
                 }
-                recordCubeExperimentStage("hyperflux-singularity-search", hyperfluxSubstageStartedAt, {
-                  requests: singRequests.length,
-                  tiers: tableSing.length,
-                  cube: tableCubeV.length,
-                  luckCube: tableCache.tableLuckCube.length,
-                })
               }
+              hyperfluxSubstageStartedAt = experimentNow()
+              searchSource(plainSource)
+              recordCubeExperimentStage("hyperflux-direct-search", hyperfluxSubstageStartedAt, {
+                cube: tableCubeV.length,
+                luckCube: tableCache.tableLuckCube.length,
+              })
+              hyperfluxSubstageStartedAt = experimentNow()
+              singSources.forEach(searchSource)
+              recordCubeExperimentStage("hyperflux-singularity-search", hyperfluxSubstageStartedAt, {
+                tiers: singSources.length,
+                cube: tableCubeV.length,
+                luckCube: tableCache.tableLuckCube.length,
+              })
 
-              for (let h = 0; h <= upgrades.ambrosiaHyperflux.maxLevel; h++) {
+              // The P4x4 thresholds compare the rows without Hyperflux's own
+              // Cube effect, at each row's real Blueberry cost.
+              const cubeStatsWithoutHyperflux = loadoutsH.map(loadout => {
+                if (loadout === undefined)
+                  return 0
+                const base = new Loadout(loadout)
+                base.upgradeLevels.ambrosiaHyperflux = 0
+                base.setCachedCosts(loadout.cost, loadout.blueberryCost)
+                return base.getStat("cube")
+              })
+              for (let h = 0; h <= hyperflux.maxLevel; h++) {
                   if (loadoutsH[h] === undefined)
                       continue
                   thresholds[h] = 0;
@@ -5578,17 +5813,14 @@ export class HSHeaterOptimizer {
                           continue
                       if (thresholds[p] > 50)
                           continue;
-                      thresholds[h] = loadoutsH[p]!.getStat("cube") / loadoutsH[h]!.getStat("cube");
+                      thresholds[h] = cubeStatsWithoutHyperflux[p] / cubeStatsWithoutHyperflux[h];
                       thresholds[h] = Math.log2(thresholds[h]) / Math.log2((1 + 0.01 * h) / (1 + 0.01 * p));
                       thresholds[h] = Math.max(0, Math.ceil(thresholds[h]));
                       if (thresholds[h] > Math.min(50, thresholds[p]))
                           break;
                       thresholds[p] = Infinity;
                   }
-                  loadoutsH[h]!.upgradeLevels.ambrosiaHyperflux = h;
               }
-
-              loadoutsH.length = upgrades.ambrosiaHyperflux.maxLevel + 1
 
               let hyperOutput: HeaterResultRowMatrix = [];
               for (let i = 0; i <= upgrades.ambrosiaHyperflux.maxLevel; i++) {
@@ -5621,9 +5853,11 @@ export class HSHeaterOptimizer {
           return output;
 
         } catch (e) {
-            HSLogger.error(`[HeaterDiag] createHeaterOptimizerResultFromInput crashed: ${e instanceof Error ? e.stack ?? e.message : e}`, 'HSHeaterOptimizer');
-            HSLogger.error(`[HeaterDiag] options at crash time: ${JSON.stringify(options)}`, 'HSHeaterOptimizer');
-            HSLogger.error(`[HeaterDiag] input at crash time: ${JSON.stringify(input)}`, 'HSHeaterOptimizer');
+            // Console only: the error is thrown again and its caller logs it, and
+            // the runner writes the input to the mod's log itself.
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] createHeaterOptimizerResultFromInput crashed: ${e instanceof Error ? e.stack ?? e.message : e}`);
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] options at crash time: ${JSON.stringify(options)}`);
+            console.error(`[HSHeaterOptimizer]: [HeaterDiag] input at crash time: ${JSON.stringify(input)}`);
             throw e;
         }
     }

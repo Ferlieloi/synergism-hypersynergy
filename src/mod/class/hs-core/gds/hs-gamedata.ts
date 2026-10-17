@@ -8,7 +8,7 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
-import { HSBooleanSetting, HSSetting } from "../settings/hs-setting";
+import { HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
@@ -28,10 +28,8 @@ import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 export class HSGameData extends HSModule {
     // --- Save Data & State ---
     #saveDataLocalStorageKey = 'Synergysave2';
-    #saveDataCheckInterval?: number;
     #saveData?: GameData;
     #lastB64Save?: string;
-    #wasUsingGDS = false;
     
     isSteam = false;
 
@@ -40,6 +38,7 @@ export class HSGameData extends HSModule {
     #last_mitm_gamedata?: string;
     #mitm_atob_data: string | undefined;
     #mitmProcessScheduled = false;
+    #mitmCaptureCount = 0;
     #btoaHacked = false;
     #atobHacked = false;
     #nativeBtoa?: typeof window.btoa;
@@ -47,9 +46,23 @@ export class HSGameData extends HSModule {
 
     // --- Turbo Mode & Intervals ---
     #gdsEnabled = false;
+    // Reasons the engine is paused (autosing, save import...) while the GDS setting may stay ON.
+    // The engine only runs when no pause is left and the setting is ON.
+    #enginePauses = new Set<string>();
+    #importPauseSequence = 0;
+    // Ends the "Load from file" import still waiting for its save, if any
+    #abortPendingImport?: () => void;
+    // Bumped by disableGDS(): a start begun under an older generation is cancelled
+    #engineGeneration = 0;
+    #engineStart?: { generation: number, promise: Promise<void> };
     #gdsCSS = `
         #savegame {
-            display: none !important;
+            font-size: 0;
+        }
+        #savegame::after {
+            content: "[HS] Perma-saved by GDS";
+            font-size: 12px;
+            visibility: visible;
         }
         #saveinfo {
             display: none !important;
@@ -62,12 +75,9 @@ export class HSGameData extends HSModule {
     #saveinfoElement?: HTMLParagraphElement;
     #gameDataDebugElement?: HTMLDivElement;
     #campaignTokenElement?: HTMLHeadingElement;
-    #singularityButton?: HTMLImageElement;
     #importSaveButton?: HTMLLabelElement;
-    #singularityChallengeButtons?: HTMLDivElement[];
 
     // --- Event Handlers ---
-    #singularityEventHandler?: (e: MouseEvent) => Promise<void>;
     #loadFromFileEventHandler?: (e: MouseEvent) => Promise<void>;
 
     // --- Data APIs & Subscribers ---
@@ -129,8 +139,6 @@ export class HSGameData extends HSModule {
         this.#manualSaveButton = document.querySelector('#savegame') as HTMLButtonElement;
         this.#saveinfoElement = document.querySelector('#saveinfo') as HTMLParagraphElement;
         this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
-        this.#singularityButton = document.querySelector('#singularitybtn') as HTMLImageElement;
-        this.#singularityChallengeButtons = Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
     }
 
     /**
@@ -144,9 +152,12 @@ export class HSGameData extends HSModule {
 
         this.#cacheDomElements();
 
+        // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
+        (window as any).__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
+
         // Set before the fetches: the fetched data only reaches the API through this reference.
         // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
-        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater export).
+        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater, backup).
         // A PseudoCoin purchase or a login after the page load is seen at the next reload.
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         await this.#refreshFetchedData();
@@ -172,6 +183,25 @@ export class HSGameData extends HSModule {
                 HSLogger.log("Save file import interceptor registered", this.context);
             }
         })();
+    }
+
+    /**
+     * The game is about to load a save, whatever the source (patched game only).
+     * A singularity, entering or leaving an Exalt and the game reset load one too, with reset = true:
+     * nothing to do for them, and autosing goes through here at every singularity, so that path stays one test.
+     * The other loads replace the save: autosing can't go on. A cloud save and the Steam cloud are only seen here;
+     * "Load from file" has already stopped autosing at its button's click.
+     */
+    #onSaveImport(reset: boolean): void {
+        if (reset) return;
+
+        const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+        if (!autosing?.isAutosingActive()) return;
+
+        autosing.stopAutosing({ saveReplaced: true });
+        // After the stop: autosing mutes the log while it runs
+        HSLogger.log("Auto-Sing stopped: the game is loading a save", this.context);
+        HSUI.Notify("Auto-Sing stopped: a save was loaded", { position: 'top', notificationType: 'warning' });
     }
 
 
@@ -200,7 +230,8 @@ export class HSGameData extends HSModule {
     #refreshCampaignTokens() {
         this.#campaignTokenElement ||= document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
         const text = this.#campaignTokenElement?.textContent ?? '';
-        const match = text.match(/^You have\s+(\d+)\s+\/\s+(\d+)\s+/);
+        // The text is translated ("You have 3 / 4 tokens!", "У вас 3 / 4 жетонов!"...): match only the numbers
+        const match = text.match(/(\d+)\s*\/\s*(\d+)/);
         if (!match) return;
 
         const tokens = Number.parseInt(match[1], 10);
@@ -216,6 +247,24 @@ export class HSGameData extends HSModule {
         if (this.#gameDataAPI) {
             this.#gameDataAPI._updateCampaignData(this.#campaignData);
         }
+    }
+
+    /**
+     * SYNCHRONOUSLY triggers a game save and returns the raw save JSON captured by the btoa hook.
+     * For callers that cannot await (e.g. right before a click whose ordering matters).
+     * @returns The fresh save JSON, or undefined if no save was captured (e.g. during a time warp)
+     */
+    forceCaptureRawSaveSync(): string | undefined {
+        const saveBtn = this.#manualSaveButton ?? document.getElementById('savegame') as HTMLButtonElement | null;
+        if (!saveBtn) return undefined;
+
+        this.#hackJSNativebtoa();
+
+        // The game's save handler calls btoa synchronously, so a capture happens before dispatchEvent returns
+        const captureCountBefore = this.#mitmCaptureCount;
+        saveBtn.dispatchEvent(this.#saveTriggerEvent);
+
+        return this.#mitmCaptureCount !== captureCountBefore ? this.#mitm_gamedata : undefined;
     }
 
     /**
@@ -402,48 +451,80 @@ export class HSGameData extends HSModule {
                 this.#saveDataUpdated();
             } catch (error) {
                 HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
-                this.#maybeStopSniffOnError();
             }
         }
 
         requestAnimationFrame(this.#processSaveDataWithRAF);
     }
 
-    /**
-     * Stops game data sniffing if error is detected and settings allow it.
-     * @returns void
-     */
-    #maybeStopSniffOnError() {
-        if (!this.#saveDataCheckInterval) return;
-
-        const useGameDataSetting = HSSettings.getSetting('useGameData') as HSBooleanSetting;
-        const stopSniffOnErrorSetting = HSSettings.getSetting('stopSniffOnError') as HSBooleanSetting;
-
-        if (useGameDataSetting && stopSniffOnErrorSetting) {
-            if (stopSniffOnErrorSetting.isEnabled()) {
-                HSLogger.debug(() => `Stopped game data sniffing on error`, this.context);
-                useGameDataSetting.disable();
-            }
-        } else {
-            HSLogger.debug(() => `maybeStopSniffOnError() - Issue with fetching settings: ${useGameDataSetting}, ${stopSniffOnErrorSetting}`, this.context);
-        }
-    }
-
 
     // --- GDS (Game Data Sniffing) Control ---
 
     /**
+     * Whether the GDS engine is currently running, i.e. the cached game data is kept up to date.
+     * Can be false while the GDS setting is ON (engine paused by autosing or a save import).
+     */
+    isGDSRunning(): boolean {
+        return this.#gdsEnabled;
+    }
+
+    /**
+     * Pauses the GDS engine without touching the GDS setting, so the setting can't be left OFF
+     * if the pause is never released (reload, crash...). The engine stays stopped until every
+     * pause is released.
+     * @param reason Identifies the pause, released by resumeGDS() with the same value.
+     */
+    async pauseGDS(reason: string): Promise<void> {
+        this.#enginePauses.add(reason);
+        HSLogger.debug(() => `GDS paused (${reason})`, this.context);
+        if (this.#gdsEnabled) await this.disableGDS();
+    }
+
+    /**
+     * Releases a pause taken by pauseGDS(). Restarts the engine when no pause is left
+     * and the GDS setting is ON.
+     * @param reason The value given to pauseGDS().
+     * @returns true when the engine was restarted.
+     */
+    async resumeGDS(reason: string): Promise<boolean> {
+        if (!this.#enginePauses.delete(reason)) return false;
+        HSLogger.debug(() => `GDS pause released (${reason})`, this.context);
+        if (this.#enginePauses.size > 0) return false;
+        if (!(HSSettings.getSetting('useGameData')?.isEnabled() ?? false)) return false;
+
+        await this.enableGDS();
+        return this.#gdsEnabled;
+    }
+
+    /**
      * Enables Game Data Sniffing (GDS) mode, sets up intervals, hooks DOM elements,
      * and starts save processing. Handles turbo mode and experimental GDS.
+     * Does nothing while the engine is paused (see pauseGDS()).
      * @returns Promise<void>
      */
     async enableGDS() {
         if (this.#gdsEnabled) return;
+        if (this.#enginePauses.size > 0) {
+            HSLogger.debug(() => `GDS start deferred, paused by: ${[...this.#enginePauses].join(', ')}`, this.context);
+            return;
+        }
 
-        HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
+        // Concurrent callers share one start, so the intervals are never installed twice.
+        // A start cancelled by disableGDS() isn't shared: it ends by itself without starting anything.
+        if (this.#engineStart?.generation !== this.#engineGeneration) {
+            const start = {
+                generation: this.#engineGeneration,
+                promise: this.#startEngine(this.#engineGeneration).finally(() => {
+                    if (this.#engineStart === start) this.#engineStart = undefined;
+                })
+            };
+            this.#engineStart = start;
+        }
+        return this.#engineStart.promise;
+    }
 
-        if (this.#saveInterval) clearInterval(this.#saveInterval);
-
+    async #startEngine(generation: number) {
+        // Every wait happens before anything is installed: the start can be cancelled meanwhile
         if (!this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
         }
@@ -452,16 +533,20 @@ export class HSGameData extends HSModule {
             this.#saveinfoElement = await HSElementHooker.HookElement('#saveinfo') as HTMLParagraphElement;
         }
 
+        // Cancelled while waiting by disableGDS() or pauseGDS() (e.g. GDS turned off, autosing started)
+        if (generation !== this.#engineGeneration || this.#enginePauses.size > 0 || this.#gdsEnabled) {
+            HSLogger.debug(() => `GDS start cancelled`, this.context);
+            return;
+        }
+
+        HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
+        if (this.#saveInterval) clearInterval(this.#saveInterval);
+
         this.#saveInterval = setInterval(() => {
             if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
                 this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
             }
         }, HSGlobal.HSGameData.gdsSpeedMs)
-
-        if (!this.#singularityButton)
-            this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
-
-        this.#singularityChallengeButtons ||= Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
 
         HSLogger.info(`GDS = ON`, this.context);
         this.#gdsEnabled = true;
@@ -489,18 +574,18 @@ export class HSGameData extends HSModule {
                 this.#saveDataUpdated();
             } catch (error) {
                 HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
-                this.#maybeStopSniffOnError();
             }
         }
     }
 
     /**
-     * Disables Game Data Sniffing (GDS) mode, clears intervals,
-     * removes injected styles, and detaches event handlers.
+     * Disables Game Data Sniffing (GDS) mode, clears intervals
+     * and removes injected styles.
      * @returns Promise<void>
      */
     async disableGDS() {
-        const self = this;
+        // Cancels a start still waiting in #startEngine()
+        this.#engineGeneration++;
 
         if (this.#saveInterval) {
             clearInterval(this.#saveInterval);
@@ -509,31 +594,8 @@ export class HSGameData extends HSModule {
 
         HSUI.removeInjectedStyle(HSGlobal.HSGameData.gdsCSSId);
 
-        if (!this.#singularityButton)
-            this.#singularityButton = await HSElementHooker.HookElement('#singularitybtn') as HTMLImageElement;
-
-        if (!this.#singularityChallengeButtons)
-            this.#singularityChallengeButtons = await HSElementHooker.HookElements('#singularityChallenges > div.singularityChallenges > div') as HTMLDivElement[];
-
-        if (!this.#importSaveButton)
-            this.#importSaveButton = await HSElementHooker.HookElement('#importFileButton') as HTMLLabelElement;
-
-        if (this.#singularityEventHandler) {
-            this.#singularityButton.removeEventListener('click', this.#singularityEventHandler, { capture: true });
-
-            this.#singularityChallengeButtons.forEach((btn) => {
-                btn.removeEventListener('click', self.#singularityEventHandler!, { capture: true });
-            });
-
-            this.#singularityEventHandler = undefined;
-        }
-
-        // We do NOT remove the loadFromFileEventHandler here.
-        // It must remain active to intercept save loads even when GDS is disabled.
-        // if (this.#loadFromFileEventHandler) {
-        //    this.#importSaveButton.removeEventListener('click', this.#loadFromFileEventHandler, { capture: true });
-        //    this.#loadFromFileEventHandler = undefined;
-        // }
+        // The loadFromFileEventHandler is NOT removed here:
+        // it must remain active to intercept save loads even when GDS is disabled.
 
         HSLogger.info(`GDS turbo = OFF`, this.context);
         this.#gdsEnabled = false;
@@ -617,6 +679,7 @@ export class HSGameData extends HSModule {
             // This is the save payload as the game produces it.
             if (s && s.length > 0 && s[0] === '{') {
                 self.#mitm_gamedata = s;
+                self.#mitmCaptureCount++;
                 if (!self.#mitmProcessScheduled) {
                     self.#mitmProcessScheduled = true;
                     queueMicrotask(() => {
@@ -633,31 +696,48 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Handles save file import, disables GDS and autosing if active,
+     * Handles save file import: pauses the GDS engine and stops autosing if active,
      * watches for offline container visibility, restores active ambrosia loadout,
-     * and restores GDS state after import.
+     * then brings the GDS engine back in line with the GDS setting.
+     * The GDS setting itself is never changed here, so a cancelled or failed import
+     * can't leave GDS turned off.
      * @param e MouseEvent from the import button click.
      * @returns Promise<void>
      */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
         const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
+        const isGdsSettingEnabled = () => gameDataSetting?.isEnabled() ?? false;
+        // Shown as paused when the setting is ON, even if autosing had already paused the engine
+        const announcePause = isGdsSettingEnabled();
+        // Ends the "GDS paused" notification shown below, only when one was shown
+        const notifyResumed = (reason: string) => {
+            if (!announcePause) return;
+            HSUI.Notify(`GDS resumed (${reason})`, { position: 'top', notificationType: 'success' });
+        };
 
-        // Capture state BEFORE we potentially change it
-        // If GDS is disabled, this will be false, so the Flash GDS logic will correctly "Flash" it (Enable -> Clean -> Disable)
-        this.#wasUsingGDS = gameDataSetting ? gameDataSetting.isEnabled() : false;
+        // An older click still waiting (e.g. no event came back from its dialog) is ended here.
+        // Each click gets its own pause, so an older click can't release a newer one.
+        this.#abortPendingImport?.();
+        const pauseReason = `import-${++this.#importPauseSequence}`;
+        // Taken before stopping autosing, so autosing releasing its own pause doesn't restart the engine
+        await this.pauseGDS(pauseReason);
 
-        if (gameDataSetting && gameDataSetting.isEnabled()) {
-            gameDataSetting.disable({ preserveGameDataDependents: true });
+        // Autosing can't go on with another save, whatever the GDS state
+        const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
+        // Also a start in progress or a pending restart, which would run on the imported save
+        const stopsAutosing = autosing?.isAutosingActive() ?? false;
+        if (stopsAutosing) {
+            HSLogger.log("Load from file clicked - Stopping Auto-Sing", this.context);
+            autosing!.stopAutosing();
+        }
 
-            const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
-            if (autosing && autosing.isAutosingEnabled()) {
-                HSLogger.log("Load from file clicked - Stopping Auto-Sing (GDS)", this.context);
-                autosing.stopAutosing();
-                HSUI.Notify("Auto-Sing stopped and GDS disabled for save file import", { position: 'top', notificationType: 'warning' });
-            } else {
-                HSUI.Notify('GDS has been disabled for save file import', { position: 'top', notificationType: 'warning' });
-            }
+        if (stopsAutosing && announcePause) {
+            HSUI.Notify("Auto-Sing stopped and GDS paused for save file import", { position: 'top', notificationType: 'warning' });
+        } else if (stopsAutosing) {
+            HSUI.Notify("Auto-Sing stopped for save file import", { position: 'top', notificationType: 'warning' });
+        } else if (announcePause) {
+            HSUI.Notify('GDS paused for save file import', { position: 'top', notificationType: 'warning' });
         }
 
         // Always run the detection/cleanup logic, regardless of previous GDS state
@@ -665,20 +745,25 @@ export class HSGameData extends HSModule {
         const offlineContainer = await HSElementHooker.HookElement('#offlineContainer') as HTMLDivElement;
         const self = this;
         let watcherStopped = false;
+        // Set below, once the dialog listeners exist
+        let stopWaitingForLoad = () => { };
 
         const watcherId = HSElementHooker.watchElement(offlineContainer, async (viewState: { view: string, state: string }) => {
             if (viewState.state !== 'none' && !watcherStopped) {
                 // IMMEDIATELY mark as stopped and disconnect to prevent multiple fires during lag
                 watcherStopped = true;
-                if (watcherId) {
-                    HSElementHooker.stopWatching(watcherId);
-                }
+                stopWaitingForLoad();
 
                 try {
                     HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
 
                     // Ensure GDS is enabled for UI sync - AWAIT it because it triggers CPU heavy refreshes
-                    await self.enableGDS();
+                    if (await self.resumeGDS(pauseReason)) {
+                        notifyResumed('save loaded');
+                    } else {
+                        // Setting OFF: run the engine briefly for the cleanup, stopped again below
+                        await self.enableGDS();
+                    }
 
                     const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
                     if (ambrosiaModule) {
@@ -700,9 +785,11 @@ export class HSGameData extends HSModule {
                         HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
                     }
 
-                    if (!self.#wasUsingGDS) {
+                    if (!isGdsSettingEnabled()) {
                         // Wait for game state to settle and cleanup to take effect, then restore OFF state
                         setTimeout(() => {
+                            // The player may have turned GDS on in the meantime
+                            if (isGdsSettingEnabled()) return;
                             self.disableGDS();
                             HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
                         }, 2000);
@@ -731,109 +818,57 @@ export class HSGameData extends HSModule {
             }
         });
 
-        // Cleanup watcher if user cancels file dialog (focus returns to window)
-        const focusHandler = () => {
-            setTimeout(() => {
-                if (watcherId && !watcherStopped) {
-                    if (HSElementHooker.stopWatching(watcherId)) {
-                        HSLogger.log("GDS Save Load Watcher timed out (User likely cancelled)", self.context);
-                    }
-                    watcherStopped = true;
-                }
-            }, 5000);
-            window.removeEventListener('focus', focusHandler);
+        // --- No save loaded: dialog cancelled, or the game refused the file (it only shows an Alert) ---
+        const fileInput = document.getElementById('importfile') as HTMLInputElement | null;
+        let noLoadTimer: number | undefined;
+        let fileChosen = false;
+
+        const stopWaiting = () => {
+            watcherStopped = true;
+            window.clearTimeout(noLoadTimer);
+            fileInput?.removeEventListener('cancel', onCancel);
+            fileInput?.removeEventListener('change', onChange);
+            window.removeEventListener('focus', onFocus);
+            if (watcherId) HSElementHooker.stopWatching(watcherId);
+            if (self.#abortPendingImport === abortThisImport) self.#abortPendingImport = undefined;
         };
-        window.addEventListener('focus', focusHandler);
-    }
+        stopWaitingForLoad = stopWaiting;
 
-    // Not used anymore ? Useful to keep ?
-    /**
-     * Ensures that GDS is temporarily disabled during a singularity action
-     * (to avoid data sync issues or conflicts), then re-enabled after a short delay.
-     * It also prevents users from performing a singularity while a challenge is active
-     * or when the button is disabled.
-     * @param e MouseEvent from the singularity button or challenge button click.
-     * @returns Promise<void>
-     */
-    async #singularityHandler(e: MouseEvent) {
-        const target = e.target as HTMLElement;
+        const endWithoutLoad = (reason: string) => {
+            if (watcherStopped) return;
+            stopWaiting();
+            HSLogger.log(`Save file import ended without a save loaded (${reason})`, self.context);
+            void self.resumeGDS(pauseReason).then((resumed) => {
+                if (resumed) notifyResumed('no save loaded');
+            });
+        };
 
-        const challengeTargets = [
-            'noSingularityUpgrades',
-            'oneChallengeCap',
-            'limitedAscensions',
-            'noOcteracts',
-            'noAmbrosiaUpgrades',
-            'limitedTime',
-            'sadisticPrequel',
-            'taxmanLastStand',
-        ];
+        // Fired when the dialog is closed without choosing a file
+        const onCancel = () => endWithoutLoad('dialog cancelled');
+        // A file was chosen: the game reads it and shows the offline popup if it loads it
+        const onChange = () => {
+            fileChosen = true;
+            window.clearTimeout(noLoadTimer);
+            noLoadTimer = window.setTimeout(() => endWithoutLoad('file not loaded by the game'), 10_000);
+        };
+        // Fallback when 'cancel' isn't supported. 'change' may come just after 'focus', hence the long delay
+        const onFocus = () => {
+            window.removeEventListener('focus', onFocus);
+            if (fileChosen) return;
+            noLoadTimer = window.setTimeout(() => endWithoutLoad('dialog closed'), 10_000);
+        };
 
-        if (target) {
-            let canSingularity;
-            const styleString = target.getAttribute('style');
+        fileInput?.addEventListener('cancel', onCancel);
+        fileInput?.addEventListener('change', onChange);
+        window.addEventListener('focus', onFocus);
 
-            // User pressed singularity challenge button
-            if (target.id && challengeTargets.includes(target.id)) {
-                // User pressed active sing challenge button (is trying to quit or complete it)
-                if (styleString?.includes('orchid')) {
-                    canSingularity = true;
-                } else {
-                    // User pressed non-active sing challenge button
-                    // If any challenge is active, user can't sing
-                    const challengeButtons = this.#singularityChallengeButtons ?? Array.from(document.querySelectorAll('#singularityChallenges > div.singularityChallenges > div'));
-                    const anyChallengeActive = challengeButtons
-                        .map((btn) => challengeTargets.includes(btn.id) ? btn.getAttribute('style')?.includes('orchid') : false)
-                        .some((b => b === true));
-
-                    // User can't sing because they're trying to swap sing challenge
-                    if (anyChallengeActive) {
-                        canSingularity = false;
-                    } else {
-                        canSingularity = true;
-                    }
-                }
-            } else {
-                // User pressed the normal sing button
-                // Check if the button is grayed out
-                if (!styleString?.toLowerCase().includes('grayscale')) {
-                    canSingularity = true;
-                } else {
-                    canSingularity = false;
-                }
-            }
-
-            if (canSingularity) {
-                const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
-
-                if (gameDataSetting && gameDataSetting.isEnabled()) {
-                    this.#wasUsingGDS = true;
-                    //this.#afterSingularityCheckerIntervalElapsed = 0;
-                    //clearInterval(this.#afterSingularityCheckerInterval);
-
-                    // From here on these are used
-                    gameDataSetting.disable({ preserveGameDataDependents: true });
-                    /*
-                    await HSUI.Notify('GDS temporarily disabled for Sing and will be re-enabled soon', {
-                        position: 'topRight',
-                        notificationType: 'warning'
-                    });*/
-
-                    await HSUtils.wait(4000);
-
-                    const gdsSetting = HSSettings.getSetting('useGameData') as HSSetting<boolean>;
-
-                    if (gdsSetting && this.#wasUsingGDS && !gdsSetting.isEnabled()) {
-                        HSLogger.debug(() => `Re-enabled GDS`, this.context);
-                        gdsSetting.enable();
-                    } else {
-                        HSLogger.debug(() => `GDS was already enabled (WoW fast!)`, this.context);
-                    }
-
-                    this.#wasUsingGDS = false;
-                }
-            }
-        }
+        // A new click ends this import without resuming: the new click takes its own pause right after
+        const abortThisImport = () => {
+            if (watcherStopped) return;
+            stopWaiting();
+            this.#enginePauses.delete(pauseReason);
+        };
+        this.#abortPendingImport = abortThisImport;
     }
 
     // --- Subscription Management ---

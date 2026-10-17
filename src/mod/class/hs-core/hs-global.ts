@@ -33,7 +33,6 @@ export const HSGlobal: IHSGlobal = class {
     // --- Release check configuration ---
     static Release = {
         githubOwner: 'Ferlieloi',    // Can be removed if you prefer
-        isLatestVersion: true,
         checkIntervalMs: 1800000     // 30min
     }
 
@@ -42,7 +41,6 @@ export const HSGlobal: IHSGlobal = class {
         // Version number bumping should be done in package.json.version
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isModFullyLoaded: false,
-        isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
         // Wiki needs to be cloned !
         get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
@@ -128,7 +126,6 @@ export const HSGlobal: IHSGlobal = class {
             'defaultValue',
             'settingControl',
             'settingAction',
-            'patchConfig',
             'usesGameData',
         ],
         gameDataRequiredTooltip: 'This feature requires Game Data Sniffing to be enabled.',
@@ -137,7 +134,6 @@ export const HSGlobal: IHSGlobal = class {
         // this list may enable GDS themselves when switched on.
         gameDataCheckBlacklist: [
             'useGameData',
-            'stopSniffOnError',
             // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
             // RETIRED: 'ambrosiaIdleSwap',
@@ -244,6 +240,11 @@ export const HSGlobal: IHSGlobal = class {
         ]
     }
 
+    // HSHiddenDialogs
+    static HSHiddenDialogs = {
+        storageKey: 'hidden-dialogs',
+    }
+
     // HSAmbrosia
     static HSAmbrosia = {
         storageKey: 'ambrosia-loadouts',
@@ -272,13 +273,6 @@ export const HSGlobal: IHSGlobal = class {
         purpleBarId: 'hs-purple-progress-bar',
         purpleBarProgressId: 'hs-purple-progress',
         barWrapperId: 'hs-minibars-wrapper',
-    }
-
-    // HSCorruptionQuickbar
-    static HSCorruptionQuickbar = {
-        storageKey: 'corruption-loadouts',
-        quickBarId: 'hs-corruption-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-corruption-quickbar',
     }
 
     // HSQOLAutomationQuickbar

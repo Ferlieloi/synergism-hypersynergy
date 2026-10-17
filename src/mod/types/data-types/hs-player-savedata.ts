@@ -32,9 +32,19 @@ export type JsonDate = string | null
 
 
 export type ArrayStartingWithNull<T> = [null, ...T[]]
-export type AutoResetModes = 'amount' | 'time'
-export type AutoAscensionModes = 'amount' | 'percentage'
-export type AutoAscensionResetModes = 'c10Completions' | 'realAscensionTime'
+// The game stores these modes as numbers (enums in its Toggles.ts); old string saves are converted on load.
+export enum AutoResetModes {
+  amount = 0,
+  time = 1
+}
+export enum AutoAscensionModes {
+  amount = 0,
+  percentage = 1
+}
+export enum AutoAscensionResetModes {
+  c10Completions = 0,
+  realAscensionTime = 1
+}
 export type Tabs =
   | 'Buildings'
   | 'Upgrades'
@@ -851,6 +861,8 @@ export interface SingularityChallengeRewards {
         talismanUnlock: boolean;
         talismanFreeLevel: number;
         talismanRuneEffect: number;
+        purpleHoneyLuck: number;
+        purpleBarSize: number;
         antiquityOOM: number;
         horseShoeOOM: number;
     };
@@ -1877,7 +1889,7 @@ export interface GameData {
 
     ascendShards: string; // Large values stored as string
     autoAscend: boolean;
-    autoAscendMode: string; // e.g., "realAscensionTime"
+    autoAscendMode: AutoAscensionResetModes;
     autoAscendThreshold: number;
     roombaResearchIndex: number;
     ascStatToggles: AscStatToggles;

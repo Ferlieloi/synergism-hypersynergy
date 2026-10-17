@@ -37,6 +37,27 @@ export class HSHeaterUIStyles {
                 padding-right: 6px;
             }
 
+            /* Start Heater, with the cancel button on its right while a heat runs */
+            .hs-heater-start-row {
+                display: flex;
+                gap: 4px;
+            }
+
+            /* Full width, less the cancel button when it is shown */
+            #hs-heater-recalculate-btn {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            #hs-heater-cancel-btn {
+                width: 30px;
+                flex: 0 0 auto;
+            }
+
+            #hs-heater-cancel-btn[hidden] {
+                display: none;
+            }
+
             /* === Shared Table Base Styles === */
             .hs-heater-input-table,
             .hs-heater-results-table,
@@ -242,6 +263,33 @@ export class HSHeaterUIStyles {
                 max-width: 8rem;
             }
 
+            .hs-heater-red-ambrosia-sort-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                width: 100%;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: inherit;
+                font: inherit;
+                cursor: pointer;
+            }
+
+            .hs-heater-red-ambrosia-sort-button:hover {
+                color: #ffffff;
+            }
+
+            .hs-heater-red-ambrosia-sort-button:focus-visible {
+                outline: 2px solid #8eb5ff;
+                outline-offset: 2px;
+            }
+
+            .hs-heater-red-ambrosia-sort-button span {
+                opacity: 0.7;
+            }
+
             .hs-heater-red-ambrosia-cef-log-cell {
                 transition: background-color 0.2s ease;
                 background-color: rgba(75, 180, 90, var(--cef-log-alpha, 0));
@@ -409,8 +457,18 @@ export class HSHeaterUIStyles {
                 color: white;
             }
 
+            /* The browser's focus ring would cover the state border below */
+            .hs-heater-type-select:focus {
+                outline: none;
+            }
+
             .hs-heater-type-select-unavailable {
                 border: 1px solid #810b0b;
+            }
+
+            /* Heated, but the player can't afford it: nothing to import */
+            .hs-heater-type-select-unaffordable {
+                border: 1px solid #c96a00;
             }
 
             .hs-heater-type-select-checkbox {
@@ -514,6 +572,14 @@ export class HSHeaterUIStyles {
                 margin: 0;
             }
 
+            .hs-heater-type-cell-content {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                width: 100%;
+                min-width: 0;
+            }
+
             .hs-heater-results-table td:has(.hs-heater-type-icon),
             .hs-heater-subtable td:has(.hs-heater-type-icon) {
                 display: flex;
@@ -525,9 +591,34 @@ export class HSHeaterUIStyles {
                 display: flex;
                 align-items: center;
                 cursor: pointer;
-                width: 100%;
+                flex: 1 1 auto;
+                min-width: 0;
+                width: auto;
                 height: auto;
                 min-height: 22px;
+            }
+
+            .hs-heater-type-info-trigger {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 16px;
+                width: 16px;
+                height: 16px;
+                padding: 0;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                border-radius: 50%;
+                background: transparent;
+                color: inherit;
+                font-size: 11px;
+                line-height: 1;
+                cursor: help;
+                user-select: none;
+            }
+
+            .hs-heater-type-info-trigger:focus-visible {
+                outline: 2px solid #8eb5ff;
+                outline-offset: 2px;
             }
 
             .hs-heater-type-label {
@@ -547,13 +638,70 @@ export class HSHeaterUIStyles {
 
             /* === Buttons & Interactive === */
             .hs-heater-copy-loadout-btn,
-            .hs-heater-import-loadout-btn {
+            .hs-heater-import-loadout-btn,
+            .hs-heater-apply-routing-btn {
                 height: 20px;
                 min-height: 20px;
                 cursor: pointer;
                 padding: 1px 4px;
                 font-size: 0.85em;
                 border: 2px solid transparent;
+            }
+
+            /* Common section with Purple rows: Effect and Routing are one cell spanning both
+               effect columns, split at a fixed width. As two real columns,
+               the routing's width would set the p4x4 section's columns too. */
+            .hs-heater-results-table .hs-heater-split-cell {
+                position: relative;
+                padding-left: 4px;
+                padding-right: 4px;
+                /* The "Effect" header in bold is about 3.35em wide */
+                --hs-heater-split-effect-width: 3.4em;
+            }
+
+            .hs-heater-split-cell::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: calc(8px + var(--hs-heater-split-effect-width));
+                border-left: 1px solid rgba(255,255,255,0.08);
+            }
+
+            .hs-heater-split {
+                display: grid;
+                grid-template-columns: var(--hs-heater-split-effect-width) 1fr;
+                column-gap: 9px;
+                align-items: center;
+            }
+
+            /* Fixed tracks, so the four routings line up whatever their
+               percentages, with or without the Apply button. The icon tracks
+               are narrower than the icons, whose sides are transparent. */
+            .hs-heater-purple-routing {
+                display: grid;
+                grid-template-columns: 12px 2.8em 12px 2.5em auto;
+                column-gap: 1px;
+                align-items: center;
+                justify-content: start;
+                justify-items: start;
+                font-size: 0.9em;
+                white-space: nowrap;
+                cursor: help;
+            }
+
+            .hs-heater-purple-routing .hs-heater-apply-routing-btn {
+                padding: 0;
+                font-size: 1em;
+                line-height: 1;
+                color: var(--purple-text-color, #FF29FF);
+            }
+
+            .hs-heater-routing-icon {
+                width: 16px;
+                height: 16px;
+                margin: 0 -2px;
+                object-fit: contain;
             }
 
             .hs-heater-json-tooltip-trigger {
@@ -565,6 +713,13 @@ export class HSHeaterUIStyles {
             /* === Status & Colors === */
             .hs-heater-status-maxed { color: #08ba52; }
             .hs-heater-status-unmaxed { color: #962f2f; }
+
+            /* Same red as the ✘. The type's label is in a button when it has
+               an icon, and a button doesn't inherit the row's colour. */
+            .hs-heater-selected-unaffordable-row td,
+            .hs-heater-selected-unaffordable-row .hs-heater-type-icon-button {
+                color: #962f2f;
+            }
 
             .hs-heater-inputs-header { background-color: #472323; }
             .hs-heater-results-header { background-color: #232647; }
@@ -678,6 +833,7 @@ export class HSHeaterUIStyles {
 
             /* === Heater Tooltip Overlays === */
             .hs-heater-loadout-json-tooltip,
+            .hs-heater-type-info-tooltip,
             #hs-heater-sync-settings-tooltip,
             #hs-heater-start-heater-tooltip,
             #hs-heater-topbar-help-tooltip {
@@ -696,6 +852,9 @@ export class HSHeaterUIStyles {
                 overflow-y: auto;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
                 white-space: pre-wrap;
+            }
+            .hs-heater-type-info-tooltip {
+                max-width: 250px;
             }
             #hs-heater-sync-settings-tooltip {
                 white-space: normal !important;

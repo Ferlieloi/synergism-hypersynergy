@@ -7,6 +7,7 @@ import { HSSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
+import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 import { getEffectiveHeaterIconSrc } from "./hs-heater/hs-heater-icon-store";
 import { HSQuickbarIconPickerController } from "./hs-qol-quickbar/hs-qolQuickbarIconPicker";
 
@@ -19,7 +20,7 @@ export interface HeaterSlotIconApplyResult {
 export class HSAmbrosiaQuickbar {
     readonly context = 'HSAmbrosiaQuickbar';
     readonly host: HSAmbrosia;
-    #quickBarClickHandlers: Map<HTMLButtonElement, (e: Event) => Promise<void>> = new Map();
+    #quickBarClickHandlers: Map<HTMLButtonElement, (e: Event) => void> = new Map();
     #quickBarContextMenuHandlers: Map<HTMLButtonElement, (e: Event) => void> = new Map();
     #originalButtonRefs: Map<string, HTMLButtonElement> = new Map();
 
@@ -184,6 +185,9 @@ export class HSAmbrosiaQuickbar {
 
         const cloneLoadoutButtons = clone.querySelectorAll(".blueberryLoadoutSlot") as NodeListOf<HTMLButtonElement>;
         cloneLoadoutButtons.forEach((button) => {
+            // Clones keep only our rainbow/silver highlight (set by syncActiveSlot): a copied game class would
+            // stay frozen on the clone, styled by the game's CSS, while the real marker moves on.
+            button.classList.remove('activeBlueberryLoadout', 'hs-rainbow-border', 'hs-silver-border');
             const buttonId = button.id;
             if (!preserveIds) {
                 button.id = `${HSGlobal.HSAmbrosia.quickBarLoadoutIdPrefix}-${buttonId}`;
@@ -221,7 +225,7 @@ export class HSAmbrosiaQuickbar {
             clone.title = 'Alt+Click to pick an icon | Right-click to clear';
             this.#cacheOriginalButtonRef(buttonId);
 
-            const buttonHandler = async (e: Event) => {
+            const buttonHandler = (e: Event) => {
                 const mouseEvent = e as MouseEvent;
                 // Alt+Click enters icon pick mode
                 if (mouseEvent.altKey) {
@@ -231,7 +235,7 @@ export class HSAmbrosiaQuickbar {
                     return;
                 }
                 // Regular click
-                await this.onQuickBarClick(e, buttonId);
+                this.onQuickBarClick(e, buttonId);
             };
             // Right-click clears the custom icon for the slot
             const contextMenuHandler = (e: Event) => {
@@ -279,7 +283,7 @@ export class HSAmbrosiaQuickbar {
                 const customUrl = this.#getAmbrosiaSlotIcon(originalSlotId);
                 if (customUrl) {
                     slot.classList.add("hs-ambrosia-slot");
-                    slot.style.backgroundImage = `url(${customUrl})`;
+                    slot.style.backgroundImage = HSUtils.cssUrl(customUrl);
                 } else {
                     slot.classList.remove("hs-ambrosia-slot");
                     slot.style.backgroundImage = "";
@@ -294,7 +298,7 @@ export class HSAmbrosiaQuickbar {
                 const customUrl = this.#getAmbrosiaSlotIcon(slot.id);
                 if (customUrl) {
                     slot.classList.add("hs-ambrosia-slot");
-                    slot.style.backgroundImage = `url(${customUrl})`;
+                    slot.style.backgroundImage = HSUtils.cssUrl(customUrl);
                 } else {
                     slot.classList.remove("hs-ambrosia-slot");
                     slot.style.backgroundImage = "";
@@ -343,42 +347,40 @@ export class HSAmbrosiaQuickbar {
         return Array.from(loadoutContainer.querySelectorAll('.blueberryLoadoutSlot')) as HTMLButtonElement[];
     }
 
-    public syncActiveSlot(slotNumber: number): void {
-        const originalButtons = this.getCurrentOriginalLoadoutButtons();
-        originalButtons.forEach((button) => button.classList.remove('hs-rainbow-border'));
-
-        const originalTargetId = `blueberryLoadout${slotNumber}`;
-        const originalTarget = originalButtons.find((button) => button.id === originalTargetId);
-        if (originalTarget) {
-            originalTarget.classList.add('hs-rainbow-border');
-        } else {
-            HSLogger.warn(`No active slot found in original quickbar for slot ${slotNumber}`, this.context);
-        }
-
+    /**
+     * Highlight the active slot on the quickbar clones: rainbow border once the game marks it (confirmed),
+     * silver while it's only guessed from the save, as the game marks no slot after a page load.
+     * The game's own loadout bar already highlights it with its activeBlueberryLoadout class, so it is left untouched.
+     */
+    public syncActiveSlot(slotNumber: number, confirmed: boolean): void {
         const quickBar = this.getQuickbarElement();
-        if (!quickBar) { HSLogger.debug(() => 'Ambrosia quickbar not injected yet; original bar was synced only', this.context); return; }
+        if (!quickBar) { HSLogger.debug(() => 'Ambrosia quickbar not injected yet; nothing to sync', this.context); return; }
 
         const clonedSlots = quickBar.querySelectorAll('.blueberryLoadoutSlot');
-        clonedSlots.forEach((slot) => slot.classList.remove('hs-rainbow-border'));
+        clonedSlots.forEach((slot) => slot.classList.remove('hs-rainbow-border', 'hs-silver-border'));
 
         const clonedTargetId = `hs-ambrosia-quickbar-blueberryLoadout${slotNumber}`;
         const clonedTarget = quickBar.querySelector(`#${clonedTargetId}`);
         if (clonedTarget) {
-            clonedTarget.classList.add('hs-rainbow-border');
+            clonedTarget.classList.add(confirmed ? 'hs-rainbow-border' : 'hs-silver-border');
         } else {
             HSLogger.warn(`No active slot found in ambrosia quickbar for slot ${slotNumber}`, this.context);
         }
     }
 
-    async onQuickBarClick(e: Event, buttonId: string) {
+    /**
+     * Loads the slot, synchronously: when Auto-Loadout calls this from its listener on a code button,
+     * the loadout is in place before the game's own listener uses the code. Its success Alert is dismissed.
+     */
+    onQuickBarClick(e: Event, buttonId: string): void {
         const realButton = this.#originalButtonRefs.get(buttonId) ?? document.getElementById(buttonId) as HTMLButtonElement | null;
         if (!realButton) { HSLogger.warn(`Could not find real button for ${buttonId}`, this.context); return; }
 
         const slotEnum = HSAmbrosiaHelper.getSlotEnumBySlotId(buttonId);
         if (!slotEnum) { HSLogger.warn(`Could not resolve Ambrosia slot enum for ${buttonId}`, this.context); return; }
 
-        HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
-        await HSUtils.hiddenAction(async () => { realButton.click(); });
+        HSAmbrosiaHelper.ensureLoadoutMode('loadTree');
+        HSGameDialogs.act('ambrosiaQuickbar', { alert: 'dismiss' }, () => realButton.click());
     }
 
     async showQuickBar() {

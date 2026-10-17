@@ -1,6 +1,7 @@
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUtils } from "../hs-utils/hs-utils";
+import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 
 export interface HSCorruptionLevels {
     viscosity: number;
@@ -36,6 +37,8 @@ export type HSCorruptionUserLoadouts = HSCorruptionUserLoadout[];
 
 export class HSCorruption {
     static readonly #context = 'HSCorruption';
+    static readonly #DOM_IMPORT_TIMEOUT_MS = 2000;
+    static readonly #DOM_IMPORT_MAX_CLICKS = 5;
 
     static readonly #CORRUPTION_NAMES: (keyof HSCorruptionLevels)[] = [
         "viscosity",
@@ -66,8 +69,6 @@ export class HSCorruption {
     static #nextCorruptionLevels: HSCorruptionLevels | null = null;
     static #userLoadouts: HSCorruptionUserLoadouts = [];
     
-    static #corruptionPromptInput: HTMLInputElement | null = null;
-    static #corruptionPromptOkBtn: HTMLButtonElement | null = null;
     static #importBtn: HTMLButtonElement | null = null;
 
 
@@ -123,19 +124,29 @@ export class HSCorruption {
             return success;
         }
 
-        // DOM Fallback
+        // DOM Fallback, as HSAutosingCorruption.setCorruptions(): clicks import only while no dialog is open, a few
+        // times at most (with a dialog open, each click would queue one more import Prompt), and gives up after a while.
+        // Its session answers the Prompt with the loadout, and dismisses the Alert of a rejected import.
         await HSCorruption.cacheCorruptionElements();
-        if (!HSCorruption.#importBtn || !HSCorruption.#corruptionPromptInput || !HSCorruption.#corruptionPromptOkBtn) { HSLogger.warn('importCorruptionLoadout: corruption import DOM elements unavailable', HSCorruption.#context); return false; }
-        
+        const importBtn = HSCorruption.#importBtn;
+        if (!importBtn) { HSLogger.warn('importCorruptionLoadout: corruption import DOM elements unavailable', HSCorruption.#context); return false; }
+
+        const deadline = performance.now() + HSCorruption.#DOM_IMPORT_TIMEOUT_MS;
+        let importClicks = 0;
         while (true) {
-            HSCorruption.#importBtn.click();
-            HSCorruption.#corruptionPromptInput.value = jsonString;
-            HSCorruption.#corruptionPromptOkBtn.click();
+            if (importClicks < HSCorruption.#DOM_IMPORT_MAX_CLICKS && HSGameDialogs.isQueueIdle()) {
+                importClicks++;
+                HSGameDialogs.act('corruptionImport', { prompt: { ok: jsonString }, alert: 'dismiss' }, () => importBtn.click());
+            }
             await HSUtils.yield();
             await HSCorruption.refreshLoadedCorruptions();
             const next = HSCorruption.#nextCorruptionLevels ?? HSCorruption.ZERO_CORRUPTIONS;
             if (HSCorruption.matches(next, levels)) {
                 return true;
+            }
+            if (performance.now() >= deadline) {
+                HSLogger.warn(`Failed to import corruptions through the import prompt within ${HSCorruption.#DOM_IMPORT_TIMEOUT_MS} ms: ${jsonString}`, HSCorruption.#context);
+                return false;
             }
         }
     }
@@ -209,8 +220,6 @@ export class HSCorruption {
     static async #cacheImportCorruptionElements(): Promise<void> {
         await HSElementHooker.HookElement('#corruptionLoadoutTable');
         HSCorruption.#importBtn = document.querySelector<HTMLButtonElement>('#corruptionLoadoutTable button.corrImport');
-        HSCorruption.#corruptionPromptInput = await HSElementHooker.HookElement('#prompt_text') as HTMLInputElement;
-        HSCorruption.#corruptionPromptOkBtn = await HSElementHooker.HookElement('#ok_prompt') as HTMLButtonElement;
     }
 
     /** Cache corruption table DOM elements for current/next corruption values. */
@@ -275,8 +284,6 @@ export class HSCorruption {
         HSCorruption.#currentCorruptionLevels = null;
         HSCorruption.#nextCorruptionLevels = null;
         HSCorruption.#userLoadouts = [];
-        HSCorruption.#corruptionPromptInput = null;
-        HSCorruption.#corruptionPromptOkBtn = null;
         HSCorruption.#importBtn = null;
     }
 

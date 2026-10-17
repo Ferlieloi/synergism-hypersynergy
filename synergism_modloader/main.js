@@ -6,14 +6,21 @@ const diagnostics = createStartupDiagnostics({ app, dialog, shell })
 diagnostics.log(`Starting loader ${app.getVersion()}; Electron ${process.versions.electron}; ${process.platform} ${process.arch}`)
 const { autoUpdater } = require('electron-updater')
 
-const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels } = require('./lib/config')
+const { loadConfig, saveConfig, DEFAULTS, resolveChannel, listChannels, setLocalChannelEnabled } = require('./lib/config')
 const { detectSteamPathWindows, findGameDir, detectSevenZip, getBundledSevenZipPath } = require('./lib/steamLocator')
-const { patchGame, buildModUrl, buildPatcherUrl } = require('./lib/patchGame')
+const { patchGame, buildModUrl, buildPatcherUrl, PATCH_FORMAT } = require('./lib/patchGame')
+const { checkPatcherChanged } = require('./lib/patcherSource')
+const { injectorHash } = require('./lib/injectorTemplate')
 const { createLauncherUpdater } = require('./lib/launcherUpdater')
 const { listModRefs } = require('./lib/modRefs')
 const { rememberedRefs } = require('./lib/modRefCache')
 const { launchGame } = require('./lib/gameLauncher')
 const { cleanupOldWorkspaces, ensureNoRunningWorkGames } = require('./lib/workspaceManager')
+
+// The hidden "local" channel: only when running from source (npm start) or started with HS_LOADER_DEV=1.
+setLocalChannelEnabled(!app.isPackaged || process.env.HS_LOADER_DEV === '1')
+
+const PATCHER_CHECK_TIMEOUT_MS = 5000
 
 let mainWindow
 let patchInProgress = false
@@ -158,6 +165,17 @@ ipcMain.handle('channels:list', () => listChannels())
 
 ipcMain.handle('mod:get-refs', async (_e, channelId) => {
     const ch = resolveChannel(channelId)
+    if (ch.local) {
+        return {
+            refs: [{ name: ch.defaultRef, type: 'dev server', date: null }],
+            branchCount: 0,
+            tagCount: 0,
+            defaultRef: ch.defaultRef,
+            datesIncomplete: false,
+            message: `Local build from http://${ch.repo} — keep start-dev-server.bat running while patching and playing.`,
+            error: null
+        }
+    }
     try {
         const cfg = loadConfig(app)
         const signal = AbortSignal.timeout(8000)
@@ -201,7 +219,7 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             sendLog('Finishing old folder cleanup before patching...')
             await legacyCleanupPromise
         }
-        const { launchExePath, sourceStat } = await patchGame({
+        const { launchExePath, sourceStat, patcherHash, injectorHash: patchedInjectorHash, patchFormat, patchWarnings } = await patchGame({
             gameDir,
             exeName: DEFAULTS.exeName,
             sevenZipPath,
@@ -219,11 +237,14 @@ ipcMain.handle('patch:run', async (_e, { gameDir, sevenZipPath, channel, modRef 
             modRef,
             lastPatchedExe: launchExePath,
             lastPatchedSourceStat: sourceStat,
+            lastPatchedPatcherHash: patcherHash,
+            lastPatchedInjectorHash: patchedInjectorHash,
+            lastPatchedFormat: patchFormat,
             lastPatchedChannel: channel,
             lastPatchedModRef: modRef
         })
 
-        return { ok: true, launchExePath }
+        return { ok: true, launchExePath, patchWarnings }
     } catch (e) {
         sendLog(`ERROR: ${e.message}`)
         return { ok: false, error: e.message }
@@ -236,9 +257,36 @@ ipcMain.handle('game:check-update-needed', (_e, { gameDir, exeName }) => {
     const cfg = loadConfig(app)
     const exePath = path.join(gameDir, exeName)
     if (!cfg.lastPatchedSourceStat || !fs.existsSync(exePath)) return { needsRepatch: true }
+    // The patched copy is gone: the game was reinstalled, or moved to another Steam library.
+    if (!cfg.lastPatchedExe || !fs.existsSync(cfg.lastPatchedExe)) return { needsRepatch: true, reason: 'missing' }
     const stat = fs.statSync(exePath)
     const changed = stat.size !== cfg.lastPatchedSourceStat.size || stat.mtimeMs !== cfg.lastPatchedSourceStat.mtimeMs
-    return { needsRepatch: changed }
+    if (changed) return { needsRepatch: true }
+    // The copy was built by a loader that patched another way (no number: a loader up to 0.2.9).
+    if (cfg.lastPatchedFormat !== PATCH_FORMAT) return { needsRepatch: true, reason: 'format' }
+    return { needsRepatch: false }
+})
+
+// The patcher is only applied by a patch: "Launch only", "Launch last played" and "Quick switch" reuse
+// the game as last patched. So a build whose patcher isn't the one the game was patched with needs a
+// patch, like a game update does. A check that can't be done never asks for one.
+// The same goes for the injector, which comes from the loader itself: it is compared without a download.
+ipcMain.handle('patcher:check-changed', async (_e, { channel, modRef }) => {
+    if (patchInProgress) return { needsRepatch: false, reason: 'busy' }
+    const cfg = loadConfig(app)
+    if (!cfg.lastPatchedExe) return { needsRepatch: false, reason: 'not-patched' }
+    if (cfg.lastPatchedPatcherHash && cfg.lastPatchedInjectorHash !== injectorHash()) {
+        return { needsRepatch: true, reason: 'injector' }
+    }
+    try {
+        return await checkPatcherChanged({
+            lastHash: cfg.lastPatchedPatcherHash,
+            patcherUrl: buildPatcherUrl(channel, modRef),
+            timeoutMs: PATCHER_CHECK_TIMEOUT_MS
+        })
+    } catch (e) {
+        return { needsRepatch: false, reason: 'unknown', error: e.message }
+    }
 })
 
 ipcMain.handle('mod:quick-switch', (_e, { modUrl, channel, modRef }) => {

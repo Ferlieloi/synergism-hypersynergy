@@ -116,14 +116,8 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         this.#slotsWrapper.id = 'hs-corruption-slots-wrapper';
         this.#slotsWrapper.className = 'hs-quickbar-slots-wrapper';
 
-        const infobox = document.createElement('div');
-        infobox.id = 'hs-corruption-infobox';
-        infobox.textContent = '?';
-        infobox.title = 'Alt+Click a slot to pick an icon for it.\nRight-click to clear the assigned icon.';
-
         this.container.appendChild(this.#corruptionSummaryWrapper);
         this.container.appendChild(this.#slotsWrapper);
-        this.container.appendChild(infobox);
     }
 
     /** Create the immutable corruption cleanse button. */
@@ -791,7 +785,7 @@ export class HSQOLCorruptionQuickbar extends HSQOLQuickbarBase {
         if (!iconEl) return;
 
         if (iconUrl) {
-            iconEl.style.backgroundImage = `url(${iconUrl})`;
+            iconEl.style.backgroundImage = HSUtils.cssUrl(iconUrl);
             iconEl.style.display = 'block';
             slot.classList.add('hs-corruption-slot-icon');
         } else {

@@ -107,6 +107,7 @@
    width: 25px;
    border-radius: 8px;
    margin-left: 2px;
+   align-self: flex-end;
 }
 
 #events-quickbar-happy-hour-span {
@@ -184,29 +185,6 @@
    height: 12px;
    display: grid;
    place-items: center;
-}
-
-#hs-corruption-infobox {
-   position: absolute;
-   top: 0px;
-   right: 0px;
-   width: 11px;
-   height: 11px;
-   min-height: 11px;
-   line-height: 10px;
-   font-size: 10px;
-   font-weight: bold;
-   text-align: center;
-   border: 1px solid #999;
-   color: #cecece;
-   background: rgba(0, 0, 0, 0.45);
-   cursor: help;
-   z-index: 20;
-   box-shadow: 0 0 4px rgba(0,0,0,0.5);
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   user-select: none;
 }
 
 .hs-corruption-slot-icon {

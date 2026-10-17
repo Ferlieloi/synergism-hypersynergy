@@ -789,6 +789,11 @@ export class HSAutosingModal {
         this.#currentPhaseName = '';
     }
 
+    /** Restarts the timer of the singularity in progress, without recording anything. */
+    public restartSingularityTimer(): void {
+        this.#startNewSingTimer();
+    }
+
     /** Stop the live timer interval. */
     #clearSingularityInterval(): void {
         if (this.#liveTimerInterval !== null) {

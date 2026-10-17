@@ -1,0 +1,233 @@
+/* ===== HEPTERACT DISTRIBUTOR (Hepteract Forge) ===== */
+
+/* The open button sits on the forge's welcome line, without moving the game's own elements */
+#cubeTab7 {
+    position: relative;
+}
+
+/* No taller than the welcome line (the game gives buttons a min-height of 30px) */
+#hs-hept-distributor-open {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-height: 0;
+    height: 22px;
+    padding: 0 10px;
+    border: 2px solid pink;
+    cursor: pointer;
+}
+
+/* Room for the button: a long translated welcome line wraps instead of running under it */
+#hs-hept-distributor-open ~ #hepteractWelcome {
+    padding: 0 100px;
+}
+
+/* Open: the panel takes the place of the forge's three intro lines */
+#cubeTab7.hs-hept-distributor-opened > #hepteractWelcome,
+#cubeTab7.hs-hept-distributor-opened > #hepteractExpository1,
+#cubeTab7.hs-hept-distributor-opened > #hepteractExpository2,
+#cubeTab7.hs-hept-distributor-opened > #hs-hept-distributor-open,
+#cubeTab7:not(.hs-hept-distributor-opened) > #hs-hept-distributor {
+    display: none;
+}
+
+#hs-hept-distributor {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 34px;
+    /* The game's own box border, which follows its theme */
+    border: 3px solid;
+    border-color: var(--boxmain-bordercolor);
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 0.85em;
+}
+
+#hs-hept-distributor-minimize {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-height: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.hs-hept-distributor-title {
+    font-size: 1.15em;
+    font-weight: bold;
+}
+
+/* The "?" after the title: the feature in a few lines, shown on hover */
+.hs-hept-distributor-help {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    margin-left: 8px;
+    border: 1px solid #aaa;
+    border-radius: 50%;
+    color: #ccc;
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 16px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* Placed against the panel, not the "?", so it is as wide as the panel's content.
+   It lets the mouse through: it closes as soon as the "?" is left, and never keeps the fields under it out of reach */
+.hs-hept-distributor-help-box {
+    display: none;
+    position: absolute;
+    top: 34px;
+    left: 34px;
+    right: 34px;
+    z-index: 10;
+    margin: 0;
+    padding: 8px 12px 8px 28px;
+    border: 1px solid #888;
+    border-radius: 5px;
+    background-color: #101828;
+    color: white;
+    font-size: 13px;
+    line-height: 1.4;
+    list-style: disc;
+    text-align: left;
+    pointer-events: none;
+}
+
+.hs-hept-distributor-help-box li {
+    margin: 2px 0;
+}
+
+.hs-hept-distributor-help:hover .hs-hept-distributor-help-box {
+    display: block;
+}
+
+.hs-hept-distributor-cells {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 6px 12px;
+}
+
+.hs-hept-distributor-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.hs-hept-distributor-orbs {
+    margin-right: 12px;
+    padding-right: 18px;
+    border-right: 1px solid #666;
+}
+
+/* The game's icons are 56px sprites: shown at 40px */
+.hs-hept-distributor-icon {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+}
+
+.hs-hept-distributor-icon > img {
+    width: 56px;
+    height: 56px;
+    transform: scale(0.7143);
+    transform-origin: top left;
+}
+
+/* The game gives every input a left padding, which shifts centred text to the right */
+#hs-hept-distributor input[type="number"] {
+    width: 72px;
+    padding: 1px 0;
+    border: 1px solid #666;
+    text-align: center;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+#hs-hept-distributor input[type="number"]::-webkit-outer-spin-button,
+#hs-hept-distributor input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.hs-hept-distributor-orbs-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#hs-hept-distributor .hs-hept-distributor-orbs-field input[type="number"] {
+    width: 44px;
+}
+
+.hs-hept-distributor-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.hs-hept-distributor-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+/* A sub-option belongs to the option above it, and is only offered while that one is ticked */
+.hs-hept-distributor-suboption {
+    margin-left: 22px;
+}
+
+.hs-hept-distributor-option:has(input:not(:checked)) + .hs-hept-distributor-suboption {
+    display: none;
+}
+
+.hs-hept-distributor-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.hs-hept-distributor-actions button {
+    padding: 5px 15px;
+    cursor: pointer;
+}
+
+#hs-hept-distributor button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.hs-hept-distributor-warning {
+    font-size: 12px;
+    color: orange;
+    text-align: center;
+}
+
+/* One line per topic; can be selected and copied (the game blocks selection by default) */
+.hs-hept-distributor-status {
+    min-height: 16px;
+    font-size: 12px;
+    color: #aaa;
+    text-align: center;
+    white-space: pre-line;
+    user-select: text;
+}

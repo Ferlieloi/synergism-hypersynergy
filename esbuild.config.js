@@ -20,6 +20,9 @@ const baseOptions = {
     }
 };
 
+// Present in the dev tools' code (ids, CSS, storage), which must never reach the release bundle
+const DEV_ONLY_MARKER = 'hs-dev-tools';
+
 // Copy loader files to build directory for dev server
 function copyLoaderFiles() {
     const srcDir = path.join(__dirname, 'src', 'loader');
@@ -77,6 +80,8 @@ async function build(env) {
             define: {
                 ...baseOptions.define,
                 HS_HEATER_WORKER_SOURCE: JSON.stringify(heaterWorkerSource),
+                // False in the release build only: code under `if (HS_DEV_BUILD)` (the dev tools) is left out of it
+                HS_DEV_BUILD: JSON.stringify(env !== 'release'),
             },
         };
 
@@ -95,8 +100,17 @@ async function build(env) {
             // For watch mode
             const ctx = await esbuild.context(options);
             await ctx.watch();
+        } else if (env === 'release') {
+            // Built in memory first: the bundle players get is only written once it's checked to hold no dev-only code
+            const result = await esbuild.build({ ...options, write: false });
+            const output = result.outputFiles[0];
+            if (output.text.includes(DEV_ONLY_MARKER)) {
+                console.error(`Release build refused: dev-only code ("${DEV_ONLY_MARKER}") ended up in the bundle. ${path.relative(__dirname, output.path)} was not written.`);
+                process.exit(1);
+            }
+            fs.writeFileSync(output.path, output.contents);
+            console.log(`Build completed for ${env} environment`);
         } else {
-            // For build and release
             await esbuild.build(options);
             console.log(`Build completed for ${env} environment`);
         }

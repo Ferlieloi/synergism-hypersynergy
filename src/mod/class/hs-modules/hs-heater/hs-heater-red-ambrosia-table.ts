@@ -461,7 +461,15 @@ function formatRedAmbrosiaUpgradeCategoryValue(value: RedAmbrosiaUpgradeCategory
     return value.toFixed(9);
 }
 
-type CefLogKey = 'ambrosiaCefLog' | 'redAmbrosiaCefLog' | 'octeractCefLog';
+export type RedAmbrosiaUpgradeSortKey = 'ambrosiaCefLog' | 'redAmbrosiaCefLog' | 'octeractCefLog';
+export type RedAmbrosiaUpgradeSortDirection = 'ascending' | 'descending';
+
+export interface RedAmbrosiaUpgradeSortState {
+    key: RedAmbrosiaUpgradeSortKey | null;
+    direction: RedAmbrosiaUpgradeSortDirection | null;
+}
+
+type CefLogKey = RedAmbrosiaUpgradeSortKey;
 
 type CefLogRange = {
     min: number;
@@ -497,6 +505,30 @@ function buildCefLogCellHtml(value: RedAmbrosiaUpgradeCefLogValue, range: CefLog
 function formatRedAmbrosiaUpgradeCefLogValue(value: RedAmbrosiaUpgradeCefLogValue): string {
     if (typeof value !== 'number') { return value; }
     return value.toFixed(9);
+}
+
+function sortRedAmbrosiaUpgradeRows(
+    rows: RedAmbrosiaUpgradeTableRow[],
+    sortState: RedAmbrosiaUpgradeSortState,
+): RedAmbrosiaUpgradeTableRow[] {
+    if (!sortState.key || !sortState.direction) return rows;
+
+    const directionMultiplier = sortState.direction === 'ascending' ? 1 : -1;
+    return rows
+        .map((row, originalIndex) => ({ row, originalIndex }))
+        .sort((left, right) => {
+            const leftValue = left.row[sortState.key!];
+            const rightValue = right.row[sortState.key!];
+            const leftIsNumber = typeof leftValue === 'number' && Number.isFinite(leftValue);
+            const rightIsNumber = typeof rightValue === 'number' && Number.isFinite(rightValue);
+
+            if (leftIsNumber !== rightIsNumber) return leftIsNumber ? -1 : 1;
+            if (leftIsNumber && rightIsNumber && leftValue !== rightValue) {
+                return (leftValue - rightValue) * directionMultiplier;
+            }
+            return left.originalIndex - right.originalIndex;
+        })
+        .map(({ row }) => row);
 }
 
 export function computeRedAmbrosiaUpgradeRows(gameDataApi?: HSGameDataAPI): RedAmbrosiaUpgradeTableRow[] {
@@ -594,16 +626,35 @@ function renderRedAmbrosiaUpgradeRowHtml(
     `;
 }
 
-function renderRedAmbrosiaUpgradeTableHeaderHtml(showRawColumns = false, compactView = false): string {
+function renderCefLogSortHeaderHtml(
+    label: string,
+    sortKey: CefLogKey,
+    sortState: RedAmbrosiaUpgradeSortState,
+): string {
+    const isActive = sortState.key === sortKey && sortState.direction !== null;
+    const ariaSort = isActive ? ` aria-sort="${sortState.direction}"` : '';
+    const indicator = isActive
+        ? (sortState.direction === 'ascending' ? '&#8593;' : '&#8595;')
+        : '&#8597;';
+    const directionLabel = isActive ? `, currently ${sortState.direction}` : '';
+
+    return `<th${ariaSort}><button type="button" class="hs-heater-red-ambrosia-sort-button" data-cef-sort-key="${sortKey}" aria-label="Sort by ${label} CEF-LOG${directionLabel}">${label}<span aria-hidden="true">${indicator}</span></button></th>`;
+}
+
+function renderRedAmbrosiaUpgradeTableHeaderHtml(
+    showRawColumns = false,
+    compactView = false,
+    sortState: RedAmbrosiaUpgradeSortState = { key: null, direction: null },
+): string {
     if (compactView) {
         return `
             <thead>
                 <tr>
                     <th></th>
                     <th>Upgrade</th>
-                    <th>Amb</th>
-                    <th>Red Amb</th>
-                    <th>Oct</th>
+                    ${renderCefLogSortHeaderHtml('Amb', 'ambrosiaCefLog', sortState)}
+                    ${renderCefLogSortHeaderHtml('Red Amb', 'redAmbrosiaCefLog', sortState)}
+                    ${renderCefLogSortHeaderHtml('Oct', 'octeractCefLog', sortState)}
                 </tr>
             </thead>
         `;
@@ -627,13 +678,13 @@ function renderRedAmbrosiaUpgradeTableHeaderHtml(showRawColumns = false, compact
             <tr>
                 ${showRawColumns ? '<th>Raw</th>' : ''}
                 <th>Effect</th>
-                <th>CEF-LOG</th>
+                ${renderCefLogSortHeaderHtml('Ambrosia', 'ambrosiaCefLog', sortState)}
                 ${showRawColumns ? '<th>Raw</th>' : ''}
                 <th>Effect</th>
-                <th>CEF-LOG</th>
+                ${renderCefLogSortHeaderHtml('Red Ambrosia', 'redAmbrosiaCefLog', sortState)}
                 ${showRawColumns ? '<th>Raw</th>' : ''}
                 <th>Effect</th>
-                <th>CEF-LOG</th>
+                ${renderCefLogSortHeaderHtml('Octeracts', 'octeractCefLog', sortState)}
             </tr>
         </thead>
     `;
@@ -675,24 +726,30 @@ function renderRedAmbrosiaUpgradeContextSummaryHtml(context: ReturnType<typeof g
     `;
 }
 
-function renderRedAmbrosiaUpgradeTableHtml(rows: RedAmbrosiaUpgradeTableRow[], context: ReturnType<typeof getCurrentRedAmbrosiaOptimizerContext>, compactView = false): string {
+function renderRedAmbrosiaUpgradeTableHtml(
+    rows: RedAmbrosiaUpgradeTableRow[],
+    context: ReturnType<typeof getCurrentRedAmbrosiaOptimizerContext>,
+    compactView = false,
+    sortState: RedAmbrosiaUpgradeSortState = { key: null, direction: null },
+): string {
     if (!rows.length) {
         return `<div class="hs-heater-red-ambrosia-empty">No red ambrosia upgrade rows available.</div>`;
     }
 
+    const sortedRows = sortRedAmbrosiaUpgradeRows(rows, sortState);
     const showRawColumns = SHOW_RED_AMBROSIA_RAW_COLUMNS;
     const cefLogRanges: Record<CefLogKey, CefLogRange | null> = {
-        ambrosiaCefLog: computeCefLogRange(rows, 'ambrosiaCefLog'),
-        redAmbrosiaCefLog: computeCefLogRange(rows, 'redAmbrosiaCefLog'),
-        octeractCefLog: computeCefLogRange(rows, 'octeractCefLog'),
+        ambrosiaCefLog: computeCefLogRange(sortedRows, 'ambrosiaCefLog'),
+        redAmbrosiaCefLog: computeCefLogRange(sortedRows, 'redAmbrosiaCefLog'),
+        octeractCefLog: computeCefLogRange(sortedRows, 'octeractCefLog'),
     };
-    const rowsHtml = rows.map(row => renderRedAmbrosiaUpgradeRowHtml(row, cefLogRanges, showRawColumns, compactView)).join('');
+    const rowsHtml = sortedRows.map(row => renderRedAmbrosiaUpgradeRowHtml(row, cefLogRanges, showRawColumns, compactView)).join('');
 
     return `
         <div class="hs-heater-red-ambrosia-table-section${compactView ? ' hs-heater-red-ambrosia-compact-view' : ''}">
             <div class="hs-heater-redamb-table-wrapper">
                 <table class="hs-heater-redamb-table hs-heater-red-ambrosia-table">
-                    ${renderRedAmbrosiaUpgradeTableHeaderHtml(showRawColumns, compactView)}
+                    ${renderRedAmbrosiaUpgradeTableHeaderHtml(showRawColumns, compactView, sortState)}
                     <tbody>
                         ${rowsHtml}
                     </tbody>
@@ -707,8 +764,12 @@ function renderRedAmbrosiaUpgradeTableHtml(rows: RedAmbrosiaUpgradeTableRow[], c
     `;
 }
 
-export function buildRedAmbrosiaUpgradeTableHtml(gameDataApi?: HSGameDataAPI, compactView = false): string {
+export function buildRedAmbrosiaUpgradeTableHtml(
+    gameDataApi?: HSGameDataAPI,
+    compactView = false,
+    sortState: RedAmbrosiaUpgradeSortState = { key: null, direction: null },
+): string {
     const rows = computeRedAmbrosiaUpgradeRows(gameDataApi);
     const optimizerContext = getCurrentRedAmbrosiaOptimizerContext();
-    return renderRedAmbrosiaUpgradeTableHtml(rows, optimizerContext, compactView);
+    return renderRedAmbrosiaUpgradeTableHtml(rows, optimizerContext, compactView, sortState);
 }

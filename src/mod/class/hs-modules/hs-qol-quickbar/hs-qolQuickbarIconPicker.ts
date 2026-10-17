@@ -1,4 +1,3 @@
-import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSIcons, type HSIcon } from "../../hs-utils/hs-icons";
 
@@ -13,7 +12,6 @@ export class HSQuickbarIconPickerController<TSlotKey> {
     #isPicking = false;
     #targetSlot: TSlotKey | null = null;
     #docClickListener: ((event: MouseEvent) => void) | null = null;
-    #wasGdsEnabled: boolean | null = null;
     #pickSequence = 0;
     readonly #options: HSQuickbarIconPickerOptions<TSlotKey>;
 
@@ -31,11 +29,6 @@ export class HSQuickbarIconPickerController<TSlotKey> {
         }
 
         this.#pickSequence += 1;
-        this.#wasGdsEnabled = HSSettings.getSetting("useGameData")?.isEnabled() ?? null;
-        if (this.#wasGdsEnabled) {
-            HSSettings.getSetting("useGameData")?.disable({ preserveGameDataDependents: true });
-        }
-
         this.#isPicking = true;
         this.#targetSlot = slotKey;
         this.#options.clearAllSlotPickModeVisuals();
@@ -47,6 +40,10 @@ export class HSQuickbarIconPickerController<TSlotKey> {
         );
 
         this.#docClickListener = (event: MouseEvent) => {
+            // Only the player's clicks count: the mod's own clicks (GDS on the save button every few ms,
+            // autosing, quickbars) neither end the mode nor get taken as the icon
+            if (!event.isTrusted) return;
+
             const target = event.target instanceof Element ? event.target : null;
             if (!target || this.#options.shouldIgnoreClickTarget(target)) {
                 this.end();
@@ -96,19 +93,6 @@ export class HSQuickbarIconPickerController<TSlotKey> {
         }
 
         this.#options.clearAllSlotPickModeVisuals();
-
-        if (this.#wasGdsEnabled !== null) {
-            const gdsSetting = HSSettings.getSetting("useGameData");
-            if (gdsSetting) {
-                if (this.#wasGdsEnabled && !gdsSetting.isEnabled()) {
-                    gdsSetting.enable();
-                }
-                if (!this.#wasGdsEnabled && gdsSetting.isEnabled()) {
-                    gdsSetting.disable();
-                }
-            }
-            this.#wasGdsEnabled = null;
-        }
     }
 
     dispose(): void {

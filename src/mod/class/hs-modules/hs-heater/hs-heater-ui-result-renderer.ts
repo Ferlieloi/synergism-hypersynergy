@@ -1,6 +1,6 @@
-import { escapeHtml } from "./hs-heater-utils";
+import { escapeHtml, formatNumber } from "./hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "./hs-heater-icon-store";
-import { getHeaterResultSectionDefinitions, type HeaterResultSectionDef } from "./hs-heater-result-config";
+import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "./hs-heater-result-config";
 import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
 import type { HeaterResultArrayKey, HeaterResultRow } from "../../../types/data-types/hs-heater-types";
 
@@ -26,20 +26,30 @@ type NormalizedResultRow = {
     maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
 };
 
-function buildTypeLabelWithIcon(label: string, semanticId?: string): string {
+function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
     const safeLabel = escapeHtml(label);
+    const safeInfoTitle = escapeHtml(infoTitle);
+    const description = semanticId ? resolveHeaterTypeDescription(semanticId) : null;
     const effectiveIconSrc = semanticId ? getEffectiveHeaterIconSrc(semanticId) : null;
-    if (!effectiveIconSrc) return `<span class="hs-heater-type-label">${safeLabel}</span>`;
-
-    const buttonClasses = "hs-heater-type-icon-button";
-    const dataAttr = semanticId ? `data-heater-icon-id="${escapeHtml(semanticId)}"` : "";
-    const titleText = semanticId ? `title="Alt+click to edit icon; right-click to clear override"` : "";
-
-    return `
-        <button type="button" class="${buttonClasses}" ${dataAttr} ${titleText}>
+    const typeLabel = effectiveIconSrc
+        ? `<button type="button" class="hs-heater-type-icon-button" data-heater-icon-id="${escapeHtml(semanticId ?? '')}" title="Alt+click to edit icon; right-click to clear override">
             <img class="hs-heater-type-icon" src="${escapeHtml(effectiveIconSrc)}" alt="" aria-hidden="true" />
             <span class="hs-heater-type-label">${safeLabel}</span>
-        </button>`;
+        </button>`
+        : `<span class="hs-heater-type-label">${safeLabel}</span>`;
+
+    const infoTrigger = description
+        ? `<div class="hs-heater-type-info-trigger" tabindex="0" role="note"
+                data-info-title="${safeInfoTitle}"
+                data-info-content="${escapeHtml(description)}"
+                aria-label="More information about ${safeInfoTitle}">?</div>`
+        : '';
+
+    return `
+        <div class="hs-heater-type-cell-content">
+            ${typeLabel}
+            ${infoTrigger}
+        </div>`;
 }
 
 function formatCostCellValue(value: HeaterResultRow[typeof RESULT_COL_INDEX.cost | typeof RESULT_COL_INDEX.blueberryCost]): string {
@@ -68,10 +78,15 @@ function buildHeaderTooltipLabel(label: string, tooltip: string): string {
     return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
 }
 
-function buildArraySectionHeaderRow(showP4x4: boolean, effectHeader: string): string {
+function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string {
+    const { showP4x4, showRouting, effectHeader } = sectionDef;
     const blueberryHeader = `<img src="Pictures/Default/Blueberries.png" class="hs-heater-header-icon" />`;
+    if (showRouting) {
+        const splitHeader = `<th colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${escapeHtml(effectHeader)}</span><span>Routing</span></div></th>`;
+        return `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${splitHeader}<th>Maxed?</th></tr>`;
+    }
     const effectLabel = showP4x4
-        ? buildHeaderTooltipLabel(effectHeader, "Effect do not consider hyperflux.")
+        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50")
         : `<th>${escapeHtml(effectHeader)}</th>`;
     const p4x4Label = showP4x4
         ? buildHeaderTooltipLabel("p4x4 eq", `"p4x4 eq" indicates the amount\n`
@@ -92,12 +107,45 @@ function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLa
     return `${copyButton}${importButton}`;
 }
 
+// Purple rows show the Purple Reactor routing they assume, next to the effect
+// (the other rows of their section have none).
+// Best-routing rows also compare with the current routing and offer to apply
+// theirs.
+function buildPurpleRoutingHtml(entry: NormalizedHeaterResultEntry): string {
+    const routing = entry.purpleRouting;
+    if (!routing) return "";
+
+    const blue = routing.blueRoutingPercent;
+    const red = routing.redRoutingPercent;
+    const unit = entry.key === "purpleHoney" || entry.key === "purpleHoneyOpt" ? "Purple Honey" : "Purple Ambrosia";
+    const current = routing.currentRoutingPerHour;
+    const tooltipLines = current === undefined
+        ? [`Your current routing: Blue ${blue}% / Red ${red}%`, `≈ ${formatNumber(routing.perHour)} ${unit} / hour`]
+        : [
+            `Recommended routing: Blue ${blue}% / Red ${red}%`,
+            `≈ ${formatNumber(routing.perHour)} ${unit} / hour`,
+            `vs ${formatNumber(current)} / hour at your current routing`
+                + (current > 0 ? ` (+${formatNumber((routing.perHour / current - 1) * 100)}%)` : ""),
+            "Routing is global: it also changes your other loadouts' income.",
+        ];
+    const applyButton = current === undefined
+        ? ""
+        : `<button class="hs-heater-apply-routing-btn" type="button" data-blue-routing="${blue}" data-red-routing="${red}" title="Set your Purple Reactor to this routing" aria-label="Apply this routing">➜</button>`;
+
+    const blueIcon = `<img class="hs-heater-routing-icon" src="Pictures/Default/Ambrosia.png" alt="Blue" />`;
+    const redIcon = `<img class="hs-heater-routing-icon" src="Pictures/RedAmbrosia/RedAmbrosia.png" alt="Red" />`;
+
+    return `<div class="hs-heater-purple-routing" title="${escapeHtml(tooltipLines.join("\n"))}">`
+        + `${blueIcon}<span>${blue}%</span>${redIcon}<span>${red}%</span>${applyButton}</div>`;
+}
+
 function buildArraySectionDataRow(
     entry: NormalizedHeaterResultEntry,
-    showP4x4: boolean,
+    sectionDef: HeaterResultSectionDef,
     rowSpan: number,
     selectedSemanticIds: Set<string> = new Set(),
 ): string {
+    const { showP4x4, showRouting } = sectionDef;
     const rowModel = normalizeArrayResultRow(entry.rowData);
     const loadoutValue = rowModel.loadoutValue;
     const isUnaffordable = loadoutValue === "Unaffordable";
@@ -106,24 +154,32 @@ function buildArraySectionDataRow(
     const isValidJson = !isUnaffordable && fullLoadout.trim().startsWith("{") && fullLoadout.trim().endsWith("}");
     const actionControlsHtml = buildLoadoutActionControls(escapedFullLoadout, escapeHtml(entry.label), isValidJson);
     const isSelectedType = selectedSemanticIds.has(entry.semanticId);
+    const infoTitle = getHeaterTypeConfig(entry.key)?.label ?? entry.label;
     const typeCellClass = isSelectedType ? ' class="hs-heater-selected-type-cell"' : '';
 
     const loadoutCell = isUnaffordable
         ? `<td>${escapeHtml(String(loadoutValue))}</td>`
         : `<td><div class="hs-heater-loadout-buttons">${actionControlsHtml}</div></td>`;
     const resultCell = rowSpan === 1
-        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(entry.label, entry.semanticId)}</td>`
+        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
         : entry.rowIndex === 0
-            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId)}</td>`
+            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
             : "";
     const blueberryCostCell = `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
     const costCell = `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
-    const effectCell = showP4x4
-        ? `<td>${escapeHtml(String(rowModel.effectValue))}</td>`
-        : `<td colspan="2">${escapeHtml(String(rowModel.effectValue))}</td>`;
-    const p4x4Cell = showP4x4 ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
+    // Effect takes two columns, or shares them with p4x4 eq. With the routing,
+    // it stays one cell, split inside (see .hs-heater-split-cell).
+    const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectCell = showRouting
+        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
+        : showP4x4
+            ? `<td>${effectHtml}</td>`
+            : `<td colspan="2">${effectHtml}</td>`;
+    const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
-    return `<tr>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
+    // A type picked in "Your loadout order" that can't be afforded: the whole row in red
+    const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
+    return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }
 
 function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set()): string {
@@ -132,12 +188,16 @@ function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey:
         .map((key) => ({ key, entries: entriesByKey.get(key)! }));
     if (matching.length === 0) return "";
 
+    // The Routing column is only there when a row has a routing to show (the
+    // Purple branch was heated); the section's other rows leave it empty.
+    const hasRouting = matching.some(({ entries }) => entries.some((entry) => entry.purpleRouting));
+    const shownDef = sectionDef.showRouting && !hasRouting ? { ...sectionDef, showRouting: false } : sectionDef;
     const titleRow = `<tr><td colspan="${RESULT_TABLE_TOTAL_COLS}" class="hs-heater-title-row">${escapeHtml(sectionDef.title)}</td></tr>`;
-    const headerRow = buildArraySectionHeaderRow(sectionDef.showP4x4, sectionDef.effectHeader);
+    const headerRow = buildArraySectionHeaderRow(shownDef);
     const dataRows = matching
         .map(({ key, entries }) => {
             const rowSpan = entries[0].isRowBased ? 1 : entries.length;
-            return entries.map((entry) => buildArraySectionDataRow(entry, sectionDef.showP4x4, rowSpan, selectedSemanticIds)).join("");
+            return entries.map((entry) => buildArraySectionDataRow(entry, shownDef, rowSpan, selectedSemanticIds)).join("");
         })
         .join("");
     return titleRow + headerRow + dataRows;

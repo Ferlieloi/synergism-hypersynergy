@@ -16,14 +16,12 @@ export interface HSGlobalDebug {
 
 export interface HSGlobalRelease {
     githubOwner: string;
-    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 
 export interface HSGlobalGeneral {
     currentModVersion: string;
     isModFullyLoaded: boolean;
-    isDev: boolean;
     modGithubUrl: string;
     modWikiUrl: string;
     modWikiFeaturesUrl: string;
@@ -74,6 +72,8 @@ export interface HSGlobalSettings extends IStoreable {
 export interface HSGlobalMouse {
     autoClickIgnoredElements: string[];
 }
+
+export interface HSGlobalHiddenDialogs extends IStoreable { }
 
 export interface HSGlobalAmbrosia extends IStoreable {
     quickBarId: string;
@@ -152,6 +152,7 @@ export interface IHSGlobal {
     HSStorage: HSGlobalStorage;
     HSSettings: HSGlobalSettings;
     HSMouse: HSGlobalMouse;
+    HSHiddenDialogs: HSGlobalHiddenDialogs;
     HSAmbrosia: HSGlobalAmbrosia;
     HSGameData: HSGlobalGameData;
     HSUI: HSGlobalHSUI;

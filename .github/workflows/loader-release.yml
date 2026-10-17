@@ -18,6 +18,18 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v4
+      # actions/checkout fetches the tagged commit under the tag's name, not the tag itself:
+      # without this, the tag's message (the release notes) is not on the runner.
+      # A tag without a message is refused: its commit's message would be published as the notes.
+      - name: Fetch the release tag and check it has a message
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --force --no-tags --depth=1 origin "+refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch tag $env:RELEASE_TAG" }
+          if ((git cat-file -t "refs/tags/$env:RELEASE_TAG") -ne 'tag') {
+            throw "Tag $env:RELEASE_TAG has no message. Delete it and create it again with: git tag -a $env:RELEASE_TAG (a title line, an empty line, then the release notes)"
+          }
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -80,4 +92,11 @@ jobs:
           foreach ($asset in $assets) {
             if (-not (Test-Path -LiteralPath $asset)) { throw "Missing release asset: $asset" }
           }
-          gh release create $env:RELEASE_TAG $assets --verify-tag --latest --title "Hypersynergism Loader $version" --notes-from-tag
+          # Release notes: the tag's message without its first line (the title, already the release's title).
+          # A one-line message is used as is.
+          [Console]::OutputEncoding = [Text.Encoding]::UTF8
+          $notes = (git tag --list $env:RELEASE_TAG --format='%(contents:body)' | Out-String).Trim()
+          if (-not $notes) { $notes = (git tag --list $env:RELEASE_TAG --format='%(contents:subject)' | Out-String).Trim() }
+          $notesFile = Join-Path $env:RUNNER_TEMP 'loader-release-notes.md'
+          [IO.File]::WriteAllText($notesFile, $notes, [Text.UTF8Encoding]::new($false))
+          gh release create $env:RELEASE_TAG $assets --verify-tag --latest --title "Hypersynergism Loader $version" --notes-file $notesFile

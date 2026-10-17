@@ -591,6 +591,10 @@ button:disabled {
   color: var(--danger);
 }
 
+.console .line-warn {
+  color: var(--warning);
+}
+
 .console .line-ok {
   color: var(--ok);
 }

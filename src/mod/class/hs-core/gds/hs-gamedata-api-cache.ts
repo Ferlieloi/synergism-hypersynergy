@@ -93,6 +93,7 @@ export const createQuarkShopCalculationCacheEntries = (): Record<string, CachedV
         'shopSingularityPotency',
         'shopHorseShoe',
         'shopSingularityPenaltyDebuff',
+        'shopPurpleBarRebate',
     ];
 
     for (const groupKeys of Object.values(SHOP_UPGRADE_TYPE_KEYS)) {
@@ -115,6 +116,7 @@ export const createQuarkShopCalculationCacheEntries = (): Record<string, CachedV
     }
 
     addCacheEntry('QUARKSHOP_FREE_QUARK_BONUS_LEVELS');
+    addCacheEntry('QUARKSHOP_FREE_QUARK_BONUS_LEVELS_TRUE_BASE');
     return entries;
 };
 
@@ -212,7 +214,11 @@ export const createCoreCalculationCacheEntries = (): Record<string, CachedValue>
         'HepteractEffective',
         'NumberOfThresholds',
         'RequiredBlueberryTime',
+        'RequiredBlueberryTime_IGNORE_TWO_MIND',
+        'RequiredBlueberryTime_IGNORE_BRICK',
+        'RequiredBlueberryTime_IGNORE_TWO_MIND_IGNORE_BRICK',
         'RequiredRedAmbrosiaTime',
+        'RequiredRedAmbrosiaTime_IGNORE_TWO_MIND',
         'RawAscensionSpeedMult',
         'RawAscensionSpeedMult_TRUE_BASE',
         'RawAscensionSpeedMult_NO_AMB',

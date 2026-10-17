@@ -22,6 +22,21 @@ const CHANNELS = {
     }
 }
 
+// Hidden "local" channel: the mod's dev server (start-dev-server.bat) on this
+// machine, like the browser dev userscript. Never offered to players: main.js
+// enables it only when running from source or with HS_LOADER_DEV=1.
+const LOCAL_CHANNEL_ID = 'local'
+const LOCAL_CHANNEL = {
+    label: 'Local',
+    repo: '127.0.0.1:8080',
+    defaultRef: 'local',
+    description: 'Local dev server (start-dev-server.bat).',
+    local: true,
+    modUrl: 'http://127.0.0.1:8080/hypersynergism.js',
+    patcherUrl: 'http://127.0.0.1:8080/synergism_modloader/lib/patcher.js'
+}
+let localChannelEnabled = false
+
 // ─── Defaults ────────────────────────────────────────────────────────────
 const DEFAULTS = {
     steamAppName: 'Synergism',
@@ -35,12 +50,23 @@ const DEFAULTS = {
     patcherPath: 'synergism_modloader/lib/patcher.js'
 }
 
+function setLocalChannelEnabled(enabled) {
+    localChannelEnabled = Boolean(enabled)
+}
+
+function availableChannels() {
+    return localChannelEnabled
+        ? { ...DEFAULTS.channels, [LOCAL_CHANNEL_ID]: LOCAL_CHANNEL }
+        : DEFAULTS.channels
+}
+
+// An unknown or hidden channel (e.g. "local" saved by a dev session) resolves to the default one.
 function resolveChannel(channelId) {
-    return DEFAULTS.channels[channelId] || DEFAULTS.channels[DEFAULTS.defaultChannel]
+    return availableChannels()[channelId] || DEFAULTS.channels[DEFAULTS.defaultChannel]
 }
 
 function listChannels() {
-    return Object.entries(DEFAULTS.channels).map(([id, c]) => ({
+    return Object.entries(availableChannels()).map(([id, c]) => ({
         id,
         label: c.label,
         repo: c.repo,
@@ -82,9 +108,15 @@ function emptyConfig() {
         refListCache: {},   // last successful branch/tag list for each channel
         lastPatchedExe: '',     // launchable exe produced by the last successful patch
         lastPatchedSourceStat: null, // { size, mtimeMs } of the original exe at patch time
+        lastPatchedPatcherHash: '',  // patcher.js used by that patch (lib/patcherSource.js); '' = patched by a loader up to 0.2.8
+        lastPatchedInjectorHash: '', // injector written by that patch (lib/injectorTemplate.js)
+        lastPatchedFormat: 0,        // PATCH_FORMAT of that patch (lib/patchGame.js); 0 = patched by a loader up to 0.2.9
         lastPatchedChannel: '',
         lastPatchedModRef: ''
     }
 }
 
-module.exports = { DEFAULTS, CHANNELS, resolveChannel, listChannels, loadConfig, saveConfig, configFilePath }
+module.exports = {
+    DEFAULTS, CHANNELS, LOCAL_CHANNEL_ID, setLocalChannelEnabled,
+    resolveChannel, listChannels, loadConfig, saveConfig, configFilePath
+}

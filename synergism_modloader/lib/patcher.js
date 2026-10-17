@@ -51,9 +51,11 @@ function patchBundle(code, options = {}) {
 
     const findFunctionBodyByName = (src, fnName) => {
         const escapedName = fnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Not \b: minified names can start with "$" (e.g. "$w"), and \b never matches before a "$"
+        const notInName = '(?<![\\w$])';
         const headerPatterns = [
-            new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>\\s*\\{`, 'g'),
-            new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`, 'g'),
+            new RegExp(`${notInName}${escapedName}\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>\\s*\\{`, 'g'),
+            new RegExp(`${notInName}${escapedName}\\s*=\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`, 'g'),
             new RegExp(`(?:async\\s+)?function\\s+${escapedName}\\s*\\([^)]*\\)\\s*\\{`, 'g')
         ];
 
@@ -350,53 +352,69 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
-    // ── AUTO-CONFIRM PATCH — make Confirm/Alert auto-resolve when window.__HS_AUTO_CONFIRM is set to true
-    // Confirm resolves true (OK clicked) and Alert resolves void, bypassing all DOM/queue overhead.
-    // 'Unique' anchors: 'confirmationBox' appears exactly 3× in the bundle: 1st = Confirm body, 2nd = Alert body, 3rd = Prompt.
-    // We use the 1st for Confirm and 2nd for Alert. Walk back to the `() => {` of the enqueue action.
-    // Toggle: window.__HS_AUTO_CONFIRM = true (no pop-up) / false (normal play with pop-ups).
+    // ── DIALOG HOOK PATCH — let the mod see every game dialog when it's queued, and answer it before it's shown.
+    // The 5 dialog functions (Confirm, Alert, InfoAlert, Prompt, PurchasePrompt) share one queue and one shape:
+    //   je=async e=>Jf.enqueue(()=>{let t=c("confirmationBox"),r=c("confirmWrapper"), …
+    // Each one is found by its own wrapper id (DOM ids the mod already relies on), whatever their order.
+    // 1. An extra default parameter records the dialog's origin when it's queued (defaults are evaluated at call time):
+    //    e=>  becomes  (e,__hsO=window.__HS_dialogOrigin?.("confirm",e))=>
+    // 2. At the start of the queued action (when the dialog reaches the front of the queue), the mod may answer it:
+    //    window.__HS_onDialog(kind, origin) returns { value } to resolve the dialog without showing it, or undefined to show it.
+    // Without the mod's hook (older mod), window.__HS_AUTO_CONFIRM still auto-answers Confirm and Alert, as the old patch did.
+    // All 5 or none: with a partial match, the mod falls back to clicking dialogs through the DOM.
     try {
-        const cbRe = /['"]confirmationBox['"]/g;
-        const cbMatch1 = cbRe.exec(code);
-        const cbMatch2 = cbMatch1 ? cbRe.exec(code) : null;
+        const dialogKinds = {
+            confirmWrapper: 'confirm',
+            alertWrapper: 'alert',
+            infoAlertWrapper: 'infoAlert',
+            promptWrapper: 'prompt',
+            purchasePromptWrapper: 'purchasePrompt'
+        };
+        // Old mod versions only know __HS_AUTO_CONFIRM, for these two kinds
+        const legacyAnswers = { confirm: '!0', alert: 'void 0' };
+        const dialogRe = /(?<![\w$])[\w$]+\s*=\s*(?:async\s*)?(\([^)]*\)|[\w$]+)\s*=>\s*[\w$.]+\.enqueue\(\s*\(\s*\)\s*=>\s*(\{)\s*(?:let|const|var)\s+[\w$]+\s*=\s*[\w$]+\(\s*["']confirmationBox["']\s*\)\s*,\s*[\w$]+\s*=\s*[\w$]+\(\s*["'](confirmWrapper|alertWrapper|infoAlertWrapper|promptWrapper|purchasePromptWrapper)["']\s*\)/dg;
 
-        // Collect both patch sites against the unmodified code, then apply highest-index first
-        // so earlier insertions don't invalidate later indices.
-        const autoConfirmSites = [];
-        if (cbMatch1) {
-            const backCtx = code.slice(Math.max(0, cbMatch1.index - 200), cbMatch1.index);
-            const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
-            if (lastArrow) {
-                autoConfirmSites.push({
-                    bodyStart: (cbMatch1.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
-                    inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(!0);\n`,
-                    label: 'Confirm'
-                });
-            } else { warn('autoConfirm: could not find Confirm action body start'); }
-        } else { warn('Could not patch Confirm — confirmationBox anchor not found'); }
-
-        if (cbMatch2) {
-            const backCtx = code.slice(Math.max(0, cbMatch2.index - 200), cbMatch2.index);
-            const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
-            if (lastArrow) {
-                autoConfirmSites.push({
-                    bodyStart: (cbMatch2.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
-                    inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(void 0);\n`,
-                    label: 'Alert'
-                });
-            } else { warn('autoConfirm: could not find Alert action body start'); }
-        } else { warn('Could not patch Alert — second confirmationBox anchor not found'); }
-
-        autoConfirmSites.sort((a, b) => b.bodyStart - a.bodyStart);
-        for (const site of autoConfirmSites) {
-            code = code.slice(0, site.bodyStart) + site.inject + code.slice(site.bodyStart);
-            log(`Patched ${site.label} (auto-confirm support)`);
+        const sites = [];
+        let m;
+        while ((m = dialogRe.exec(code)) !== null) {
+            const [paramsStart, paramsEnd] = m.indices[1];
+            sites.push({ kind: dialogKinds[m[3]], params: m[1], paramsStart, paramsEnd, bodyStart: m.indices[2][1] });
         }
-        if (autoConfirmSites.length === 2) {
-            code = 'window.__HS_AUTO_CONFIRM_PATCHED = true;\n' + code;
+
+        const foundKinds = sites.map(site => site.kind);
+        const allFoundOnce = Object.values(dialogKinds).every(kind => foundKinds.filter(k => k === kind).length === 1);
+        if (!allFoundOnce) {
+            warn(`Could not patch the game dialogs — expected each of the 5 once, found: [${foundKinds.join(', ')}]`);
+        } else {
+            // Highest index first, so earlier insertions don't move later ones
+            const edits = [];
+            for (const site of sites) {
+                const list = site.params.startsWith('(') ? site.params.slice(1, -1).trim() : site.params.trim();
+                const firstParam = list.split(',')[0].trim();
+                const originArgs = /^[\w$]+$/.test(firstParam) ? `"${site.kind}",${firstParam}` : `"${site.kind}"`;
+                const originParam = `__hsO=window.__HS_dialogOrigin?.(${originArgs})`;
+                edits.push({
+                    start: site.paramsStart, end: site.paramsEnd,
+                    text: `(${list ? `${list},` : ''}${originParam})`
+                });
+                const legacy = legacyAnswers[site.kind];
+                edits.push({
+                    start: site.bodyStart, end: site.bodyStart,
+                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);` +
+                        (legacy ? `if(!window.__HS_onDialog&&window.__HS_AUTO_CONFIRM)return Promise.resolve(${legacy});` : '') +
+                        `\n`
+                });
+            }
+            edits.sort((a, b) => b.start - a.start);
+            for (const edit of edits) {
+                code = code.slice(0, edit.start) + edit.text + code.slice(edit.end);
+            }
+            // __HS_AUTO_CONFIRM_PATCHED: older mod versions check it before relying on __HS_AUTO_CONFIRM
+            code = 'window.__HS_DIALOG_HOOK_PATCHED = true;window.__HS_AUTO_CONFIRM_PATCHED = true;\n' + code;
+            log('Patched the 5 game dialogs (dialog hook)');
         }
     } catch (e) {
-        warn('Error while patching Confirm/Alert', e);
+        warn('Error while patching the game dialogs', e);
     }
 
     // ==================================================================================
@@ -411,7 +429,9 @@ function patchBundle(code, options = {}) {
             const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
             const corrFn = allFnMatches.at(-1)?.[1];
             if (corrFn) {
-                const fnHeaderRe = new RegExp(`\\b${corrFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
+                // Escaped, and not \b: minified names can start with "$", and \b never matches before a "$"
+                const escapedCorrFn = corrFn.replace(/\$/g, '\\$');
+                const fnHeaderRe = new RegExp(`(?<![\\w$])${escapedCorrFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
                 let bodyStart = -1, fhm;
                 const preAnchor = code.slice(0, corrAnchorIdx);
                 while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
@@ -435,6 +455,73 @@ function patchBundle(code, options = {}) {
         }
     } catch (e) {
         warn('Error while patching applyCorruptions', e);
+    }
+
+    // ==================================================================================
+    // ── VALIDATEBLUEBERRYTREE PATCH — expose BlueberryUpgrades.ts validateBlueberryTree as window.__HS_validateBlueberryTree
+    // Lets the mod check an ambrosia tree before writing it into a loadout slot itself (no import through the game,
+    // which replaces the live tree and shows dialogs). It only reads the player's state.
+    // Found by what it does, not by minified names or call shapes: the function checking the Exalt unlock criteria
+    // (string literals "Exalt1x1", "Exalt5x1", "Exalt9x1") against the ambrosia budget (player.lifetimeAmbrosia).
+    // Exposed where it's defined when it's an arrow or a function expression, so it exists as soon as the bundle runs:
+    //   eK=e=>{  becomes  eK=window.__HS_validateBlueberryTree=e=>{
+    // Otherwise at the start of its body: it then exists once the game has validated a tree (at the first loadout load).
+    try {
+        const vbtResult = findEnclosingFunction(code, /["']Exalt9x1["']/g, ['lifetimeAmbrosia', 'Exalt1x1', 'Exalt5x1']);
+        if (vbtResult) {
+            const fn = vbtResult.fnName;
+            // Escaped, and not \b: minified names can start with "$"
+            const escapedFn = fn.replace(/\$/g, '\\$');
+            const headerStart = Math.max(0, vbtResult.bodyStart - 300);
+            const header = code.slice(headerStart, vbtResult.bodyStart);
+            const exprHeader = new RegExp(
+                `(?<![\\w$.])${escapedFn}\\s*=\\s*(?=(?:async\\s*)?(?:\\([^)]*\\)|[\\w$]+)\\s*=>\\s*\\{$|(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{$)`
+            ).exec(header);
+            if (exprHeader) {
+                const insertAt = headerStart + exprHeader.index + exprHeader[0].length;
+                code = code.slice(0, insertAt) + 'window.__HS_validateBlueberryTree=' + code.slice(insertAt);
+                log(`Patched validateBlueberryTree (fn=${fn})`);
+            } else {
+                code = code.slice(0, vbtResult.bodyStart) + `\nwindow.__HS_validateBlueberryTree=${fn};\n` + code.slice(vbtResult.bodyStart);
+                log(`Patched validateBlueberryTree at its first call (fn=${fn})`);
+            }
+        } else {
+            warn('Could not patch validateBlueberryTree — Exalt unlock check not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching validateBlueberryTree', e);
+    }
+
+    // ==================================================================================
+    // ── SAVE IMPORT HOOK PATCH — tell the mod when the game is about to load a save
+    // ImportExport.ts importSynergism(input, reset) loads every save: a file, a cloud save, the Steam cloud, and with
+    // reset = true a singularity, an Exalt and the game reset. The mod stops autosing on the first three.
+    // Found by what it does, not by minified names or call shapes: the function holding the import's own error keys
+    // ("importexport.loadTestInLive", "importexport.unableImport") and the save's "exporttest" check.
+    // At the start of its body, with its second parameter (reset):
+    //   Ic=(e,t=!1)=>{  becomes  Ic=(e,t=!1)=>{try{window.__HS_onSaveImport?.(t)}catch(__hsE){}
+    // The try: importSynergism ends every singularity, and an error from the mod must not stop the game there.
+    try {
+        const importResult = findEnclosingFunction(code, /["']importexport\.loadTestInLive["']/g,
+            ['importexport.unableImport', 'exporttest']);
+        if (importResult) {
+            const header = code.slice(Math.max(0, importResult.bodyStart - 300), importResult.bodyStart);
+            const params = /\(([^)]*)\)\s*(?:=>\s*)?\{$/.exec(header);
+            const resetParam = params?.[1].split(',')[1]?.split('=')[0].trim();
+            if (resetParam && /^[\w$]+$/.test(resetParam)) {
+                code = code.slice(0, importResult.bodyStart) +
+                    `\ntry{window.__HS_onSaveImport?.(${resetParam})}catch(__hsE){}\n` +
+                    code.slice(importResult.bodyStart);
+                code = 'window.__HS_SAVE_IMPORT_HOOK_PATCHED = true;\n' + code;
+                log(`Patched importSynergism (save import hook, fn=${importResult.fnName})`);
+            } else {
+                warn('Could not patch the save import hook — importSynergism has no second (reset) parameter');
+            }
+        } else {
+            warn('Could not patch the save import hook — importSynergism not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching the save import hook', e);
     }
 
     // ==================================================================================
@@ -545,7 +632,7 @@ function startBrowserLoader(options) {
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '4.1';
+    const loaderVersion = '4.3';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -837,6 +924,9 @@ function startBrowserLoader(options) {
                         `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
+                        `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
+                        `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
+                        `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
                     `};` +
                 `}` +
@@ -849,58 +939,104 @@ function startBrowserLoader(options) {
     // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ───────────
     // ==================================================================================
 
+    // Read a boolean mod setting from the mod's own storage (HSSettings → HSStorage:
+    // key 'hs-settings', JSON encoded twice, { [settingName]: { enabled, ... } }).
+    // The mod isn't loaded yet at this point, so fall back to its default.
+    function readModBooleanSetting(settingName, fallback) {
+        try {
+            const raw = localStorage.getItem('hs-settings');
+            if (!raw) return fallback;
+            let settings = JSON.parse(raw);
+            if (typeof settings === 'string') settings = JSON.parse(settings);
+            const enabled = settings?.[settingName]?.enabled;
+            return typeof enabled === 'boolean' ? enabled : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     async function runPostLoadSequence() {
         try {
             // Phase 4: Wait for the game to finish loading.
             // The offline container is the game's own "loading done" signal —
             // it only appears after the save has been read and the UI is ready.
+            // Also accept body.loading being gone: the page starts with it and only
+            // the popup's exit removes it, so the player already closed the popup.
             log('Phase 4 — waiting for offlineContainer to appear...');
             await waitFor(
                 () => {
                     const el = document.getElementById('offlineContainer');
-                    return el && getComputedStyle(el).display !== 'none';
+                    return (el && getComputedStyle(el).display !== 'none')
+                        || !document.body.classList.contains('loading');
                 },
                 60000,
                 'offlineContainer to become visible'
             );
-            log('offlineContainer visible — game is loaded');
+            log('Game is loaded (offlineContainer visible or already closed)');
 
-            // Dismiss the offline container.
-            const offlineContainer = document.getElementById('offlineContainer');
-            log('Dismissing offlineContainer...');
-            const exitBtn = document.getElementById('exitOffline')
-                || offlineContainer.querySelector('button');
-            if (exitBtn) exitBtn.click();
+            const isExposed = () => window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED;
+            const isOfflineOpen = () => {
+                const el = document.getElementById('offlineContainer');
+                return !!el && getComputedStyle(el).display !== 'none';
+            };
+            const dismissOffline = async () => {
+                if (!isOfflineOpen()) return;
+                log('Dismissing offlineContainer...');
+                const offlineContainer = document.getElementById('offlineContainer');
+                const exitBtn = document.getElementById('exitOffline')
+                    || offlineContainer.querySelector('button');
+                if (exitBtn) exitBtn.click();
+                // Wait 100 ms for the dismissal animation and any post-modal setup.
+                await new Promise(r => setTimeout(r, 100));
+            };
+            const navigateForExposure = async () => {
+                await clickWhenAvailable('settingstab');
+                await new Promise(r => setTimeout(r, 300));
+                await clickWhenAvailable('switchSettingSubTab4');
+                await new Promise(r => setTimeout(r, 300));
+                await clickWhenAvailable('kMisc');
+                await new Promise(r => setTimeout(r, 300));
 
-            // Wait 100 ms for the dismissal animation and any post-modal setup.
-            await new Promise(r => setTimeout(r, 100));
+                // Trigger exportSynergism silently to expose both export functions.
+                window.__HS_SILENT_EXPORT = true;
+                await clickWhenAvailable('exportgame');
+                window.__HS_SILENT_EXPORT = false;
+            };
 
             // Phase 5: Trigger exposure by navigating to Settings → Misc → Export.
-            log('Phase 5 — navigating to Settings to trigger exposure...');
-            await clickWhenAvailable('settingstab');
-            await new Promise(r => setTimeout(r, 300));
-            await clickWhenAvailable('switchSettingSubTab4');
-            await new Promise(r => setTimeout(r, 300));
-            await clickWhenAvailable('kMisc');
-            await new Promise(r => setTimeout(r, 300));
+            // Done behind the offline popup: the game's tab buttons don't check for it,
+            // so the player doesn't see the tab switching. The export exposes itself
+            // right away (its click handler runs it directly).
+            log('Phase 5 — navigating to Settings (behind the offline popup) to trigger exposure...');
+            await navigateForExposure();
+            await waitFor(() => window.__HS_EXPORT_EXPOSED, 20000, '__HS_EXPORT_EXPOSED');
 
-            // Trigger exportSynergism silently to expose both export functions.
-            window.__HS_SILENT_EXPORT = true;
-            await clickWhenAvailable('exportgame');
-            window.__HS_SILENT_EXPORT = false;
+            // The stage is only exposed when the game renders the Misc stats, and the game
+            // pauses its display updates while the offline popup is open. So it happens on
+            // the first update after the popup closes, with Misc still active behind it.
+            if (readModBooleanSetting('autoDismissOfflinePopup', true)) {
+                await dismissOffline();
+            }
 
-            // Wait for both exposure flags.
-            log('Waiting for stage and export exposure flags...');
-            await waitFor(
-                () => window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED,
-                20000,
-                '__HS_EXPOSED and __HS_EXPORT_EXPOSED'
-            );
-            log('Exposure complete — stage and export are ready');
+            if (!isOfflineOpen()) {
+                log('Waiting for stage and export exposure flags...');
+                await waitFor(isExposed, 20000, '__HS_EXPOSED and __HS_EXPORT_EXPOSED');
+                log('Exposure complete — stage and export are ready');
 
-            // Return to Buildings tab so the game looks normal to the player.
-            await clickWhenAvailable('buildingstab');
-            await new Promise(r => setTimeout(r, 300));
+                // Return to Buildings tab so the game looks normal to the player.
+                await clickWhenAvailable('buildingstab');
+                await new Promise(r => setTimeout(r, 300));
+            } else {
+                // Popup kept open (autoDismissOfflinePopup is off): load the mod now, the stage
+                // gets exposed when the player closes the popup, then go back to Buildings.
+                log('Keeping offlineContainer open (autoDismissOfflinePopup is off) — stage will be exposed when it closes');
+                waitFor(() => window.__HS_EXPOSED, 24 * 3600 * 1000, '__HS_EXPOSED')
+                    .then(() => {
+                        log('Exposure complete — stage and export are ready');
+                        return clickWhenAvailable('buildingstab');
+                    })
+                    .catch(e => warn('Stage exposure after the offline popup failed:', e));
+            }
 
             // Phase 6: Load the mod.
             await loadMod();
@@ -913,7 +1049,6 @@ function startBrowserLoader(options) {
     function loadMod() {
         const modSource = dev ? 'LOCAL DEV SERVER' : 'CDN';
         log(`Phase 6 — loading mod from ${modSource}...`);
-        if (dev) window.__HS_IS_DEV = true;
         window.__HS_REPO = window.__HS_REPO || (dev ? 'maenhiir' : 'Ferlieloi');
         window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'master';
         return new Promise((resolve, reject) => {

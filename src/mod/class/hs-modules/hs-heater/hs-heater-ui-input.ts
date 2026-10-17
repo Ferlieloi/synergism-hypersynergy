@@ -1,6 +1,8 @@
 import Decimal from "break_infinity.js";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSIcons } from "../../hs-utils/hs-icons";
+import { HSUtils } from "../../hs-utils/hs-utils";
 import { escapeHtml } from "./hs-heater-utils";
 import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "./hs-heater-icon-store";
 import { HSHeaterResultStore } from "./hs-heater-result-store";
@@ -36,6 +38,7 @@ export class HSHeaterUIInput {
         | 'shopBonusLevelsNoAmbrosia'
         | 'panthemaLevel'
         | 'reactor'
+        | 'purple'
         | 'shopUpgradesDisabled'> = {
             ambrosiaUpgradeBonusLevels: {},
             ambrosiaUpgradeBlueberryCostReductions: {},
@@ -55,6 +58,7 @@ export class HSHeaterUIInput {
             },
             panthemaLevel: 0,
             reactor: undefined,
+            purple: undefined,
             shopUpgradesDisabled: false,
         };
 
@@ -83,13 +87,16 @@ export class HSHeaterUIInput {
             },
             panthemaLevel: hsData?.panthemaLevel ?? 0,
             reactor: hsData?.heaterReactor,
+            purple: hsData?.heaterPurple,
             shopUpgradesDisabled: Boolean(hsData?.shopUpgradesDisabled),
         };
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
-                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, true])
+                // Purple Ambrosia unlocks with the first Exalt 9 completion,
+                // the same condition as the "Exalt 9x1 Done" input
+                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, branch.id !== 'purple' || Boolean(hsData?.exalt9Unlocked)])
             ) as Record<HeaterBranchId, boolean>,
         };
     }
@@ -116,8 +123,21 @@ export class HSHeaterUIInput {
         `;
     }
 
+    static applyInputIconSprites(modal: HTMLElement): void {
+        for (const field of this.inputDefinitions) {
+            const icon = (field as HeaterInputField).icon;
+            if (!icon) continue;
+            const iconElement = modal.querySelector<HTMLElement>(`[data-heater-icon-key="${field.key}"]`);
+            if (iconElement) {
+                HSIcons.applyBackground(iconElement, icon, 20);
+            }
+        }
+    }
+
+    // The Purple checkbox is left out while Purple Ambrosia is locked (its
+    // branch comes in as off); a missing checkbox reads as off.
     static buildHeaterOptionToggleGrid(active: Record<HeaterBranchId, boolean>): string {
-        const checkboxRows = HEATER_BRANCH_DEFINITIONS.map((branch) => {
+        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || active.purple).map((branch) => {
             const fieldId = `hs-heater-input-active-${branch.id}`;
             const checked = active[branch.id] ? 'checked' : '';
             return `
@@ -283,7 +303,7 @@ export class HSHeaterUIInput {
 
         const iconSrc = getEffectiveHeaterIconSrc(select.value ?? '');
         if (iconSrc) {
-            icon.style.backgroundImage = `url('${iconSrc}')`;
+            icon.style.backgroundImage = HSUtils.cssUrl(iconSrc);
             icon.style.visibility = 'visible';
         } else {
             icon.style.backgroundImage = '';
@@ -300,9 +320,12 @@ export class HSHeaterUIInput {
 
         const semanticId = (select.value || '').trim();
         const isAvailable = HSHeaterResultStore.isSemanticIdAvailable(semanticId);
+        const isUnaffordable = HSHeaterResultStore.isSemanticIdUnaffordable(semanticId);
 
-        checkbox.checked = isAvailable;
+        // Nothing to import for a missing or an unaffordable type
+        checkbox.checked = isAvailable && !isUnaffordable;
         select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
+        select.classList.toggle('hs-heater-type-select-unaffordable', isUnaffordable);
     }
 
     static refreshHeaterTypeSelectIcons(modal: HTMLElement): void {
@@ -421,9 +444,11 @@ export class HSHeaterUIInput {
 
     static buildInputTableRow(field: HeaterInputField, value: number | Decimal | boolean): string {
         const lockId = `hs-heater-lock-${field.key}`;
-        const iconHtml = field.url
-            ? `<img src="${field.url}" alt="${escapeHtml(field.label)}" class="hs-heater-icon-image" />`
-            : '';
+        const iconHtml = field.icon
+            ? `<span class="hs-heater-icon-image" data-heater-icon-key="${field.key}" role="img" aria-label="${escapeHtml(field.label)}"></span>`
+            : field.url
+                ? `<img src="${field.url}" alt="${escapeHtml(field.label)}" class="hs-heater-icon-image" />`
+                : '';
         const inputHtml = this.buildFieldInputHtml(field, value);
 
         return `

@@ -3,7 +3,7 @@ import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
+import { HSHeatCancelledError, HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIInput } from "./hs-heater-ui-input";
@@ -12,7 +12,7 @@ import { HSHeaterResultModalController } from "./hs-heater-result-modal-controll
 import { HSHeaterRedAmbrosiaModalController } from "./hs-heater-red-ambrosia-modal-controller";
 import { HSHeaterUIResult } from "./hs-heater-ui-result";
 import { resolveHeaterTypeLabel } from "./hs-heater-result-config";
-import { escapeHtml } from "./hs-heater-utils";
+import { escapeHtml, escapeLogText } from "./hs-heater-utils";
 import { getHeaterTypeDropdownOptionsWithIcons } from "./hs-heater-icon-store";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
@@ -103,7 +103,7 @@ export class HSHeaterInputModalController {
             <div id="hs-heater-inputs-body-right" class="hs-scrollbar-themed">
                 <div>${HSUIC.Button({ id: 'hs-heater-update-inputs-btn', class: 'redButton',  text: 'Update 🔓 Inputs' })}</div>
                 <div>${HSHeaterUIInput.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
-                <div>${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}</div>
+                <div class="hs-heater-start-row">${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}${HSUIC.Button({ id: 'hs-heater-cancel-btn', class: 'redButton', text: '✖', props: { title: 'Cancel this heat', hidden: '' } })}</div>
                 <div id="hs-heater-type-selects" class="hs-heater-type-selects-grid">${heaterTypeDropdowns}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-import-all-btn',    class: 'blueButton', text: 'Import All <span style="color: #338eef;">☑</span> Loadouts' })}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-sync-icons-btn',    class: 'blueButton', text:   'Sync All Icons' })}</div>
@@ -159,6 +159,7 @@ export class HSHeaterInputModalController {
         if (!modal) return;
 
         this.cacheInputsModalElements(modal);
+        HSHeaterUIInput.applyInputIconSprites(modal);
         HSHeaterUIInput.attachHeaterTypeSelectHandlers(modal, () => {
             if (this.currentInputsModalId) {
                 HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId, false);
@@ -212,6 +213,9 @@ export class HSHeaterInputModalController {
             recalcButton.addEventListener('blur', () => this.removeStartHeaterTooltip());
         }
 
+        const cancelButton = modal.querySelector('#hs-heater-cancel-btn') as HTMLElement | null;
+        cancelButton?.addEventListener('click', () => HSHeaterOptimizerRunner.cancel());
+
         recalcButton?.addEventListener('click', async () => {
             const branchCheckboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
             const hasActiveBranch = branchCheckboxes.some((checkbox) => checkbox.checked);
@@ -240,17 +244,27 @@ export class HSHeaterInputModalController {
                     });
                     return;
                 }
-                const updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
+                // Cancel is only offered while the optimizer itself runs
+                if (cancelButton) cancelButton.hidden = !HSHeaterOptimizerRunner.canCancel;
+                let updatedResult;
+                try {
+                    updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
+                } finally {
+                    if (cancelButton) cancelButton.hidden = true;
+                }
                 await HSHeaterResultModalController.openHeaterResultModal(updatedResult, modalId);
                 await HSHeaterRedAmbrosiaModalController.openRedAmbrosiaUpgradeModal();
             } catch (error) {
+                if (error instanceof HSHeatCancelledError) return;
                 const memoryLimit = error instanceof Error && error.message.includes('memory safety limit');
                 HSUI.Notify(memoryLimit
                     ? 'Heater stopped before exceeding its memory limit. Try fewer builds at once.'
-                    : 'Heater could not finish. Check the console for details.', {
+                    : 'Heater could not finish. Check the Log tab for details.', {
                     position: 'top', notificationType: 'error'
                 });
-                console.error('Heater calculation failed:', error);
+                // The log tab renders a line as HTML, and a stack trace can hold "<anonymous>"
+                const details = error instanceof Error ? error.stack ?? error.message : String(error);
+                HSLogger.error(`Heater calculation failed: ${escapeLogText(details)}`, 'HSHeater');
             } finally {
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';
@@ -274,11 +288,20 @@ export class HSHeaterInputModalController {
                 const selectedSemanticIds = typeSelects.map(select => select.value ?? 'none');
 
                 const loadoutJsons: string[] = [];
+                const unaffordable: string[] = [];
                 for (let index = 0; index < selectedSemanticIds.length; index++) {
                     const semanticId = selectedSemanticIds[index];
                     const isEnabled = typeCheckboxes[index]?.checked ?? true;
 
                     if (!isEnabled || semanticId === 'none') {
+                        loadoutJsons.push('');
+                        continue;
+                    }
+
+                    // An unaffordable type has no loadout: its slot is left as it is.
+                    // Its checkbox is unticked after a heat, so this is one the player ticked again.
+                    if (HSHeaterResultStore.isSemanticIdUnaffordable(semanticId)) {
+                        unaffordable.push(`L${index + 1}: ${resolveHeaterTypeLabel(semanticId) ?? semanticId}`);
                         loadoutJsons.push('');
                         continue;
                     }
@@ -290,6 +313,12 @@ export class HSHeaterInputModalController {
                         HSUI.Notify(`Failed to find loadout for "${semanticId}"`, { position: 'top', notificationType: 'warning' });
                         loadoutJsons.push('');
                     }
+                }
+
+                if (unaffordable.length > 0) {
+                    const message = `Unaffordable, not imported: ${unaffordable.join(', ')}`;
+                    HSUI.Notify(message, { position: 'top', notificationType: 'warning' });
+                    HSLogger.warn(message, 'HSHeater');
                 }
 
                 const clipboardText = loadoutJsons.join('\n');

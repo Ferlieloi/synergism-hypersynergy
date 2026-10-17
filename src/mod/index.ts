@@ -90,11 +90,6 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: 'indianred',
         },
         {
-            className: 'HSPatches',
-            context: 'HSPatches',
-            moduleColor: '#487eb0',
-        },
-        {
             className: 'HSGameData',
             context: 'HSGameData',
             moduleColor: '#fbc531',
@@ -105,9 +100,19 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: '#fbc531',
         },
         {
+            className: 'HSSubtabMemory',
+            context: 'HSSubtabMemory',
+            moduleColor: 'lightsalmon',
+        },
+        {
             className: 'HSAmbrosia',
             context: 'HSAmbrosia',
             moduleColor: 'blueviolet',
+        },
+        {
+            className: 'HSHepteractDistributor',
+            context: 'HSHepteractDistributor',
+            moduleColor: 'mediumslateblue',
         },
         {
             className: 'HSAutosing',
@@ -118,6 +123,11 @@ window.__HS_INIT_PROMISE = (async () => {
             className: 'HSQOLButtons',
             context: 'HSQOLButtons',
             moduleColor: '#c0c0c0',
+        },
+        {
+            className: 'HSAutoExport',
+            context: 'HSAutoExport',
+            moduleColor: '#7fb3d5',
         },
         {
             className: 'Chartist',

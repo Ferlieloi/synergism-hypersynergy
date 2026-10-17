@@ -35,6 +35,7 @@ const els = {
   summaryChannel: document.getElementById('summaryChannel'),
   summaryModRef: document.getElementById('summaryModRef'),
   updateBanner: document.getElementById('updateBanner'),
+  patcherBanner: document.getElementById('patcherBanner'),
   mismatchBanner: document.getElementById('mismatchBanner'),
   quickSwitchBtn: document.getElementById('quickSwitchBtn'),
 
@@ -54,10 +55,13 @@ let state = {
   lastPatchedExe: '',
   lastPlayedChannel: '',
   lastPlayedModRef: '',
+  lastPlayedNeedsPatch: false,
   refListCache: {},
   channels: []
 }
 let refsRequestId = 0
+// While a patch runs, the main process refuses a launch or a build switch: their buttons stay disabled.
+let patchRunning = false
 let cleanupUiPromise = null
 
 function renderLauncherUpdate(status) {
@@ -308,10 +312,34 @@ els.retryLegacyCleanupBtn.addEventListener('click', () => { void cleanupLegacyFo
 
 function updateLastPlayedButton() {
   const available = Boolean(state.lastPatchedExe && state.lastPlayedChannel && state.lastPlayedModRef)
-  els.launchLastPlayedBtn.disabled = !available
+  const needsPatch = available && state.lastPlayedNeedsPatch
+  els.launchLastPlayedBtn.disabled = !available || patchRunning
   els.launchLastPlayedBtn.textContent = available
-    ? `Launch last played: ${state.lastPlayedModRef} (${state.lastPlayedChannel})`
+    ? `${needsPatch ? 'Patch & launch' : 'Launch'} last played: ${state.lastPlayedModRef} (${state.lastPlayedChannel})`
     : 'Launch last played build'
+  els.launchLastPlayedBtn.title = needsPatch
+    ? 'A re-patch is needed first — the last screen says why.'
+    : ''
+}
+
+// Whether "Launch last played" has to patch first: the game was updated, or that build's patcher
+// isn't the one the game was patched with. The click waits for the check that is running.
+let lastPlayedCheck = Promise.resolve(false)
+
+function refreshLastPlayedCheck() {
+  const { lastPlayedChannel: channel, lastPlayedModRef: modRef } = state
+  const check = (state.lastPatchedExe && channel && modRef)
+    ? (async () => {
+      if ((await checkGame()).needsRepatch) return true
+      return (await window.loader.checkPatcherChanged({ channel, modRef })).needsRepatch
+    })().catch(() => false)
+    : Promise.resolve(false)
+  lastPlayedCheck = check
+  void check.then(needsPatch => {
+    if (check !== lastPlayedCheck) return
+    state.lastPlayedNeedsPatch = needsPatch
+    updateLastPlayedButton()
+  })
 }
 
 document.querySelectorAll('a[data-external]').forEach(a => {
@@ -392,13 +420,16 @@ async function loadModRefs() {
   els.refsStatus.className = 'status-line'
   const requestedChannel = state.channel
   const requestId = ++refsRequestId
-  const { refs, branchCount, tagCount, defaultRef, datesIncomplete, error } = await window.loader.getModRefs(requestedChannel)
+  const { refs, branchCount, tagCount, defaultRef, datesIncomplete, message, error } = await window.loader.getModRefs(requestedChannel)
   if (requestedChannel !== state.channel || requestId !== refsRequestId) return
 
   renderRefOptions(refs, defaultRef)
   if (!error) state.refListCache[requestedChannel] = refs
 
-  if (error) {
+  if (message) {
+    els.refsStatus.textContent = message
+    els.refsStatus.className = 'status-line ok'
+  } else if (error) {
     const saved = refs.length > 1 || state.lastPlayedChannel === state.channel
     els.refsStatus.textContent = `Couldn't reach GitHub (${error}) — showing ${saved ? 'saved builds' : 'the default branch'}.`
     els.refsStatus.className = 'status-line error'
@@ -445,6 +476,7 @@ async function launchSelectedGame(exePath, modUrl, channel, modRef) {
     state.lastPlayedChannel = channel
     state.lastPlayedModRef = modRef
     updateLastPlayedButton()
+    refreshLastPlayedCheck()
   }
   return result
 }
@@ -461,6 +493,11 @@ els.launchLastPlayedBtn.addEventListener('click', async () => {
   renderChannelToggle()
   showRememberedRefs()
   goToStep(3)
+  if (await lastPlayedCheck) {
+    await patchAndLaunch()
+    updateLastPlayedButton()
+    return
+  }
   appendConsoleLine(`Launching last played build "${cfg.lastPlayedModRef}"…`)
   const modUrl = await window.loader.resolveModUrl(cfg.lastPlayedChannel, cfg.lastPlayedModRef)
   const result = await launchSelectedGame(cfg.lastPatchedExe, modUrl, cfg.lastPlayedChannel, cfg.lastPlayedModRef)
@@ -468,56 +505,133 @@ els.launchLastPlayedBtn.addEventListener('click', async () => {
   updateLastPlayedButton()
 })
 
+// A patcher warning is a patch step that could not be applied; lib/patchGame.js gives them this prefix.
+const PATCH_WARNING_PREFIX = '[PATCH] WARNING:'
+
 window.loader.onPatchLog((line) => {
-  appendConsoleLine(line, /error|fail/i.test(line) ? 'error' : null)
+  if (line.startsWith(PATCH_WARNING_PREFIX)) appendConsoleLine(line, 'warn')
+  else appendConsoleLine(line, /error|fail/i.test(line) ? 'error' : null)
 })
+
+const PATCHER_BANNER_TEXT = {
+  changed: "This build's patcher is not the one your game was patched with — re-patch to keep the mod working.",
+  'no-hash': 'Your game was patched by an older loader, which did not record its patcher — re-patch once so the loader can tell when the patcher changes.',
+  injector: 'This loader version changed what it adds to the game — re-patch to keep the mod working.'
+}
+
+const GAME_BANNER_TEXT = {
+  updated: 'The game has updated since your last patch — re-patch to keep the mod working.',
+  missing: 'The patched copy of the game is missing (the game was reinstalled or moved) — re-patch to create it again.',
+  format: 'This loader version changed how it builds the patched game — re-patch to keep the mod working.'
+}
+
+// The game side of the re-patch check: the game was updated by Steam, the patched copy is gone,
+// or it was built by a loader that patched another way.
+async function checkGame() {
+  if (!state.gameDir) return { needsRepatch: false }
+  return window.loader.checkUpdateNeeded({ gameDir: state.gameDir, exeName: EXE_NAME })
+}
+
+// `game` is the game check's result; `patcher` is the patcher check's result, or null while it runs.
+function renderRepatchState({ game, mismatch, patcher }) {
+  const checking = patcher === null
+  const gameUpdated = game.needsRepatch
+  const patcherChanged = Boolean(patcher?.needsRepatch)
+  const needsRepatch = gameUpdated || patcherChanged
+  // Without a patched game there is no last patch to compare with: "Patch & launch" is the only way on.
+  els.updateBanner.classList.toggle('is-hidden', !gameUpdated || !state.lastPatchedExe)
+  if (gameUpdated) els.updateBanner.textContent = GAME_BANNER_TEXT[game.reason] || GAME_BANNER_TEXT.updated
+  els.patcherBanner.classList.toggle('is-hidden', !patcherChanged)
+  if (patcherChanged) els.patcherBanner.textContent = PATCHER_BANNER_TEXT[patcher.reason] || PATCHER_BANNER_TEXT.changed
+
+  // The mismatch banner points at Quick switch, which can't be used while a re-patch is needed.
+  els.mismatchBanner.classList.toggle('is-hidden', !mismatch || !state.lastPatchedExe || needsRepatch || checking)
+  els.quickSwitchBtn.style.display = (mismatch && state.lastPatchedExe) ? '' : 'none'
+  els.quickSwitchBtn.disabled = needsRepatch || checking || patchRunning
+
+  els.launchOnlyBtn.disabled = needsRepatch || checking || patchRunning || !state.lastPatchedExe || mismatch
+}
+
+function notePatcherCheckFailed(error) {
+  const line = `Could not check this build's patcher (${error || 'unknown error'}) — the game stays as last patched.`
+  if (els.console.lastElementChild?.textContent !== line) appendConsoleLine(line)
+}
+
+let repatchCheckId = 0
 
 async function refreshUpdateBanner() {
   if (!state.gameDir) return
-  const { needsRepatch } = await window.loader.checkUpdateNeeded({ gameDir: state.gameDir, exeName: EXE_NAME })
-  els.updateBanner.classList.toggle('is-hidden', !needsRepatch)
+  const checkId = ++repatchCheckId
+  const game = await checkGame()
 
   // Check if the selected channel/ref differs from what was last patched
-  const { mismatch, lastChannel, lastModRef } = await window.loader.checkVersionMismatch({
+  const { mismatch } = await window.loader.checkVersionMismatch({
     channel: state.channel,
     modRef: state.modRef
   })
-  els.mismatchBanner.classList.toggle('is-hidden', !mismatch || !state.lastPatchedExe)
-  els.quickSwitchBtn.style.display = (mismatch && state.lastPatchedExe) ? '' : 'none'
-  els.quickSwitchBtn.disabled = needsRepatch  // can't quick-switch if game needs full repatch anyway
+  if (checkId !== repatchCheckId) return
 
-  els.launchOnlyBtn.disabled = needsRepatch || !state.lastPatchedExe || mismatch
+  // The game side may already ask for a patch. Otherwise the selected build's patcher is downloaded
+  // and compared: the launch buttons wait for it, the caller doesn't.
+  const patcherCheckNeeded = !game.needsRepatch && Boolean(state.lastPatchedExe)
+  renderRepatchState({ game, mismatch, patcher: patcherCheckNeeded ? null : { needsRepatch: false } })
+  if (!patcherCheckNeeded) return
+
+  void window.loader.checkPatcherChanged({ channel: state.channel, modRef: state.modRef })
+    .catch(error => ({ needsRepatch: false, reason: 'unknown', error: error.message }))
+    .then(patcher => {
+      if (checkId !== repatchCheckId) return
+      renderRepatchState({ game, mismatch, patcher })
+      if (patcher.reason === 'unknown') notePatcherCheckFailed(patcher.error)
+    })
 }
 
-els.patchAndLaunchBtn.addEventListener('click', async () => {
+async function patchAndLaunch() {
+  if (patchRunning) return
+  patchRunning = true
   els.console.innerHTML = ''
   els.patchAndLaunchBtn.disabled = true
   els.launchOnlyBtn.disabled = true
+  els.quickSwitchBtn.disabled = true
+  updateLastPlayedButton()
   setPill('Patching…', 'busy')
   appendConsoleLine(`Patching with "${state.channel}" build "${state.modRef}"…`)
 
-  const result = await window.loader.runPatch({
-    gameDir: state.gameDir,
-    sevenZipPath: state.sevenZipPath,
-    channel: state.channel,
-    modRef: state.modRef
-  })
+  try {
+    const result = await window.loader.runPatch({
+      gameDir: state.gameDir,
+      sevenZipPath: state.sevenZipPath,
+      channel: state.channel,
+      modRef: state.modRef
+    })
 
-  if (result.ok) {
-    state.lastPatchedExe = result.launchExePath
-    updateLastPlayedButton()
-    setPill('Patched', 'ok')
-    appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
-    const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
-    await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
-  } else {
+    if (result.ok) {
+      state.lastPatchedExe = result.launchExePath
+      setPill('Patched', 'ok')
+      appendConsoleLine(`Launching ${result.launchExePath}`, 'ok')
+      const modUrl = await window.loader.resolveModUrl(state.channel, state.modRef)
+      const launch = await launchSelectedGame(result.launchExePath, modUrl, state.channel, state.modRef)
+      // A launch that is remembered refreshes it itself.
+      if (!launch.ok || launch.warning) refreshLastPlayedCheck()
+      if (result.patchWarnings) {
+        appendConsoleLine(`The patch finished with ${result.patchWarnings} warning(s), the "${PATCH_WARNING_PREFIX}" lines above: some mod features may be missing or slower. This usually follows a game update — look for a newer mod build.`, 'warn')
+      }
+    } else {
+      setPill('Error', 'error')
+      appendConsoleLine(`Patch failed: ${result.error}`, 'error')
+    }
+  } catch (error) {
     setPill('Error', 'error')
-    appendConsoleLine(`Patch failed: ${result.error}`, 'error')
+    appendConsoleLine(`Patch failed: ${error.message}`, 'error')
+  } finally {
+    patchRunning = false
+    els.patchAndLaunchBtn.disabled = false
+    updateLastPlayedButton()
+    await refreshUpdateBanner()
   }
+}
 
-  els.patchAndLaunchBtn.disabled = false
-  await refreshUpdateBanner()
-})
+els.patchAndLaunchBtn.addEventListener('click', () => patchAndLaunch())
 
 els.launchOnlyBtn.addEventListener('click', async () => {
   if (!state.lastPatchedExe) return
@@ -559,10 +673,10 @@ els.quickSwitchBtn.addEventListener('click', async () => {
 
     state.channels = await window.loader.getChannels()
     const preferredChannel = cfg.lastPlayedChannel || cfg.lastPatchedChannel || cfg.channel
-    state.channel = (preferredChannel && state.channels.some(c => c.id === preferredChannel))
-      ? preferredChannel
-      : (state.channels[0]?.id || 'live')
-    state.modRef = cfg.lastPlayedModRef || cfg.lastPatchedModRef || cfg.modRef || ''
+    const preferredAvailable = Boolean(preferredChannel && state.channels.some(c => c.id === preferredChannel))
+    state.channel = preferredAvailable ? preferredChannel : (state.channels[0]?.id || 'live')
+    // A ref saved for a channel that isn't offered (e.g. the hidden local one) means nothing here.
+    state.modRef = preferredAvailable ? (cfg.lastPlayedModRef || cfg.lastPatchedModRef || cfg.modRef || '') : ''
 
     els.steamPathInput.value = state.steamPath
     els.gameDirOutput.value = state.gameDir
@@ -576,6 +690,7 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     goToStep(1)
     void cleanupLegacyFolders()
     void loadModRefs()
+    refreshLastPlayedCheck()
     await refreshUpdateBanner()
   })().catch(error => {
     setPill('Startup failed', 'error')

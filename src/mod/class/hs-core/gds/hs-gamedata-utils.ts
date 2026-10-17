@@ -1,4 +1,5 @@
 import Decimal from "break_infinity.js";
+import { AutoAscensionModes } from "../../../types/data-types/hs-player-savedata";
 
 export const parseNumericStringIfSafe = (value: unknown): number | undefined => {
     if (typeof value !== 'string') return undefined;
@@ -104,3 +105,7 @@ export const calcECC = (type: 'transcend' | 'reincarnation' | 'ascension', compl
     }
 };
 
+
+/** Whether the tesseract auto-buyer is in percentage mode (player.resetToggleModes.ascension). */
+export const isTesseractAutoBuyPercentageMode = (resetToggleModes: { ascension?: AutoAscensionModes } | undefined): boolean =>
+    resetToggleModes?.ascension === AutoAscensionModes.percentage;

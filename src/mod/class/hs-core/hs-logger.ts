@@ -83,6 +83,29 @@ export class HSLogger {
         HSLogger.scrollToBottom(true);
     }
 
+    /**
+     * Every log line kept, oldest first, as plain text with its time: the Log tab's lines,
+     * then the ones still waiting for that tab to be shown.
+     */
+    static getLogLines(): string[] {
+        const lines: string[] = [];
+        if (!this.#integratedToUI) return lines;
+
+        for (const line of Array.from(this.#logElement.querySelectorAll('.hs-ui-log-line'))) {
+            lines.push((line.textContent ?? '').trimEnd());
+        }
+
+        // Same text as #renderLogLineToUi gives them, without rendering them
+        const plainText = document.createElement('div');
+        for (const record of this.#pendingLogRecords) {
+            plainText.innerHTML = `${record.level} [${record.contextString} (${record.timeString})]: ${record.formattedMessage}`;
+            const repeat = record.repeatCount > 1 ? ` (x${record.repeatCount})` : '';
+            lines.push(`${plainText.textContent ?? ''}${repeat}`);
+        }
+
+        return lines;
+    }
+
     static updateDebugEnabled(): void {
         const debugLog = HSSettings.getSetting('showDebugLogs') as HSSetting<boolean>;
         HSLogger.#cachedDebugEnabled = !!(debugLog && debugLog.getValue());

@@ -392,7 +392,7 @@ select::-webkit-scrollbar-corner {
     transition: background-color 0.15s, border-color 0.15s;
     cursor: pointer;
     background-color: #101828;
-    width: 130px;
+    width: 150px;
     height: 30px;
     line-height: 30px;
     text-align: center;
@@ -525,6 +525,17 @@ select::-webkit-scrollbar-corner {
     padding-left: 10px;
 }
 
+/* A setting that belongs to another one (settingControl.controlParent): indented under its label
+   (block padding + switch width + gap) */
+.hs-panel-setting-block.hs-panel-setting-block-child {
+    padding-left: calc(40px + 0.5em);
+}
+
+/* Buttons side by side: only the first one of the row is indented */
+.hs-panel-setting-block-child.hs-inline-button + .hs-panel-setting-block-child.hs-inline-button {
+    padding-left: 10px;
+}
+
 .hs-panel-grid-2col {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -600,7 +611,7 @@ select::-webkit-scrollbar-corner {
 }
 
 #hs-setting-hidden-vanilla-tabs {
-    height: 160px;
+    height: 120px;
 }
 
 .hs-panel-setting-block-select-input[multiple] option:checked {
@@ -634,6 +645,29 @@ select::-webkit-scrollbar-corner {
 
 .hs-panel-btn-auto-width {
     width: auto;
+}
+
+/* Auto-Sing strategy buttons (Edit, Create, Delete, Import, Export): narrower than the other panel buttons */
+.hs-button-group-autosing-strategy .hs-panel-btn {
+    width: 130px;
+}
+
+/* Timed save export: the two folder buttons share a line, the first one shows the folder's name. Their widths
+   keep them on one line at the panel's narrowest width, indented under "Export the save every X minutes" */
+#hs-setting-auto-export-save-folder-button,
+#hs-setting-auto-export-save-forget-folder-button {
+    width: auto;
+    min-width: 125px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+#hs-setting-auto-export-save-folder-button {
+    min-width: 290px;
+    max-width: 290px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .hs-panel-setting-block-gamedata-icon {

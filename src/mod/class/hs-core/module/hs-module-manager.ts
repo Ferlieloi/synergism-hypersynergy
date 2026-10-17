@@ -2,6 +2,7 @@ import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
@@ -13,12 +14,13 @@ import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
-import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
+import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 
 /**
  * Class: HSModuleManager
@@ -38,6 +40,7 @@ export class HSModuleManager {
         "HSUI": HSUI,
         "HSCodes": HSCodes,
         "HSHepteracts": HSHepteracts,
+        "HSHepteractDistributor": HSHepteractDistributor,
         "HSTalismans": HSTalismans,
         "HSSettings": HSSettings,
         "HSPrototypes": HSPrototypes,
@@ -47,12 +50,13 @@ export class HSModuleManager {
         "HSAmbrosia": HSAmbrosia,
         "HSStats": HSStats,
         "HSGameState": HSGameState,
-        "HSPatches": HSPatches,
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
         "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
-        "HSQOLButtons": HSQOLButtons
+        "HSQOLButtons": HSQOLButtons,
+        "HSSubtabMemory": HSSubtabMemory,
+        "HSAutoExport": HSAutoExport
     };
 
     constructor(context: string, modulesToEnable: HSModuleDefinition[]) {

@@ -23,7 +23,7 @@
     position: fixed;
     top: 10px;
     left: 50px;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 1);
     color: var(--timer-text-primary);
     border-radius: 8px;
     font-family: monospace;

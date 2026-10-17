@@ -74,6 +74,7 @@ export interface AmbrosiaHelperContext {
   getGameData: () => GameData | undefined
   getMeData: () => any
   calculateLuck: (reduce_vals?: boolean, true_base?: boolean) => { luckBase: number; luckMult: number; luckTotal: number } | any
+  calculateRedAmbrosiaLuck: () => number
   getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
@@ -82,6 +83,8 @@ export interface AmbrosiaHelperContext {
   getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
   getPurpleReactorUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
+  getPurpleHoneyLuck: () => number
+  getPurpleHoneyPerExtraction: () => number
   getPCoinUpgradeLevel: (upgradeName: string) => number
   getCampaignTokens: () => number
   getEventBellAmount: () => number
@@ -109,6 +112,11 @@ export interface RuneHelperContext {
   getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K]
   calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
   calculateChallenge15Reward: (rewardName: string) => number
+  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  calculateHepteractEffective: (type: HepteractType) => number
+  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
+  calculateSynergismLevel: () => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }

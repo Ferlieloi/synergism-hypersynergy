@@ -443,7 +443,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
   },
   // Row 2
   freeLevelsRow2: {
-    label: 'Row 2 Upgrade Levels',
+    label: 'More Blueberry Luck Module Levels!',
     costPerLevel: 10,
     maxLevel: 5,
     costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
@@ -504,7 +504,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
   },
   // Row 3
   freeLevelsRow3: {
-    label: 'Row 3 Upgrade Levels',
+    label: 'More Blueberry Resource and Utility Module Levels!',
     costPerLevel: 250,
     maxLevel: 5,
     costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
@@ -588,7 +588,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
   },
   // Row 4
   freeLevelsRow4: {
-    label: 'Row 4 Upgrade Levels',
+    label: 'More Blueberry Cube Module Levels!',
     costPerLevel: 5000,
     maxLevel: 5,
     costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
@@ -664,7 +664,7 @@ export const redAmbrosiaUpgradeCalculationCollection: RedAmbrosiaUpgradeCalculat
     url: 'Pictures/RedAmbrosia/RedAmbrosiaTutorial.png'
   },
   freeLevelsRow5: {
-    label: 'Row 5 Upgrade Levels',
+    label: 'More Blueberry Quark Module Levels!',
     costPerLevel: 50000,
     maxLevel: 5,
     costFunction: (n: number, cpl: number) => cpl * Math.pow(2, n),
@@ -1015,7 +1015,7 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
       return n > 0 ? 1 : 0
     },
   },
-  corruptionFifteen: { maxLevel: 1, costPerLevel: 40_000, specialCostForm: 'Default' },
+  corruptionFifteen: { maxLevel: 1, costPerLevel: 40_000, specialCostForm: 'Default', effect: (n) => n },
   singOfferings1: { maxLevel: MAX_PURCHASED_UPGRADE_LEVEL, costPerLevel: 1, specialCostForm: 'Default' },
   singOfferings2: { maxLevel: 25, canExceedCap: true, costPerLevel: 25, specialCostForm: 'Default' },
   singOfferings3: { maxLevel: 40, canExceedCap: true, costPerLevel: 500, specialCostForm: 'Default' },
@@ -1036,7 +1036,10 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
       : key === 'ascensionSpeedMult' ? (n > 0 ? 1.5 : 1)
         : (n > 0 ? 0.02 : 0),
   },
-  advancedPack: { maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default' },
+  advancedPack: {
+    maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default',
+    effect: (n, key) => key === 'corruptionScoreIncrease' ? (n > 0 ? 0.33 : 0) : (n > 0 ? 0.04 : 0),
+  },
   expertPack: {
     maxLevel: 1, costPerLevel: 800, specialCostForm: 'Default',
     effect: (n, key) => key === 'addCodeAscensionTimeMult' ? (n > 0 ? 1.2 : 1)
@@ -1448,12 +1451,12 @@ export const SINGULARITY_CHALLENGE_DATA: {
     }
   },
   taxmanLastStand: {
-    baseReq: 240,
+    baseReq: 266,
     maxCompletions: 10,
     unlockSingularity: 281,
     HTMLTag: 'taxmanLastStand',
     singularityRequirement: (baseReq: number, completions: number) => {
-      return baseReq + 4 * completions
+      return baseReq + 2 * completions
     },
     achievementPointValue: (n: number) => {
       return 50 * n
@@ -1467,6 +1470,8 @@ export const SINGULARITY_CHALLENGE_DATA: {
         talismanUnlock: n >= 10,
         talismanFreeLevel: 25 * n,
         talismanRuneEffect: 0.03 * n,
+        purpleHoneyLuck: 3 * n,
+        purpleBarSize: 1 - 0.01 * n,
         antiquityOOM: 1 / 50 * n / 10,
         horseShoeOOM: 1 / 20 * n / 10
       }

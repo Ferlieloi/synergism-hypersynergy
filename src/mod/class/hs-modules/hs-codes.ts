@@ -1,7 +1,10 @@
 import { HSModuleOptions } from "../../types/hs-types";
+import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
+import { HSModuleManager } from "../hs-core/module/hs-module-manager";
+import type { HSAutosing } from "./hs-autosing/hs-autosing";
 
 /**
  * Class: HSCodes
@@ -15,6 +18,8 @@ export class HSCodes extends HSModule {
     #config : MutationObserverInit;
     #codeBoxLabelObserver? : MutationObserver;
     #codeSpanStyle = 'white-space: nowrap; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all;';
+    #codeInfo?: HTMLElement;
+    #pendingCodeInfoRefresh = new Set<string>();
 
     constructor(moduleOptions : HSModuleOptions) {
         super(moduleOptions);
@@ -46,7 +51,38 @@ export class HSCodes extends HSModule {
         this.#codeBoxLabel = await HSElementHooker.HookElement('#promptWrapper > #prompt > label') as HTMLLabelElement;
 
         this.#observe();
+        await this.#hookCodeInfoRefresh();
         this.isInitialized = true;
+    }
+
+    // The game writes the code info (#promocodeinfo) only on mouseover of the code buttons. When a code's dialogs
+    // are answered without the pointer leaving the button (Add x10, Auto-Loadout Time), it keeps showing the uses
+    // from before the click. So once the code's dialogs are over (it has paid out), the game's mouseover listener
+    // is run again. The clicks on the Add buttons bubble to #addCodeBox, which holds that listener.
+    async #hookCodeInfoRefresh() {
+        const [addCodeBox, timeCodeButton, codeInfo] = await Promise.all([
+            HSElementHooker.HookElement('#addCodeBox'),
+            HSElementHooker.HookElement('#timeCode'),
+            HSElementHooker.HookElement('#promocodeinfo'),
+        ]);
+        this.#codeInfo = codeInfo;
+
+        addCodeBox.addEventListener('click', () => this.#refreshCodeInfoWhenDone('add', addCodeBox));
+        timeCodeButton.addEventListener('click', () => this.#refreshCodeInfoWhenDone('time', timeCodeButton));
+    }
+
+    // Not while autosing runs: it uses both codes at every singularity, with the Settings tab hidden.
+    #refreshCodeInfoWhenDone(code: 'add' | 'time', hoverTarget: HTMLElement) {
+        if (HSModuleManager.getModule<HSAutosing>('HSAutosing')?.isAutosingActive()) return;
+        if (this.#pendingCodeInfoRefresh.has(code)) return;
+        this.#pendingCodeInfoRefresh.add(code);
+
+        void HSGameDialogs.whenQueueIdle().then(() => {
+            this.#pendingCodeInfoRefresh.delete(code);
+            // Only while the info still shows this code. The prefix is a literal of the game's promocodesInfoText(), not translated
+            if (!this.#codeInfo?.textContent?.startsWith(`'${code}': `)) return;
+            hoverTarget.dispatchEvent(new MouseEvent('mouseover'));
+        });
     }
 
     #observe() {

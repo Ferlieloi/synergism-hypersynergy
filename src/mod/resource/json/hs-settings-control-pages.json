@@ -29,12 +29,6 @@
     "pageColor": "crimson",
     "order": 5
   },
-  "patch": {
-    "page": "patch",
-    "pageName": "Patch",
-    "pageColor": "fuchsia",
-    "order": 6
-  },
   "ambrosia": {
     "page": "ambrosia",
     "pageName": "Ambrosia",

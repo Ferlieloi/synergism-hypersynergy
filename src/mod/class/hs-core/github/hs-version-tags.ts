@@ -1,22 +1,25 @@
 // Patch-letter tags such as v2.14.0a are stable releases in this project.
-// Hyphenated tags are development or prerelease builds and must not prompt
-// users of a stable release to update.
+// Hyphenated tags (v2.14.4b-dev4) are dev builds: they must not prompt users
+// of a stable release to update, and only count for players of the Dev channel.
 const stableTagPattern = /^v?\d+\.\d+\.\d+[a-z]?$/;
+const devTagPattern = /^v?\d+\.\d+\.\d+[a-z]?-[0-9A-Za-z.-]+$/;
 
-function parseVersionTag(tag: string): { numbers: number[]; suffix: Array<string | number> | null } {
+// v2.14.4b-dev4: numbers 2.14.4, patch letter b, build dev4
+function parseVersionTag(tag: string): { numbers: number[]; letter: string; build: Array<string | number> | null } {
     const normalized = tag.startsWith('v') ? tag.slice(1) : tag;
-    const match = normalized.match(/^(\d+(?:\.\d+)*)(?:-?(.+))?$/);
+    // A tag of another shape: whatever follows the numbers is read as its build
+    const match = normalized.match(/^(\d+(?:\.\d+)*)([a-z]?)(?:-(.+))?$/) ?? normalized.match(/^(\d+(?:\.\d+)*)()(.+)$/);
     const version = match?.[1] ?? normalized;
-    const suffix = match?.[2] ?? null;
+    const build = match?.[3] ?? null;
     const numbers = version.split('.').map((segment) => {
         const parsed = Number(segment);
         return Number.isFinite(parsed) ? parsed : 0;
     });
-    const parsedSuffix = suffix ? suffix.split('.').flatMap((part) => {
+    const parsedBuild = build ? build.split('.').flatMap((part) => {
         const matches = part.match(/([0-9]+|[^0-9]+)/g);
         return matches ? matches.map((chunk) => /^[0-9]+$/.test(chunk) ? Number(chunk) : chunk) : [part];
     }) : null;
-    return { numbers, suffix: parsedSuffix };
+    return { numbers, letter: match?.[2] ?? '', build: parsedBuild };
 }
 
 export function compareVersionTags(a: string, b: string): number {
@@ -30,16 +33,21 @@ export function compareVersionTags(a: string, b: string): number {
         if (leftNum !== rightNum) return leftNum < rightNum ? -1 : 1;
     }
 
-    if (left.suffix === right.suffix) return 0;
-    // A current dev build of a stable version is still current, while a
-    // patch-letter release (v2.14.0a) follows its plain tag (v2.14.0).
-    if (left.suffix === null) return -1;
-    if (right.suffix === null) return 1;
+    // A patch-letter release (v2.14.0a) follows its plain tag (v2.14.0), dev builds included:
+    // v2.14.0-dev3 < v2.14.0a < v2.14.0a-dev1
+    if (left.letter !== right.letter) return left.letter < right.letter ? -1 : 1;
 
-    const suffixLen = Math.max(left.suffix.length, right.suffix.length);
-    for (let i = 0; i < suffixLen; i += 1) {
-        const leftId = left.suffix[i];
-        const rightId = right.suffix[i];
+    // A dev build is named from the release it is built on, so it follows it:
+    // a current dev build of a stable version is still current.
+    if (left.build === null || right.build === null) {
+        if (left.build === right.build) return 0;
+        return left.build === null ? -1 : 1;
+    }
+
+    const buildLen = Math.max(left.build.length, right.build.length);
+    for (let i = 0; i < buildLen; i += 1) {
+        const leftId = left.build[i];
+        const rightId = right.build[i];
         if (leftId === undefined) return -1;
         if (rightId === undefined) return 1;
         if (leftId === rightId) continue;
@@ -51,16 +59,18 @@ export function compareVersionTags(a: string, b: string): number {
     return 0;
 }
 
-export function latestStableVersionTag(entries: readonly unknown[]): string | null {
+// The highest version tag of a GitHub tag list: stable tags only, or dev builds too
+export function latestVersionTag(entries: readonly unknown[], includeDev = false): string | null {
     let highestTag: string | null = null;
     for (const entry of entries) {
         const name = entry && typeof entry === 'object' && 'name' in entry ? entry.name : null;
-        if (typeof name !== 'string' || !stableTagPattern.test(name)) continue;
+        if (typeof name !== 'string') continue;
+        if (!stableTagPattern.test(name) && !(includeDev && devTagPattern.test(name))) continue;
         if (!highestTag || compareVersionTags(name, highestTag) > 0) highestTag = name;
     }
     return highestTag;
 }
 
-export function isCurrentVersionLatest(currentTag: string, latestStableTag: string): boolean {
-    return compareVersionTags(currentTag, latestStableTag) >= 0;
+export function isCurrentVersionLatest(currentTag: string, latestTag: string): boolean {
+    return compareVersionTags(currentTag, latestTag) >= 0;
 }

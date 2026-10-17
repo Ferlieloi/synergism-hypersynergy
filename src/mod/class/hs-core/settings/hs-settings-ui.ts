@@ -648,7 +648,8 @@ export class HSSettingsUI {
         } else if (controls.controlType === 'button') {
             components.push(HSUIC.Button({
                 id: controls.controlId!,
-                text: setting.settingDescription || 'Error: No button text'
+                text: setting.settingDescription || 'Error: No button text',
+                props: setting.settingHelpText ? { title: setting.settingHelpText } : undefined
             }));
         } else {
             const convertedType = this.#resolveControlTypeInput(controls.controlType);
@@ -672,12 +673,34 @@ export class HSSettingsUI {
         }
 
         let blockClass = 'hs-panel-setting-block';
-        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+        if (controls.controlType === 'button' && (controls.controlGroup === 'auto-sing-strategy-controls' || controls.controlGroup === 'save-export')) {
             blockClass += ' hs-inline-button';
+        }
+        // The strategy buttons keep a width of their own (hs-panel-core.css)
+        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+            blockClass += ' hs-button-group-autosing-strategy';
+        }
+
+        // A setting that belongs to another one (controlParent) is indented under its label. With
+        // controlHideWhenParentOff it is hidden while the parent is off: a CSS rule on the parent's switch, which
+        // the settings UI keeps marked .hs-disabled while off
+        let blockId = setting.settingBlockId;
+        if (controls.controlParent) {
+            blockClass += ' hs-panel-setting-block-child';
+            blockId ??= `hs-setting-block-${setting.settingName}`;
+            if (controls.controlHideWhenParentOff) {
+                const parentSwitchId = HSSettings.getSetting(controls.controlParent)?.getDefinition().settingControl?.controlEnabledId;
+                if (parentSwitchId) {
+                    HSUI.injectStyle(`.hs-panel-setting-block:has(#${parentSwitchId}.hs-disabled) ~ #${blockId} { display: none; }`,
+                        `hs-setting-child-${setting.settingName}`);
+                } else {
+                    HSLogger.warn(`Setting ${setting.settingName}: its parent ${controls.controlParent} has no switch, it is always shown`, this.#context);
+                }
+            }
         }
 
         return HSUIC.Div({
-            id: setting.settingBlockId,
+            id: blockId,
             class: blockClass,
             html: components
         });

@@ -18,15 +18,24 @@ patching again so the loader can replace that folder safely.
 ## Project layout
 
 ```
-main.js              Electron main process: window + all IPC handlers
+main.js               Electron main process: window + all IPC handlers
 preload.js            contextBridge API exposed to the UI (window.loader)
 renderer/             UI: index.html, style.css, renderer.js
 lib/
-  config.js          Defaults + persisted user config (steam path, mod ref, etc.)
-  steamLocator.js     Steam path detection, library-folder parsing, 7-Zip detection
-  patchGame.js        The extract → patch → repack pipeline
-  patcher.js          Local fallback copy of the out.js bundle patcher
-  injectorTemplate.js Builds the preload.js injector snippet for a given mod URL
+  config.js             Channels, defaults + persisted user config (steam path, mod ref, last patch)
+  steamLocator.js       Steam path detection, library-folder parsing, 7-Zip detection
+  patchGame.js          The extract → patch → repack pipeline, mod and patcher URLs
+  patcher.js            Local fallback copy of the out.js bundle patcher
+  patcherSource.js      Downloads a build's patcher.js, and tells when it is not the one last used
+  injectorTemplate.js   Builds the preload.js injector snippet for a given mod URL
+  workspaceManager.js   The __hs_work_* folders: staging, swap, cleanup, running-game check
+  archiveWriter.js      Repacks app.asar and waits for the file to be closed
+  gameLauncher.js       Starts the patched game and remembers the build played
+  modRefs.js            Branch and tag list of a channel's repo (GitHub API)
+  modRefCache.js        The last list seen, for when GitHub can't be reached
+  launcherUpdater.js    Loader self-update from GitHub Releases
+  startupDiagnostics.js Startup log and error dialogs
+test/                 node --test suites (npm test)
 ```
 
 ## Developing
@@ -68,10 +77,14 @@ the launcher restarts. The loader's version is separate from the mod version.
 
 To publish a launcher update, increase `version` in this directory's
 `package.json` and `package-lock.json`, then push a matching tag such as
-`loader-v0.2.7`. The `Release Windows loader` workflow builds the installer,
+`loader-v0.2.10`. The `Release Windows loader` workflow builds the installer,
 uploads it with `latest.yml` and its block map. The launcher selects the
 newest published `loader-v*` release with update metadata. The workflow marks
 the new loader release as GitHub's Latest release.
+
+Create the tag with `git tag -a`, with a message made of a title line, an
+empty line, then the release notes: the workflow publishes everything after
+the title line as the release's notes, and refuses a tag without a message.
 
 Players using the earlier 0.1.0 installer need to install an updater-enabled
 release once. Future launcher releases can then update through the app.
@@ -87,7 +100,9 @@ list and keeps the last played build selected. The **Launch last played** button
 on the first screen starts the existing patched copy with that build without
 waiting for GitHub's build list or requiring 7-Zip. The mod script is still
 fetched from the selected build's CDN URL when the game starts, so this feature
-does not provide fully offline play.
+does not provide fully offline play. When that build needs a re-patch (see
+below), the button reads **Patch & launch last played** and patches first,
+which does need 7-Zip.
 
 ## How the patch pipeline works
 
@@ -118,6 +133,21 @@ The loader remembers the original exe's size/mtime at patch time, so it
 can tell you when Synergism has been updated by Steam and a re-patch is a
 good idea (the bundle patcher's anchor strings can drift between game
 versions).
+
+It also remembers which `patcher.js` that patch used. The patcher is only
+applied by a patch, so when the selected build's patcher is not that one (a
+mod release changed it, or you picked a build with another patcher), the
+loader asks for a re-patch the same way: a banner on the last screen, with
+**Launch only** and **Quick switch** disabled. A game patched by loader 0.2.8
+or older has no recorded patcher and is asked to re-patch once. When the
+patcher can't be downloaded for the check, nothing is asked.
+
+Three more cases ask for a re-patch: the injector snippet written into the
+game is not the one this loader version writes (a loader update changed it),
+the patched copy is missing (the game was reinstalled, or moved to another
+Steam library), and the patched copy was built by a loader version that built
+it another way (a game patched by loader 0.2.9 or older is asked once: its
+native modules were packed into `app.asar`, which broke logging in).
 
 ## Known limitations / things to be aware of
 
@@ -156,19 +186,14 @@ or installation-specific issue.
   recognizes specific strings in the minified `out.js` bundle. A Synergism
   update can shift or rename those, in which case a given patch step logs
   a warning and is skipped rather than crashing the whole run — but that
-  also means a feature can silently stop working until the patcher is
-  updated. Watch the console output after patching.
+  also means a mod feature can stop working until the patcher is updated.
+  The loader's console shows these warnings in orange (`[PATCH] WARNING:`),
+  and ends the patch with their count.
 - **7-Zip's NSIS support is the one piece this can't route around without
   asking the player to install something.** Bundling a lightweight 7-Zip
   binary (e.g. via npm) doesn't help, because those builds drop the NSIS
   module the first extraction step depends on.
 - **The launchable-exe heuristic is a best guess** (first non-uninstaller
   `.exe` at the root of the extracted app folder). If a future build of
-  the game ships multiple top-level exes, you may need to point the
-  "Launch" step at the right one by hand — happy to add a manual override
-  if that ever happens.
-- I wrote and syntax-checked all of this, and smoke-tested the
-  pure-logic pieces (URL building, exe picking, the bundle patcher against
-  dummy code), but couldn't run the full pipeline end-to-end here since
-  that requires Windows, Steam, and 7-Zip. Treat the first real run as a
-  test pass and let me know what breaks.
+  the game ships multiple top-level exes, the loader will need a way to
+  choose the right one.

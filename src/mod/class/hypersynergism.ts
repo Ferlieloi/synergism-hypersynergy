@@ -3,12 +3,11 @@ import { HSLogger } from "./hs-core/hs-logger";
 import { HSModuleManager } from "./hs-core/module/hs-module-manager";
 import { HSUI } from "./hs-core/hs-ui";
 import { HSUIC } from "./hs-core/hs-ui-components";
-import corruption_ref_b64 from "inline:../resource/txt/corruption_ref.txt";
-import corruption_ref_b64_2 from "inline:../resource/txt/corruption_ref_onemind.txt";
 import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
 import { HSGlobal } from "./hs-core/hs-global";
-import { HSStorage } from "./hs-core/hs-storage";
+import { HSBackup } from "./hs-core/hs-backup";
+import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
@@ -18,6 +17,11 @@ import { HSAmbrosia } from "./hs-modules/hs-ambrosia";
 import { HSHeaterInputModalController } from "./hs-modules/hs-heater/hs-heater-input-modal-controller";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
+import { HSGameDialogs } from "./hs-core/dialogs/hs-game-dialogs";
+import { HSDevTools } from "./hs-core/dev/hs-dev-tools";
+
+// Build-time injected by esbuild via `define`: false in the release build only.
+declare const HS_DEV_BUILD: boolean;
 
 /**
  * Class: Hypersynergism
@@ -57,6 +61,9 @@ export class Hypersynergism {
 
         // Now that game is ready, we can process modules (which might init immediate modules like HSUI)
         await this.preprocessModules();
+        // After preprocessModules(), which attaches HSLogger to the panel (it drops panel logs written before that),
+        // and before the feature modules, which may click game buttons that open dialogs
+        HSGameDialogs.init();
         await this.#moduleManager.initModules();
 
         HSLogger.log("Building UI Panel", this.#context);
@@ -87,6 +94,135 @@ export class Hypersynergism {
 
         HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
         this.#startVanillaGlobalEventPolling();
+        void this.#onGameLoaded();
+        void HSBookmarkletNotice.showIfBookmarklet();
+    }
+
+    /**
+     * Once the game has finished loading: expose the patched game internals (hidden behind the offline
+     * popup when it is open), then close the popup if the autoDismissOfflinePopup setting is on.
+     * The browser loader usually did both already, in which case this does nothing.
+     */
+    async #onGameLoaded(): Promise<void> {
+        const autoDismissPopup = !!HSSettings.getSetting('autoDismissOfflinePopup')?.isEnabled();
+
+        await this.#waitForGameLoaded();
+        await this.#ensurePatcherExposure(autoDismissPopup);
+
+        if (autoDismissPopup) this.#dismissOfflinePopup();
+    }
+
+    /** Close the offline progress popup if it is open. */
+    #dismissOfflinePopup() {
+        if (document.getElementById('offlineContainer')?.style.display !== 'flex') return;
+        document.getElementById('exitOffline')?.click();
+    }
+
+    /**
+     * Resolve once the game has finished loading. Same signal as the browser loader: the offline progress
+     * popup is shown. Also resolves when the popup was already dismissed (body.loading removed by exitOffline).
+     */
+    #waitForGameLoaded(): Promise<void> {
+        const isLoaded = () => document.getElementById('offlineContainer')?.style.display === 'flex'
+            || !document.body.classList.contains('loading');
+
+        return new Promise(resolve => {
+            if (isLoaded()) { resolve(); return; }
+
+            const observer = new MutationObserver(() => {
+                if (!isLoaded()) return;
+                observer.disconnect();
+                resolve();
+            });
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+        });
+    }
+
+    /**
+     * Patched bundles expose some game internals (__HS_i18next, __HS_synergismStage, __HS_exportSynergism...)
+     * only once the game runs the patched functions. The browser loader triggers them before loading the mod,
+     * the Steam injector doesn't, so do the same here: open Settings → Stats for nerds → Misc, run a silent
+     * export, then go back to the previous tab. Called once the game has loaded; the game's tab buttons don't
+     * check for the offline popup, so the navigation runs hidden behind it when it is open (the stage itself
+     * is only exposed once the popup closes, see below).
+     * Done here in the mod rather than in the Steam injector, so it reaches Steam players with a mod release
+     * instead of requiring a new exe launcher. Skipped when the loader already did it (browser).
+     */
+    async #ensurePatcherExposure(autoDismissPopup: boolean): Promise<void> {
+        const w = window as any;
+        // Without the patched bundle (bookmarklet loader), navigating can't expose anything
+        if (!HSGlobal.exposedPlayer) return;
+
+        const isExposed = () => !!w.__HS_STAGE_EXPOSED && !!w.__HS_EXPORT_EXPOSED;
+        if (isExposed()) return;
+
+        const click = async (id: string) => {
+            document.getElementById(id)?.click();
+            await HSUtils.sleep(100);
+        };
+        const waitForPopupClosed = () => new Promise<void>(resolve => {
+            if (!document.body.classList.contains('loading')) { resolve(); return; }
+            const observer = new MutationObserver(() => {
+                if (document.body.classList.contains('loading')) return;
+                observer.disconnect();
+                resolve();
+            });
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        });
+
+        // Only the active main tab button has aria-current (its panel also gets .active-tab)
+        const previousTab = document.querySelector<HTMLElement>('[aria-current="page"]');
+        const settingsTab = document.getElementById('settingstab');
+
+        // Safety net: the game should accept tab clicks once loaded, even behind the offline popup
+        for (let check = 0; check < 10; check++) {
+            await click('settingstab');
+            if (settingsTab?.classList.contains('active-tab')) break;
+            await HSUtils.sleep(1000);
+        }
+        if (!settingsTab?.classList.contains('active-tab')) {
+            HSLogger.warn('Could not expose patched game internals: the settings tab did not open', this.#context);
+            return;
+        }
+
+        if (!w.__HS_STAGE_EXPOSED) {
+            await click('switchSettingSubTab4');
+            await click('kMisc');
+        }
+
+        if (!w.__HS_EXPORT_EXPOSED) {
+            // The patched exportSynergism exposes itself right away, then returns early while this flag is set
+            w.__HS_SILENT_EXPORT = true;
+            try {
+                document.getElementById('exportgame')?.click();
+            } finally {
+                w.__HS_SILENT_EXPORT = false;
+            }
+        }
+
+        // The stage is only exposed when the game renders the Misc stats, and the game pauses its display
+        // updates while the offline popup is open. It happens on the first update after the popup closes,
+        // with Misc still active behind it: close it (setting on) or wait for the player to (no limit).
+        if (document.body.classList.contains('loading')) {
+            if (autoDismissPopup) this.#dismissOfflinePopup();
+            await waitForPopupClosed();
+        }
+
+        const stageDeadline = Date.now() + 5000;
+        while (!w.__HS_STAGE_EXPOSED && Date.now() < stageDeadline) {
+            await HSUtils.sleep(100);
+        }
+
+        // Go back to where the player was, unless they already moved away from Settings
+        if (settingsTab?.classList.contains('active-tab')) {
+            (previousTab ?? document.getElementById('buildingstab'))?.click();
+        }
+
+        if (isExposed()) {
+            HSLogger.log('Patched game internals exposed (stage, i18n, export)', this.#context);
+        } else {
+            HSLogger.warn(`Could not expose patched game internals (stage: ${!!w.__HS_STAGE_EXPOSED}, export: ${!!w.__HS_EXPORT_EXPOSED})`, this.#context);
+        }
     }
 
     #startVanillaGlobalEventPolling() {
@@ -173,16 +309,19 @@ export class Hypersynergism {
                 value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
             }));
 
+        // Only for players who loaded the mod with the bookmark, hence at the very top
+        const bookmarkletSection = HSBookmarkletNotice.buildToolsSection();
+
         hsui.replaceTabContents(2,
             HSUIC.Grid({
                 html: [
-                    this.#buildGridSectionHeader('Export tools'),
+                    ...(bookmarkletSection.length > 0 ? [this.#buildGridSectionHeader('Recommended: Tampermonkey loader'), ...bookmarkletSection] : []),
+                    this.#buildGridSectionHeader('Backup & Restore'),
+                    ...HSBackup.buildToolsSection(),
+                    this.#buildGridSectionHeader('Ambrosia Heater'),
                     this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater sheet</a>.`),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Copy Heater Data' }),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-compute-btn', text: 'Ambrosia Heater' }),
-                    this.#buildGridSectionHeader('References'),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn', text: 'Corruption Ref.' }),
-                    HSUIC.Button({ id: 'hs-panel-cor-ref-btn-2', text: 'Crpt. Onemind' }),
                     this.#buildGridSectionHeader('Mod links'),
                     HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: 'Mod Github' }),
                     HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
@@ -231,6 +370,9 @@ export class Hypersynergism {
         let p_idx = -1;
         let c_idx = -1;
 
+        HSBookmarkletNotice.bindToolsSection();
+        HSBackup.bindToolsSection();
+
         this.#bindToolsButton('#hs-panel-amb-heater-btn', async () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
             if (!dataModule) return;
@@ -253,14 +395,6 @@ export class Hypersynergism {
             await HSHeaterInputModalController.openHeaterComputationModal();
         });
 
-        this.#bindToolsButton('#hs-panel-cor-ref-btn', () => {
-            hsui.Modal({ htmlContent: `<img class="hs-modal-img" src="${corruption_ref_b64}" />`, needsToLoad: true });
-        });
-
-        this.#bindToolsButton('#hs-panel-cor-ref-btn-2', () => {
-            hsui.Modal({ htmlContent: `<img class="hs-modal-img" src="${corruption_ref_b64_2}" />`, needsToLoad: true });
-        });
-
         this.#bindToolsButton('#hs-panel-mod-github-btn', () => this.#openUrl(HSGlobal.General.modGithubUrl));
         this.#bindToolsButton('#hs-panel-mod-wiki-btn', () => this.#openUrl(HSGlobal.General.modWikiUrl));
         this.#bindToolsButton('#hs-panel-mod-wiki-features-btn', () => this.#openUrl(HSGlobal.General.modWikiFeaturesUrl));
@@ -268,7 +402,7 @@ export class Hypersynergism {
 
         this.#bindToolsButton('#hs-panel-dump-settings-btn', () => HSSettings.dumpToConsole());
         this.#bindToolsButton('#hs-panel-dump-gamedata-btn', () => this.#dumpGameData());
-        this.#bindToolsButton('#hs-panel-clear-settings-btn', () => this.#clearStoredSettings());
+        this.#bindToolsButton('#hs-panel-clear-settings-btn', () => HSBackup.clearSettingsAndReload());
         this.#bindToolsButton('#hs-panel-check-version-btn', () => this.#checkVersion());
         this.#bindToolsButton('#hs-panel-exit-exalt-bug-btn', () => this.#fixExaltBug());
         this.#bindToolsButton('#hs-panel-test-calc-redu-btn', () => this.#runCalculation('reduced'));
@@ -310,20 +444,15 @@ export class Hypersynergism {
         window.open(url, '_blank');
     }
 
-    #clearStoredSettings() {
-        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
-        if (!storageMod) return;
-
-        storageMod.clearData(HSGlobal.HSSettings.storageKey);
-        HSLogger.log('Stored settings cleared', this.#context);
-    }
-
     async #checkVersion() {
         const isLatest = await HSGithub.isLatestTag();
+        // Dev channel players only
+        const liveTag = HSGithub.liveReleaseTag;
+        const liveRelease = liveTag ? ` Latest Live release: ${liveTag}.` : '';
 
-        HSUI.Notify(isLatest
+        HSUI.Notify((isLatest
             ? 'You are using the latest version of Hypersynergism!'
-            : 'You are NOT using the latest version of Hypersynergism!', {
+            : 'You are NOT using the latest version of Hypersynergism!') + liveRelease, {
             position: 'top',
             notificationType: isLatest ? 'success' : 'warning'
         });
@@ -386,22 +515,22 @@ export class Hypersynergism {
             }
 
             dataModule.clearCache();
-            const result = calcFnTyped(false);
-            if (!Array.isArray(result)) {
+            const result: unknown = calcFnTyped(false);
+            if (!Array.isArray(result) && !this.#isPlainObject(result)) {
                 HSLogger.warn(`${calcFnName} did not return an array when expected`, this.#context);
                 return;
             }
 
             const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
             if (latestDiv) {
-                latestDiv.innerText = `Last calc result: [${result.toString().split(',').join(', ')}]`;
+                latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
             }
             console.log(`--- CALCULATED ${calcFnName} ---`);
             console.log(result);
             return;
         }
 
-        const result = calcFnTyped();
+        const result: unknown = calcFnTyped();
         if (Array.isArray(result)) {
             HSLogger.warn(`${calcFnName} returned an array when a number was expected`, this.#context);
             return;
@@ -412,8 +541,23 @@ export class Hypersynergism {
 
         const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
         if (latestDiv) {
-            latestDiv.innerText = `Last calc result: ${HSUtils.N(result)}`;
+            latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
         }
+    }
+
+    #isPlainObject(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+    }
+
+    // A number, an array of components, or an object of either (calculateLuck returns { luckBase, luckMult, luckTotal }): one key per line
+    #formatCalcResult(result: unknown): string {
+        if (Array.isArray(result)) return `[${result.join(', ')}]`;
+        if (this.#isPlainObject(result)) {
+            return Object.entries(result)
+                .map(([key, value]) => `\n${key}: ${this.#formatCalcResult(value)}`)
+                .join('');
+        }
+        return typeof result === 'number' ? HSUtils.N(result) : String(result);
     }
 
     #clearCalcCache() {
@@ -521,6 +665,7 @@ export class Hypersynergism {
     #buildDebugTab(hsui: HSUI) {
         hsui.replaceTabContents(4,
             HSUIC.Grid({
+                id: 'hs-panel-debug-grid',
                 class: 'hs-panel-grid-2col',
                 html: [
                     this.#buildGridSectionHeader('Mouse'),
@@ -530,6 +675,12 @@ export class Hypersynergism {
                 ]
             })
         );
+
+        // Dev builds only: the release build drops this block, and HSDevTools with it
+        if (HS_DEV_BUILD) {
+            const debugGrid = document.getElementById('hs-panel-debug-grid');
+            if (debugGrid) new HSDevTools().build(debugGrid);
+        }
     }
 
 }

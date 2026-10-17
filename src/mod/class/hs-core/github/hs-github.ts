@@ -1,37 +1,72 @@
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
-import { isCurrentVersionLatest, latestStableVersionTag } from "./hs-version-tags";
+import { HSStorage } from "../hs-storage";
+import { HSUI } from "../hs-ui";
+import { HSModuleManager } from "../module/hs-module-manager";
+import { compareVersionTags, isCurrentVersionLatest, latestVersionTag } from "./hs-version-tags";
+
+const STORAGE_KEY = 'version-check';
 
 /**
  * Class: HSGithub
  * IsExplicitHSModule: No
  * Description:
  *     Small helper to check if we have the latest mod version, using tags.
+ *     The tags are those of the repo the mod was loaded from. Players of the
+ *     Live repo follow its stable tags. Players of another repo (the Dev
+ *     channel) follow that repo's dev builds too, and are told once about
+ *     each Live release.
  */
 export class HSGithub {
     static #context: string = 'HSGithub';
     static #pollInterval?: number;
+    static #liveReleaseTag: string | null = null;
+    static #announcedLiveTag: string | null = null;
 
-    static readonly owner: string | null = ((window as any).__HS_REPO ? (window as any).__HS_REPO : null);
+    // Set by the browser loaders and by the Steam injector (loader 0.2.9 and later)
+    static readonly owner: string | null = (typeof (window as any).__HS_REPO === 'string' && (window as any).__HS_REPO) ? (window as any).__HS_REPO : null;
     static readonly currentTag: string = `v${HSGlobal.General.currentModVersion}`;
+
+    // The latest Live release, as last read for a Dev channel player (null for a Live player)
+    static get liveReleaseTag(): string | null {
+        return HSGithub.#liveReleaseTag;
+    }
 
     static async isLatestTag(): Promise<boolean> {
         return await this.#checkLatestTag();
     }
 
+    static #liveOwner(): string {
+        return HSGlobal.Release.githubOwner ?? 'ahvonenj';
+    }
+
+    static #repoOwner(): string {
+        return HSGithub.owner ?? HSGithub.#liveOwner();
+    }
+
+    static #isDevChannel(): boolean {
+        return HSGithub.#repoOwner().toLowerCase() !== HSGithub.#liveOwner().toLowerCase();
+    }
+
     static async #checkLatestTag(): Promise<boolean> {
-        const latestTag = await this.#getLatestRemoteTag();
+        const isDevChannel = HSGithub.#isDevChannel();
+        const repoOwner = HSGithub.#repoOwner();
+        const tags = await HSGithub.#getRemoteTags(repoOwner);
+        const latestTag = tags ? latestVersionTag(tags, isDevChannel) : null;
+
+        if (isDevChannel) {
+            await HSGithub.#checkLiveRelease();
+        }
+
         if (!latestTag) {
-            HSGlobal.Release.isLatestVersion = true;
             HSLogger.debug(() => `No latest tag available; assuming current version is latest.`, HSGithub.#context);
             return true;
         }
 
         const isLatest = isCurrentVersionLatest(HSGithub.currentTag, latestTag);
-        HSGlobal.Release.isLatestVersion = isLatest;
 
         if (isLatest) {
-            HSLogger.log(`Current tag (${HSGithub.currentTag}) is up to date with latest tag (${latestTag}).`, HSGithub.#context);
+            HSLogger.log(`Up to date: running ${HSGithub.currentTag}, the latest tag of ${repoOwner} is ${latestTag}.`, HSGithub.#context);
         } else {
             HSLogger.log(`New version available: ${latestTag}!`, HSGithub.#context);
             HSGithub.#setNewVersionStyle();
@@ -40,11 +75,37 @@ export class HSGithub {
         return isLatest;
     }
 
-    static async #getLatestRemoteTag(): Promise<string | null> {
+    // A Live release above the running build is announced once to a Dev channel player.
+    // No "new version" mark: a reload would give them the same Dev build.
+    static async #checkLiveRelease(): Promise<void> {
+        const tags = await HSGithub.#getRemoteTags(HSGithub.#liveOwner());
+        const liveTag = tags ? latestVersionTag(tags) : null;
+        if (!liveTag) return;
+
+        HSGithub.#liveReleaseTag = liveTag;
+        HSLogger.log(`Latest Live release: ${liveTag}.`, HSGithub.#context);
+
+        if (compareVersionTags(liveTag, HSGithub.currentTag) <= 0) return;
+        if (HSGithub.#wasLiveTagAnnounced(liveTag)) return;
+
+        HSGithub.#announcedLiveTag = liveTag;
+        HSModuleManager.getModule<HSStorage>('HSStorage')?.setData(STORAGE_KEY, { announcedLiveTag: liveTag });
+        void HSUI.Notify(`Live channel: ${liveTag} was released`, { position: 'top', displayDuration: 8000 });
+    }
+
+    static #wasLiveTagAnnounced(liveTag: string): boolean {
+        if (HSGithub.#announcedLiveTag === liveTag) return true;
+
+        // HSStorage warns when a key is missing: nothing stored is the normal case until a first announcement
+        const exists = localStorage.getItem(`${HSGlobal.HSStorage.storagePrefix}${STORAGE_KEY}`) !== null;
+        const stored = exists ? HSModuleManager.getModule<HSStorage>('HSStorage')?.getData<{ announcedLiveTag?: unknown }>(STORAGE_KEY) : null;
+        return stored?.announcedLiveTag === liveTag;
+    }
+
+    static async #getRemoteTags(githubOwner: string): Promise<unknown[] | null> {
         try {
             // GitHub's tags API does not promise chronological or version order.
             // Fetch a full page so a run of dev tags cannot hide a stable tag.
-            const githubOwner = this.owner ?? HSGlobal.Release.githubOwner ?? 'ahvonenj';
             const githubUrl = `https://api.github.com/repos/${githubOwner}/synergism-hypersynergy/tags?per_page=100`;
             const ghResp = await fetch(githubUrl);
             if (!ghResp.ok) {
@@ -60,15 +121,7 @@ export class HSGithub {
                 return null;
             }
 
-            const highestTag = latestStableVersionTag(ghJson);
-
-            if (highestTag) {
-                HSLogger.debug(() => `Latest tag from GitHub API: ${highestTag}`, HSGithub.#context);
-            } else {
-                HSLogger.debug(() => `GitHub API returned tags, but none was a stable version`, HSGithub.#context);
-            }
-
-            return highestTag;
+            return ghJson;
         } catch (err) {
             HSLogger.debug(() => `GitHub API request threw an error: ${err}`, HSGithub.#context);
             return null;
