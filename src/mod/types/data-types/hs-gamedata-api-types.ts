@@ -112,6 +112,11 @@ export interface RuneHelperContext {
   getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K]
   calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
   calculateChallenge15Reward: (rewardName: string) => number
+  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  calculateHepteractEffective: (type: HepteractType) => number
+  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
+  calculateSynergismLevel: () => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }

@@ -706,6 +706,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
             calculateHypercubeBlessingMultiplierPlatonicBlessing: () => this.calculateHypercubeBlessingMultiplierPlatonicBlessing(),
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
+            getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
+            calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
+            calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
+            calculateSingularityDebuff: (debuff) => this.calculateSingularityDebuff(debuff),
+            calculateSynergismLevel: () => this.calculateSynergismLevel(),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };

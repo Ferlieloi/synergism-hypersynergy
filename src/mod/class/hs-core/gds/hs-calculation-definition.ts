@@ -475,6 +475,27 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
+        calculationName: "Total Salvage",
+        fnName: "calculateTotalSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Positive Salvage",
+        fnName: "calculatePositiveSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Negative Salvage",
+        fnName: "calculateNegativeSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
         calculationName: "Dump Data For Heater",
         fnName: "dumpDataForHeater",
         fnParams: [],

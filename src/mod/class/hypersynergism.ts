@@ -515,22 +515,22 @@ export class Hypersynergism {
             }
 
             dataModule.clearCache();
-            const result = calcFnTyped(false);
-            if (!Array.isArray(result)) {
+            const result: unknown = calcFnTyped(false);
+            if (!Array.isArray(result) && !this.#isPlainObject(result)) {
                 HSLogger.warn(`${calcFnName} did not return an array when expected`, this.#context);
                 return;
             }
 
             const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
             if (latestDiv) {
-                latestDiv.innerText = `Last calc result: [${result.toString().split(',').join(', ')}]`;
+                latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
             }
             console.log(`--- CALCULATED ${calcFnName} ---`);
             console.log(result);
             return;
         }
 
-        const result = calcFnTyped();
+        const result: unknown = calcFnTyped();
         if (Array.isArray(result)) {
             HSLogger.warn(`${calcFnName} returned an array when a number was expected`, this.#context);
             return;
@@ -541,8 +541,23 @@ export class Hypersynergism {
 
         const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
         if (latestDiv) {
-            latestDiv.innerText = `Last calc result: ${HSUtils.N(result)}`;
+            latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
         }
+    }
+
+    #isPlainObject(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+    }
+
+    // A number, an array of components, or an object of either (calculateLuck returns { luckBase, luckMult, luckTotal }): one key per line
+    #formatCalcResult(result: unknown): string {
+        if (Array.isArray(result)) return `[${result.join(', ')}]`;
+        if (this.#isPlainObject(result)) {
+            return Object.entries(result)
+                .map(([key, value]) => `\n${key}: ${this.#formatCalcResult(value)}`)
+                .join('');
+        }
+        return typeof result === 'number' ? HSUtils.N(result) : String(result);
     }
 
     #clearCalcCache() {
