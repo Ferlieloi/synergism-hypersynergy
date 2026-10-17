@@ -271,7 +271,7 @@ export class HSHepteractDistributor extends HSModule {
             + 'With the Horseshoe shop upgrade, that tree also gets as much Talisman Power as the ambrosia left pays for: '
             + 'it lowers every singularity penalty a little more.',
             'hepteractDistributorUseReducers');
-        option('Also when only Talisman Power can be added',
+        option('Also swap when only Talisman Power can be added',
             'Off: the tree is only replaced when it adds a singularity reducer.\n'
             + 'On: also when it can\'t (reducers already in your tree, locked, too expensive, or of no use here), '
             + 'to raise Talisman Power alone. With the Horseshoe shop upgrade, hepteracts then cost a fraction of a percent less, '
