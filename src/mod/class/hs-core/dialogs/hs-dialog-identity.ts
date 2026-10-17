@@ -170,12 +170,15 @@ export class HSDialogIdentity {
         HSLogger.debug(() => `Dialog index (${lang}): ${exact.size} texts, ${HSDialogIdentity.#templates.length} patterns, ${Math.round(performance.now() - start)} ms`, HSDialogIdentity.#context);
     }
 
-    /** From the game's i18next when the patcher exposed it, else the game's translation file. */
+    /**
+     * From the game's i18next when the patcher exposed it (it holds the current language and English), else the game's translation file.
+     * No fetch when i18next is there, even for a language it lacks.
+     */
     static async #loadFile(lang: string): Promise<Record<string, unknown> | undefined> {
         const i18n = (window as any).__HS_i18next;
-        const bundle = typeof i18n?.getResourceBundle === 'function' ? i18n.getResourceBundle(lang, 'translation') : undefined;
-        if (bundle && typeof bundle === 'object' && Object.keys(bundle).length > 0) return bundle;
-        return HSUtils.getGameTranslationFile(lang);
+        if (typeof i18n?.getResourceBundle !== 'function') return HSUtils.getGameTranslationFile(lang);
+        const bundle = i18n.getResourceBundle(lang, 'translation');
+        return bundle && typeof bundle === 'object' && Object.keys(bundle).length > 0 ? bundle : undefined;
     }
 
     static #flatten(node: Record<string, unknown>, prefix: string, add: (key: string, value: string) => void): void {

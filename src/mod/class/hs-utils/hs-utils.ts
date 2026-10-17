@@ -2,6 +2,7 @@ import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSGlobal } from "../hs-core/hs-global";
 
 /**
  * Class: HSUtils
@@ -259,12 +260,16 @@ export class HSUtils {
 
     static #translationFiles = new Map<string, Promise<Record<string, unknown> | undefined>>();
 
-    /** Fetch a game translation file the same way the game does (cached per language). */
+    /**
+     * Fetch a game translation file the same way the game does (cached per language).
+     * Only for players without the patcher's __HS_i18next (bookmarklet): the game's i18next holds the same files.
+     */
     static #loadTranslationFile(lang: string): Promise<Record<string, unknown> | undefined> {
         let file = this.#translationFiles.get(lang);
         if (!file) {
-            file = fetch(`./translations/${lang}.json`)
-                .catch(() => fetch(`https://synergism.cc/translations/${lang}.json`))
+            const init = { headers: HSGlobal.Common.modRequestHeaders };
+            file = fetch(`./translations/${lang}.json`, init)
+                .catch(() => fetch(`https://synergism.cc/translations/${lang}.json`, init))
                 .then(r => r.ok ? r.json() as Promise<Record<string, unknown>> : undefined)
                 .catch(() => undefined)
                 .then(json => {
@@ -291,8 +296,9 @@ export class HSUtils {
     static async getGameTranslation(key: string, vars?: Record<string, string | number>): Promise<string | undefined> {
         const i18n = (window as any).__HS_i18next;
         if (typeof i18n?.t === 'function') {
+            // i18next returns the key itself when it has no text for it. Its files are the ones a fetch would get, so no fetch then
             const text = i18n.t(key, vars);
-            if (typeof text === 'string' && text !== key) return text;
+            return typeof text === 'string' && text !== key ? text : undefined;
         }
 
         const resolve = (file: Record<string, unknown> | undefined): string | undefined => {
