@@ -115,11 +115,14 @@ export class HSAmbrosiaQuickbar {
         const quickbar = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement;
 
         if (quickbar) {
+            // Wired even while hidden: showQuickBar() only shows the bar, and the slots' click handlers and
+            // data-original-id (which the icons are looked up by) are only set here, once
+            this.setupQuickbarSectionEvents();
+
             if (quickbarSetting && !quickbarSetting.isEnabled()) {
                 quickbar.style.display = "none";
                 HSLogger.debug(() => "quickbar hidden due to settings", this.context);
             } else {
-                this.setupQuickbarSectionEvents();
                 await this.refreshQuickbarIcons();
                 await this.host.refreshActiveLoadoutFromState();
                 HSUI.injectStyle(this.host.getQuickbarCSS(), this.host.getQuickbarCSSId());
