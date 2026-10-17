@@ -12,6 +12,11 @@
     box-sizing: border-box;
 }
 
+/* "Center quick bars" setting */
+.hs-quickbars-centered #quickbarsRow {
+    justify-content: center;
+}
+
 .hs-quickbar {
    display: flex;
    flex-direction: column;

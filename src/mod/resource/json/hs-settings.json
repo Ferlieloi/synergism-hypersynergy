@@ -1658,6 +1658,20 @@
       "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
     }
   },
+  "centerQuickbars": {
+    "settingName": "centerQuickbars",
+    "settingDescription": "Center quick bars",
+    "settingHelpText": "When enabled, the quick bars in the header are centered instead of aligned to the right.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingAction": "centerQuickbarsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-center-quickbars-btn"
+    }
+  },
   "hideMaxedGQUpgrades": {
     "settingName": "hideMaxedGQUpgrades",
     "settingDescription": "Hide maxed GQ upgrades",

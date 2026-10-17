@@ -214,6 +214,11 @@ export class HSSettingActions {
             await HSSettingsUI.importStrategy();
         },
 
+        // A class on <html>, so it applies whenever #quickbarsRow is created (hs-quickbars.css)
+        centerQuickbarsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-quickbars-centered', params.disable !== true);
+        },
+
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');

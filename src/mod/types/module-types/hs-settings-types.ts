@@ -95,6 +95,7 @@ export interface HSSettingsDefinition {
     enableCorruptionQuickBar: QOLButtonsEnableCorruptionQuickBarSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     enableEventsQuickBar: QOLButtonsEnableEventsQuickBarSetting;
+    centerQuickbars: QOLButtonsCenterQuickbarsSetting;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
@@ -255,6 +256,7 @@ export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boo
 export interface QOLButtonsEnableCorruptionQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableEventsQuickBarSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
