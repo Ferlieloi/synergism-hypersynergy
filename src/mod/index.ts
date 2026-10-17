@@ -55,12 +55,6 @@ window.__HS_INIT_PROMISE = (async () => {
             initImmediate: true
         },
         {
-            className: 'HSWebSocket',
-            context: 'HSWebSocket',
-            moduleColor: '#FC427B',
-            loadOrder: 6,
-        },
-        {
             className: 'HSShadowDOM',
             context: 'HSShadowDOM',
             moduleColor: 'hotpink',

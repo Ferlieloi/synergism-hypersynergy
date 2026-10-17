@@ -30,9 +30,9 @@ export interface HSGlobalGeneral {
 }
 
 export interface HSGlobalCommon {
-    eventAPIUrl: string;
     pseudoAPIurl: string;
     meAPIurl: string;
+    readonly modRequestHeaders: Record<string, string>;
     experimentalGDS: boolean,
 }
 
@@ -124,6 +124,7 @@ export interface HSGlobalGameState {
 
 export interface HSGlobalGameData {
     globalEventRefreshInterval: number;
+    consumablesPollInterval: number;
     gdsSpeedMs: number;
     gdsCSSId: string;
 }

@@ -110,20 +110,13 @@
    align-self: flex-end;
 }
 
-#events-quickbar-happy-hour-span,
-#events-quickbar-lotus-span {
+#events-quickbar-happy-hour-span {
    display: inline-flex;
    align-items: flex-start;
    font-size: 16px;
    font-weight: bold;
    color: #d4c095;
 }
-/* Lotus image: visually match bell size by zooming in a bit to crop useless pixels */
-#events-quickbar-lotus-span .events-quickbar-event-img {
-   object-fit: cover;
-   width: 32px;
-}
-
 #events-quickbar-happy-hour-span.crazy-happy-hour {
    font-size: 22px;
    font-weight: bold;

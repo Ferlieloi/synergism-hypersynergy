@@ -299,6 +299,7 @@ export class HSBackup {
                 validateBlueberryTree: has('__HS_validateBlueberryTree'),
                 saveImportHook: has('__HS_SAVE_IMPORT_HOOK_PATCHED'),
                 tackHooks: has('__HS_tackHooks'),
+                consumables: has('__HS_consumables'),
             },
             gameLanguage: localStorage.getItem('language') ?? 'en',
             statSymbols: localStorage.getItem('statSymbols') === 'true',

@@ -2,14 +2,13 @@
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSQOLQuickbarBase } from "./hs-qolQuickbarBase";
-import { HSWebSocket } from "../../hs-core/hs-websocket";
 
 /**
  * Class: HSQOLEventsQuickbar
  * IsExplicitHSModule: No
  * Description: Events Quickbar component.
  *     Create and manage a small quickbar that displays time-limited event indicators
- *     (e.g. Happy Hour, Lotus of Rejuvenation) in the header quickbars row.
+ *     (Happy Hour Bells, global event) in the header quickbars row.
  *     Subscribe to `HSGameDataAPI` for updates and refresh the DOM accordingly.
  *     Provide a stable public lifecycle: `createSection()`, `setup()`, `teardown()`.
  */
@@ -21,7 +20,6 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
     #cachedElements?: {
         happyHourSpan: HTMLSpanElement;
         happyHourAmountSpan: HTMLSpanElement;
-        lotusSpan: HTMLSpanElement;
         globalEventSpan: HTMLSpanElement;
     };
     #unsubscribeEventData: (() => void) | null = null;
@@ -44,16 +42,6 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         happyHourImg.src = 'Pictures/PseudoShop/HAPPY_HOUR_BELL.png';
         happyHourSpan.appendChild(happyHourImg);
 
-        // Lotus event display (image only)
-        const lotusSpan = document.createElement('span');
-        lotusSpan.id = 'events-quickbar-lotus-span';
-        lotusSpan.style.cursor = 'help';
-
-        const lotusImg = document.createElement('img');
-        lotusImg.className = 'events-quickbar-event-img';
-        lotusImg.src = 'Pictures/PseudoShop/LOTUS.png';
-        lotusSpan.appendChild(lotusImg);
-
         // Global event display (image only)
         const globalEventSpan = document.createElement('span');
         globalEventSpan.id = 'events-quickbar-global-event-span';
@@ -64,21 +52,18 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         globalEventImg.src = 'Pictures/transcended-monthly-sub.png';
         globalEventSpan.appendChild(globalEventImg);
 
-        // default status before any WS update: no active HH and hidden Lotus / global event.
+        // default status before the first update: no active HH and hidden global event.
         happyHourSpan.classList.add('no-event');
-        lotusSpan.classList.add('hs-hidden');
         globalEventSpan.classList.add('hs-hidden');
 
         // Cache references for fast updates later
         this.#cachedElements = {
             happyHourSpan,
             happyHourAmountSpan,
-            lotusSpan,
             globalEventSpan
         };
 
         this.container.appendChild(happyHourSpan);
-        this.container.appendChild(lotusSpan);
         this.container.appendChild(globalEventSpan);
 
         HSLogger.debug(() => 'Events quickbar DOM created', this.context);
@@ -142,31 +127,26 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
         const eventData = gameDataAPI.getEventData();
         const vanillaGlobalEvent = gameDataAPI.getVanillaGlobalEvent();
 
-        const { happyHourSpan, happyHourAmountSpan, lotusSpan, globalEventSpan } = this.#cachedElements;
+        const { happyHourSpan, happyHourAmountSpan, globalEventSpan } = this.#cachedElements;
 
         const happyHourEvent = eventData?.HAPPY_HOUR_BELL;
-        const lotusEvent = eventData?.LOTUS_OF_REJUVENATION;
         const happyHourAmount = happyHourEvent?.amount ?? 0;
 
         const hhTooltipText = this.#formatHappyHourTooltip(happyHourEvent, happyHourAmount);
-        const lotusTooltipText = this.#formatLotusTooltip(lotusEvent);
         const globalEventTooltip = this.#formatGlobalEventTooltip(vanillaGlobalEvent);
 
         happyHourSpan.title = hhTooltipText;
-        lotusSpan.title = lotusTooltipText;
         globalEventSpan.title = globalEventTooltip;
         happyHourAmountSpan.textContent = `${happyHourAmount}`;
 
         const happyHourActive = Array.isArray(happyHourEvent?.ends) && happyHourEvent.ends.length > 0;
-        const lotusActive = Array.isArray(lotusEvent?.ends) && lotusEvent.ends.length > 0;
         const globalEventActive = !!vanillaGlobalEvent;
 
         happyHourSpan.classList.toggle('no-event', !happyHourActive);
         happyHourSpan.classList.toggle('crazy-happy-hour', happyHourAmount > 4);
-        lotusSpan.classList.toggle('hs-hidden', !lotusActive);
         globalEventSpan.classList.toggle('hs-hidden', !globalEventActive);
 
-        HSLogger.debug(() => `Events quickbar updated: Happy Hour: "${hhTooltipText}", Lotus: "${lotusTooltipText}", Global Event: "${globalEventTooltip}"`, this.context);
+        HSLogger.debug(() => `Events quickbar updated: Happy Hour: "${hhTooltipText}", Global Event: "${globalEventTooltip}"`, this.context);
     }
 
     /** Format happy hour event end-times into tooltip text. */
@@ -182,15 +162,6 @@ export class HSQOLEventsQuickbar extends HSQOLQuickbarBase {
             return `${happyHourAmount} HH ending at: ${displayed.join(', ')}${suffix}`;
         }
         return 'No active HH';
-    }
-
-    /** Format lotus event end-time into tooltip text. */
-    #formatLotusTooltip(lotusEvent: any): string {
-        if (lotusEvent?.ends && lotusEvent.ends.length > 0) {
-            const lotusEndTime = new Date(lotusEvent.ends[0]).toLocaleTimeString(undefined, { hour12: false });
-            return `Lotus until: ${lotusEndTime}`;
-        }
-        return 'No active Lotus';
     }
 
     /** Format global event tooltip text for a single vanilla global event. */
