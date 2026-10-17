@@ -5,7 +5,6 @@ import { MeData } from "../../../types/data-types/hs-me-data";
 import { GameData } from "../../../types/data-types/hs-player-savedata";
 import { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
 import { HSModuleOptions } from "../../../types/hs-types";
-import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
@@ -137,14 +136,19 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         return this.eventData;
     }
 
-    async fetchVanillaGlobalEventData(): Promise<VanillaGlobalEvent | null> {
-        const response = await fetch("https://synergism.cc/events/get", { headers: HSGlobal.Common.modRequestHeaders });
-        if (!response.ok) { throw new Error(`HSGameDataAPI: failed to fetch vanilla event data (${response.status})`); }
+    /**
+     * Takes the game's own answer from https://synergism.cc/events/get (Event.ts eventCheck, handed over by the patcher;
+     * the mod doesn't fetch it), and keeps it when the game would: a name, and now between start and end.
+     * "Now" is the game's clock (getTimePinnedToLoadDate: the wall clock at page load plus performance.now()),
+     * which performance.timeOrigin + performance.now() matches to within milliseconds, also after a clock change or a sleep.
+     */
+    _updateVanillaGlobalEvent(raw: unknown) {
+        const apiEvent = raw as VanillaGlobalEvent | null;
+        const now = performance.timeOrigin + performance.now();
 
-        const apiEvent = await response.json() as VanillaGlobalEvent;
-        const now = Date.now();
-
-        if (apiEvent.name.length > 0 && now >= apiEvent.start && now <= apiEvent.end) {
+        if (apiEvent && Array.isArray(apiEvent.name) && apiEvent.name.length > 0
+            && typeof apiEvent.start === 'number' && typeof apiEvent.end === 'number'
+            && now >= apiEvent.start && now <= apiEvent.end) {
             this.vanillaGlobalEvent = apiEvent;
         } else {
             this.vanillaGlobalEvent = null;
@@ -163,8 +167,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
                 cb(this.vanillaGlobalEvent);
             } catch (e) { HSLogger.error("VanillaGlobalEvent subscriber error: " + e, this.context); }
         }
-
-        return this.vanillaGlobalEvent;
     }
 
     getVanillaGlobalEvent(): VanillaGlobalEvent | null {

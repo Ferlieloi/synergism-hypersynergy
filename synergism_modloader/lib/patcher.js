@@ -555,6 +555,31 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── GLOBAL EVENT PATCH — hand Event.ts eventCheck's answer to the mod (window.__HS_globalEvent / __HS_onGlobalEvent)
+    // The game fetches https://synergism.cc/events/get at load and every 5 minutes; the mod reads that answer
+    // instead of fetching it again (the game's dev asked for less traffic). Found by its URL string and the
+    // save's dayCheck test. A local `fetch` at the start of its body shadows the browser's for this function only:
+    //   oL=async()=>{if(!n.dayCheck)return;let e=await fetch("https://synergism.cc/events/get");...
+    //   becomes  oL=async()=>{const fetch=(...a)=>window.fetch(...a).then(<copy of an ok answer to the mod>);if(!n.dayCheck)...
+    // The game gets the browser's response untouched; the mod reads a clone. Nothing from the mod can throw into the game.
+    try {
+        const eventResult = findEnclosingFunction(code, /["']https:\/\/synergism\.cc\/events\/get["']/g, ['dayCheck', '.json()']);
+        if (eventResult) {
+            const shadow =
+                '\nconst fetch=(...__hsA)=>window.fetch(...__hsA).then(__hsR=>{try{if(__hsR&&__hsR.ok)' +
+                '__hsR.clone().json().then(__hsJ=>{window.__HS_globalEvent=__hsJ;' +
+                'try{window.__HS_onGlobalEvent?.(__hsJ)}catch(__hsE){}},()=>{})}catch(__hsE){}return __hsR});\n';
+            code = code.slice(0, eventResult.bodyStart) + shadow + code.slice(eventResult.bodyStart);
+            code = 'window.__HS_GLOBAL_EVENT_PATCHED = true;\n' + code;
+            log(`Patched eventCheck (global event, fn=${eventResult.fnName})`);
+        } else {
+            warn('Could not patch the global event — eventCheck not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching the global event', e);
+    }
+
+    // ==================================================================================
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
         try {

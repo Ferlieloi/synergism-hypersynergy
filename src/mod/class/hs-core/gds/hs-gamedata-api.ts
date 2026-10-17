@@ -249,6 +249,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         this.clearCache();
     }
 
+    // The event buffs and ambrosia luck read the global event: cached results must not outlive it
+    override _updateVanillaGlobalEvent(raw: unknown) {
+        super._updateVanillaGlobalEvent(raw);
+        this.clearCache();
+    }
+
     /** Mirrors CampaignManager.updateTokens/updateMaxTokens in
      * SynergismOfficial/src/Campaign.ts. */
     private calculateCampaignDataFromSave(): CampaignData | undefined {
@@ -2800,17 +2806,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             return;
         }
 
-        // SynergismOfficial reads the active vanilla global event when it
-        // evaluates stat breakdowns. Refresh it immediately before building
-        // the Heater snapshot so event-only contributions (including Red
-        // Luck's Ambrosia-Luck conversion) cannot be omitted when the
-        // background poll has not completed yet. A failed refresh leaves the
-        // previously cached event untouched in fetchVanillaGlobalEventData.
-        try {
-            await this.fetchVanillaGlobalEventData();
-        } catch (error) {
-            HSLogger.warn(`Failed to refresh vanilla global event data for heater export: ${error}`, this.context);
-        }
+        // The global event is the game's own (eventCheck's last answer, handed over by the patcher), as current as the game's:
+        // no refresh here, the mod doesn't fetch it.
 
         if (!this.gameData) return undefined;
         const gameData = this.gameData;

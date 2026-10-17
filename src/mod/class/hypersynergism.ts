@@ -93,7 +93,6 @@ export class Hypersynergism {
         });
 
         HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
-        this.#startVanillaGlobalEventPolling();
         void this.#onGameLoaded();
         void HSBookmarkletNotice.showIfBookmarklet();
     }
@@ -223,20 +222,6 @@ export class Hypersynergism {
         } else {
             HSLogger.warn(`Could not expose patched game internals (stage: ${!!w.__HS_STAGE_EXPOSED}, export: ${!!w.__HS_EXPORT_EXPOSED})`, this.#context);
         }
-    }
-
-    #startVanillaGlobalEventPolling() {
-        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!dataModule) return;
-
-        const refresh = async () => {
-            try {
-                await dataModule.fetchVanillaGlobalEventData();
-            } catch (error) { HSLogger.warn(`Failed to refresh vanilla global event data: ${error}`, this.#context); }
-        };
-
-        void refresh();
-        window.setInterval(refresh, HSGlobal.HSGameData.globalEventRefreshInterval);
     }
 
     async #waitForGameReady(): Promise<boolean> {
