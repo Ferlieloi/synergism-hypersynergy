@@ -16,7 +16,6 @@ import { HSGameState } from "../hs-gamestate";
 import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
-import { HSWebSocket } from "../hs-websocket";
 import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
@@ -51,7 +50,6 @@ export class HSModuleManager {
         "HSPatches": HSPatches,
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
-        "HSWebSocket": HSWebSocket,
         "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
         "HSQOLButtons": HSQOLButtons

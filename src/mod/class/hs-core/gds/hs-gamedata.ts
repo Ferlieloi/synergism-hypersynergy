@@ -13,8 +13,7 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
-import { GameEventResponse, GameEventResponseType, ConsumableGameEvents, GameEventID } from "../../../types/data-types/hs-event-data";
-import { HSWebSocket } from "../hs-websocket";
+import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 
@@ -86,8 +85,7 @@ export class HSGameData extends HSModule {
 
     // --- Game Events ---
     #gameEvents: ConsumableGameEvents = {
-        HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: "Happy Hour Bell" },
-        LOTUS_OF_REJUVENATION: { amount: 0, ends: [], displayName: "Lotus of Rejuvenation" }
+        HAPPY_HOUR_BELL: { amount: 0, ends: [], displayName: "Happy Hour Bell" }
     };
 
     // --- Miscellaneous ---
@@ -153,7 +151,7 @@ export class HSGameData extends HSModule {
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         await this.#refreshFetchedData();
 
-        this.#registerWebSocket();
+        this.#startConsumablesPoll();
         this.isInitialized = true;
 
         this.isSteam = this.#isSteamElectron();
@@ -281,7 +279,7 @@ export class HSGameData extends HSModule {
     async #refreshFetchedData() {
         // HSLogger.debug(() => `Refreshing fetched data`, this.context);
         try {
-            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl);
+            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
             const data = await upgradesQuery.json() as PseudoGameData;
 
             this.#playerPseudoUpgrades = data;
@@ -289,28 +287,12 @@ export class HSGameData extends HSModule {
         } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
 
         try {
-            const meQuery = await fetch(HSGlobal.Common.meAPIurl);
+            const meQuery = await fetch(HSGlobal.Common.meAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
             const data = await meQuery.json() as MeData;
 
             this.#meBonuses = data;
             this.#meDataUpdated();
         } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
-    }
-
-    /**
-     * Resets all game event data to default values and triggers event data update.
-     * @returns void
-     */
-    #resetEventData() {
-        for (const key of Object.keys(this.#gameEvents)) {
-            this.#gameEvents[key as keyof ConsumableGameEvents] = {
-                amount: 0,
-                ends: [],
-                displayName: ''
-            }
-        }
-
-        this.#eventDataUpdated();
     }
 
     /**
@@ -363,156 +345,40 @@ export class HSGameData extends HSModule {
     }
 
 
-    // --- WebSocket/Event Handling ---
+    // --- Consumables (Happy Hour Bells) ---
 
     /**
-     * Sets up the WebSocket connection for consumable game events.
-     * Registers a handler for incoming messages that updates internal event state based on event type:
-     * - INFO_ALL: Resets event data, then processes active events, updating their end times, amounts, and display names. Unknown events are logged as warnings.
-     * - CONSUMED: Updates Happy Hour event, setting end time, amount, and display name.
-     * - CONSUMABLE_ENDED: Removes ended Happy Hour event and decrements amount.
-     * - APPLIED_LOTUS, LOTUS_ACTIVE, LOTUS_ENDED: Updates Lotus event end times and amounts.
-     * - Other event types: Not used.
-     * Handles retry failures by resetting event data and triggering an update.
+     * Follows the game's active Happy Hour Bells, read once a second from the game's own record
+     * (window.__HS_consumables, exposed by the patcher; filled by the game's consumables WebSocket).
+     * The mod no longer opens a connection of its own: the server refuses a second one for the same account.
+     * Without the patcher's capture (bookmarklet, older patch) the bells stay at 0.
      * @returns void
      */
-    #registerWebSocket() {
-        const self = this;
-        const wsMod = HSModuleManager.getModule<HSWebSocket>('HSWebSocket');
-
-        if (wsMod) {
-            wsMod.registerWebSocket<GameEventResponse>('consumable-event-socket', {
-                url: HSGlobal.Common.eventAPIUrl,
-                onMessage: async (msg) => {
-                    HSLogger.debug(() => `onMessage received: ${JSON.stringify(msg)}`, this.context);
-                    switch (msg?.type) {
-                        case GameEventResponseType.INFO_ALL: {
-                            self.#resetEventData();
-                            if (msg.active && msg.active.length > 0) {
-                                HSLogger.debug(() => `Caught WS event: ${msg.type} - event count: ${msg.active.length}`, this.context);
-                                for (const { internalName, endsAt, name } of msg.active) {
-                                    const consumable = self.#gameEvents[internalName as keyof ConsumableGameEvents];
-                                    consumable.ends.push(endsAt);
-                                    consumable.amount++;
-                                    consumable.displayName = name;
-                                }
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.debug(() => `Caught INFO_ALL, but no active events`, this.context);
-                            }
-                            break;
-                        }
-                        case GameEventResponseType.CONSUMED: {
-                            HSLogger.debug(() => `Caught CONSUMED event (Happy Hour)`, this.context);
-                            const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
-                            if (consumable) {
-                                consumable.ends.push(msg.startedAt + 3600 * 1000);
-                                consumable.amount++;
-                                consumable.displayName = msg.displayName;
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.warn(`Unknown event: ${msg.consumable}`, this.context);
-                            }
-                            break;
-                        }
-                        case GameEventResponseType.CONSUMABLE_ENDED: {
-                            HSLogger.debug(() => `Caught CONSUMABLE_ENDED (Happy Hour)`, this.context);
-                            const consumable = self.#gameEvents[msg.consumable as keyof ConsumableGameEvents];
-                            if (consumable) {
-                                consumable.ends.shift();
-                                consumable.amount--;
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.warn(`Unknown event: ${msg.consumable}`, this.context);
-                            }
-                            break;
-                        }
-
-                        case GameEventResponseType.APPLIED_LOTUS: {
-                            HSLogger.debug(() => `Caught APPLIED_LOTUS event`, this.context);
-                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
-                            if (consumable) {
-                                const newEnd = performance.now() + msg.remaining;
-                                consumable.ends[0] = newEnd;
-                                consumable.amount = 1;
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
-                            }
-                            break;
-                        }
-                        case GameEventResponseType.LOTUS_ACTIVE: {
-                            HSLogger.debug(() => `Caught LOTUS_ACTIVE event`, this.context);
-                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
-                            if (consumable) {
-                                consumable.ends[0] = performance.now() + msg.remainingMs;
-                                consumable.amount = 1;
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
-                            }
-                            break;
-                        }
-                        case GameEventResponseType.LOTUS_ENDED: {
-                            HSLogger.debug(() => `Caught LOTUS_ENDED event`, this.context);
-                            const consumable = self.#gameEvents[GameEventID.LOTUS_OF_REJUVENATION as keyof ConsumableGameEvents];
-                            if (consumable) {
-                                consumable.ends.shift();
-                                consumable.amount = 0;
-                                self.#eventDataUpdated();
-                            } else {
-                                HSLogger.warn(`Unknown event: ${GameEventID.LOTUS_OF_REJUVENATION}`, this.context);
-                            }
-                            break;
-                        }
-                        case GameEventResponseType.LOTUS: {
-                            HSLogger.debug(() => `Caught LOTUS (bought) event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.TIPS: {
-                            HSLogger.debug(() => `Caught TIPS (received) event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.APPLIED_TIP: {
-                            HSLogger.debug(() => `Caught APPLIED_TIP event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.TIP_BACKLOG: {
-                            HSLogger.debug(() => `Caught TIP_BACKLOG event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.TIME_SKIP: {
-                            HSLogger.debug(() => `Caught TIME_SKIP event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.THANKS: {
-                            HSLogger.debug(() => `Caught THANKS event`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.JOIN: {
-                            HSLogger.debug(() => `Caught JOIN (connection established)`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.WARN: {
-                            HSLogger.warn(`Caught WARNING: ${msg.message}`, this.context);
-                            break;
-                        }
-                        case GameEventResponseType.ERROR: {
-                            HSLogger.warn(`Caught ERROR`, this.context);
-                            self.#resetEventData();
-                            break;
-                        }
-                        default: {
-                            HSLogger.debug(() => `Caught unknown event type: ${msg}`, this.context);
-                        }
-                    }
-                },
-                onRetriesFailed: async () => {
-                    self.#resetEventData();
-                    self.#eventDataUpdated();
-                }
-            })
+    #startConsumablesPoll() {
+        if (!(window as any).__HS_consumables) {
+            HSLogger.log(`Happy Hour Bells not readable (the game is not patched for it): counted as 0`, this.context);
+            return;
         }
+
+        let lastKey = '';
+        const read = () => {
+            const bell = (window as any).__HS_consumables?.HAPPY_HOUR_BELL;
+            const amount = typeof bell?.amount === 'number' ? bell.amount : 0;
+            const ends: number[] = Array.isArray(bell?.ends) ? bell.ends.filter((e: unknown) => typeof e === 'number') : [];
+            const key = `${amount}|${ends.join(',')}`;
+            if (key === lastKey) return;
+            lastKey = key;
+
+            this.#gameEvents.HAPPY_HOUR_BELL = {
+                amount,
+                ends,
+                displayName: (typeof bell?.displayName === 'string' && bell.displayName) || 'Happy Hour Bell'
+            };
+            this.#eventDataUpdated();
+        };
+
+        read();
+        setInterval(read, HSGlobal.HSGameData.consumablesPollInterval);
     }
 
 

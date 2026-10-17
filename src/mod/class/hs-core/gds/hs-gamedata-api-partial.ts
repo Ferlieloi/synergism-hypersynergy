@@ -5,6 +5,7 @@ import { MeData } from "../../../types/data-types/hs-me-data";
 import { GameData } from "../../../types/data-types/hs-player-savedata";
 import { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
@@ -137,7 +138,7 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     }
 
     async fetchVanillaGlobalEventData(): Promise<VanillaGlobalEvent | null> {
-        const response = await fetch("https://synergism.cc/events/get");
+        const response = await fetch("https://synergism.cc/events/get", { headers: HSGlobal.Common.modRequestHeaders });
         if (!response.ok) { throw new Error(`HSGameDataAPI: failed to fetch vanilla event data (${response.status})`); }
 
         const apiEvent = await response.json() as VanillaGlobalEvent;

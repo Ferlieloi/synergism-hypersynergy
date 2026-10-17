@@ -54,9 +54,11 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- COMMON ---
     static Common = {
-        eventAPIUrl: 'wss://synergism.cc/consumables/connect',
         pseudoAPIurl: 'https://synergism.cc/stripe/upgrades',
         meAPIurl: 'https://synergism.cc/api/v1/users/me',
+        // Sent with every request to synergism.cc, so the game's backend can tell the mod's traffic and its version apart
+        // (a custom header: Chromium drops a User-Agent set through fetch)
+        get modRequestHeaders(): Record<string, string> { return { 'X-HyperSynergism-Version': HSGlobal.General.currentModVersion }; },
 
         experimentalGDS: true
     }
@@ -405,6 +407,7 @@ export const HSGlobal: IHSGlobal = class {
     // HSGameData
     static HSGameData = {
         globalEventRefreshInterval: 1000 * 60 * 10, // 10 minutes
+        consumablesPollInterval: 1000, // a read of the game's Happy Hour Bells, no request
         gdsSpeedMs: 66,
         gdsCSSId: 'hs-game-data-turbo-css'
     }

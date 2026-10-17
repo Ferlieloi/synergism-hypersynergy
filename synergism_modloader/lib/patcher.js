@@ -438,6 +438,36 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── CONSUMABLES PATCH — expose Login.ts allDurableConsumables as window.__HS_consumables
+    // The game's own consumables WebSocket keeps the active Happy Hour Bells in that object; the mod
+    // reads it instead of opening a second connection for the same account (refused by the server).
+    // Captured by its initializer, the same way as the player: no minified name is read.
+    //   Ro={HAPPY_HOUR_BELL:{amount:0,ends:[],displayName:""}}
+    //   becomes  Ro=(function(o){window.__HS_consumables=o;return o})({HAPPY_HOUR_BELL:{...}})
+    // The game only replaces the entries of this object (resetWebSocket), never the object, so the reference stays live.
+    try {
+        const re = /HAPPY_HOUR_BELL["']?\s*:\s*\{\s*amount\s*:\s*0\s*,\s*ends\s*:\s*\[\s*\]/g;
+        let m;
+        let patched = false;
+        while ((m = re.exec(code)) !== null) {
+            // The enclosing object literal, assigned to a variable: `=` then `{` right before the key
+            const before = /=\s*\{\s*["']?$/.exec(code.slice(Math.max(0, m.index - 50), m.index));
+            if (!before) continue;
+            const objectStart = m.index - before[0].length + before[0].indexOf('{');
+            const objectEnd = findMatchingBrace(code, objectStart + 1);
+            if (objectEnd < 0 || !code.slice(objectStart, objectEnd).includes('displayName')) continue;
+            const capture = '(function(o){window.__HS_consumables=o;return o})(';
+            code = code.slice(0, objectStart) + capture + code.slice(objectStart, objectEnd + 1) + ')' + code.slice(objectEnd + 1);
+            log('Patched consumables (window.__HS_consumables)');
+            patched = true;
+            break;
+        }
+        if (!patched) warn('Could not patch consumables — the HAPPY_HOUR_BELL initializer was not found in bundle');
+    } catch (e) {
+        warn('Error while patching consumables', e);
+    }
+
+    // ==================================================================================
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
         try {
