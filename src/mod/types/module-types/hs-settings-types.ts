@@ -50,6 +50,7 @@ export interface HSSettingsDefinition {
     autoExportSaveKeep: AutoExportSaveKeepSetting;
 
     // Ambrosia Settings
+    persistentAmbrosiaLevels: PersistentAmbrosiaLevelsSetting;
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
@@ -214,6 +215,7 @@ export interface AutoExportSaveLoadoutSetting extends HSSettingBase<string> { }
 export interface AutoExportSaveKeepSetting extends HSSettingBase<number> { }
 
 // Ambrosia Settings
+export interface PersistentAmbrosiaLevelsSetting extends HSSettingBase<boolean> { }
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }

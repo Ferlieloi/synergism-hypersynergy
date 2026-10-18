@@ -75,7 +75,7 @@ export interface HSGlobalMouse {
 
 export interface HSGlobalHiddenDialogs extends IStoreable { }
 
-export interface HSGlobalAmbrosia extends IStoreable {
+export interface HSGlobalAmbrosia {
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 

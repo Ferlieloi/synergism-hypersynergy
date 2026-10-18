@@ -138,6 +138,11 @@ export class HSSettingActions {
             (mod) => { void mod.disableGDS(); }
         ),
 
+        persistentAmbrosiaLevelsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.applyPersistentAmbrosiaLevelsSetting(true),
+            (mod) => mod.applyPersistentAmbrosiaLevelsSetting(false)
+        ),
+
         addTimeAutoLoadoutsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
             (mod) => mod.enableAutoLoadout(),
             (mod) => mod.disableAutoLoadout()

@@ -1,4 +1,4 @@
-import { HSGameDataSubscriber, HSModuleOptions, HSPersistable } from "../../types/hs-types";
+import { HSGameDataSubscriber, HSModuleOptions } from "../../types/hs-types";
 import { AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig } from "../../types/data-types/hs-gamedata-api-types";
 import { AmbrosiaUpgradeData, AmbrosiaUpgrades, GameData } from "../../types/data-types/hs-player-savedata";
 import { AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
@@ -74,7 +74,7 @@ export interface HSSingReducerPlan {
  * Author: Swiffy
  */
 export class HSAmbrosia extends HSModule
-    implements HSPersistable, HSGameDataSubscriber {
+    implements HSGameDataSubscriber {
 
     // Import through the game's dialogs (no exposedPlayer): up to 16 lines, each waiting up to ~1.5 s for its dialogs
     static readonly #GAME_IMPORT_TIME_LIMIT_MS = 120000;
@@ -105,9 +105,6 @@ export class HSAmbrosia extends HSModule
     #isLoadoutClickHandlerAttached = false;
     #persistentAmbrosiaLevelsToggleHandler?: (event: Event) => void;
     #isAmbrosiaTabActive = false;
-    #state = {
-        persistentAmbrosiaLevelsDisplayEnabled: true
-    };
     #persistentAmbrosiaLevelsSignature?: string;
     // RETIRED: #debugElement was used only by the Ambrosia AFK/idle swapper.
     // #debugElement?: HTMLDivElement;
@@ -217,7 +214,7 @@ export class HSAmbrosia extends HSModule
 
         this.#attachLoadoutClickHandler();
 
-        await this.loadState();
+        this.#migrateLegacyPersistentAmbrosiaLevelsState();
 
         await this.quickbar.init();
         this.#observeGameActiveLoadout();
@@ -856,57 +853,47 @@ export class HSAmbrosia extends HSModule
     }
 
     // ==============================================
-    // ---------------- Persistence -----------------
-    // ==============================================
-
-    async saveState(): Promise<void> {
-        const storageModule = HSModuleManager.getModule('HSStorage') as HSStorage;
-
-        if (storageModule) {
-            const payload = {
-                persistentAmbrosiaLevelsDisplayEnabled: this.#state.persistentAmbrosiaLevelsDisplayEnabled
-            };
-            storageModule.setData(HSGlobal.HSAmbrosia.storageKey, JSON.stringify(payload));
-        } else {
-            HSLogger.warn(`saveState - Could not find storage module`, this.context);
-        }
-    }
-
-    async loadState(): Promise<void> {
-        const storageModule = HSModuleManager.getModule('HSStorage') as HSStorage;
-
-        if (!storageModule) { return; }
-
-        const data = storageModule.getData(HSGlobal.HSAmbrosia.storageKey);
-        if (!data) { return; }
-
-        let parsedData: any = data;
-        if (typeof data === 'string') {
-            try {
-                parsedData = JSON.parse(data);
-            } catch {
-                return;
-            }
-        }
-
-        try {
-            if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
-                if ('persistentAmbrosiaLevelsDisplayEnabled' in parsedData) {
-                    this.#state.persistentAmbrosiaLevelsDisplayEnabled = Boolean(parsedData.persistentAmbrosiaLevelsDisplayEnabled);
-                } else if ('permaAmbLevelsDisplayEnabled' in parsedData) {
-                    this.#state.persistentAmbrosiaLevelsDisplayEnabled = Boolean(parsedData.permaAmbLevelsDisplayEnabled);
-                }
-            }
-        } catch (e) {
-            HSLogger.warn(`loadState - Error parsing data`, this.context);
-            return;
-        }
-    }
-
-
-    // ==============================================
     // ----- Persistent Ambrosia Levels Display -----
     // ==============================================
+
+    /** The "Keep upgrade levels shown on the tree" setting, the only record of the 📌/🔎 state. */
+    get #persistentAmbrosiaLevelsEnabled(): boolean {
+        return HSSettings.getSetting('persistentAmbrosiaLevels')?.isEnabled() ?? true;
+    }
+
+    /**
+     * Before the setting, the state had a storage key of its own (hs-ambrosia-loadouts, despite its name).
+     * Carried into the setting once, then removed; an old backup brings it back and goes through here again.
+     * Temporary (added 2026-10-18): can be removed a few releases later, with its call in init().
+     * Without it, a leftover key is just ignored and the setting keeps its default.
+     */
+    #migrateLegacyPersistentAmbrosiaLevelsState() {
+        const legacyKey = 'ambrosia-loadouts';
+        const storage = HSModuleManager.getModule<HSStorage>('HSStorage');
+        if (!storage || localStorage.getItem(`${HSGlobal.HSStorage.storagePrefix}${legacyKey}`) === null) return;
+
+        let stored: unknown = storage.getData(legacyKey);
+        try {
+            // Written as a JSON string inside JSON
+            if (typeof stored === 'string') stored = JSON.parse(stored);
+        } catch {
+            stored = null;
+        }
+
+        if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+            const record = stored as Record<string, unknown>;
+            const value = 'persistentAmbrosiaLevelsDisplayEnabled' in record ? record.persistentAmbrosiaLevelsDisplayEnabled
+                : 'permaAmbLevelsDisplayEnabled' in record ? record.permaAmbLevelsDisplayEnabled
+                    : undefined;
+            const setting = HSSettings.getSetting('persistentAmbrosiaLevels');
+            if (value !== undefined && setting) {
+                setting.setValue(Boolean(value));
+                HSLogger.log(`Persistent ambrosia levels display (${Boolean(value) ? 'on' : 'off'}) moved into its setting`, this.context);
+            }
+        }
+
+        storage.clearData(legacyKey);
+    }
 
     async #hookPersistentAmbrosiaLevelsToggleButton() {
         const button = this.#persistentAmbrosiaLevelsToggleButton ?? await HSElementHooker.HookElement('#showCurrAmbrosiaUpgrades') as HTMLButtonElement;
@@ -921,24 +908,37 @@ export class HSAmbrosia extends HSModule
             event.preventDefault();
             event.stopPropagation();
             HSLogger.debug(() => 'persistentAmbrosiaLevelsToggle clicked', this.context);
-            if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
-                this.#disablePersistentAmbrosiaLevelsDisplay();
+            // The setting saves, updates its panel switch and runs its action (applyPersistentAmbrosiaLevelsSetting)
+            const setting = HSSettings.getSetting('persistentAmbrosiaLevels');
+            if (this.#persistentAmbrosiaLevelsEnabled) {
+                setting.disable();
             } else {
-                this.#enablePersistentAmbrosiaLevelsDisplay();
+                setting.enable();
             }
         };
 
         button.addEventListener('click', this.#persistentAmbrosiaLevelsToggleHandler);
 
-        if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
+        if (this.#persistentAmbrosiaLevelsEnabled) {
             this.#enablePersistentAmbrosiaLevelsDisplay();
+        }
+    }
+
+    /** Action of the persistentAmbrosiaLevels setting (panel switch or 📌/🔎 click). */
+    applyPersistentAmbrosiaLevelsSetting(enabled: boolean) {
+        // Button not hooked yet (Ambrosia tab not opened since the load): the hook applies the setting
+        if (!this.#persistentAmbrosiaLevelsToggleButton) return;
+
+        if (enabled) {
+            this.#enablePersistentAmbrosiaLevelsDisplay();
+        } else {
+            this.#disablePersistentAmbrosiaLevelsDisplay();
         }
     }
 
     #enablePersistentAmbrosiaLevelsDisplay() {
         if (!this.#persistentAmbrosiaLevelsToggleButton) { HSLogger.warn('enablePersistentAmbrosiaLevelsDisplay() missing button reference', this.context); return; }
 
-        this.#state.persistentAmbrosiaLevelsDisplayEnabled = true;
         this.#persistentAmbrosiaLevelsToggleButton.classList.add('hs-ambrosia-current-levels-active');
         this.#persistentAmbrosiaLevelsToggleButton.textContent = '📌';
 
@@ -948,20 +948,14 @@ export class HSAmbrosia extends HSModule
             // Fresh render: the next GDS update only records the tree as reference
             this.#persistentAmbrosiaLevelsSignature = undefined;
         }
-
-        void this.saveState();
     }
 
     #disablePersistentAmbrosiaLevelsDisplay() {
         if (!this.#persistentAmbrosiaLevelsToggleButton) { HSLogger.warn('disablePersistentAmbrosiaLevelsDisplay() missing button reference', this.context); return; }
         this.#persistentAmbrosiaLevelsToggleButton.textContent = '🔎';
-
-        this.#state.persistentAmbrosiaLevelsDisplayEnabled = false;
         this.#persistentAmbrosiaLevelsToggleButton.classList.remove('hs-ambrosia-current-levels-active');
 
         this.#detachPersistentAmbrosiaLevelsDisplayListeners();
-
-        void this.saveState();
 
         if (!this.#blueberryUpgradeContainer?.matches(':hover')) {
             this.#restorePersistentAmbrosiaLevelsDisplay();
@@ -969,7 +963,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #shouldRestorePersistentAmbrosiaLevelsDisplay() {
-        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return false;
+        if (!this.#persistentAmbrosiaLevelsEnabled) return false;
         if (this.#blueberryUpgradeContainer?.matches(':hover')) return false;
         if (this.#loadoutsSlots.some((loadoutSlot) => loadoutSlot.matches(':hover'))) return false;
         return true;
@@ -981,7 +975,7 @@ export class HSAmbrosia extends HSModule
     }
 
     #persistentAmbrosiaLevelsContainerEnterHandler = (event: Event) => {
-        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#persistentAmbrosiaLevelsEnabled) return;
         if (!this.#blueberryUpgradeContainer) return;
         if (!event.isTrusted) return;
 
@@ -989,7 +983,7 @@ export class HSAmbrosia extends HSModule
     };
 
     #persistentAmbrosiaLevelsContainerLeaveHandler = (event: Event) => {
-        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#persistentAmbrosiaLevelsEnabled) return;
         if (!this.#blueberryUpgradeContainer) return;
         if (!event.isTrusted) return;
 
@@ -999,7 +993,7 @@ export class HSAmbrosia extends HSModule
     };
 
     #persistentAmbrosiaLevelsSlotMouseOutHandler = (event: MouseEvent) => {
-        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#persistentAmbrosiaLevelsEnabled) return;
         if (!(event.target instanceof HTMLElement)) return;
 
         const slot = event.target.closest('.blueberryLoadoutSlot');
@@ -1039,7 +1033,7 @@ export class HSAmbrosia extends HSModule
 
     /** Refresh the persistent levels when the tree in the save data changed (any source: game, mod, autosing). */
     #refreshPersistentAmbrosiaLevelsOnTreeChange(gameData: GameData) {
-        if (!this.#isAmbrosiaTabActive || !this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#isAmbrosiaTabActive || !this.#persistentAmbrosiaLevelsEnabled) return;
 
         // The 🔎 view also shows red and purple levels, so they are part of the signature
         const signature = JSON.stringify(gameData.ambrosiaUpgrades) + JSON.stringify(gameData.redAmbrosiaUpgrades);
@@ -1116,7 +1110,7 @@ export class HSAmbrosia extends HSModule
         //     void this.#activateIdleSwap();
         // }
 
-        if (!this.#state.persistentAmbrosiaLevelsDisplayEnabled) return;
+        if (!this.#persistentAmbrosiaLevelsEnabled) return;
 
         this.#enablePersistentAmbrosiaLevelsDisplay();
     }
@@ -1135,7 +1129,7 @@ export class HSAmbrosia extends HSModule
         //     this.#deactivateIdleSwap();
         // }
 
-        if (this.#state.persistentAmbrosiaLevelsDisplayEnabled) {
+        if (this.#persistentAmbrosiaLevelsEnabled) {
             this.#restorePersistentAmbrosiaLevelsDisplay();
         }
     }

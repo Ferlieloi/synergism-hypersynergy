@@ -488,6 +488,21 @@
       ]
     }
   },
+  "persistentAmbrosiaLevels": {
+    "settingName": "persistentAmbrosiaLevels",
+    "settingDescription": "Keep upgrade levels shown on the tree",
+    "settingHelpText": "On the Ambrosia tab, keeps the game's current upgrade levels view on, except while the mouse is over the tree or a loadout. Same as clicking the game's levels button (📌 on, 🔎 off).",
+    "settingType": "boolean",
+    "enabled": true,
+    "settingAction": "persistentAmbrosiaLevelsAction",
+    "skipInit": true,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "ambrosia-tree",
+      "controlPage": "ambrosia",
+      "controlEnabledId": "hs-setting-persistent-ambrosia-levels-btn"
+    }
+  },
   "addTimeAutoLoadouts": {
     "settingName": "addTimeAutoLoadouts",
     "settingDescription": "Add+Time Amb loadouts auto-switch",

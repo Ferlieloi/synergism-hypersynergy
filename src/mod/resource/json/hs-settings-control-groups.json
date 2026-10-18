@@ -27,6 +27,10 @@
     "groupName": "Add+Time Amb loadouts auto-switch settings",
     "order": 8
   },
+  "ambrosia-tree": {
+    "groupName": "Ambrosia tree settings",
+    "order": 7.5
+  },
   "ambrosia2": {
     "groupName": "Idle Swapper settings",
     "order": 7

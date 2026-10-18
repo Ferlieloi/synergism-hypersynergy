@@ -247,7 +247,6 @@ export const HSGlobal: IHSGlobal = class {
 
     // HSAmbrosia
     static HSAmbrosia = {
-        storageKey: 'ambrosia-loadouts',
         quickBarId: 'hs-ambrosia-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
 
