@@ -717,6 +717,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
             calculateSingularityDebuff: (debuff) => this.calculateSingularityDebuff(debuff),
             calculateSynergismLevel: () => this.calculateSynergismLevel(),
+            getShopLevel: (upgradeKey) => quarkShop.getShopLevel(upgradeKey),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };
@@ -2484,6 +2485,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopInfiniteShopUpgrades,
             data.redAmbrosiaUpgrades.infiniteShopUpgrades,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
+            data.singularityChallenges.noQuarkUpgrades.enabled ? 1 : 0,
             mode === 'true_base' ? 1 : mode === 'non_ambrosia' ? 2 : 0,
             ...(Object.values(data.singularityChallenges) as SingularityChallengeStatus[]).map((c) => c.completions),
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
@@ -2519,7 +2521,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             dunno(),
             this.goldenQuark.getGQUpgradeEffect('singInfiniteShopUpgrades', 'infinityVouchers'),
             this.octeract.getOcteractUpgradeEffect('octeractInfiniteShopUpgrades', 'infinityVouchers'),
-            Math.floor(0.01 * data.shopUpgrades.shopInfiniteShopUpgrades * this.calculateSumOfExaltCompletions()),
+            this.quarkShop.getShopUpgradeEffects('shopInfiniteShopUpgrades', 'infiniteVouchers') as number,
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
                 ? []
                 : [

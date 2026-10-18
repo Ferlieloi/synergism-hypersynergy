@@ -293,7 +293,7 @@ export class RuneHelper {
             effectiveLevelMult: () => 1,
             freeLevels: () => 0,
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean((this.#ctx.getGameData()?.shopUpgrades.shopSadisticRune ?? 0) > 0),
+            isUnlocked: () => this.#ctx.getShopLevel('shopSadisticRune') > 0,
         },
         topHat: {
             ignoreChal9: false,

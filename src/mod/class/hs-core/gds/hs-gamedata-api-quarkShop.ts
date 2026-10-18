@@ -1,7 +1,7 @@
 import { ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
 import { parseGameDataNumber } from "./hs-gamedata-utils";
-import { SHOP_UPGRADE_GROUPS_BY_KEY } from "./stored-vars-and-calculations"
-import type { ShopUpgradeHelperContext, CalculationCache, CalculationMode } from "../../../types/data-types/hs-gamedata-api-types"
+import { SHOP_UPGRADE_GROUPS_BY_KEY, SINGULARITY_CHALLENGE_DATA } from "./stored-vars-and-calculations"
+import type { ShopUpgradeHelperContext, CalculationCache, CalculationMode, SingularityChallengeDataKeys } from "../../../types/data-types/hs-gamedata-api-types"
 import { HSLogger } from "../hs-logger";
 
 const QUARKSHOP_CACHE_PREFIX = 'QUARKSHOP_';
@@ -286,6 +286,39 @@ const getRawShopUpgradeLevel = (upgradeKey: string, env: ShopUpgradeHelperContex
     return gameData?.shopUpgrades[upgradeKey as keyof typeof gameData.shopUpgrades] ?? 0
 }
 
+// The Exalt reward that unlocks a shop upgrade (SynergismOfficial/src/Shop.ts isUnlocked). The game's getShopLevel counts a
+// locked upgrade as level 0, even a bought one. The other unlock conditions (shop passes, early game) are left out: every
+// player past singularity 1 meets them, and an upgrade can't be bought before them.
+const SHOP_UPGRADE_EXALT_UNLOCKS: Record<string, [SingularityChallengeDataKeys, string]> = {
+    shopSingularityPenaltyDebuff: ['noSingularityUpgrades', 'shopUpgrade'],
+    shopCashGrabUltra: ['noSingularityUpgrades', 'shopUpgrade2'],
+    shopAmbrosiaLuckMultiplier4: ['oneChallengeCap', 'shopUpgrade'],
+    shopOcteractAmbrosiaLuck: ['noOcteracts', 'shopUpgrade'],
+    shopInfiniteShopUpgrades: ['limitedAscensions', 'shopUpgrade'],
+    calculator7: ['limitedAscensions', 'shopUpgrade2'],
+    shopAmbrosiaAccelerator: ['noAmbrosiaUpgrades', 'shopUpgrade'],
+    shopEXUltra: ['noAmbrosiaUpgrades', 'shopUpgrade2'],
+    shopChronometerS: ['limitedTime', 'shopUpgrade'],
+    shopAmbrosiaUltra: ['limitedTime', 'shopUpgrade2'],
+    shopSingularitySpeedup: ['sadisticPrequel', 'shopUpgrade'],
+    shopSingularityPotency: ['sadisticPrequel', 'shopUpgrade2'],
+    shopSadisticRune: ['sadisticPrequel', 'shopUpgrade3'],
+    shopPurpleBarRebate: ['taxmanLastStand', 'shopUpgrade'],
+    shopPanthema: ['noQuarkUpgrades', 'shopUpgrade'],
+    shopHorseShoe: ['barDependence', 'shopUpgrade'],
+};
+
+const isShopUpgradeLocked = (
+    upgradeKey: string,
+    gameData: ReturnType<ShopUpgradeHelperContext["getGameData"]>,
+): boolean => {
+    const unlock = SHOP_UPGRADE_EXALT_UNLOCKS[upgradeKey];
+    if (!unlock || !gameData) return false;
+    const [challenge, rewardKey] = unlock;
+    const completions = gameData.singularityChallenges[challenge]?.completions ?? 0;
+    return !(SINGULARITY_CHALLENGE_DATA[challenge].effect(completions) as Record<string, unknown>)[rewardKey];
+}
+
 const buildShopLevelDependencies = (
     upgradeKey: string,
     rawLevel: number,
@@ -294,9 +327,10 @@ const buildShopLevelDependencies = (
     getShopUpgradeTypeBonusLevelCalculationVars: (group: ShopUpgradeGroups) => number[],
 ): number[] => {
     const noQuarkLock = gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility ? 1 : 0;
+    const exaltLock = isShopUpgradeLocked(upgradeKey, gameData) ? 1 : 0;
     const shouldIncludeGroupVars = upgradeKey !== 'shopPanthema' && !isUtility;
 
-    const vars: number[] = [rawLevel, noQuarkLock];
+    const vars: number[] = [rawLevel, noQuarkLock, exaltLock];
     if (shouldIncludeGroupVars) {
         const groups = getShopUpgradeGroups(upgradeKey);
         for (const group of groups) {
@@ -314,7 +348,7 @@ const buildShopLevelResult = (
     isUtility: boolean,
     getBonusLevels: () => number,
 ): number => {
-    if (gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility) {
+    if ((gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility) || isShopUpgradeLocked(upgradeKey, gameData)) {
         return 0;
     }
 

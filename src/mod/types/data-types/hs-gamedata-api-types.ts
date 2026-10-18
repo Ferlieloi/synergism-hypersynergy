@@ -117,6 +117,7 @@ export interface RuneHelperContext {
   calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
   calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
   calculateSynergismLevel: () => number
+  getShopLevel: (upgradeKey: string) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
