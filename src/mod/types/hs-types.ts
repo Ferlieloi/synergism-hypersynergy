@@ -48,17 +48,6 @@ export interface HSExternalModuleOptions extends HSModuleOptions {
     scriptContext: string;
 }
 
-/**
- * HSPersistable interface
- * 
- * Implementers should maintain a private #state property
- * that holds the state to be persisted.
- */
-export interface HSPersistable {
-    saveState(): Promise<any>;
-    loadState(): Promise<void>;
-}
-
 export interface HSGameDataSubscriber {
     gameDataSubscriptionId?: string;
     gameDataCallback: (data: GameData) => Promise<void>;
