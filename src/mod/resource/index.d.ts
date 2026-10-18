@@ -25,3 +25,9 @@ declare module '*.json' {
     const json: string;
     export default json;
 }
+
+// A userscript from src/loader, inlined as text
+declare module '*.user.js' {
+    const script: string;
+    export default script;
+}

@@ -18,6 +18,7 @@ import { HSAmbrosia } from "./hs-modules/hs-ambrosia";
 import { HSHeaterInputModalController } from "./hs-modules/hs-heater/hs-heater-input-modal-controller";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";
+import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
 
 /**
  * Class: Hypersynergism
@@ -86,6 +87,7 @@ export class Hypersynergism {
         });
 
         HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
+        void HSBookmarkletNotice.showIfBookmarklet();
     }
 
     async #waitForGameReady(): Promise<boolean> {
@@ -158,9 +160,13 @@ export class Hypersynergism {
                 value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
             }));
 
+        // Only for players who loaded the mod with the bookmark, hence at the very top
+        const bookmarkletSection = HSBookmarkletNotice.buildToolsSection();
+
         hsui.replaceTabContents(2,
             HSUIC.Grid({
                 html: [
+                    ...(bookmarkletSection.length > 0 ? [this.#buildGridSectionHeader('Recommended: Tampermonkey loader'), ...bookmarkletSection] : []),
                     this.#buildGridSectionHeader('Export tools'),
                     this.#buildGridFullSpanDiv('hs-panel-amb-heater-p', `Export an extended save file string for the <a href="${HSGlobal.General.heaterUrl}" class="hs-link" target="_blank">Ambrosia Heater sheet</a>.`),
                     HSUIC.Button({ id: 'hs-panel-amb-heater-btn', text: 'Copy Heater Data' }),
@@ -216,6 +222,7 @@ export class Hypersynergism {
         let p_idx = -1;
         let c_idx = -1;
 
+        HSBookmarkletNotice.bindToolsSection();
         this.#bindToolsButton('#hs-panel-amb-heater-btn', async () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
             if (!dataModule) return;
