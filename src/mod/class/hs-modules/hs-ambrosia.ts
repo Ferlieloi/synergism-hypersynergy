@@ -688,6 +688,17 @@ export class HSAmbrosia extends HSModule
         return { id: bestMatchId, score: highestScore };
     }
 
+    /**
+     * Another save replaced the game's (cloud save, Steam cloud, file: the patched game's save import, reset = false).
+     * The game marks no slot, and ours is still the old save's: guessed again from the save now loaded, read from
+     * the live player (the same fields as a save). Without the live player, no slot is shown.
+     */
+    public async matchActiveLoadoutToLoadedSave(): Promise<void> {
+        const player = HSGlobal.exposedPlayer as unknown as GameData | undefined;
+        if (!player) { await this.resetActiveLoadout(); return; }
+        await this.performInitialActiveLoadoutMatch(player);
+    }
+
     public async performInitialActiveLoadoutMatch(saveData: GameData): Promise<void> {
         if (!saveData) return;
 
@@ -837,12 +848,13 @@ export class HSAmbrosia extends HSModule
 
     /**
      * Loads the code's loadout (through its quickbar copy), then loads the previous one back once the queue is
-     * idle: the code's dialogs are over, so it has paid out. Skipped when no slot was active, when the player
-     * switched or saved meanwhile, or when autosing started. One restore at a time: a second code meanwhile
-     * keeps the first previous slot.
+     * idle: the code's dialogs are over, so it has paid out. The previous one is the slot the quickbar shows,
+     * also when the game marks none (after a page load or any save load): then its saved loadout is loaded, even
+     * if the tree had changed since. Skipped when no slot was shown, when the player switched or saved meanwhile,
+     * or when autosing started. One restore at a time: a second code meanwhile keeps the first previous slot.
      */
     #switchLoadoutForCode(codeLoadoutBtn: HTMLButtonElement, codeSlotId: string) {
-        const previousSlot = this.#pendingCodeRestore?.slot ?? this.#getGameActiveSlot();
+        const previousSlot = this.#pendingCodeRestore?.slot ?? this.#shownLoadoutSlot();
         codeLoadoutBtn.click();
         if (!previousSlot || previousSlot.id === codeSlotId) {
             this.#pendingCodeRestore = undefined;

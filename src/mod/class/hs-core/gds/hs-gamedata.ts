@@ -192,9 +192,16 @@ export class HSGameData extends HSModule {
      * nothing to do for them, and autosing goes through here at every singularity, so that path stays one test.
      * The other loads replace the save: autosing can't go on. A cloud save and the Steam cloud are only seen here;
      * "Load from file" has already stopped autosing at its button's click.
+     * The ambrosia slot the quickbar shows is guessed again from the new save: with reset = false, importSynergism
+     * loads the save synchronously, so it is in place one task later (or the import was refused, nothing changed).
      */
     #onSaveImport(reset: boolean): void {
         if (reset) return;
+
+        setTimeout(() => {
+            void HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.matchActiveLoadoutToLoadedSave()
+                .catch(e => HSLogger.warn(`Ambrosia loadout match after a save load failed: ${e}`, this.context));
+        }, 0);
 
         const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
         if (!autosing?.isAutosingActive()) return;
