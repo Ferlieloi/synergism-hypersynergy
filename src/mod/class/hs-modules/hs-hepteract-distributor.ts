@@ -81,7 +81,7 @@ const ASCENSION_WARNING = 'Distribute ascends several times in a row: your curre
 // The feature in a few lines, shown by the "?" after the panel's title. Each control has its own tooltip
 const HELP_LINES = [
     'Spends your hepteracts between the hepteract types, following your ratios.',
-    'A ratio is the balance a type should hold compared with the others: 4 and 1 means four times as much. 0 leaves a type alone.',
+    'A ratio is what a type\'s balance should be worth in hepteracts (its units x the hepteracts one unit costs), compared with the others: 4 and 1 means four times as many hepteracts. 0 leaves a type alone.',
     'Each step goes to the type furthest behind its ratio: its meter is filled, or expanded then filled. It stops when that type can\'t pay.',
     'It crafts through the game\'s Auto craft, so only hepteracts are spent. For that it ascends several times in a row: your current ascension ends.',
     'Keep: a power of ten of hepteracts is never spent (some bonuses count the hepteracts you own). It follows your stock as it grows. Orbs and ratios run on what is above it.',
@@ -95,8 +95,8 @@ const HELP_LINES = [
  * Description:
  *     The Hepteract Distributor, a panel in the Hepteract Forge opened by a button on the forge's welcome line
  *     (it then takes the place of the forge's three intro lines).
- *     It spends the owned hepteracts on the hepteract types so that their balances follow the ratios the player
- *     set (the rule is in hs-hepteract-distributor-plan.ts). A percentage can go to Overflux Orbs first.
+ *     It spends the owned hepteracts on the hepteract types so that what their balances are worth in hepteracts
+ *     follows the ratios the player set (the rule is in hs-hepteract-distributor-plan.ts). A percentage can go to Overflux Orbs first.
  *     A power of ten can be kept: Orbs and ratios only spend what is above it (Cx13 and the ambrosia hybrid modules
  *     count the hepteracts owned, by powers of ten). It is saved as a distance below the stock's own power of
  *     ten, so it follows the stock.
@@ -371,7 +371,7 @@ export class HSHepteractDistributor extends HSModule {
             + 'your ascension\'s reward, then once per hepteract it crafts, with only that one\'s Auto on.\n'
             + 'Your Auto switches, the autocraft percentage and the ascension confirmation are put back as they were.',
             () => void this.#distribute());
-        this.#matchButton = button('Match current', 'Set the ratios from the current capacities, without spending anything.', () => this.#matchCurrent());
+        this.#matchButton = button('Match current', 'Set the ratios from what the current capacities are worth in hepteracts, without spending anything.', () => this.#matchCurrent());
         button('Reset', 'Set every ratio to 0.', () => this.#resetRatios());
         panel.appendChild(actions);
 
@@ -558,20 +558,23 @@ export class HSHepteractDistributor extends HSModule {
         this.#setStatus('Ratios reset.');
     }
 
-    /** Ratios from the current capacities (the smallest one counts for 1). Locked hepteracts keep theirs. */
+    /**
+     * Ratios from what the current capacities are worth in hepteracts (the smallest one counts for 1).
+     * The singularity debuff is the same for every type, so it is left out. Locked hepteracts keep theirs.
+     */
     #matchCurrent(): void {
-        const capacities = new Map<HepteractKey, number>();
+        const worths = new Map<HepteractKey, number>();
         for (const info of HEPTERACTS) {
             if (HSHepteractDistributor.#isLocked(info.key)) continue;
             const live = HSHepteractDistributor.#readLive(info);
-            if (live) capacities.set(info.key, live.finalCapacity);
+            if (live) worths.set(info.key, live.finalCapacity * HEPTERACT_DATA[info.key].conversion);
         }
-        if (capacities.size === 0) {
+        if (worths.size === 0) {
             this.#setStatus('Could not read the hepteracts.');
             return;
         }
-        const smallest = Math.min(...capacities.values());
-        for (const [key, capacity] of capacities) this.#ratios[key] = capacity / smallest;
+        const smallest = Math.min(...worths.values());
+        for (const [key, worth] of worths) this.#ratios[key] = worth / smallest;
         this.#saveRatios();
         this.#showRatios();
         this.#setStatus('Ratios set from the current capacities.');

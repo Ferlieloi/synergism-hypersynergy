@@ -8,9 +8,12 @@ import { expandHepteract, HepteractState } from "./hs-hepteract-state";
 
 export interface HepteractPlanType extends HepteractState {
     key: string;
-    /** The balance this type should hold, compared with the other types' ratios. 0: left alone. */
+    /**
+     * What this type's balance should be worth in hepteracts (balance x unitCost), compared with the other types'
+     * ratios. 0: left alone.
+     */
     ratio: number;
-    /** Hepteracts for one unit, singularity debuff included. */
+    /** Hepteracts for one unit, singularity debuff included (the same factor for every type). */
     unitCost: number;
 }
 
@@ -55,8 +58,8 @@ export interface HepteractPlan {
 const MAX_STEPS = 5000;
 
 /**
- * The next step towards the ratios: the type furthest behind its ratio (lowest balance / ratio) gets its meter
- * filled to the top, after an expansion when it is already full.
+ * The next step towards the ratios: the type furthest behind its ratio (lowest balance x unitCost / ratio, what
+ * its balance is worth in hepteracts) gets its meter filled to the top, after an expansion when it is already full.
  * When that type can't pay for it, nothing is given to the others (they would end far above their ratio).
  * With allowPartial, what is left goes into it anyway: it only expands when at least what the expansion consumes
  * can be crafted back, as the game's Auto does, so a balance never goes down.
@@ -65,7 +68,7 @@ export function nextHepteractStep(state: HepteractPlanState, allowPartial: boole
     let behind: HepteractPlanType | undefined;
     let behindLevel = Infinity;
     for (const type of state.types) {
-        const level = type.balance / type.ratio;
+        const level = type.balance * type.unitCost / type.ratio;
         if (type.ratio > 0 && level < behindLevel) {
             behind = type;
             behindLevel = level;
