@@ -2985,7 +2985,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     totalTalismanPowerMultiplierNoAmb: new Decimal(noAmbTalismanPower),
                     patreonBonus:               this.getPatreonBonus(),
                     activeBells:                activeBells,
-                    jack:                       gameData.shopUpgrades.shopPanthema > 0,
+                    jack:                       this.quarkShop.getShopLevel('shopPanthema') > 0,
                     freeShopLevelsInfinityNoAmb: this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),
                     freeShopLevelsSpeed:        this.quarkShop.getShopFreeLevelsAscensionSpeed(),
@@ -3076,7 +3076,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     redAmbrosiaBarMax:      this.ambrosia.calculateRequiredRedAmbrosiaTime(),
                     ambrosiaGainChance:       ambrosiaGainChance,
                     trueAmbrosiaGainChance:   trueAmbrosiaGainChance,
-                    ambrosiaAcceleratorCount: gameData.shopUpgrades.shopAmbrosiaAccelerator,
+                    ambrosiaAcceleratorCount: this.quarkShop.getShopLevel('shopAmbrosiaAccelerator'),
                     pseudoCoinUpgrades: {
                         ambrosiaGenerationBuffLevel:    this.getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF'),
                         ambrosiaLuckBuffLevel:          this.getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF'),
