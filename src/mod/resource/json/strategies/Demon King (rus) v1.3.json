@@ -1,5 +1,5 @@
 {
-  "strategyName": "test",
+  "strategyName": "DK_(rus)_v1.3",
   "strategy": [
     {
       "startPhase": "start",
@@ -34,7 +34,7 @@
           "challengeNumber": 1,
           "challengeCompletions": 75,
           "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
+          "challengeWaitBefore": 10,
           "challengeMaxTime": 200
         },
         {
@@ -46,6 +46,13 @@
         },
         {
           "challengeNumber": 3,
+          "challengeCompletions": 75,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 200
+        },
+        {
+          "challengeNumber": 4,
           "challengeCompletions": 75,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
