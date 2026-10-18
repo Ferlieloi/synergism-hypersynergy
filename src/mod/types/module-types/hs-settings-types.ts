@@ -23,6 +23,7 @@ export interface HSSettingsDefinition {
     hepteractDistributorTalismanAlone: HepteractDistributorTalismanAloneSetting;
     hepteractDistributorRatios: HepteractDistributorRatiosSetting;
     hepteractDistributorOrbsPercent: HepteractDistributorOrbsPercentSetting;
+    hepteractDistributorKeep: HepteractDistributorKeepSetting;
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
@@ -190,6 +191,7 @@ export interface HepteractDistributorUseReducersSetting extends HSSettingBase<bo
 export interface HepteractDistributorTalismanAloneSetting extends HSSettingBase<boolean> { }
 export interface HepteractDistributorRatiosSetting extends HSSettingBase<string> { }
 export interface HepteractDistributorOrbsPercentSetting extends HSSettingBase<number> { }
+export interface HepteractDistributorKeepSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }

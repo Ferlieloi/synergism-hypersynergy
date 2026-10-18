@@ -90,6 +90,14 @@
     "hidden": true,
     "settingValue": 0
   },
+  "hepteractDistributorKeep": {
+    "settingName": "hepteractDistributorKeep",
+    "settingDescription": "Hepteract Distributor: hepteracts never spent, as how many powers of ten below the stock's own (1 with 3.4e16 owned keeps 1e15, -1 keeps nothing)",
+    "settingType": "numeric",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": -1
+  },
   "autoConfirmPopups": {
     "settingName": "autoConfirmPopups",
     "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",

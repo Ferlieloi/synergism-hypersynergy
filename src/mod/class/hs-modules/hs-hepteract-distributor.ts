@@ -16,6 +16,7 @@ import type { HSAmbrosia, HSSingReducerSwap } from "./hs-ambrosia";
 import type { HepteractKeys } from "../../types/data-types/hs-player-savedata";
 import { HepteractPlan, HepteractPlanState, HepteractPlanType, planHepteractDistribution } from "./hs-hepteract-distributor-plan";
 import { HEPTERACT_DATA, HepteractState, readHepteract } from "./hs-hepteract-state";
+import { escapeLogText } from "./hs-heater/hs-heater-utils";
 import distributorCSS from "inline:../../resource/css/module/hs-hepteract-distributor.css";
 
 type HepteractKey = Exclude<HepteractKeys, 'quark'>;
@@ -66,6 +67,12 @@ const SETTLE_TIME_LIMIT_MS = 2000;
 // takes at least a third more than the planned cost: 5% above it absorbs a cost slightly off (the cost check
 // allows 1%) without ever reaching that
 const AMOUNT_MARGIN = 1.05;
+// With hepteracts to keep, the run spends that fraction of the stock less than what is above them. The game takes
+// floor(stock x percentage / 100): on a large stock, the float rounding of a share can come out a few thousand
+// hepteracts above it, enough to end just under a power of ten, which the bonuses counted in digits would lose
+const KEEP_SAFETY = 1e-12;
+// The game caps the hepteracts owned at 1e300 (Reset.ts)
+const MAX_KEEP_EXPONENT = 300;
 // The most singularity reducers the ambrosia tree gives (reducer 1 or reducer 2, 2 levels each)
 const MOST_TREE_REDUCERS = 2;
 /** The hepteract cost multiplier with another ambrosia tree (#readCostMultiplier). */
@@ -77,6 +84,7 @@ const HELP_LINES = [
     'A ratio is the balance a type should hold compared with the others: 4 and 1 means four times as much. 0 leaves a type alone.',
     'Each step goes to the type furthest behind its ratio: its meter is filled, or expanded then filled. It stops when that type can\'t pay.',
     'It crafts through the game\'s Auto craft, so only hepteracts are spent. For that it ascends several times in a row: your current ascension ends.',
+    'Keep: a power of ten of hepteracts is never spent (some bonuses count the hepteracts you own). It follows your stock as it grows. Orbs and ratios run on what is above it.',
     'Orbs: that part of your hepteracts buys Overflux Orbs first.',
     'Your Auto switches, autocraft percentage and ascension confirmation are put back at the end.',
 ];
@@ -89,6 +97,9 @@ const HELP_LINES = [
  *     (it then takes the place of the forge's three intro lines).
  *     It spends the owned hepteracts on the hepteract types so that their balances follow the ratios the player
  *     set (the rule is in hs-hepteract-distributor-plan.ts). A percentage can go to Overflux Orbs first.
+ *     A power of ten can be kept: Orbs and ratios only spend what is above it (Cx13 and the ambrosia hybrid modules
+ *     count the hepteracts owned, by powers of ten). It is saved as a distance below the stock's own power of
+ *     ten, so it follows the stock.
  *     Crafting goes through the game's own Auto craft, which runs at an ascension and takes no other resource
  *     than hepteracts: the Distributor ascends once per type, with only that type's Auto on and the game's
  *     autocraft percentage set to that type's exact share. The player's switches and percentage are put back
@@ -110,6 +121,8 @@ export class HSHepteractDistributor extends HSModule {
     #ratioInputs = new Map<HepteractKey, HTMLInputElement>();
     #cells = new Map<HepteractKey, HTMLElement>();
     #orbsIcon?: HTMLElement;
+    #keepIcon?: HTMLElement;
+    #keepInput?: HTMLInputElement;
 
     #ratios: Partial<Record<HepteractKey, number>> = {};
     #shown = false;
@@ -179,7 +192,11 @@ export class HSHepteractDistributor extends HSModule {
         const panel = document.createElement('div');
         panel.id = 'hs-hept-distributor';
         // What makes it unavailable (an Exalt, autosing) changes while the panel stays open
-        panel.addEventListener('mouseenter', () => this.#refreshAvailability());
+        panel.addEventListener('mouseenter', () => {
+            this.#refreshAvailability();
+            // The stock changes at each ascension: the mouse is over the panel before the field is read
+            this.#refreshKeepField();
+        });
 
         const minimize = document.createElement('button');
         minimize.id = 'hs-hept-distributor-minimize';
@@ -239,12 +256,12 @@ export class HSHepteractDistributor extends HSModule {
         }
 
         const orbsCell = document.createElement('label');
-        orbsCell.className = 'hs-hept-distributor-cell hs-hept-distributor-orbs';
+        orbsCell.className = 'hs-hept-distributor-cell hs-hept-distributor-dotted';
         orbsCell.title = 'This part of your hepteracts buys Overflux Orbs first (250,000 each). The ratios run on what is left.';
         this.#orbsIcon = HSHepteractDistributor.#iconSlot();
         orbsCell.appendChild(this.#orbsIcon);
         const orbsField = document.createElement('span');
-        orbsField.className = 'hs-hept-distributor-orbs-field';
+        orbsField.className = 'hs-hept-distributor-field';
         const orbsInput = document.createElement('input');
         orbsInput.type = 'number';
         orbsInput.min = '0';
@@ -263,6 +280,42 @@ export class HSHepteractDistributor extends HSModule {
         // Bought first, so shown first
         cells.prepend(orbsCell);
         this.#controls.push(orbsInput);
+
+        const keepCell = document.createElement('label');
+        keepCell.className = 'hs-hept-distributor-cell hs-hept-distributor-separated';
+        keepCell.title = 'These hepteracts are never spent: Orbs and ratios run on what is above them.\n'
+            + 'Cx13 (cube gain) and the ambrosia Cube-Quark and Cube-Luck hybrid modules count the hepteracts you own, '
+            + 'by powers of ten, so the field takes the exponent: 15 keeps 1e15.\n'
+            + 'It follows your stock: 15 typed while you own 3.4e16 (one power of ten below) becomes 16 once you own 1e17. '
+            + 'At most every digit you own: an exponent above your stock\'s is brought down to it.\n'
+            + 'Empty keeps nothing. The greyed value is only a suggestion, one power of ten below what you own: '
+            + 'at most a tenth of your hepteracts, for one digit less.';
+        this.#keepIcon = HSHepteractDistributor.#iconSlot();
+        keepCell.appendChild(this.#keepIcon);
+        const keepField = document.createElement('span');
+        keepField.className = 'hs-hept-distributor-field';
+        const keepInput = document.createElement('input');
+        keepInput.type = 'number';
+        keepInput.min = '1';
+        keepInput.max = String(MAX_KEEP_EXPONENT);
+        keepInput.step = '1';
+        keepInput.setAttribute('aria-label', 'Hepteracts to keep, as a power of ten');
+        keepInput.addEventListener('input', () => {
+            // Saved as the distance to the stock's power of ten, so the reserve follows the stock as it grows.
+            // Above the stock's own power: every digit it has (distance 0)
+            const typed = Math.floor(parseFloat(keepInput.value));
+            const stock = HSHepteractDistributor.#stockExponent(HSHepteractDistributor.#ownedHepteracts());
+            HSSettings.getSetting('hepteractDistributorKeep')
+                .setValue(Number.isFinite(typed) && typed >= 1 && Number.isFinite(stock) ? Math.max(0, stock - typed) : -1);
+        });
+        keepInput.addEventListener('change', () => this.#refreshKeepField(true));
+        keepField.append('Keep 1e', keepInput);
+        keepCell.appendChild(keepField);
+        // Set aside before the Orbs
+        cells.prepend(keepCell);
+        this.#keepInput = keepInput;
+        this.#refreshKeepField(true);
+        this.#controls.push(keepInput);
 
         type OptionSetting = 'hepteractDistributorUseReducers' | 'hepteractDistributorTalismanAlone' | 'hepteractDistributorAllowPartial';
         // A sub-option is only shown while the option above it is ticked (CSS)
@@ -346,8 +399,7 @@ export class HSHepteractDistributor extends HSModule {
      * Does nothing before the panel is built.
      */
     #refreshIcons(): void {
-        const copy = (slot: HTMLElement | null | undefined, imageId: string, label: string) => {
-            const image = document.getElementById(imageId);
+        const copy = (slot: HTMLElement | null | undefined, image: Element | null | undefined, label: string) => {
             if (!slot || !image) return;
             const icon = image.cloneNode(false) as HTMLElement;
             icon.removeAttribute('id');
@@ -356,9 +408,12 @@ export class HSHepteractDistributor extends HSModule {
             slot.replaceChildren(icon);
         };
         for (const info of HEPTERACTS) {
-            copy(this.#cells.get(info.key)?.querySelector<HTMLElement>('.hs-hept-distributor-icon'), `${info.key}HepteractImage`, info.label);
+            copy(this.#cells.get(info.key)?.querySelector<HTMLElement>('.hs-hept-distributor-icon'),
+                document.getElementById(`${info.key}HepteractImage`), info.label);
         }
-        copy(this.#orbsIcon, 'hepteractToQuarkImage', 'Overflux Orbs');
+        copy(this.#orbsIcon, document.getElementById('hepteractToQuarkImage'), 'Overflux Orbs');
+        // The forge's own hepteract image, which has no id
+        copy(this.#keepIcon, this.#tab?.querySelector('.openGrid .openImage'), 'Hepteracts to keep');
     }
 
     #setOpened(opened: boolean, save = true): void {
@@ -366,8 +421,27 @@ export class HSHepteractDistributor extends HSModule {
         if (opened) {
             this.#refreshIcons();
             this.#refreshAvailability();
+            this.#refreshKeepField();
         }
         if (save) HSSettings.getSetting('hepteractDistributorOpen').setValue(opened);
+    }
+
+    /**
+     * The Keep field, from the current stock: its exponent (the saved distance applied to the stock, empty when
+     * nothing is kept), and its greyed suggestion, one power of ten below the stock (3.4e16 owned: 15), so at most
+     * a tenth of it is kept, for one digit less in the bonuses. The suggestion is only a hint.
+     * @param evenFocused also rewrite the value while the player is in the field (not in the middle of typing).
+     */
+    #refreshKeepField(evenFocused = false): void {
+        const input = this.#keepInput;
+        if (!input) return;
+        const owned = HSHepteractDistributor.#ownedHepteracts();
+        const suggestion = HSHepteractDistributor.#stockExponent(owned) - 1;
+        input.placeholder = suggestion >= 1 ? String(suggestion) : '';
+        if (evenFocused || document.activeElement !== input) {
+            const exponent = this.#keepExponentFor(owned);
+            input.value = exponent > 0 ? String(exponent) : '';
+        }
     }
 
     #setStatus(text: string): void {
@@ -451,6 +525,32 @@ export class HSHepteractDistributor extends HSModule {
         return typeof value === 'number' && Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
     }
 
+    /** The stock's power of ten (3.4e16: 16). NaN below 1 hepteract, or when it can't be read. */
+    static #stockExponent(owned: number): number {
+        return owned >= 1 ? Math.floor(Math.log10(owned)) : NaN;
+    }
+
+    /**
+     * The power of ten to keep out of this stock: the Keep field's saved distance (how many powers of ten below
+     * the stock's own) applied to it. 0: nothing kept (no distance saved, or nothing left to keep).
+     */
+    #keepExponentFor(owned: number): number {
+        const distance = HSSettings.getSetting('hepteractDistributorKeep').getValue();
+        if (typeof distance !== 'number' || !Number.isFinite(distance) || distance < 0) return 0;
+        const exponent = HSHepteractDistributor.#stockExponent(owned) - Math.floor(distance);
+        return exponent >= 1 ? Math.min(MAX_KEEP_EXPONENT, exponent) : 0;
+    }
+
+    /** The hepteracts kept for a power of ten. Read as a literal, so 1e23 is the number 1e23 (10 ** 23 is one float step above it). */
+    static #kept(exponent: number): number {
+        return exponent > 0 ? Number(`1e${exponent}`) : 0;
+    }
+
+    /** What a run may spend out of this stock: what is above the hepteracts kept, less a safety (KEEP_SAFETY). */
+    static #spendable(owned: number, kept: number): number {
+        return kept > 0 ? Math.max(0, owned - kept - owned * KEEP_SAFETY) : owned;
+    }
+
     #resetRatios(): void {
         this.#ratios = {};
         this.#saveRatios();
@@ -493,10 +593,11 @@ export class HSHepteractDistributor extends HSModule {
         return typeof owned === 'number' && Number.isFinite(owned) ? owned : NaN;
     }
 
-    /** The planner's input: the unlocked hepteracts with a ratio, from the live player. */
-    #readState(costMultiplier: number): HepteractPlanState {
-        const hepteracts = HSHepteractDistributor.#ownedHepteracts();
-        if (Number.isNaN(hepteracts)) throw new Error('Could not read the hepteracts.');
+    /** The planner's input: the unlocked hepteracts with a ratio, from the live player, and the stock it may spend. */
+    #readState(costMultiplier: number, kept: number): HepteractPlanState {
+        const owned = HSHepteractDistributor.#ownedHepteracts();
+        if (Number.isNaN(owned)) throw new Error('Could not read the hepteracts.');
+        const hepteracts = HSHepteractDistributor.#spendable(owned, kept);
 
         const types: HepteractPlanType[] = [];
         for (const info of HEPTERACTS) {
@@ -573,14 +674,19 @@ export class HSHepteractDistributor extends HSModule {
             // The save read takes a moment: autosing may have started, or an Exalt been entered, meanwhile
             const lateReason = this.#unavailableReason();
             if (lateReason !== undefined) throw new Error(lateReason);
-            this.#setStatus(await this.#run(costMultiplierWith));
+            const summary = await this.#run(costMultiplierWith);
+            this.#setStatus(summary);
+            // A log line shows no line break
+            HSLogger.log(`Hepteract distribution: ${escapeLogText(summary.split('\n').join(' | '))}`, this.context);
         } catch (error) {
-            HSLogger.warn(`Hepteract distribution stopped: ${error}`, this.context);
+            HSLogger.warn(`Hepteract distribution stopped: ${escapeLogText(String(error))}`, this.context);
             this.#setStatus(`Stopped: ${error instanceof Error ? error.message : error}`);
         } finally {
             this.#running = false;
             this.#setControlsDisabled(false);
             if (this.#matchButton) this.#matchButton.disabled = !HSGlobal.exposedPlayer;
+            // The mouse is still over the panel: no mouseenter will refresh it
+            this.#refreshKeepField();
         }
     }
 
@@ -595,7 +701,20 @@ export class HSHepteractDistributor extends HSModule {
         const startedAt = performance.now();
         const allowPartial = HSSettings.getSetting('hepteractDistributorAllowPartial').getValue() === true;
         const orbsPercent = this.#orbsPercent();
-        const orbsToBuy = (owned: number) => Math.floor(Math.floor(owned * orbsPercent / 100) / ORB_COST);
+        // The power of ten kept, from the stock now. Set again, once, after the reward ascension: from then on it
+        // stays, or it would fall as the crafts spend the stock it follows
+        let keptExponent = this.#keepExponentFor(HSHepteractDistributor.#ownedHepteracts());
+        let kept = HSHepteractDistributor.#kept(keptExponent);
+        // The Orbs' part is taken from what is above the hepteracts to keep
+        const orbsToBuy = (owned: number) => Math.floor(Math.floor(HSHepteractDistributor.#spendable(owned, kept) * orbsPercent / 100) / ORB_COST);
+        // A craft or the Orbs must never take the stock under the hepteracts to keep (a game change would). The
+        // reserve comes from the stock, so it starts at or under it
+        const checkKept = () => {
+            const owned = HSHepteractDistributor.#ownedHepteracts();
+            if (kept > 0 && owned < kept) {
+                throw new Error(`The game spent more than planned: you now own ${HSUtils.N(owned, 0)} hepteracts, under the 1e${keptExponent} to keep.`);
+            }
+        };
         const notes: string[] = [];
 
         // The singularity reducers, when asked for and when they make hepteracts cheaper here (they don't up to
@@ -624,14 +743,14 @@ export class HSHepteractDistributor extends HSModule {
         }
 
         // Nothing to craft with what is owned: the player's ascension is left alone (its reward isn't known)
-        const firstPlan = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
+        const firstPlan = planHepteractDistribution(this.#readState(costMultiplier, kept), allowPartial);
         const player = HSGlobal.exposedPlayer;
         if (!player) throw new Error('Could not read the game.');
         if (firstPlan.targets.length === 0 && !(orbsToBuy(HSHepteractDistributor.#ownedHepteracts()) >= 1)) {
             if (player.challengecompletions?.[10] > 0) {
                 notes.push('The reward of your current ascension is not counted: ascend, then press Distribute again.');
             }
-            return this.#summary({ plan: firstPlan, orbsPercent, ascensions: 0, notes });
+            return this.#summary({ plan: firstPlan, orbsPercent, keptExponent, ascensions: 0, notes });
         }
 
         const original = new Map<GameSwitch, boolean>();
@@ -674,22 +793,29 @@ export class HSHepteractDistributor extends HSModule {
                 }
             }
 
+            // The stock now holds the reward, and only goes down from here
+            keptExponent = this.#keepExponentFor(HSHepteractDistributor.#ownedHepteracts());
+            kept = HSHepteractDistributor.#kept(keptExponent);
+
             if (orbsPercent > 0) {
                 orbsBought = 0;
-                if (orbsToBuy(HSHepteractDistributor.#ownedHepteracts()) >= 1) {
+                const owned = HSHepteractDistributor.#ownedHepteracts();
+                if (orbsToBuy(owned) >= 1) {
                     const orbsBefore = Number(player.overfluxOrbs);
-                    // Orbs Auto alone: the game spends this percentage of the stock on Orbs
-                    player.hepteractAutoCraftPercentage = orbsPercent;
+                    // Orbs Auto alone: the game spends this percentage of the whole stock on Orbs, so the
+                    // percentage of what is above the hepteracts to keep is scaled to it
+                    player.hepteractAutoCraftPercentage = orbsPercent * HSHepteractDistributor.#spendable(owned, kept) / owned;
                     if (!turn(ORBS_AUTO, true)) throw new Error('Could not switch Orbs Auto on.');
                     await this.#ascend(() => Number(player.overfluxOrbs) > orbsBefore, 'The game did not buy the Orbs.');
                     ascensions++;
                     turn(ORBS_AUTO, false);
+                    checkKept();
                     orbsBought = Number(player.overfluxOrbs) - orbsBefore;
                 }
             }
 
             // The stock is now exact: the reward is in, and the next ascensions give none
-            plan = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
+            plan = planHepteractDistribution(this.#readState(costMultiplier, kept), allowPartial);
             for (const target of plan.targets) {
                 const info = HEPTERACTS.find(hepteract => hepteract.key === target.key)!;
                 const auto = HEPTERACT_AUTOS[HEPTERACTS.indexOf(info)];
@@ -697,13 +823,16 @@ export class HSHepteractDistributor extends HSModule {
                 const owned = HSHepteractDistributor.#ownedHepteracts();
 
                 // With one Auto on, the game gives it owned x percentage / 100. Its prompt only takes whole
-                // percentages, its formula any number: the exact share is written, and put back at the end
-                const amount = target.partial ? owned : Math.min(owned, (target.units * AMOUNT_MARGIN + 0.5) * HEPTERACT_DATA[info.key].conversion * costMultiplier);
+                // percentages, its formula any number: the exact share is written, and put back at the end.
+                // Never more than what is above the hepteracts to keep, the margin included
+                const spendable = HSHepteractDistributor.#spendable(owned, kept);
+                const amount = target.partial ? spendable : Math.min(spendable, (target.units * AMOUNT_MARGIN + 0.5) * HEPTERACT_DATA[info.key].conversion * costMultiplier);
                 player.hepteractAutoCraftPercentage = owned > 0 ? Math.min(100, amount / owned * 100) : 0;
                 if (!turn(auto, true)) throw new Error(`Could not switch ${info.label}'s Auto on.`);
                 await this.#ascend(() => HSHepteractDistributor.#readLive(info)?.balance !== before, `The game did not craft ${info.label}.`);
                 ascensions++;
                 turn(auto, false);
+                checkKept();
 
                 const after = HSHepteractDistributor.#readLive(info)!.balance;
                 balances.set(info.key, { before, after });
@@ -726,7 +855,7 @@ export class HSHepteractDistributor extends HSModule {
         }
 
         // What the last type could not afford, on what is left now (at the cost of the next press, reducers included)
-        const left = planHepteractDistribution(this.#readState(costMultiplier), allowPartial);
+        const left = planHepteractDistribution(this.#readState(costMultiplier, kept), allowPartial);
         const added: string[] = [];
         if (swapApplied && reducerSwap) {
             const count = (amount: number, what: string) => `${amount} ${what}${amount > 1 ? 's' : ''}`;
@@ -740,7 +869,7 @@ export class HSHepteractDistributor extends HSModule {
             const saved = Math.round((1 - costMultiplier / plainCostMultiplier) * 10000) / 100;
             notes.unshift(`Ambrosia tree: ${added.join(' and ')} added for the crafts, hepteracts cost ${saved.toLocaleString()}% less.`);
         }
-        return this.#summary({ plan: left, balances, orbsPercent, orbsBought, ascensions, notes });
+        return this.#summary({ plan: left, balances, orbsPercent, orbsBought, keptExponent, ascensions, notes });
     }
 
     #summary(run: {
@@ -748,6 +877,8 @@ export class HSHepteractDistributor extends HSModule {
         balances?: Map<HepteractKey, { before: number, after: number }>,
         orbsPercent: number,
         orbsBought?: number,
+        /** The run's power of ten kept. 0: nothing kept. */
+        keptExponent: number,
         ascensions: number,
         notes?: string[],
     }): string {
@@ -756,15 +887,18 @@ export class HSHepteractDistributor extends HSModule {
         const count = run.ascensions === 0 ? '' : ` in ${run.ascensions} ascension${run.ascensions === 1 ? '' : 's'}`;
         const lines = [crafted.length > 0 ? `Done${count}. ${crafted.join(' · ')}` : `Done${count}. No hepteract crafted.`];
 
+        const kept = HSHepteractDistributor.#kept(run.keptExponent);
+        const owned = HSHepteractDistributor.#ownedHepteracts();
         if (run.orbsBought !== undefined && run.orbsBought > 0) {
             lines.push(`Orbs: ${HSUtils.N(run.orbsBought, 0)} bought.`);
         } else if (run.orbsPercent > 0) {
-            lines.push(`Orbs: ${run.orbsPercent}% of your hepteracts can't pay one (${ORB_COST.toLocaleString()} each).`);
+            lines.push(`Orbs: ${run.orbsPercent}% of your hepteracts${kept > 0 ? ' above the kept ones' : ''} can't pay one (${ORB_COST.toLocaleString()} each).`);
         }
         if (run.plan.waitingFor) {
-            const owned = HSHepteractDistributor.#ownedHepteracts();
-            lines.push(`Next: ${label(run.plan.waitingFor.key)}, which needs ${HSUtils.N(run.plan.waitingFor.hepteractsNeeded, 0)} hepteracts (you have ${HSUtils.N(owned, 0)}).`);
+            const have = kept > 0 ? `${HSUtils.N(HSHepteractDistributor.#spendable(owned, kept), 0)} above the 1e${run.keptExponent} kept` : HSUtils.N(owned, 0);
+            lines.push(`Next: ${label(run.plan.waitingFor.key)}, which needs ${HSUtils.N(run.plan.waitingFor.hepteractsNeeded, 0)} hepteracts (you have ${have}).`);
         }
+        if (kept > 0) lines.push(`Kept: 1e${run.keptExponent} hepteracts (you own ${HSUtils.N(owned, 0)}).`);
         const locked = HEPTERACTS.filter(info => (this.#ratios[info.key] ?? 0) > 0 && HSHepteractDistributor.#isLocked(info.key));
         if (locked.length > 0) lines.push(`Locked: ${locked.map(info => info.label).join(' · ')}`);
         lines.push(...run.notes ?? []);

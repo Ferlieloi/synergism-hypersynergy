@@ -130,10 +130,31 @@
     gap: 4px;
 }
 
-.hs-hept-distributor-orbs {
+/* Keep and Orbs come before the ratios: a line after Keep, a dot (centred on icon and field) after Orbs */
+.hs-hept-distributor-separated,
+.hs-hept-distributor-dotted {
     margin-right: 12px;
     padding-right: 18px;
+}
+
+.hs-hept-distributor-separated {
     border-right: 1px solid #666;
+}
+
+.hs-hept-distributor-dotted {
+    position: relative;
+}
+
+.hs-hept-distributor-dotted::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #777;
 }
 
 /* The game's icons are 56px sprites: shown at 40px */
@@ -152,7 +173,7 @@
 
 /* The game gives every input a left padding, which shifts centred text to the right */
 #hs-hept-distributor input[type="number"] {
-    width: 72px;
+    width: 45px;
     padding: 1px 0;
     border: 1px solid #666;
     text-align: center;
@@ -167,15 +188,16 @@
     margin: 0;
 }
 
-.hs-hept-distributor-orbs-field {
+/* A short field with its text: "Keep 1e [15]", "[50] % first" */
+.hs-hept-distributor-field {
     display: flex;
     align-items: center;
     gap: 4px;
     white-space: nowrap;
 }
 
-#hs-hept-distributor .hs-hept-distributor-orbs-field input[type="number"] {
-    width: 44px;
+#hs-hept-distributor .hs-hept-distributor-field input[type="number"] {
+    width: 30px;
 }
 
 .hs-hept-distributor-option {
