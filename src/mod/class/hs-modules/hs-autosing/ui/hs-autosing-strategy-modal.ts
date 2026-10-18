@@ -8,6 +8,7 @@ import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSGlobal } from '../../../hs-core/hs-global';
+import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 
 /**
  * Class: HSAutosingStrategyModal
@@ -29,6 +30,7 @@ export class HSAutosingStrategyModal {
         const context = 'HSAutosingStrategyModal';
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
+        if (!HSAutosingEditorWindows.claim(uiMod, 'strategy', options?.parentModalId)) return;
 
         const isDuplicateMode = !!options?.duplicateFromDefault;
         const isEditMode = !!existingStrategy && !isDuplicateMode;
@@ -162,9 +164,11 @@ export class HSAutosingStrategyModal {
         };
 
         const modalID = await uiMod.Modal(modalContent);
+        HSAutosingEditorWindows.opened('strategy', modalID);
 
         setTimeout(() => {
-            const modalRoot = document.querySelector('.hs-strategy-modal-container');
+            // By id: the corruption loadouts window has the same class
+            const modalRoot = document.getElementById('hs-strategy-modal-root');
             if (!modalRoot) return;
 
             updatePhaseListUI();
@@ -247,7 +251,13 @@ export class HSAutosingStrategyModal {
                         strategyDraft.corruptionLoadouts ?? [],
                         () => { }, // onCreate not needed for edit
                         (updatedPhase) => {
-                            strategyDraft.strategy[index] = updatedPhase;
+                            // Found again: a phase deleted while its window was open moves the others
+                            const currentIndex = strategyDraft.strategy.indexOf(phase);
+                            if (currentIndex === -1) {
+                                HSUI.Notify("This phase was deleted meanwhile: its changes were not kept", { notificationType: "warning" });
+                                return;
+                            }
+                            strategyDraft.strategy[currentIndex] = updatedPhase;
                             fixPhaseChain();
                             updatePhaseListUI();
                         },

@@ -1065,6 +1065,17 @@ export class HSUI extends HSModule {
         }
     }
 
+    // Shows an open modal above the others, restored first if it was minimized
+    async BringModalToFront(modalId: string): Promise<void> {
+        const modal = document.getElementById(modalId) as HTMLDivElement | null;
+        if (!modal) return;
+        const modalBody = modal.querySelector('.hs-modal-body') as HTMLElement | null;
+        if (modalBody?.style.display === 'none') {
+            await this.MinimizeModal(modalId);
+        }
+        this.#bringModalToFront(modal);
+    }
+
 
     // ========================================
     // --------- Notification helpers ---------

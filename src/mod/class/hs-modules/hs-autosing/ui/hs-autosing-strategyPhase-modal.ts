@@ -7,6 +7,7 @@ import {
 import { openAutosingCorruptionModal } from "./hs-autosing-corruption-modal";
 import { openAutosingChallengesModal } from "./hs-autosing-challenge-modal";
 import { HSUI } from "../../../hs-core/hs-ui"
+import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 
 export async function openStrategyPhaseModal(
     uiMod: HSUI,
@@ -23,6 +24,8 @@ export async function openStrategyPhaseModal(
         forcedEndPhase?: PhaseOption;
     }
 ) {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'phase', parentModalId)) return;
+
     const isEditing = !!existingPhase;
     const isSpecialPhase = options?.isSpecialPhase ?? false;
     const displayName = options?.displayName ?? '';
@@ -130,6 +133,7 @@ export async function openStrategyPhaseModal(
     };
 
     const modalId = await uiMod.Modal(modalContent);
+    HSAutosingEditorWindows.opened('phase', modalId);
 
     setTimeout(() => {
         const root = document.querySelector(".hs-phase-modal-container");
