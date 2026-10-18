@@ -1,5 +1,7 @@
 import { HSModuleOptions } from "../../types/hs-types";
+import { CUBE_VIEW, MAIN_VIEW } from "../../types/module-types/hs-gamestate-types";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
+import type { HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUI } from "../hs-core/hs-ui";
@@ -122,6 +124,21 @@ export class HSHepteractDistributor extends HSModule {
     async init(): Promise<void> {
         HSLogger.log('Initialising HSHepteractDistributor module', this.context);
         this.#ratios = this.#loadRatios();
+
+        // On Steam the panel can be built before the game draws its sprites, and the icon set is changed in
+        // Settings: the forge coming on screen is when the copies have to be right
+        const gameState = HSModuleManager.getModule<HSGameState>('HSGameState');
+        if (gameState) {
+            const onViewChange = () => {
+                if (gameState.getCurrentUIView('MAIN_VIEW').getId() === MAIN_VIEW.CUBES
+                    && gameState.getCurrentUIView('CUBE_VIEW').getId() === CUBE_VIEW.HEPTERACT_FORGE) {
+                    this.#refreshIcons();
+                }
+            };
+            gameState.subscribeGameStateChange('MAIN_VIEW', onViewChange);
+            gameState.subscribeGameStateChange('CUBE_VIEW', onViewChange);
+        }
+
         // Shown by the enableHepteractDistributor setting's action (HSSettings.syncSettings)
         this.isInitialized = true;
     }
@@ -324,8 +341,9 @@ export class HSHepteractDistributor extends HSModule {
     }
 
     /**
-     * The game's icons are sprites set as inline styles on its own images, and change with the theme:
-     * copied again each time the panel opens.
+     * The game's icons are sprites set as inline styles on its own images, and change with the icon set:
+     * copied again each time the panel opens and each time the forge is shown.
+     * Does nothing before the panel is built.
      */
     #refreshIcons(): void {
         const copy = (slot: HTMLElement | null | undefined, imageId: string, label: string) => {
