@@ -1,5 +1,6 @@
 import { HSUI } from "../../../hs-core/hs-ui";
 import { AOAG_PHASE_NAME, CorruptionLoadout, CorruptionLoadoutDefinition, HSAutosingStrategy } from "../../../../types/module-types/hs-autosing-types";
+import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 import viscosity from "../../../../resource/txt/viscosity_icon.txt";
 import drought from "../../../../resource/txt/drought_icon.txt";
 import deflation from "../../../../resource/txt/deflation_icon.txt";
@@ -102,6 +103,8 @@ const openCorruptionLoadoutEditorModal = async (
     existingLoadout?: CorruptionLoadoutDefinition,
     parentModalId?: string
 ): Promise<CorruptionLoadoutDefinition | null> => {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'corruptionLoadoutEditor', parentModalId)) return null;
+
     const modalId = "hs-autosing-corruption-loadout-editor";
     const isEdit = !!existingLoadout;
     const workingLoadout = existingLoadout ? { ...existingLoadout.loadout } : createEmptyLoadout();
@@ -156,6 +159,7 @@ const openCorruptionLoadoutEditorModal = async (
         ...modalContent,
         parentModalId
     });
+    HSAutosingEditorWindows.opened('corruptionLoadoutEditor', modalInstance);
 
     return new Promise(resolve => {
         setTimeout(() => {
@@ -212,6 +216,8 @@ export async function openAutosingCorruptionLoadoutsModal(
     strategy: HSAutosingStrategy,
     parentModalId?: string
 ): Promise<void> {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'corruptionLoadouts', parentModalId)) return;
+
     const modalId = "hs-autosing-corruption-loadouts-modal";
     if (!Array.isArray(strategy.corruptionLoadouts)) strategy.corruptionLoadouts = [];
 
@@ -266,6 +272,7 @@ export async function openAutosingCorruptionLoadoutsModal(
         ...modalContent,
         parentModalId
     });
+    HSAutosingEditorWindows.opened('corruptionLoadouts', modalInstance);
 
     setTimeout(() => {
         const root = document.getElementById(modalId);

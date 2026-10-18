@@ -2,6 +2,7 @@ import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
+import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 
 /** Challenge Modal Builder for Autosing
  * Description: Builds and manages the modal UI for configuring autosing challenge strategies.
@@ -25,6 +26,8 @@ export async function openAutosingChallengesModal(
     parentModalId?: string,
     displayName?: string
 ): Promise<void> {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'challenges', parentModalId)) return;
+
     // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
     const workingChallenges: Challenge[] = [...stratData];
@@ -321,6 +324,7 @@ export async function openAutosingChallengesModal(
         ...modalContent,
         parentModalId
     });
+    HSAutosingEditorWindows.opened('challenges', modalInstance);
     // State variables for editing, drag-and-drop, and jump target management
     let editingIndex: number | null = null;
     let draggedElement: HTMLElement | null = null;

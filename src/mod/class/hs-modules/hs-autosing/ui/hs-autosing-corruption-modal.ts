@@ -1,5 +1,6 @@
 import { HSUI } from "../../../hs-core/hs-ui";
 import { CorruptionLoadoutDefinition } from "../../../../types/module-types/hs-autosing-types";
+import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 
 export async function openAutosingCorruptionModal(
     uiMod: HSUI,
@@ -10,6 +11,8 @@ export async function openAutosingCorruptionModal(
         onDone?: (selectedValue: string | null) => void;
     }
 ): Promise<void> {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'corruptionSelect', options?.parentModalId)) return;
+
     const modalId = "hs-autosing-corruption-modal";
     const selectedName = selectedLoadoutRef.value ?? "";
 
@@ -51,6 +54,7 @@ export async function openAutosingCorruptionModal(
         ...modalContent,
         parentModalId: options?.parentModalId
     });
+    HSAutosingEditorWindows.opened('corruptionSelect', modalInstance);
 
     setTimeout(() => {
         document.getElementById("hs-corruption-save-btn")?.addEventListener("click", () => {
