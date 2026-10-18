@@ -94,6 +94,7 @@ export const createQuarkShopCalculationCacheEntries = (): Record<string, CachedV
         'shopHorseShoe',
         'shopSingularityPenaltyDebuff',
         'shopPurpleBarRebate',
+        'shopInfiniteShopUpgrades',
     ];
 
     for (const groupKeys of Object.values(SHOP_UPGRADE_TYPE_KEYS)) {
