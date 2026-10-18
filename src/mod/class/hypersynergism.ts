@@ -309,8 +309,6 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-amb-heater-compute-btn', text: 'Ambrosia Heater' }),
                     this.#buildGridSectionHeader('Mod links'),
                     HSUIC.Button({ id: 'hs-panel-mod-github-btn', text: 'Mod Github' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-wiki-btn', text: 'Mod Wiki' }),
-                    HSUIC.Button({ id: 'hs-panel-mod-wiki-features-btn', text: 'Mod Features' }),
                     HSUIC.Button({ id: 'hs-panel-discord-thread-btn', text: 'Discord Thread' }),
                     HSUIC.Button({ id: 'hs-panel-check-version-btn', text: 'CHECK VERSION' }),
                     this.#buildGridSectionHeader('Other tools'),
@@ -381,8 +379,6 @@ export class Hypersynergism {
         });
 
         this.#bindToolsButton('#hs-panel-mod-github-btn', () => this.#openUrl(HSGlobal.General.modGithubUrl));
-        this.#bindToolsButton('#hs-panel-mod-wiki-btn', () => this.#openUrl(HSGlobal.General.modWikiUrl));
-        this.#bindToolsButton('#hs-panel-mod-wiki-features-btn', () => this.#openUrl(HSGlobal.General.modWikiFeaturesUrl));
         this.#bindToolsButton('#hs-panel-discord-thread-btn', () => this.#openUrl(HSGlobal.General.modDiscordThreadUrl));
 
         this.#bindToolsButton('#hs-panel-dump-settings-btn', () => HSSettings.dumpToConsole());

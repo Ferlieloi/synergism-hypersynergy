@@ -32,7 +32,7 @@ export const HSGlobal: IHSGlobal = class {
 
     // --- Release check configuration ---
     static Release = {
-        githubOwner: 'Ferlieloi',    // Can be removed if you prefer
+        githubOwner: 'Ferlieloi',    // The Live repo: version check fallback and the Mod Github link
         checkIntervalMs: 1800000     // 30min
     }
 
@@ -42,10 +42,7 @@ export const HSGlobal: IHSGlobal = class {
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isModFullyLoaded: false,
 
-        // Wiki needs to be cloned !
         get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
-        get modWikiUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/`; },
-        get modWikiFeaturesUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/wiki/Mod-Features`; },
         get modDiscordThreadUrl() { return 'https://discord.com/channels/677271830838640680/1456904896099127367'; },
         heaterUrl: 'https://docs.google.com/spreadsheets/d/105yoI41lk8UJ2PThTkV0tWKNli5R0K1WuaSphKl13R0/'
     };

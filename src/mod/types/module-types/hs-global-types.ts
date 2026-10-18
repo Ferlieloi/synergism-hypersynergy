@@ -23,8 +23,6 @@ export interface HSGlobalGeneral {
     currentModVersion: string;
     isModFullyLoaded: boolean;
     modGithubUrl: string;
-    modWikiUrl: string;
-    modWikiFeaturesUrl: string;
     modDiscordThreadUrl: string;
     heaterUrl: string;
 }

@@ -37,7 +37,7 @@ export class HSGithub {
     }
 
     static #liveOwner(): string {
-        return HSGlobal.Release.githubOwner ?? 'ahvonenj';
+        return HSGlobal.Release.githubOwner;
     }
 
     static #repoOwner(): string {
