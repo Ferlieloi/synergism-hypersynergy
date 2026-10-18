@@ -862,7 +862,8 @@ function startBrowserLoader(options) {
         try {
             const res = await originalFetch(`https://synergism.cc/dist/out.js?t=${Date.now()}`, {
                 cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+                // The mod's header (HSGlobal.Common.modRequestHeaders); the mod isn't loaded yet, so no version
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'X-HyperSynergism-Version': 'loader' }
             });
             if (!res.ok) throw new Error(`Game bundle returned HTTP ${res.status}`);
             code = await res.text();
