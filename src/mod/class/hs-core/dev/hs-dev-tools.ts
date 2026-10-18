@@ -70,6 +70,7 @@ const HIGHEST_SINGULARITY_PATH = 'highestSingularityCount';
 const SNAPSHOT_RULES = [
     `Automatic: taken before the first edit and before each restore. Only the last ${AUTO_SNAPSHOTS_KEPT} are kept.`,
     'Named: kept until you delete it. Saving under the same name replaces it.',
+    'Import file: a game export or a mod backup, added as a named snapshot under its file name (the list date is when it was saved).',
     'Restore keeps the current state as an automatic snapshot, then reloads the page.',
     'A restored state loads as it was saved: no offline progress, same Add and Time code timers.',
     'Restore is refused while Auto-Sing is active.',
@@ -581,8 +582,42 @@ export class HSDevTools {
         };
         name.addEventListener('keydown', (e) => { if (e.key === 'Enter') void save(); });
 
-        element.append(name, this.#button('Save snapshot', () => { void save(); }));
+        element.append(name, this.#button('Save snapshot', () => { void save(); }), this.#button('Import file', () => this.#chooseSnapshotFile()));
         return element;
+    }
+
+    /** Adds a save file from the disk (a game export or a mod backup) to the list, as a named snapshot under its file name. */
+    #chooseSnapshotFile(): void {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.txt,application/json,text/plain';
+        input.addEventListener('change', () => {
+            const file = input.files?.[0];
+            if (file) void this.#importSnapshotFile(file);
+        });
+        input.click();
+    }
+
+    async #importSnapshotFile(file: File): Promise<void> {
+        try {
+            const result = HSBackup.saveFromFile(await file.text());
+            if (typeof result === 'string') {
+                this.#fail(`File not imported: ${result}`);
+                return;
+            }
+
+            // GDS's atob hook keeps what it decodes only for the "Load from file" button, which clears it first
+            const save = atob(result.save);
+            const data = JSON.parse(save);
+            const label = file.name.replace(/\.[^.]+$/, '').trim() || file.name;
+            const singularity = typeof data.singularityCount === 'number' ? data.singularityCount : undefined;
+            // When the save was made, as for the snapshots taken here
+            const date = typeof data.offlinetick === 'number' ? data.offlinetick : Date.now();
+
+            await this.#storeSnapshot({ kind: 'named', date, label, singularity, save });
+        } catch (error) {
+            this.#fail(`File not imported: ${error}`);
+        }
     }
 
     /** The current state as a snapshot, or null when the game could not save (it refuses during a time warp). */

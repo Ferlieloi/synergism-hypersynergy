@@ -451,6 +451,17 @@ export class HSBackup {
         return content;
     }
 
+    /**
+     * The save a file holds, as the game stores it (base64), or the reason there is none the game would load.
+     * Takes the same files as the import: a mod backup (its save part) or a save exported by the game.
+     */
+    static saveFromFile(text: string): { save: string } | string {
+        const content = HSBackup.#parseFile(text);
+        if (typeof content === 'string') return content;
+        if (content.save) return { save: content.save };
+        return content.saveRefused ? 'the save in this file is not one the game would load' : 'this file holds no save';
+    }
+
     static async #openImportModal(fileName: string, content: HSBackupImport): Promise<void> {
         const hsui = HSModuleManager.getModule<HSUI>('HSUI');
         if (!hsui) return;
