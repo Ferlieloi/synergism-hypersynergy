@@ -461,7 +461,7 @@ export class LuckHelper {
             this.calculateCookieUpgrade29Luck(),
             this.#ctx.getShopUpgradeEffects('shopAmbrosiaUltra', 'ambrosiaLuck') as number,
             Math.max(0, ((this.#ctx.calculateSynergismLevel() ?? 0) - 229) * 4),
-            this.#ctx.getRuneEffectiveLevel('horseShoe'),
+            this.#ctx.getRuneEffects('horseShoe').ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck1', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck2', mode).ambrosiaLuck,
             this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaLuck3', mode).ambrosiaLuck,
