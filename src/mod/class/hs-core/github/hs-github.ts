@@ -44,7 +44,7 @@ export class HSGithub {
         try {
             // GitHub's tags API does not promise chronological or version order.
             // Fetch a full page so a run of dev tags cannot hide a stable tag.
-            const githubOwner = this.owner ?? HSGlobal.Release.githubOwner ?? 'ahvonenj';
+            const githubOwner = this.owner ?? HSGlobal.Release.githubOwner;
             const githubUrl = `https://api.github.com/repos/${githubOwner}/synergism-hypersynergy/tags?per_page=100`;
             const ghResp = await fetch(githubUrl);
             if (!ghResp.ok) {
