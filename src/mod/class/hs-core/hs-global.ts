@@ -406,7 +406,6 @@ export const HSGlobal: IHSGlobal = class {
 
     // HSGameData
     static HSGameData = {
-        globalEventRefreshInterval: 1000 * 60 * 10, // 10 minutes
         consumablesPollInterval: 1000, // a read of the game's Happy Hour Bells, no request
         gdsSpeedMs: 66,
         gdsCSSId: 'hs-game-data-turbo-css'

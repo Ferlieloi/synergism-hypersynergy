@@ -123,7 +123,6 @@ export interface HSGlobalGameState {
 }
 
 export interface HSGlobalGameData {
-    globalEventRefreshInterval: number;
     consumablesPollInterval: number;
     gdsSpeedMs: number;
     gdsCSSId: string;

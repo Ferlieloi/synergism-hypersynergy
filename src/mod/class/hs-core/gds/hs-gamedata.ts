@@ -152,6 +152,7 @@ export class HSGameData extends HSModule {
         await this.#refreshFetchedData();
 
         this.#startConsumablesPoll();
+        this.#startGlobalEventCapture();
         this.isInitialized = true;
 
         this.isSteam = this.#isSteamElectron();
@@ -379,6 +380,27 @@ export class HSGameData extends HSModule {
 
         read();
         setInterval(read, HSGlobal.HSGameData.consumablesPollInterval);
+    }
+
+    // --- Global event ---
+
+    /**
+     * Follows the game's global event: the patcher hands over each answer the game gets from
+     * https://synergism.cc/events/get (Event.ts eventCheck, at load then every 5 minutes), and keeps the last one in
+     * window.__HS_globalEvent, read here once because the game's first fetch comes before the mod loads.
+     * The mod doesn't fetch it (the game's dev asked for less traffic). Without the patch (bookmarklet, older patch)
+     * there is no global event. A save without dayCheck makes the game skip its fetch: no event, as in the game.
+     * @returns void
+     */
+    #startGlobalEventCapture() {
+        const w = window as any;
+        if (!w.__HS_GLOBAL_EVENT_PATCHED) {
+            HSLogger.log(`Global event not readable (the game is not patched for it): counted as none`, this.context);
+            return;
+        }
+
+        w.__HS_onGlobalEvent = (json: unknown) => this.#gameDataAPI?._updateVanillaGlobalEvent(json);
+        if (w.__HS_globalEvent !== undefined) this.#gameDataAPI?._updateVanillaGlobalEvent(w.__HS_globalEvent);
     }
 
 

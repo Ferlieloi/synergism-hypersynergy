@@ -86,21 +86,6 @@ export class Hypersynergism {
         });
 
         HSGithub.startVersionPolling(HSGlobal.Release.checkIntervalMs);
-        this.#startVanillaGlobalEventPolling();
-    }
-
-    #startVanillaGlobalEventPolling() {
-        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!dataModule) return;
-
-        const refresh = async () => {
-            try {
-                await dataModule.fetchVanillaGlobalEventData();
-            } catch (error) { HSLogger.warn(`Failed to refresh vanilla global event data: ${error}`, this.#context); }
-        };
-
-        void refresh();
-        window.setInterval(refresh, HSGlobal.HSGameData.globalEventRefreshInterval);
     }
 
     async #waitForGameReady(): Promise<boolean> {
