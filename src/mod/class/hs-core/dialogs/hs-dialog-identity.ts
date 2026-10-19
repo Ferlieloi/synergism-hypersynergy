@@ -18,7 +18,6 @@ interface HSDialogTemplate {
  *     updates and languages. Built from the game's translation file for the current language, plus English for
  *     keys it lacks (as the game falls back). Texts without {{placeholders}} are looked up exactly; the others are
  *     matched as patterns, the most specific first. Texts with no key aren't identified.
- *     Design: docs/git-ignore/dialog-queue-design.md, section 13.2
  * Author: maenhiir
  */
 export class HSDialogIdentity {

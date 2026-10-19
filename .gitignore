@@ -3,7 +3,7 @@ build
 Synergism-*.txt
 cdn_cache_purge.bat
 cdn_cache_purge.ps1
-docs/git-ignore/
+local/
 
 synergism_modloader/node_modules/
 synergism_modloader/dist/
