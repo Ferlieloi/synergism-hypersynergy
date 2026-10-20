@@ -31,6 +31,8 @@ interface HSHeaderModulePlace {
     partners: string[];
     size?: string;
     hidden: boolean;
+    // Its place in the stack (0: the top), when it has partners; none in notes from before it was kept (the bottom)
+    stackIndex?: number;
 }
 
 interface HSHeaderModuleNotes {
@@ -194,6 +196,7 @@ export class HSHeaderModules {
                 // with the partner, whichever of the two is turned off or on first
                 if (noted && place.partners.length === 0) {
                     place.partners = noted.partners.filter(partner => /^hs[A-Z]/.test(partner) && !HSHeaderModules.#modules.has(partner));
+                    if (place.partners.length > 0 && noted.stackIndex !== undefined) place.stackIndex = noted.stackIndex;
                 }
                 if (JSON.stringify(place) !== JSON.stringify(noted)) {
                     (notes.layouts[key] ??= {})[id] = place;
@@ -217,6 +220,7 @@ export class HSHeaderModules {
                 hidden: layout.hidden.includes(id)
             };
             if (layout.sizes[id]) place.size = layout.sizes[id];
+            if (place.partners.length > 0) place.stackIndex = slots[index].indexOf(id);
             return place;
         }
         return null;
@@ -234,7 +238,8 @@ export class HSHeaderModules {
                     && place.partners.every(partner => slot.includes(partner)))
                 : undefined;
             if (partnerSlot) {
-                partnerSlot.push(id);
+                // At its place in the stack (the bottom when unknown)
+                partnerSlot.splice(Math.min(place.stackIndex ?? partnerSlot.length, partnerSlot.length), 0, id);
                 // The game sizes a stack's modules S when it makes the stack
                 for (const member of partnerSlot) layout.sizes[member] = 'S';
                 placed = true;
@@ -299,11 +304,14 @@ export class HSHeaderModules {
                     && Number.isInteger(place.index) && place.index! >= 0 && place.index! <= MAX_SLOT_INDEX
                     && Array.isArray(place.partners) && place.partners.every(partner => typeof partner === 'string')
                     && typeof place.hidden === 'boolean'
-                    && (place.size === undefined || SIZES.includes(place.size));
+                    && (place.size === undefined || SIZES.includes(place.size))
+                    && (place.stackIndex === undefined
+                        || (Number.isInteger(place.stackIndex) && place.stackIndex >= 0 && place.stackIndex < STACK_CAPACITY));
                 if (!valid) continue;
                 (notes.layouts[key] ??= {})[id] = {
                     region: place.region!, index: place.index!, partners: [...place.partners!], hidden: place.hidden!,
-                    ...(place.size ? { size: place.size } : {})
+                    ...(place.size ? { size: place.size } : {}),
+                    ...(place.stackIndex !== undefined ? { stackIndex: place.stackIndex } : {})
                 };
             }
         }
