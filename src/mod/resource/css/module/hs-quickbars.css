@@ -129,17 +129,17 @@
 }
 #hs-corruption-header-levels {
    grid-column: 1 / -1;
-   font-size: 0.75em;
+   font-size: 0.7em;
    font-weight: 500;
    letter-spacing: 0.03em;
    line-height: 1.2;
 }
-#corruptionLoadoutsHeader[data-size="M"] #hs-corruption-header-levels {
-   font-size: 0.7em;
+#corruptionLoadoutsHeader[data-size="L"] #hs-corruption-header-levels {
+   font-size: 0.75em;
 }
 /* In the top row: out of the flow, hanging under the module into the row's bottom margin (10px in the game), so the
    row's height and alignment stay the game's. That margin grows by what the line needs past it, by the module's size
-   (the line is 0.75em of the module's font at S and L, 0.7em at M). */
+   (the line is 0.7em of the module's font, 0.75em at L). */
 .ascensionStats #corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked) {
    display: flex;
    position: relative;
