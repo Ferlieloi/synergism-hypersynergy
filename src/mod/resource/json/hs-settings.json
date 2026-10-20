@@ -1383,32 +1383,32 @@
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
     }
   },
-  "enableCorruptionQuickBar": {
-    "settingName": "enableCorruptionQuickBar",
-    "settingDescription": "Corruption quick bar",
-    "settingHelpText": "When enabled, shows corruption loadout buttons in the header for quick loading.",
+  "corruptionHeaderLevels": {
+    "settingName": "corruptionHeaderLevels",
+    "settingDescription": "Corruption levels in the header",
+    "settingHelpText": "Shows your corruption levels on a line above the game's Corruption loadouts header module: the current levels, then the next ones when they differ. Add the module to the header first (hold any header item to edit the header). Turned off while Auto-Sing runs.",
     "settingType": "boolean",
     "enabled": true,
-    "settingAction": "enableCorruptionQuickBarAction",
+    "settingAction": "corruptionHeaderLevelsAction",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-enable-corruption-quickbar-btn"
+      "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
     }
   },
-  "enableEventsQuickBar": {
-    "settingName": "enableEventsQuickBar",
-    "settingDescription": "Events quick bar",
-    "settingHelpText": "When enabled, shows HH/Lotus in the header during events.",
+  "corruptionHeaderCleanse": {
+    "settingName": "corruptionHeaderCleanse",
+    "settingDescription": "Cleanse button in the header",
+    "settingHelpText": "Turns the icon of the game's Corruption loadouts header module into a cleanse button: one click sets your current and next corruptions to 0, with no confirmation. Add the module to the header first (hold any header item to edit the header).",
     "settingType": "boolean",
     "enabled": true,
-    "settingAction": "enableEventsQuickBarAction",
+    "settingAction": "corruptionHeaderCleanseAction",
     "settingControl": {
       "controlType": "switch",
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-enable-events-quickbar-btn"
+      "controlEnabledId": "hs-setting-qol-corruption-header-cleanse-btn"
     }
   },
   "centerQuickbars": {

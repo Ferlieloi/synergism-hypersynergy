@@ -10,6 +10,7 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSCorruption } from "../../hs-modules/hs-corruption";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
@@ -224,15 +225,14 @@ export class HSSettingActions {
             (mod) => mod.disableAutomationQuickbar()
         ),
 
-        enableEventsQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
-            (mod) => mod.enableEventsQuickbar(),
-            (mod) => mod.disableEventsQuickbar()
-        ),
+        // The game's "Corruption loadouts" header module, which is in the page from the start
+        corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderLevels(params.disable !== true);
+        },
 
-        enableCorruptionQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
-            (mod) => mod.enableCorruptionQuickbar(),
-            (mod) => mod.disableCorruptionQuickbar()
-        )
+        corruptionHeaderCleanseAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderCleanse(params.disable !== true);
+        }
     }
 
     constructor() { }

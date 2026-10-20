@@ -11,8 +11,6 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { goldenQuarkUpgradeMinimumSingularity } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
-import { HSQOLEventsQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarEvents";
-import { HSQOLCorruptionQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarCorruption";
 import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 import type { QUICKBAR_ID } from "./hs-qol-quickbar/hs-qolQuickbarManager";
 import type { GameData } from "../../types/data-types/hs-player-savedata";
@@ -38,8 +36,6 @@ export class HSQOLButtons extends HSModule {
     #tabVisitUnsubscribers: Map<SINGULARITY_VIEW, () => void> = new Map();
 
     #automationQuickbarHandler: HSQOLAutomationQuickbar | null = null;
-    #eventsQuickbarHandler: HSQOLEventsQuickbar | null = null;
-    #corruptionQuickbarHandler: HSQOLCorruptionQuickbar | null = null;
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -900,62 +896,11 @@ export class HSQOLButtons extends HSModule {
         );
     }
 
-    /** Public wrapper to enable the Events Quickbar. */
-    public enableEventsQuickbar(): void {
-        if (!this.#eventsQuickbarHandler) this.#eventsQuickbarHandler = new HSQOLEventsQuickbar();
-        const handler = this.#eventsQuickbarHandler;
-        this.#enableQuickbar(
-            HSQuickbarManager.QUICKBAR_IDS.EVENTS,
-            () => ({ 
-                element: handler!.createSection(),
-                teardown: () => { 
-                    HSLogger.debug(() => 'Events quickbar teardown invoked', this.context);
-                    try { handler!.teardown(); } 
-                    catch (e) { HSLogger.log(`Error during events quickbar teardown: ${e}`, this.context); }
-                }
-            }),
-            (section) => { try { handler!.setup(section as HTMLDivElement); } catch (e) { HSLogger.log(`Error during events quickbar setup: ${e}`, this.context); } }
-        );
-    }
-
-    /** Public wrapper to enable the Corruption Quickbar. */
-    public enableCorruptionQuickbar(): void {
-        if (!this.#corruptionQuickbarHandler) this.#corruptionQuickbarHandler = new HSQOLCorruptionQuickbar();
-        const handler = this.#corruptionQuickbarHandler;
-        this.#enableQuickbar(
-            HSQuickbarManager.QUICKBAR_IDS.CORRUPTION,
-            () => ({
-                element: handler!.createSection(),
-                teardown: () => {
-                    HSLogger.debug(() => 'Corruption quickbar teardown invoked', this.context);
-                    try { handler!.teardown(); } catch (e) { HSLogger.log(`Error during corruption quickbar teardown: ${e}`, this.context); }
-                }
-            }),
-            (section) => {
-                handler!.setup(section as HTMLDivElement).catch((e) => {
-                    HSLogger.log(`Error during corruption quickbar setup: ${e}`, this.context);
-                });
-            }
-        );
-    }
-
     /** Public wrapper to disable the Automation Quickbar. */
     public disableAutomationQuickbar(): void {
         // Manager will call the stored teardown; just remove the section and drop handler reference.
         this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
         this.#automationQuickbarHandler = null;
-    }
-
-    /** Public wrapper to disable the Events Quickbar. */
-    public disableEventsQuickbar(): void {
-        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.EVENTS);
-        this.#eventsQuickbarHandler = null;
-    }
-
-    /** Public wrapper to disable the Corruption Quickbar. */
-    public disableCorruptionQuickbar(): void {
-        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.CORRUPTION);
-        this.#corruptionQuickbarHandler = null;
     }
 
     /**

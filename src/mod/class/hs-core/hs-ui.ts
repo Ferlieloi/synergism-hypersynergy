@@ -64,9 +64,7 @@ export class HSUI extends HSModule {
     readonly #quickbarSubMenuItems = [
         { label: 'Ambrosia',     btnId: 'hs-setting-qol-ambrosia-quickbar-btn',          icon: 'Pictures/Default/Blueberries.png',           hoverColor: '#0a1085' },
         { label: 'Amb minibars', btnId: 'hs-setting-ambrosia-minibar-btn',               icon: 'Pictures/Default/Blueberries.png',           hoverColor: '#0a1085' },
-        { label: 'Corruption',   btnId: 'hs-setting-qol-enable-corruption-quickbar-btn', icon: 'Pictures/Default/CorruptHyperchallenge.png', hoverColor: '#560404' },
-        { label: 'Automation',   btnId: 'hs-setting-qol-enable-syn-ui-btn',              icon: 'Pictures/Default/Generators.png',            hoverColor: '#083d02' },
-        { label: 'Events',       btnId: 'hs-setting-qol-enable-events-quickbar-btn',     icon: 'Pictures/PseudoShop/HAPPY_HOUR_BELL.png',    hoverColor: '#654a02' }
+        { label: 'Automation',   btnId: 'hs-setting-qol-enable-syn-ui-btn',              icon: 'Pictures/Default/Generators.png',            hoverColor: '#083d02' }
     ];
 
     #tabs: HSPanelTabDefinition[] = [

@@ -22,7 +22,7 @@ export class HSAmbrosiaQuickbar {
     readonly host: HSAmbrosia;
     #originalButtonRefs: Map<string, HTMLButtonElement> = new Map();
 
-    // Icon picking (mirrors HSQOLCorruptionQuickbar)
+    // Icon picking
     readonly #AMBROSIA_ICON_STORAGE_KEY = 'hs-ambrosia-quickbar-icons';
     #ambrosiaSlotIcons: Map<string, string> = new Map();
     #iconPicker = new HSQuickbarIconPickerController<string>({
