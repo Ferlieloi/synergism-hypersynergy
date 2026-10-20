@@ -106,9 +106,57 @@ export class Hypersynergism {
         const autoDismissPopup = !!HSSettings.getSetting('autoDismissOfflinePopup')?.isEnabled();
 
         await this.#waitForGameLoaded();
+        this.#reportPatchProblems();
         await this.#ensurePatcherExposure(autoDismissPopup);
 
         if (autoDismissPopup) this.#dismissOfflinePopup();
+    }
+
+    /**
+     * What the patcher applied to the game bundle ({ patch name: applied }), written into it as
+     * window.__HS_PATCH_REPORT. Undefined without a patched bundle (bookmarklet) or with a patcher older than it.
+     */
+    #getPatchReport(): Record<string, boolean> | undefined {
+        return (window as any).__HS_PATCH_REPORT;
+    }
+
+    /**
+     * Tell the player once when the game patch is incomplete or in doubt, both usually after a game update the
+     * patcher doesn't match yet: a notification, and the detail in the Log tab (bug reports carry it).
+     * - Missing (window.__HS_PATCH_REPORT): the features using those patches run on their fallbacks, as for
+     *   bookmarklet players.
+     * - In doubt (window.__HS_PATCH_AMBIGUOUS, the labels of patches whose anchor matched several functions): the
+     *   first one was patched, maybe the wrong one, so what relies on it may misbehave.
+     */
+    #reportPatchProblems(): void {
+        const report = this.#getPatchReport();
+        if (!report) return;
+        const missing = Object.keys(report).filter(name => !report[name]);
+        const ambiguous: string[] = Array.isArray((window as any).__HS_PATCH_AMBIGUOUS) ? (window as any).__HS_PATCH_AMBIGUOUS : [];
+        if (missing.length === 0 && ambiguous.length === 0) return;
+
+        if (missing.length) {
+            HSLogger.warn(`Game patch incomplete, missing: ${missing.join(', ')}. The features using them fall back to other ways, `
+                + 'some slower or partial.', this.#context);
+        }
+        if (ambiguous.length) {
+            HSLogger.warn(`Game patch in doubt: ${ambiguous.join(', ')} matched several places in the game's code, the first one `
+                + 'was patched and may be the wrong one. What relies on it may misbehave.', this.#context);
+        }
+        HSLogger.warn('A game update probably changed what the patcher looks for: please report it with this log.', this.#context);
+
+        const problems = [
+            missing.length ? `${missing.length} part(s) missing` : '',
+            ambiguous.length ? `${ambiguous.length} in doubt` : ''
+        ].filter(Boolean).join(', ');
+        void HSUI.Notify(`Game patch: ${problems}. Some features may not work as usual, details in the Log tab.`, {
+            position: 'top',
+            notificationType: 'warning',
+            displayDuration: 10000,
+            // A fixed-size box that hides what overflows: two lines of this text
+            width: 440,
+            height: 60
+        });
     }
 
     /** Close the offline progress popup if it is open. */
@@ -152,7 +200,14 @@ export class Hypersynergism {
         // Without the patched bundle (bookmarklet loader), navigating can't expose anything
         if (!HSGlobal.exposedPlayer) return;
 
-        const isExposed = () => !!w.__HS_STAGE_EXPOSED && !!w.__HS_EXPORT_EXPOSED;
+        // Only what the patcher applied (all of it with a patcher older than its report): never click the
+        // export without the export patch, it would run a real export (a file or the clipboard, and its rewards)
+        const report = this.#getPatchReport();
+        const isStagePatched = report?.stage !== false;
+        const isExportPatched = report?.export !== false;
+        if (!isStagePatched && !isExportPatched) return;
+
+        const isExposed = () => (!isStagePatched || !!w.__HS_STAGE_EXPOSED) && (!isExportPatched || !!w.__HS_EXPORT_EXPOSED);
         if (isExposed()) return;
 
         const click = async (id: string) => {
@@ -184,12 +239,12 @@ export class Hypersynergism {
             return;
         }
 
-        if (!w.__HS_STAGE_EXPOSED) {
+        if (isStagePatched && !w.__HS_STAGE_EXPOSED) {
             await click('switchSettingSubTab4');
             await click('kMisc');
         }
 
-        if (!w.__HS_EXPORT_EXPOSED) {
+        if (isExportPatched && !w.__HS_EXPORT_EXPOSED) {
             // The patched exportSynergism exposes itself right away, then returns early while this flag is set
             w.__HS_SILENT_EXPORT = true;
             try {
@@ -202,14 +257,16 @@ export class Hypersynergism {
         // The stage is only exposed when the game renders the Misc stats, and the game pauses its display
         // updates while the offline popup is open. It happens on the first update after the popup closes,
         // with Misc still active behind it: close it (setting on) or wait for the player to (no limit).
-        if (document.body.classList.contains('loading')) {
-            if (autoDismissPopup) this.#dismissOfflinePopup();
-            await waitForPopupClosed();
-        }
+        if (isStagePatched) {
+            if (document.body.classList.contains('loading')) {
+                if (autoDismissPopup) this.#dismissOfflinePopup();
+                await waitForPopupClosed();
+            }
 
-        const stageDeadline = Date.now() + 5000;
-        while (!w.__HS_STAGE_EXPOSED && Date.now() < stageDeadline) {
-            await HSUtils.sleep(100);
+            const stageDeadline = Date.now() + 5000;
+            while (!w.__HS_STAGE_EXPOSED && Date.now() < stageDeadline) {
+                await HSUtils.sleep(100);
+            }
         }
 
         // Go back to where the player was, unless they already moved away from Settings
