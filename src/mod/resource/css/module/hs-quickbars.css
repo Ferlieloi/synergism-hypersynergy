@@ -134,9 +134,12 @@
    letter-spacing: 0.03em;
    line-height: 1.2;
 }
+#corruptionLoadoutsHeader[data-size="M"] #hs-corruption-header-levels {
+   font-size: 0.7em;
+}
 /* In the top row: out of the flow, hanging under the module into the row's bottom margin (10px in the game), so the
    row's height and alignment stay the game's. That margin grows by what the line needs past it, by the module's size
-   (the line is 0.75em of the module's font: 12px at S, 16px at M, 20px at L). */
+   (the line is 0.75em of the module's font at S and L, 0.7em at M). */
 .ascensionStats #corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked) {
    display: flex;
    position: relative;
@@ -148,13 +151,13 @@
    white-space: nowrap;
 }
 .ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked)) {
-   margin-bottom: 18px;
+   margin-bottom: 13px;
 }
 .ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown[data-size="S"]:not(.headerModuleLocked)) {
-   margin-bottom: 14px;
+   margin-bottom: 10px;
 }
 .ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown[data-size="L"]:not(.headerModuleLocked)) {
-   margin-bottom: 22px;
+   margin-bottom: 16px;
 }
 .hs-corruption-header-levels-current {
    color: #ba2d2d;
