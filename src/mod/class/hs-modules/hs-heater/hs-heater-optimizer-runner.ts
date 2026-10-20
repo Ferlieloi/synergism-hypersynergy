@@ -185,7 +185,12 @@ export class HSHeaterOptimizerRunner {
     stopRunningWorker?.()
   }
 
-  static async createResult(input: HeaterOptimizerInput): Promise<HeaterOptimizationResult> {
+  // onProgress is called before each worker group starts (group from 1),
+  // only when the heat runs in a worker
+  static async createResult(
+    input: HeaterOptimizerInput,
+    onProgress?: (group: number, groupCount: number) => void,
+  ): Promise<HeaterOptimizationResult> {
     if (!ALL_BRANCHES.some(branch => input.heaterOptions[branch]))
       return { input }
 
@@ -231,6 +236,7 @@ export class HSHeaterOptimizerRunner {
           if (heatCancelled)
             throw new HSHeatCancelledError()
           running = activeGroups[index].join('+')
+          onProgress?.(index + 1, activeGroups.length)
           const groupStartedAt = performance.now()
           results.push(await runWorker(sourceUrl, index, inputForBranches(input, activeGroups[index])))
           groupTimes.push(`${running} ${formatSeconds(performance.now() - groupStartedAt)}`)

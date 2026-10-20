@@ -219,9 +219,20 @@ export class HSHeaterInputModalController {
             if (!hasActiveBranch) { HSUI.Notify('Select at least one active branch before starting the heater.', { position: 'top', notificationType: 'warning' }); return; }
 
             const originalText = recalcButton.textContent;
-            recalcButton.textContent = `🔥 Heating... ⏳`;
             recalcButton.style.pointerEvents = 'none';
             document.body.style.cursor = 'wait';
+            // Elapsed time, and the worker group when there are several, with
+            // an icon that heats up with the time.
+            // It only ticks while a worker runs: without one the page is frozen.
+            const startedAt = performance.now();
+            let progress = '';
+            const showElapsed = () => {
+                const seconds = Math.floor((performance.now() - startedAt) / 1000);
+                const icon = seconds >= 120 ? '🥵' : seconds >= 90 ? '🤒' : seconds >= 60 ? '😵' : '🌡️';
+                recalcButton.textContent = `🔥 Heating${progress}... ⏳ ${seconds}s ${icon}`;
+            };
+            showElapsed();
+            const elapsedTimer = setInterval(showElapsed, 1000);
             await HSUtils.waitForNextTack();
 
             try {
@@ -237,7 +248,10 @@ export class HSHeaterInputModalController {
                 if (cancelButton) cancelButton.hidden = !HSHeaterOptimizerRunner.canCancel;
                 let updatedResult;
                 try {
-                    updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput);
+                    updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput, (group, groupCount) => {
+                        progress = groupCount > 1 ? ` ${group}/${groupCount}` : '';
+                        showElapsed();
+                    });
                 } finally {
                     if (cancelButton) cancelButton.hidden = true;
                 }
@@ -255,6 +269,7 @@ export class HSHeaterInputModalController {
                 const details = error instanceof Error ? error.stack ?? error.message : String(error);
                 HSLogger.error(`Heater calculation failed: ${escapeLogText(details)}`, 'HSHeater');
             } finally {
+                clearInterval(elapsedTimer);
                 recalcButton.style.pointerEvents = '';
                 document.body.style.cursor = '';
                 if (originalText !== null) {
