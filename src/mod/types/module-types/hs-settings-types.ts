@@ -76,7 +76,6 @@ export interface HSSettingsDefinition {
     autosingOffLoadout: AutosingOffLoadout;
     autosingAmbrosiaLoadout: AutosingAmbrosiaLoadout;
     autosingStrategy: AutosingStrategy;
-    autosingSelectStrategy: AutosingSelectStrategy;
 
     // Advanced AutoSing Settings
     advancedDataCollection: AutosingAdvancedDataCollection; // disabled for now...
@@ -105,14 +104,6 @@ export interface HSSettingsDefinition {
     gqDistributorRatios: GQDistributorRatiosSetting;
     gqDistributorBalanceInvestments: GQDistributorBalanceInvestmentsSetting;
     gqDistributorKeepSkippedShare: GQDistributorKeepSkippedShareSetting;
-    gqDistributorRatio1: GQDistributorRatio1Setting;
-    gqDistributorRatio2: GQDistributorRatio2Setting;
-    gqDistributorRatio3: GQDistributorRatio3Setting;
-    gqDistributorRatio4: GQDistributorRatio4Setting;
-    gqDistributorRatio5: GQDistributorRatio5Setting;
-    gqDistributorRatio6: GQDistributorRatio6Setting;
-    gqDistributorRatio7: GQDistributorRatio7Setting;
-    gqDistributorRatio8: GQDistributorRatio8Setting;
 }
 
 export interface AmbrosiaMinibarsSetting extends HSSettingBase<boolean> { }
@@ -242,7 +233,6 @@ export interface AutosingAmbrosiaLoadout extends HSSettingBase<string> { }
 export interface AutosingObtLoadout extends HSSettingBase<string> { }
 export interface AutosingOffLoadout extends HSSettingBase<string> { }
 export interface AutosingStrategy extends HSSettingBase<string> { }
-export interface AutosingSelectStrategy extends HSSettingBase<string> { }
 
 // Advanced AutoSing Settings
 export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> { }
@@ -266,17 +256,9 @@ export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean>
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
 
 // GQ Distributor Ratio Settings
-export interface GQDistributorRatio1Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatiosSetting extends HSSettingBase<string> { }
 export interface GQDistributorBalanceInvestmentsSetting extends HSSettingBase<boolean> { }
 export interface GQDistributorKeepSkippedShareSetting extends HSSettingBase<boolean> { }
-export interface GQDistributorRatio2Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio3Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio4Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio5Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio6Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio7Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio8Setting extends HSSettingBase<number> { }
 
 // Heater Settings
 export interface HeaterTypeLoadoutSelectionsSetting extends HSSettingBase<string[]> { }

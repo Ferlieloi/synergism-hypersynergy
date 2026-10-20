@@ -11,10 +11,6 @@
     "groupName": "Notification settings",
     "order": 3
   },
-  "log": {
-    "groupName": "Log settings",
-    "order": 4
-  },
   "talismans": {
     "groupName": "Talisman settings",
     "order": 5
@@ -35,10 +31,6 @@
     "groupName": "Idle Swapper settings",
     "order": 7
   },
-  "ambrosia3": {
-    "groupName": "Minibar settings",
-    "order": 9
-  },
   "gamedata": {
     "groupName": "Game data settings",
     "order": 11
@@ -46,10 +38,6 @@
   "save-export": {
     "groupName": "Timed save export settings",
     "order": 11.5
-  },
-  "shop": {
-    "groupName": "Shop settings",
-    "order": 12
   },
   "debug": {
     "groupName": "Debugging settings",

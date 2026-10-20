@@ -11,12 +11,6 @@
     "pageColor": "cyan",
     "order": 2
   },
-  "log": {
-    "page": "log",
-    "pageName": "Logging",
-    "pageColor": "orange",
-    "order": 3
-  },
   "input": {
     "page": "input",
     "pageName": "Input",
@@ -35,12 +29,6 @@
     "pageColor": "gold",
     "order": 7
   },
-  "shop": {
-    "page": "shop",
-    "pageName": "Shop",
-    "pageColor": "#b300b2",
-    "order": 8
-  },
   "auto-sing": {
     "page": "auto-sing",
     "pageName": "Auto-Sing",
@@ -52,12 +40,6 @@
     "pageName": "QOL-Buttons",
     "pageColor": "#c0c0c0",
     "order": 10
-  },
-  "misc": {
-    "page": "misc",
-    "pageName": "Misc.",
-    "pageColor": "white",
-    "order": 11
   },
   "debug": {
     "page": "debug",

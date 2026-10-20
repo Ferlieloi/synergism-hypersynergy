@@ -7,9 +7,8 @@ import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSUtils } from "../hs-utils/hs-utils";
-import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { goldenQuarkUpgradeMaxLevels, goldenQuarkUpgradeMinimumSingularity } from "../hs-core/gds/stored-vars-and-calculations";
+import { goldenQuarkUpgradeMinimumSingularity } from "../hs-core/gds/stored-vars-and-calculations";
 import { GoldenQuarkUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
 import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
 import { HSQOLEventsQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarEvents";
@@ -382,18 +381,7 @@ export class HSQOLButtons extends HSModule {
                 }
             } catch { /* Ignore malformed saved ratios. */ }
         }
-
-        // Migrate the former eight positional settings using their original DOM order.
-        const legacyIds = Array.from(document.querySelectorAll<HTMLButtonElement>(
-            '#actualSingularityUpgradeContainer button.singularityUpgrade'
-        )).filter(button => goldenQuarkUpgradeMaxLevels[button.id as GoldenQuarkUpgradeKey]?.maxLevel === 2 ** 31 - 1)
-            .map(button => button.id);
-        const ratios: Record<string, number> = {};
-        legacyIds.slice(0, 8).forEach((id, index) => {
-            const value = HSSettings.getSetting(`gqDistributorRatio${index + 1}` as keyof HSSettingsDefinition)?.getValue();
-            if (typeof value === 'number' && value > 0) ratios[id] = value;
-        });
-        return ratios;
+        return {};
     }
 
     async showGQDistributor(): Promise<void> {
