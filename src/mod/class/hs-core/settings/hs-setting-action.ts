@@ -109,10 +109,11 @@ export class HSSettingActions {
 
         ambrosiaMinibarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
             (mod, params) => {
-                // Auto-enable GDS if not already enabled
-                const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                if (!gdsSettingEnabled) {
-                    HSSettings.getSetting('useGameData')?.enable();
+                // Where they need GDS (bookmarklet: no live player to read), they turn it on
+                const minibars = HSSettings.getSetting('ambrosiaMinibars')?.getDefinition();
+                const gameDataSetting = HSSettings.getSetting('useGameData');
+                if (minibars && HSSettings.usesGameData(minibars) && !gameDataSetting?.isEnabled()) {
+                    gameDataSetting?.enable();
                 }
                 return mod.enableBerryMinibars(params.byPlayer === true);
             },

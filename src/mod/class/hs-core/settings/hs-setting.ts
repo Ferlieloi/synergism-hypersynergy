@@ -56,7 +56,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         return Object.values(HSSettings.getSettings()).filter((setting) => {
             const definition = setting.getDefinition();
             return definition.settingName !== 'useGameData'
-                && definition.usesGameData === true
+                && HSSettings.usesGameData(definition)
                 && setting.isEnabled();
         });
     }
@@ -110,7 +110,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         // We're trying to prevent enabling settings which use game data when game data is not enabled
         if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(this.definition.settingName)) {
             if (gameDataSetting) {
-                if (this.definition.usesGameData &&
+                if (HSSettings.usesGameData(this.definition) &&
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {

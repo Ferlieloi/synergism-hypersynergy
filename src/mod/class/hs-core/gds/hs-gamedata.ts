@@ -502,6 +502,14 @@ export class HSGameData extends HSModule {
     }
 
     /**
+     * Whether a pause is held (pauseGDS()): autosing, a save file import, a backup restore. Code that forces a save
+     * (getForcedGameData) on its own schedule waits for the end of it.
+     */
+    isGDSPaused(): boolean {
+        return this.#enginePauses.size > 0;
+    }
+
+    /**
      * Pauses the GDS engine without touching the GDS setting, so the setting can't be left OFF
      * if the pause is never released (reload, crash...). The engine stays stopped until every
      * pause is released.

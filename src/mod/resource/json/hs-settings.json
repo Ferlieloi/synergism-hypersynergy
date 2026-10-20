@@ -1364,10 +1364,10 @@
   "ambrosiaMinibars": {
     "settingName": "ambrosiaMinibars",
     "settingDescription": "Ambrosia minibars (S25+)",
-    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show in the mod's row under the header.",
+    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show in the mod's row under the header, need GDS (turned on with them) and move twice a second.",
     "settingType": "boolean",
     "enabled": true,
-    "usesGameData": true,
+    "usesGameData": ["bookmarklet"],
     "settingAction": "ambrosiaMinibarAction",
     "settingControl": {
       "controlType": "switch",

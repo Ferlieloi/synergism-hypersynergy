@@ -165,7 +165,8 @@ export interface HSSettingBase<T> {
     defaultValue?: T;
     settingControl?: HSSettingControl;
     settingAction?: string;
-    usesGameData?: boolean;
+    /** Needs GDS: everywhere (true) or only on these platforms. Read it through HSSettings.usesGameData() */
+    usesGameData?: boolean | HSPlatformName[];
     skipInit?: boolean;
     /** Shown in the settings panel only on these platforms (all when absent). The setting itself still works everywhere */
     platforms?: HSPlatformName[];

@@ -643,7 +643,7 @@ export class HSSettingsUI {
     ): string | null {
         let gameDataIcon = "";
 
-        if (setting.usesGameData) {
+        if (HSSettings.usesGameData(setting)) {
             gameDataIcon = HSUIC.Image({
                 class: 'hs-panel-setting-block-gamedata-icon',
                 src: sIconB64,

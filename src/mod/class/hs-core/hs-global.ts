@@ -420,7 +420,8 @@ export const HSGlobal: IHSGlobal = class {
     // HSGameData
     static HSGameData = {
         consumablesPollInterval: 1000, // a read of the game's Happy Hour Bells, no request
-        gdsSpeedMs: 66,
+        // A save every 500ms: the Ambrosia tab's rates refresh at that pace, and the minibars read the live player
+        gdsSpeedMs: 500,
         gdsCSSId: 'hs-game-data-turbo-css'
     }
 }

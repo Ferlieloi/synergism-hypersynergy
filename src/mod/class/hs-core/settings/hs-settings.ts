@@ -14,6 +14,7 @@ import { HSGlobal } from "../hs-global";
 import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSSettingsUIDependencies } from "./hs-settings-ui";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { HSPlatform } from "../hs-platform";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
 type StringIndexedObject = Record<string, unknown>;
@@ -83,7 +84,7 @@ export class HSSettings extends HSModule {
                     settingDef.settingValue = false;
                 }
                 // Disable settings that use game data if game data is off
-                if (setting.usesGameData && setting.enabled && !gameDataSettingState) {
+                if (HSSettings.usesGameData(setting) && setting.enabled && !gameDataSettingState) {
                     if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(key)) {
                         HSLogger.info(`Disabled ${setting.settingDescription} on load because GDS is not on`, this.context);
                         setting.enabled = false;
@@ -217,6 +218,17 @@ export class HSSettings extends HSModule {
     static getSettings = (): HSSettingRecord => {
         return HSSettings.#settings;
     };
+
+    /**
+     * Whether a setting needs GDS on the platform the mod was loaded on (its usesGameData: true, or a list of
+     * platforms). A list counts as no while the platform isn't known yet (before HSGameData is initialised).
+     */
+    static usesGameData(definition: Pick<HSSettingBase<HSSettingType>, 'usesGameData'>): boolean {
+        const usesGameData = definition.usesGameData;
+        if (!Array.isArray(usesGameData)) return usesGameData === true;
+        const platform = HSPlatform.get();
+        return platform !== null && usesGameData.includes(platform);
+    }
 
     static getStrategies(): HSAutosingStrategy[] {
         return HSStrategyManager.getStrategies();
@@ -406,6 +418,8 @@ export class HSSettings extends HSModule {
                     if (!loadedTopLevel || !defaultTopLevel) return;
 
                     Object.keys(loadedTopLevel).forEach(nestedKey => {
+                        // Keys only the JSON decides: never saved now, but a copy saved by an older version may hold them
+                        if (HSGlobal.HSSettings.serializationBlackList.includes(nestedKey)) return;
                         if (nestedKey in defaultTopLevel) {
                             const bValue = loadedTopLevel[nestedKey];
                             const defaultValue = defaultTopLevel[nestedKey];

@@ -43,6 +43,13 @@ export interface HeaterSlotIconApplyResult {
 
 type HSAmbrosiaRateResource = 'amb' | 'ramb' | 'phoney';
 
+/** What the minibars read, from the live player or a GDS save: fields GameData doesn't declare added. */
+type HSMinibarsPlayer = GameData & {
+    purpleHoneyProgress?: number;
+    purpleReactor?: { lifetimePurpleHoney?: number };
+    purpleReactorUpgrades?: Record<string, number>;
+};
+
 /** One hourly rate as a module of the game's header, built like the game's currency modules. */
 interface HSAmbrosiaRateHeaderModule {
     id: string;
@@ -152,6 +159,20 @@ export class HSAmbrosia extends HSModule
     #redProgressMinibarElement?: HTMLDivElement;
     #purpleProgressMinibarBarElement?: HTMLDivElement;
     #purpleProgressMinibarElement?: HTMLDivElement;
+    // The game moves the three bars in its purple reactor step, every 0.125s of real time (PURPLE_REACTOR_TICK_INTERVAL)
+    static readonly #LIVE_MINIBARS_INTERVAL_MS = 125;
+    // Read from the live player (exposedPlayer), not from GDS: the bookmarklet has none
+    #minibarsLive = false;
+    #liveMinibarsTimer?: ReturnType<typeof setInterval>;
+    // Bar sizes from the mod's formulas on one save, computed again when one of their inputs changes on the live player
+    #minibarSizes?: { blue: number; red: number; purple: number };
+    #minibarSizesSignature?: string;
+    #minibarSizesRefreshing = false;
+    // After a failed computation, not before (each try forces a save)
+    static readonly #MINIBAR_SIZES_RETRY_MS = 5_000;
+    #minibarSizesRetryAt = 0;
+    // What the bars show, written to the page only on a change
+    #minibarsShown: { blue?: number; red?: number; purple?: number; redUnlocked?: boolean; purpleUnlocked?: boolean } = {};
     #blueIncomeElement?: HTMLParagraphElement;
     #redIncomeElement?: HTMLParagraphElement;
     #purpleIncomeElement?: HTMLParagraphElement;
@@ -401,8 +422,19 @@ export class HSAmbrosia extends HSModule
 
         barWrapper.style.display = 'flex';
         HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
-        this.subscribeGameDataChanges();
         this.#berryMinibarsEnabled = true;
+
+        if (HSGlobal.exposedPlayer) {
+            this.#minibarsLive = true;
+            if (!this.#liveMinibarsTimer) {
+                this.#liveMinibarsTimer = setInterval(() => this.#updateLiveMinibars(), HSAmbrosia.#LIVE_MINIBARS_INTERVAL_MS);
+            }
+            this.#updateLiveMinibars();
+            return;
+        }
+
+        // No live player (bookmarklet, or the patch failed): from GDS's save data
+        this.subscribeGameDataChanges();
         const gameDataAPI = this.#cachedGameDataAPI
             ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         const gameData = gameDataAPI?.getGameData() ?? await gameDataAPI?.getForcedGameData();
@@ -420,6 +452,9 @@ export class HSAmbrosia extends HSModule
         HSUI.removeInjectedStyle(this.#minibarCSSId);
 
         this.#berryMinibarsEnabled = false;
+        this.#minibarsLive = false;
+        clearInterval(this.#liveMinibarsTimer);
+        this.#liveMinibarsTimer = undefined;
         this.unsubscribeGameDataChanges();
     }
 
@@ -1277,12 +1312,15 @@ export class HSAmbrosia extends HSModule
         return queuedRefresh;
     }
 
-    /** With GDS running, new save data comes about 15 times a second: refresh the rates from it, every 500ms at most. */
+    /**
+     * With GDS running, new save data comes about every 500ms (gdsSpeedMs): refresh the rates from each, with a
+     * margin (400ms) so that a save arriving a little early isn't skipped.
+     */
     #refreshBarIncomeOnGameData(): void {
         if (!this.#isAmbrosiaTabActive) return;
 
         const now = performance.now();
-        if (now - this.#lastBarIncomeDataRefresh < 500) return;
+        if (now - this.#lastBarIncomeDataRefresh < 400) return;
         this.#lastBarIncomeDataRefresh = now;
 
         void this.#queueBarIncomeRefresh(false);
@@ -2155,8 +2193,9 @@ export class HSAmbrosia extends HSModule
         const gameDataMod = this.#cachedGameDataMod ?? HSModuleManager.getModule<HSGameData>('HSGameData');
 
         if (gameDataMod && this.gameDataSubscriptionId) {
-            // Only actually unsubscribe if neither the minibars, the header's rates nor the Ambrosia tab need game data.
-            if (!this.#berryMinibarsEnabled && !this.#rateHeaderEnabled && !this.#isAmbrosiaTabActive) {
+            // Only actually unsubscribe if neither the minibars (without the live player), the header's rates nor the
+            // Ambrosia tab need game data.
+            if (!this.#minibarsNeedGameData() && !this.#rateHeaderEnabled && !this.#isAmbrosiaTabActive) {
                 gameDataMod.unsubscribeGameDataChange(this.gameDataSubscriptionId);
                 this.gameDataSubscriptionId = undefined;
                 HSLogger.debug(() => 'Unsubscribed from game data changes', this.context);
@@ -2182,16 +2221,132 @@ export class HSAmbrosia extends HSModule
         this.#refreshBarIncomeOnGameData();
         this.#refreshRateHeaderOnGameData();
 
-        if (this.#berryMinibarsEnabled) {
+        if (this.#minibarsNeedGameData()) {
             this.#updateBerryMinibars(gameData, gameDataAPI);
         }
     };
 
-    #updateBerryMinibars(gameData?: GameData, gameDataAPI?: HSGameDataAPI) {
-        if (!this.#berryMinibarsEnabled) {
-            HSLogger.logOnce('HSAmbrosia.gameDataCallback() - berryMinibarsEnabled was false', 'hs-minibars-false');
-            return;
+    #minibarsNeedGameData(): boolean {
+        return this.#berryMinibarsEnabled && !this.#minibarsLive;
+    }
+
+    /**
+     * The minibars from the live player, every 125ms: the fill read from it, the bar sizes from the mod's formulas
+     * (#refreshMinibarSizesOnChange). Nothing while the page is hidden.
+     */
+    #updateLiveMinibars(): void {
+        if (!this.#berryMinibarsEnabled || document.hidden) return;
+        const player = HSGlobal.exposedPlayer as unknown as HSMinibarsPlayer | null;
+        if (!player) return;
+
+        this.#refreshMinibarSizesOnChange(player);
+        const sizes = this.#minibarSizes;
+        if (!sizes) return;
+
+        // Shown once unlocked, as the game's red ambrosia and purple honey header modules (Exalts 9 and 10)
+        const redUnlocked = (player.singularityChallenges?.noAmbrosiaUpgrades?.completions ?? 0) > 0;
+        const purpleUnlocked = (player.singularityChallenges?.taxmanLastStand?.completions ?? 0) > 0;
+        this.#drawMinibars({
+            blue: HSAmbrosia.#barFill(player.blueberryTime, sizes.blue),
+            red: HSAmbrosia.#barFill(player.redAmbrosiaTime, sizes.red),
+            purple: purpleUnlocked ? HSAmbrosia.#barFill(player.purpleHoneyProgress, sizes.purple) : undefined,
+            redUnlocked,
+            purpleUnlocked,
+        });
+    }
+
+    static #barFill(progress: number | undefined, size: number): number {
+        return size > 0 ? Math.min(1, Math.max(0, Number(progress ?? 0) / size)) : 0;
+    }
+
+    /**
+     * The bar sizes change at every fill (lifetime ambrosia), but by about a millionth: the lifetimes count only to
+     * 3 significant digits (0.1%). They also change with the loadout (Two Minds, Brick of Lead), the Exalts, the shop's
+     * accelerator and the purple reactor's requirement upgrades. On a change, one forced save (a few ms) and the
+     * sizes are computed again; never while GDS is paused (a save import or a backup restore must not get a save).
+     */
+    #refreshMinibarSizesOnChange(player: HSMinibarsPlayer): void {
+        if (this.#minibarSizesRefreshing || performance.now() < this.#minibarSizesRetryAt) return;
+        const signature = HSAmbrosia.#minibarSizeInputs(player);
+        if (signature === this.#minibarSizesSignature) return;
+        if (HSModuleManager.getModule<HSGameData>('HSGameData')?.isGDSPaused()) return;
+
+        this.#minibarSizesRefreshing = true;
+        void this.#refreshMinibarSizes(signature)
+            .catch(error => {
+                this.#minibarSizesRetryAt = performance.now() + HSAmbrosia.#MINIBAR_SIZES_RETRY_MS;
+                HSLogger.warnOnce(`Could not calculate the minibars' sizes: ${error}`, 'hs-minibar-sizes');
+            })
+            .finally(() => { this.#minibarSizesRefreshing = false; });
+    }
+
+    async #refreshMinibarSizes(signature: string): Promise<void> {
+        const gameDataAPI = this.#cachedGameDataAPI ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (!gameDataAPI || !await gameDataAPI.getForcedGameData()) throw new Error('no save data');
+
+        this.#minibarSizes = {
+            blue: gameDataAPI.ambrosia.calculateRequiredBlueberryTime(),
+            red: gameDataAPI.ambrosia.calculateRequiredRedAmbrosiaTime(),
+            purple: gameDataAPI.ambrosia.calculatePurpleHoneyConversionFactor(),
+        };
+        this.#minibarSizesSignature = signature;
+        const sizes = this.#minibarSizes;
+        HSLogger.debug(() => `Minibar sizes: ${sizes.blue} / ${sizes.red} / ${sizes.purple}`, this.context);
+    }
+
+    /** The live player's inputs of the three bar-size formulas (calculateRequiredBlueberryTime and the others). */
+    static #minibarSizeInputs(player: HSMinibarsPlayer): string {
+        const rounded = (value: unknown) => Number(value ?? 0).toPrecision(3);
+        const parts: unknown[] = [
+            rounded(player.lifetimeAmbrosia),
+            rounded(player.lifetimeRedAmbrosia),
+            rounded(player.purpleReactor?.lifetimePurpleHoney),
+            player.highestSingularityCount,
+            player.shopUpgrades?.shopAmbrosiaAccelerator,
+        ];
+        for (const name of ['twoMind', 'ambrosiaBrickOfLead'] as const) {
+            const upgrade = player.ambrosiaUpgrades?.[name] as
+                { ambrosiaInvested?: number; blueberriesInvested?: number; purpleAmbrosiaInvested?: number } | undefined;
+            parts.push(upgrade?.ambrosiaInvested, upgrade?.blueberriesInvested, upgrade?.purpleAmbrosiaInvested);
         }
+        for (let i = 1; i <= 4; i++) {
+            parts.push(rounded(player.purpleReactorUpgrades?.[`purpleHoneyRequirementReduction${i}`]));
+        }
+        // Every Exalt: inside it, and its completions (the shop's Exalt unlocks included)
+        for (const exalt of Object.values(player.singularityChallenges ?? {}) as { enabled?: boolean; completions?: number }[]) {
+            parts.push(exalt?.enabled ? 1 : 0, exalt?.completions);
+        }
+        return parts.join(',');
+    }
+
+    /** Writes only what changed. */
+    #drawMinibars(bars: { blue: number; red: number; purple?: number; redUnlocked: boolean; purpleUnlocked: boolean }): void {
+        const shown = this.#minibarsShown;
+        if (this.#blueProgressMinibarElement && shown.blue !== bars.blue) {
+            this.#blueProgressMinibarElement.style.transform = `scaleX(${bars.blue})`;
+            shown.blue = bars.blue;
+        }
+        if (this.#redProgressMinibarElement && shown.red !== bars.red) {
+            this.#redProgressMinibarElement.style.transform = `scaleX(${bars.red})`;
+            shown.red = bars.red;
+        }
+        if (this.#redProgressMinibarBarElement && shown.redUnlocked !== bars.redUnlocked) {
+            this.#redProgressMinibarBarElement.style.display = bars.redUnlocked ? 'block' : 'none';
+            shown.redUnlocked = bars.redUnlocked;
+        }
+        if (this.#purpleProgressMinibarBarElement && shown.purpleUnlocked !== bars.purpleUnlocked) {
+            this.#purpleProgressMinibarBarElement.style.display = bars.purpleUnlocked ? 'block' : 'none';
+            shown.purpleUnlocked = bars.purpleUnlocked;
+        }
+        if (bars.purple !== undefined && this.#purpleProgressMinibarElement && shown.purple !== bars.purple) {
+            this.#purpleProgressMinibarElement.style.setProperty('--progress-fill', String(bars.purple));
+            shown.purple = bars.purple;
+        }
+    }
+
+    /** The minibars from GDS's save data, without the live player (bookmarklet, or the patch failed). */
+    #updateBerryMinibars(gameData?: GameData, gameDataAPI?: HSGameDataAPI) {
+        if (!this.#berryMinibarsEnabled) return;
 
         gameDataAPI ??= this.#cachedGameDataAPI
             ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
@@ -2201,53 +2356,17 @@ export class HSAmbrosia extends HSModule
         // The subscription will render the bars as soon as data arrives.
         if (!gameDataAPI || !gameData) return;
 
-        if (this.#blueProgressMinibarElement && this.#redProgressMinibarElement) {
-            const blueRequirement = gameDataAPI.ambrosia.calculateRequiredBlueberryTime();
-            const redRequirement = gameDataAPI.ambrosia.calculateRequiredRedAmbrosiaTime();
-            const blueProgress = blueRequirement > 0
-                ? Math.min(1, Math.max(0, gameData.blueberryTime / blueRequirement))
-                : 0;
-            const redProgress = redRequirement > 0
-                ? Math.min(1, Math.max(0, gameData.redAmbrosiaTime / redRequirement))
-                : 0;
-
-            // These are the same save values and requirement formulas used by the
-            // game, so they continue updating even when its bar elements are stale.
-            this.#blueProgressMinibarElement.style.transform = `scaleX(${blueProgress})`;
-            this.#redProgressMinibarElement.style.transform = `scaleX(${redProgress})`;
-        } else {
-            HSLogger.warnOnce(`
-        HSAmbrosia.gameDataCallback() - progress data or minibar element(s) undefined.
-            game data: ${gameData},
-            game data API: ${gameDataAPI},
-            minibar blue: ${this.#blueProgressMinibarElement},
-            minibar red: ${this.#redProgressMinibarElement} `, 'hs-minibars-undefined');
-        }
-
-        // Shown once unlocked, as the game's red ambrosia and purple honey header modules (Exalts 9 and 10)
-        const redUnlocked = (gameData.singularityChallenges?.noAmbrosiaUpgrades?.completions ?? 0) > 0;
-        const purpleUnlocked = (gameData.singularityChallenges?.taxmanLastStand?.completions ?? 0) > 0;
-
-        if (this.#redProgressMinibarBarElement) {
-            this.#redProgressMinibarBarElement.style.display = redUnlocked ? 'block' : 'none';
-        }
-        if (this.#purpleProgressMinibarBarElement) {
-            this.#purpleProgressMinibarBarElement.style.display = purpleUnlocked ? 'block' : 'none';
-        }
-        if (!purpleUnlocked) return;
-
-        const purpleData = gameData as (GameData & { purpleHoneyProgress?: number }) | undefined;
-        if (gameDataAPI && purpleData?.purpleHoneyProgress != null && this.#purpleProgressMinibarElement) {
-            const purpleRequirement = gameDataAPI.ambrosia.calculatePurpleHoneyConversionFactor();
-            const progress = purpleRequirement > 0
-                ? Math.min(1, Math.max(0, purpleData.purpleHoneyProgress / purpleRequirement))
-                : 0;
-            this.#purpleProgressMinibarElement.style.setProperty('--progress-fill', String(progress));
-        } else {
-            HSLogger.warnOnce(`
-        HSAmbrosia.gameDataCallback() - purple progress data or minibar element undefined.
-            progress: ${purpleData?.purpleHoneyProgress},
-            minibar: ${this.#purpleProgressMinibarElement} `, 'hs-purple-minibar-undefined');
-        }
+        const data = gameData as HSMinibarsPlayer;
+        const redUnlocked = (data.singularityChallenges?.noAmbrosiaUpgrades?.completions ?? 0) > 0;
+        const purpleUnlocked = (data.singularityChallenges?.taxmanLastStand?.completions ?? 0) > 0;
+        this.#drawMinibars({
+            blue: HSAmbrosia.#barFill(data.blueberryTime, gameDataAPI.ambrosia.calculateRequiredBlueberryTime()),
+            red: HSAmbrosia.#barFill(data.redAmbrosiaTime, gameDataAPI.ambrosia.calculateRequiredRedAmbrosiaTime()),
+            purple: purpleUnlocked
+                ? HSAmbrosia.#barFill(data.purpleHoneyProgress, gameDataAPI.ambrosia.calculatePurpleHoneyConversionFactor())
+                : undefined,
+            redUnlocked,
+            purpleUnlocked,
+        });
     }
 }
