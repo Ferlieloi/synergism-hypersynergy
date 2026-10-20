@@ -71,7 +71,8 @@ function listChannels() {
         label: c.label,
         repo: c.repo,
         description: c.description,
-        defaultRef: c.defaultRef
+        defaultRef: c.defaultRef,
+        local: Boolean(c.local)
     }))
 }
 
@@ -104,6 +105,7 @@ function emptyConfig() {
         modRef: '',        // branch/tag within that channel's repo ('' = let the UI pick the channel default)
         lastPlayedChannel: '',
         lastPlayedModRef: '',
+        lastPlayedLocal: false, // the last launch used the hidden local channel (lib/gameLauncher.js)
         refDateCache: {},   // commit dates keyed by SHA, to limit GitHub API requests
         refListCache: {},   // last successful branch/tag list for each channel
         lastPatchedExe: '',     // launchable exe produced by the last successful patch

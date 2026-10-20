@@ -672,11 +672,18 @@ els.quickSwitchBtn.addEventListener('click', async () => {
     state.refListCache = cfg.refListCache || {}
 
     state.channels = await window.loader.getChannels()
+    // The local channel is never "last played": its own flag selects it again, when it is offered.
+    const localChannel = cfg.lastPlayedLocal ? state.channels.find(c => c.local) : null
     const preferredChannel = cfg.lastPlayedChannel || cfg.lastPatchedChannel || cfg.channel
     const preferredAvailable = Boolean(preferredChannel && state.channels.some(c => c.id === preferredChannel))
-    state.channel = preferredAvailable ? preferredChannel : (state.channels[0]?.id || 'live')
-    // A ref saved for a channel that isn't offered (e.g. the hidden local one) means nothing here.
-    state.modRef = preferredAvailable ? (cfg.lastPlayedModRef || cfg.lastPatchedModRef || cfg.modRef || '') : ''
+    if (localChannel) {
+      state.channel = localChannel.id
+      state.modRef = localChannel.defaultRef
+    } else {
+      state.channel = preferredAvailable ? preferredChannel : (state.channels[0]?.id || 'live')
+      // A ref saved for a channel that isn't offered (e.g. the hidden local one) means nothing here.
+      state.modRef = preferredAvailable ? (cfg.lastPlayedModRef || cfg.lastPatchedModRef || cfg.modRef || '') : ''
+    }
 
     els.steamPathInput.value = state.steamPath
     els.gameDirOutput.value = state.gameDir
