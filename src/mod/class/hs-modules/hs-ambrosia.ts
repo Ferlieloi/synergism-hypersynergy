@@ -413,21 +413,11 @@ export class HSAmbrosia extends HSModule
     async #createPersistentMinibars() {
         if (!this.#pageHeader) return;
 
-        // Check if already exists
-        const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
-        let groupWrapper = quickbarsRow.querySelector('#hs-ambrosia-group-wrapper') as HTMLElement;
+        // Built by the ambrosia quickbar's section, injected in this.quickbar.init()
+        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
         if (!groupWrapper) {
-            groupWrapper = document.createElement('div');
-            groupWrapper.id = 'hs-ambrosia-group-wrapper';
-            groupWrapper.className = 'hs-quickbar';
-            groupWrapper.style.display = 'flex';
-            groupWrapper.style.flexDirection = 'column';
-            groupWrapper.style.justifyContent = "flex-end";
-            quickbarsRow.appendChild(groupWrapper);
-        }
-        // Move to last child if not already
-        if (quickbarsRow.lastChild !== groupWrapper) {
-            quickbarsRow.appendChild(groupWrapper);
+            HSLogger.warn('Could not find group wrapper for minibars', this.context);
+            return;
         }
 
         // Check if minibarWrapper already exists

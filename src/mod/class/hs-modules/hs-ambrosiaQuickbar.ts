@@ -71,19 +71,12 @@ export class HSAmbrosiaQuickbar {
             HSLogger.debug(() => "Ambrosia Quickbar section factory called", this.context);
             const pageHeader = this.host.getPageHeader();
             if (!pageHeader) return { element: document.createElement("div") };
-            const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
-            let groupWrapper = quickbarsRow.querySelector("#hs-ambrosia-group-wrapper") as HTMLElement;
-            if (!groupWrapper) {
-                groupWrapper = document.createElement("div");
-                groupWrapper.id = "hs-ambrosia-group-wrapper";
-                groupWrapper.style.display = "flex";
-                groupWrapper.style.flexDirection = "column";
-                groupWrapper.style.justifyContent = "flex-end";
-                quickbarsRow.appendChild(groupWrapper);
-            }
-            if (quickbarsRow.lastChild !== groupWrapper) {
-                quickbarsRow.appendChild(groupWrapper);
-            }
+            // The only place the ambrosia group (quickbar slots and minibars) is built; the manager places it in the row
+            const groupWrapper = document.createElement("div");
+            groupWrapper.id = "hs-ambrosia-group-wrapper";
+            groupWrapper.style.display = "flex";
+            groupWrapper.style.flexDirection = "column";
+            groupWrapper.style.justifyContent = "flex-end";
             return { element: groupWrapper };
         });
         HSQuickbarManager.getInstance().injectSection("ambrosia");
@@ -137,20 +130,8 @@ export class HSAmbrosiaQuickbar {
             this.#loadAmbrosiaIcons();
         }
 
-        const quickbarsRow = HSQuickbarManager.ensureQuickbarsRow();
-        let groupWrapper = quickbarsRow.querySelector("#hs-ambrosia-group-wrapper") as HTMLElement;
-        if (!groupWrapper) {
-            groupWrapper = document.createElement("div");
-            groupWrapper.id = "hs-ambrosia-group-wrapper";
-            groupWrapper.style.display = "flex";
-            groupWrapper.style.flexDirection = "column";
-            groupWrapper.style.justifyContent = "flex-end";
-            quickbarsRow.appendChild(groupWrapper);
-        }
-
-        if (quickbarsRow.lastChild !== groupWrapper) {
-            quickbarsRow.appendChild(groupWrapper);
-        }
+        const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
+        if (!groupWrapper) return;
 
         if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`)) {
             HSLogger.debug(() => "Quickbar already exists in group wrapper", this.context);

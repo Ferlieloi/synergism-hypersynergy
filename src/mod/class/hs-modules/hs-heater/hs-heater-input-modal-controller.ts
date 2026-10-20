@@ -19,6 +19,7 @@ import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSSettingsDefinition } from "../../../types/module-types/hs-settings-types";
 import type { HeaterBranchId } from "./hs-heater-result-config";
+import type { HSAmbrosia } from "../hs-ambrosia";
 
 export class HSHeaterInputModalController {
     static context = 'HSHeaterInputModalController';
@@ -72,8 +73,8 @@ export class HSHeaterInputModalController {
 
         HSHeaterUIStyles.ensureHeaterStylesInjected();
 
-        const ambrosiaModule = HSModuleManager.getModule<any>('HSAmbrosia') as { getAmbrosiaLoadoutsAmount?: () => number } | undefined;
-        const loadoutsAmountRaw = ambrosiaModule?.getAmbrosiaLoadoutsAmount?.();
+        const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+        const loadoutsAmountRaw = ambrosiaModule?.getAmbrosiaLoadoutsAmount();
         const loadoutsAmount = Number.isInteger(loadoutsAmountRaw) && (loadoutsAmountRaw as number) > 0
             ? (loadoutsAmountRaw as number)
             : 8;
@@ -228,8 +229,8 @@ export class HSHeaterInputModalController {
             await HSUtils.waitForNextTack();
 
             try {
-                const ambrosiaModule = HSModuleManager.getModule<any>('HSAmbrosia') as { showQuickBar?: () => Promise<void> } | undefined;
-                if (!ambrosiaModule?.showQuickBar) {
+                const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
+                if (!ambrosiaModule) {
                     HSUI.Notify('Failed to start heater because Ambrosia quickbar is unavailable.', { position: 'top', notificationType: 'error' });
                     return;
                 }
@@ -341,14 +342,14 @@ export class HSHeaterInputModalController {
 
         const syncIconsButton = modal.querySelector('#hs-heater-sync-icons-btn') as HTMLElement | null;
         syncIconsButton?.addEventListener('click', async () => {
-            const ambrosiaModule = HSModuleManager.getModule<any>('HSAmbrosia');
+            const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
             if (!ambrosiaModule) return;
 
             const typeSelects = this.#cachedTypeSelects.length ? this.#cachedTypeSelects : Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
             const typeIcons = this.#cachedTypeIcons.length ? this.#cachedTypeIcons : Array.from(modal.querySelectorAll('.hs-heater-type-select-icon')) as HTMLButtonElement[];
-            const loadoutsAmountRaw = ambrosiaModule.getAmbrosiaLoadoutsAmount?.();
-            const maxAmbrosiaSlots = Number.isInteger(loadoutsAmountRaw) && (loadoutsAmountRaw as number) > 0
-                ? (loadoutsAmountRaw as number)
+            const loadoutsAmountRaw = ambrosiaModule.getAmbrosiaLoadoutsAmount();
+            const maxAmbrosiaSlots = Number.isInteger(loadoutsAmountRaw) && loadoutsAmountRaw > 0
+                ? loadoutsAmountRaw
                 : Math.min(typeSelects.length, typeIcons.length);
             const syncCount = Math.min(typeSelects.length, typeIcons.length, maxAmbrosiaSlots);
 
