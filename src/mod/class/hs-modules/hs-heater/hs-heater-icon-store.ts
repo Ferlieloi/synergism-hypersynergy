@@ -1,5 +1,5 @@
 import { HSUI } from "../../hs-core/hs-ui";
-import { buildHeaterTypeSemanticId, getHeaterTypeEntries, resolveHeaterTypeIconSrc } from "./hs-heater-result-config";
+import { buildHeaterTypeSemanticId, getHeaterTypeEntries, HEATER_BEST_H_SEMANTIC_ID, resolveHeaterTypeIconSrc, resolveHeaterTypeLabel } from "./hs-heater-result-config";
 import type { HeaterTypeSemanticId } from "../../../types/data-types/hs-heater-types";
 export type { HeaterTypeSemanticId } from "../../../types/data-types/hs-heater-types";
 
@@ -67,6 +67,9 @@ export function getHeaterTypeDropdownOptionsWithIcons(): HeaterTypeDropdownOptio
                     label: rowLabel,
                 });
             });
+            if (key === "hyperflux") {
+                options.push({ semanticId: HEATER_BEST_H_SEMANTIC_ID, label: resolveHeaterTypeLabel(HEATER_BEST_H_SEMANTIC_ID)! });
+            }
             continue;
         }
 

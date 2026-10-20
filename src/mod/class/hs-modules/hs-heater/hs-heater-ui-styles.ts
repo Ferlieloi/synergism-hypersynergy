@@ -735,6 +735,7 @@ export class HSHeaterUIStyles {
             /* === Status & Colors === */
             .hs-heater-status-maxed { color: #08ba52; }
             .hs-heater-status-unmaxed { color: #962f2f; }
+            .hs-heater-best-h-marker { color: #f2c94c; white-space: nowrap; cursor: help; }
 
             /* Same red as the ✘. The type's label is in a button when it has
                an icon, and a button doesn't inherit the row's colour. */

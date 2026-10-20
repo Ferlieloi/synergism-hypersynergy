@@ -162,7 +162,7 @@ export class HSHeaterResultModalController {
             const semanticId = (typeSelects[i].value || '').trim();
             const select = typeSelects[i];
             const checkbox = typeCheckboxes[i];
-            const isAvailable = semanticId !== '' && semanticId !== 'none' && availableSemanticIds.has(semanticId);
+            const isAvailable = semanticId !== '' && semanticId !== 'none' && availableSemanticIds.has(HSHeaterResultStore.resolveSemanticId(semanticId));
             const isUnaffordable = HSHeaterResultStore.isSemanticIdUnaffordable(semanticId);
 
             // Nothing to import for a missing or an unaffordable type

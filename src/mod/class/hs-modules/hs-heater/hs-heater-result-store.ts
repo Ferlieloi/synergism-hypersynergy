@@ -1,6 +1,9 @@
-import { buildHeaterTypeSemanticId, getHeaterTypeBranchId, getHeaterTypeConfig, getHeaterTypeRowCount, resolveHeaterTypeLabel } from "./hs-heater-result-config";
-import type { HeaterOptimizationResult, HeaterPurpleRoutedResultKey, HeaterResultArrayKey, NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
+import { buildHeaterTypeSemanticId, getHeaterTypeBranchId, getHeaterTypeConfig, getHeaterTypeRowCount, HEATER_BEST_H_SEMANTIC_ID, resolveHeaterTypeLabel } from "./hs-heater-result-config";
+import type { HeaterOptimizationResult, HeaterPurpleRoutedResultKey, HeaterResultArrayKey, HeaterTypeSemanticId, NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
 import type { HeaterBranchId } from "./hs-heater-result-config";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 
 export type { NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
 
@@ -63,6 +66,23 @@ export function normalizeHeaterOptimizationResult(
     return normalizedEntries;
 }
 
+/**
+ * The Hyperflux row that wins at this P4x4 level: the highest row whose
+ * "p4x4 eq" is reached. A row beats the rows above it from its p4x4 eq on;
+ * a row that never wins shows "Never", an unaffordable one "N / A".
+ * -1 when no row qualifies.
+ */
+export function pickBestHyperfluxRowIndex(entries: NormalizedHeaterResultEntry[], p4x4: number): number {
+    let best = -1;
+    for (const entry of entries) {
+        const p4x4Eq = entry.rowData[5];
+        if (typeof p4x4Eq === "number" && p4x4Eq <= p4x4 && entry.rowIndex > best) best = entry.rowIndex;
+    }
+    return best;
+}
+
+export type HeaterBestHPick = { rowIndex: number; semanticId: HeaterTypeSemanticId; p4x4: number };
+
 
 // ================================================================
 // Result store / selected semantic ID helpers
@@ -80,10 +100,43 @@ export class HSHeaterResultStore {
         return this.#currentRawResult;
     }
 
+    /** P4x4 level now: the live player, else the last GDS save. It resets at every singularity. */
+    static getLiveP4x4(): number | null {
+        const live = HSGlobal.exposedPlayer?.platonicUpgrades?.[19];
+        if (typeof live === "number") return live;
+        const saved = HSModuleManager.getModule<HSGameDataAPI>("HSGameDataAPI")?.getGameData()?.platonicUpgrades?.[19];
+        return typeof saved === "number" ? saved : null;
+    }
+
+    /** The H row that wins at the live P4x4, or null (branch not heated, P4x4 unknown, no affordable row). */
+    static getBestHyperfluxPick(): HeaterBestHPick | null {
+        const entries = this.#currentNormalizedResult?.filter((entry) => entry.key === "hyperflux");
+        if (!entries?.length) return null;
+        const p4x4 = this.getLiveP4x4();
+        if (p4x4 === null) return null;
+        const rowIndex = pickBestHyperfluxRowIndex(entries, p4x4);
+        if (rowIndex < 0) return null;
+        return { rowIndex, semanticId: buildHeaterTypeSemanticId("hyperflux", rowIndex), p4x4 };
+    }
+
+    /**
+     * "Best H" → the H row it stands for right now; any other id as is.
+     * With every H row unaffordable it's H0 (shown as unaffordable); with no
+     * H rows or no P4x4 it stays "Best H", which no result row matches.
+     */
+    static resolveSemanticId(semanticId: string): string {
+        if (semanticId !== HEATER_BEST_H_SEMANTIC_ID) return semanticId;
+        const pick = this.getBestHyperfluxPick();
+        if (pick) return pick.semanticId;
+        const hasHyperfluxRows = this.#currentNormalizedResult?.some((entry) => entry.key === "hyperflux") ?? false;
+        return hasHyperfluxRows && this.getLiveP4x4() !== null ? buildHeaterTypeSemanticId("hyperflux", 0) : semanticId;
+    }
+
     static isSemanticIdAvailable(semanticId: string): boolean {
         const normalizedResult = this.getCurrentNormalizedResult();
         if (!normalizedResult) return false;
-        return normalizedResult.some((entry) => String(entry.semanticId) === semanticId);
+        const resolved = this.resolveSemanticId(semanticId);
+        return normalizedResult.some((entry) => String(entry.semanticId) === resolved);
     }
 
     /** In the results, but as an "Unaffordable" row: there is no loadout to import. */
@@ -104,7 +157,7 @@ export class HSHeaterResultStore {
                 const checkbox = typeCheckboxes[i];
                 if (!checkbox?.checked) continue;
             }
-            selectedSemanticIds.add(semanticId);
+            selectedSemanticIds.add(this.resolveSemanticId(semanticId));
         }
 
         return selectedSemanticIds;
@@ -143,7 +196,8 @@ export class HSHeaterResultStore {
 
     static getLoadoutJsonBySemanticId(semanticId: string): string | null {
         if (!this.#currentNormalizedResult) return null;
-        const entry = this.#currentNormalizedResult.find((item) => item.semanticId === semanticId);
+        const resolved = this.resolveSemanticId(semanticId);
+        const entry = this.#currentNormalizedResult.find((item) => item.semanticId === resolved);
         const loadoutJson = entry?.rowData?.[0];
         return typeof loadoutJson === 'string' ? loadoutJson : null;
     }

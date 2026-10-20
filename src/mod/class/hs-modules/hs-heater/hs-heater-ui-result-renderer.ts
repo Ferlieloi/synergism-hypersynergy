@@ -1,7 +1,7 @@
 import { escapeHtml, formatNumber } from "./hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "./hs-heater-icon-store";
 import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "./hs-heater-result-config";
-import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
+import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "./hs-heater-result-store";
 import type { HeaterResultArrayKey, HeaterResultRow } from "../../../types/data-types/hs-heater-types";
 
 type ResultKey = HeaterResultArrayKey;
@@ -92,12 +92,26 @@ function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string 
         ? buildHeaderTooltipLabel("p4x4 eq", `"p4x4 eq" indicates the amount\n`
                                             + `of p4x4 you need to buy for the\n`
                                             + `loadout in this row to be better\n`
-                                            + `than the ones above it.`)
+                                            + `than the ones above it.\n`
+                                            + `"★ now" marks the best one\n`
+                                            + `at your current P4x4.`)
         : `<th>p4x4 eq</th>`;
 
     return showP4x4
         ? `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
         : `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
+}
+
+// The H row that wins at the live P4x4 when the table is drawn (it's redrawn
+// at each heat and slot change).
+type BestHMarker = { rowIndex: number; p4x4: number };
+
+function getBestHMarker(hyperfluxEntries: NormalizedHeaterResultEntry[] | undefined): BestHMarker | null {
+    if (!hyperfluxEntries?.length) return null;
+    const p4x4 = HSHeaterResultStore.getLiveP4x4();
+    if (p4x4 === null) return null;
+    const rowIndex = pickBestHyperfluxRowIndex(hyperfluxEntries, p4x4);
+    return rowIndex < 0 ? null : { rowIndex, p4x4 };
 }
 
 function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLabel: string, isValidJson: boolean): string {
@@ -144,6 +158,7 @@ function buildArraySectionDataRow(
     sectionDef: HeaterResultSectionDef,
     rowSpan: number,
     selectedSemanticIds: Set<string> = new Set(),
+    bestH: BestHMarker | null = null,
 ): string {
     const { showP4x4, showRouting } = sectionDef;
     const rowModel = normalizeArrayResultRow(entry.rowData);
@@ -175,14 +190,17 @@ function buildArraySectionDataRow(
         : showP4x4
             ? `<td>${effectHtml}</td>`
             : `<td colspan="2">${effectHtml}</td>`;
-    const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}</td>` : "";
+    const bestHMarker = bestH && entry.key === "hyperflux" && entry.rowIndex === bestH.rowIndex
+        ? ` <span class="hs-heater-best-h-marker" title="Best H at your current P4x4 (${bestH.p4x4})">★ now</span>`
+        : "";
+    const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
     // A type picked in "Your loadout order" that can't be afforded: the whole row in red
     const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
     return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }
 
-function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set()): string {
+function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set(), bestH: BestHMarker | null = null): string {
     const matching = sectionDef.keys
         .filter((key) => entriesByKey.has(key))
         .map((key) => ({ key, entries: entriesByKey.get(key)! }));
@@ -197,7 +215,7 @@ function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey:
     const dataRows = matching
         .map(({ key, entries }) => {
             const rowSpan = entries[0].isRowBased ? 1 : entries.length;
-            return entries.map((entry) => buildArraySectionDataRow(entry, shownDef, rowSpan, selectedSemanticIds)).join("");
+            return entries.map((entry) => buildArraySectionDataRow(entry, shownDef, rowSpan, selectedSemanticIds, bestH)).join("");
         })
         .join("");
     return titleRow + headerRow + dataRows;
@@ -205,7 +223,8 @@ function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey:
 
 function buildArrayResultSection(entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set()): string {
     const sectionDefs = getHeaterResultSectionDefinitions();
-    const allRows = sectionDefs.map((sectionDef) => buildArraySectionRows(sectionDef, entriesByKey, selectedSemanticIds)).join("");
+    const bestH = getBestHMarker(entriesByKey.get("hyperflux"));
+    const allRows = sectionDefs.map((sectionDef) => buildArraySectionRows(sectionDef, entriesByKey, selectedSemanticIds, bestH)).join("");
     return `
         <div class="hs-heater-results-wrapper">
             <div class="hs-heater-results-topbar">

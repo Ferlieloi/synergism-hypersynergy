@@ -128,7 +128,7 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
     },
     hyperflux: {
         label: "Hyperflux (H0–H7)",
-        description: "(Pre-AOAG only) H loadouts from Hyperflux lvl 0 to 7.\nCheck the p4x4eq tooltip to understand how to chose from them. H0-3 are for early players with low amb. H4 will usually be good for early sing while the rest would be for the middle/end of pre-aoag. (again, check p4x4eq)",
+        description: "(Pre-AOAG only) H loadouts from Hyperflux lvl 0 to 7.\nCheck the p4x4eq tooltip to understand how to chose from them. H0-3 are for early players with low amb. H4 will usually be good for early sing while the rest would be for the middle/end of pre-aoag. (again, check p4x4eq)\n\"★ now\" marks the best H at your current P4x4. In Your Loadout Order, \"Best H (P4x4 now)\" imports that row, picked from your P4x4 at the moment you import.",
         section: "p4x4",
         rowLabels: ["H0", "H1", "H2", "H3", "H4", "H5", "H6", "H7"],
         rowIcons: Array(8).fill("Pictures/Default/BlueberryHyperflux.png"),
@@ -206,6 +206,7 @@ export function getHeaterTypeConfig(key: ResultKey): HeaterResultTypeConfig | nu
 }
 
 export function getHeaterTypeBranchId(semanticId: string): HeaterBranchId | null {
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) return "hyperflux";
     const parsed = parseHeaterTypeSemanticId(semanticId);
     if (!parsed) return null;
 
@@ -252,6 +253,11 @@ function isRowBasedResultKey(value: string): value is RowBasedResultKey {
     return getHeaterTypeRowCount(value as ResultKey) > 1;
 }
 
+// A slot choice, not a result row: HSHeaterResultStore.resolveSemanticId turns
+// it into the Hyperflux row that wins at the live P4x4.
+export const HEATER_BEST_H_SEMANTIC_ID = "hyperflux:best" satisfies HeaterTypeSemanticId;
+const HEATER_BEST_H_LABEL = "Best H (P4x4 now)";
+
 export function buildHeaterTypeSemanticId(key: ResultKey, rowIndex?: number): HeaterTypeSemanticId {
     return rowIndex === undefined ? key as HeaterTypeSemanticId : `${key}:${rowIndex}` as HeaterTypeSemanticId;
 }
@@ -281,6 +287,7 @@ function parseHeaterTypeSemanticId(semanticId: string): ParsedHeaterTypeSemantic
 
 export function resolveHeaterTypeLabel(key: string): string | null {
     if (key === "none") return "None";
+    if (key === HEATER_BEST_H_SEMANTIC_ID) return HEATER_BEST_H_LABEL;
     const parsed = parseHeaterTypeSemanticId(key);
     if (!parsed) return null;
 
@@ -295,6 +302,7 @@ export function resolveHeaterTypeLabel(key: string): string | null {
 }
 
 export function resolveHeaterTypeDescription(semanticId: string): string | null {
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) semanticId = "hyperflux:0";
     const parsed = parseHeaterTypeSemanticId(semanticId);
     if (!parsed) return null;
 
@@ -304,6 +312,7 @@ export function resolveHeaterTypeDescription(semanticId: string): string | null 
 
 export function resolveHeaterTypeIconSrc(semanticId: string): string | null {
     if (semanticId === "none") { return "Pictures/RedAmbrosia/RedAmbrosiaFreeTutorialLevels.png"; }
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) semanticId = "hyperflux:0";
 
     const parsed = parseHeaterTypeSemanticId(semanticId);
     if (!parsed) return null;

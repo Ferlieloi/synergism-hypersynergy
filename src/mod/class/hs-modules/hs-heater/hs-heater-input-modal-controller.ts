@@ -10,7 +10,7 @@ import { HSHeaterResultStore } from "./hs-heater-result-store";
 import { HSHeaterResultModalController } from "./hs-heater-result-modal-controller";
 import { HSHeaterRedAmbrosiaModalController } from "./hs-heater-red-ambrosia-modal-controller";
 import { HSHeaterUIResult } from "./hs-heater-ui-result";
-import { resolveHeaterTypeLabel } from "./hs-heater-result-config";
+import { HEATER_BEST_H_SEMANTIC_ID, resolveHeaterTypeLabel } from "./hs-heater-result-config";
 import { escapeHtml, escapeLogText } from "./hs-heater-utils";
 import { getHeaterTypeDropdownOptionsWithIcons } from "./hs-heater-icon-store";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
@@ -34,7 +34,7 @@ export class HSHeaterInputModalController {
     static #cachedActiveLabels: HTMLElement[] = [];
 
     static #loadoutSettingPreferences: Partial<Record<keyof HSSettingsDefinition, { label: string; preferences: string[] }>> = {
-        autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7", "oct"] },
+        autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7", HEATER_BEST_H_SEMANTIC_ID, "oct"] },
         autosingLateCubeLoadout:            { label: 'Autosing Late Cube',      preferences: ["cubes"] },
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
         autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
@@ -293,6 +293,9 @@ export class HSHeaterInputModalController {
 
                 const loadoutJsons: string[] = [];
                 const unaffordable: string[] = [];
+                const bestHPicks: string[] = [];
+                // "Best H" follows the live P4x4: read once, so every slot gets the same row
+                const bestHPick = HSHeaterResultStore.getBestHyperfluxPick();
                 for (let index = 0; index < selectedSemanticIds.length; index++) {
                     const semanticId = selectedSemanticIds[index];
                     const isEnabled = typeCheckboxes[index]?.checked ?? true;
@@ -302,15 +305,27 @@ export class HSHeaterInputModalController {
                         continue;
                     }
 
+                    const isBestH = semanticId === HEATER_BEST_H_SEMANTIC_ID;
+                    const rowId = isBestH && bestHPick ? bestHPick.semanticId : semanticId;
+                    const label = resolveHeaterTypeLabel(rowId) ?? rowId;
+
                     // An unaffordable type has no loadout: its slot is left as it is.
                     // Its checkbox is unticked after a heat, so this is one the player ticked again.
-                    if (HSHeaterResultStore.isSemanticIdUnaffordable(semanticId)) {
-                        unaffordable.push(`L${index + 1}: ${resolveHeaterTypeLabel(semanticId) ?? semanticId}`);
+                    if (HSHeaterResultStore.isSemanticIdUnaffordable(rowId)) {
+                        unaffordable.push(`L${index + 1}: ${label}`);
                         loadoutJsons.push('');
                         continue;
                     }
 
-                    const loadout = HSHeaterResultStore.getLoadoutJsonBySemanticId(semanticId);
+                    if (isBestH && bestHPick) {
+                        bestHPicks.push(`L${index + 1}: ${label}`);
+                    } else if (isBestH) {
+                        HSUI.Notify(`L${index + 1}: no Best H to import (Hyperflux not heated, or P4x4 unknown)`, { position: 'top', notificationType: 'warning' });
+                        loadoutJsons.push('');
+                        continue;
+                    }
+
+                    const loadout = HSHeaterResultStore.getLoadoutJsonBySemanticId(rowId);
                     if (loadout) {
                         loadoutJsons.push(loadout);
                     } else {
@@ -323,6 +338,12 @@ export class HSHeaterInputModalController {
                     const message = `Unaffordable, not imported: ${unaffordable.join(', ')}`;
                     HSUI.Notify(message, { position: 'top', notificationType: 'warning' });
                     HSLogger.warn(message, 'HSHeater');
+                }
+
+                if (bestHPicks.length > 0 && bestHPick) {
+                    const message = `Best H at P4x4 ${bestHPick.p4x4}: ${bestHPicks.join(', ')}`;
+                    HSUI.Notify(message, { position: 'top', notificationType: 'default' });
+                    HSLogger.log(message, 'HSHeater');
                 }
 
                 const clipboardText = loadoutJsons.join('\n');
