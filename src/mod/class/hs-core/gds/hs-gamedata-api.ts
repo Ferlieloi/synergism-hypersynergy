@@ -176,6 +176,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     #calculationCacheTemplate: CalculationCache;
 
+    // calculateSynergismLevel's result for the current data, cleared with the calculation cache
+    #synergismLevel: number | undefined;
+
     // These are imported from stored-vars-and-calculations.ts
     #hepteractEffectiveValues = hepteractEffectiveValues;
     readonly #calculationHelperProviders: Array<object> = [];
@@ -839,6 +842,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     clearCache() {
         this.#calculationCache = clearCalculationCache(this.#calculationCacheTemplate);
+        this.#synergismLevel = undefined;
     }
 
     dumpCache() {
@@ -1800,8 +1804,14 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         };
     }
 
+    /**
+     * Cached until the next clearCache(): about 0.1 ms, and an ambrosia rate refresh asks for it 8 times
+     * (luck, red luck, red speed, purple honey…). Everything it reads comes in through the _update* methods,
+     * which all clear the cache.
+     */
     calculateSynergismLevel() {
         if (!this.gameData) return 0;
+        if (this.#synergismLevel !== undefined) return this.#synergismLevel;
         const data = this.gameData;
 
         let achievementPoints = 0;
@@ -1825,6 +1835,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             level = 50 + Math.floor((achievementPoints - 2500) / 100)
         }
 
+        this.#synergismLevel = level;
         return level
     }
 
