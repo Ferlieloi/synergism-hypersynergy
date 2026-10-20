@@ -73,6 +73,19 @@ test('tack: names starting with "$", tack defined before addTimers, single quote
     assert.equal(calls, 1)
 })
 
+test('tack: a second function matching the anchor is reported, the first still patched', () => {
+    const window = {}
+    const { game, warnings } = run(`let ${addTimers()},${tack()},${tack('jZ')};`, window, 'At,jY,jZ')
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /tack\(\): 2 places match its anchor — patched jY, also jZ/)
+    // Written into the bundle for the mod's notification
+    assert.deepEqual(window.__HS_PATCH_AMBIGUOUS, ['tack()'])
+    game.jZ(1)
+    assert.equal(window.__HS_TACK_PATCHED, undefined)
+    game.jY(1)
+    assert.equal(window.__HS_TACK_PATCHED, true)
+})
+
 test('tack: not found, no hook in addTimers, with a warning', () => {
     const window = {}
     const { game, warnings } = run(`let ${addTimers()},jY=e=>{At("quarks",e)};`, window)

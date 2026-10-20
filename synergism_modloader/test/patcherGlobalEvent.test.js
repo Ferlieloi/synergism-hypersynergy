@@ -47,7 +47,9 @@ test('global event: the game gets its answer, the mod gets a copy', async () => 
     const window = { now: 2000, fetch: fakeFetch([{ ok: true, body: event }], calls) }
     const { game, warnings, code } = run(window)
     assert.deepEqual(warnings, [])
-    assert.ok(code.startsWith('window.__HS_GLOBAL_EVENT_PATCHED = true;'))
+    // Set at the top of the bundle, after its "use strict"
+    assert.ok(code.startsWith('"use strict";\n'))
+    assert.equal(window.__HS_GLOBAL_EVENT_PATCHED, true)
     window.__HS_onGlobalEvent = json => received.push(json)
 
     await game.eventCheck()

@@ -95,6 +95,36 @@ test('dialog hook: older mods keep __HS_AUTO_CONFIRM for Confirm and Alert', asy
     assert.equal(game.shown[0].wrapper, 'promptWrapper')
 })
 
+test('dialog hook: each action hides the 4 other wrappers, lines in any order, defaults with parentheses', async () => {
+    const wrappers = ['confirmWrapper', 'alertWrapper', 'infoAlertWrapper', 'promptWrapper', 'purchasePromptWrapper']
+    // As in the game: every dialog hides the others; here before declaring its own, after other elements
+    const hidingOthers = (header, wrapper) =>
+        `${header}Jf.enqueue(()=>{let a=c("transparentBG");` +
+        wrappers.filter(w => w !== wrapper).map(w => `c("${w}").style.display="none"`).join(',') +
+        `;let t=c("confirmationBox"),w=c("${wrapper}");t.style.display="block";` +
+        `return new Promise(res=>shown.push({wrapper:"${wrapper}",res}))})`
+    const window = {}
+    const { game, warnings } = patchAndRun([
+        hidingOthers('je=async e=>', 'confirmWrapper'),
+        hidingOthers('D=e=>', 'alertWrapper'),
+        hidingOthers('Hy=(e,t=c("x"))=>', 'infoAlertWrapper'),
+        hidingOthers('kn=(e,t)=>', 'promptWrapper'),
+        hidingOthers('is=e=>', 'purchasePromptWrapper'),
+    ], window)
+    assert.deepEqual(warnings.filter(w => w.includes('dialogs')), [])
+    assert.equal(window.__HS_DIALOG_HOOK_PATCHED, true)
+
+    const queued = []
+    window.__HS_dialogOrigin = (kind, firstArg) => { queued.push([kind, firstArg]); return kind }
+    window.__HS_onDialog = kind => (kind === 'alert' ? undefined : { value: kind })
+    assert.equal(await game.Confirm('Sure?'), 'confirm')
+    assert.equal(await game.InfoAlert('Title'), 'infoAlert')
+    assert.equal(await game.PurchasePrompt('Upgrade'), 'purchasePrompt')
+    void game.Alert('Hello')
+    assert.deepEqual(game.shown.map(s => s.wrapper), ['alertWrapper'])
+    assert.deepEqual(queued, [['confirm', 'Sure?'], ['infoAlert', 'Title'], ['purchasePrompt', 'Upgrade'], ['alert', 'Hello']])
+})
+
 test('dialog hook: all 5 dialogs or none', () => {
     const window = {}
     const { code, warnings } = patchAndRun(allDialogs.slice(0, 4).concat('is=e=>null'), window)

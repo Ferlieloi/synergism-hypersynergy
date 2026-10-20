@@ -93,3 +93,14 @@ test('save import hook: no reset parameter or no import function, bundle left un
     assert.equal(notFound.__HS_SAVE_IMPORT_HOOK_PATCHED, undefined)
     assert.ok(!second.code.includes('__HS_onSaveImport'))
 })
+
+test('save import hook: a default value with parentheses before the body', () => {
+    const window = {}
+    const { game, warnings } = run(`let ${importData},Ic=(e,t=Boolean(0))=>{${importBody()}};`, window)
+    assert.deepEqual(warnings, [])
+    const calls = []
+    window.__HS_onSaveImport = reset => calls.push(reset)
+    game.importSynergism(save)
+    game.importSynergism(save, true)
+    assert.deepEqual(calls, [false, true])
+})
