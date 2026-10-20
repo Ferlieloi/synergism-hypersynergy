@@ -3,7 +3,6 @@ import {
     HSInputType,
     HSUICButtonOptions,
     HSUICDivOptions,
-    HSUICFlexOptions,
     HSUICGridOptions,
     HSUICImageOptions,
     HSUICInputOptions,
@@ -225,30 +224,6 @@ export class HSUIC {
             display: grid;
             ${HSUtils.objectToCSS(options.styles as CSSKeyValueObject)}
         }`)
-
-        return `<div class="hs-panel-div ${comp_class}" id="${id}"${propString} ${dataString}>${comp_html}</div>`;
-    }
-
-    // Grid Component
-    static Flex(options: HSUICFlexOptions): string {
-        const comp_class = options.class ?? '';
-        const id = options.id ?? HSUtils.domid();
-        let comp_html = '';
-        const propString = this.#getPropString(options.props);
-        const dataString = this.#dataString(options.data);
-
-        if (options.html) {
-            if (Array.isArray(options.html)) {
-                comp_html = options.html.join('\n');
-            } else {
-                comp_html = options.html;
-            }
-        }
-
-        HSUI.injectStyle(`#${id} {
-            display: flex;
-            ${HSUtils.objectToCSS(options.styles as CSSKeyValueObject)}
-        }`);
 
         return `<div class="hs-panel-div ${comp_class}" id="${id}"${propString} ${dataString}>${comp_html}</div>`;
     }

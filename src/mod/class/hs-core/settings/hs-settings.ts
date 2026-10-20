@@ -250,14 +250,6 @@ export class HSSettings extends HSModule {
         return HSStrategyManager.validateStrategy(strategy, HSSettings.#staticContext);
     }
 
-    static ensureAoagPhase(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        return HSStrategyManager.ensureAoagPhase(strategy);
-    }
-
-    static ensureCorruptionLoadouts(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        return HSStrategyManager.ensureCorruptionLoadouts(strategy);
-    }
-
 
     // ===============================
     // --------- Persistence ---------

@@ -146,8 +146,4 @@ export class HSMouse extends HSModule {
             HSMouse.#autoClickUpdateInterval = null;
         }
     }
-
-    static getPosition() : HSMousePosition {
-        return this.#mousePosition;
-    }
 }

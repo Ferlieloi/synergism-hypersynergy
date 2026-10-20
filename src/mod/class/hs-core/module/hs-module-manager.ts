@@ -9,14 +9,12 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
 import { HSPrototypes } from "../hs-prototypes";
 import { HSMouse } from "../hs-mouse";
-import { HSShadowDOM } from "../hs-shadowdom";
 import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
-import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
@@ -45,14 +43,12 @@ export class HSModuleManager {
         "HSSettings": HSSettings,
         "HSPrototypes": HSPrototypes,
         "HSMouse": HSMouse,
-        "HSShadowDOM": HSShadowDOM,
         "HSStorage": HSStorage,
         "HSAmbrosia": HSAmbrosia,
         "HSStats": HSStats,
         "HSGameState": HSGameState,
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
-        "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
         "HSQOLButtons": HSQOLButtons,
         "HSSubtabMemory": HSSubtabMemory,
@@ -179,11 +175,6 @@ export class HSModuleManager {
             if (!module.isInitialized)
                 await module.init();
         }
-    }
-
-    // Returns a list of all of the enabled modules
-    getModules(): Map<string, HSModule> {
-        return HSModuleManager.#enabledModules;
     }
 
     // Returns a module by name

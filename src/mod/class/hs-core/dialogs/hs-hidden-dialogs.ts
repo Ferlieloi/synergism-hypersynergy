@@ -69,10 +69,6 @@ export class HSHiddenDialogs {
         return HSHiddenDialogs.#resourceData;
     }
 
-    static isEnabled(): boolean {
-        return HSHiddenDialogs.#enabled;
-    }
-
     /** The setting's action (also run at load with the stored state). */
     static setEnabled(enabled: boolean): void {
         HSHiddenDialogs.#enabled = enabled;

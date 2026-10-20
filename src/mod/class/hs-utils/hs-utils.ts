@@ -57,10 +57,6 @@ export class HSUtils {
         return HSUtils.#_onAfterTack !== null;
     }
 
-    static isAfterTackHooked(): boolean {
-        return HSUtils.#_onAfterTack !== null;
-    }
-
     // Resolves as a microtask immediately after the next game tack() completes
     // If no tack hook is available, waits 5ms instead
     static waitForNextTack = (tackCount = 1): Promise<void> => {
@@ -126,10 +122,6 @@ export class HSUtils {
         );
     }
 
-    static getExponent(num: number): number {
-        return Math.pow(10, num);
-    }
-
     static hashCode(str: string): number {
         let hash = 0;
         let i;
@@ -144,16 +136,6 @@ export class HSUtils {
         }
 
         return hash;
-    }
-
-    static async computeHash(data: string): Promise<string> {
-        const encoder = new TextEncoder();
-        const dataBuffer = encoder.encode(data);
-        const hashBuffer = await crypto.subtle.digest('SHA-1', dataBuffer);
-
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
     }
 
     static N(num: string | number, precision: number = 2, expDecimals: number = 2) {
@@ -338,10 +320,6 @@ export class HSUtils {
         }
     }
 
-    static async Noop() {
-        return;
-    }
-
     static eventBuffNumToName(buff: EventBuffType) {
         const reverse = {
             0: 'Quark',
@@ -407,77 +385,6 @@ export class HSUtils {
         });
     }
 
-
-    static waitForNextMutation(
-        el: HTMLElement,
-        timeoutMs = 2000
-    ): Promise<void> {
-        const root = el.parentElement ?? el;
-
-        return new Promise((resolve, reject) => {
-            let finished = false;
-
-            const observer = new MutationObserver(() => {
-                cleanup();
-                resolve();
-            });
-
-            const timeout = window.setTimeout(() => {
-                cleanup();
-                reject(new Error("Timed out waiting for next mutation"));
-            }, timeoutMs);
-
-            const cleanup = () => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeout);
-                observer.disconnect();
-            };
-
-            observer.observe(root, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        });
-    }
-
-    static waitForClassCondition(
-        element: Element, condition: () => boolean,
-        timeoutMs: number
-    ): Promise<boolean> {
-        if (condition()) return Promise.resolve(true);
-        return new Promise<boolean>((resolve) => {
-            let finished = false;
-            const cleanup = (success: boolean): void => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeoutId);
-                observer.disconnect();
-                resolve(success);
-            };
-            const observer = new MutationObserver(() => { if (condition()) cleanup(true); });
-            const timeoutId = window.setTimeout(() => cleanup(false), timeoutMs);
-            observer.observe(element, { attributes: true, attributeFilter: ['class'] });
-            if (condition()) cleanup(true);
-        });
-    }
-
-    static async click(button: HTMLButtonElement): Promise<void> {
-        button.click();
-        await HSUtils.sleep(HSUtils.tackTime);
-        return Promise.resolve();
-    }
-
-    static async DblClick(element: HTMLElement): Promise<void> {
-        element.click();
-        await new Promise(res => setTimeout(res, 5));
-        element.click();
-        await HSUtils.sleep(HSUtils.tackTime);
-        element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-        return Promise.resolve();
-    }
-
     static base64WithCRLF(
         base64: string,
         chunkSize = 49000
@@ -494,38 +401,6 @@ export class HSUtils {
         }
 
         return parts.join("\r\n");
-    }
-
-    static getCorruptions(mode: "current" | "next") {
-        const getLevel = (id: string): number => {
-            const element = document.getElementById(id);
-            // Use parseInt and default to 0 if the element is missing or text is invalid
-            return element ? parseInt(element.textContent || '0', 10) : 0;
-        };
-        if (mode === "current") {
-            const a = {
-                viscosity: getLevel('corrCurrentviscosity'),
-                drought: getLevel('corrCurrentdrought'),
-                deflation: getLevel('corrCurrentdeflation'),
-                extinction: getLevel('corrCurrentextinction'),
-                illiteracy: getLevel('corrCurrentilliteracy'),
-                recession: getLevel('corrCurrentrecession'),
-                dilation: getLevel('corrCurrentdilation'),
-                hyperchallenge: getLevel('corrCurrenthyperchallenge')
-            };
-            return a;
-        } else {
-            return {
-                viscosity: getLevel('corrNextviscosity'),
-                drought: getLevel('corrNextdrought'),
-                deflation: getLevel('corrNextdeflation'),
-                extinction: getLevel('corrNextextinction'),
-                illiteracy: getLevel('corrNextilliteracy'),
-                recession: getLevel('corrNextrecession'),
-                dilation: getLevel('corrNextdilation'),
-                hyperchallenge: getLevel('corrNexthyperchallenge')
-            };
-        }
     }
 
     static sumContents(arr: (number | null)[]): number {

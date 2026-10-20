@@ -80,10 +80,6 @@ export interface HSUICGridOptions extends HSOptional<HSUICOptions, 'id'> {
     html?: string | string[];
 }
 
-export interface HSUICFlexOptions extends HSOptional<HSUICOptions, 'id'> {
-    html?: string | string[];
-}
-
 export interface HSUIModalOptions extends HSOptional<HSUICOptions, 'id'> {
     htmlContent?: string;
     position?: HSUIDOMCoordinates;

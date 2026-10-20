@@ -47,18 +47,6 @@ window.__HS_INIT_PROMISE = (async () => {
             loadOrder: 4,
         },
         {
-            className: 'HSDebug',
-            context: 'HSDebug',
-            moduleColor: '#ff2020',
-            loadOrder: 5,
-            initImmediate: true
-        },
-        {
-            className: 'HSShadowDOM',
-            context: 'HSShadowDOM',
-            moduleColor: 'hotpink',
-        },
-        {
             className: 'HSCodes',
             context: 'HSCodes',
             moduleColor: 'darkgoldenrod',

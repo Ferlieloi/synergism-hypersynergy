@@ -44,10 +44,6 @@ export abstract class HSSetting<T extends HSSettingType> {
         return this.definition;
     }
 
-    setDefinition(setting: HSSettingBase<T>) {
-        this.definition = setting;
-    }
-
     enable() {
         this.#handleManualToggle(true);
     }
@@ -259,10 +255,6 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     getCalculatedValue() {
         return this.definition.calculatedSettingValue;
-    }
-
-    toString() {
-        return JSON.stringify(this.definition);
     }
 
     abstract getValue(): T;
