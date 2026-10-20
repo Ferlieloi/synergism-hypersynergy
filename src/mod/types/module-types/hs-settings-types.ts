@@ -6,6 +6,7 @@
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
 import { HSUICSelectOption, HTMLProps } from "./hs-ui-types";
+import type { HSPlatformName } from "../../class/hs-core/hs-platform";
 
 export type HSSettingType = number | string | string[] | boolean | null;
 export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSettingType>>;
@@ -34,6 +35,7 @@ export interface HSSettingsDefinition {
     hideGameDialogsNotify: HideGameDialogsNotifySetting;
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
     autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
+    reloadOnLateLoaderStart: ReloadOnLateLoaderStartSetting;
     rememberSubtabs: RememberSubtabsSetting;
 
     // Log Settings
@@ -159,6 +161,8 @@ export interface HSSettingBase<T> {
     settingAction?: string;
     usesGameData?: boolean;
     skipInit?: boolean;
+    /** Shown in the settings panel only on these platforms (all when absent). The setting itself still works everywhere */
+    platforms?: HSPlatformName[];
 }
 
 // Expand Cost Protection Settings
@@ -191,6 +195,7 @@ export interface HideGameDialogsSetting extends HSSettingBase<boolean> { }
 export interface HideGameDialogsNotifySetting extends HSSettingBase<boolean> { }
 export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
 export interface AutoDismissOfflinePopupSetting extends HSSettingBase<boolean> { }
+export interface ReloadOnLateLoaderStartSetting extends HSSettingBase<boolean> { }
 export interface RememberSubtabsSetting extends HSSettingBase<boolean> { }
 
 // Timed save export

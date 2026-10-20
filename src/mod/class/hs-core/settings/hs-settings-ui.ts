@@ -7,6 +7,7 @@ import { HSGlobal } from "../hs-global";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType, HSUICSelectOption } from "../../../types/module-types/hs-ui-types";
 import { HSLogger } from "../hs-logger";
+import { HSPlatform } from "../hs-platform";
 import { HSSetting } from "./hs-setting";
 import { HSSettings } from "./hs-settings";
 import { HSStrategyManager } from "./hs-strategy-manager";
@@ -552,7 +553,10 @@ export class HSSettingsUI {
         const subTabs: string[] = [];
 
         for (const [key, page] of sortedPages) {
-            const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
+            const haveAnySettingsForPage = sortedSettings.some(([, settingObj]) => {
+                const setting = settingObj.getDefinition() as HSSettingBaseWithHidden<HSSettingType>;
+                return setting.settingControl?.controlPage === key && this.#isShownInPanel(setting);
+            });
             if (!haveAnySettingsForPage) continue;
 
             subTabs.push(HSUIC.Div({
@@ -572,6 +576,14 @@ export class HSSettingsUI {
         });
     }
 
+    // Not hidden, and meant for the platform the mod was loaded on (shown when it isn't known yet)
+    static #isShownInPanel(setting: HSSettingBaseWithHidden<HSSettingType>): boolean {
+        if (setting.hidden === true) return false;
+        if (!setting.platforms) return true;
+        const platform = HSPlatform.get();
+        return platform === null || setting.platforms.includes(platform);
+    }
+
     static #buildPagesHTML(
         sortedSettings: [string, HSSetting<HSSettingType>][],
         controlGroups: Record<string, HSSettingControlGroup>,
@@ -583,7 +595,7 @@ export class HSSettingsUI {
         for (const [key, settingObj] of sortedSettings) {
             const setting = settingObj.getDefinition() as HSSettingBaseWithHidden<HSSettingType>;
 
-            if (setting.hidden === true) continue;
+            if (!this.#isShownInPanel(setting)) continue;
 
             const controls = setting.settingControl;
             if (!controls) {

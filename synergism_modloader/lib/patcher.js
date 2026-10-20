@@ -716,7 +716,9 @@ function guardBrowserGameElements(getPatchedScript, onBlocked) {
     const gameElements = ['tab-row', 'sub-tab'];
     const assertUnclaimed = () => {
         if (gameElements.some(name => customElements.get(name))) {
-            throw new Error('The original game registered its UI before the loader started. Enable the userscript at document-start and refresh.');
+            const error = new Error('The original game registered its UI before the loader started. Enable the userscript at document-start and refresh.');
+            error.hsGameStartedFirst = true;
+            throw error;
         }
     };
     assertUnclaimed();
@@ -771,9 +773,71 @@ function startBrowserLoader(options) {
     // ─── State ────────────────────────────────────────────────────────────────
     let gameScriptDetected = false;
     let patchedScript = null;
+
+    // ─── Late start ───────────────────────────────────────────────────────────
+    // The original game ran before the userscript (Tampermonkey injected it late, e.g. its
+    // worker was asleep): it can't be patched any more. A reload usually wins the race.
+    // At most LATE_START_MAX_RELOADS in a row, counted in sessionStorage so it can't loop.
+    // The mod's reloadOnLateLoaderStart setting (read from localStorage) can turn the reload off.
+    const LATE_START_KEY = 'hs-loader-late-start-reloads';
+    const LATE_START_MAX_RELOADS = 2;
+    const LATE_START_WINDOW_MS = 60000;
+    const LATE_START_RELOAD_DELAY_MS = 1500;
+
+    // null when sessionStorage can't be used: then no automatic reload, nothing would stop a loop
+    function readLateStartReloads() {
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(LATE_START_KEY) || 'null');
+            return saved && Date.now() - saved.at < LATE_START_WINDOW_MS ? saved.count : 0;
+        } catch {
+            return null;
+        }
+    }
+
+    function clearLateStartReloads() {
+        try { sessionStorage.removeItem(LATE_START_KEY); } catch { }
+    }
+
+    function showLoaderBanner(text, closable) {
+        const show = () => {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;padding:8px 36px;' +
+                'background:#2b2108;color:#ffd27a;border-bottom:2px solid #fa4;font:14px/1.4 sans-serif;text-align:center;';
+            banner.textContent = text;
+            if (closable) {
+                const close = document.createElement('button');
+                close.textContent = '✕';
+                close.style.cssText = 'position:absolute;top:4px;right:8px;background:none;border:none;color:inherit;font-size:16px;cursor:pointer;';
+                close.addEventListener('click', () => banner.remove());
+                banner.appendChild(close);
+            }
+            (document.body || document.documentElement).appendChild(banner);
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show, { once: true });
+        else show();
+    }
+
+    function recoverFromLateStart() {
+        const reloads = readModBooleanSetting('reloadOnLateLoaderStart', true) ? readLateStartReloads() : null;
+        if (reloads !== null && reloads < LATE_START_MAX_RELOADS) {
+            try {
+                sessionStorage.setItem(LATE_START_KEY, JSON.stringify({ count: reloads + 1, at: Date.now() }));
+            } catch { }
+            log(`Game started before the loader: reloading (${reloads + 1}/${LATE_START_MAX_RELOADS})`);
+            showLoaderBanner(`HyperSynergism: the game started before the mod's loader. Reloading… (${reloads + 1}/${LATE_START_MAX_RELOADS})`, false);
+            setTimeout(() => location.reload(), LATE_START_RELOAD_DELAY_MS);
+            return;
+        }
+        // A manual refresh gets its automatic reloads again
+        clearLateStartReloads();
+        showLoaderBanner('HyperSynergism could not start: Tampermonkey ran the loader too late. Refresh the page.' +
+            (isFirefox ? '' : ' If it keeps happening, turn on "Allow User Scripts" in Chrome\'s extension details for Tampermonkey.'), true);
+    }
+
     const fail = error => {
         window.__HS_LOADER_ERROR = String(error?.message || error);
         warn('Loader stopped:', error);
+        if (error?.hsGameStartedFirst) recoverFromLateStart();
     };
     let assertUnclaimed;
     try {
@@ -1015,6 +1079,7 @@ function startBrowserLoader(options) {
         }
         // Restore fetch — the block on /dist/out*.js is no longer needed.
         window.fetch = originalFetch;
+        clearLateStartReloads();
         log('Bundle executed; late original game copies remain guarded');
 
 
