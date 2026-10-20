@@ -20,8 +20,6 @@ export interface HeaterSlotIconApplyResult {
 export class HSAmbrosiaQuickbar {
     readonly context = 'HSAmbrosiaQuickbar';
     readonly host: HSAmbrosia;
-    #quickBarClickHandlers: Map<HTMLButtonElement, (e: Event) => void> = new Map();
-    #quickBarContextMenuHandlers: Map<HTMLButtonElement, (e: Event) => void> = new Map();
     #originalButtonRefs: Map<string, HTMLButtonElement> = new Map();
 
     // Icon picking (mirrors HSQOLCorruptionQuickbar)
@@ -249,21 +247,7 @@ export class HSAmbrosiaQuickbar {
             };
             clone.addEventListener("click", buttonHandler);
             clone.addEventListener("contextmenu", contextMenuHandler);
-            this.#quickBarClickHandlers.set(clone, buttonHandler);
-            this.#quickBarContextMenuHandlers.set(clone, contextMenuHandler);
         });
-    }
-
-    cleanupQuickbarClickHandlers() {
-        for (const [button, handler] of this.#quickBarClickHandlers.entries()) {
-            button.removeEventListener("click", handler);
-        }
-        for (const [button, handler] of this.#quickBarContextMenuHandlers.entries()) {
-            button.removeEventListener("contextmenu", handler);
-        }
-        this.#quickBarClickHandlers.clear();
-        this.#quickBarContextMenuHandlers.clear();
-        this.#originalButtonRefs.clear();
     }
 
     #cacheOriginalButtonRef(buttonId: string) {
@@ -310,28 +294,12 @@ export class HSAmbrosiaQuickbar {
         }
     }
 
-    updateQuickBar() {
-        const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
-        if (!isInjected) { HSLogger.warn("updateQuickBar() fail: quickbar not injected", this.context); return; }
-
-        const quickbarSetting = HSSettings.getSetting("ambrosiaQuickBar") as HSSetting<boolean>;
-
-        if (quickbarSetting.isEnabled()) {
-            this.refreshQuickbarIcons();
-        }
-    }
-
     public getQuickbarElement(): HTMLElement | null {
         const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
         if (!isInjected) { HSLogger.warn("getQuickbarElement() fail: quickbar not injected", this.context); return null; }
 
         const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
         return groupWrapper?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`) as HTMLElement | null;
-    }
-
-    public getOriginalButtonRef(buttonId?: string): HTMLButtonElement | undefined {
-        if (!buttonId) return undefined;
-        return this.#originalButtonRefs.get(buttonId);
     }
 
     public getClonedButtonRef(buttonId?: string): HTMLButtonElement | undefined {
@@ -414,13 +382,6 @@ export class HSAmbrosiaQuickbar {
             ambQuickBar.style.display = "none";
             HSUI.removeInjectedStyle(this.host.getQuickbarCSSId());
         }
-    }
-
-    async destroy() {
-        this.#iconPicker.dispose();
-        this.cleanupQuickbarClickHandlers();
-        HSQuickbarManager.getInstance().removeSection("ambrosia");
-        HSUI.removeInjectedStyle(this.host.getQuickbarCSSId());
     }
 
     // ======================================================

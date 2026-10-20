@@ -348,33 +348,12 @@ export class HSAmbrosia extends HSModule
         }
     }
 
-    updateQuickBar() {
-        this.quickbar.updateQuickBar();
-    }
-
     async showQuickBar() {
         await this.quickbar.showQuickBar();
     }
 
     async hideQuickBar() {
         await this.quickbar.hideQuickBar();
-    }
-
-    // Never used, and not really any need for it since we want HSAmbrosia basically always ON
-    async destroy() {
-        this.#gameActiveLoadoutObserver?.disconnect();
-        await this.quickbar.destroy();
-        await this.disableBerryMinibars();
-        this.unsubscribeGameDataChanges();
-        this.#unsubscribeGameStateViewChanges();
-
-        // Remove style tokens
-        HSUI.removeInjectedStyle(this.#minibarCSSId);
-        // RETIRED: HSUI.removeInjectedStyle(this.#idleLoadoutCSSId);
-
-        this.isInitialized = false;
-        this.activeLoadout = undefined;
-        this.#activeLoadoutConfirmed = false;
     }
 
 
@@ -1103,16 +1082,6 @@ export class HSAmbrosia extends HSModule
                     }
                 }
             );
-        }
-    }
-
-    #unsubscribeGameStateViewChanges() {
-        const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
-        if (!gameStateMod) return;
-
-        if (this.#ambrosiaViewSubscriptionId) {
-            gameStateMod.unsubscribeForView(this.#ambrosiaViewSubscriptionId);
-            this.#ambrosiaViewSubscriptionId = undefined;
         }
     }
 

@@ -175,18 +175,6 @@ export class HSCorruption {
         return this.#userLoadouts;
     }
 
-    /** Return the currently loaded corruption levels (refresh from DOM first). */
-    static async getCurrentLoadedCorruption(): Promise<HSCorruptionLevels> {
-        await HSCorruption.refreshLoadedCorruptions();
-        return this.#currentCorruptionLevels ?? HSCorruption.ZERO_CORRUPTIONS;
-    }
-
-    /** Return the next planned corruption levels (refresh from DOM first). */
-    static async getNextLoadedCorruption(): Promise<HSCorruptionLevels> {
-        await HSCorruption.refreshLoadedCorruptions();
-        return this.#nextCorruptionLevels ?? HSCorruption.ZERO_CORRUPTIONS;
-    }
-
     /** Return both current and next corruption levels after refresh. */
     static async getBothLoadedCorruptions(): Promise<{ current: HSCorruptionLevels; next: HSCorruptionLevels }> {
         await HSCorruption.refreshLoadedCorruptions();

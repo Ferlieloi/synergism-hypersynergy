@@ -8,8 +8,6 @@ import type { HeaterOptimizationResult } from "../../../types/data-types/hs-heat
 import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
 
 export class HSHeaterResultModalController {
-    static context = 'HSHeaterResultModalController';
-
     static currentResultModalId: string | null = null;
     static currentResultParentModalId: string | null = null;
 

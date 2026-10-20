@@ -132,8 +132,5 @@ window.__HS_INIT_PROMISE = (async () => {
     window.hypersynergism = hypersynergism;
 
     await hypersynergism.init();
-
-    // Ensure all quickbar sections are injected after all modules are initialized
-    // HSQuickbarManager.getInstance().injectAll();
 })();
 void window.__HS_INIT_PROMISE.catch(error => console.error('[HS] Mod initialization failed', error));

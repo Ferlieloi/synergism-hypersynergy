@@ -93,15 +93,6 @@ export class HSHeaterRedAmbrosiaModalController {
         this.attachModalHandlers(modal);
     }
 
-    static async closeCurrentRedAmbrosiaModal(): Promise<void> {
-        if (!this.currentRedAmbrosiaModalId) return;
-        const hsui = HSModuleManager.getModule<HSUI>('HSUI');
-        if (!hsui) return;
-        await hsui.CloseModal(this.currentRedAmbrosiaModalId);
-        this.currentRedAmbrosiaModalId = null;
-        this.#sortState = { key: null, direction: null };
-    }
-
     private static monitorRedAmbrosiaModalRemoval(modal: HTMLElement): void {
         if (this.#currentRedAmbrosiaModalObserver) return;
 

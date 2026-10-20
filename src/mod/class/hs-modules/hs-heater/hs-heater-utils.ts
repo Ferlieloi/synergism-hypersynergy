@@ -38,14 +38,6 @@ export const formatNumber = (number: number, fixedDecimals = true): string => {
     });
 };
 
-export interface HeaterFusionInputs {
-    fusion: number;
-    rBar: number;
-    rSpeed: number;
-    rLuckRLuck: number;
-    baseRLuck: number;
-}
-
 export function normalizeHeaterFusion(fusion: number, rBar: number, rSpeed: number): number {
     const normalizedFusion = (fusion > 0 ? 1 : 0) + 0.02 * fusion;
     return rBar > 0 ? normalizedFusion * (rSpeed / rBar) : 0;
@@ -53,11 +45,6 @@ export function normalizeHeaterFusion(fusion: number, rBar: number, rSpeed: numb
 
 export function computeHeaterFusionValue(fusion: number, rLuckRLuck: number, baseRLuck: number): number {
     return fusion * rLuckRLuck * baseRLuck / 100;
-}
-
-export function computeHeaterFusionValueFromStats(inputs: HeaterFusionInputs): number {
-    const normalizedFusion = normalizeHeaterFusion(inputs.fusion, inputs.rBar, inputs.rSpeed);
-    return computeHeaterFusionValue(normalizedFusion, inputs.rLuckRLuck, inputs.baseRLuck);
 }
 
 export function computeHeaterFusionGain(fusionValue: number, multiplier: number): number {

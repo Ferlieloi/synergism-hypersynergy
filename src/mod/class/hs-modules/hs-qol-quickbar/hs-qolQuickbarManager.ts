@@ -18,8 +18,6 @@ export class HSQuickbarManager {
     static #instance: HSQuickbarManager;
     #sectionFactories: Map<QUICKBAR_ID, QuickbarSectionFactory> = new Map();
     #sectionElements: Map<QUICKBAR_ID, HTMLElement> = new Map();
-    #sectionInjectedCallbacks: Map<QUICKBAR_ID, (() => void)[]> = new Map();
-    #sectionOrder: QUICKBAR_ID[] = [];
 
     /** Canonical, type-safe quickbar IDs. Use for all quickbar references. */
     public static readonly QUICKBAR_IDS = {
@@ -73,19 +71,9 @@ export class HSQuickbarManager {
         return quickbarsRow;
     }
 
-    /** Get the #quickbarsRow element if it exists, otherwise undefined. */
-    public static getQuickbarsRow(): HTMLDivElement | undefined {
-        let header = document.querySelector('header');
-        if (!header) return undefined;
-        return header.querySelector('#quickbarsRow') as HTMLDivElement | null || undefined;
-    }
-
     /** Register a quickbar section factory for the given id. */
     public registerSection(id: QUICKBAR_ID, factory: QuickbarSectionFactory): void {
         this.#sectionFactories.set(id, factory);
-        if (!this.#sectionOrder.includes(id)) {
-            this.#sectionOrder.push(id);
-        }
         // --- Promise-based: create a new promise if not present ---
         if (!this.#sectionInjectedPromises.has(id)) {
             this.#sectionInjectedPromises.set(id, new Promise(resolve => {
@@ -105,11 +93,11 @@ export class HSQuickbarManager {
             row.removeChild(existing);
         }
 
-        // Update sectionOrder to match QUICKBAR_ORDER, only including registered sections
-        this.#sectionOrder = HSQuickbarManager.#QUICKBAR_ORDER.filter(sectionId => this.#sectionFactories.has(sectionId));
+        // QUICKBAR_ORDER, only including registered sections
+        const sectionOrder = HSQuickbarManager.#QUICKBAR_ORDER.filter(sectionId => this.#sectionFactories.has(sectionId));
 
         // Find the correct insertion index for this section
-        const insertIndex = this.#sectionOrder.indexOf(id);
+        const insertIndex = sectionOrder.indexOf(id);
         if (insertIndex === -1) return; // Not registered
 
         // Create the new element
@@ -125,8 +113,8 @@ export class HSQuickbarManager {
 
         // Find the next quickbar element in order (if any)
         let nextElement: HTMLElement | null = null;
-        for (let i = insertIndex + 1; i < this.#sectionOrder.length; i++) {
-            const nextId = this.#sectionOrder[i];
+        for (let i = insertIndex + 1; i < sectionOrder.length; i++) {
+            const nextId = sectionOrder[i];
             const nextEl = this.#sectionElements.get(nextId);
             if (nextEl && nextEl.parentElement === row) {
                 nextElement = nextEl;
@@ -142,13 +130,6 @@ export class HSQuickbarManager {
         }
         this.#sectionElements.set(id, el);
 
-        // Call section injected callbacks if any
-        const callbacks = this.#sectionInjectedCallbacks.get(id);
-        if (callbacks) {
-            for (const cb of callbacks) {
-                try { cb(); } catch (e) { /* ignore */ }
-            }
-        }
         // --- Promise-based: resolve the injection promise ---
         const resolver = this.#sectionInjectedResolvers.get(id);
         if (resolver) {
@@ -170,37 +151,9 @@ export class HSQuickbarManager {
         return this.#sectionInjectedPromises.get(id)!;
     }
 
-    /** Register a callback to run when a section is injected (calls immediately if already injected). */
-    public onSectionInjected(id: QUICKBAR_ID, callback: () => void): void {
-        if (this.#sectionElements.has(id)) {
-            HSLogger.debug(() => `section ${id} already injected, calling callback immediately`, this.#context);
-            callback();
-            return;
-        }
-        if (!this.#sectionInjectedCallbacks.has(id)) {
-            this.#sectionInjectedCallbacks.set(id, []);
-        }
-        this.#sectionInjectedCallbacks.get(id)!.push(callback);
-    }
-
-    /** Return the current ordered list of registered section IDs. */
-    public getSectionOrder(): QUICKBAR_ID[] {
-        return [...this.#sectionOrder];
-    }
-
     /** Return whether the section has already been injected into the DOM. */
     public isInjected(id: QUICKBAR_ID): boolean {
         return this.#sectionElements.has(id);
-    }
-
-    /** Inject all registered quickbar sections into the DOM in configured order. */
-    public injectAll(): void {
-        const row = HSQuickbarManager.ensureQuickbarsRow();
-        for (const sectionId of HSQuickbarManager.#QUICKBAR_ORDER) {
-            if (this.#sectionFactories.has(sectionId)) {
-                this.injectSection(sectionId, row);
-            }
-        }
     }
 
     /** Get the DOM element for a registered section (after injection). */
@@ -253,7 +206,6 @@ export class HSQuickbarManager {
         }
 
         this.#sectionFactories.delete(id);
-        this.#sectionOrder = this.#sectionOrder.filter(x => x !== id);
         const el = this.#sectionElements.get(id);
         if (el && el.parentElement) {
             el.parentElement.removeChild(el);

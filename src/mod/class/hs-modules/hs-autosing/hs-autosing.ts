@@ -1852,10 +1852,6 @@ export class HSAutosing extends HSModule {
     // MISC - PUBLIC API
     // ============================================================================
 
-    isAutosingEnabled(): boolean {
-        return this.#autosingEnabled;
-    }
-
     /** Running, starting (not cancelled yet), or waiting to restart. */
     isAutosingActive(): boolean {
         return this.#autosingEnabled

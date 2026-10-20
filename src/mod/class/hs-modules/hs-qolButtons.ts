@@ -103,12 +103,6 @@ export class HSQOLButtons extends HSModule {
         // this.injectAFKSwapperToggleButton();
     }
 
-    public getEventsQuickbarSection(): HTMLElement {
-        const container = document.createElement('div');
-        container.id = 'eventsQuickBar';
-        return container;
-    }
-    
     observe() {
         if (this.#offeringPotion) {
             this.#offeringPotionObserver.observe(this.#offeringPotion, this.#config);

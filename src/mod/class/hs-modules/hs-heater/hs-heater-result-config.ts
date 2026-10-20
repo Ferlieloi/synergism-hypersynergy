@@ -216,7 +216,6 @@ export const HEATER_BRANCH_DEFINITIONS = [
 
 export type HeaterBranchDefinition = typeof HEATER_BRANCH_DEFINITIONS[number];
 export type HeaterBranchId = HeaterBranchDefinition["id"];
-export type HeaterOptionKey = HeaterBranchDefinition["optionKey"];
 
 export function getHeaterTypeRowCount(key: ResultKey): number {
     return HEATER_RESULT_TYPE_CONFIG[key]?.rowLabels?.length ?? 1;
@@ -241,10 +240,6 @@ function isRowBasedResultKey(value: string): value is RowBasedResultKey {
 
 export function buildHeaterTypeSemanticId(key: ResultKey, rowIndex?: number): HeaterTypeSemanticId {
     return rowIndex === undefined ? key as HeaterTypeSemanticId : `${key}:${rowIndex}` as HeaterTypeSemanticId;
-}
-
-export function isHeaterTypeSemanticId(semanticId: string): semanticId is HeaterTypeSemanticId {
-    return parseHeaterTypeSemanticId(semanticId) !== null;
 }
 
 type ParsedHeaterTypeSemanticId =

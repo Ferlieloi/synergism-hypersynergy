@@ -713,10 +713,6 @@ class Upgrade {
       return rLuck
     }
 
-    static rSpeed(speed = 1) {
-      return Math.min(speed, Math.sqrt(1000 * speed))
-    }
-
     static shopQuark(level = 0, loadout: Loadout) {
       let base = (1 + 0.2 * Math.log2(1 + stats.qHept / 500))
       const vouchers = loadout.getStat('vouchers')
