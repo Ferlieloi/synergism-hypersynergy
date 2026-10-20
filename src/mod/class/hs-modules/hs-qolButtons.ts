@@ -17,6 +17,7 @@ import type { GameData } from "../../types/data-types/hs-player-savedata";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSUI } from "../hs-core/hs-ui";
+import { HSHeaderModules } from "../hs-core/hs-header-modules";
 
 const MAXED_UPGRADE_TOGGLES = {
     toggleMaxedGoldenQuarkUpgrades: 'hideMaxedGQUpgrades',
@@ -36,6 +37,8 @@ export class HSQOLButtons extends HSModule {
     #tabVisitUnsubscribers: Map<SINGULARITY_VIEW, () => void> = new Map();
 
     #automationQuickbarHandler: HSQOLAutomationQuickbar | null = null;
+    // The Automation Quickbar's id as a module of the game's header (see HSHeaderModules)
+    static readonly #AUTOMATION_HEADER_MODULE = 'hsAutomationHeader';
 
     #offeringPotion: HTMLElement | null;
     #obtainiumPotion: HTMLElement | null;
@@ -878,10 +881,24 @@ export class HSQOLButtons extends HSModule {
         }
     }
 
-    /** Public wrapper to enable the Automation Quickbar. */
+    /**
+     * Enable the Automation Quickbar: a module of the game's header, which the player places in the header's edit mode
+     * (it starts in the tray), or the mod's quickbar row without the patcher's header modules patch.
+     */
     public enableAutomationQuickbar(): void {
         if (!this.#automationQuickbarHandler) this.#automationQuickbarHandler = new HSQOLAutomationQuickbar();
         const handler = this.#automationQuickbarHandler;
+
+        const headerModule = HSHeaderModules.register(HSQOLButtons.#AUTOMATION_HEADER_MODULE);
+        if (headerModule) {
+            // Already filled: enabled twice
+            if (headerModule.childElementCount > 0) return;
+            const section = handler.createSection() as HTMLDivElement;
+            headerModule.appendChild(section);
+            handler.setup(section).catch(e => HSLogger.log(`Error during automation quickbar setup: ${e}`, this.context));
+            return;
+        }
+
         this.#enableQuickbar(
             HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
             () => ({
@@ -896,10 +913,20 @@ export class HSQOLButtons extends HSModule {
         );
     }
 
-    /** Public wrapper to disable the Automation Quickbar. */
+    /** Disable the Automation Quickbar, wherever it is (its place in the header stays remembered). */
     public disableAutomationQuickbar(): void {
-        // Manager will call the stored teardown; just remove the section and drop handler reference.
-        this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
+        const id = HSQOLButtons.#AUTOMATION_HEADER_MODULE;
+        if (HSHeaderModules.isRegistered(id)) {
+            try { this.#automationQuickbarHandler?.teardown(); }
+            catch (e) { HSLogger.log(`Error during automation quickbar teardown: ${e}`, this.context); }
+            // Taken before unregister() takes it out of the page; emptied so the next enable fills it again
+            const headerModule = document.getElementById(id);
+            HSHeaderModules.unregister(id);
+            headerModule?.replaceChildren();
+        } else {
+            // Manager will call the stored teardown; just remove the section and drop handler reference.
+            this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
+        }
         this.#automationQuickbarHandler = null;
     }
 

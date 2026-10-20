@@ -1,5 +1,54 @@
 // Shared bundle patcher for browser userscripts and the desktop launcher.
 // The browser startup code below uses this same function with Steam changes disabled.
+
+// For the header modules patch (see there). Self-contained: its source is written into the game bundle.
+// A copy of the player without the mod's module ids ("hs" then a capital letter) in its headerLayouts (slots, hidden,
+// sizes, positions), or the same object when there are none. Never changes what it's given.
+function stripHeaderModules(player) {
+    const isMod = id => typeof id === 'string' && /^hs[A-Z]/.test(id);
+    const layouts = player && player.headerLayouts;
+    if (!layouts || typeof layouts !== 'object') return player;
+    const withoutMod = record => {
+        if (!record || typeof record !== 'object' || !Object.keys(record).some(isMod)) return record;
+        const copy = Object.assign({}, record);
+        for (const id of Object.keys(copy)) if (isMod(id)) delete copy[id];
+        return copy;
+    };
+    let changed = false;
+    const strippedLayouts = {};
+    for (const key of Object.keys(layouts)) {
+        const layout = layouts[key];
+        strippedLayouts[key] = layout;
+        if (!layout || typeof layout !== 'object' || !layout.regions || typeof layout.regions !== 'object') continue;
+        let found = false;
+        // Left alone in a slot, a module loses the stack's S size, as when the game unstacks it
+        const unstacked = [];
+        const regions = {};
+        for (const region of Object.keys(layout.regions)) {
+            const slots = layout.regions[region];
+            regions[region] = !Array.isArray(slots) ? slots : slots.map(slot => {
+                if (!Array.isArray(slot) || !slot.some(isMod)) return slot;
+                found = true;
+                const kept = slot.filter(id => !isMod(id));
+                if (kept.length === 1) unstacked.push(kept[0]);
+                return kept;
+            });
+        }
+        let sizes = withoutMod(layout.sizes);
+        const positions = withoutMod(layout.positions);
+        const hidden = Array.isArray(layout.hidden) ? layout.hidden.filter(id => !isMod(id)) : layout.hidden;
+        if (!found && sizes === layout.sizes && positions === layout.positions
+            && (!Array.isArray(hidden) || hidden.length === layout.hidden.length)) continue;
+        if (sizes && typeof sizes === 'object' && unstacked.some(id => sizes[id] === 'S')) {
+            sizes = Object.assign({}, sizes);
+            for (const id of unstacked) if (sizes[id] === 'S') delete sizes[id];
+        }
+        strippedLayouts[key] = Object.assign({}, layout, { regions, sizes, hidden, positions });
+        changed = true;
+    }
+    return changed ? Object.assign({}, player, { headerLayouts: strippedLayouts }) : player;
+}
+
 function patchBundle(code, options = {}) {
     const log = options.log || ((...a) => console.log('[PATCH]', ...a));
     const warn = options.warn || ((...a) => console.warn('[PATCH]', ...a));
@@ -668,6 +717,83 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── HEADER MODULES PATCH — let the mod add its own modules to the game's editable header (HeaderModules.ts)
+    // The mod's module ids start with "hs" then a capital letter (no game id does). They live only in the live
+    // player.headerLayouts: the game's save schema checks every id against its own list, and one unknown id resets the
+    // whole layout. So no save ever holds them, and a save loaded by an unpatched game keeps the player's header.
+    // The mod remembers where its modules are, and puts them back before each render.
+    // 1. saveSynergy, found by its "testing.gameSaved" message and the talismans it writes (fragmentsInvested):
+    //    its one schema parse of the player saves a copy without the mod's ids:
+    //      let t=Yp.parse(n)  becomes  let t=Yp.parse(window.__HS_stripHeaderModules(n))
+    // 2. loadSynergy, found by its "testing.saveInLive2" message: the save it parses loses the mod's ids (a singularity
+    //    reloads the live layout, and importSynergism stores that save as is until the next saveSynergy):
+    //      let t=JSON.parse(atob(e))  becomes  let t=window.__HS_parseSave(atob(e))
+    // 3. headerModuleUnlocks, the object literal with a key per module (ascCubeStats … singularitybtn): captured as
+    //    window.__HS_headerModuleUnlocks, where the mod adds its modules (the render calls it for each placed id).
+    // 4. renderHeaderLayout, found by "--header-button-slots" and "headerTray": exposed as window.__HS_renderHeaderLayout,
+    //    and calls window.__HS_beforeHeaderRender at the start (where the mod puts its modules back).
+    // All four or none: without 1, a save would hold the mod's ids; without 2-4, the mod has nothing to add them with.
+    report.headerModules = false;
+    try {
+        let next = code;
+        const problems = [];
+
+        const saveResult = findEnclosingFunction(next, /["']testing\.gameSaved["']/g, ['fragmentsInvested'], 'header modules (saveSynergy)');
+        const schemaParse = /(?<![\w$.])(?!JSON\.)([a-zA-Z_$][\w$]*)\.parse\(\s*([a-zA-Z_$][\w$]*)\s*\)/g;
+        const saveParses = saveResult ? [...next.slice(saveResult.bodyStart, saveResult.bodyEnd).matchAll(schemaParse)] : [];
+        if (saveParses.length === 1) {
+            const [match, schema, playerVar] = saveParses[0];
+            const at = saveResult.bodyStart + saveParses[0].index;
+            next = next.slice(0, at) + `${schema}.parse(window.__HS_stripHeaderModules(${playerVar}))` + next.slice(at + match.length);
+        } else {
+            problems.push(saveResult
+                ? `expected 1 schema parse in saveSynergy (fn=${saveResult.fnName}), found ${saveParses.length}`
+                : 'saveSynergy ("testing.gameSaved") not found');
+        }
+
+        const loadResult = findEnclosingFunction(next, /["']testing\.saveInLive2["']/g, [], 'header modules (loadSynergy)');
+        const loadParseAt = loadResult ? next.slice(loadResult.bodyStart, loadResult.bodyEnd).search(/(?<![\w$.])JSON\.parse\(/) : -1;
+        if (loadParseAt >= 0) {
+            const at = loadResult.bodyStart + loadParseAt;
+            next = next.slice(0, at) + 'window.__HS_parseSave(' + next.slice(at + 'JSON.parse('.length);
+        } else {
+            problems.push(loadResult ? `no JSON.parse in loadSynergy (fn=${loadResult.fnName})` : 'loadSynergy ("testing.saveInLive2") not found');
+        }
+
+        const unlocks = findAssignedObjectLiteral(next, /(?<![\w$.])["']?ascCubeStats["']?\s*:/g,
+            ['singularitybtn', 'ascensionChallengeProgress'], 'header modules (headerModuleUnlocks)');
+        if (unlocks) {
+            const capture = '(function(o){window.__HS_headerModuleUnlocks=o;return o})(';
+            next = next.slice(0, unlocks.start) + capture + next.slice(unlocks.start, unlocks.end + 1) + ')' + next.slice(unlocks.end + 1);
+        } else {
+            problems.push('headerModuleUnlocks (ascCubeStats … singularitybtn) not found');
+        }
+
+        const renderResult = findEnclosingFunction(next, /["']--header-button-slots["']/g, ['headerTray'], 'header modules (renderHeaderLayout)');
+        if (renderResult) {
+            next = next.slice(0, renderResult.bodyStart) + '\ntry{window.__HS_beforeHeaderRender?.()}catch(__hsE){}\n' +
+                next.slice(renderResult.bodyStart);
+            next = exposeFunction(next, renderResult, '__HS_renderHeaderLayout').code;
+        } else {
+            problems.push('renderHeaderLayout ("--header-button-slots") not found');
+        }
+
+        if (problems.length === 0) {
+            code = next;
+            topLines.push(`window.__HS_stripHeaderModules=${String(stripHeaderModules)};` +
+                'window.__HS_parseSave=function(t){return window.__HS_stripHeaderModules(JSON.parse(t))};' +
+                'window.__HS_HEADER_MODULES_PATCHED = true;');
+            report.headerModules = true;
+            log(`Patched the header modules (save=${saveResult.fnName}, load=${loadResult.fnName}, ` +
+                `unlocks=${unlocks.name}, render=${renderResult.fnName})`);
+        } else {
+            warn(`Could not patch the header modules — ${problems.join('; ')}`);
+        }
+    } catch (e) {
+        warn('Error while patching the header modules', e);
+    }
+
+    // ==================================================================================
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — sync the Steam cloud on its 60 s clock only, not at each manual save
         // (remove the manual trigger: e || ...). In saveSynergy, found by its "testing.gameSaved" message,
@@ -1119,6 +1245,7 @@ function startBrowserLoader(options) {
                         `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
                         `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
                         `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +
+                        `headerModulesPatched: !!window.__HS_HEADER_MODULES_PATCHED,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
                     `};` +
                 `}` +

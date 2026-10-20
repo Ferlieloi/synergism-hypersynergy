@@ -1386,7 +1386,7 @@
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",
-    "settingHelpText": "When enabled, shows a compact automation status bar in the header (adapted from the syn UI userscript).",
+    "settingHelpText": "A compact bar of the automation toggles (adapted from the syn UI userscript). It is a module of the game's header: hold any header module to edit the header, then drag the bar out of the Hidden tray to where you want it. Without the game patch (bookmarklet), it shows in its own row at the bottom of the header.",
     "settingType": "boolean",
     "enabled": true,
     "settingAction": "enableAutomationQuickBarAction",

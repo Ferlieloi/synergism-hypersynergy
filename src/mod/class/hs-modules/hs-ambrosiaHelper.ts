@@ -17,7 +17,6 @@ export class HSAmbrosiaHelper {
     static #context: string = 'HSAmbrosiaHelper';
 
     static #cachedBlueberryToggleModeButton: HTMLButtonElement | undefined;
-    static #cachedQuickbarSummaryElements: HTMLElement[] | undefined;
     // Texts of the mode toggle button (normalized), in every language seen this session: the game writes
     // the button from ambrosia.loadouts.load/save and doesn't re-translate it on a language switch.
     static readonly #modeLabels: Record<BlueberryLoadoutMode, Set<string>> = {
@@ -38,15 +37,6 @@ export class HSAmbrosiaHelper {
         }
         HSLogger.warn('Could not cache blueberry loadout mode toggle button', this.#context);
         return undefined;
-    }
-
-    static getCachedQuickbarSummaryElements(): HTMLElement[] {
-        if (this.#cachedQuickbarSummaryElements) {
-            return this.#cachedQuickbarSummaryElements;
-        }
-        const elements = Array.from(document.querySelectorAll<HTMLElement>('.hs-quickbar-summary-wrapper'));
-        this.#cachedQuickbarSummaryElements = elements;
-        return elements;
     }
 
     /** Resolve an ambrosia loadout slot enum by its slot ID string. */
@@ -166,14 +156,5 @@ export class HSAmbrosiaHelper {
         if (!this.isLoadoutMode(mode)) {
             modeButton.click();
         }
-    }
-
-    /** Show or hide other quickbars' summary headers. */
-    static setQuickbarTopTextVisibility(visibility: boolean): void {
-        const quickbarSummaryElements = this.getCachedQuickbarSummaryElements();
-
-        quickbarSummaryElements.forEach(
-            (el) => el.classList.toggle('hs-hidden', !visibility)
-        );
     }
 }

@@ -73,9 +73,7 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
     protected readonly sectionIdCss = 'automationQuickBar';
 
     #automationQuickBarContainer: HTMLDivElement | null = null;
-    #automationSummaryWrapper: HTMLDivElement | null = null;
     #automationSlotsWrapper: HTMLDivElement | null = null;
-    #challengeMutationObservers: MutationObserver[] = [];
     #automationQuickBarWatcherBySelector = new Map<string, { watcherId: string; element: HTMLElement }>();
     #automationQuickbarBootstrapTimeoutIds: number[] = [];
     #selectorElementCache = new Map<string, HTMLElement | null>();
@@ -960,66 +958,14 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         }
     }
 
-    #resolveActiveChallenges(): string {
-        const activeChallenges: string[] = [];
-
-        // Reverse order to have the highest one first
-        for (let challenge = 15; challenge >= 1; challenge -= 1) {
-            const el = document.getElementById(`challenge${challenge}`);
-            if (el && el.classList.contains('challengeActive')) {
-                activeChallenges.push(`C${challenge}`);
-            }
-        }
-
-        return activeChallenges.length > 0 ? activeChallenges.join(' > ') : 'C∅';
-    }
-
-    #updateAutomationSummaryText(): void {
-        if (!this.#automationSummaryWrapper) return;
-
-        const activeChallenges = this.#resolveActiveChallenges();
-        this.#automationSummaryWrapper.textContent = activeChallenges || '';
-    }
-
-    #setupChallengeActiveObservers(): void {
-        this.#clearChallengeActiveObservers();
-
-        for (let challenge = 1; challenge <= 15; challenge += 1) {
-            const el = document.getElementById(`challenge${challenge}`);
-            if (!el) continue;
-
-            const observer = new MutationObserver(() => {
-                this.#updateAutomationSummaryText();
-            });
-            observer.observe(el, { attributes: true, attributeFilter: ['class'] });
-            this.#challengeMutationObservers.push(observer);
-        }
-    }
-
-    #clearChallengeActiveObservers(): void {
-        for (const observer of this.#challengeMutationObservers) {
-            observer.disconnect();
-        }
-        this.#challengeMutationObservers = [];
-    }
-
     // Public lifecycle is supplied by HSQOLQuickbarBase via createSection/setup/teardown.
     protected createDOM(): void {
         if (!this.container) return;
-
-        this.#automationSummaryWrapper = document.createElement('div');
-        this.#automationSummaryWrapper.id = 'hs-automation-summary-wrapper';
-        this.#automationSummaryWrapper.className = 'hs-quickbar-summary-wrapper';
-        
-        const minibarsSetting = document.getElementById('hs-setting-ambrosia-minibar-btn') as HTMLElement;
-        if (minibarsSetting && minibarsSetting.classList.contains('hs-disabled'))
-            this.#automationSummaryWrapper.classList.add('hs-hidden');
 
         this.#automationSlotsWrapper = document.createElement('div');
         this.#automationSlotsWrapper.id = 'hs-automation-slots-wrapper';
         this.#automationSlotsWrapper.className = 'hs-quickbar-slots-wrapper';
 
-        this.container.appendChild(this.#automationSummaryWrapper);
         this.container.appendChild(this.#automationSlotsWrapper);
     }
 
@@ -1028,22 +974,16 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
             this.container.innerHTML = '';
         }
         this.#automationQuickBarContainer = null;
-        this.#automationSummaryWrapper = null;
         this.#automationSlotsWrapper = null;
     }
 
     protected onSetup(): void {
         this.#automationQuickBarContainer = this.#automationSlotsWrapper;
         this.#setupAutomationQuickbar();
-
-        // Challenge text summary for C11-15
-        this.#updateAutomationSummaryText();
-        this.#setupChallengeActiveObservers();
     }
 
     protected onTeardown(): void {
         this.#teardownAutomationQuickbar();
         this.#automationQuickBarContainer = null;
-        this.#clearChallengeActiveObservers();
     }
 }

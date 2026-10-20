@@ -325,9 +325,6 @@ export class HSAmbrosia extends HSModule
             if (this.#berryMinibarsEnabled && gameData) {
                 this.#updateBerryMinibars(gameData, gameDataAPI);
             }
-
-            // Restore automation/corruption summary headers when minibars quickbar is enabled.
-            HSAmbrosiaHelper.setQuickbarTopTextVisibility(true);
         } else {
             HSLogger.warn('Could not find minibar wrapper', this.context);
         }
@@ -347,9 +344,6 @@ export class HSAmbrosia extends HSModule
         } else {
             HSLogger.warn('Could not find bar wrapper element', this.context);
         }
-
-        // Hide automation/corruption summary headers when minibars quickbar is disabled.
-        HSAmbrosiaHelper.setQuickbarTopTextVisibility(false);
 
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
