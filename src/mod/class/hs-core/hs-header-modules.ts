@@ -1,6 +1,7 @@
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSStorage } from "./hs-storage";
+import { HSUI } from "./hs-ui";
 import { HSModuleManager } from "./module/hs-module-manager";
 
 const STORAGE_KEY = 'header-modules';
@@ -105,6 +106,8 @@ export class HSHeaderModules {
 
         // In the page before the game looks it up: its DOM cache throws over a missing id
         if (!element.isConnected) document.getElementById('headerTray')!.appendChild(element);
+        // The game checks its locks only at its next revealStuff() (a tab change, a reset): locked from the start
+        try { element.classList.toggle('headerModuleLocked', !unlocked()); } catch { /* the game's next check decides */ }
         HSHeaderModules.#modules.set(id, unlocked);
         (window as any).__HS_headerModuleUnlocks[id] = () => {
             try { return unlocked(); } catch { return false; }
@@ -113,6 +116,24 @@ export class HSHeaderModules {
         HSHeaderModules.#render();
         HSLogger.debug(() => `Header module ${id} registered`, HSHeaderModules.#context);
         return element;
+    }
+
+    /**
+     * Tell the player that a module waits in the header's Hidden tray, and how to place it (they just turned it on).
+     * Nothing when it's placed, locked (the game doesn't offer it), or not registered.
+     * @param name what the player calls it, inside a sentence ("the automation quick bar")
+     */
+    static notifyIfInTray(id: string, name: string): void {
+        const unlocked = HSHeaderModules.#modules.get(id);
+        const element = HSHeaderModules.#elements.get(id);
+        if (!unlocked || element?.parentElement?.id !== 'headerTray') return;
+        try { if (!unlocked()) return; } catch { return; }
+
+        void HSUI.Notify(`To show ${name} in the game's header, hold any header module to edit the header, then drag the module out of the Hidden tray.`, {
+            displayDuration: 8000,
+            width: 440,
+            height: 80
+        });
     }
 
     /** Take a module out of the header and its tray. Its place stays remembered for the next register(). */

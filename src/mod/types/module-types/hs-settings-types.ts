@@ -118,6 +118,8 @@ export interface HSSettingActionParams {
     contextName?: string,
     value?: any,
     disable?: boolean,
+    // The player changed it in the mod panel (not the page load, autosing, or GDS turning it back on)
+    byPlayer?: boolean,
 }
 
 export interface HSSettingControlGroup {

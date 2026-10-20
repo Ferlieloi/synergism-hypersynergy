@@ -22,6 +22,7 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import minibarCSS from "inline:../../resource/css/module/hs-ambrosia-minibars.css";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
+import { HSHeaderModules } from "../hs-core/hs-header-modules";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
 
 interface HSQuickImportSummary {
@@ -118,8 +119,12 @@ export class HSAmbrosia extends HSModule
     #_delegateAddHandler?: (e: Event) => Promise<void>;
     #_delegateTimeHandler?: (e: Event) => Promise<void>;
 
+    // The minibars' id as a module of the game's header (see HSHeaderModules)
+    static readonly #MINIBARS_HEADER_MODULE = 'hsAmbrosiaBars';
     #berryMinibarsEnabled = false;
+    #minibarWrapper?: HTMLDivElement;
     #blueProgressMinibarElement?: HTMLDivElement;
+    #redProgressMinibarBarElement?: HTMLDivElement;
     #redProgressMinibarElement?: HTMLDivElement;
     #purpleProgressMinibarBarElement?: HTMLDivElement;
     #purpleProgressMinibarElement?: HTMLDivElement;
@@ -306,64 +311,64 @@ export class HSAmbrosia extends HSModule
     // -------- Ambrosia Minibars (Quickbar) --------
     // ==============================================
 
-    async enableBerryMinibars() {
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for minibars', this.context);
+    /**
+     * Show the minibars: a module of the game's header, which the player places in the header's edit mode (it starts
+     * in the tray), or above the ambrosia quickbar without the patcher's header modules patch.
+     * @param byPlayer the player turned them on: told how to place them when they're in the tray
+     */
+    async enableBerryMinibars(byPlayer = false) {
+        const barWrapper = this.#minibarWrapper;
+        if (!barWrapper) {
+            HSLogger.warn('Could not find minibar wrapper', this.context);
             return;
         }
-        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-        if (barWrapper) {
-            barWrapper.style.display = 'flex';
-            HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
-            this.subscribeGameDataChanges();
-            this.#berryMinibarsEnabled = true;
-            const gameDataAPI = this.#cachedGameDataAPI
-                ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-            const gameData = gameDataAPI?.getGameData() ?? await gameDataAPI?.getForcedGameData();
-            if (this.#berryMinibarsEnabled && gameData) {
-                this.#updateBerryMinibars(gameData, gameDataAPI);
-            }
+
+        const headerModule = HSHeaderModules.register(HSAmbrosia.#MINIBARS_HEADER_MODULE, () => this.#isAmbrosiaUnlocked());
+        if (headerModule) {
+            headerModule.appendChild(barWrapper);
+            if (byPlayer) HSHeaderModules.notifyIfInTray(HSAmbrosia.#MINIBARS_HEADER_MODULE, 'the ambrosia minibars');
         } else {
-            HSLogger.warn('Could not find minibar wrapper', this.context);
+            await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
+            const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
+            if (!groupWrapper) {
+                HSLogger.warn('Could not find group wrapper for minibars', this.context);
+                return;
+            }
+            groupWrapper.insertBefore(barWrapper, groupWrapper.firstChild);
+        }
+
+        barWrapper.style.display = 'flex';
+        HSUI.injectStyle(minibarCSS, this.#minibarCSSId);
+        this.subscribeGameDataChanges();
+        this.#berryMinibarsEnabled = true;
+        const gameDataAPI = this.#cachedGameDataAPI
+            ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameData = gameDataAPI?.getGameData() ?? await gameDataAPI?.getForcedGameData();
+        if (this.#berryMinibarsEnabled && gameData) {
+            this.#updateBerryMinibars(gameData, gameDataAPI);
         }
     }
 
+    /** Hide the minibars, wherever they are (their place in the header stays remembered). */
     async disableBerryMinibars() {
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for minibars', this.context);
-            return;
-        }
-        const barWrapper = groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`) as HTMLElement;
-        if (barWrapper) {
-            barWrapper.style.display = 'none';
-            HSUI.removeInjectedStyle(this.#minibarCSSId);
-        } else {
-            HSLogger.warn('Could not find bar wrapper element', this.context);
-        }
+        // Takes the module, with the bars in it, out of the page
+        HSHeaderModules.unregister(HSAmbrosia.#MINIBARS_HEADER_MODULE);
+        if (this.#minibarWrapper) this.#minibarWrapper.style.display = 'none';
+        HSUI.removeInjectedStyle(this.#minibarCSSId);
 
         this.#berryMinibarsEnabled = false;
         this.unsubscribeGameDataChanges();
     }
 
+    /** Whether the game shows its ambrosia (Exalt 1 completed), as its own ambrosia header modules check. */
+    #isAmbrosiaUnlocked(): boolean {
+        const completions = HSGlobal.exposedPlayer?.singularityChallenges?.noSingularityUpgrades?.completions;
+        return completions === undefined || completions > 0;
+    }
+
+    /** Builds the minibars, out of the page: enableBerryMinibars() places them. */
     async #createPersistentMinibars() {
-        if (!this.#pageHeader) return;
-
-        // Built by the ambrosia quickbar's section, injected in this.quickbar.init()
-        const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-        if (!groupWrapper) {
-            HSLogger.warn('Could not find group wrapper for minibars', this.context);
-            return;
-        }
-
-        // Check if minibarWrapper already exists
-        if (groupWrapper.querySelector(`#${HSGlobal.HSAmbrosia.barWrapperId}`)) {
-            HSLogger.debug(() => 'Minibar wrapper already exists in group wrapper', this.context);
-            return;
-        }
+        if (!this.#pageHeader || this.#minibarWrapper) return;
 
         // Build independent bars rather than cloning the game's bars. The game uses an
         // inline scaleX transform now, which would otherwise be copied at an arbitrary
@@ -371,19 +376,23 @@ export class HSAmbrosia extends HSModule
         const blueBar = document.createElement('div');
         const blueBarProgress = document.createElement('div');
         blueBar.id = HSGlobal.HSAmbrosia.blueBarId;
+        blueBar.title = 'Ambrosia progress (HyperSynergism)';
         blueBarProgress.id = HSGlobal.HSAmbrosia.blueBarProgressId;
         blueBar.appendChild(blueBarProgress);
 
         const redBar = document.createElement('div');
         const redBarProgress = document.createElement('div');
         redBar.id = HSGlobal.HSAmbrosia.redBarId;
+        redBar.title = 'Red ambrosia progress (HyperSynergism)';
         redBarProgress.id = HSGlobal.HSAmbrosia.redBarProgressId;
+        redBar.style.display = 'none';
         redBar.appendChild(redBarProgress);
 
         // Purple Honey fills symmetrically from both outer edges toward the center.
         const purpleBar = document.createElement('div');
         const purpleBarProgress = document.createElement('div');
         purpleBar.id = HSGlobal.HSAmbrosia.purpleBarId;
+        purpleBar.title = 'Purple honey progress (HyperSynergism)';
         purpleBarProgress.id = HSGlobal.HSAmbrosia.purpleBarProgressId;
         for (let i = 0; i < 2; i++) {
             const half = document.createElement('div');
@@ -393,7 +402,7 @@ export class HSAmbrosia extends HSModule
         purpleBar.style.display = 'none';
         purpleBar.appendChild(purpleBarProgress);
 
-        // Wrapper for both
+        // Wrapper for the three
         const minibarWrapper = document.createElement('div') as HTMLDivElement;
         minibarWrapper.id = HSGlobal.HSAmbrosia.barWrapperId;
         minibarWrapper.style.display = 'none';
@@ -401,14 +410,9 @@ export class HSAmbrosia extends HSModule
         minibarWrapper.appendChild(redBar);
         minibarWrapper.appendChild(purpleBar);
 
-        // Append minibarWrapper as first child of groupWrapper
-        if (groupWrapper.firstChild) {
-            groupWrapper.insertBefore(minibarWrapper, groupWrapper.firstChild);
-        } else {
-            groupWrapper.appendChild(minibarWrapper);
-        }
-
+        this.#minibarWrapper = minibarWrapper;
         this.#blueProgressMinibarElement = blueBarProgress;
+        this.#redProgressMinibarBarElement = redBar;
         this.#redProgressMinibarElement = redBarProgress;
         this.#purpleProgressMinibarBarElement = purpleBar;
         this.#purpleProgressMinibarElement = purpleBarProgress;
@@ -2038,14 +2042,13 @@ export class HSAmbrosia extends HSModule
             minibar red: ${this.#redProgressMinibarElement} `, 'hs-minibars-undefined');
         }
 
-        const purpleTabLabel = document.querySelector<HTMLElement>('[i18n="tabs.singularity.purple"]');
-        const purpleTabButton = purpleTabLabel?.closest('button')
-            ?? document.getElementById('toggleSingularitySubTab6');
-        const purpleUnlocked = purpleTabButton instanceof HTMLElement
-            && !purpleTabButton.hidden
-            && purpleTabButton.getAttribute('aria-hidden') !== 'true'
-            && getComputedStyle(purpleTabButton).display !== 'none';
+        // Shown once unlocked, as the game's red ambrosia and purple honey header modules (Exalts 9 and 10)
+        const redUnlocked = (gameData.singularityChallenges?.noAmbrosiaUpgrades?.completions ?? 0) > 0;
+        const purpleUnlocked = (gameData.singularityChallenges?.taxmanLastStand?.completions ?? 0) > 0;
 
+        if (this.#redProgressMinibarBarElement) {
+            this.#redProgressMinibarBarElement.style.display = redUnlocked ? 'block' : 'none';
+        }
         if (this.#purpleProgressMinibarBarElement) {
             this.#purpleProgressMinibarBarElement.style.display = purpleUnlocked ? 'block' : 'none';
         }

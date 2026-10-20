@@ -148,7 +148,7 @@ export abstract class HSSetting<T extends HSSettingType> {
             targetElement.classList.add('hs-disabled');
         }
 
-        await this.handleSettingAction('state', newState);
+        await this.handleSettingAction('state', newState, true);
 
         if (this.definition.settingName === 'useGameData' && newState) {
             this.#restoreGameDataDependents();
@@ -213,13 +213,14 @@ export abstract class HSSetting<T extends HSSettingType> {
     }
 
     // Handles a setting's settingAction for all settings
-    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean): Promise<void> {
+    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean, byPlayer = false): Promise<void> {
         if (this.settingAction) {
             const action = this.settingAction;
 
             const actionConfig: HSSettingActionParams = {
                 contextName: this.context,
-                value: this.definition.calculatedSettingValue ?? null
+                value: this.definition.calculatedSettingValue ?? null,
+                byPlayer
             }
 
             if (action && action instanceof Function) {

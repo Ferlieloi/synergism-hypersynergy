@@ -1,4 +1,6 @@
 #hs-minibars-wrapper {
+    --hs-minibar-height: 8px;
+
     width: 281px;
     display: flex;
     padding: 0;
@@ -8,14 +10,36 @@
     box-sizing: border-box;
 }
 
+/* As a module of the game's header (HSHeaderModules): a currency module's width (its em follow the header's S / M / L),
+   the cell's when the game makes it wide (L in the grid). Not on a locked module, which the game hides with
+   display: none. */
+#hsAmbrosiaBars:not(.headerModuleLocked) {
+    display: flex;
+    align-items: center;
+}
+#hsAmbrosiaBars {
+    width: calc(38px + 7.5em);
+    min-width: 150px;
+}
+#hsAmbrosiaBars.headerModuleWide {
+    justify-self: stretch;
+    width: auto;
+}
+#hsAmbrosiaBars #hs-minibars-wrapper {
+    width: 100%;
+    margin-bottom: 0;
+}
+#hsAmbrosiaBars[data-size="S"] #hs-minibars-wrapper { --hs-minibar-height: 6px; }
+#hsAmbrosiaBars[data-size="L"] #hs-minibars-wrapper { --hs-minibar-height: 12px; }
+
 #hs-blue-progress-bar,
 #hs-red-progress-bar,
 #hs-purple-progress-bar {
     width: 100%;
-    height: 8px;
-    min-height: 8px;
-    max-height: 8px;
-    flex: 0 0 8px;
+    height: var(--hs-minibar-height);
+    min-height: var(--hs-minibar-height);
+    max-height: var(--hs-minibar-height);
+    flex: 0 0 var(--hs-minibar-height);
     overflow: hidden;
     background-color: black;
     border: 1px solid white;

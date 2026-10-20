@@ -1371,7 +1371,7 @@
   "ambrosiaMinibars": {
     "settingName": "ambrosiaMinibars",
     "settingDescription": "Ambrosia minibars (S25+)",
-    "settingHelpText": "Displays small blue- and red ambrosia progress bars in the page header",
+    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show above the ambrosia quick bar.",
     "settingType": "boolean",
     "enabled": true,
     "usesGameData": true,

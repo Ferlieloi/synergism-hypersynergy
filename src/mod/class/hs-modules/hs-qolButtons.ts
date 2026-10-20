@@ -884,12 +884,14 @@ export class HSQOLButtons extends HSModule {
     /**
      * Enable the Automation Quickbar: a module of the game's header, which the player places in the header's edit mode
      * (it starts in the tray), or the mod's quickbar row without the patcher's header modules patch.
+     * @param byPlayer the player turned it on: told how to place it when it's in the tray
      */
-    public enableAutomationQuickbar(): void {
+    public enableAutomationQuickbar(byPlayer = false): void {
         if (!this.#automationQuickbarHandler) this.#automationQuickbarHandler = new HSQOLAutomationQuickbar();
         const handler = this.#automationQuickbarHandler;
 
         const headerModule = HSHeaderModules.register(HSQOLButtons.#AUTOMATION_HEADER_MODULE);
+        if (byPlayer) HSHeaderModules.notifyIfInTray(HSQOLButtons.#AUTOMATION_HEADER_MODULE, 'the automation quick bar');
         if (headerModule) {
             // Already filled: enabled twice
             if (headerModule.childElementCount > 0) return;

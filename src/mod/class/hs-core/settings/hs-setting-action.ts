@@ -21,14 +21,14 @@ import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
 // Does nothing if the module isn't loaded.
 function moduleToggle<T extends HSModule>(
     moduleName: string,
-    on: (mod: T) => unknown,
-    off: (mod: T) => unknown
+    on: (mod: T, params: HSSettingActionParams) => unknown,
+    off: (mod: T, params: HSSettingActionParams) => unknown
 ): (params: HSSettingActionParams) => Promise<void> {
     return async (params: HSSettingActionParams) => {
         const mod = HSModuleManager.getModule<T>(moduleName);
         if (!mod) return;
 
-        await (params.disable === true ? off(mod) : on(mod));
+        await (params.disable === true ? off(mod, params) : on(mod, params));
     };
 }
 
@@ -113,13 +113,13 @@ export class HSSettingActions {
         ),
 
         ambrosiaMinibarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
-            (mod) => {
+            (mod, params) => {
                 // Auto-enable GDS if not already enabled
                 const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
                 if (!gdsSettingEnabled) {
                     HSSettings.getSetting('useGameData')?.enable();
                 }
-                return mod.enableBerryMinibars();
+                return mod.enableBerryMinibars(params.byPlayer === true);
             },
             (mod) => mod.disableBerryMinibars()
         ),
@@ -221,7 +221,7 @@ export class HSSettingActions {
         ),
 
         enableAutomationQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
-            (mod) => mod.enableAutomationQuickbar(),
+            (mod, params) => mod.enableAutomationQuickbar(params.byPlayer === true),
             (mod) => mod.disableAutomationQuickbar()
         ),
 
