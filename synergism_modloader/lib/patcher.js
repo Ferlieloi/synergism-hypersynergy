@@ -93,42 +93,6 @@ function patchBundle(code, options = {}) {
         return null;
     };
 
-    const findFunctionBodyBySemantics = (src, anchorStr, requiredMarkers, lookBehind = 20000) => {
-        const headerPatterns = [
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/g,
-            /(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g
-        ];
-
-        let anchorIdx = src.indexOf(anchorStr);
-        while (anchorIdx !== -1) {
-            const windowStart = Math.max(0, anchorIdx - lookBehind);
-            const beforeAnchor = src.slice(windowStart, anchorIdx);
-            const candidates = [];
-
-            for (const pattern of headerPatterns) {
-                pattern.lastIndex = 0;
-                let match;
-                while ((match = pattern.exec(beforeAnchor)) !== null) {
-                        const bodyStart = windowStart + match.index + match[0].length;
-                        candidates.push({ bodyStart, bodyEnd: findMatchingBrace(src, bodyStart), fnName: match[1] });
-                }
-            }
-
-            candidates.sort((a, b) => b.bodyStart - a.bodyStart);
-            for (const candidate of candidates) {
-                const candidatePrefix = src.slice(candidate.bodyStart, anchorIdx);
-                if (requiredMarkers.every(marker => candidatePrefix.includes(marker))) {
-                    return candidate;
-                }
-            }
-
-            anchorIdx = src.indexOf(anchorStr, anchorIdx + anchorStr.length);
-        }
-
-        return null;
-    };
-
     // Find the function containing a behavior marker, even when its header is
     // far away or a nested callback lies between the header and marker.
     const findEnclosingFunction = (src, anchorRe, markers, lookBehind = 100000) => {
@@ -183,43 +147,48 @@ function patchBundle(code, options = {}) {
         };
     };
 
+    // The functions a function awaits by name (`await xY(`), found by findFunctionBodyByName.
+    const findAwaitedFunctions = (src, fnResult) => {
+        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
+        const awaitedCall = /(?<![\w$.])await\s+([a-zA-Z_$][\w$]*)\s*\(/g;
+        const found = [];
+        let match;
+        while ((match = awaitedCall.exec(body)) !== null) {
+            if (match[1] === fnResult.fnName) continue;
+            const result = findFunctionBodyByName(src, match[1]);
+            if (result && result.bodyEnd > result.bodyStart) found.push(result);
+        }
+        return found;
+    };
+
+    // ImportExport.ts exportData: writes the save to the clipboard or a file, as the "saveType" checkbox says.
+    const writesSaveOut = (src, fnResult) => {
+        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
+        return (body.includes('"saveType"') || body.includes("'saveType'"))
+            && (body.includes('clipboard') || body.includes('createObjectURL') || body.includes('Blob'));
+    };
+
+    // exportSynergism's output step: the function it awaits that writes the save out (exportData), or that awaits it.
+    // Today exportSynergism awaits exportStoredSave (reads the stored save), which awaits exportData; older games
+    // awaited exportData directly. The guard goes at the start of that step, so nothing is read or written.
+    // No guess when neither shape is there: an await added after the output step must not get the guard.
     const findExportDataFunction = (src, fnResult) => {
         if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
-        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
-        const awaitedCall = /\bawait\s+([a-zA-Z_$][\w$]*)\s*\(/g;
-        let match;
-        const awaitedNames = [];
-        while ((match = awaitedCall.exec(body)) !== null) awaitedNames.push(match[1]);
-
-        let terminalFallback = null;
-        for (const fnName of awaitedNames.reverse()) {
-            if (fnName === fnResult.fnName) continue;
-            const result = findFunctionBodyByName(src, fnName);
-            if (!result || result.bodyEnd < result.bodyStart) continue;
-            terminalFallback ??= result;
-            const candidateBody = src.slice(result.bodyStart, result.bodyEnd);
-            const readsExportMode = candidateBody.includes('"saveType"') || candidateBody.includes("'saveType'");
-            const writesClipboardOrFile = candidateBody.includes('clipboard')
-                || candidateBody.includes('createObjectURL')
-                || candidateBody.includes('Blob');
-            if (readsExportMode && writesClipboardOrFile) return result;
+        for (const step of findAwaitedFunctions(src, fnResult)) {
+            if (writesSaveOut(src, step)) return step;
+            if (findAwaitedFunctions(src, step).some(inner => writesSaveOut(src, inner))) return step;
         }
-
-        // Older/minimal bundles may strip the recognizable DOM/output markers.
-        // In exportSynergism the save-output call has historically been the final await.
-        return terminalFallback;
+        return null;
     };
 
     // ==================================================================================
-    // ────── EXPORT PATCH ─ Expose exportSynergism and suppress only its final
-    // save-output helper when autosing requests a quark-only export.
-    // Primary strategy: follow the stable exportgame click listener to the
-    // minified function it invokes. Fall back to save-export behavior if the
-    // listener wiring changes. Neither strategy depends on parameter spelling.
-    const exportListenerResult = findExportFunctionFromClickHandler(code);
-    const exportResult = exportListenerResult || findFunctionBodyBySemantics(
-        code, 'Synergysave2', ['.offlinetick', '.lastExportedSave']
-    );
+    // ────── EXPORT PATCH ─ Expose exportSynergism and suppress only its save output
+    // when autosing requests a quark-only export.
+    // Found by what it does: the function awarding the export's golden quarks ("exportGQPerHour") and stamping
+    // the save (.lastExportedSave, .offlinetick). Fallback: the function the exportgame click listener calls.
+    // Its output step: see findExportDataFunction.
+    const exportSemanticResult = findEnclosingFunction(code, /["']exportGQPerHour["']/g, ['.lastExportedSave', '.offlinetick']);
+    const exportResult = exportSemanticResult || findExportFunctionFromClickHandler(code);
     if (exportResult) {
         const exportFn = exportResult.fnName;
         const exportDataResult = findExportDataFunction(code, exportResult);
@@ -233,7 +202,7 @@ function patchBundle(code, options = {}) {
                 `}\n`;
             log(`Patched exportData output guard (fn=${exportDataFn})`);
         } else {
-            warn('Found exportSynergism but could not identify its final awaited exportData helper');
+            warn('Found exportSynergism but not its save output step (no awaited function writing the save out by "saveType")');
         }
 
         const expose = exportFn
@@ -259,48 +228,47 @@ function patchBundle(code, options = {}) {
         for (const insertion of insertions) {
             code = code.slice(0, insertion.index) + insertion.text + code.slice(insertion.index);
         }
-        log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'}, output=${exportDataFn ?? 'unavailable'}, via=${exportListenerResult ? 'click-handler' : 'semantic-fallback'})`);
+        log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'}, output=${exportDataFn ?? 'unavailable'}, via=${exportSemanticResult ? 'golden-quark-export' : 'click-handler'})`);
     } else {
-        warn('Could not patch exportSynergism — click handler and semantic fallback did not match');
+        warn('Could not patch exportSynergism — neither the golden quark export nor the exportgame click handler matched');
     }
 
     // ==================================================================================
     // ────── STAGE PATCH — inject at the entry of loadMiscellaneousStats.
-    // Locate the unique anchor, extract variable names, find the enclosing
-    // no-arg arrow function, and inject at its opening brace.
-    const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
-    if (stageAnchorIdx !== -1) {
-        const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
-        const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
-        const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
-        const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
-        if (domFn && i18nObj && stageFn) {
-            const expose =
-                `\nif(!window.__HS_STAGE_EXPOSED){` +
-                `window.DOMCacheGetOrSet=${domFn};` +
-                `window.__HS_synergismStage=${stageFn};` +
-                `window.__HS_i18next=${i18nObj};` +
-                `window.__HS_STAGE_EXPOSED=true;` +
-                `window.__HS_EXPOSED=true;` +
-                `console.log('[HS-PATCH] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');` +
-                `}\n`;
-            const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
-            const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
-            let am, lastBodyStart = -1;
-            while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
-            if (lastBodyStart !== -1) {
-                const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-            } else {
-                code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
-                log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-            }
+    // Found by what it does: the function filling "gameStageStatistic" on the Misc stats ("miscStats").
+    // The game's names are read from that statement, without the minifier's spelling of anything else:
+    //   cQ=()=>{Be(w7,"miscStats",…),c("gameStageStatistic").innerHTML=s.t("statistics.gameStage",{stage:gk(0)})}
+    // DOMCacheGetOrSet = the bare call holding the id (a member call such as document.getElementById is refused).
+    try {
+        const stageAnchor = /["']gameStageStatistic["']/;
+        const stageResult = findEnclosingFunction(code, new RegExp(stageAnchor.source, 'g'), ['miscStats']);
+        if (!stageResult) {
+            warn('Could not patch stage — loadMiscellaneousStats ("gameStageStatistic" with "miscStats") not found in bundle');
         } else {
-            warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+            const body = code.slice(stageResult.bodyStart, stageResult.bodyEnd);
+            const anchorAt = body.search(stageAnchor);
+            const domFn = /(?<![\w$.])([a-zA-Z_$][\w$]*)\(\s*$/.exec(body.slice(0, anchorAt))?.[1];
+            const statement = body.slice(anchorAt);
+            const i18nObj = /^["']gameStageStatistic["']\s*\)\s*\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/.exec(statement)?.[1];
+            const stageFn = /(?<![\w$])stage\s*:\s*([a-zA-Z_$][\w$]*)\(/.exec(statement)?.[1];
+            if (domFn && i18nObj && stageFn) {
+                const expose =
+                    `\nif(!window.__HS_STAGE_EXPOSED){` +
+                    `window.DOMCacheGetOrSet=${domFn};` +
+                    `window.__HS_synergismStage=${stageFn};` +
+                    `window.__HS_i18next=${i18nObj};` +
+                    `window.__HS_STAGE_EXPOSED=true;` +
+                    `window.__HS_EXPOSED=true;` +
+                    `console.log('[HS-PATCH] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');` +
+                    `}\n`;
+                code = code.slice(0, stageResult.bodyStart) + expose + code.slice(stageResult.bodyStart);
+                log(`Patched stage at fn entry (fn=${stageResult.fnName} dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+            } else {
+                warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+            }
         }
-    } else {
-        warn('Could not patch stage — "gameStageStatistic" not found in bundle');
+    } catch (e) {
+        warn('Error while patching stage', e);
     }
 
     // ==================================================================================
@@ -350,11 +318,14 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
-    // ── TACK PATCH — wrap tack() to fire registered after-tack hooks
-    // Find the enclosing update from its timer behavior, not a nearby arrow.
+    // ── TACK PATCH — fire registered after-tack hooks after each game tick (Synergism.ts tack)
+    // Found by what it does: the tick skipping its timers during a time warp (.timeWarp), adding time to every timer
+    // (autoPotion and purpleReactor among them), then running the automatic tools (runeSacrifice).
+    // addTimers, which tack calls, holds the same timer names but neither .timeWarp nor runeSacrifice. It must not get
+    // the hook: the game also calls it outside a tick (codes, PseudoCoin time skips, offline progress).
     try {
-        const tackResult = findEnclosingFunction(code, /["']autoPotion["']/g,
-            ['prestige', 'autoPotion', 'ascension', 'quarks']);
+        const tackResult = findEnclosingFunction(code, /\.timeWarp\b/g,
+            ['autoPotion', 'purpleReactor', 'runeSacrifice']);
         if (tackResult) {
             const tackPatch =
                 `if(!window.__HS_TACK_PATCHED){` +
