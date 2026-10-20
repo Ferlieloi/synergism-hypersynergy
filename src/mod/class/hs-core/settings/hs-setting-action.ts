@@ -124,6 +124,12 @@ export class HSSettingActions {
             (mod) => mod.disableBerryMinibars()
         ),
 
+        // Needs GDS (usesGameData): the settings keep it off while GDS is off
+        ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod, params) => mod.enableRateHeader(params.byPlayer === true),
+            (mod) => mod.disableRateHeader()
+        ),
+
         hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
             HSSettingsUI.applyHiddenVanillaTabsSetting();
         },

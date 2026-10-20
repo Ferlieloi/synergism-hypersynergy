@@ -1383,6 +1383,21 @@
       "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
     }
   },
+  "ambrosiaRateHeader": {
+    "settingName": "ambrosiaRateHeader",
+    "settingDescription": "Ambrosia per hour in the header (S25+)",
+    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout (the rates shown in the Ambrosia tab), as three modules of the game's header, refreshed every 5 seconds (every half second while the Ambrosia tab is open). Hold any header module to edit the header, then drag them out of the Hidden tray to where you want them. Red ambrosia and purple honey show once unlocked. Needs the game patch: not available with the bookmarklet.",
+    "settingType": "boolean",
+    "enabled": true,
+    "usesGameData": true,
+    "settingAction": "ambrosiaRateHeaderAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-ambrosia-rate-header-btn"
+    }
+  },
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",

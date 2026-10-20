@@ -122,18 +122,20 @@ export class HSHeaderModules {
      * Tell the player that a module waits in the header's Hidden tray, and how to place it (they just turned it on).
      * Nothing when it's placed, locked (the game doesn't offer it), or not registered.
      * @param name what the player calls it, inside a sentence ("the automation quick bar")
+     * @returns whether the player was told
      */
-    static notifyIfInTray(id: string, name: string): void {
+    static notifyIfInTray(id: string, name: string): boolean {
         const unlocked = HSHeaderModules.#modules.get(id);
         const element = HSHeaderModules.#elements.get(id);
-        if (!unlocked || element?.parentElement?.id !== 'headerTray') return;
-        try { if (!unlocked()) return; } catch { return; }
+        if (!unlocked || element?.parentElement?.id !== 'headerTray') return false;
+        try { if (!unlocked()) return false; } catch { return false; }
 
         void HSUI.Notify(`To show ${name} in the game's header, hold any header module to edit the header, then drag the module out of the Hidden tray.`, {
             displayDuration: 8000,
             width: 440,
             height: 80
         });
+        return true;
     }
 
     /** Take a module out of the header and its tray. Its place stays remembered for the next register(). */
@@ -179,11 +181,21 @@ export class HSHeaderModules {
             }
             HSHeaderModules.#seenLayout[key] = layout;
 
+            // Every missing module back first, then every place noted: a module noted before its partner is put back
+            // into its slot would be noted alone
+            for (const id of HSHeaderModules.#modules.keys()) {
+                if (!HSHeaderModules.#findPlace(layout, id)) HSHeaderModules.#putBack(layout, id, notes.layouts[key]?.[id]);
+            }
             for (const id of HSHeaderModules.#modules.keys()) {
                 const place = HSHeaderModules.#findPlace(layout, id);
-                if (!place) {
-                    HSHeaderModules.#putBack(layout, id, notes.layouts[key]?.[id]);
-                } else if (JSON.stringify(place) !== JSON.stringify(notes.layouts[key]?.[id])) {
+                if (!place) continue;
+                const noted = notes.layouts[key]?.[id];
+                // Alone because its partner is turned off (unregistered): still noted with it, so the stack comes back
+                // with the partner, whichever of the two is turned off or on first
+                if (noted && place.partners.length === 0) {
+                    place.partners = noted.partners.filter(partner => /^hs[A-Z]/.test(partner) && !HSHeaderModules.#modules.has(partner));
+                }
+                if (JSON.stringify(place) !== JSON.stringify(noted)) {
                     (notes.layouts[key] ??= {})[id] = place;
                     changed = true;
                 }

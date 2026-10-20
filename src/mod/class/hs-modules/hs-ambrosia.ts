@@ -33,6 +33,19 @@ interface HSQuickImportSummary {
 
 type HSAmbrosiaTree = Record<string, number>;
 
+type HSAmbrosiaRateResource = 'amb' | 'ramb' | 'phoney';
+
+/** One hourly rate as a module of the game's header, built like the game's currency modules. */
+interface HSAmbrosiaRateHeaderModule {
+    id: string;
+    resource: HSAmbrosiaRateResource;
+    icon: string;
+    color: string;
+    title: string;
+    // The Exalt whose completion unlocks the game's module of that currency
+    exalt: 'noSingularityUpgrades' | 'noAmbrosiaUpgrades' | 'taxmanLastStand';
+}
+
 /** A temporary ambrosia tree holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap). */
 export interface HSSingReducerSwap {
     /** How many singularity reducers the temporary tree has more than the player's own tree. */
@@ -134,6 +147,27 @@ export class HSAmbrosia extends HSModule
     #barIncomeRefreshQueue: Promise<void> = Promise.resolve();
     #barIncomeRefreshTimer?: ReturnType<typeof setTimeout>;
     #lastBarIncomeDataRefresh = 0;
+
+    // The hourly rates as modules of the game's header (see HSHeaderModules)
+    static readonly #RATE_HEADER_MODULES: readonly HSAmbrosiaRateHeaderModule[] = [
+        {
+            id: 'hsAmbrosiaRate', resource: 'amb', icon: 'Pictures/Default/Ambrosia.png',
+            color: 'var(--amber-text-color)', title: 'Ambrosia', exalt: 'noSingularityUpgrades'
+        },
+        {
+            id: 'hsRedAmbrosiaRate', resource: 'ramb', icon: 'Pictures/RedAmbrosia/RedAmbrosia.png',
+            color: 'var(--red-text-color)', title: 'Red ambrosia', exalt: 'noAmbrosiaUpgrades'
+        },
+        {
+            id: 'hsPurpleHoneyRate', resource: 'phoney', icon: 'Pictures/PurpleAmbrosia/PurpleAmbrosia.png',
+            color: 'var(--purple-text-color)', title: 'Purple honey', exalt: 'taxmanLastStand'
+        },
+    ];
+    // Outside the Ambrosia tab, which refreshes them with its own rates every 500ms
+    static readonly #RATE_HEADER_REFRESH_MS = 5_000;
+    #rateHeaderEnabled = false;
+    #rateHeaderDisplays: Partial<Record<HSAmbrosiaRateResource, HTMLDivElement>> = {};
+    #lastRateHeaderRefresh = 0;
 
     #hasPerformedInitialLoadoutMatch = false;
 
@@ -364,6 +398,113 @@ export class HSAmbrosia extends HSModule
     #isAmbrosiaUnlocked(): boolean {
         const completions = HSGlobal.exposedPlayer?.singularityChallenges?.noSingularityUpgrades?.completions;
         return completions === undefined || completions > 0;
+    }
+
+    // ==============================================
+    // ------- Hourly rates in the game's header -------
+    // ==============================================
+
+    /**
+     * Show the hourly rates as three modules of the game's header, which the player places in the header's edit mode
+     * (they start in the tray). Nothing without the patcher's header modules patch: the rates stay in the Ambrosia tab.
+     * @param byPlayer the player turned them on: told how to place them when they're in the tray
+     */
+    async enableRateHeader(byPlayer = false) {
+        for (const module of HSAmbrosia.#RATE_HEADER_MODULES) {
+            const element = HSHeaderModules.register(module.id, () => this.#isRateUnlocked(module));
+            if (!element) {
+                HSLogger.debug(() => 'No header modules patch: the ambrosia rates stay in the Ambrosia tab', this.context);
+                return;
+            }
+            // One element per id for the page's life: built once
+            this.#rateHeaderDisplays[module.resource] ??= this.#buildRateHeaderModule(element, module);
+        }
+        if (byPlayer) {
+            // One notification for the three
+            for (const module of HSAmbrosia.#RATE_HEADER_MODULES) {
+                if (HSHeaderModules.notifyIfInTray(module.id, 'the ambrosia hourly rates')) break;
+            }
+        }
+
+        this.#rateHeaderEnabled = true;
+        this.subscribeGameDataChanges();
+        this.#refreshRateHeader();
+    }
+
+    /** Take the hourly rates out of the header (their places stay remembered). */
+    async disableRateHeader() {
+        for (const module of HSAmbrosia.#RATE_HEADER_MODULES) HSHeaderModules.unregister(module.id);
+        this.#rateHeaderEnabled = false;
+        this.unsubscribeGameDataChanges();
+    }
+
+    /** Locked as the game's module of the same currency. */
+    #isRateUnlocked(module: HSAmbrosiaRateHeaderModule): boolean {
+        if (module.exalt === 'noSingularityUpgrades') return this.#isAmbrosiaUnlocked();
+        const completions = HSGlobal.exposedPlayer?.singularityChallenges?.[module.exalt]?.completions;
+        return typeof completions === 'number' && completions > 0;
+    }
+
+    /** The game's currency module: its icon, then the rate. @returns the rate's element */
+    #buildRateHeaderModule(element: HTMLElement, module: HSAmbrosiaRateHeaderModule): HTMLDivElement {
+        element.classList.add('currencyContainer');
+        element.title = `${module.title} per hour, expected for the active loadout (HyperSynergism)`;
+
+        const icon = document.createElement('img');
+        icon.className = 'img';
+        icon.src = module.icon;
+        icon.alt = module.title;
+
+        const display = document.createElement('div');
+        display.className = 'statDisplay';
+        display.style.color = module.color;
+        display.textContent = '—';
+
+        element.replaceChildren(icon, display);
+        return display;
+    }
+
+    /** Whether one of the rates can be seen: placed and unlocked, or in the tray while the player edits the header. */
+    #isRateHeaderShown(): boolean {
+        return Object.values(this.#rateHeaderDisplays).some(display => {
+            const element = display?.parentElement;
+            return !!element?.isConnected && (element.checkVisibility?.() ?? true);
+        });
+    }
+
+    /** With GDS running, outside the Ambrosia tab (which refreshes them): from the last save data, every 5s at most. */
+    #refreshRateHeaderOnGameData(): void {
+        if (!this.#rateHeaderEnabled || this.#isAmbrosiaTabActive) return;
+        if (performance.now() - this.#lastRateHeaderRefresh < HSAmbrosia.#RATE_HEADER_REFRESH_MS) return;
+        if (!this.#isRateHeaderShown()) return;
+
+        this.#refreshRateHeader();
+    }
+
+    /** From GDS's last save data: never forces a save. */
+    #refreshRateHeader(): void {
+        try {
+            const gameDataAPI = this.#cachedGameDataAPI ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+            const rates = this.#calculateHourlyRates(gameDataAPI);
+            // No save data yet (at load): the next one gives the first value, not 5s later
+            if (rates) this.#lastRateHeaderRefresh = performance.now();
+            this.#renderRateHeader(rates);
+        } catch (error) {
+            this.#lastRateHeaderRefresh = performance.now();
+            HSLogger.warnOnce(`Could not calculate the ambrosia rates of the header: ${error}`, 'hs-ambrosia-rate-header');
+            this.#renderRateHeader(null);
+        }
+    }
+
+    /** @param rates null: shown as unknown */
+    #renderRateHeader(rates: Record<HSAmbrosiaRateResource, number> | null): void {
+        if (!this.#rateHeaderEnabled) return;
+
+        for (const [resource, display] of Object.entries(this.#rateHeaderDisplays) as [HSAmbrosiaRateResource, HTMLDivElement][]) {
+            const rate = rates?.[resource];
+            const text = rate !== undefined && Number.isFinite(rate) ? `${HSUtils.N(rate)}/h` : '—';
+            if (display.textContent !== text) display.textContent = text;
+        }
     }
 
     /** Builds the minibars, out of the page: enableBerryMinibars() places them. */
@@ -1068,33 +1209,18 @@ export class HSAmbrosia extends HSModule
                     return;
                 }
 
-                const income = gameDataAPI.ambrosia.calculateAmbrosiaBarIncome();
-                if (!income) {
+                const rates = this.#calculateHourlyRates(gameDataAPI);
+                if (!rates) {
                     this.#setBarIncomeUnavailable();
                     return;
                 }
 
-                const bluePerHour = income.blueAmbrosiaPerSecond * 3_600;
-                const redPerHour = income.redAmbrosiaPerSecond * 3_600;
-                const purplePerHour = income.purpleHoneyPerSecond * 3_600;
-                this.#renderIncomeRate(
-                    this.#blueIncomeElement,
-                    Number.isFinite(bluePerHour) ? HSUtils.N(bluePerHour) : 'unavailable',
-                    'amb',
-                    'var(--amber-text-color)'
-                );
-                this.#renderIncomeRate(
-                    this.#redIncomeElement,
-                    Number.isFinite(redPerHour) ? HSUtils.N(redPerHour) : 'unavailable',
-                    'ramb',
-                    'red'
-                );
-                this.#renderIncomeRate(
-                    this.#purpleIncomeElement,
-                    Number.isFinite(purplePerHour) ? HSUtils.N(purplePerHour) : 'unavailable',
-                    'phoney',
-                    'var(--purple-text-color)'
-                );
+                const format = (rate: number) => Number.isFinite(rate) ? HSUtils.N(rate) : 'unavailable';
+                this.#renderIncomeRate(this.#blueIncomeElement, format(rates.amb), 'amb', 'var(--amber-text-color)');
+                this.#renderIncomeRate(this.#redIncomeElement, format(rates.ramb), 'ramb', 'red');
+                this.#renderIncomeRate(this.#purpleIncomeElement, format(rates.phoney), 'phoney', 'var(--purple-text-color)');
+                // The header's rates follow the tab's, at no extra cost
+                this.#renderRateHeader(rates);
             } catch (error) {
                 HSLogger.warn(`Could not calculate expected Ambrosia income: ${error}`, this.context);
                 this.#setBarIncomeUnavailable();
@@ -1126,26 +1252,41 @@ export class HSAmbrosia extends HSModule
         this.#renderIncomeRate(this.#blueIncomeElement, 'unavailable', 'amb', 'var(--amber-text-color)');
         this.#renderIncomeRate(this.#redIncomeElement, 'unavailable', 'ramb', 'red');
         this.#renderIncomeRate(this.#purpleIncomeElement, 'unavailable', 'phoney', 'var(--purple-text-color)');
+        this.#renderRateHeader(null);
+    }
+
+    /** The three rates per hour for the active loadout, from GDS's last save data; null when there's none. */
+    #calculateHourlyRates(gameDataAPI: HSGameDataAPI | undefined): Record<HSAmbrosiaRateResource, number> | null {
+        const income = gameDataAPI?.ambrosia.calculateAmbrosiaBarIncome();
+        if (!income) return null;
+        return {
+            amb: income.blueAmbrosiaPerSecond * 3_600,
+            ramb: income.redAmbrosiaPerSecond * 3_600,
+            phoney: income.purpleHoneyPerSecond * 3_600,
+        };
     }
 
     #renderIncomeRate(
         element: HTMLParagraphElement | undefined,
         amount: string,
-        resource: 'amb' | 'ramb' | 'phoney',
+        resource: HSAmbrosiaRateResource,
         color: string
     ): void {
         if (!element) return;
 
         // The element is aria-live: an unchanged rate must not be written again
-        if (element.textContent === `[HS] ${amount} ${resource} / hour`) return;
+        if (element.textContent === `${amount} ${resource} / hour [HS]`) return;
 
         const amountElement = document.createElement('span');
         amountElement.style.color = color;
         amountElement.textContent = amount;
+        const tagElement = document.createElement('span');
+        tagElement.style.color = '#777';
+        tagElement.textContent = '[HS]';
         element.replaceChildren(
-            document.createTextNode('[HS] '),
             amountElement,
-            document.createTextNode(` ${resource} / hour`)
+            document.createTextNode(` ${resource} / hour `),
+            tagElement
         );
     }
 
@@ -1974,8 +2115,8 @@ export class HSAmbrosia extends HSModule
         const gameDataMod = this.#cachedGameDataMod ?? HSModuleManager.getModule<HSGameData>('HSGameData');
 
         if (gameDataMod && this.gameDataSubscriptionId) {
-            // Only actually unsubscribe if neither the minibars nor the Ambrosia tab need game data.
-            if (!this.#berryMinibarsEnabled && !this.#isAmbrosiaTabActive) {
+            // Only actually unsubscribe if neither the minibars, the header's rates nor the Ambrosia tab need game data.
+            if (!this.#berryMinibarsEnabled && !this.#rateHeaderEnabled && !this.#isAmbrosiaTabActive) {
                 gameDataMod.unsubscribeGameDataChange(this.gameDataSubscriptionId);
                 this.gameDataSubscriptionId = undefined;
                 HSLogger.debug(() => 'Unsubscribed from game data changes', this.context);
@@ -1999,6 +2140,7 @@ export class HSAmbrosia extends HSModule
 
         this.#refreshPersistentAmbrosiaLevelsOnTreeChange(gameData);
         this.#refreshBarIncomeOnGameData();
+        this.#refreshRateHeaderOnGameData();
 
         if (this.#berryMinibarsEnabled) {
             this.#updateBerryMinibars(gameData, gameDataAPI);

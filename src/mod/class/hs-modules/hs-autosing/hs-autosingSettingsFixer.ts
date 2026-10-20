@@ -466,6 +466,7 @@ export class HSAutosingSettingsFixer {
             'corruptionHeaderLevels',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
+            'ambrosiaRateHeader',
         ] as const;
 
         const disabledSettings: string[] = [];
