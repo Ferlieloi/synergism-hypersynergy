@@ -161,6 +161,28 @@ function patchBundle(code, options = {}) {
         return null;
     };
 
+    // Expose a function found by findEnclosingFunction as window[globalName], without calling or wrapping it.
+    // Where it's defined when it's an arrow or a function expression, so it exists as soon as the bundle runs:
+    //   eK=e=>{  becomes  eK=window.__HS_x=e=>{
+    // Otherwise at the start of its body: it then exists once the game has called it.
+    const exposeFunction = (src, result, globalName) => {
+        // Escaped, and not \b: minified names can start with "$"
+        const escapedFn = result.fnName.replace(/\$/g, '\\$');
+        const headerStart = Math.max(0, result.bodyStart - 300);
+        const header = src.slice(headerStart, result.bodyStart);
+        const exprHeader = new RegExp(
+            `(?<![\\w$.])${escapedFn}\\s*=\\s*(?=(?:async\\s*)?(?:\\([^)]*\\)|[\\w$]+)\\s*=>\\s*\\{$|(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{$)`
+        ).exec(header);
+        if (exprHeader) {
+            const insertAt = headerStart + exprHeader.index + exprHeader[0].length;
+            return { code: src.slice(0, insertAt) + `window.${globalName}=` + src.slice(insertAt), atDefinition: true };
+        }
+        return {
+            code: src.slice(0, result.bodyStart) + `\nwindow.${globalName}=${result.fnName};\n` + src.slice(result.bodyStart),
+            atDefinition: false
+        };
+    };
+
     const findExportDataFunction = (src, fnResult) => {
         if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
         const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
@@ -419,39 +441,19 @@ function patchBundle(code, options = {}) {
 
     // ==================================================================================
     // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
-    // Unique anchor: e.includes('/') only appears inside applyCorruptions (legacy corruption format check)
+    // Found by what it does, not by minified or parameter names: the function reading the legacy "a/b/c" format
+    // (.includes("/")) or JSON (JSON.parse), then setting the next corruptions (setCorruptionLevelsWithChallengeRequirement).
+    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
+    //   fx=e=>{  becomes  fx=window.__HS_applyCorruptions=e=>{
     try {
-        const corrAnchor = 'e.includes("/")';
-        const corrAnchorIdx = code.indexOf(corrAnchor);
-        if (corrAnchorIdx !== -1) {
-            const backCtx = code.slice(Math.max(0, corrAnchorIdx - 400), corrAnchorIdx);
-            // applyCorruptions is assigned as: fnName = e => {
-            const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
-            const corrFn = allFnMatches.at(-1)?.[1];
-            if (corrFn) {
-                // Escaped, and not \b: minified names can start with "$", and \b never matches before a "$"
-                const escapedCorrFn = corrFn.replace(/\$/g, '\\$');
-                const fnHeaderRe = new RegExp(`(?<![\\w$])${escapedCorrFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
-                let bodyStart = -1, fhm;
-                const preAnchor = code.slice(0, corrAnchorIdx);
-                while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
-                if (bodyStart !== -1) {
-                    const expose =
-                        `\nif(!window.__HS_CORRUPTIONS_EXPOSED){` +
-                        `window.__HS_applyCorruptions=${corrFn};` +
-                        `window.__HS_CORRUPTIONS_EXPOSED=true;` +
-                        `console.log('[HS-PATCH] \u2705 applyCorruptions exposed (fn=${corrFn})');` +
-                        `}\n`;
-                    code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
-                    log(`Patched applyCorruptions (fn=${corrFn})`);
-                } else {
-                    warn(`applyCorruptions: found fn name '${corrFn}' but could not locate body start`);
-                }
-            } else {
-                warn('applyCorruptions: could not extract fn name from anchor context');
-            }
+        const corrResult = findEnclosingFunction(code, /\.includes\(\s*["']\/["']\s*\)/g,
+            ['setCorruptionLevelsWithChallengeRequirement', 'JSON.parse(']);
+        if (corrResult) {
+            const exposed = exposeFunction(code, corrResult, '__HS_applyCorruptions');
+            code = exposed.code;
+            log(`Patched applyCorruptions${exposed.atDefinition ? '' : ' at its first call'} (fn=${corrResult.fnName})`);
         } else {
-            warn('Could not patch applyCorruptions — anchor not found in bundle');
+            warn('Could not patch applyCorruptions — corruption import not found in bundle');
         }
     } catch (e) {
         warn('Error while patching applyCorruptions', e);
@@ -463,28 +465,15 @@ function patchBundle(code, options = {}) {
     // which replaces the live tree and shows dialogs). It only reads the player's state.
     // Found by what it does, not by minified names or call shapes: the function checking the Exalt unlock criteria
     // (string literals "Exalt1x1", "Exalt5x1", "Exalt9x1") against the ambrosia budget (player.lifetimeAmbrosia).
-    // Exposed where it's defined when it's an arrow or a function expression, so it exists as soon as the bundle runs:
+    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
     //   eK=e=>{  becomes  eK=window.__HS_validateBlueberryTree=e=>{
-    // Otherwise at the start of its body: it then exists once the game has validated a tree (at the first loadout load).
+    // A function declaration is exposed once the game has validated a tree (at the first loadout load).
     try {
         const vbtResult = findEnclosingFunction(code, /["']Exalt9x1["']/g, ['lifetimeAmbrosia', 'Exalt1x1', 'Exalt5x1']);
         if (vbtResult) {
-            const fn = vbtResult.fnName;
-            // Escaped, and not \b: minified names can start with "$"
-            const escapedFn = fn.replace(/\$/g, '\\$');
-            const headerStart = Math.max(0, vbtResult.bodyStart - 300);
-            const header = code.slice(headerStart, vbtResult.bodyStart);
-            const exprHeader = new RegExp(
-                `(?<![\\w$.])${escapedFn}\\s*=\\s*(?=(?:async\\s*)?(?:\\([^)]*\\)|[\\w$]+)\\s*=>\\s*\\{$|(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{$)`
-            ).exec(header);
-            if (exprHeader) {
-                const insertAt = headerStart + exprHeader.index + exprHeader[0].length;
-                code = code.slice(0, insertAt) + 'window.__HS_validateBlueberryTree=' + code.slice(insertAt);
-                log(`Patched validateBlueberryTree (fn=${fn})`);
-            } else {
-                code = code.slice(0, vbtResult.bodyStart) + `\nwindow.__HS_validateBlueberryTree=${fn};\n` + code.slice(vbtResult.bodyStart);
-                log(`Patched validateBlueberryTree at its first call (fn=${fn})`);
-            }
+            const exposed = exposeFunction(code, vbtResult, '__HS_validateBlueberryTree');
+            code = exposed.code;
+            log(`Patched validateBlueberryTree${exposed.atDefinition ? '' : ' at its first call'} (fn=${vbtResult.fnName})`);
         } else {
             warn('Could not patch validateBlueberryTree — Exalt unlock check not found in bundle');
         }
