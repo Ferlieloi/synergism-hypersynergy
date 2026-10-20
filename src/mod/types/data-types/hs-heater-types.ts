@@ -195,7 +195,6 @@ export interface HeaterOptimizationResult {
     oct?: HeaterResultRowMatrix;
     obt?: HeaterResultRowMatrix;
     off?: HeaterResultRowMatrix;
-    voucher?: HeaterResultRowMatrix;
     hyperflux?: HeaterResultRowMatrix;
     sr1?: HeaterResultRowMatrix;
     sr2?: HeaterResultRowMatrix;

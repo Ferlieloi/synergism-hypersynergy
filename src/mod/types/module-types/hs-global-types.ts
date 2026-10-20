@@ -92,21 +92,6 @@ export interface HSGlobalAmbrosia {
     barWrapperId: string;
 }
 
-export interface HSGlobalCorruptionQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-}
-
-export interface HSGlobalAutomationQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-}
-
-export interface HSGlobalEventsQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-}
-
 
 export interface HSGlobalGameState {
     viewProperties: Map<MAIN_VIEW, HSViewProperties>;

@@ -127,7 +127,7 @@ export interface HSSettingControl {
     controlId: string;
     controlType: HSSettingsControlType;
     controlGroup: string;
-    controlPage: keyof HSSettingControlPage;
+    controlPage: string;
     controlEnabledId?: string;
     /** The setting this one belongs to: shown indented under its label. It must come before this one on the page */
     controlParent?: keyof HSSettingsDefinition;
@@ -139,7 +139,6 @@ export interface HSSettingControl {
 }
 
 export interface HSSettingControlPage {
-    page: string;
     order: number;
     pageName: string;
     pageColor: string;
@@ -161,8 +160,6 @@ export interface HSSettingBase<T> {
     usesGameData?: boolean;
     skipInit?: boolean;
 }
-
-export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
 
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }

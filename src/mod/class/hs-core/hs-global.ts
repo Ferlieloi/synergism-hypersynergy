@@ -262,18 +262,6 @@ export const HSGlobal: IHSGlobal = class {
         barWrapperId: 'hs-minibars-wrapper',
     }
 
-    // HSQOLAutomationQuickbar
-    static HSQOLAutomationQuickbar = {
-        quickBarId: 'hs-automation-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-automation-quickbar',
-    }
-
-    // HSQOLEventsQuickbar
-    static HSQOLEventsQuickbar = {
-        quickBarId: 'hs-events-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-events-quickbar',
-    }
-
     // HSGameState
     static HSGameState = {
         viewProperties: new Map<MAIN_VIEW, HSViewProperties>([

@@ -24,11 +24,6 @@ export type HSPanelTabDefinition = {
     panelDisplayType: "flex" | "block";
 }
 
-export interface HTMLData {
-    key: string;
-    value: string;
-}
-
 export enum HSInputType {
     CHECK = 1,
     COLOR = 2,

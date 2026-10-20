@@ -36,7 +36,7 @@ export class HSSettings extends HSModule {
 
     static #settings: HSSettingRecord = {} as HSSettingRecord;
     static #settingsControlGroups: Record<string, HSSettingControlGroup>;
-    static #settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
+    static #settingsControlPages: Record<string, HSSettingControlPage>;
     static #settingsParsed = false;
     static #saveTimeout: ReturnType<typeof setTimeout> | undefined;
     static #settingEnabledString = "✓";
@@ -60,7 +60,7 @@ export class HSSettings extends HSModule {
         // Parse settings_control_pages
         try {
             HSLogger.log(`Parsing settings_control_pages`, this.context);
-            HSSettings.#settingsControlPages = JSON.parse(settings_control_pages) as Record<keyof HSSettingControlPage, HSSettingControlPage>;
+            HSSettings.#settingsControlPages = JSON.parse(settings_control_pages) as Record<string, HSSettingControlPage>;
         } catch (e) {
             HSLogger.error(`Error parsing settings_control_pages ${e}`, this.context);
             HSSettings.#settingsParsed = false;

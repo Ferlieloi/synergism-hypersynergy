@@ -28,9 +28,7 @@ export interface HSCorruptionLoadoutElements {
 export interface HSCorruptionUserLoadout {
     name: string;
     levels: HSCorruptionLevels;
-    elements: HSCorruptionLoadoutElements;
     loadButton: HTMLButtonElement | null;
-    saveButton: HTMLButtonElement | null;
 }
 
 export type HSCorruptionUserLoadouts = HSCorruptionUserLoadout[];
@@ -244,23 +242,18 @@ export class HSCorruption {
             const nameCell = row.querySelector<HTMLTableCellElement>('.corrLoadoutName');
             const slotName = nameCell?.textContent?.slice(0, -1) ?? '';
 
-            const elements = {} as HSCorruptionLoadoutElements;
             const levels = {} as HSCorruptionLevels;
 
             for (let i = 0; i < names.length; i++) {
                 const key = names[i];
-                const el = row.querySelector<HTMLElement>(`.test${key}`);
-                elements[key] = el;
-                const raw = el?.textContent ?? '0';
+                const raw = row.querySelector<HTMLElement>(`.test${key}`)?.textContent ?? '0';
                 levels[key] = Number(raw) || 0;
             }
 
             return {
                 name: slotName,
                 levels,
-                elements,
                 loadButton: row.querySelector<HTMLButtonElement>('.corrLoad'),
-                saveButton: row.querySelector<HTMLButtonElement>('.corrSave'),
             };
         });
     }

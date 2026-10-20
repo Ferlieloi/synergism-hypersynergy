@@ -34,7 +34,7 @@ export interface HSSettingsUIDependencies {
     settingsParsed: boolean;
     settings: HSSettingRecord;
     settingsControlGroups: Record<string, HSSettingControlGroup>;
-    settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
+    settingsControlPages: Record<string, HSSettingControlPage>;
     settingEnabledString: string;
     settingDisabledString: string;
     settingChangeDelegate: (e: Event, settingObj: HSSetting<HSSettingType>) => Promise<void>;
@@ -529,8 +529,8 @@ export class HSSettingsUI {
         });
     }
 
-    static #sortPagesByOrder(pages: Record<keyof HSSettingControlPage, HSSettingControlPage>): [keyof HSSettingControlPage, HSSettingControlPage][] {
-        return (Object.entries(pages) as [keyof HSSettingControlPage, HSSettingControlPage][]).sort((a, b) => {
+    static #sortPagesByOrder(pages: Record<string, HSSettingControlPage>): [string, HSSettingControlPage][] {
+        return Object.entries(pages).sort((a, b) => {
             const aPage = a[1].order;
             const bPage = b[1].order;
 
@@ -546,7 +546,7 @@ export class HSSettingsUI {
     }
 
     static #buildSubTabNav(
-        sortedPages: [keyof HSSettingControlPage, HSSettingControlPage][],
+        sortedPages: [string, HSSettingControlPage][],
         sortedSettings: [string, HSSetting<HSSettingType>][],
     ): string {
         const subTabs: string[] = [];
@@ -576,7 +576,7 @@ export class HSSettingsUI {
         sortedSettings: [string, HSSetting<HSSettingType>][],
         controlGroups: Record<string, HSSettingControlGroup>,
     ) {
-        const pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
+        const pagesHTML: Map<string, string[]> = new Map();
         let didBuild = true;
         let currentControlGroup: string | null = null;
 

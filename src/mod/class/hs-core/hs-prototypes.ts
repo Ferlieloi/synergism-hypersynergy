@@ -13,10 +13,6 @@ declare global {
     interface Element {
         delegateEventListener : DelegateEventListener<Element>;
         removeDelegateEventListener: RemoveDelegateEventListener<Element>;
-
-        // Declare _delegateListeners attribute where we store the delegateEventListeners
-        // This is so that we can use removeDelegateEventListener to remove delegate listeners
-        _delegateListeners?: Map<string, Map<Function, { delegateHandler: Function }>>;
     }
 
     interface HTMLElement {
@@ -28,10 +24,6 @@ declare global {
     interface Document {
         delegateEventListener : DelegateEventListener<Document>;
         removeDelegateEventListener: RemoveDelegateEventListener<Document>;
-
-        // Declare _delegateListeners attribute where we store the delegateEventListeners
-        // This is so that we can use removeDelegateEventListener to remove delegate listeners
-        _delegateListeners?: Map<string, Map<Function, { delegateHandler: Function }>>;
     }
 
     interface Node {

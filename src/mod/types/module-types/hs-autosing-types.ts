@@ -161,13 +161,6 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
     ]
 });
 
-export type GetFromDOMOptions<T> = {
-    regex?: RegExp;
-    parser?: (raw: string) => T;
-    timeoutMs?: number;
-    predicate?: (text: string) => boolean;
-};
-
 export type PhaseOption = (typeof phases)[number];
 
 export interface HSAutosingStrategy {
