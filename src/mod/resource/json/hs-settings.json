@@ -53,6 +53,13 @@
     "enabled": false,
     "hidden": true
   },
+  "keepHeaderLayoutOnImport": {
+    "settingName": "keepHeaderLayoutOnImport",
+    "settingDescription": "Keep my header layout when a save is loaded (checkbox under Load from file)",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
   "hepteractDistributorAllowPartial": {
     "settingName": "hepteractDistributorAllowPartial",
     "settingDescription": "Hepteract Distributor: allow partly filled meters",

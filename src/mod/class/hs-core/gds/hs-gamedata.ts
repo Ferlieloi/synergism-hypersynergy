@@ -13,6 +13,7 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSKeepHeaderLayout } from "../hs-keep-header-layout";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
@@ -182,6 +183,7 @@ export class HSGameData extends HSModule {
                 this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
                 HSLogger.log("Save file import interceptor registered", this.context);
             }
+            if (this.#importSaveButton) HSKeepHeaderLayout.install(this.#importSaveButton);
         })();
     }
 
@@ -193,9 +195,12 @@ export class HSGameData extends HSModule {
      * "Load from file" has already stopped autosing at its button's click.
      * The ambrosia slot the quickbar shows is guessed again from the new save: with reset = false, importSynergism
      * loads the save synchronously, so it is in place one task later (or the import was refused, nothing changed).
+     * "Keep my header layout" notes the current header layouts for that load.
      */
     #onSaveImport(reset: boolean): void {
         if (reset) return;
+
+        HSKeepHeaderLayout.onSaveImport();
 
         setTimeout(() => {
             void HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.matchActiveLoadoutToLoadedSave()

@@ -26,6 +26,9 @@ export interface HSSettingsDefinition {
     hepteractDistributorOrbsPercent: HepteractDistributorOrbsPercentSetting;
     hepteractDistributorKeep: HepteractDistributorKeepSetting;
 
+    // Save import
+    keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
+
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
     autoConfirmPopups: AutoConfirmPopupsSetting;
@@ -181,6 +184,9 @@ export interface HepteractDistributorTalismanAloneSetting extends HSSettingBase<
 export interface HepteractDistributorRatiosSetting extends HSSettingBase<string> { }
 export interface HepteractDistributorOrbsPercentSetting extends HSSettingBase<number> { }
 export interface HepteractDistributorKeepSetting extends HSSettingBase<number> { }
+
+// Save import
+export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
