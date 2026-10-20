@@ -97,6 +97,11 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: 'blueviolet',
         },
         {
+            className: 'HSHeaderLoadoutIcons',
+            context: 'HSHeaderLoadoutIcons',
+            moduleColor: 'khaki',
+        },
+        {
             className: 'HSHepteractDistributor',
             context: 'HSHepteractDistributor',
             moduleColor: 'mediumslateblue',

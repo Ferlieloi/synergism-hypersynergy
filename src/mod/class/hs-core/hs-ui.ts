@@ -786,17 +786,28 @@ export class HSUI extends HSModule {
 
         setTimeout(() => {
             HSUI.#updatePending = false;
-
-            if (!HSUI.#injectedStylesHolder) {
-                HSUI.#injectedStylesHolder = document.createElement('style');
-                HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
-                document.head.appendChild(HSUI.#injectedStylesHolder);
-            }
-
-            HSUI.#injectedStylesHolder.innerHTML = Array.from(HSUI.#injectedStyles.values()).join('');
-
-            HSLogger.debug(() => `Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
+            HSUI.#writeInjectedStyleBlock();
         }, 0);
+    }
+
+    /**
+     * Writes the injected styles to the page now, instead of in the next task: for elements drawn right after
+     * their CSS is injected, which would otherwise be painted once without it.
+     */
+    static flushInjectedStyles() {
+        HSUI.#writeInjectedStyleBlock();
+    }
+
+    static #writeInjectedStyleBlock() {
+        if (!HSUI.#injectedStylesHolder) {
+            HSUI.#injectedStylesHolder = document.createElement('style');
+            HSUI.#injectedStylesHolder.id = HSGlobal.HSUI.injectedStylesDomId;
+            document.head.appendChild(HSUI.#injectedStylesHolder);
+        }
+
+        HSUI.#injectedStylesHolder.innerHTML = Array.from(HSUI.#injectedStyles.values()).join('');
+
+        HSLogger.debug(() => `Flushed ${HSUI.#injectedStyles.size} styles`, HSUI.#staticContext);
     }
 
     // Can be used to inject arbitrary HTML

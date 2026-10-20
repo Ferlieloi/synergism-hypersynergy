@@ -10,6 +10,7 @@ import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 import { getEffectiveHeaterIconSrc } from "./hs-heater/hs-heater-icon-store";
 import { HSQuickbarIconPickerController } from "./hs-qol-quickbar/hs-qolQuickbarIconPicker";
+import { HSLoadoutIconStore } from "./hs-qol-quickbar/hs-loadout-icon-store";
 
 export interface HeaterSlotIconApplyResult {
     setCount: number;
@@ -22,9 +23,7 @@ export class HSAmbrosiaQuickbar {
     readonly host: HSAmbrosia;
     #originalButtonRefs: Map<string, HTMLButtonElement> = new Map();
 
-    // Icon picking
-    readonly #AMBROSIA_ICON_STORAGE_KEY = 'hs-ambrosia-quickbar-icons';
-    #ambrosiaSlotIcons: Map<string, string> = new Map();
+    // Icon picking (the icons themselves are in HSLoadoutIconStore.ambrosia, shared with the game's header)
     #iconPicker = new HSQuickbarIconPickerController<string>({
         shouldIgnoreClickTarget: (target: Element) => {
             const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
@@ -58,6 +57,8 @@ export class HSAmbrosiaQuickbar {
 
     constructor(host: HSAmbrosia) {
         this.host = host;
+        // An icon picked on the game's header also shows here
+        HSLoadoutIconStore.ambrosia.onChange(() => this.refreshQuickbarIcons());
     }
 
     async init() {
@@ -124,11 +125,6 @@ export class HSAmbrosiaQuickbar {
     async createPersistentQuickbarContainer() {
         const pageHeader = this.host.getPageHeader();
         if (!pageHeader) return;
-
-        // Load persisted slot icons once before building the container
-        if (this.#ambrosiaSlotIcons.size === 0) {
-            this.#loadAmbrosiaIcons();
-        }
 
         const groupWrapper = HSQuickbarManager.getInstance().getSection("ambrosia");
         if (!groupWrapper) return;
@@ -362,74 +358,22 @@ export class HSAmbrosiaQuickbar {
     // ------------------- Icon storage --------------------
     // ======================================================
 
-    #loadAmbrosiaIcons(): void {
-        try {
-            const raw = localStorage.getItem(this.#AMBROSIA_ICON_STORAGE_KEY);
-            if (!raw) { this.#ambrosiaSlotIcons = new Map(); return; }
-            const parsed = JSON.parse(raw) as Record<string, string>;
-            this.#ambrosiaSlotIcons = new Map(Object.entries(parsed));
-        } catch (error) {
-            HSLogger.warn(`HSAmbrosiaQuickbar.loadAmbrosiaIcons failed: ${String(error)}`, this.context);
-            this.#ambrosiaSlotIcons = new Map();
-        }
-    }
-
-    #saveAmbrosiaIcons(): void {
-        try {
-            const obj: Record<string, string> = {};
-            this.#ambrosiaSlotIcons.forEach((url, key) => { obj[key] = url; });
-            localStorage.setItem(this.#AMBROSIA_ICON_STORAGE_KEY, JSON.stringify(obj));
-        } catch (error) {
-            HSLogger.warn(`HSAmbrosiaQuickbar.saveAmbrosiaIcons failed: ${String(error)}`, this.context);
-        }
-    }
+    // A change refreshes the slots through the store's listener (constructor)
 
     #getAmbrosiaSlotIcon(slotId: string): string | undefined {
-        return this.#ambrosiaSlotIcons.get(slotId);
-    }
-
-    #setAmbrosiaSlotIcon(slotId: string, url: string): void {
-        this.#ambrosiaSlotIcons.set(slotId, url);
-        this.#saveAmbrosiaIcons();
-    }
-
-    #clearAmbrosiaSlotIcon(slotId: string): void {
-        this.#ambrosiaSlotIcons.delete(slotId);
-        this.#saveAmbrosiaIcons();
+        return HSLoadoutIconStore.ambrosia.get(slotId);
     }
 
     #setIconForSlot(slotId: string, url: string): void {
-        this.#setAmbrosiaSlotIcon(slotId, url);
-        void this.refreshQuickbarIcons();
+        HSLoadoutIconStore.ambrosia.set(slotId, url);
     }
 
     #clearIconForSlot(slotId: string): void {
-        this.#clearAmbrosiaSlotIcon(slotId);
-        void this.refreshQuickbarIcons();
+        HSLoadoutIconStore.ambrosia.clear(slotId);
     }
 
     public async applySlotIconsBulk(iconBySlotId: Record<string, string | null | undefined>): Promise<void> {
-        let changed = false;
-
-        for (const [slotId, iconUrl] of Object.entries(iconBySlotId)) {
-            if (!slotId) continue;
-
-            const normalizedUrl = typeof iconUrl === 'string' ? iconUrl.trim() : '';
-            if (normalizedUrl) {
-                if (this.#ambrosiaSlotIcons.get(slotId) !== normalizedUrl) {
-                    this.#ambrosiaSlotIcons.set(slotId, normalizedUrl);
-                    changed = true;
-                }
-            } else if (this.#ambrosiaSlotIcons.has(slotId)) {
-                this.#ambrosiaSlotIcons.delete(slotId);
-                changed = true;
-            }
-        }
-
-        if (changed) {
-            this.#saveAmbrosiaIcons();
-        }
-
+        HSLoadoutIconStore.ambrosia.applyBulk(iconBySlotId);
         await this.refreshQuickbarIcons();
     }
 
