@@ -29,7 +29,15 @@ interface HSBackupParts {
 interface HSBackupSaveSummary {
     singularity?: number;
     highestSingularity?: number;
+    // The Exalt the save is inside (1 to 10), absent outside one
+    exalt?: number;
 }
+
+// The Exalts in the order of the game's Exalt tab, which numbers them (as HSGameDataAPI.getActiveExalt)
+const EXALT_KEYS = [
+    'noSingularityUpgrades', 'oneChallengeCap', 'limitedAscensions', 'noQuarkUpgrades', 'noOcteracts',
+    'noAmbrosiaUpgrades', 'limitedTime', 'sadisticPrequel', 'taxmanLastStand', 'barDependence',
+];
 
 // Always written, never imported: what is asked first when debugging a player's file
 interface HSBackupInfo extends HSBackupSaveSummary {
@@ -321,7 +329,10 @@ export class HSBackup {
         const date = new Date();
         const pad = (value: number) => String(value).padStart(2, '0');
         const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
-        const singularity = file.info.singularity !== undefined ? ` S${file.info.singularity}` : '';
+        const { singularity: current, highestSingularity: highest, exalt } = file.info;
+        const singularity = current !== undefined
+            ? ` S${current}${exalt !== undefined ? ` E${exalt}` : ''}${highest !== undefined ? ` (highest S${highest})` : ''}`
+            : '';
         const name = `[HS] ${label} ${stamp}${singularity}.json`;
 
         // One line per log and per stored value, so the file can be read in a text editor
@@ -382,7 +393,12 @@ export class HSBackup {
             if (data.exporttest !== 'YES!' && data.exporttest !== true) return null;
 
             const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-            return { singularity: count(data.singularityCount), highestSingularity: count(data.highestSingularityCount) };
+            const exaltIndex = EXALT_KEYS.findIndex(key => data.singularityChallenges?.[key]?.enabled === true);
+            return {
+                singularity: count(data.singularityCount),
+                highestSingularity: count(data.highestSingularityCount),
+                ...(exaltIndex >= 0 ? { exalt: exaltIndex + 1 } : {}),
+            };
         } catch {
             return null;
         }
@@ -519,8 +535,10 @@ export class HSBackup {
         };
 
         if (content.save) {
-            const { singularity, highestSingularity } = content.saveSummary ?? {};
-            note('save').textContent = singularity !== undefined ? `(Singularity ${singularity}, highest ${highestSingularity ?? '?'})` : '';
+            const { singularity, highestSingularity, exalt } = content.saveSummary ?? {};
+            note('save').textContent = singularity !== undefined
+                ? `(Singularity ${singularity}${exalt !== undefined ? ` inside Exalt ${exalt}` : ''}, highest ${highestSingularity ?? '?'})`
+                : '';
         } else {
             unavailable('save', content.saveRefused ? '(not a save the game would load)' : '(not in this file)');
         }
