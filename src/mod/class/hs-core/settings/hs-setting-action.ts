@@ -143,33 +143,6 @@ export class HSSettingActions {
             (mod) => mod.disableAutoLoadout()
         ),
 
-        /* RETIRED: The Ambrosia AFK/idle swapper is no longer useful after the
-         * corresponding game update. Keep the old action here as commented
-         * reference so the feature can be reconstructed if the game changes.
-        ambrosiaIdleSwapAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            const startAutosingEnabled = HSSettings.getSetting('startAutosing')?.isEnabled() ?? false;
-            HSLogger.debug(() => `ambrosiaIdleSwapAction called disable=${Boolean(params.disable)} startAutosingEnabled=${startAutosingEnabled}`, context);
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    // HSLogger.debug(() => `ambrosiaIdleSwapAction disable stack: ${new Error().stack ?? 'n/a'}`, context);
-                    ambrosiaMod.disableIdleSwap();
-                } else {
-                    // Auto-enable GDS if not already enabled
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
-                    }
-                    await ambrosiaMod.enableIdleSwap();
-                }
-            }
-        },
-        */
-
         startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
 

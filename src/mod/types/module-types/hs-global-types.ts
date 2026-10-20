@@ -77,14 +77,6 @@ export interface HSGlobalAmbrosia {
     quickBarId: string;
     quickBarLoadoutIdPrefix: string;
 
-    // RETIRED: Ambrosia AFK/idle swapper globals.
-    // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png';
-    // idleSwapIndicatorId: string;
-    // idleSwapMaxBlueThreshold: number;
-    // idleSwapMinBlueThreshold: number;
-    // idleSwapMaxRedThreshold: number;
-    // idleSwapMinRedThreshold: number;
-
     TIME_PER_AMBROSIA: number;
     TIME_PER_RED_AMBROSIA: number;
     digitReduction: number;

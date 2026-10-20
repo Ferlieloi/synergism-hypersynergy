@@ -816,12 +816,6 @@ export class HSUI extends HSModule {
         };
     }
 
-    // Can be used to inject arbitrary HTML
-    // injectFunction can be supplied to control where the HTML is injected
-    static injectHTMLElement(element: HTMLElement, injectFunction: (htmlElement: HTMLElement) => void) {
-        injectFunction(element);
-    }
-
 
     // ========================================
     // ------------ Modal helpers -------------

@@ -27,10 +27,6 @@
     "groupName": "Ambrosia tree settings",
     "order": 7.5
   },
-  "ambrosia2": {
-    "groupName": "Idle Swapper settings",
-    "order": 7
-  },
   "gamedata": {
     "groupName": "Game data settings",
     "order": 11

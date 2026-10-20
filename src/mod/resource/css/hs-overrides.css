@@ -13,20 +13,6 @@
    width: 15% !important;
 }
 
-/* RETIRED: AFK Swapper toggle button in Ambrosia subtab.
-#hs-ambrosia-loadout-idle-swap-toggle {
-    font-size: 1.0em;
-    font-family: fantasy;
-    letter-spacing: 3px;
-    border: 2px solid;
-    border-color: #0190cd;
-    padding: 10px 20px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    color: #774ed1;
-}
-*/
-
 /* Always hide the visually-useless ambrosia minibars numbers to avoid a 'jump' when enabling them. */
 #hs-blue-progress-text,
 #hs-red-progress-text {

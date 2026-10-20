@@ -133,7 +133,6 @@ export const HSGlobal: IHSGlobal = class {
             'useGameData',
             // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            // RETIRED: 'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
@@ -246,14 +245,6 @@ export const HSGlobal: IHSGlobal = class {
     static HSAmbrosia = {
         quickBarId: 'hs-ambrosia-slots-wrapper',
         quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
-
-        // RETIRED: Ambrosia AFK/idle swapper constants.
-        // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
-        // idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
-        // idleSwapMaxBlueThreshold: 97,
-        // idleSwapMinBlueThreshold: 3,
-        // idleSwapMaxRedThreshold: 99,
-        // idleSwapMinRedThreshold: 1,
 
         // Constants ripped from the game code
         TIME_PER_AMBROSIA: 45,

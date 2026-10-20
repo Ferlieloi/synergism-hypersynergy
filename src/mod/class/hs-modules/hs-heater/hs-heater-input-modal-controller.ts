@@ -43,9 +43,6 @@ export class HSHeaterInputModalController {
         autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb"] },
         autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb"] },
         autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb"] },
-        // RETIRED: Ambrosia AFK/idle swapper loadout recommendations.
-        // ambrosiaIdleSwapNormalLuckLoadout: { label: 'AFK Swapper Blue Luck', preferences: ["ambOct", "luck"] },
-        // ambrosiaIdleSwapRedLuckLoadout:    { label: 'AFK Swapper Red Luck',  preferences: ["rLuck"] },
     };
 
 

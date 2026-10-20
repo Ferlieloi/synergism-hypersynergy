@@ -98,8 +98,6 @@ export class HSQOLButtons extends HSModule {
         // Only perform module-specific DOM setup here if not settings-driven.
         this.#injectAdd10Button();
         this.#injectPurchaseBuyMaxButton();
-        // RETIRED: Ambrosia AFK/idle swapper.
-        // this.injectAFKSwapperToggleButton();
     }
 
     observe() {
@@ -998,8 +996,6 @@ export class HSQOLButtons extends HSModule {
         if (teardownCallback) teardownCallback();
         HSQuickbarManager.getInstance().disableQuickbar(id);
     }
-
-    // RETIRED: injectAFKSwapperToggleButton() and its Ambrosia-tab toggle UI.
 
     /**
      * Subscribe to a SINGULARITY_VIEW tab visit and run a callback.

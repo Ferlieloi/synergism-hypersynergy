@@ -466,7 +466,6 @@ export class HSAutosingSettingsFixer {
             'enableCorruptionQuickBar',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
-            // RETIRED: 'ambrosiaIdleSwap',
         ] as const;
 
         const disabledSettings: string[] = [];

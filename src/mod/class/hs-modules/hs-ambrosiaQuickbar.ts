@@ -292,13 +292,6 @@ export class HSAmbrosiaQuickbar {
         return quickbar.querySelector<HTMLButtonElement>(`.blueberryLoadoutSlot[data-original-id="${buttonId}"]`) ?? undefined;
     }
 
-    public getCurrentOriginalLoadoutButtons(): HTMLButtonElement[] {
-        const loadoutContainer = this.host.getLoadoutContainer();
-        if (!loadoutContainer) { return []; }
-
-        return Array.from(loadoutContainer.querySelectorAll('.blueberryLoadoutSlot')) as HTMLButtonElement[];
-    }
-
     /**
      * Highlight the active slot on the quickbar clones: rainbow border once the game marks it (confirmed),
      * silver while it's only guessed from the save, as the game marks no slot after a page load.

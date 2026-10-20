@@ -651,8 +651,6 @@ export class Hypersynergism {
                 html: [
                     this.#buildGridSectionHeader('Mouse'),
                     HSUIC.Div({ id: 'hs-panel-debug-mousepos' }),
-                    this.#buildGridSectionHeader('Game Data'),
-                    this.#buildGridFullSpanDiv('hs-panel-debug-gamedata-currentambrosia', ''),
                 ]
             })
         );
