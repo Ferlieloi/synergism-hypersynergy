@@ -108,7 +108,8 @@ export class HSCorruption {
     // =================================
 
     /**
-     * A line above the icon and slots of the game's "Corruption loadouts" header module: the current corruption levels,
+     * A line under the icon and slots of the game's "Corruption loadouts" header module (in the top row, hanging into the
+     * row's bottom margin, so the row keeps its alignment: hs-quickbars.css): the current corruption levels,
      * then the next ones when they differ. Refreshed when the game rewrites its corruption stats (corrCurrent* /
      * corrNext*, at a level change, a loadout load, a cleanse, each ascension, whatever tab is shown): one observer on
      * them, no polling. The levels come from the live player; without it (bookmarklet), from those spans.
@@ -142,7 +143,7 @@ export class HSCorruption {
         next.className = 'hs-corruption-header-levels-next';
         element.append(current, next);
 
-        module.prepend(element);
+        module.append(element);
         module.classList.add('hs-corruption-levels-shown');
 
         const observer = new MutationObserver(() => HSCorruption.#refreshHeaderLevels());

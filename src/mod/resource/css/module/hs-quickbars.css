@@ -101,7 +101,18 @@
     --- Game's "Corruption loadouts" header module ---
     ================================================== */
 
-/* Its icon as the cleanse button (HSCorruption): a button, except while the header is edited */
+/* Its icon as the cleanse button (HSCorruption): the size of the loadout slots next to it (the game's 1.75em, so it
+   follows the module's S / M / L), not the game's stat icon size (12px at S in the top row) */
+#corruptionLoadoutsHeader > img.hs-corruption-cleanse {
+   width: 1.75em;
+   height: 1.75em;
+}
+/* In the grid at S, the game shrinks only the module's spans (the slots) by 0.75, not its font size */
+.headerGrid #corruptionLoadoutsHeader[data-size="S"] > img.hs-corruption-cleanse {
+   width: calc(1.75em * 0.75);
+   height: calc(1.75em * 0.75);
+}
+/* A button, except while the header is edited */
 #mainHeader:not(.headerEditMode) .hs-corruption-cleanse {
    cursor: pointer;
 }
@@ -109,8 +120,8 @@
    filter: brightness(130%) drop-shadow(0 0 4px rgba(255, 0, 0, 0.6));
 }
 
-/* The levels line above its icon and slots (HSCorruption): a grid, the line across both columns.
-   Not on a locked module, which the game hides with display: none. */
+/* The levels line under its icon and slots (HSCorruption). Not on a locked module, which the game hides with
+   display: none. In the grid (and the tray): a grid, the line across both columns. */
 #corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked) {
    display: grid;
    grid-template-columns: auto 1fr;
@@ -122,6 +133,28 @@
    font-weight: 500;
    letter-spacing: 0.03em;
    line-height: 1.2;
+}
+/* In the top row: out of the flow, hanging under the module into the row's bottom margin (10px in the game), so the
+   row's height and alignment stay the game's. That margin grows by what the line needs past it, by the module's size
+   (the line is 0.75em of the module's font: 12px at S, 16px at M, 20px at L). */
+.ascensionStats #corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked) {
+   display: flex;
+   position: relative;
+}
+.ascensionStats #hs-corruption-header-levels {
+   position: absolute;
+   top: 100%;
+   left: 0;
+   white-space: nowrap;
+}
+.ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown:not(.headerModuleLocked)) {
+   margin-bottom: 18px;
+}
+.ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown[data-size="S"]:not(.headerModuleLocked)) {
+   margin-bottom: 14px;
+}
+.ascensionStats:has(#corruptionLoadoutsHeader.hs-corruption-levels-shown[data-size="L"]:not(.headerModuleLocked)) {
+   margin-bottom: 22px;
 }
 .hs-corruption-header-levels-current {
    color: #ba2d2d;
