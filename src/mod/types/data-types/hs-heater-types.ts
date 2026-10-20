@@ -144,22 +144,6 @@ export type HeaterResultUnaffordableRow = [
 export type HeaterResultRow = HeaterResultAffordableRow | HeaterResultUnaffordableRow;
 export type HeaterResultRowMatrix = HeaterResultRow[];
 
-export type HeaterResultSheetRow = {
-    loadout:        string;
-    blueberryCost:  number | "N / A";
-    cost:           number | "N / A";
-    costDetail:     number | "Maxed" | "N / A";
-    effect:         string;
-    p4x4Eq:         number | "Never" | "" | "N / A";
-    maxed:          boolean;
-    p4Effect:       number | "-" | "N / A";
-    p4CefLog:       number | "-" | "N / A" | "Never";
-    p9Effect:       number | "-" | "N / A";
-    p9CefLog:       number | "-" | "N / A" | "Never";
-};
-
-export type HeaterResultSheetRowMatrix = HeaterResultSheetRow[];
-
 export type RowBasedResultKey = import("../../class/hs-modules/hs-heater/hs-heater-result-config").RowBasedResultKey;
 export type SingleResultKey = Exclude<HeaterResultArrayKey, RowBasedResultKey>;
 export type HeaterTypeSemanticId = 'none' | SingleResultKey | `${RowBasedResultKey}:${number}`;

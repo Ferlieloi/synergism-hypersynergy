@@ -10,7 +10,6 @@ import {
     HSUICModalOptions,
     HSUICPOptions,
     HSUICSelectOption,
-    HTMLData,
     HTMLProps
 } from "../../types/module-types/hs-ui-types";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -121,7 +120,6 @@ export class HSUIC {
     // Input Component
     static Select(options: HSUICInputOptions, selectOptions: HSUICSelectOption[]): string {
         const comp_class = options.class ?? '';
-        const comp_type = this.#resolveInputType(options.type);
         const comp_input_class = this.#resolveInputClass(options.type);
         const id = options.id ?? HSUtils.domid();
         const propString = this.#getPropString(options.props);
@@ -261,7 +259,6 @@ export class HSUIC {
         const comp_header_class = options.headerClass ?? '';
         const comp_body_class   = options.bodyClass ?? '';
         const comp_html         = options.htmlContent ?? '';
-        const comp_data         = options.data ?? [];
         const comp_title        = options.title ?? '';
         const id                = options.id ?? HSUtils.domid();
         const propString = this.#getPropString(options.props);

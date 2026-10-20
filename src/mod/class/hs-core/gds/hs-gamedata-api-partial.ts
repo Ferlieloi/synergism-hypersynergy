@@ -58,7 +58,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     }
 
     async init() {
-        const self = this;
         HSLogger.log(`Initializing HSGameDataAPI module`, this.context);
         this.gameDataModule = HSModuleManager.getModule<HSGameData>('HSGameData');
 

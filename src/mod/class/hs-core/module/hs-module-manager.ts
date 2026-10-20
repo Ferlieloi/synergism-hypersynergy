@@ -6,7 +6,7 @@ import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributo
 import { HSTalismans } from "../../hs-modules/hs-talismans";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
-import { HSExternalModuleOptions, HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
+import { HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
 import { HSPrototypes } from "../hs-prototypes";
 import { HSMouse } from "../hs-mouse";
 import { HSShadowDOM } from "../hs-shadowdom";
@@ -175,8 +175,7 @@ export class HSModuleManager {
     async initModules() {
         // Go through the modules added to module manager and initialize all of them
 
-        HSModuleManager.#enabledModules.forEach
-        for (const [className, module] of HSModuleManager.#enabledModules.entries()) {
+        for (const module of HSModuleManager.#enabledModules.values()) {
             if (!module.isInitialized)
                 await module.init();
         }

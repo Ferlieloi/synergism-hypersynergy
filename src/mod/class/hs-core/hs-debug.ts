@@ -1,4 +1,3 @@
-import { HSModuleOptions } from "../../types/hs-types";
 import { HSModule } from "./module/hs-module";
 
 /**
@@ -9,13 +8,6 @@ import { HSModule } from "./module/hs-module";
  * Author: Swiffy
  */
 export class HSDebug extends HSModule {
-    static #context: string;
-
-    constructor(moduleOptions : HSModuleOptions) {
-        super(moduleOptions);
-        HSDebug.#context = moduleOptions.context;
-    }
-
     async init() {
         this.isInitialized = true;
     }

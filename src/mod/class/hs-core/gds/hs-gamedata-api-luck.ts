@@ -188,7 +188,6 @@ export class LuckHelper {
 
         const redLuck = this.#ctx.getRedAmbrosiaUpgradeEffects('redLuck').redAmbrosiaLuck;
         const viscount = this.#ctx.getRedAmbrosiaUpgradeEffects('viscount').redLuckBonus;
-        const horseShoeLevel = this.#ctx.getRuneEffectiveLevel('horseShoe');
         const effectiveShopRedLuck1 = this.#ctx.getShopLevel('shopRedLuck1', mode);
         const effectiveShopRedLuck2 = this.#ctx.getShopLevel('shopRedLuck2', mode);
         const effectiveShopRedLuck3 = this.#ctx.getShopLevel('shopRedLuck3', mode);

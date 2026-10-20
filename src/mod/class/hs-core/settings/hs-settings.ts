@@ -273,7 +273,6 @@ export class HSSettings extends HSModule {
 
             if (storageMod) {
                 const serializedSettings = this.#serializeSettings();
-                const parsed = JSON.parse(serializedSettings);
 
                 const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
 
@@ -314,7 +313,7 @@ export class HSSettings extends HSModule {
     #parseDefaultSettings(): HSSettingsDefinition {
         const defaultSettings = JSON.parse(settings) as Partial<HSSettingsDefinition>;
 
-        for (const [key, setting] of Object.typedEntries<Partial<HSSettingsDefinition>>(defaultSettings)) {
+        for (const setting of Object.values(defaultSettings)) {
             if (!setting) continue;
             const settingDef = setting as HSSettingBaseWithHidden<HSSettingType>;
 

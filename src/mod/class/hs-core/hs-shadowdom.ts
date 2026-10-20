@@ -29,7 +29,7 @@ export class HSShadowDOM extends HSModule {
             return existingShadow;
         }
 
-        const shadow = new HSShadow(element, name, this).create(visible);
+        const shadow = new HSShadow(element, name).create(visible);
 
         if(shadow) {
             this.#shadows.set(name, shadow);
@@ -53,7 +53,7 @@ export class HSShadowDOM extends HSModule {
     }
 
     #shadowExists(element: HTMLElement) : HSShadow | null {
-        for(const [shadowName, shadow] of this.#shadows.entries()) {
+        for(const shadow of this.#shadows.values()) {
             if(element === shadow.getElement()) {
                 return shadow;
             }
@@ -72,8 +72,6 @@ export class HSShadowDOM extends HSModule {
  */
 export class HSShadow {
     #context = 'HSShadow';
-
-    #shadowDOM: HSShadowDOM;
 
     #element: HTMLElement;
     name: string;
@@ -95,11 +93,9 @@ export class HSShadow {
         backgroundColor: 'rgba(125, 125, 125, 0.8)'
     }
 
-    constructor(element: HTMLElement, name: string, shadowDOM: HSShadowDOM) {
+    constructor(element: HTMLElement, name: string) {
         this.#element = element;
         this.name = name;
-
-        this.#shadowDOM = shadowDOM;
 
         this.#container = document.createElement('div');
     }

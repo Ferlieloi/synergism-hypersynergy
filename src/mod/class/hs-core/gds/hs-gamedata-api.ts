@@ -893,7 +893,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     getFavoriteUpgradeMaxedDependencyCount(): number {
         if (!this.gameData) return 0
-        const data = this.gameData
 
         const goldenQuarkMaxed = FAVORITE_UPGRADE_GQ_DEPENDENCIES.reduce((count, key) =>
             count + (this.goldenQuark.getGQUpgradeLevel(key) >= goldenQuarkUpgradeMaxLevels[key].maxLevel ? 1 : 0),
@@ -1467,7 +1466,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     calculateAmbrosiaLuckSingularityUpgrade(reduce_vals = true) {
         if (!this.gameData) return 0;
-        const data = this.gameData;
         const vals = [
             this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck', 'ambrosiaLuck'),
             this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck2', 'ambrosiaLuck'),

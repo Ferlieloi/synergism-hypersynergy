@@ -49,7 +49,6 @@ export class HSSettingActions {
         // Care should be taken to handle this case so the setting will know what to do when it is enabled/disabled
         syncNotificationOpacity: async (params: HSSettingActionParams) => {
             const notifElement = document.querySelector('#notification') as HTMLDivElement;
-            const context = params.contextName ?? "HSSettings";
 
             if (params.disable && params.disable === true) {
                 notifElement.style.removeProperty('opacity');
@@ -96,16 +95,12 @@ export class HSSettingActions {
         },
 
         reactiveMouseHover: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
             if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('hover');
             }
         },
 
         autoClick: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
             if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('click');
             }
@@ -196,26 +191,21 @@ export class HSSettingActions {
         },
 
         createAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSAutosingStrategyModal.open();
         },
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.exportSelectedStrategy();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.importStrategy();
         },
 
@@ -225,7 +215,6 @@ export class HSSettingActions {
         },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
                 qolButtonsMod.setMaxedGQUpgradesVisibility();
@@ -233,7 +222,6 @@ export class HSSettingActions {
         },
 
         hideMaxedOctUpgradesAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
                 qolButtonsMod.setMaxedOctUpgradesVisibility();

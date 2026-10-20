@@ -12,7 +12,7 @@ import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSSelectStringSetting, HSSetting } from "../hs-core/settings/hs-setting";
+import { HSSelectStringSetting } from "../hs-core/settings/hs-setting";
 import { HSSettings } from "../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
 import { HSStorage } from "../hs-core/hs-storage";
@@ -98,7 +98,6 @@ export class HSAmbrosia extends HSModule
     // Auto-Loadout: the slot to load back once the code has paid out
     #pendingCodeRestore: { slot: HTMLButtonElement, codeSlotId: string } | undefined;
     #importBlueberriesButton: HTMLButtonElement | null = null;
-    #importBlueberriesInput: HTMLInputElement | null = null;
     #persistentAmbrosiaLevelsToggleButton: HTMLButtonElement | null = null;
     #loadoutContainerClickHandler?: (e: MouseEvent) => Promise<void>;
     #gameActiveLoadoutObserver?: MutationObserver;
@@ -230,7 +229,7 @@ export class HSAmbrosia extends HSModule
     }
 
     async #cacheDomRefs() {
-        const [loadoutsSlots, loadoutContainer, blueberryUpgradeContainer, pageHeader, addCodeButton, addCodeAllButton, addCodeOneButton, timeCodeButton, importBlueberriesButton, importBlueberriesInput] = await Promise.all([
+        const [loadoutsSlots, loadoutContainer, blueberryUpgradeContainer, pageHeader, addCodeButton, addCodeAllButton, addCodeOneButton, timeCodeButton, importBlueberriesButton] = await Promise.all([
             HSElementHooker.HookElements('.blueberryLoadoutSlot'),
             HSElementHooker.HookElement('#bbLoadoutContainer'),
             HSElementHooker.HookElement('#blueberryUpgradeContainer'),
@@ -239,8 +238,7 @@ export class HSAmbrosia extends HSModule
             HSElementHooker.HookElement('#addCodeAll'),
             HSElementHooker.HookElement('#addCodeOne'),
             HSElementHooker.HookElement('#timeCode'),
-            HSElementHooker.HookElement('#importBlueberriesButton'),
-            HSElementHooker.HookElement('#importBlueberries')
+            HSElementHooker.HookElement('#importBlueberriesButton')
         ]);
 
         this.#loadoutsSlots = loadoutsSlots;
@@ -252,7 +250,6 @@ export class HSAmbrosia extends HSModule
         this.#addCodeOneButton = addCodeOneButton as HTMLButtonElement;
         this.#timeCodeButton = timeCodeButton as HTMLButtonElement;
         this.#importBlueberriesButton = importBlueberriesButton as HTMLButtonElement;
-        this.#importBlueberriesInput = importBlueberriesInput as HTMLInputElement;
     }
 
     public async initializeActiveLoadoutFromGameData(): Promise<void> {

@@ -73,7 +73,6 @@ export class HSGameData extends HSModule {
     // --- DOM Elements ---
     #manualSaveButton?: HTMLButtonElement;
     #saveinfoElement?: HTMLParagraphElement;
-    #gameDataDebugElement?: HTMLDivElement;
     #campaignTokenElement?: HTMLHeadingElement;
     #importSaveButton?: HTMLLabelElement;
 

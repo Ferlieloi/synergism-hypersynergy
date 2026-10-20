@@ -110,7 +110,6 @@ export class HSHepteracts extends HSModule {
     #ratioElementB?: HTMLElement;
     #ratioElementC?: HTMLElement;
 
-    #hepteractForgeView?: HTMLElement;
     #hoveredHepteractId: string | null = null;
     #craftTextRefreshTimer?: ReturnType<typeof setInterval>;
     #ascensionIncomeReadQueue: Promise<unknown> = Promise.resolve();

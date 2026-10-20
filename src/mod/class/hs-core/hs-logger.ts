@@ -15,7 +15,6 @@ import { HSSettings } from "./settings/hs-settings";
  * Author: Swiffy
 */
 export class HSLogger {
-    static #context = 'HSLogger';
 
     static #integratedToUI = false;
     static #logElement: HTMLElement;
@@ -416,20 +415,6 @@ export class HSLogger {
                 this.#oneShotLogHistory.delete(key);
             }
         }
-    }
-
-    static #maybeStartOneShotIvl() {
-        /*if(!this.#oneShotLogHistoryIvl) {
-            this.#oneShotLogHistoryIvl = setInterval(() => {
-                this.#oneShotLogHistory.forEach((value, key) => {
-                    if(value.logged) {
-                        if(Date.now() - value.timestamp > 10 * 60 * 1000) {
-                            this.#oneShotLogHistory.delete(key);
-                        }
-                    }
-                });
-            }, 5 * 60 * 1000);
-        }*/
     }
 
 

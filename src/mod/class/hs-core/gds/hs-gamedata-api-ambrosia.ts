@@ -2,8 +2,7 @@ import { redAmbrosiaUpgradeCalculationCollection } from "./stored-vars-and-calcu
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { HSGlobal } from "../hs-global";
 import type { GameData, RedAmbrosiaUpgrades } from "../../../types/data-types/hs-player-savedata";
-import type { AmbrosiaHelperContext, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig, AmbrosiaUpgradeEffectContext, RedAmbrosiaUpgradeRewards, RedAmbrosiaUpgradeKey, AmbrosiaUpgradeCalculationConfig as AmbrosiaUpgradeCalculationConfigAny, CachedValue, CalculationCache, CalculationMode } from "../../../types/data-types/hs-gamedata-api-types";
-import { HSLogger } from "../hs-logger";
+import type { AmbrosiaHelperContext, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig, AmbrosiaUpgradeEffectContext, RedAmbrosiaUpgradeRewards, RedAmbrosiaUpgradeKey, CalculationCache, CalculationMode } from "../../../types/data-types/hs-gamedata-api-types";
 import { calculateAmbrosiaBarIncome } from "./hs-ambrosia-bar-income";
 import type { AmbrosiaBarIncome } from "../../../types/data-types/hs-ambrosia-income-types";
 

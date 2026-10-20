@@ -484,11 +484,6 @@ export class HSQOLAutomationQuickbar extends HSQOLQuickbarBase {
         return !!visibilityTarget && visibilityTarget.isConnected && visibilityTarget.style.display !== 'none' ? el : null;
     }
 
-    /** Narrowing helper: returns true when element is attached and visible. */
-    #isElementVisibleInDom(el: HTMLElement | null): el is HTMLElement {
-        return !!el && el.isConnected && el.style.display !== 'none';
-    }
-
     /** Reset queued render state and existing watchers before rebuilding quickbar UI. */
     #resetAutomationQuickbarRuntime(): void {
         if (this.#queuedAutomationFrameId !== null) {

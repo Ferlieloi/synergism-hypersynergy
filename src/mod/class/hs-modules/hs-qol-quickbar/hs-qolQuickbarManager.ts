@@ -18,7 +18,6 @@ export class HSQuickbarManager {
     static #instance: HSQuickbarManager;
     #sectionFactories: Map<QUICKBAR_ID, QuickbarSectionFactory> = new Map();
     #sectionElements: Map<QUICKBAR_ID, HTMLElement> = new Map();
-    #injected = false;
     #sectionInjectedCallbacks: Map<QUICKBAR_ID, (() => void)[]> = new Map();
     #sectionOrder: QUICKBAR_ID[] = [];
 
@@ -87,7 +86,6 @@ export class HSQuickbarManager {
         if (!this.#sectionOrder.includes(id)) {
             this.#sectionOrder.push(id);
         }
-        this.#injected = false;
         // --- Promise-based: create a new promise if not present ---
         if (!this.#sectionInjectedPromises.has(id)) {
             this.#sectionInjectedPromises.set(id, new Promise(resolve => {
@@ -261,6 +259,5 @@ export class HSQuickbarManager {
             el.parentElement.removeChild(el);
         }
         this.#sectionElements.delete(id);
-        this.#injected = false;
     }
 }

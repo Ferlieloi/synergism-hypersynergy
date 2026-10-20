@@ -306,7 +306,6 @@ export class HSAutosing extends HSModule {
         const elements = {
             addCodeAllBtn: document.getElementById("addCodeAll") as HTMLButtonElement | null,
             timeCodeBtn: document.getElementById("timeCode") as HTMLButtonElement | null,
-            corruptionStats: document.getElementById('corruptionStats') as HTMLElement | null,
             corrImportBtn: document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement | null,
             ...corrNextElements,
         } as Record<string, HTMLElement | null>;
@@ -320,7 +319,6 @@ export class HSAutosing extends HSModule {
         this.#timeCodeBtn = elements.timeCodeBtn as HTMLButtonElement;
         this.#corruptionManager = new HSAutosingCorruption(
             corrNext,
-            elements.corruptionStats as HTMLElement,
             elements.corrImportBtn as HTMLButtonElement,
         );
         return true;

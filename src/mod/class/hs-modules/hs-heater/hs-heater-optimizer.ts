@@ -4576,7 +4576,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         runeIaExp, runeIaBonusLevelsTotal, runeIaBonusLevelsTalisman,
         baseTalismanPower,
         patreonBonus,
-        jack, freeShopLevelsInfinity, freeShopLevelsQuark,
+        jack, freeShopLevelsQuark,
         chronometerLevel,
         shopAmbrosiaLuck1, shopAmbrosiaLuck2, shopAmbrosiaLuck3, shopAmbrosiaLuck4,
         shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4,
@@ -4586,7 +4586,6 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         ossifiedTactics, redberries, viscount, ossifiedTactics2,
         ambrosiaUpgradeBonusLevels, ambrosiaUpgradeBlueberryCostReductions,
         shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel, shopUpgradesDisabled,
-        heaterOptions,
     } = input;
 
     stats.amb            = amb;

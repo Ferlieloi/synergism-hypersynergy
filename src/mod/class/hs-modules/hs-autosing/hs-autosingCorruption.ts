@@ -1,6 +1,5 @@
 import { CorruptionLoadout, CorruptionLoadoutDefinition, AutosingStrategyPhase } from "../../../types/module-types/hs-autosing-types";
 import { HSLogger } from "../../hs-core/hs-logger";
-import { HSGlobal } from "../../hs-core/hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 
@@ -22,7 +21,6 @@ export class HSAutosingCorruption {
     readonly #context = 'HSAutosingCorruption';
 
     readonly #corrNext: Record<string, HTMLElement | null>;
-    readonly #corruptionStatsContainer: HTMLElement | null | undefined;
     readonly #importBtn: HTMLButtonElement;
     #applyCorruptionsFunc: ((json: string) => boolean) | null;
     #lastAppliedCorruptionsJson: string | null = null;
@@ -32,11 +30,9 @@ export class HSAutosingCorruption {
 
     constructor(
         corrNext: Record<string, HTMLElement | null>,
-        corruptionStatsContainer: HTMLElement | null | undefined,
         importBtn: HTMLButtonElement,
     ) {
         this.#corrNext = corrNext;
-        this.#corruptionStatsContainer = corruptionStatsContainer;
         this.#importBtn = importBtn;
         this.#applyCorruptionsFunc = null;
     }

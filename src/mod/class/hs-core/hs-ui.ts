@@ -4,7 +4,6 @@ import { HSIcons } from "../hs-utils/hs-icons";
 import { HSElementHooker } from "./hs-elementhooker";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
-import { HSSettingsUI } from "./settings/hs-settings-ui";
 import { HSModule } from "./module/hs-module";
 import { HSUIC } from "./hs-ui-components";
 import panelCoreCSS from "inline:../../resource/css/hs-panel-core.css";
