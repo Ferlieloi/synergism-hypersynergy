@@ -107,11 +107,6 @@ export class HSSettingActions {
             }
         },
 
-        ambrosiaQuickBarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
-            (mod) => mod.showQuickBar(),
-            (mod) => mod.hideQuickBar()
-        ),
-
         ambrosiaMinibarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
             (mod, params) => {
                 // Auto-enable GDS if not already enabled

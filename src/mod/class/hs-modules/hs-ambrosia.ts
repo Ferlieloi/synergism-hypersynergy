@@ -8,7 +8,8 @@ import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSAmbrosiaQuickbar } from "./hs-ambrosiaQuickbar";
+import { HSLoadoutIconStore } from "./hs-qol-quickbar/hs-loadout-icon-store";
+import { getEffectiveHeaterIconSrc } from "./hs-heater/hs-heater-icon-store";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
@@ -32,6 +33,13 @@ interface HSQuickImportSummary {
 }
 
 type HSAmbrosiaTree = Record<string, number>;
+
+/** What the heater's "Sync icons" did (HSAmbrosia.applyHeaterSlotIconSemanticsBulk). */
+export interface HeaterSlotIconApplyResult {
+    setCount: number;
+    clearedCount: number;
+    missingCount: number;
+}
 
 type HSAmbrosiaRateResource = 'amb' | 'ramb' | 'phoney';
 
@@ -84,7 +92,9 @@ export interface HSSingReducerPlan {
 /**
  * Class: HSAmbrosia
  * IsExplicitHSModule: Yes
- * Description: Hypersynergism module which manages ambrosia loadouts and quickbar interactions.
+ * Description: Hypersynergism module which manages ambrosia loadouts: the slot shown as loaded (rainbow or silver
+ *     border, on the Ambrosia tab's slots and the game's Ambrosia loadouts header module), imports, Auto-Loadout,
+ *     custom slot icons on the tab, the minibars and the hourly rates.
  * Author: Swiffy
  */
 export class HSAmbrosia extends HSModule
@@ -92,9 +102,12 @@ export class HSAmbrosia extends HSModule
 
     // Import through the game's dialogs (no exposedPlayer): up to 16 lines, each waiting up to ~1.5 s for its dialogs
     static readonly #GAME_IMPORT_TIME_LIMIT_MS = 120000;
-    // A single loadout goes into the slot the game marks as active; none is marked after a page load,
-    // and the slot guessed from the save (silver border) may be wrong, so the import is refused
+    // A single loadout goes into the slot shown as loaded (#shownLoadoutSlot): refused when none is shown
     static readonly #NO_ACTIVE_LOADOUT_REASON = 'No active loadout: load a loadout first';
+    // The slots of the game's Ambrosia loadouts header module
+    static readonly #HEADER_SLOTS_ID = 'ambrosiaLoadoutsHeaderSlots';
+    static readonly #CONFIRMED_BORDER = 'hs-rainbow-border';
+    static readonly #GUESSED_BORDER = 'hs-silver-border';
 
     gameDataSubscriptionId?: string;
     #ambrosiaViewSubscriptionId?: string;
@@ -123,8 +136,6 @@ export class HSAmbrosia extends HSModule
     activeLoadout?: AMBROSIA_LOADOUT_SLOT;
     /** Whether the game marks activeLoadout as its active slot (rainbow border) or it's our guess from the save (silver). */
     #activeLoadoutConfirmed = false;
-
-    public quickbar: HSAmbrosiaQuickbar;
 
     #cachedGameDataAPI?: HSGameDataAPI;
     #cachedGameDataMod?: HSGameData;
@@ -171,13 +182,7 @@ export class HSAmbrosia extends HSModule
 
     #hasPerformedInitialLoadoutMatch = false;
 
-    #quickbarCSSId = 'hs-ambrosia-quickbar-css';
     #minibarCSSId = 'hs-ambrosia-minibar-css';
-    #quickbarCSS = `
-        #${HSGlobal.HSAmbrosia.quickBarId} > .blueberryLoadoutSlot:hover {
-            filter: brightness(150%);
-        }
-    `;
 
 
     // ==============================================
@@ -186,7 +191,8 @@ export class HSAmbrosia extends HSModule
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
-        this.quickbar = new HSAmbrosiaQuickbar(this);
+        // An icon picked on the game's header also shows on the Ambrosia tab
+        HSLoadoutIconStore.ambrosia.onChange(() => this.#refreshTabSlotIcons());
     }
 
     async init() {
@@ -199,7 +205,8 @@ export class HSAmbrosia extends HSModule
 
         this.#migrateLegacyPersistentAmbrosiaLevelsState();
 
-        await this.quickbar.init();
+        this.#refreshTabSlotIcons();
+        this.#observeHeaderLoadoutSlots();
         this.#observeGameActiveLoadout();
 
         await this.#createPersistentMinibars();
@@ -246,12 +253,6 @@ export class HSAmbrosia extends HSModule
         await this.#performInitialActiveLoadoutMatchOnce(gameData);
     }
 
-    async #ensureAmbrosiaSection(): Promise<HTMLElement | null> {
-        await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-        const section = HSQuickbarManager.getInstance().getSection('ambrosia');
-        return section ?? null;
-    }
-
 
     // ==============================================
     // --------------- Loadout Events ---------------
@@ -266,8 +267,8 @@ export class HSAmbrosia extends HSModule
     }
 
     #detachAmbrosiaTabEvents() {
-        // The loadout click handler stays attached even when the Ambrosia tab is hidden.
-        // Persistent quickbar clicks rely on the original loadout click event to update active loadout state.
+        // The loadout click handler stays attached even when the Ambrosia tab is hidden:
+        // the mod's slot clicks (Auto-Loadout, imports, heater) refresh the persistent levels through it.
 
         if (this.#persistentAmbrosiaLevelsToggleButton && this.#persistentAmbrosiaLevelsToggleHandler) {
             this.#persistentAmbrosiaLevelsToggleButton.removeEventListener('click', this.#persistentAmbrosiaLevelsToggleHandler);
@@ -290,7 +291,7 @@ export class HSAmbrosia extends HSModule
         // The active loadout itself is not set here anymore: #observeGameActiveLoadout follows the game's marker,
         // which only moves when the load (or save) actually succeeded.
 
-        // Programmatic slot clicks (quickbar, Add/Time codes, heater...) don't move the mouse,
+        // Programmatic slot clicks (Add/Time codes, heater...) don't move the mouse,
         // so the hover handlers won't refresh the persistent levels: do it here.
         this.#queuePersistentAmbrosiaLevelsRefresh();
 
@@ -306,48 +307,77 @@ export class HSAmbrosia extends HSModule
 
 
     // ==============================================
-    // ---- Ambrosia Quickbar (UI, events, sync) ----
+    // ----------- Loadout slots and icons ----------
     // ==============================================
 
+    /** The Ambrosia tab's loadout bar (#bbLoadoutContainer): its 16 slots, then the mode and quick save buttons. */
     getLoadoutContainer(): HTMLElement | null {
         return this.#loadoutContainer;
     }
 
-    getPageHeader(): HTMLElement | null {
-        return this.#pageHeader;
+    /** The Ambrosia tab's slot button, by its id (blueberryLoadoutN). */
+    #loadoutSlotById(slotId: string | undefined): HTMLButtonElement | undefined {
+        if (!slotId) return undefined;
+        return this.#loadoutsSlots.find(slot => slot.id === slotId) as HTMLButtonElement | undefined;
     }
 
-    getQuickbarCSS(): string {
-        return this.#quickbarCSS;
+    /** Loads a slot of the Ambrosia tab, by its id (the heater results' slot row). Its success Alert is dismissed. */
+    loadLoadoutSlot(slotId: string, owner: string): void {
+        const slot = this.#loadoutSlotById(slotId);
+        if (!slot) { HSLogger.warn(`No ambrosia loadout slot ${slotId}`, this.context); return; }
+        this.#reloadLoadoutSlot(slot, owner);
     }
 
-    getQuickbarCSSId(): string {
-        return this.#quickbarCSSId;
-    }
-
-    refreshActiveLoadoutFromState() {
-        const resolvedCurrent = HSAmbrosiaHelper.resolveAmbrosiaLoadout(this.activeLoadout);
-        if (resolvedCurrent) {
-            this.updateActiveLoadout(resolvedCurrent);
+    /** The custom slot icons (HSLoadoutIconStore, also painted on the game's header) on the Ambrosia tab's slots. */
+    #refreshTabSlotIcons(): void {
+        for (const slot of this.#loadoutsSlots) {
+            const url = HSLoadoutIconStore.ambrosia.get(slot.id);
+            slot.classList.toggle('hs-ambrosia-slot', !!url);
+            slot.style.backgroundImage = url ? HSUtils.cssUrl(url) : '';
         }
     }
 
-    async showQuickBar() {
-        await this.quickbar.showQuickBar();
-    }
+    /** The heater's "Sync icons": a heater icon id (or none) per slot id. The store's listeners repaint the slots. */
+    applyHeaterSlotIconSemanticsBulk(iconSemanticBySlotId: Record<string, string | null | undefined>): HeaterSlotIconApplyResult {
+        const iconBySlotId: Record<string, string | null> = {};
+        let setCount = 0;
+        let clearedCount = 0;
+        let missingCount = 0;
 
-    async hideQuickBar() {
-        await this.quickbar.hideQuickBar();
+        for (const [slotId, semanticId] of Object.entries(iconSemanticBySlotId)) {
+            if (!slotId) continue;
+
+            const normalizedSemanticId = typeof semanticId === "string" ? semanticId.trim() : "";
+            if (!normalizedSemanticId || normalizedSemanticId === "none") {
+                iconBySlotId[slotId] = null;
+                clearedCount++;
+                continue;
+            }
+
+            const resolvedUrl = getEffectiveHeaterIconSrc(normalizedSemanticId);
+            if (resolvedUrl) {
+                iconBySlotId[slotId] = resolvedUrl;
+                setCount++;
+            } else {
+                iconBySlotId[slotId] = null;
+                clearedCount++;
+                missingCount++;
+                HSLogger.warn(`Unknown heater icon semantic ID: ${normalizedSemanticId}`, this.context);
+            }
+        }
+
+        HSLoadoutIconStore.ambrosia.applyBulk(iconBySlotId);
+        return { setCount, clearedCount, missingCount };
     }
 
 
     // ==============================================
-    // -------- Ambrosia Minibars (Quickbar) --------
+    // -------------- Ambrosia Minibars -------------
     // ==============================================
 
     /**
      * Show the minibars: a module of the game's header, which the player places in the header's edit mode (it starts
-     * in the tray), or above the ambrosia quickbar without the patcher's header modules patch.
+     * in the tray), or a section of the mod's own row (#quickbarsRow) without the patcher's header modules patch.
      * @param byPlayer the player turned them on: told how to place them when they're in the tray
      */
     async enableBerryMinibars(byPlayer = false) {
@@ -362,13 +392,11 @@ export class HSAmbrosia extends HSModule
             headerModule.appendChild(barWrapper);
             if (byPlayer) HSHeaderModules.notifyIfInTray(HSAmbrosia.#MINIBARS_HEADER_MODULE, 'the ambrosia minibars');
         } else {
-            await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-            const groupWrapper = HSQuickbarManager.getInstance().getSection('ambrosia');
-            if (!groupWrapper) {
-                HSLogger.warn('Could not find group wrapper for minibars', this.context);
-                return;
+            const quickbarManager = HSQuickbarManager.getInstance();
+            const sectionId = HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS;
+            if (!quickbarManager.isInjected(sectionId)) {
+                await quickbarManager.enableQuickbar(sectionId, () => ({ element: barWrapper }));
             }
-            groupWrapper.insertBefore(barWrapper, groupWrapper.firstChild);
         }
 
         barWrapper.style.display = 'flex';
@@ -385,8 +413,9 @@ export class HSAmbrosia extends HSModule
 
     /** Hide the minibars, wherever they are (their place in the header stays remembered). */
     async disableBerryMinibars() {
-        // Takes the module, with the bars in it, out of the page
+        // Takes the module, with the bars in it, out of the page (or, without the patch, their section of the row)
         HSHeaderModules.unregister(HSAmbrosia.#MINIBARS_HEADER_MODULE);
+        HSQuickbarManager.getInstance().removeSection(HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS);
         if (this.#minibarWrapper) this.#minibarWrapper.style.display = 'none';
         HSUI.removeInjectedStyle(this.#minibarCSSId);
 
@@ -570,9 +599,9 @@ export class HSAmbrosia extends HSModule
     }
 
     /**
-     * The slot the quickbar shows as loaded: the one the game marks, else ours. The game marks none after a page
-     * load or any save load (singularities included): then it's our guess from the save at load (silver border),
-     * or the slot loaded before the save load. Imports go there. Undefined when none is shown, or it's locked.
+     * The slot shown as loaded (rainbow or silver border): the one the game marks, else ours. The game marks none
+     * after a page load or any save load (singularities included): then it's our guess from the save at load (silver
+     * border), or the slot loaded before the save load. Imports go there. Undefined when none is shown, or it's locked.
      */
     #shownLoadoutSlot(): HTMLButtonElement | undefined {
         const slot = this.#getGameActiveSlot()
@@ -603,26 +632,47 @@ export class HSAmbrosia extends HSModule
         syncFromGame();
     }
 
+    /**
+     * The game rebuilds its header module's slots when their count changes, and builds them the first time the module
+     * is shown (none while it has been in the tray since the load): the border is put back on the new ones.
+     */
+    #observeHeaderLoadoutSlots(): void {
+        const container = document.getElementById(HSAmbrosia.#HEADER_SLOTS_ID);
+        if (!container) {
+            HSLogger.debug(() => `#${HSAmbrosia.#HEADER_SLOTS_ID} not found: the loaded slot is only marked on the Ambrosia tab`, this.context);
+            return;
+        }
+        new MutationObserver(() => this.#renderActiveLoadoutBorders()).observe(container, { childList: true });
+    }
+
+    /**
+     * Marks the slot shown as loaded, on the Ambrosia tab's slots and on the game's Ambrosia loadouts header module:
+     * rainbow once the game marks it, silver while it's only our guess from the save.
+     */
+    #renderActiveLoadoutBorders(): void {
+        const border = this.#activeLoadoutConfirmed ? HSAmbrosia.#CONFIRMED_BORDER : HSAmbrosia.#GUESSED_BORDER;
+        for (const slot of this.#loadoutsSlots) {
+            HSAmbrosia.#setBorder(slot, slot.id === this.activeLoadout ? border : undefined);
+        }
+
+        const headerSlots = document.getElementById(HSAmbrosia.#HEADER_SLOTS_ID)?.querySelectorAll<HTMLElement>(':scope > .headerLoadoutSlot');
+        for (const slot of headerSlots ?? []) {
+            HSAmbrosia.#setBorder(slot, `blueberryLoadout${slot.dataset.slot}` === this.activeLoadout ? border : undefined);
+        }
+    }
+
+    static #setBorder(slot: Element, border: string | undefined): void {
+        for (const className of [HSAmbrosia.#CONFIRMED_BORDER, HSAmbrosia.#GUESSED_BORDER]) {
+            const wanted = className === border;
+            // Only on a change: the tab's slot classes are observed (#observeGameActiveLoadout, the heater's slot row)
+            if (slot.classList.contains(className) !== wanted) slot.classList.toggle(className, wanted);
+        }
+    }
+
     async resetActiveLoadout() {
-        // Ensure quickbar section is injected before manipulating DOM
-        await this.#ensureAmbrosiaSection();
         this.activeLoadout = undefined;
         this.#activeLoadoutConfirmed = false;
-
-        // Clear visual state from both containers
-        const containers = [
-            this.#pageHeader?.querySelector(`#${HSGlobal.HSAmbrosia.quickBarId}`),
-            this.#loadoutContainer,
-            document.querySelector('#hs-ambrosia-slots-wrapper') // Just in case
-        ];
-
-        containers.forEach(container => {
-            if (container) {
-                container.querySelectorAll('.hs-rainbow-border, .hs-silver-border').forEach(slot => {
-                    slot.classList.remove('hs-rainbow-border', 'hs-silver-border');
-                });
-            }
-        });
+        this.#renderActiveLoadoutBorders();
     }
 
     updateActiveLoadout(slotEnum?: AMBROSIA_LOADOUT_SLOT) {
@@ -635,14 +685,7 @@ export class HSAmbrosia extends HSModule
         this.activeLoadout = resolvedSlot as AMBROSIA_LOADOUT_SLOT;
         // Confirmed once the game marks this slot; until then (none marked after a page load) it's our guess from the save
         this.#activeLoadoutConfirmed = this.#getGameActiveSlot()?.id === resolvedSlot;
-
-        const isInjected = HSQuickbarManager.getInstance().isInjected("ambrosia");
-        if (!isInjected) { HSLogger.warn("updateActiveLoadout() fail: quickbar not injected", this.context); return; }
-
-        const slotNumber = HSAmbrosiaHelper.getLoadoutNumberFromSlot(resolvedSlot);
-        if (!slotNumber) { HSLogger.warn('Could not parse loadout number from resolvedSlot:' + resolvedSlot, this.context); return; }
-
-        this.quickbar.syncActiveSlot(slotNumber, this.#activeLoadoutConfirmed);
+        this.#renderActiveLoadoutBorders();
 
         HSLogger.debug(() => 'Switched Ambrosia loadout to ' + resolvedSlot, this.context);
     }
@@ -738,9 +781,6 @@ export class HSAmbrosia extends HSModule
         const SIMILARITY_THRESHOLD = 0.8;
 
         if (bestMatchId && highestScore >= SIMILARITY_THRESHOLD) {
-            // Ensure quickbar section is injected before manipulating DOM
-            await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-
             const slotNumber = parseInt(bestMatchId, 10);
             const slotId = `blueberryLoadout${slotNumber}`;
             const slotElement = this.#loadoutsSlots.find(slot => slot.id === slotId);
@@ -827,8 +867,8 @@ export class HSAmbrosia extends HSModule
     }
 
     // Auto-Loadout runs from a capture listener on the code buttons, so before the game's own listener.
-    // The quickbar click loads the loadout synchronously (HSAmbrosiaQuickbar.onQuickBarClick): it's in place
-    // before the game uses the code, whoever clicked. No await before that click.
+    // The slot click loads the loadout synchronously (#reloadLoadoutSlot): it's in place before the game uses
+    // the code, whoever clicked. No await before that click.
     // Once the code's dialogs are over (it has paid out), the previous loadout is loaded back.
     // Not while autosing runs: autosing sets its own loadout before using the codes.
 
@@ -838,7 +878,7 @@ export class HSAmbrosia extends HSModule
 
         if (addLoadoutSetting) {
             const addLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(addLoadoutSetting.getValue());
-            const addLoadoutBtn = this.quickbar.getClonedButtonRef(addLoadout);
+            const addLoadoutBtn = this.#loadoutSlotById(addLoadout);
             if (!addLoadout || !addLoadoutBtn) { HSLogger.warn('Invalid autoLoadoutAdd setting - cannot resolve addLoadout or loadoutSlot', this.context); return; }
 
             this.#switchLoadoutForCode(addLoadoutBtn, addLoadout);
@@ -851,7 +891,7 @@ export class HSAmbrosia extends HSModule
 
         if (timeLoadoutSetting) {
             const timeLoadout = HSAmbrosiaHelper.convertSettingLoadoutToSlot(timeLoadoutSetting.getValue());
-            const timeLoadoutBtn = this.quickbar.getClonedButtonRef(timeLoadout);
+            const timeLoadoutBtn = this.#loadoutSlotById(timeLoadout);
             if (!timeLoadout || !timeLoadoutBtn) { HSLogger.warn('Invalid autoLoadoutTime setting - cannot resolve timeLoadout or loadoutSlot', this.context); return; }
 
             // The game's listener runs next, for this same click: the act's answers cover the time code's Confirm
@@ -870,15 +910,15 @@ export class HSAmbrosia extends HSModule
     }
 
     /**
-     * Loads the code's loadout (through its quickbar copy), then loads the previous one back once the queue is
-     * idle: the code's dialogs are over, so it has paid out. The previous one is the slot the quickbar shows,
-     * also when the game marks none (after a page load or any save load): then its saved loadout is loaded, even
-     * if the tree had changed since. Skipped when no slot was shown, when the player switched or saved meanwhile,
-     * or when autosing started. One restore at a time: a second code meanwhile keeps the first previous slot.
+     * Loads the code's loadout, then loads the previous one back once the queue is idle: the code's dialogs are
+     * over, so it has paid out. The previous one is the slot shown as loaded, also when the game marks none
+     * (after a page load or any save load): then its saved loadout is loaded, even if the tree had changed since.
+     * Skipped when no slot was shown, when the player switched or saved meanwhile, or when autosing started.
+     * One restore at a time: a second code meanwhile keeps the first previous slot.
      */
     #switchLoadoutForCode(codeLoadoutBtn: HTMLButtonElement, codeSlotId: string) {
         const previousSlot = this.#pendingCodeRestore?.slot ?? this.#shownLoadoutSlot();
-        codeLoadoutBtn.click();
+        this.#reloadLoadoutSlot(codeLoadoutBtn, 'autoLoadout');
         if (!previousSlot || previousSlot.id === codeSlotId) {
             this.#pendingCodeRestore = undefined;
             return;
@@ -1506,7 +1546,7 @@ export class HSAmbrosia extends HSModule
     /**
      * With the patched game: writes each loadout straight into the save (player.blueberryLoadouts), as the game's
      * own save does. No dialog, no loadout mode switch, the live tree untouched, all in one synchronous step: safe
-     * while autosing runs. Then loads the slot the quickbar shows (#shownLoadoutSlot) if it was written, so the
+     * while autosing runs. Then loads the slot shown as loaded (#shownLoadoutSlot) if it was written, so the
      * live tree matches it and the game marks it.
      * One line goes into that slot; several go into slots 1 to 16, in order (empty lines skipped).
      */
@@ -1591,7 +1631,7 @@ export class HSAmbrosia extends HSModule
      * reducer, which it must never cost a level: raised as far as the ambrosia left allows when asked, else kept
      * at the player's own level.
      * The game only loads a tree from a loadout slot (#loadTreeThroughSlot). The slot used is the one the game
-     * marks; it marks none after a save load (every singularity), and then the one the quickbar remembers is
+     * marks; it marks none after a save load (every singularity), and then the one the mod remembers is
      * used, if it holds exactly the live tree. So the live tree, the slots and the game's mark end as they were
      * (or the mark on a slot holding the live tree).
      * Only reads the game: nothing changes before apply().
@@ -1667,7 +1707,7 @@ export class HSAmbrosia extends HSModule
         const slot = this.#getGameActiveSlot() ?? this.#rememberedSlotHolding(liveTree);
         if (!slot) {
             return {
-                stop: 'Singularity reducers: the game marks no ambrosia loadout, and your tree is not the quickbar\'s loadout. '
+                stop: 'Singularity reducers: the game marks no ambrosia loadout, and your tree is not the loadout with the silver border. '
                     + 'Load or save a loadout, then press Distribute again. Nothing was spent.'
             };
         }
@@ -1738,7 +1778,7 @@ export class HSAmbrosia extends HSModule
         return true;
     }
 
-    /** The slot the quickbar shows as loaded, when its saved loadout is exactly this tree. */
+    /** The slot shown as loaded, when its saved loadout is exactly this tree. */
     #rememberedSlotHolding(tree: HSAmbrosiaTree): HTMLButtonElement | undefined {
         const slot = this.#loadoutsSlots.find(loadoutSlot => loadoutSlot.id === this.activeLoadout) as HTMLButtonElement | undefined;
         if (!slot || slot.style.display === 'none') return undefined;
@@ -1784,7 +1824,7 @@ export class HSAmbrosia extends HSModule
 
     /**
      * Runs a synchronous action with a loadout loaded, then puts the player's tree back (the timed save export).
-     * The tree comes back through a slot: the one the game marks, else the one the quickbar remembers when it
+     * The tree comes back through a slot: the one the game marks, else the one the mod remembers when it
      * holds exactly the live tree (the game marks none after a save load, so after every singularity). With no
      * such slot the loadout is loaded all the same and stays loaded (the user's choice).
      * Unsaved changes to the tree are kept when it can be read from the live player and the game accepts it;
@@ -1865,7 +1905,7 @@ export class HSAmbrosia extends HSModule
      */
     async #importLinesThroughGame(lines: string[], isSingleLoadout: boolean): Promise<HSQuickImportSummary> {
         const summary: HSQuickImportSummary = { importedCount: 0, skippedCount: 0, failures: [] };
-        // The real slot to reload afterwards: the game's marker, else the one the quickbar shows
+        // The slot to reload afterwards: the game's marker, else the one shown as loaded
         const previouslyActiveSlot = this.#shownLoadoutSlot();
         try {
             const fileInput = document.getElementById('importBlueberries') as HTMLInputElement;
@@ -1926,11 +1966,11 @@ export class HSAmbrosia extends HSModule
     }
 
     /**
-     * Import a loadout into the slot the quickbar shows (#shownLoadoutSlot), as with the patched game. The game's
+     * Import a loadout into the slot shown as loaded (#shownLoadoutSlot), as with the patched game. The game's
      * import loads the tree, then it is saved into the slot, which the game then marks. With the game's own mark,
      * through #blueberryQuickSave, without touching the loadout mode. Without one (the quick save only saves into
      * the marked slot), or without the quick save button: SAVE mode and a click on the slot.
-     * Refused when the quickbar shows none.
+     * Refused when none is shown.
      */
     async #importLoadoutLineToActiveSlot(line: string): Promise<{ success: boolean; skipped?: boolean; reason?: string }> {
         const gameActiveSlot = this.#getGameActiveSlot();
@@ -2157,7 +2197,7 @@ export class HSAmbrosia extends HSModule
             ?? HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
         gameData ??= gameDataAPI?.getGameData();
 
-        // Enabling the quickbar can precede the first save-data refresh.
+        // Enabling the minibars can precede the first save-data refresh.
         // The subscription will render the bars as soon as data arrives.
         if (!gameDataAPI || !gameData) return;
 

@@ -24,14 +24,12 @@ export class HSQuickbarManager {
         AUTOMATION: 'automation',
         // OTHER: 'other', // add other quickbars as needed
         AMBROSIA_MINIBARS: 'ambrosia-minibars',
-        AMBROSIA: 'ambrosia',
     } as const;
 
     /** Hard-coded desired order for quickbars (left-to-right) */
     static readonly #QUICKBAR_ORDER: QUICKBAR_ID[] = [
         HSQuickbarManager.QUICKBAR_IDS.AUTOMATION, // left-most
-        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS,
-        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA    // right-most
+        HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS // right-most
     ];
 
     // --- Promise-based synchronization additions ---

@@ -15,7 +15,6 @@ import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
-import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
@@ -774,12 +773,6 @@ export class HSAutosing extends HSModule {
     }
 
     async #validateAutosingSetupAndRequirements(): Promise<boolean> {
-        const quickbarSetting = HSSettings.getSetting('ambrosiaQuickBar');
-        if (quickbarSetting && !quickbarSetting.isEnabled()) {
-            HSLogger.log("Autosing requirement: Enabling Ambrosia Quick Bar now.", this.context);
-            quickbarSetting.enable();
-        }
-
         const singularitySetting = HSSettings.getSetting('singularityNumber') as HSNumericSetting;
         this.#targetSingularity = singularitySetting.getValue();
 
@@ -900,7 +893,6 @@ export class HSAutosing extends HSModule {
             if (!this.#autosingEnabled) return;
 
             if (this.#autosingModal) {
-                await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
                 let quarks: number;
                 let goldenQuarks: number;
                 if (this.#isExposureReady) {

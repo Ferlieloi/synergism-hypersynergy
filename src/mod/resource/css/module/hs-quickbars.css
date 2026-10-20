@@ -32,7 +32,9 @@
    margin-left: 50px;
    box-sizing: border-box;
 }
-#hs-ambrosia-group-wrapper {
+/* The ambrosia minibars, without the header modules patch */
+#quickbarsRow > #hs-minibars-wrapper {
+    align-self: flex-end;
     margin-left: 50px;
 }
 
@@ -44,9 +46,6 @@
    gap: 4px;
    width: auto;
    max-width: 100%;
-}
-#hs-ambrosia-slots-wrapper {
-    border: 0px solid #4f86f7;
 }
 
 
@@ -167,7 +166,7 @@
 }
 
 
-/* Icon picking (ambrosia quickbar, heater results) */
+/* Icon picking (game's header loadout slots, heater results) */
 .hs-quickbar-slot-pickmode {
    border: 2px dashed #ffff00;
    box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);

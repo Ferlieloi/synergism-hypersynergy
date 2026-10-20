@@ -428,7 +428,7 @@
   "autoExportSaveLoadout": {
     "settingName": "autoExportSaveLoadout",
     "settingDescription": "Export loadout",
-    "settingHelpText": "The Ambrosia loadout to load for the timed export, so the export rewards are collected with it. Your tree is put back right after. With None, nothing is loaded. Each load restarts the progress of the ambrosia bars. When the game marks no loadout as active (after a singularity or a page load) and your tree is not the loadout shown on the quickbar, the export loadout stays loaded.",
+    "settingHelpText": "The Ambrosia loadout to load for the timed export, so the export rewards are collected with it. Your tree is put back right after. With None, nothing is loaded. Each load restarts the progress of the ambrosia bars. When the game marks no loadout as active (after a singularity or a page load) and your tree is not the loadout with the silver border, the export loadout stays loaded.",
     "settingType": "selectstring",
     "enabled": true,
     "settingValue": "",
@@ -1354,24 +1354,10 @@
       "controlEnabledId": "hs-setting-auto-sing-advanced-data"
     }
   },
-  "ambrosiaQuickBar": {
-    "settingName": "ambrosiaQuickBar",
-    "settingDescription": "Ambrosia quick bar (S25+)",
-    "settingHelpText": "When enabled, displays ambrosia loadout quick bar in the header. This is a quick way to load ambrosia loadouts without having to open the ambrosia menu.",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingAction": "ambrosiaQuickBarAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-ambrosia-quickbar-btn"
-    }
-  },
   "ambrosiaMinibars": {
     "settingName": "ambrosiaMinibars",
     "settingDescription": "Ambrosia minibars (S25+)",
-    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show above the ambrosia quick bar.",
+    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show in the mod's row under the header.",
     "settingType": "boolean",
     "enabled": true,
     "usesGameData": true,

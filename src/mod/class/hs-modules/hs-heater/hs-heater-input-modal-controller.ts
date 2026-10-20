@@ -2,7 +2,6 @@ import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
-import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
 import { HSHeatCancelledError, HSHeaterOptimizerRunner } from "./hs-heater-optimizer-runner";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
@@ -226,14 +225,6 @@ export class HSHeaterInputModalController {
             await HSUtils.waitForNextTack();
 
             try {
-                const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-                if (!ambrosiaModule) {
-                    HSUI.Notify('Failed to start heater because Ambrosia quickbar is unavailable.', { position: 'top', notificationType: 'error' });
-                    return;
-                }
-                await ambrosiaModule.showQuickBar();
-                await HSQuickbarManager.getInstance().whenSectionInjected('ambrosia');
-
                 const updatedInput = HSHeaterUIInput.readInputValues(modal);
                 if (!Number.isFinite(updatedInput.blueBarRequirementBeforeRounding)
                     || updatedInput.blueBarRequirementBeforeRounding <= 0) {
@@ -363,7 +354,7 @@ export class HSHeaterInputModalController {
             }
 
             const attemptedSlotCount = Object.keys(iconSemanticBySlotId).length;
-            const result = await ambrosiaModule.quickbar.applyHeaterSlotIconSemanticsBulk(iconSemanticBySlotId);
+            const result = ambrosiaModule.applyHeaterSlotIconSemanticsBulk(iconSemanticBySlotId);
 
             if (result.missingCount > 0) {
                 HSUI.Notify(`Synced ${attemptedSlotCount} slot icons (${result.setCount} set, ${result.clearedCount} cleared). ${result.missingCount} icon(s) were missing.`, { position: 'top', notificationType: 'warning' });

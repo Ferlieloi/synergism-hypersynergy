@@ -245,14 +245,20 @@ export class HSHeaterUIResult {
         this.#quickbarCloneCleanup?.();
         this.#quickbarCloneCleanup = null;
 
-        // Preserve any static header content (help badge, future actions) and remove only the old quickbar clone.
+        // Preserve any static header content (help badge, future actions) and remove only the old slot row.
         header.querySelector('[data-hs-heater-quickbar-clone]')?.remove();
 
-        const slotsSource = document.getElementById('hs-ambrosia-slots-wrapper');
+        // The Ambrosia tab's loadout slots, without its mode and quick save buttons
+        const slotsSource = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.getLoadoutContainer();
         if (slotsSource) {
             const clone = slotsSource.cloneNode(true) as HTMLElement;
             clone.removeAttribute('id');
+            clone.className = 'hs-quickbar-slots-wrapper';
+            clone.style.display = 'inline-flex';
             clone.dataset.hsHeaterQuickbarClone = 'true';
+            clone.querySelectorAll('.blueberryLoadoutSetting').forEach(el => el.remove());
+            // The game's own marker would stay frozen on the copy: only the mod's borders are mirrored
+            clone.querySelectorAll('.activeBlueberryLoadout').forEach(el => el.classList.remove('activeBlueberryLoadout'));
             // Strip child IDs to avoid duplicate DOM IDs
             clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
             header.appendChild(clone);
@@ -290,8 +296,8 @@ export class HSHeaterUIResult {
         const originalSlots = Array.from(slotsSource.querySelectorAll<HTMLElement>('.blueberryLoadoutSlot'));
         const cloneSlots = Array.from(clone.querySelectorAll<HTMLElement>('.blueberryLoadoutSlot'));
 
-        // Mirror the active-slot highlight and the custom slot icon (class + inline background image,
-        // set by the ambrosia quickbar on icon changes such as "Sync All Icons" or Alt+click)
+        // Mirror the loaded-slot border and the custom slot icon (class + inline background image,
+        // set by HSAmbrosia on icon changes such as "Sync All Icons" or a pick on the game's header)
         const syncCloneSlot = (orig: HTMLElement, cloneSlot: HTMLElement | undefined) => {
             if (!cloneSlot) return;
             cloneSlot.classList.toggle('hs-rainbow-border', orig.classList.contains('hs-rainbow-border'));
@@ -303,13 +309,14 @@ export class HSHeaterUIResult {
         // Initial sync from original to clone
         originalSlots.forEach((orig, i) => syncCloneSlot(orig, cloneSlots[i]));
 
-        // Click delegation: clone slot click → original slot click
+        // Click delegation: clone slot click → loads the original slot (its success Alert dismissed)
         const onCloneClick = (event: Event) => {
             const target = (event.target as HTMLElement | null)?.closest('.blueberryLoadoutSlot') as HTMLElement | null;
             if (!target) return;
             const idx = cloneSlots.indexOf(target);
-            if (idx === -1) return;
-            originalSlots[idx]?.click();
+            const original = originalSlots[idx];
+            if (!original) return;
+            HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.loadLoadoutSlot(original.id, 'heaterSlotRow');
         };
         clone.addEventListener('click', onCloneClick);
 

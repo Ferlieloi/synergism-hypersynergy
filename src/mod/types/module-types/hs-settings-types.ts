@@ -86,7 +86,6 @@ export interface HSSettingsDefinition {
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;
 
     // QOL Buttons Settings
-    ambrosiaQuickBar: QOLButtonsQuickBarSetting;
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
@@ -236,7 +235,6 @@ export interface AutosingAutoChallTimerExit extends HSSettingBase<number> { }
 export interface AutosingAutoChallTimerEnter extends HSSettingBase<number> { }
 
 // QOL Buttons Settings
-export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }

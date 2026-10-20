@@ -75,9 +75,6 @@ export interface HSGlobalMouse {
 export interface HSGlobalHiddenDialogs extends IStoreable { }
 
 export interface HSGlobalAmbrosia {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-
     TIME_PER_AMBROSIA: number;
     TIME_PER_RED_AMBROSIA: number;
     digitReduction: number;

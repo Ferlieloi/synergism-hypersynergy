@@ -102,7 +102,6 @@ export const HSGlobal: IHSGlobal = class {
             HSAutosingCorruption: 'HSAutosing',
             HSAutosingStrategyModal: 'HSAutosing',
             // Ambrosia
-            HSAmbrosiaQuickbar: 'HSAmbrosia',
             HSAmbrosiaHelper: 'HSAmbrosia',
             // Settings
             HSSetting: 'HSSettings',
@@ -290,9 +289,6 @@ export const HSGlobal: IHSGlobal = class {
 
     // HSAmbrosia
     static HSAmbrosia = {
-        quickBarId: 'hs-ambrosia-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
-
         // Constants ripped from the game code
         TIME_PER_AMBROSIA: 45,
         TIME_PER_RED_AMBROSIA: 1000,

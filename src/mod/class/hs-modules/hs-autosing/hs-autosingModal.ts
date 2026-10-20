@@ -799,13 +799,6 @@ export class HSAutosingModal {
         this.reset();
         this.enterRunningMode();
 
-        // Defensive check: Ensure Ambrosia quickbar DOM is present
-        const quickbar = document.getElementById(HSGlobal.HSAmbrosia.quickBarId);
-        if (!quickbar) {
-            HSLogger.error('Ambrosia quickbar DOM not found! Autosing mapping aborted. This should never happen if whenSectionInjected was awaited.', this.#context);
-            return;
-        }
-
         HSLogger.log('start() called: reset complete, initializing run metadata', this.#context);
         this.#latestQuarksTotal = initialQuarks;
         this.#latestGoldenQuarksTotal = initialGoldenQuarks;
