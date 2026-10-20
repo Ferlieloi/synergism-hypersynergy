@@ -274,6 +274,10 @@ select::-webkit-scrollbar-corner {
     font-style: italic;
 }
 
+.hs-log-ts {
+    color: #8a8a99;
+}
+
 .hs-log-ts-hidden {
     display: none;
 }

@@ -97,7 +97,7 @@ export class HSLogger {
         // Same text as #renderLogLineToUi gives them, without rendering them
         const plainText = document.createElement('div');
         for (const record of this.#pendingLogRecords) {
-            plainText.innerHTML = `${record.level} [${record.contextString} (${record.timeString})]: ${record.formattedMessage}`;
+            plainText.innerHTML = `${record.timeString} ${record.level}[${record.contextString}]: ${record.formattedMessage}`;
             const repeat = record.repeatCount > 1 ? ` (x${record.repeatCount})` : '';
             lines.push(`${plainText.textContent ?? ''}${repeat}`);
         }
@@ -201,10 +201,7 @@ export class HSLogger {
         if (!this.#integratedToUI) return;
 
         const { level, className } = this.#getLogLevelMeta(logType);
-        const moduleFromContext = HSModuleManager.getModule(context);
-        const contextString = (moduleFromContext && moduleFromContext.moduleColor)
-            ? HSUtils.parseColorTags(context.colorTag(moduleFromContext.moduleColor))
-            : context;
+        const contextString = this.#colorContext(context);
         const formattedMessage = HSUtils.parseColorTags(msg);
         const timeString = HSUtils.getTime();
         const logHash = HSUtils.hashCode(`${level}${contextString}${msg}`);
@@ -284,7 +281,7 @@ export class HSLogger {
         }
 
         const hiddenTS = this.#displayTimestamp ? "" : "hs-log-ts-hidden";
-        logLine.innerHTML = `${level} [<span class="hs-log-ctx">${contextString}</span><span class="hs-log-ts ${hiddenTS}"> (${timeString})</span>]: ${formattedMessage}\n`;
+        logLine.innerHTML = `<span class="hs-log-ts ${hiddenTS}">${timeString} </span>${level}[<span class="hs-log-ctx">${contextString}</span>]: ${formattedMessage}\n`;
 
         if (this.#lastLogHash !== logHash) {
             parentElement.appendChild(logLine);
@@ -386,6 +383,14 @@ export class HSLogger {
             default:
                 return false;
         }
+    }
+
+    // A module's context takes its moduleColor, another context the color listed for it in HSGlobal
+    static #colorContext(context: string): string {
+        const listed = HSGlobal.HSLogger.contextColors[context];
+        const module = HSModuleManager.getModule(context) ?? (listed ? HSModuleManager.getModule(listed) : undefined);
+        const color = module?.moduleColor ?? listed;
+        return color ? HSUtils.parseColorTags(context.colorTag(color)) : context;
     }
 
     static #getLogLevelMeta(logType: ELogType): { level: string; className: string | null } {

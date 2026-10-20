@@ -91,7 +91,52 @@ export const HSGlobal: IHSGlobal = class {
     // --- HSLogger ---
     static HSLogger = {
         logLevel: ELogLevel.NONE,
-        logSize: 5000
+        logSize: 5000,
+
+        // Log tab colors of the contexts that aren't modules (modules have their moduleColor, in index.ts).
+        // A module's name gives that module's color, anything else is a CSS color.
+        contextColors: {
+            // Autosing
+            HSAutosingModal: 'HSAutosing',
+            HSAutosingSettingsFixer: 'HSAutosing',
+            HSAutosingCorruption: 'HSAutosing',
+            HSAutosingStrategyModal: 'HSAutosing',
+            // Ambrosia
+            HSAmbrosiaQuickbar: 'HSAmbrosia',
+            HSAmbrosiaHelper: 'HSAmbrosia',
+            // Settings
+            HSSetting: 'HSSettings',
+            HSSettingsUI: 'HSSettings',
+            // QoL quickbars
+            HSQuickbarManager: 'HSQOLButtons',
+            HSQOLAutomationQuickbar: 'HSQOLButtons',
+            HSQOLEventsQuickbar: 'HSQOLButtons',
+            HSQOLCorruptionQuickbar: 'HSQOLButtons',
+            HSCorruption: 'HSQOLButtons',
+            // UI
+            HSUIC: 'HSUI',
+            Notify: 'HSUI',
+            // Heater
+            HSHeater: 'darkorange',
+            HSHeaterOptimizer: 'darkorange',
+            HSHeaterUIResult: 'darkorange',
+            HSHeaterInputModalController: 'darkorange',
+            // Game dialogs
+            HSGameDialogs: 'hotpink',
+            HSHiddenDialogs: 'hotpink',
+            HSDialogIdentity: 'hotpink',
+            // Core and the rest
+            HSMain: 'plum',
+            HSLogger: 'plum',
+            HSModuleManager: 'plum',
+            HSElementHooker: 'plum',
+            HSUtils: 'plum',
+            Once: 'plum',
+            HSBackup: 'plum',
+            HSGithub: 'plum',
+            HSBookmarkletNotice: 'plum',
+            HSDevTools: 'plum',
+        }
     }
 
     // --- HSStorage ---

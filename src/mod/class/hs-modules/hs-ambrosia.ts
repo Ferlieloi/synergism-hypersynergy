@@ -976,7 +976,7 @@ export class HSAmbrosia extends HSModule
 
     #subscribeGameStateViewChanges() {
         const gameStateMod = HSModuleManager.getModule<HSGameState>('HSGameState');
-        if (!gameStateMod) { HSLogger.warn('subscribeGameStateViewChanges() - gameStateMod==undefined', 'hs-ambrosia-gamestate'); return; }
+        if (!gameStateMod) { HSLogger.warn('subscribeGameStateViewChanges() - gameStateMod==undefined', this.context); return; }
 
         if (!this.#ambrosiaViewSubscriptionId) {
             this.#ambrosiaViewSubscriptionId = gameStateMod.subscribeForView(

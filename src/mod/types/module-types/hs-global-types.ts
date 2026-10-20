@@ -50,6 +50,7 @@ export interface HSGlobalElementHooker {
 export interface HSGlobalLogger {
     logLevel: ELogLevel,
     logSize: number;
+    contextColors: Record<string, string>;
 }
 
 export interface HSGlobalStorage {
