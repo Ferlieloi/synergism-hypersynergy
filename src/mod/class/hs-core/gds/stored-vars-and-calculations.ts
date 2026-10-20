@@ -2,14 +2,6 @@ import Decimal from "break_infinity.js";
 import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
 import type { GameData, SingularityChallengeRewards } from "../../../types/data-types/hs-player-savedata"
 
-export const CASH_GRAB_ULTRA_QUARK = 0.08;
-export const CASH_GRAB_ULTRA_CUBE = 1.2;
-export const CASH_GRAB_ULTRA_BLUEBERRY = 0.15;
-
-export const EX_ULTRA_OFFERING = 0.125;
-export const EX_ULTRA_OBTAINIUM = 0.125;
-export const EX_ULTRA_CUBES = 0.125;
-
 export const SHOP_UPGRADE_TYPE_KEYS: Record<ShopUpgradeGroups, string[]> = {
   [ShopUpgradeGroups.Offering]: [
     'offeringEX',
@@ -1644,51 +1636,3 @@ export const exponentialCostProgressionDecimal = (baseMult: string, level: numbe
     mythicalFragment: getCost(level - 150, 5),
   };
 };
-
-export const regularCostProgressionString = (baseMult: string, level: number): Record<string, string> => {
-  const log10Base = Math.log10(parseFloat(baseMult.split('e')[0])) + (parseInt(baseMult.split('e')[1]) || 0);
-
-  let log10PriceMult = log10Base;
-  if (level >= 120) {
-    log10PriceMult += Math.log10((level - 90) / 30);
-  }
-  if (level >= 150) {
-    log10PriceMult += Math.log10((level - 120) / 30);
-  }
-  if (level >= 180) {
-    log10PriceMult += Math.log10((level - 170) / 10);
-  }
-
-  const getCostLog = (l: number, pow: number, div: number) => {
-    if (l < 0) return -Infinity;
-    return Math.log10(Math.pow(l, pow) / div + 1) + log10PriceMult;
-  }
-
-  return {
-    shard: `1e${getCostLog(level, 3, 8)}`,
-    commonFragment: level >= 30 ? `1e${getCostLog(level - 30, 3, 32)}` : '0',
-    uncommonFragment: level >= 60 ? `1e${getCostLog(level - 60, 3, 384)}` : '0',
-    rareFragment: level >= 90 ? `1e${getCostLog(level - 90, 3, 500)}` : '0',
-    epicFragment: level >= 120 ? `1e${getCostLog(level - 120, 3, 375)}` : '0',
-    legendaryFragment: level >= 150 ? `1e${getCostLog(level - 150, 3, 192)}` : '0',
-    mythicalFragment: level >= 150 ? `1e${getCostLog(level - 150, 3, 1280)}` : '0'
-  }
-}
-
-export const exponentialCostProgressionString = (baseMult: string, level: number, ratio: number): Record<string, string> => {
-  const log10Base = Math.log10(parseFloat(baseMult.split('e')[0])) + (parseInt(baseMult.split('e')[1]) || 0);
-
-  const getCostLog = (l: number, r: number, mult: number) => {
-    return l * Math.log10(r) + log10Base + Math.log10(mult);
-  }
-
-  return {
-    shard: `1e${getCostLog(level, ratio, 100)}`,
-    commonFragment: level >= 30 ? `1e${getCostLog(level - 30, ratio, 50)}` : '0',
-    uncommonFragment: level >= 60 ? `1e${getCostLog(level - 60, ratio, 25)}` : '0',
-    rareFragment: level >= 90 ? `1e${getCostLog(level - 90, ratio, 20)}` : '0',
-    epicFragment: level >= 120 ? `1e${getCostLog(level - 120, ratio, 15)}` : '0',
-    legendaryFragment: level >= 150 ? `1e${getCostLog(level - 150, ratio, 10)}` : '0',
-    mythicalFragment: level >= 150 ? `1e${getCostLog(level - 150, ratio, 5)}` : '0'
-  }
-}

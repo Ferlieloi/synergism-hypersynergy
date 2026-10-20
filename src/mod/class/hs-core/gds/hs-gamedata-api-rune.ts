@@ -347,11 +347,6 @@ export class RuneHelper {
         return result;
     }
 
-    public computeEXPToLevel = (rune: RuneKeys, level: number): Decimal => {
-        const levelPerOOM = this.getLevelsPerOOM(rune)
-        return this.runes[rune].costCoefficient.times(Decimal.pow(10, level / levelPerOOM).minus(1))
-    }
-
     public getLevelsPerOOM = (rune: RuneKeys, mode: CalculationMode = 'normal'): number => {
         this.#clearCachesIfGameDataChanged();
         if (mode !== 'normal') {
@@ -462,26 +457,6 @@ export class RuneHelper {
             runeEXP.div(this.runes[rune].costCoefficient).plus(1)
         )
         return Math.max(0, Math.floor(this.getLevelsPerOOM(rune) * log10ExpOverCostPlus1))
-    }
-
-    public calculateHeaterMaxRuneExp(): number {
-        const data = this.#ctx.getGameData();
-        if (!data) return 0
-
-        const runeValues = [
-            parseGameDataDecimal(data.runes.speed),
-            parseGameDataDecimal(data.runes.duplication),
-            parseGameDataDecimal(data.runes.prism),
-            parseGameDataDecimal(data.runes.thrift),
-            parseGameDataDecimal(data.runes.superiorIntellect),
-            parseGameDataDecimal(data.runes.infiniteAscent),
-        ]
-
-        const maxLog = runeValues.reduce((currentMax, value) => {
-            return Math.max(currentMax, value.gt(0) ? value.log10() : Number.NEGATIVE_INFINITY)
-        }, Number.NEGATIVE_INFINITY)
-
-        return Math.max(0, maxLog === Number.NEGATIVE_INFINITY ? 0 : maxLog)
     }
 
     public calculateRuneEffectivenessHypercubeBlessing = () => {

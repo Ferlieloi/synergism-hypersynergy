@@ -15,7 +15,6 @@ export class TalismanHelper {
     #lastGameData?: ReturnType<TalismanHelperContext['getGameData']>
     readonly #talismanLevelCache = new Map<TalismanKeys, number>()
     readonly #talismanRarityCache = new Map<TalismanKeys, number>()
-    readonly #talismanLevelCapCache = new Map<TalismanKeys, number>()
     readonly #talismanUnlockedCache = new Map<TalismanKeys, boolean>()
     readonly #talismanEffectsCache = new Map<TalismanKeys, Map<number, unknown>>()
     #allRuneBonusesCache?: Record<RuneKeys, number>
@@ -32,7 +31,6 @@ export class TalismanHelper {
             this.#lastGameData = gameData;
             this.#talismanLevelCache.clear();
             this.#talismanRarityCache.clear();
-            this.#talismanLevelCapCache.clear();
             this.#talismanUnlockedCache.clear();
             this.#talismanEffectsCache.clear();
             this.#allRuneBonusesCache = undefined;
@@ -179,11 +177,6 @@ export class TalismanHelper {
         return result;
     }
 
-    getTalismanLevel = (t: TalismanKeys): number => {
-        this.#computeAllTalismanStats();
-        return this.#talismanLevelCache.get(t) ?? 0;
-    }
-
     getTalismanRarity = (t: TalismanKeys): number => {
         this.#computeAllTalismanStats();
         return this.#talismanRarityCache.get(t) ?? 0;
@@ -203,23 +196,6 @@ export class TalismanHelper {
         this.#computeAllTalismanStats();
         const bonuses = this.#computeAllRuneBonuses(mode);
         return bonuses[rune] ?? 0;
-    }
-
-    getTalismanLevelCap = (t: TalismanKeys): number => {
-        this.#clearCachesIfGameDataChanged();
-        const cached = this.#talismanLevelCapCache.get(t);
-        if (cached !== undefined) return cached;
-
-        const result = getTalismanLevelCap(t, this.#ctx);
-        this.#talismanLevelCapCache.set(t, result);
-        return result;
-    }
-
-    universalTalismanMaxLevelIncreasers = (): number => universalTalismanMaxLevelIncreasers(this.#ctx)
-
-    isTalismanUnlocked = (t: TalismanKeys): boolean => {
-        this.#computeAllTalismanStats();
-        return this.#talismanUnlockedCache.get(t) ?? false;
     }
 }
 

@@ -74,10 +74,6 @@ export class AntUpgradeHelper {
         return value;
     }
 
-    computeFreeAntUpgradeLevels = (): number => {
-        return computeFreeAntUpgradeLevels(this.#ctx);
-    }
-
     calculateTrueAntLevel = (antUpgrade: AntUpgrades, data?: ReturnType<AntUpgradeHelperContext['getGameData']>): number => {
         if (!data) data = this.#ctx.getGameData();
         if (!data) return 0;
