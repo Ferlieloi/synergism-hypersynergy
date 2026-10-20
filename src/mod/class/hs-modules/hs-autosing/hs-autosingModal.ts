@@ -2,7 +2,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSGlobal } from "../../hs-core/hs-global";
-import { HSAutosingStrategy, phases } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosing } from "./hs-autosing";
 // DB Disabled... See for advanced data collection re-implementation
 // import { HSAutosingDB } from './hs-autosingDB';
@@ -124,13 +124,9 @@ export class HSAutosingModal {
         totalQuarks: 0,
         minQuarks: Infinity,
         maxQuarks: 0,
-        meanQuarks: 0,
-        sumSqQuarks: 0,
         totalGoldenQuarks: 0,
         minGoldenQuarks: Infinity,
-        maxGoldenQuarks: 0,
-        meanGoldenQuarks: 0,
-        sumSqGoldenQuarks: 0
+        maxGoldenQuarks: 0
     };
 
     // --- Unified array for chart metrics: each entry represents a singularity event.
@@ -146,7 +142,6 @@ export class HSAutosingModal {
     static readonly #DECIMAL_0 = new Decimal(0);
     #c15Count: number = 0;
     #c15Mean: Decimal = HSAutosingModal.#DECIMAL_0;
-    #c15M2: Decimal = HSAutosingModal.#DECIMAL_0;
     #logC15Count: number = 0;
     #logC15Mean: number = 0;
     #logC15M2: number = 0;
@@ -185,7 +180,6 @@ export class HSAutosingModal {
     // --- Sizing & Layout ---
     #autoResized: boolean = false;
     #computedMaxWidth: number | null = null; // px
-    #computedMaxHeight: number | null = null; // px
     #computedGraphWidth: number | null = null; // px
 
 
@@ -589,7 +583,6 @@ export class HSAutosingModal {
 
         // Hard-coded defaults (adjust as desired)
         const FIXED_WIDTH  = 350; // px
-        const FIXED_HEIGHT = 560; // px
 
         // Sparkline SVG width: leave space for the label column on the right.
         const FIXED_GRAPH_WIDTH = 286; // px
@@ -597,10 +590,8 @@ export class HSAutosingModal {
 
         // Respect viewport so the modal doesn't go off-screen by default.
         const appliedWidth  = Math.max(260, Math.min(FIXED_WIDTH,  window.innerWidth - 20));
-        const appliedHeight = Math.max(400, Math.min(FIXED_HEIGHT, window.innerHeight - 6));
 
         this.#computedMaxWidth  = appliedWidth;
-        this.#computedMaxHeight = appliedHeight + 250;
         // Graph (SVG) width must fit inside the modal
         this.#computedGraphWidth = Math.max(120, Math.min(FIXED_GRAPH_WIDTH, appliedWidth - LABELS_ESTIMATE));
 
@@ -932,14 +923,7 @@ export class HSAutosingModal {
         this.#latestQuarksTotal = currentQuarks;
 
         // Add to unified metrics array for charts
-        this.#addSingularityMetric(
-            singularityDuration,
-            realQuarksGain,
-            gainedGoldenQuarks,
-            this.#currentSingularityPhases,
-            happyHourStackAmount,
-            c15Score
-        );
+        this.#addSingularityMetric(singularityDuration, realQuarksGain, gainedGoldenQuarks);
 
         // --- Update all-time statistical summary (Welford's algorithm)
         this.#allTimeStats.singCompleted++;
@@ -950,14 +934,8 @@ export class HSAutosingModal {
         this.#allTimeStats.sumSqDuration += deltaDuration * (singularityDuration - this.#allTimeStats.meanDuration);
         this.#allTimeStats.totalDuration += singularityDuration;
         // Quarks
-        const deltaQuarks = realQuarksGain - this.#allTimeStats.meanQuarks;
-        this.#allTimeStats.meanQuarks  += deltaQuarks / this.#allTimeStats.singCompleted;
-        this.#allTimeStats.sumSqQuarks += deltaQuarks * (realQuarksGain - this.#allTimeStats.meanQuarks);
         this.#allTimeStats.totalQuarks += realQuarksGain;
         // Golden Quarks
-        const deltaGoldenQuarks = gainedGoldenQuarks - this.#allTimeStats.meanGoldenQuarks;
-        this.#allTimeStats.meanGoldenQuarks  += deltaGoldenQuarks / this.#allTimeStats.singCompleted;
-        this.#allTimeStats.sumSqGoldenQuarks += deltaGoldenQuarks * (gainedGoldenQuarks - this.#allTimeStats.meanGoldenQuarks);
         this.#allTimeStats.totalGoldenQuarks += gainedGoldenQuarks;
         // Min and Max
         this.#allTimeStats.minDuration     = Math.min(this.#allTimeStats.minDuration,     singularityDuration);
@@ -969,12 +947,10 @@ export class HSAutosingModal {
 
         // Store c15 into history if provided (store Decimal for accurate statistics)
         if (c15Score !== undefined) {
-            // Update C15 online stats (Decimal Welford)
+            // Update C15 online mean (Decimal Welford)
             const k       = this.#c15Count + 1;
             const delta   = c15Score.minus(this.#c15Mean);
             this.#c15Mean = this.#c15Mean.plus(delta.div(k));
-            const delta2  = c15Score.minus(this.#c15Mean);
-            this.#c15M2   = this.#c15M2.plus(delta.times(delta2));
             this.#c15Count = k;
 
             // Update online stats for log(C15) using Welford's algorithm (natural log)
@@ -1026,10 +1002,7 @@ export class HSAutosingModal {
     #addSingularityMetric(
         singularityDuration: number,
         realQuarksGain: number,
-        gainedGoldenQuarks: number,
-        phases: Map<string, number>,
-        happyHourStackAmount: number,
-        c15Score?: Decimal
+        gainedGoldenQuarks: number
     ): void {
         // Prune oldest entry first if at capacity, subtracting its values from running sums
         if (this.#singularityMetrics.length >= this.#sparklineMaxPoints) {
@@ -1051,19 +1024,14 @@ export class HSAutosingModal {
         const runningAvgQuarksPerSecond       = totalDuration > 0 ? this.#metricsSumQuarks / totalDuration : 0;
         const runningAvgGoldenQuarksPerSecond = totalDuration > 0 ? this.#metricsSumGoldenQuarks / totalDuration : 0;
 
-        const phasesObject: Record<string, number> = {};
-        phases.forEach((duration, phaseName) => { phasesObject[phaseName] = duration; });
         this.#singularityMetrics.push({
             timestamp: performance.now(),
             duration: singularityDuration,
             quarksGained: realQuarksGain,
             goldenQuarksGained: gainedGoldenQuarks,
-            phases: phasesObject,
-            c15: c15Score ? c15Score.toString() : undefined,
             runningAvgDuration,
             runningAvgQuarksPerSecond,
-            runningAvgGoldenQuarksPerSecond,
-            happyHourStackAmount
+            runningAvgGoldenQuarksPerSecond
         });
     }
 
@@ -1071,11 +1039,6 @@ export class HSAutosingModal {
     // =============================
     // State Accessors
     // =============================
-
-    /** Return the name of the current phase. */
-    public getCurrentPhase(): string {
-        return this.#currentPhaseName;
-    }
 
     /** Public setter to update the current phase name displayed on the timer.
      *  Call this at the START of a phase so the user sees what is happening. */
@@ -1137,18 +1100,6 @@ export class HSAutosingModal {
     }
     #getAllTimeStdDuration(): number | null {
         return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqDuration / this.#allTimeStats.singCompleted)     : null;
-    }
-    #getAllTimeAvgQuarks(): number | null {
-        return this.#allTimeStats.singCompleted     ? this.#allTimeStats.totalQuarks / this.#allTimeStats.singCompleted                  : null;
-    }
-    #getAllTimeStdQuarks(): number | null {
-        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqQuarks / this.#allTimeStats.singCompleted)       : null;
-    }
-    #getAllTimeAvgGoldenQuarks(): number | null {
-        return this.#allTimeStats.singCompleted     ? this.#allTimeStats.totalGoldenQuarks / this.#allTimeStats.singCompleted            : null;
-    }
-    #getAllTimeStdGoldenQuarks(): number | null {
-        return this.#allTimeStats.singCompleted > 1 ? Math.sqrt(this.#allTimeStats.sumSqGoldenQuarks / this.#allTimeStats.singCompleted) : null;
     }
 
 
@@ -1411,14 +1362,6 @@ export class HSAutosingModal {
         this.#isVisible = true;
     }
 
-    /** Hide the modal and stop the live timer. (never used...) */
-    public hide(): void {
-        if (!this.#timerDisplay) return;
-        this.#timerDisplay.classList.add('hs-hidden');
-        this.#isVisible = false;
-        this.#clearSingularityInterval();
-    }
-
     /** Reset all modal state, stats, and phase history. Stops timer and triggers a full render. */
     public reset(): void {
         this.#singularityCount = 0;
@@ -1442,17 +1385,12 @@ export class HSAutosingModal {
             totalQuarks: 0,
             minQuarks: Infinity,
             maxQuarks: 0,
-            meanQuarks: 0,
-            sumSqQuarks: 0,
             totalGoldenQuarks: 0,
             minGoldenQuarks: Infinity,
-            maxGoldenQuarks: 0,
-            meanGoldenQuarks: 0,
-            sumSqGoldenQuarks: 0
+            maxGoldenQuarks: 0
         };
         this.#c15Count = 0;
         this.#c15Mean = HSAutosingModal.#DECIMAL_0;
-        this.#c15M2 = HSAutosingModal.#DECIMAL_0;
         this.#logC15Count = 0;
         this.#logC15Mean = 0;
         this.#logC15M2 = 0;
