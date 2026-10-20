@@ -153,6 +153,20 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
     },
 });
 
+// How the results read inside an Exalt, shown by the Exalt badge of the
+// results modal when the heat ran with that Exalt. No entry, no badge.
+const HEATER_EXALT_RULES: Readonly<Partial<Record<number, string>>> = {
+    10: "Exalt 10 (Bar Charging): the bars give time instead of Ambrosia.\n"
+        + "- Blue Ambrosia = global time, Red Ambrosia = ascension time, All Ambrosia = both multiplied.\n"
+        + "- Each Purple Reactor extraction gives both bars' effect once per 100 Purple Honey Luck, so the Reactor routing matters most.\n"
+        + "- The bar lengths are fixed: Brick of Lead only adds Luck here. TWO MIND's shorter bars are cancelled by its lower reward Luck.\n"
+        + "- With One Mind, ascension speed multiplies cubes and ascension count. Brick of Lead lowers it (-25% at max) and SR2 raises it. These scores don't count that.",
+};
+
+export function getHeaterExaltRules(exalt: number): string | null {
+    return HEATER_EXALT_RULES[exalt] ?? null;
+}
+
 export type HeaterResultArrayKey = keyof typeof HEATER_RESULT_TYPE_CONFIG;
 export type RowBasedResultKey = {
     [K in keyof typeof HEATER_RESULT_TYPE_CONFIG]: typeof HEATER_RESULT_TYPE_CONFIG[K] extends { rowLabels: readonly string[] } ? K : never;

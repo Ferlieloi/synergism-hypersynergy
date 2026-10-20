@@ -158,6 +158,28 @@ export class HSHeaterUIStyles {
                 margin-bottom: 0;
             }
 
+            .hs-heater-results-topbar-exalt {
+                position: absolute;
+                left: 0px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 30px;
+                height: 30px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                background: rgba(1, 20, 50, 0.7);
+                cursor: default;
+                user-select: none;
+            }
+
+            .hs-heater-results-topbar-exalt img {
+                width: 24px;
+                height: 24px;
+                pointer-events: none;
+            }
+
             .hs-heater-results-topbar-help {
                 position: absolute;
                 right: 0px;

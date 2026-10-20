@@ -33,6 +33,10 @@ export interface AmbrosiaBarIncomeInput {
 export interface AmbrosiaBarIncome {
     blueAmbrosiaPerSecond: number;
     redAmbrosiaPerSecond: number;
+    // Bar rewards in Ambrosia units, also inside Bar Dependence (Exalt 10),
+    // where the bars pay them as time instead of Ambrosia
+    blueRewardPerSecond: number;
+    redRewardPerSecond: number;
     purpleHoneyPerSecond: number;
     blueFillsPerSecond: number;
     redFillsPerSecond: number;

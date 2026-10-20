@@ -1552,9 +1552,11 @@ class Loadout {
           case 'incomePurpleAmb': {
             if (!this.statCache.__barIncomeReady) {
               const income = this.barIncome()
-              this.statCache.incomeBlue = income.blueAmbrosiaPerSecond
-              this.statCache.incomeRed = income.redAmbrosiaPerSecond
-              this.statCache.incomeAll = income.blueAmbrosiaPerSecond * income.redAmbrosiaPerSecond
+              // Bar rewards, not Ambrosia gained: inside Exalt 10 the bars
+              // pay them as global time (blue) and ascension time (red)
+              this.statCache.incomeBlue = income.blueRewardPerSecond
+              this.statCache.incomeRed = income.redRewardPerSecond
+              this.statCache.incomeAll = income.blueRewardPerSecond * income.redRewardPerSecond
               this.statCache.incomeHoney = purpleIncomeObjective(income, 'incomeHoney')
               this.statCache.incomePurpleAmb = purpleIncomeObjective(income, 'incomePurpleAmb')
               this.statCache.__barIncomeReady = 1

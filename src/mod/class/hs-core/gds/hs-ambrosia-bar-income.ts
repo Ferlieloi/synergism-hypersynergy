@@ -67,12 +67,17 @@ export function calculateAmbrosiaBarIncome(input: AmbrosiaBarIncomeInput): Ambro
         const regularRedFills = Math.max(0,
             (redSupply - totalRoutedBatches) / redRequirement);
         const purplePoints = (normalBatches + 0.1 * overflowBatches) * recipePurple;
+        // SynergismOfficial/src/Helper.ts: inside Bar Dependence, each Purple
+        // Honey an extraction would yield (reward luck / 100 on average)
+        // grants one blue and one red bar reward instead.
+        const purpleBarRewards = reactor.barDependenceEnabled
+            ? purpleFills * purpleHoneyRewardLuck / 100 : 0;
         // Cancer bar points are granted after each blue/red fill and count
         // toward the following extraction, rather than feeding this tick.
-        const bonusFills = reactor.barDependenceEnabled ? 2 * purpleFills : 0;
+        const bonusFills = 2 * purpleBarRewards;
         return {
-            blue: regularBlueFills + Number(reactor.barDependenceEnabled) * purpleFills,
-            red: regularRedFills + Number(reactor.barDependenceEnabled) * purpleFills,
+            blue: regularBlueFills + purpleBarRewards,
+            red: regularRedFills + purpleBarRewards,
             purple: (purplePoints + cancer * (regularBlueFills + regularRedFills + bonusFills))
                 / purpleRequirement,
         };
@@ -148,6 +153,8 @@ export function calculateAmbrosiaBarIncome(input: AmbrosiaBarIncomeInput): Ambro
     return {
         blueAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.blue * blueAmbrosiaPerFill,
         redAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.red * redAmbrosiaPerFill,
+        blueRewardPerSecond: rates.blue * blueAmbrosiaPerFill,
+        redRewardPerSecond: rates.red * redAmbrosiaPerFill,
         purpleHoneyPerSecond: reactor.barDependenceEnabled
             ? 0
             : rates.purple * purpleHoneyRewardLuck / 100 * input.purpleHoneyPerExtraction,
