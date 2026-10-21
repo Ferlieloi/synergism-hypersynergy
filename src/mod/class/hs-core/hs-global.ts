@@ -134,6 +134,7 @@ export const HSGlobal: IHSGlobal = class {
             HSUtils: 'plum',
             Once: 'plum',
             HSBackup: 'plum',
+            HSCalculationTools: 'plum',
             HSGithub: 'plum',
             HSBookmarkletNotice: 'plum',
             HSDevTools: 'plum',

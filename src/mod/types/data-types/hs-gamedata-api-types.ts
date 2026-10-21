@@ -941,10 +941,20 @@ export type SingularityDebuffs =
     | 'Platonic Costs'
     | 'Hepteract Costs';
 
+export interface HSCalculationParamOption {
+    label: string;
+    value: unknown;
+}
+
 export interface HSCalculationParams {
     paramName: string;
     paramType: string;
     defaultValue?: any;
+    // Shown in the Tools tab instead of the param's name
+    label?: string;
+    // What the Tools tab offers for it: a list, or one read from the save when the calculation is picked.
+    // Without it, a boolean gets true / false and a number a number field: any other param can't be set there.
+    options?: readonly HSCalculationParamOption[] | ((data: GameData | undefined) => readonly HSCalculationParamOption[]);
 }
 
 export interface HSCalculationDefinition {
@@ -953,6 +963,7 @@ export interface HSCalculationDefinition {
     // from HSGameDataAPI or from registered helper providers.
     // TODO later: derive the union from GameDataAPI + actual helper keys
     fnName: string;
+    // In the function's order. With supportsReduce, the first one is reduce_vals: the Tools tab's two buttons fill it.
     fnParams: HSCalculationParams[];
     supportsReduce: boolean;
     toolingSupport: boolean;

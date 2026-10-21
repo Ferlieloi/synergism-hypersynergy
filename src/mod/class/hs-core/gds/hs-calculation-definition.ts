@@ -1,4 +1,34 @@
-import { HSCalculationDefinition } from "../../../types/data-types/hs-gamedata-api-types";
+import { CalculationMode, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams, hepteractTypeList, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
+import { EventBuffType } from "../../../types/data-types/hs-event-data";
+import { challenge15Rewards, redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
+
+// ===== Param options for the Tools tab =====
+
+const optionsFromKeys = (keys: readonly string[]): HSCalculationParamOption[] => keys.map((key) => ({ label: key, value: key }));
+
+const MODE_PARAM: HSCalculationParams = {
+    paramName: "mode",
+    paramType: "CalculationMode",
+    defaultValue: "normal",
+    options: optionsFromKeys(["normal", "true_base", "non_ambrosia"] satisfies CalculationMode[])
+};
+
+const SINGULARITY_COUNT_PARAM: HSCalculationParams = {
+    paramName: "singularityCount",
+    paramType: "number",
+    defaultValue: -1,
+    label: "Singularity (-1: current)"
+};
+
+// A numeric enum also maps its values back to its names
+const EVENT_BUFF_OPTIONS: HSCalculationParamOption[] = Object.entries(EventBuffType)
+    .filter(([, value]) => typeof value === "number")
+    .map(([label, value]) => ({ label, value }));
+
+const SINGULARITY_DEBUFF_OPTIONS = optionsFromKeys([
+    "Offering", "Obtainium", "Salvage", "Global Speed", "Researches", "Ant ELO",
+    "Ascension Speed", "Cubes", "Cube Upgrades", "Platonic Costs", "Hepteract Costs"
+] satisfies SingularityDebuffs[]);
 
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
@@ -7,11 +37,12 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         fnParams: [
             {
                 paramName: "buff",
-                paramType: "EventBuffType"
+                paramType: "EventBuffType",
+                options: EVENT_BUFF_OPTIONS
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
         calculationName: "Ambrosia Generation Shop Upgrade",
@@ -21,7 +52,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -81,7 +113,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -130,11 +163,12 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         fnParams: [
             {
                 paramName: "upgradeName",
-                paramType: "keyof RedAmbrosiaUpgrades"
+                paramType: "keyof RedAmbrosiaUpgrades",
+                options: optionsFromKeys(Object.keys(redAmbrosiaUpgradeCalculationCollection))
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
         calculationName: "Campaign Ambrosia Speed Bonus",
@@ -181,14 +215,31 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         calculationName: "Required Blueberry Time",
         fnName: "calculateRequiredBlueberryTime",
-        fnParams: [],
+        fnParams: [
+            {
+                paramName: "ignoreTwoMind",
+                paramType: "boolean",
+                defaultValue: false
+            },
+            {
+                paramName: "ignoreBrickOfLead",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
         supportsReduce: false,
         toolingSupport: true
     },
     {
         calculationName: "Required Red Ambrosia Time",
         fnName: "calculateRequiredRedAmbrosiaTime",
-        fnParams: [],
+        fnParams: [
+            {
+                paramName: "ignoreTwoMind",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
         supportsReduce: false,
         toolingSupport: true
     },
@@ -205,11 +256,12 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         fnParams: [
             {
                 paramName: "heptType",
-                paramType: "HepteractType"
+                paramType: "HepteractType",
+                options: optionsFromKeys(hepteractTypeList)
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
         calculationName: "All Shop Tablets",
@@ -219,7 +271,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -239,6 +292,11 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
+            },
+            {
+                paramName: "true_base",
+                paramType: "boolean",
+                defaultValue: false
             }
         ],
         supportsReduce: true,
@@ -247,13 +305,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         calculationName: "Effective Singularities",
         fnName: "calculateEffectiveSingularities",
-        fnParams: [
-            {
-                paramName: "singularityCount",
-                paramType: "number",
-                defaultValue: -1
-            }
-        ],
+        fnParams: [SINGULARITY_COUNT_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
@@ -263,16 +315,13 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         fnParams: [
             {
                 paramName: "debuff",
-                paramType: "SingularityDebuffs"
+                paramType: "SingularityDebuffs",
+                options: SINGULARITY_DEBUFF_OPTIONS
             },
-            {
-                paramName: "singularityCount",
-                paramType: "number",
-                defaultValue: -1
-            }
+            SINGULARITY_COUNT_PARAM
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
         calculationName: "Ascension Speed Exponent Spread",
@@ -282,7 +331,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -293,11 +343,12 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         fnParams: [
             {
                 paramName: "rewardName",
-                paramType: "keyof typeof challenge15Rewards"
+                paramType: "keyof typeof challenge15Rewards",
+                options: optionsFromKeys(Object.keys(challenge15Rewards))
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
         calculationName: "Raw Ascension Speed Mult",
@@ -307,7 +358,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -315,7 +367,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         calculationName: "Ascension Speed Mult",
         fnName: "calculateAscensionSpeedMult",
-        fnParams: [],
+        fnParams: [MODE_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
@@ -327,7 +379,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -354,11 +407,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramType: "boolean",
                 defaultValue: true
             },
-            {
-                paramName: "true_base",
-                paramType: "boolean",
-                defaultValue: false
-            }
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -371,7 +420,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -384,7 +434,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true

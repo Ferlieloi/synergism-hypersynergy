@@ -7,12 +7,13 @@ import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
 import { HSGlobal } from "./hs-core/hs-global";
 import { HSBackup } from "./hs-core/hs-backup";
+import { HSCalculationTools } from "./hs-core/hs-calculation-tools";
 import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
 import { HSHeaderEditSettings } from "./hs-core/header/hs-header-edit-settings";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
-import { HSInputType, HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
+import { HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
 import { HSAmbrosia } from "./hs-modules/hs-ambrosia";
 import { HSHeaterInputModalController } from "./hs-modules/hs-heater/ui/hs-heater-input-modal-controller";
@@ -348,12 +349,6 @@ export class Hypersynergism {
     // ================================
 
     #buildToolsTab(hsui: HSUI) {
-        const calculationOptions = HSGameDataAPI.getCalculationDefinitions({ toolingSupport: "true" })
-            .map((def) => ({
-                text: def.supportsReduce ? `${def.calculationName} (C)` : def.calculationName,
-                value: def.supportsReduce ? `${def.fnName}|c` : def.fnName,
-            }));
-
         // Only for players who loaded the mod with the bookmark, hence at the very top
         const bookmarkletSection = HSBookmarkletNotice.buildToolsSection();
 
@@ -380,19 +375,7 @@ export class Hypersynergism {
                     HSUIC.Button({ id: 'hs-panel-test-notify-btn', text: 'Notify test' }),
                     HSUIC.Button({ id: 'hs-panel-test-notify-long-btn', text: 'Notify test 2' }),
                     this.#buildGridSectionHeader('Calculation tools'),
-                    this.#buildGridFullSpanDiv('hs-panel-calc-tools-p', `Execute supported calculations and see their results. Calculations denoted with "(C)" support "calculating by components",
-                        meaning that the calculation results can be output as an array of components that make up the calculations.<br><br>
-                        Note that calculating by components always clears the calculation cache first.`),
-                    HSUIC.Select({
-                        class: 'hs-panel-setting-block-select-input hs-panel-grid-full-span',
-                        id: 'hs-panel-test-calc-sel',
-                        type: HSInputType.TEXT
-                    }, calculationOptions),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-redu-btn', text: 'Calculate reduced', class: 'hs-panel-btn-auto-width' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-comps-btn', text: 'Calculate components', class: 'hs-panel-btn-auto-width' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-clear-btn', text: 'Clear cache' }),
-                    HSUIC.Button({ id: 'hs-panel-test-calc-cache-dump-btn', text: 'Dump cache' }),
-                    this.#buildGridFullSpanDiv('hs-panel-test-calc-latest', ''),
+                    ...HSCalculationTools.buildToolsSection(),
                 ],
                 styles: {
                     gridTemplateColumns: 'repeat(2, 1fr)',
@@ -415,6 +398,7 @@ export class Hypersynergism {
 
         HSBookmarkletNotice.bindToolsSection();
         HSBackup.bindToolsSection();
+        HSCalculationTools.bindToolsSection();
 
         this.#bindToolsButton('#hs-panel-amb-heater-btn', async () => {
             const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
@@ -446,10 +430,6 @@ export class Hypersynergism {
         this.#bindToolsButton('#hs-panel-clear-settings-btn', () => HSBackup.clearSettingsAndReload());
         this.#bindToolsButton('#hs-panel-check-version-btn', () => this.#checkVersion());
         this.#bindToolsButton('#hs-panel-exit-exalt-bug-btn', () => this.#fixExaltBug());
-        this.#bindToolsButton('#hs-panel-test-calc-redu-btn', () => this.#runCalculation('reduced'));
-        this.#bindToolsButton('#hs-panel-test-calc-comps-btn', () => this.#runCalculation('components'));
-        this.#bindToolsButton('#hs-panel-test-calc-cache-clear-btn', () => this.#clearCalcCache());
-        this.#bindToolsButton('#hs-panel-test-calc-cache-dump-btn', () => this.#dumpCalcCache());
 
         this.#bindToolsButton('#hs-panel-test-notify-btn', async () => {
             p_idx = (p_idx + 1) % positions.length;
@@ -525,96 +505,6 @@ export class Hypersynergism {
 
         exposedPlayer.insideSingularityChallenge = true;
         HSLogger.info('Exalt bug fixed.', this.#context);
-    }
-
-    #runCalculation(mode: 'reduced' | 'components') {
-        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        const sel = document.querySelector('#hs-panel-test-calc-sel') as HTMLSelectElement | null;
-        if (!dataModule || !sel) {
-            HSLogger.warn('dataModule or calculation select was null', this.#context);
-            return;
-        }
-
-        const selValue = sel.value.split('|');
-        const calcFnName = selValue[0] as string;   // as keyof HSGameDataAPI
-        const isComponentMode = mode === 'components';
-        const supportsComponent = selValue.includes('c');
-
-        const calcFn = dataModule.getCalculationFunction(calcFnName);
-
-        if (typeof calcFn !== 'function') {
-            HSLogger.warn(`${calcFnName} is not a function`, this.#context);
-            return;
-        }
-
-        const calcFnTyped = calcFn as (...args: unknown[]) => number | number[];
-
-        if (isComponentMode) {
-            if (!supportsComponent) {
-                HSLogger.warn(`${calcFnName} cannot be calculated by components`, this.#context);
-                return;
-            }
-
-            dataModule.clearCache();
-            const result: unknown = calcFnTyped(false);
-            if (!Array.isArray(result) && !this.#isPlainObject(result)) {
-                HSLogger.warn(`${calcFnName} did not return an array when expected`, this.#context);
-                return;
-            }
-
-            const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
-            if (latestDiv) {
-                latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
-            }
-            console.log(`--- CALCULATED ${calcFnName} ---`);
-            console.log(result);
-            return;
-        }
-
-        const result: unknown = calcFnTyped();
-        if (Array.isArray(result)) {
-            HSLogger.warn(`${calcFnName} returned an array when a number was expected`, this.#context);
-            return;
-        }
-
-        console.log(`--- CALCULATED ${calcFnName} ---`);
-        console.log(result);
-
-        const latestDiv = document.querySelector('#hs-panel-test-calc-latest') as HTMLDivElement | null;
-        if (latestDiv) {
-            latestDiv.innerText = `Last calc result: ${this.#formatCalcResult(result)}`;
-        }
-    }
-
-    #isPlainObject(value: unknown): value is Record<string, unknown> {
-        return typeof value === 'object' && value !== null && !Array.isArray(value);
-    }
-
-    // A number, an array of components, or an object of either (calculateLuck returns { luckBase, luckMult, luckTotal }): one key per line
-    #formatCalcResult(result: unknown): string {
-        if (Array.isArray(result)) return `[${result.join(', ')}]`;
-        if (this.#isPlainObject(result)) {
-            return Object.entries(result)
-                .map(([key, value]) => `\n${key}: ${this.#formatCalcResult(value)}`)
-                .join('');
-        }
-        return typeof result === 'number' ? HSUtils.N(result) : String(result);
-    }
-
-    #clearCalcCache() {
-        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!dataModule) return;
-
-        HSLogger.log('Cleared calculation cache', this.#context);
-        dataModule.clearCache();
-    }
-
-    #dumpCalcCache() {
-        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
-        if (!dataModule) return;
-
-        HSLogger.log('Calculation cache dump', this.#context);
-        dataModule.dumpCache();
     }
 
     #dumpGameData() {
