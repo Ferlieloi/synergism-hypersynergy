@@ -24,6 +24,7 @@ const BOOLEAN_OPTIONS: HSCalculationParamOption[] = [
  *     (toolingSupport) on a save taken at the click, and shows its result.
  *     - Each param gets a control: a select of its options (true / false for a boolean), or a number field.
  *       With supportsReduce, the first param is reduce_vals, filled by the two buttons.
+ *     - Options read from the save (a corruption loadout) are read again from the save taken at the click.
  *     - Errors are shown in the result line, and logged.
  * Author: maenhiir
  */
@@ -35,8 +36,6 @@ export class HSCalculationTools {
     static readonly #reducedBtnId = 'hs-panel-test-calc-redu-btn';
     static readonly #componentsBtnId = 'hs-panel-test-calc-comps-btn';
     static readonly #dumpCacheBtnId = 'hs-panel-test-calc-cache-dump-btn';
-    // The options of the params shown, by param index (undefined for a number field): a select's value is an index into them
-    static #shownOptions: (readonly HSCalculationParamOption[] | undefined)[] = [];
 
 
     // ===============================
@@ -73,12 +72,12 @@ export class HSCalculationTools {
     }
 
     static bindToolsSection(): void {
-        document.getElementById(HSCalculationTools.#selectId)?.addEventListener('change', () => HSCalculationTools.#renderParams());
+        document.getElementById(HSCalculationTools.#selectId)?.addEventListener('change', () => void HSCalculationTools.#renderParams());
         document.getElementById(HSCalculationTools.#reducedBtnId)?.addEventListener('click', () => void HSCalculationTools.#run('reduced'));
         document.getElementById(HSCalculationTools.#componentsBtnId)?.addEventListener('click', () => void HSCalculationTools.#run('components'));
         document.getElementById(HSCalculationTools.#dumpCacheBtnId)?.addEventListener('click', () => HSCalculationTools.#dumpCache());
 
-        HSCalculationTools.#renderParams();
+        void HSCalculationTools.#renderParams();
     }
 
 
@@ -119,23 +118,29 @@ export class HSCalculationTools {
     }
 
     // Redrawn at each pick: one label and one control per param
-    static #renderParams(): void {
+    static async #renderParams(): Promise<void> {
         const container = document.getElementById(HSCalculationTools.#paramsId);
         if (!container) return;
 
-        container.replaceChildren();
-        HSCalculationTools.#shownOptions = [];
-
         const definition = HSCalculationTools.#selectedDefinition();
-        if (!definition) return;
+        const params = definition ? HSCalculationTools.#shownParams(definition) : [];
 
-        HSCalculationTools.#shownParams(definition).forEach((param, index) => {
+        // A list read from the save needs one: none yet when GDS has been off since the page load
+        const dataModule = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        if (params.some((param) => typeof param.options === 'function') && !dataModule?.getGameData()) {
+            await dataModule?.getForcedGameData();
+            // Another pick during the save draws its own params
+            if (HSCalculationTools.#selectedDefinition() !== definition) return;
+        }
+
+        container.replaceChildren();
+
+        params.forEach((param, index) => {
             const label = document.createElement('label');
             label.htmlFor = HSCalculationTools.#paramControlId(index);
             label.textContent = HSCalculationTools.#paramLabel(param);
 
             const options = HSCalculationTools.#paramOptions(param);
-            HSCalculationTools.#shownOptions.push(options);
 
             let control: HTMLSelectElement | HTMLInputElement;
             if (options) {
@@ -157,17 +162,18 @@ export class HSCalculationTools {
         });
     }
 
-    // The shown params' values in order, or undefined when a number field isn't a number
+    // The shown params' values in order, or undefined when a number field isn't a number.
+    // Options read from the save are read again, from the save just taken: a select's value is the option's index.
     static #readParams(definition: HSCalculationDefinition): unknown[] | undefined {
         const values: unknown[] = [];
+        const params = HSCalculationTools.#shownParams(definition);
 
-        for (let index = 0; index < HSCalculationTools.#shownParams(definition).length; index++) {
+        for (let index = 0; index < params.length; index++) {
             const control = document.getElementById(HSCalculationTools.#paramControlId(index)) as HTMLSelectElement | HTMLInputElement | null;
-            const options = HSCalculationTools.#shownOptions[index];
             if (!control) return undefined;
 
-            if (options) {
-                values.push(options[Number(control.value)]?.value);
+            if (control instanceof HTMLSelectElement) {
+                values.push(HSCalculationTools.#paramOptions(params[index])?.[Number(control.value)]?.value);
             } else {
                 const value = control.value.trim() === '' ? NaN : Number(control.value);
                 if (!Number.isFinite(value)) return undefined;
@@ -205,18 +211,18 @@ export class HSCalculationTools {
             return;
         }
 
+        // A save taken now, also with GDS off or paused. The new snapshot clears the calculation cache.
+        if (!await dataModule.getForcedGameData()) {
+            HSCalculationTools.#showError('Could not read the save');
+            return;
+        }
+
         const params = HSCalculationTools.#readParams(definition);
         if (!params) {
             HSCalculationTools.#showError('Every number field needs a number');
             return;
         }
         const args = definition.supportsReduce ? [!isComponentMode, ...params] : params;
-
-        // A save taken now, also with GDS off or paused. The new snapshot clears the calculation cache.
-        if (!await dataModule.getForcedGameData()) {
-            HSCalculationTools.#showError('Could not read the save');
-            return;
-        }
 
         let result: unknown;
         try {

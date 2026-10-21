@@ -1,10 +1,16 @@
-import { CalculationMode, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams, hepteractTypeList, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades, CalculationMode, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams, hepteractTypeList, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
+import { CorruptionLevels } from "../../../types/data-types/hs-player-savedata";
 import { challenge15Rewards, redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
 
 // ===== Param options for the Tools tab =====
 
 const optionsFromKeys = (keys: readonly string[]): HSCalculationParamOption[] => keys.map((key) => ({ label: key, value: key }));
+
+// A numeric enum also maps its values back to its names
+const optionsFromNumericEnum = (enumObject: Record<string, string | number>): HSCalculationParamOption[] => Object.entries(enumObject)
+    .filter(([, value]) => typeof value === "number")
+    .map(([label, value]) => ({ label, value }));
 
 const MODE_PARAM: HSCalculationParams = {
     paramName: "mode",
@@ -20,27 +26,36 @@ const SINGULARITY_COUNT_PARAM: HSCalculationParams = {
     label: "Singularity (-1: current)"
 };
 
-// A numeric enum also maps its values back to its names
-const EVENT_BUFF_OPTIONS: HSCalculationParamOption[] = Object.entries(EventBuffType)
-    .filter(([, value]) => typeof value === "number")
-    .map(([label, value]) => ({ label, value }));
+const EVENT_BUFF_PARAM: HSCalculationParams = {
+    paramName: "buff",
+    paramType: "EventBuffType",
+    options: optionsFromNumericEnum(EventBuffType)
+};
 
 const SINGULARITY_DEBUFF_OPTIONS = optionsFromKeys([
     "Offering", "Obtainium", "Salvage", "Global Speed", "Researches", "Ant ELO",
     "Ascension Speed", "Cubes", "Cube Upgrades", "Platonic Costs", "Hepteract Costs"
 ] satisfies SingularityDebuffs[]);
 
+// Read from the save again at the click, after its forced save
+const CORRUPTION_LOADOUT_PARAM: HSCalculationParams = {
+    paramName: "loadout",
+    paramType: "CorruptionLevels",
+    options: (data) => [
+        { label: "current", value: data?.corruptions.used },
+        { label: "next", value: data?.corruptions.next },
+    ]
+};
+
+const CORRUPTION_NAME_OPTIONS = optionsFromKeys([
+    "viscosity", "drought", "deflation", "extinction", "illiteracy", "recession", "dilation", "hyperchallenge"
+] satisfies (keyof CorruptionLevels)[]);
+
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
         calculationName: "Consumable Event Buff",
         fnName: "calculateConsumableEventBuff",
-        fnParams: [
-            {
-                paramName: "buff",
-                paramType: "EventBuffType",
-                options: EVENT_BUFF_OPTIONS
-            }
-        ],
+        fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
@@ -152,11 +167,6 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         supportsReduce: false,
         toolingSupport: true
     },
-    /*
-
-                            SHOULD WE ADD ANYTHING ELSE ????
-
-    */
     {
         calculationName: "Red Ambrosia Upgrade Value",
         fnName: "calculateRedAmbrosiaUpgradeValue",
@@ -465,6 +475,188 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         calculationName: "Negative Salvage",
         fnName: "calculateNegativeSalvage",
         fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Ambrosia, luck, purple -----
+    {
+        // The HSGameDataAPI copy, which hides the helper's: no reduce_vals, hence no components
+        calculationName: "Red Ambrosia Speed",
+        fnName: "calculateRedAmbrosiaGenerationSpeed",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Bar Income",
+        fnName: "calculateAmbrosiaBarIncome",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Upgrade Value",
+        fnName: "calculateAmbrosiaUpgradeValue",
+        fnParams: [
+            {
+                paramName: "upgradeName",
+                paramType: "AmbrosiaUpgradeNames",
+                options: (data) => optionsFromKeys(Object.keys(data?.ambrosiaUpgrades ?? {}))
+            },
+            {
+                paramName: "freeLevelsOnly",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Panthema Ambrosia Luck",
+        fnName: "calculatePanthemaAmbrosiaLuck",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Panthema Red Luck",
+        fnName: "calculatePanthemaRedLuck",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Luck",
+        fnName: "calculatePurpleHoneyLuck",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Luck Breakdown",
+        fnName: "calculatePurpleHoneyLuckBreakdown",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Per Extraction",
+        fnName: "calculatePurpleHoneyPerExtraction",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Cubes, ascension, corruptions -----
+    {
+        calculationName: "Cube Multiplier",
+        fnName: "calculateCubeMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier With Tau",
+        fnName: "calculateCubeMultiplierWithTau",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Tesseract Multiplier",
+        fnName: "calculateTesseractMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Hypercube Multiplier",
+        fnName: "calculateHypercubeMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Platonic Multiplier",
+        fnName: "calculatePlatonicMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Hepteract Multiplier",
+        fnName: "calculateHepteractMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ascension Score",
+        fnName: "calculateAscensionScore",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Corruption Score Multiplier",
+        fnName: "calculateCorruptionScoreMultiplier",
+        fnParams: [CORRUPTION_LOADOUT_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Corruption Effect",
+        fnName: "calculateCorruptionEffect",
+        fnParams: [
+            CORRUPTION_LOADOUT_PARAM,
+            {
+                paramName: "corruption",
+                paramType: "keyof CorruptionLevels",
+                options: CORRUPTION_NAME_OPTIONS
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Runes, talismans, other -----
+    {
+        calculationName: "Total Rune Levels",
+        fnName: "calculateTotalRuneLevels",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Talisman Rarity Total",
+        fnName: "calculateTalismanRarityTotal",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Synergism Level",
+        fnName: "calculateSynergismLevel",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "True Ant Level",
+        fnName: "calculateTrueAntLevel",
+        fnParams: [
+            {
+                paramName: "antUpgrade",
+                paramType: "AntUpgrades",
+                options: optionsFromNumericEnum(AntUpgrades)
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Event Source Buff",
+        fnName: "calculateEventSourceBuff",
+        fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
