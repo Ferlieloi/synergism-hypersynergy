@@ -2,7 +2,7 @@ import { redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { HSGlobal } from "../hs-global";
 import type { GameData, RedAmbrosiaUpgrades } from "../../../types/data-types/hs-player-savedata";
-import type { AmbrosiaHelperContext, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig, AmbrosiaUpgradeEffectContext, RedAmbrosiaUpgradeRewards, RedAmbrosiaUpgradeKey, CalculationCache, CalculationMode } from "../../../types/data-types/hs-gamedata-api-types";
+import type { AmbrosiaHelperContext, AmbrosiaUpgradeNames, AmbrosiaUpgradeRewards, AmbrosiaUpgradeCalculationCollection, AmbrosiaUpgradeCalculationConfig, AmbrosiaUpgradeEffectContext, RedAmbrosiaUpgradeRewards, RedAmbrosiaUpgradeKey, CalculationCache, CalculationMode, HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { calculateAmbrosiaBarIncome } from "./hs-ambrosia-bar-income";
 import type { AmbrosiaBarIncome } from "../../../types/data-types/hs-ambrosia-income-types";
 
@@ -991,39 +991,39 @@ export class AmbrosiaHelper {
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (reduce_vals && cached !== undefined) return cached;
 
-        const vals = [
-            this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration1', 'ambrosiaGenerationMult', mode) as number,
-            this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration2', 'ambrosiaGenerationMult', mode) as number,
-            this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration3', 'ambrosiaGenerationMult', mode) as number,
-            this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration4', 'ambrosiaGenerationMult', mode) as number,
-        ];
+        const vals: HSCalculationComponents = {
+            'Quark Upgrade - Ambrosia Generation I': this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration1', 'ambrosiaGenerationMult', mode) as number,
+            'Quark Upgrade - Ambrosia Generation II': this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration2', 'ambrosiaGenerationMult', mode) as number,
+            'Quark Upgrade - Ambrosia Generation III': this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration3', 'ambrosiaGenerationMult', mode) as number,
+            'Quark Upgrade - Ambrosia Generation IV': this.#ctx.getShopUpgradeEffects('shopAmbrosiaGeneration4', 'ambrosiaGenerationMult', mode) as number,
+        };
 
-        const reduced = vals.reduce((a, b) => a * b, 1);
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1);
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduce_vals ? reduced : vals;
     }
 
     calculateAmbrosiaGenerationSingularityUpgrade(reduce_vals = true) {
-        const vals = [
-            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
-        ];
+        const vals: HSCalculationComponents = {
+            'Hourglass of Limitlessness': this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Importance': this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Significance': this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Fantasy': this.#ctx.getGQUpgradeEffect('singAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
+        };
 
-        const reduced = vals.reduce((a, b) => a * b, 1);
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1);
         return reduce_vals ? reduced : vals;
     }
 
     calculateAmbrosiaGenerationOcteractUpgrade(reduce_vals = true) {
-        const vals = [
-            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
-            this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
-        ];
+        const vals: HSCalculationComponents = {
+            'Hourglass of Infinitude': this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Minutiae': this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration2', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Myopathy': this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration3', 'ambrosiaBarSpeedMult'),
+            'Hourglass of Reality': this.#ctx.getOcteractUpgradeEffect('octeractAmbrosiaGeneration4', 'ambrosiaBarSpeedMult'),
+        };
 
-        const reduced = vals.reduce((a, b) => a * b, 1);
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1);
         return reduce_vals ? reduced : vals;
     }
 
@@ -1123,28 +1123,28 @@ export class AmbrosiaHelper {
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (reduce_vals && cached !== undefined) return cached;
 
-        const vals = [
-            AMBROSIA_UNLOCKED_GATE,
-            P_GEN_BUFF_LVL ? 1 + P_GEN_BUFF_LVL * 0.05 : 1,
-            campaignBlueberrySpeedBonus,
-            ambrosiaGenerationShopUpgrade,
-            ambrosiaGenerationSingularityUpgrade,
-            ambrosiaGenerationOcteractUpgrade,
-            ambrosiaPatreonBlueberryGeneration,
-            panthemaAmbrosiaGenerationMult,
-            oneChallengeCap,
-            noAmbrosiaUpgrades,
-            RED_AMB_GEN_1,
-            RED_AMB_GEN_2,
-            cookie76Bonus,
-            this.#ctx.getShopUpgradeEffects('shopCashGrabUltra', 'ambrosiaGenerationMult') as number,
-            purpleTutorial,
-            eventBlueberryTimeBuff,
-            lifetimePurpleHoney,
-            purpleAries,
-        ];
+        const vals: HSCalculationComponents = {
+            'Default Per Second': AMBROSIA_UNLOCKED_GATE,
+            'PseudoCoin Upgrade': P_GEN_BUFF_LVL ? 1 + P_GEN_BUFF_LVL * 0.05 : 1,
+            'Campaign Bonus': campaignBlueberrySpeedBonus,
+            'Quark Upgrades (I-IV)': ambrosiaGenerationShopUpgrade,
+            'Golden Quark Upgrades (I-IV)': ambrosiaGenerationSingularityUpgrade,
+            'Octeract Upgrades (I-IV)': ambrosiaGenerationOcteractUpgrade,
+            'Ambrosia - Shameless, Ambrosial Subscriber Advertisement': ambrosiaPatreonBlueberryGeneration,
+            'The Jack of all Trades': panthemaAmbrosiaGenerationMult,
+            'EXALT - One Challenge Caps': oneChallengeCap,
+            'EXALT - No Ambrosia Effects': noAmbrosiaUpgrades,
+            'Red Ambrosia - The Sands of Time': RED_AMB_GEN_1,
+            'Red Ambrosia - The Sands of Time II': RED_AMB_GEN_2,
+            'Cookie Upgrade 26 (Cx26)': cookie76Bonus,
+            'Cash Grab ULTRA Blueberry Bonus': this.#ctx.getShopUpgradeEffects('shopCashGrabUltra', 'ambrosiaGenerationMult') as number,
+            "Purple Honey - The Purple Guy's Greeting": purpleTutorial,
+            'Event Bonus': eventBlueberryTimeBuff,
+            'Lifetime Purple Honey Power': lifetimePurpleHoney,
+            'Purple Ambrosia - Aries': purpleAries,
+        };
 
-        const reduced = vals.reduce((a, b) => a * b, 1);
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1);
         this.#ctx.updateCalculationCache(cacheName, { value: reduced, cachedBy: calculationVars });
         return reduce_vals ? reduced : vals;
     }
@@ -1159,25 +1159,25 @@ export class AmbrosiaHelper {
             : trueBaseOrMode ? 'true_base' : 'normal';
 
         const synergismLevel = this.#ctx.calculateSynergismLevel();
-        const vals = [
-            data.singularityChallenges.noAmbrosiaUpgrades.completions > 0 ? 1 : 0,
-            1 + 0.02 * (data.cubeUpgrades[76] ?? 0),
-            1 + 0.05 * this.#ctx.getPCoinUpgradeLevel('RED_GENERATION_BUFF'),
-            synergismLevel >= 280 ? 1 + 0.01 * (synergismLevel - 279) : 1,
-            mode === 'normal'
+        const vals: HSCalculationComponents = {
+            'Default Per Second': data.singularityChallenges.noAmbrosiaUpgrades.completions > 0 ? 1 : 0,
+            'Cookie Upgrade 26 (Cx26)': 1 + 0.02 * (data.cubeUpgrades[76] ?? 0),
+            'PseudoCoin Upgrade': 1 + 0.05 * this.#ctx.getPCoinUpgradeLevel('RED_GENERATION_BUFF'),
+            'Synergism Level Reward': synergismLevel >= 280 ? 1 + 0.01 * (synergismLevel - 279) : 1,
+            'Ambrosia - Shameless, Ambrosial Subscriber Advertisement': mode === 'normal'
                 ? this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaPatreon').blueberryGeneration
                 : 1,
-            this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed').redAmbrosiaGenerationSpeed,
-            this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed2').redAmbrosiaGenerationSpeed,
-            this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed,
-            this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed,
-            this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'redSpeedMult'),
-            this.#ctx.getPurpleReactorUpgradeEffects('tutorial', 'redAmbrosiaGeneration'),
-            this.#ctx.getPurpleReactorUpgradeEffects('lifetimeHoneyRedAmbrosia', 'redAmbrosiaGenerationSpeed'),
-            this.#ctx.getPurpleAmbrosiaUpgradeEffects('aries', 'universalBarPointMult'),
-            this.calculateBlueberryInventory(true) as number,
-        ];
-        const reduced = vals.reduce((a, b) => a * b, 1);
+            'Red Ambrosia - Millennium-Aged Red Ambrosia': this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed').redAmbrosiaGenerationSpeed,
+            'Red Ambrosia - Era of Red Ambrosia': this.getRedAmbrosiaUpgradeEffects('redGenerationSpeed2').redAmbrosiaGenerationSpeed,
+            'Red Ambrosia - The Sands of Time': this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed').blueberryGenerationSpeed,
+            'Red Ambrosia - The Sands of Time II': this.getRedAmbrosiaUpgradeEffects('blueberryGenerationSpeed2').blueberryGenerationSpeed,
+            'EXALT - No Ambrosia Effects': this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'redSpeedMult'),
+            "Purple Honey - The Purple Guy's Greeting": this.#ctx.getPurpleReactorUpgradeEffects('tutorial', 'redAmbrosiaGeneration'),
+            'Lifetime Purple Honey Power': this.#ctx.getPurpleReactorUpgradeEffects('lifetimeHoneyRedAmbrosia', 'redAmbrosiaGenerationSpeed'),
+            'Purple Ambrosia - Aries': this.#ctx.getPurpleAmbrosiaUpgradeEffects('aries', 'universalBarPointMult'),
+            'Number of Blueberries Owned': this.calculateBlueberryInventory(true) as number,
+        };
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1);
         return reduce_vals ? reduced : vals;
     }
 
@@ -1207,7 +1207,7 @@ export class AmbrosiaHelper {
             'purpleHalfLife4',
         ] as const;
         const luck = this.#ctx.calculateLuck(true) as { luckTotal: number };
-        const bluePointsPerSecond = this.calculateAmbrosiaGenerationSpeed(true)
+        const bluePointsPerSecond = (this.calculateAmbrosiaGenerationSpeed(true) as number)
             * (this.calculateBlueberryInventory(true) as number);
         const reactorData = data.purpleReactor;
 
@@ -1240,7 +1240,7 @@ export class AmbrosiaHelper {
                 barDependenceEnabled: Boolean(data.singularityChallenges.barDependence.enabled),
             },
             bluePointsPerSecond,
-            redPointsPerSecond: this.calculateRedAmbrosiaGenerationSpeed(true),
+            redPointsPerSecond: this.calculateRedAmbrosiaGenerationSpeed(true) as number,
             blueRequirementWithoutTwoMind,
             redRequirementWithoutTwoMind,
             blueLuck: Number(luck.luckTotal),
@@ -1570,23 +1570,23 @@ export class AmbrosiaHelper {
         return this.#ctx.calculateLuck(reduce_vals, true_base);
     }
 
-    calculateBlueberryInventory(reduce_vals = true): number | number[] {
+    calculateBlueberryInventory(reduce_vals = true): number | HSCalculationComponents {
         const gameData = this.#ctx.getGameData();
         if (!gameData) return 0;
 
         const noAmbrosiaFactor = this.#ctx.getSingularityChallengeEffect('noAmbrosiaUpgrades', 'blueberries');
 
-        const vals = [
-            +(gameData.singularityChallenges.noSingularityUpgrades.completions > 0) * 3,
-            this.#ctx.getGQUpgradeEffect('blueberries', 'blueberries'),
-            this.#ctx.getOcteractUpgradeEffect('octeractBlueberries', 'blueberries'),
-            +(this.getRedAmbrosiaUpgradeEffects('blueberries').blueberries),
-            this.calculateSingularityMilestoneBlueberries(),
-            noAmbrosiaFactor,
-            this.#ctx.getSingularityChallengeEffect('barDependence', 'blueberries'),
-        ];
+        const vals: HSCalculationComponents = {
+            'EXALT - No Golden Quark Upgrades': +(gameData.singularityChallenges.noSingularityUpgrades.completions > 0) * 3,
+            'Golden Quark Upgrade - Blueberries!': this.#ctx.getGQUpgradeEffect('blueberries', 'blueberries'),
+            'Octeracts - Berries that are Blue!': this.#ctx.getOcteractUpgradeEffect('octeractBlueberries', 'blueberries'),
+            'Red Ambrosia - Berries that are... blue?': +(this.getRedAmbrosiaUpgradeEffects('blueberries').blueberries),
+            'Congealed Blueberries (Singularity Milestones)': this.calculateSingularityMilestoneBlueberries(),
+            'EXALT - No Ambrosia Effects': noAmbrosiaFactor,
+            'EXALT - Bar Charging': this.#ctx.getSingularityChallengeEffect('barDependence', 'blueberries'),
+        };
 
-        const reduced = vals.reduce((a, b) => a + b, 0);
+        const reduced = Object.values(vals).reduce((a, b) => a + b, 0);
         return reduce_vals ? reduced : vals;
     }
 

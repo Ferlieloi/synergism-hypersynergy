@@ -274,7 +274,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "All Shop Tablets",
+        calculationName: "Vouchers",
         fnName: "calculateAllShopTablets",
         fnParams: [
             {

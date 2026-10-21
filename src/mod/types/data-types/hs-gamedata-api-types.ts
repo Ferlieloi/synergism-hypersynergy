@@ -30,7 +30,7 @@ export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getRuneEffects: (rune: RuneKeys) => any
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode?: CalculationMode) => number[]
+  calculateFreeShopInfinityUpgrades: (mode?: CalculationMode) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -940,6 +940,9 @@ export type SingularityDebuffs =
     | 'Cube Upgrades'
     | 'Platonic Costs'
     | 'Hepteract Costs';
+
+// What a calculation returns with reduce_vals = false: each component by name (the game's stat line name when it has one)
+export type HSCalculationComponents = Record<string, number>;
 
 export interface HSCalculationParamOption {
     label: string;

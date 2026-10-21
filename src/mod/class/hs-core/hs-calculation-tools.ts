@@ -53,7 +53,7 @@ export class HSCalculationTools {
             HSUIC.Div({
                 class: 'hs-panel-grid-full-span',
                 html: `Execute supported calculations on a save taken at the click and see their results. Calculations denoted with "(C)" support "calculating by components",
-                    meaning that the calculation results can be output as an array of components that make up the calculations.`
+                    meaning that the calculation results can be output as the named components that make up the calculations.`
             }),
             HSUIC.Select({
                 class: 'hs-panel-setting-block-select-input hs-panel-grid-full-span',
@@ -67,7 +67,7 @@ export class HSCalculationTools {
             HSUIC.Button({ id: HSCalculationTools.#reducedBtnId, text: 'Calculate reduced', class: 'hs-panel-btn-auto-width' }),
             HSUIC.Button({ id: HSCalculationTools.#componentsBtnId, text: 'Calculate components', class: 'hs-panel-btn-auto-width' }),
             HSUIC.Button({ id: HSCalculationTools.#dumpCacheBtnId, text: 'Dump cache' }),
-            HSUIC.Div({ id: HSCalculationTools.#resultId, class: 'hs-panel-grid-full-span' }),
+            HSUIC.Div({ id: HSCalculationTools.#resultId, class: 'hs-panel-grid-full-span hs-calc-result' }),
         ];
     }
 
@@ -232,12 +232,8 @@ export class HSCalculationTools {
             return;
         }
 
-        if (isComponentMode && !Array.isArray(result) && !HSCalculationTools.#isPlainObject(result)) {
-            HSCalculationTools.#showError(`${fnName} did not return an array when expected`);
-            return;
-        }
-        if (!isComponentMode && Array.isArray(result)) {
-            HSCalculationTools.#showError(`${fnName} returned an array when a number was expected`);
+        if (isComponentMode && !HSCalculationTools.#isPlainObject(result)) {
+            HSCalculationTools.#showError(`${fnName} did not return its components`);
             return;
         }
 
@@ -264,12 +260,14 @@ export class HSCalculationTools {
         return typeof value === 'object' && value !== null && !Array.isArray(value);
     }
 
-    // A number, an array of components, or an object of either (calculateLuck returns { luckBase, luckMult, luckTotal }): one key per line
-    static #formatResult(result: unknown): string {
-        if (Array.isArray(result)) return `[${result.map((value) => HSCalculationTools.#formatResult(value)).join(', ')}]`;
+    // A number, or an object of numbers or objects (named components; calculateLuck returns { luckBase, luckMult, luckTotal },
+    // each a list of components in components mode): one key per line, a nested object's keys indented under it
+    static #formatResult(result: unknown, depth = 0): string {
+        if (Array.isArray(result)) return `[${result.map((value) => HSCalculationTools.#formatResult(value, depth)).join(', ')}]`;
         if (HSCalculationTools.#isPlainObject(result)) {
+            const indent = '    '.repeat(depth);
             return Object.entries(result)
-                .map(([key, value]) => `\n${key}: ${HSCalculationTools.#formatResult(value)}`)
+                .map(([key, value]) => `\n${indent}${key}: ${HSCalculationTools.#formatResult(value, depth + 1)}`)
                 .join('');
         }
         return typeof result === 'number' ? HSUtils.N(result) : String(result);

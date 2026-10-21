@@ -17,6 +17,11 @@
     padding: 0 0 0 0.2em;
 }
 
+/* Components are indented under their group (luck's luckBase / luckMult) */
+.hs-calc-result {
+    white-space: pre-wrap;
+}
+
 .hs-calc-result-error {
     color: #ff6b6b;
 }

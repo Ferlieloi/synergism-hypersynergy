@@ -144,8 +144,8 @@ export class ShopUpgradeHelper {
             getShopUpgradeTypeBonusLevels: (type: ShopUpgradeGroups) => getShopUpgradeTypeBonusLevelsFreeLevelsOnly(type, freeEnv),
             getAmbrosiaUpgradeEffects: (upgradeKey: string, mode: CalculationMode = 'true_base') =>
                 baseEnv.getAmbrosiaUpgradeEffects(upgradeKey, mode),
-            calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode: CalculationMode = 'true_base') =>
-                baseEnv.calculateFreeShopInfinityUpgrades(reduce_vals, mode),
+            calculateFreeShopInfinityUpgrades: (mode: CalculationMode = 'true_base') =>
+                baseEnv.calculateFreeShopInfinityUpgrades(mode),
         } as ShopUpgradeHelperContext;
         return freeEnv;
     }
@@ -158,8 +158,8 @@ export class ShopUpgradeHelper {
                 SHOP_UPGRADE_GROUP_CONFIG[type]?.getBonusLevels(noAmbrosiaEnv, 'non_ambrosia') ?? 0,
             getAmbrosiaUpgradeEffects: (upgradeKey: string) =>
                 baseEnv.getAmbrosiaUpgradeEffects(upgradeKey, 'non_ambrosia'),
-            calculateFreeShopInfinityUpgrades: (reduce_vals: boolean) =>
-                baseEnv.calculateFreeShopInfinityUpgrades(reduce_vals, 'non_ambrosia'),
+            calculateFreeShopInfinityUpgrades: () =>
+                baseEnv.calculateFreeShopInfinityUpgrades('non_ambrosia'),
         } as ShopUpgradeHelperContext;
         return noAmbrosiaEnv;
     }
@@ -497,7 +497,7 @@ const SHOP_UPGRADE_GROUP_CONFIG: Record<ShopUpgradeGroups, ShopUpgradeGroupConfi
         },
         getBonusLevels: (env, mode = 'normal') => {
             const topHat = getTopHatRuneEffects(env);
-            return env.calculateFreeShopInfinityUpgrades(false, mode).reduce((sum, value) => sum + value, 0)
+            return env.calculateFreeShopInfinityUpgrades(mode)
                 + env.getSingularityChallengeEffect('noQuarkUpgrades', 'freeInfinityLevels')
                 + topHat.freeInfinityLevels;
         },
