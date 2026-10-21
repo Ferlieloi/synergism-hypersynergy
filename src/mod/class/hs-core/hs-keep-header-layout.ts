@@ -54,9 +54,9 @@ export class HSKeepHeaderLayout {
         const anchor = fileInput?.parentElement === importButton.parentElement ? fileInput! : importButton;
         anchor.after(row);
         HSUI.injectStyle(`
-            .hs-keep-header-layout { font-size: 0.75em; }
+            .hs-keep-header-layout { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.75em; }
             .hs-keep-header-layout label { display: inline; color: #bbb; cursor: pointer; }
-            .hs-keep-header-layout input { cursor: pointer; }
+            .hs-keep-header-layout input { margin: 0; cursor: pointer; }
         `, 'hs-keep-header-layout-css');
 
         checkbox.addEventListener('change', () => {

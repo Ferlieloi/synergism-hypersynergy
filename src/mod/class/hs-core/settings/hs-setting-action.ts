@@ -115,14 +115,14 @@ export class HSSettingActions {
                 if (minibars && HSSettings.usesGameData(minibars) && !gameDataSetting?.isEnabled()) {
                     gameDataSetting?.enable();
                 }
-                return mod.enableBerryMinibars(params.byPlayer === true);
+                return mod.enableBerryMinibars();
             },
             (mod) => mod.disableBerryMinibars()
         ),
 
         // Needs GDS (usesGameData): the settings keep it off while GDS is off
         ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
-            (mod, params) => mod.enableRateHeader(params.byPlayer === true),
+            (mod) => mod.enableRateHeader(),
             (mod) => mod.disableRateHeader()
         ),
 
@@ -223,7 +223,7 @@ export class HSSettingActions {
         ),
 
         enableAutomationQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
-            (mod, params) => mod.enableAutomationQuickbar(params.byPlayer === true),
+            (mod) => mod.enableAutomationQuickbar(),
             (mod) => mod.disableAutomationQuickbar()
         ),
 

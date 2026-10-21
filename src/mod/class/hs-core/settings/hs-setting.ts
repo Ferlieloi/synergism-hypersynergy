@@ -132,6 +132,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         if (!hasStateChanged) return;
 
         this.definition.enabled = newState;
+        HSSettings.notifyStateChange(this.definition.settingName);
 
         if (this.definition.settingType === 'boolean') {
             (this.definition as HSSettingBase<boolean>).settingValue = newState;
@@ -148,7 +149,7 @@ export abstract class HSSetting<T extends HSSettingType> {
             targetElement.classList.add('hs-disabled');
         }
 
-        await this.handleSettingAction('state', newState, true);
+        await this.handleSettingAction('state', newState);
 
         if (this.definition.settingName === 'useGameData' && newState) {
             this.#restoreGameDataDependents();
@@ -170,6 +171,7 @@ export abstract class HSSetting<T extends HSSettingType> {
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${newState}`, this.context);
         this.definition.enabled = newState;
+        HSSettings.notifyStateChange(this.definition.settingName);
 
         if (this.definition.settingType === 'boolean') {
             (this.definition as HSSettingBase<boolean>).settingValue = newState;
@@ -213,14 +215,13 @@ export abstract class HSSetting<T extends HSSettingType> {
     }
 
     // Handles a setting's settingAction for all settings
-    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean, byPlayer = false): Promise<void> {
+    protected async handleSettingAction(changeType: 'value' | 'state', newState?: boolean): Promise<void> {
         if (this.settingAction) {
             const action = this.settingAction;
 
             const actionConfig: HSSettingActionParams = {
                 contextName: this.context,
                 value: this.definition.calculatedSettingValue ?? null,
-                byPlayer
             }
 
             if (action && action instanceof Function) {
@@ -384,7 +385,9 @@ export class HSBooleanSetting extends HSSetting<boolean> {
     setValue(value: boolean) {
         this.definition.settingValue = value;
         this.definition.calculatedSettingValue = value;
+        const changed = this.definition.enabled !== value;
         this.definition.enabled = value;
+        if (changed) HSSettings.notifyStateChange(this.definition.settingName);
         HSSettings.saveSettingsToStorage();
     }
 

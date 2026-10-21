@@ -42,6 +42,8 @@ export class HSSettings extends HSModule {
     static #saveTimeout: ReturnType<typeof setTimeout> | undefined;
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
+    // Told when a setting is turned on or off, whoever does it (HSHeaderEditSettings' checkboxes)
+    static #stateListeners = new Set<(settingName: string) => void>();
 
     #settingActions: HSSettingActions;
 
@@ -218,6 +220,22 @@ export class HSSettings extends HSModule {
     static getSettings = (): HSSettingRecord => {
         return HSSettings.#settings;
     };
+
+    /** Run `listener` each time a setting is turned on or off: the panel, enable()/disable(), a boolean setValue(). */
+    static onStateChange(listener: (settingName: string) => void): void {
+        HSSettings.#stateListeners.add(listener);
+    }
+
+    /** Called by HSSetting right after a setting's enabled state is written, before its action runs. */
+    static notifyStateChange(settingName: string): void {
+        for (const listener of HSSettings.#stateListeners) {
+            try {
+                listener(settingName);
+            } catch (e) {
+                HSLogger.warn(`A setting state listener failed for ${settingName}: ${e}`, HSSettings.#staticContext);
+            }
+        }
+    }
 
     /**
      * Whether a setting needs GDS on the platform the mod was loaded on (its usesGameData: true, or a list of

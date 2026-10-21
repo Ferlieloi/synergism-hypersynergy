@@ -1,0 +1,119 @@
+/* "[HS] Header", the block next to the game's header tray in edit mode (HSHeaderEditSettings) */
+
+/* The game stacks the panel's children: in a wrapping row, the toolbar and the hint keep their own lines, and the
+   tray and the block share one (the block under the tray when the screen is too narrow) */
+#mainHeader.headerEditMode #headerEditPanel {
+   flex-flow: row wrap;
+   justify-content: center;
+   align-items: stretch;
+}
+
+#mainHeader.headerEditMode #headerEditToolbar,
+#mainHeader.headerEditMode #headerEditHint {
+   flex-basis: 100%;
+}
+
+/* The tray (the game's width: min(100%, 1000px)) gives way to the block before the block wraps: a row wraps on the
+   items' base sizes, so the tray's base is its smallest width, and it grows back to 1000px */
+#mainHeader.headerEditMode #headerTray {
+   flex: 1 1 500px;
+   max-width: 1000px;
+}
+
+/* As the game's #headerTray */
+#hs-header-edit-settings {
+   display: flex;
+   flex-direction: column;
+   gap: 4px;
+   box-sizing: border-box;
+   min-height: 44px;
+   padding: 4px 8px;
+   border: 1px dashed #ffffff60;
+   border-radius: 6px;
+   /* Restarts each time edit mode shows the block: its animationstart refreshes the block */
+   animation: hs-header-edit-settings-shown 1ms;
+}
+
+@keyframes hs-header-edit-settings-shown {
+   from { opacity: 1; }
+   to { opacity: 1; }
+}
+
+/* As the game's #headerTrayLabel */
+#hs-header-edit-settings .hs-hes-title {
+   color: #ccc;
+   font-size: 0.85em;
+}
+
+#hs-header-edit-settings .hs-hes-sections {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 4px 16px;
+}
+
+#hs-header-edit-settings .hs-hes-section {
+   display: flex;
+   flex-direction: column;
+   gap: 2px;
+}
+
+#hs-header-edit-settings .hs-hes-subtitle {
+   color: #999;
+   font-size: 0.7em;
+   white-space: nowrap;
+}
+
+/* As "[HS] Keep my header layout" */
+#hs-header-edit-settings .hs-hes-toggle {
+   display: flex;
+   align-items: center;
+   gap: 4px;
+   color: #bbb;
+   font-size: 0.75em;
+   white-space: nowrap;
+   cursor: pointer;
+}
+
+#hs-header-edit-settings .hs-hes-toggle > input {
+   margin: 0;
+   cursor: pointer;
+}
+
+#hs-header-edit-settings .hs-hes-slots {
+   display: flex;
+   align-items: center;
+   gap: 4px;
+   font-size: 0.75em;
+}
+
+#hs-header-edit-settings .hs-hes-slots > img {
+   width: 1.6em;
+   height: 1.6em;
+   object-fit: contain;
+}
+
+/* The game's buttons are 0.75em with a 30px min-height */
+#hs-header-edit-settings button {
+   min-width: 1.6em;
+   min-height: 0;
+   height: 1.6em;
+   padding: 0 4px;
+   border: 1px solid #ffffff80;
+   border-radius: 4px;
+   background-color: var(--button-color);
+   color: white;
+   font-size: inherit;
+   line-height: 1;
+   cursor: pointer;
+}
+
+#hs-header-edit-settings button:disabled {
+   opacity: 0.4;
+   cursor: default;
+}
+
+#hs-header-edit-settings .hs-hes-slots-value {
+   min-width: 2em;
+   color: #bbb;
+   text-align: center;
+}

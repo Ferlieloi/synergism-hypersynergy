@@ -112,6 +112,7 @@ export const HSGlobal: IHSGlobal = class {
             HSCorruption: 'HSQOLButtons',
             HSHeaderModules: 'HSQOLButtons',
             HSKeepHeaderLayout: 'HSQOLButtons',
+            HSHeaderEditSettings: 'HSQOLButtons',
             HSLoadoutIconStore: 'HSHeaderLoadoutIcons',
             // UI
             HSUIC: 'HSUI',

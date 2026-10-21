@@ -399,9 +399,8 @@ export class HSAmbrosia extends HSModule
     /**
      * Show the minibars: a module of the game's header, which the player places in the header's edit mode (it starts
      * in the tray), or a section of the mod's own row (#quickbarsRow) without the patcher's header modules patch.
-     * @param byPlayer the player turned them on: told how to place them when they're in the tray
      */
-    async enableBerryMinibars(byPlayer = false) {
+    async enableBerryMinibars() {
         const barWrapper = this.#minibarWrapper;
         if (!barWrapper) {
             HSLogger.warn('Could not find minibar wrapper', this.context);
@@ -411,7 +410,6 @@ export class HSAmbrosia extends HSModule
         const headerModule = HSHeaderModules.register(HSAmbrosia.#MINIBARS_HEADER_MODULE, () => this.#isAmbrosiaUnlocked());
         if (headerModule) {
             headerModule.appendChild(barWrapper);
-            if (byPlayer) HSHeaderModules.notifyIfInTray(HSAmbrosia.#MINIBARS_HEADER_MODULE, 'the ambrosia minibars');
         } else {
             const quickbarManager = HSQuickbarManager.getInstance();
             const sectionId = HSQuickbarManager.QUICKBAR_IDS.AMBROSIA_MINIBARS;
@@ -471,9 +469,8 @@ export class HSAmbrosia extends HSModule
     /**
      * Show the hourly rates as three modules of the game's header, which the player places in the header's edit mode
      * (they start in the tray). Nothing without the patcher's header modules patch: the rates stay in the Ambrosia tab.
-     * @param byPlayer the player turned them on: told how to place them when they're in the tray
      */
-    async enableRateHeader(byPlayer = false) {
+    async enableRateHeader() {
         for (const module of HSAmbrosia.#RATE_HEADER_MODULES) {
             const element = HSHeaderModules.register(module.id, () => this.#isRateUnlocked(module));
             if (!element) {
@@ -483,13 +480,6 @@ export class HSAmbrosia extends HSModule
             // One element per id for the page's life: built once
             this.#rateHeaderDisplays[module.resource] ??= this.#buildRateHeaderModule(element, module);
         }
-        if (byPlayer) {
-            // One notification for the three
-            for (const module of HSAmbrosia.#RATE_HEADER_MODULES) {
-                if (HSHeaderModules.notifyIfInTray(module.id, 'the ambrosia hourly rates')) break;
-            }
-        }
-
         this.#rateHeaderEnabled = true;
         this.subscribeGameDataChanges();
         this.#refreshRateHeader();

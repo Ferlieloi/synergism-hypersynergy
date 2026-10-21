@@ -1,7 +1,6 @@
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSStorage } from "./hs-storage";
-import { HSUI } from "./hs-ui";
 import { HSModuleManager } from "./module/hs-module-manager";
 
 const STORAGE_KEY = 'header-modules';
@@ -118,26 +117,6 @@ export class HSHeaderModules {
         HSHeaderModules.#render();
         HSLogger.debug(() => `Header module ${id} registered`, HSHeaderModules.#context);
         return element;
-    }
-
-    /**
-     * Tell the player that a module waits in the header's Hidden tray, and how to place it (they just turned it on).
-     * Nothing when it's placed, locked (the game doesn't offer it), or not registered.
-     * @param name what the player calls it, inside a sentence ("the automation quick bar")
-     * @returns whether the player was told
-     */
-    static notifyIfInTray(id: string, name: string): boolean {
-        const unlocked = HSHeaderModules.#modules.get(id);
-        const element = HSHeaderModules.#elements.get(id);
-        if (!unlocked || element?.parentElement?.id !== 'headerTray') return false;
-        try { if (!unlocked()) return false; } catch { return false; }
-
-        void HSUI.Notify(`To show ${name} in the game's header, hold any header module to edit the header, then drag the module out of the Hidden tray.`, {
-            displayDuration: 8000,
-            width: 440,
-            height: 80
-        });
-        return true;
     }
 
     /** Take a module out of the header and its tray. Its place stays remembered for the next register(). */

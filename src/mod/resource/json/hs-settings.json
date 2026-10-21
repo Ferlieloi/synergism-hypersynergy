@@ -60,6 +60,22 @@
     "enabled": false,
     "hidden": true
   },
+  "headerCorruptionSlotsShown": {
+    "settingName": "headerCorruptionSlotsShown",
+    "settingDescription": "Corruption loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
+    "settingType": "numeric",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": 16
+  },
+  "headerAmbrosiaSlotsShown": {
+    "settingName": "headerAmbrosiaSlotsShown",
+    "settingDescription": "Ambrosia loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
+    "settingType": "numeric",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": 16
+  },
   "hepteractDistributorAllowPartial": {
     "settingName": "hepteractDistributorAllowPartial",
     "settingDescription": "Hepteract Distributor: allow partly filled meters",
@@ -1364,8 +1380,9 @@
   "ambrosiaMinibars": {
     "settingName": "ambrosiaMinibars",
     "settingDescription": "Ambrosia minibars (S25+)",
-    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked). They are a module of the game's header: hold any header module to edit the header, then drag the bars out of the Hidden tray to where you want them. Without the game patch (bookmarklet), they show in the mod's row under the header, need GDS (turned on with them) and move twice a second.",
+    "settingHelpText": "Small progress bars for ambrosia, red ambrosia and purple honey (the last two once unlocked).",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": true,
     "usesGameData": ["bookmarklet"],
     "settingAction": "ambrosiaMinibarAction",
@@ -1379,8 +1396,9 @@
   "ambrosiaRateHeader": {
     "settingName": "ambrosiaRateHeader",
     "settingDescription": "Ambrosia per hour in the header (S25+)",
-    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout (the rates shown in the Ambrosia tab), as three modules of the game's header, refreshed every 5 seconds (every half second while the Ambrosia tab is open). Hold any header module to edit the header, then drag them out of the Hidden tray to where you want them. Red ambrosia and purple honey show once unlocked. Needs the game patch: not available with the bookmarklet.",
+    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout, as in the Ambrosia tab. Needs GDS.",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": true,
     "usesGameData": true,
     "settingAction": "ambrosiaRateHeaderAction",
@@ -1394,8 +1412,9 @@
   "enableAutomationQuickBar": {
     "settingName": "enableAutomationQuickBar",
     "settingDescription": "Automation quick bar",
-    "settingHelpText": "A compact bar of the automation toggles (adapted from the syn UI userscript). It is a module of the game's header: hold any header module to edit the header, then drag the bar out of the Hidden tray to where you want it. Without the game patch (bookmarklet), it shows in its own row at the bottom of the header.",
+    "settingHelpText": "A compact bar of the automation toggles.",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": true,
     "settingAction": "enableAutomationQuickBarAction",
     "settingControl": {
@@ -1408,8 +1427,9 @@
   "corruptionHeaderLevels": {
     "settingName": "corruptionHeaderLevels",
     "settingDescription": "Corruption levels in the header",
-    "settingHelpText": "Shows your corruption levels on a line above the game's Corruption loadouts header module: the current levels, then the next ones when they differ. Add the module to the header first (hold any header item to edit the header). Turned off while Auto-Sing runs.",
+    "settingHelpText": "Your corruption levels on a line under the Corruption loadouts module: the current ones, then the next ones when they differ. Turned off while Auto-Sing runs.",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": true,
     "settingAction": "corruptionHeaderLevelsAction",
     "settingControl": {
@@ -1422,8 +1442,9 @@
   "corruptionHeaderCleanse": {
     "settingName": "corruptionHeaderCleanse",
     "settingDescription": "Cleanse button in the header",
-    "settingHelpText": "Turns the icon of the game's Corruption loadouts header module into a cleanse button: one click sets your current and next corruptions to 0, with no confirmation. Add the module to the header first (hold any header item to edit the header).",
+    "settingHelpText": "Turns the Corruption loadouts module's icon into a cleanse button: one click sets your current and next corruptions to 0, with no confirmation.",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": true,
     "settingAction": "corruptionHeaderCleanseAction",
     "settingControl": {
@@ -1436,8 +1457,9 @@
   "centerQuickbars": {
     "settingName": "centerQuickbars",
     "settingDescription": "Center quick bars",
-    "settingHelpText": "When enabled, the quick bars in the header are centered instead of aligned to the right.",
+    "settingHelpText": "Centers the mod's row under the header instead of aligning it to the right.",
     "settingType": "boolean",
+    "hidden": true,
     "enabled": false,
     "settingAction": "centerQuickbarsAction",
     "settingControl": {

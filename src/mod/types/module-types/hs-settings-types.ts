@@ -29,6 +29,10 @@ export interface HSSettingsDefinition {
     // Save import
     keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
 
+    // Header loadout slots shown
+    headerCorruptionSlotsShown: HeaderCorruptionSlotsShownSetting;
+    headerAmbrosiaSlotsShown: HeaderAmbrosiaSlotsShownSetting;
+
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
     autoConfirmPopups: AutoConfirmPopupsSetting;
@@ -122,8 +126,6 @@ export interface HSSettingActionParams {
     contextName?: string,
     value?: any,
     disable?: boolean,
-    // The player changed it in the mod panel (not the page load, autosing, or GDS turning it back on)
-    byPlayer?: boolean,
 }
 
 export interface HSSettingControlGroup {
@@ -188,6 +190,10 @@ export interface HepteractDistributorKeepSetting extends HSSettingBase<number> {
 
 // Save import
 export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
+
+// Header loadout slots shown
+export interface HeaderCorruptionSlotsShownSetting extends HSSettingBase<number> { }
+export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
