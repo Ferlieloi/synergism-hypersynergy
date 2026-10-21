@@ -20,6 +20,29 @@
    max-width: 1000px;
 }
 
+/* "Top row at the bottom" (headerStatsAtBottom): the top row (#ascensionStats) under the grid, above the edit panel,
+   by CSS order only. On desktop both are items of #mainHeader's grid (#mobileHeaderContent is display: contents), so
+   the header's other children (the tabs, #quickbarsRow) go after them; on mobile they are items of
+   #mobileHeaderContent's column, where the game orders the row 1, the grid 2 and the panel 4 */
+html.hs-header-stats-bottom #ascensionStats {
+   order: 3;
+   /* The grid's 5px bottom margin plus this: the row's 10px gap to the grid, as at the top */
+   margin-top: 5px;
+}
+
+/* The row's top margin no longer keeps the grid off the top of the page (mobile has its own) */
+html.hs-header-stats-bottom:not([data-mobile="true"]) #headerGrid {
+   margin-top: 5px;
+}
+
+html.hs-header-stats-bottom #headerEditPanel {
+   order: 4;
+}
+
+html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
+   order: 5;
+}
+
 /* As the game's #headerTray */
 #hs-header-edit-settings {
    display: flex;

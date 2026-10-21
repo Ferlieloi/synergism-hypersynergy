@@ -100,6 +100,7 @@ export interface HSSettingsDefinition {
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
     corruptionHeaderCleanse: QOLButtonsCorruptionHeaderCleanseSetting;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
+    headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
@@ -255,6 +256,7 @@ export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase
 export interface QOLButtonsCorruptionHeaderLevelsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCorruptionHeaderCleanseSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsHeaderStatsAtBottomSetting extends HSSettingBase<boolean> { }
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }

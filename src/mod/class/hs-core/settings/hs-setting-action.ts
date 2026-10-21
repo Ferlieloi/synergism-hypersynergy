@@ -190,6 +190,11 @@ export class HSSettingActions {
             document.documentElement.classList.toggle('hs-quickbars-centered', params.disable !== true);
         },
 
+        // A class on <html>: CSS order only, the game's DOM stays as it is (hs-header-edit-settings.css)
+        headerStatsAtBottomAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-stats-bottom', params.disable !== true);
+        },
+
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {

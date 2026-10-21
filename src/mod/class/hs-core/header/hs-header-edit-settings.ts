@@ -49,6 +49,12 @@ const hasHeaderModules = () => !!(window as any).__HS_HEADER_MODULES_PATCHED;
 // In the block's order, before the visible slots
 const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
     {
+        title: 'Layout',
+        toggles: [
+            { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
+        ],
+    },
+    {
         title: 'Mod modules',
         toggles: [
             { setting: 'enableAutomationQuickBar', label: 'Automation bar', withoutPatch: "It shows in the mod's row under the header." },

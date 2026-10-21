@@ -1469,6 +1469,21 @@
       "controlEnabledId": "hs-setting-qol-center-quickbars-btn"
     }
   },
+  "headerStatsAtBottom": {
+    "settingName": "headerStatsAtBottom",
+    "settingDescription": "Header top row at the bottom",
+    "settingHelpText": "Moves the header's top row under the currencies and reset buttons.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "headerStatsAtBottomAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-stats-at-bottom-btn"
+    }
+  },
   "hideMaxedGQUpgrades": {
     "settingName": "hideMaxedGQUpgrades",
     "settingDescription": "Hide maxed GQ upgrades",
