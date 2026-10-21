@@ -5239,6 +5239,9 @@ export class HSHeaterOptimizer {
                       row: loadout.generateOutput(stat, new Loadout(maxPurpleLoadout)),
                       value: loadout.getStat(stat),
                   }))
+                  // Every bar-income module is affordable at full level: more
+                  // Ambrosia can't help, whatever search found the loadout.
+                  if (barIncomeHighBudget) row[6] = true
                   const base = emptyLoadout.getStat(stat)
                   if (row[0] !== 'Unaffordable')
                       (row as HeaterResultAffordableRow)[4] = base === 0 ? 'N / A' : formatNumber(value / base)
