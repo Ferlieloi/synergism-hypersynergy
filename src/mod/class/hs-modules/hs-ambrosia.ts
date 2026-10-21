@@ -100,8 +100,8 @@ export interface HSSingReducerPlan {
  * Class: HSAmbrosia
  * IsExplicitHSModule: Yes
  * Description: Hypersynergism module which manages ambrosia loadouts: the slot shown as loaded (rainbow or silver
- *     border, on the Ambrosia tab's slots and the game's Ambrosia loadouts header module), imports, Auto-Loadout,
- *     custom slot icons on the tab, the minibars and the hourly rates.
+ *     border, on the Ambrosia tab's slots and the game's Ambrosia loadouts and loadout page header modules), imports,
+ *     Auto-Loadout, custom slot icons on the tab, the minibars and the hourly rates.
  * Author: Swiffy
  */
 export class HSAmbrosia extends HSModule
@@ -111,8 +111,8 @@ export class HSAmbrosia extends HSModule
     static readonly #GAME_IMPORT_TIME_LIMIT_MS = 120000;
     // A single loadout goes into the slot shown as loaded (#shownLoadoutSlot): refused when none is shown
     static readonly #NO_ACTIVE_LOADOUT_REASON = 'No active loadout: load a loadout first';
-    // The slots of the game's Ambrosia loadouts header module
-    static readonly #HEADER_SLOTS_ID = 'ambrosiaLoadoutsHeaderSlots';
+    // The slots of the game's Ambrosia loadouts header module, and of its loadout page module (8 slots a page)
+    static readonly #HEADER_SLOTS_IDS = ['ambrosiaLoadoutsHeaderSlots', 'ambrosiaLoadoutPageHeaderSlots'];
     static readonly #CONFIRMED_BORDER = 'hs-rainbow-border';
     static readonly #GUESSED_BORDER = 'hs-silver-border';
 
@@ -658,21 +658,24 @@ export class HSAmbrosia extends HSModule
     }
 
     /**
-     * The game rebuilds its header module's slots when their count changes, and builds them the first time the module
-     * is shown (none while it has been in the tray since the load): the border is put back on the new ones.
+     * The game rebuilds its header modules' slots when their count changes or the page module turns a page, and builds
+     * them the first time a module is shown (none while it has been in the tray since the load): the border is put
+     * back on the new ones.
      */
     #observeHeaderLoadoutSlots(): void {
-        const container = document.getElementById(HSAmbrosia.#HEADER_SLOTS_ID);
-        if (!container) {
-            HSLogger.debug(() => `#${HSAmbrosia.#HEADER_SLOTS_ID} not found: the loaded slot is only marked on the Ambrosia tab`, this.context);
-            return;
+        for (const containerId of HSAmbrosia.#HEADER_SLOTS_IDS) {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                HSLogger.debug(() => `#${containerId} not found: the loaded slot is not marked on that header module`, this.context);
+                continue;
+            }
+            new MutationObserver(() => this.#renderActiveLoadoutBorders()).observe(container, { childList: true });
         }
-        new MutationObserver(() => this.#renderActiveLoadoutBorders()).observe(container, { childList: true });
     }
 
     /**
-     * Marks the slot shown as loaded, on the Ambrosia tab's slots and on the game's Ambrosia loadouts header module:
-     * rainbow once the game marks it, silver while it's only our guess from the save.
+     * Marks the slot shown as loaded, on the Ambrosia tab's slots and on the game's Ambrosia header modules (loadouts,
+     * loadout page): rainbow once the game marks it, silver while it's only our guess from the save.
      */
     #renderActiveLoadoutBorders(): void {
         const border = this.#activeLoadoutConfirmed ? HSAmbrosia.#CONFIRMED_BORDER : HSAmbrosia.#GUESSED_BORDER;
@@ -680,9 +683,11 @@ export class HSAmbrosia extends HSModule
             HSAmbrosia.#setBorder(slot, slot.id === this.activeLoadout ? border : undefined);
         }
 
-        const headerSlots = document.getElementById(HSAmbrosia.#HEADER_SLOTS_ID)?.querySelectorAll<HTMLElement>(':scope > .headerLoadoutSlot');
-        for (const slot of headerSlots ?? []) {
-            HSAmbrosia.#setBorder(slot, `blueberryLoadout${slot.dataset.slot}` === this.activeLoadout ? border : undefined);
+        for (const containerId of HSAmbrosia.#HEADER_SLOTS_IDS) {
+            const headerSlots = document.getElementById(containerId)?.querySelectorAll<HTMLElement>(':scope > .headerLoadoutSlot');
+            for (const slot of headerSlots ?? []) {
+                HSAmbrosia.#setBorder(slot, `blueberryLoadout${slot.dataset.slot}` === this.activeLoadout ? border : undefined);
+            }
         }
     }
 

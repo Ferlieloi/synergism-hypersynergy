@@ -166,8 +166,11 @@
 }
 
 
-/* Icon picking (game's header loadout slots, heater results) */
-.hs-quickbar-slot-pickmode {
-   border: 2px dashed #ffff00;
+/* Icon picking (game's header loadout slots, heater results). Above the loaded slot's rainbow/silver border
+   (hs-animations.css, !important, a border-image), as specific as its rules and injected after them */
+.hs-quickbar-slot-pickmode,
+.hs-quickbar-slot-pickmode:is(.hs-rainbow-border, .hs-silver-border) {
+   border: 2px dashed #ffff00 !important;
+   border-image: none !important;
    box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
 }

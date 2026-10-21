@@ -14,19 +14,20 @@ interface HSHeaderLoadoutSlot {
 }
 
 interface HSHeaderLoadoutKindDef {
-    containerId: string;
+    // The full module's slots, then the page module's (8 at a time): one icon per slot number, as the game does
+    containerIds: string[];
     store: HSLoadoutIconStore;
     storeKey: (slot: number) => string;
 }
 
 const KINDS: Record<HSHeaderLoadoutKind, HSHeaderLoadoutKindDef> = {
     ambrosia: {
-        containerId: 'ambrosiaLoadoutsHeaderSlots',
+        containerIds: ['ambrosiaLoadoutsHeaderSlots', 'ambrosiaLoadoutPageHeaderSlots'],
         store: HSLoadoutIconStore.ambrosia,
         storeKey: slot => `blueberryLoadout${slot}`,
     },
     corruption: {
-        containerId: 'corruptionLoadoutsHeaderSlots',
+        containerIds: ['corruptionLoadoutsHeaderSlots', 'corruptionLoadoutPageHeaderSlots'],
         store: HSLoadoutIconStore.corruption,
         storeKey: slot => `${slot}`,
     },
@@ -42,7 +43,7 @@ const PICK_MODE_CLASS = 'hs-quickbar-slot-pickmode';
  * IsExplicitHSModule: Yes
  * Description:
  *     Any image of the game as the icon of a slot of the game's Corruption and Ambrosia loadouts header
- *     modules. The game only offers corruption or ambrosia upgrade icons, and saves them in the save
+ *     modules, and of their loadout page modules (8 slots a page, same icons). The game only offers corruption or ambrosia upgrade icons, and saves them in the save
  *     (player.headerLayouts.*.loadoutIcons, zod-checked), so the mod's icons stay in HSLoadoutIconStore
  *     (per browser, one per slot for both layouts) and are painted over the game's slots. A mod icon wins
  *     over the game's.
@@ -62,10 +63,11 @@ export class HSHeaderLoadoutIcons extends HSModule {
     #iconPicker = new HSQuickbarIconPickerController<HSHeaderLoadoutSlot>({
         shouldIgnoreClickTarget: (target: Element) => !!target.closest('.headerLoadoutSlots'),
         setSlotPickModeVisual: (target: HSHeaderLoadoutSlot, active: boolean) => {
-            HSHeaderLoadoutIcons.#slotButton(target)?.classList.toggle(PICK_MODE_CLASS, active);
+            HSHeaderLoadoutIcons.#slotButtons(target).forEach(button => button.classList.toggle(PICK_MODE_CLASS, active));
         },
         clearAllSlotPickModeVisuals: () => {
-            document.querySelectorAll(`.headerLoadoutSlots > .${PICK_MODE_CLASS}`)
+            // Not a direct child: the corruption slots sit in a display: contents span, next to the cleanse button
+            document.querySelectorAll(`.headerLoadoutSlots .${PICK_MODE_CLASS}`)
                 .forEach(button => button.classList.remove(PICK_MODE_CLASS));
         },
         assignIconToSlot: (target: HSHeaderLoadoutSlot, iconUrl: string) => {
@@ -93,12 +95,18 @@ export class HSHeaderLoadoutIcons extends HSModule {
         HSUI.flushInjectedStyles();
 
         for (const kind of Object.keys(KINDS) as HSHeaderLoadoutKind[]) {
-            const container = document.getElementById(KINDS[kind].containerId);
-            if (!container) {
-                HSLogger.warn(`#${KINDS[kind].containerId} not found: no custom icons on that header module`, this.context);
-                continue;
+            for (const containerId of KINDS[kind].containerIds) {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    // The page modules came with the game of 2026-10-21: none on an older game
+                    const message = `#${containerId} not found: no custom icons on that header module`;
+                    if (containerId === KINDS[kind].containerIds[0]) HSLogger.warn(message, this.context);
+                    else HSLogger.debug(() => message, this.context);
+                    continue;
+                }
+                // Also a page change of the page module: the game rebuilds its slots
+                new MutationObserver(() => this.#paintAll(kind)).observe(container, { childList: true, subtree: true });
             }
-            new MutationObserver(() => this.#paintAll(kind)).observe(container, { childList: true, subtree: true });
             KINDS[kind].store.onChange(() => this.#paintAll(kind));
             this.#paintAll(kind);
         }
@@ -115,10 +123,12 @@ export class HSHeaderLoadoutIcons extends HSModule {
     // ======================================================
 
     #paintAll(kind: HSHeaderLoadoutKind): void {
-        const container = document.getElementById(KINDS[kind].containerId);
-        if (!container) return;
-        for (const button of container.querySelectorAll<HTMLElement>(':scope > .headerLoadoutSlot')) {
-            this.#paint(kind, button);
+        for (const containerId of KINDS[kind].containerIds) {
+            const container = document.getElementById(containerId);
+            if (!container) continue;
+            for (const button of container.querySelectorAll<HTMLElement>(':scope > .headerLoadoutSlot')) {
+                this.#paint(kind, button);
+            }
         }
     }
 
@@ -229,14 +239,18 @@ export class HSHeaderLoadoutIcons extends HSModule {
     // ======================================================
 
     static #kindOf(button: Element): HSHeaderLoadoutKind | null {
-        const containerId = button.parentElement?.id;
+        const containerId = button.parentElement?.id ?? '';
         for (const kind of Object.keys(KINDS) as HSHeaderLoadoutKind[]) {
-            if (KINDS[kind].containerId === containerId) return kind;
+            if (KINDS[kind].containerIds.includes(containerId)) return kind;
         }
         return null;
     }
 
-    static #slotButton(target: HSHeaderLoadoutSlot): HTMLElement | null {
-        return document.querySelector<HTMLElement>(`#${KINDS[target.kind].containerId} > .headerLoadoutSlot[data-slot="${target.slot}"]`);
+    /** The slot's button in each module that shows it (the full module, and the page module on that slot's page). */
+    static #slotButtons(target: HSHeaderLoadoutSlot): NodeListOf<HTMLElement> {
+        const selector = KINDS[target.kind].containerIds
+            .map(containerId => `#${containerId} > .headerLoadoutSlot[data-slot="${target.slot}"]`)
+            .join(', ');
+        return document.querySelectorAll<HTMLElement>(selector);
     }
 }
