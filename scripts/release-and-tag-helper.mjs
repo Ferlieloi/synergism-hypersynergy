@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { join, relative } from 'path';
+import { join, relative, resolve } from 'path';
 
 
 // ===============================
@@ -25,6 +25,11 @@ function fatal(msg, result) {
         if (result.error && result.error.code) console.error('Code:', result.error.code);
     }
     process.exit(1);
+}
+/** Stop without an error: the user said no, nothing more is done. */
+function stop(msg) {
+    info(msg);
+    process.exit(0);
 }
 
 /** Format a command + args for logging. */
@@ -88,12 +93,80 @@ function askForInput(question) {
 // --- Initialization / Help ---
 // =============================
 
+const argv = process.argv.slice(2);
+
+function printHelp() {
+    log('===============================================================');
+    log('release-and-tag-helper.mjs — release and tag helper');
+    log('===============================================================');
+    log('');
+    log('Usage: node scripts/release-and-tag-helper.mjs [-h|--help] [-y|--yes] [--notes-file <path>]');
+    log('');
+    log('Description:');
+    log('  Every choice is asked before any change (unless --yes), then the release runs:');
+    log('    1) checks git state: no merge/rebase, not detached, branch not behind its upstream');
+    log('    2) chooses the tag: the package.json version, a bump when that tag exists, or resuming a release whose tag is on HEAD');
+    log('    3) dirty working tree: asks to stage all of it into the release commit (No stops the script)');
+    log('    4) checks loader versions (offers a bridge @version bump, reminds about the patcher loaderVersion)');
+    log('    5) builds the release with esbuild, stages it with package.json, package-lock.json and the strategy manifest, commits');
+    log('    6) creates an annotated v<version> tag');
+    log('    7) prompts to push branch and tag to origin');
+    log('    8) prompts to purge jsDelivr (the mod, plus loader files changed since the previous release), waits 10s, purges');
+    log('');
+    log('Flags:');
+    log('  -h, --help           Show this help and exit');
+    log('  -y, --yes            Answer yes to every question (a bump included); stops on a dirty working tree instead of staging it');
+    log('  --notes-file <path>  Release notes (Markdown) for the tag message: "Release v<version>", an empty line,');
+    log('                       then the file as is (# headings kept); replaces the one-line suffix prompt.');
+    log('                       A relative path is read from the folder the command was run from.');
+    log('');
+    log('Examples:');
+    log('  node scripts/release-and-tag-helper.mjs          # run release workflow with interactive confirmation');
+    log('  node scripts/release-and-tag-helper.mjs --yes    # run full workflow non-interactively (auto yes)');
+    log('  npm run release-and-tag-helper -- --notes-file changelog.md   # tag message carries the changelog');
+    log('  node scripts/release-and-tag-helper.mjs --help   # show this help and exit');
+    log('');
+    log('Notes:');
+    log('  - When the tag already exists: [r]esume (tag on HEAD and the same on origin: push and purge only, e.g. after a');
+    log('    failed push or purge), [d]elete (local-only tag: create it again on this release), or [b]ump to the next free version.');
+    log('  - The last question before the commit lists the staged files; answering No leaves the build in the working tree.');
+    log('  - In detached HEAD mode, the script aborts and asks you to checkout a branch.');
+    log('===============================================================');
+}
+
+// Early exit if help argument is passed
+if (argv.includes('-h') || argv.includes('--help')) {
+    printHelp();
+    process.exit(0);
+}
+
+const opts = { yes: false, notesFile: null };
+for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '-y' || arg === '--yes') {
+        opts.yes = true;
+        continue;
+    }
+    if (arg === '--notes-file' || arg.startsWith('--notes-file=')) {
+        opts.notesFile = arg === '--notes-file' ? argv[++i] : arg.slice('--notes-file='.length);
+        if (!opts.notesFile) fatal('--notes-file needs a path.');
+        continue;
+    }
+    if (arg.startsWith('-')) fatal(`Unknown flag ${arg} (see --help)`);
+    fatal('Positional arguments are not accepted.');
+}
+skipPrompts = opts.yes;
+
+log('release-and-tag-helper.mjs (--help for the steps and flags)');
+
 const root = process.cwd();
 const pkgPath = join(root, 'package.json');
 const esbuildScript = join(root, 'esbuild.config.js');
 const releaseFilePath = join(root, 'release', 'mod', 'hypersynergism_release.js');
 if (!existsSync(releaseFilePath)) fatal('Release file missing: ' + releaseFilePath);
 const releaseFileRel = relative(root, releaseFilePath).replace(/\\/g, '/');
+// Files the release build writes (esbuild.config.js regenerates the strategy manifest), staged for the release commit
+const buildOutputs = [releaseFileRel, 'package.json', 'package-lock.json', 'src/mod/resource/json/strategies/manifest.json'];
 // Files served to players from @master through jsDelivr: the mod (rebuilt by every release, always
 // purged), and the web loader chain (bridge userscript -> hypersynergism.user.js -> patcher.js),
 // purged only when changed since the previous release.
@@ -119,59 +192,19 @@ const purgeRepo = getOriginRepo();
 const purgePathFor = (file) => `/gh/${purgeRepo}@master/${file}`;
 const purgeUrlFor = (purgePath) => `https://purge.jsdelivr.net${purgePath}`;
 
-const argv = process.argv.slice(2);
-
-log('===============================================================');
-log('release-and-tag-helper.mjs — release and tag helper');
-log('===============================================================');
-log('');
-log('Usage: node scripts/release-and-tag-helper.mjs [-h|--help] [-y|--yes]');
-log('');
-log('Description:');
-log('  This script asks for confirmation before ANY changes (unless --yes).');
-log('  and performs the full tag workflow:');
-log('    1) ensures git clean/merge/rebase state');
-log('    2) checks tags in local and remote, auto-bumps if needed');
-log('    3) builds release artifact with esbuild');
-log('    4) checks loader versions (offers a bridge @version bump, reminds about the patcher loaderVersion), stages release+package files and commits');
-log('    5) creates an annotated v<version> tag');
-log('    6) prompts to push branch and tag to origin at end');
-log('    7) prompts to purge jsDelivr (the mod, plus loader files changed since the previous release), waits 10s, purges');
-log('');
-log('Flags:');
-log('  -h, --help       Show this help and exit');
-log('  -y, --yes        Skip all prompts and proceed with defaults (non-interactive mode)');
-log('');
-log('Examples:');
-log('  node scripts/release-and-tag-helper.mjs          # run release workflow with interactive confirmation');
-log('  node scripts/release-and-tag-helper.mjs --yes    # run full workflow non-interactively (auto yes)');
-log('  node scripts/release-and-tag-helper.mjs --help   # show this help and exit');
-log('');
-log('Notes:');
-log('  - This script always includes a commit + tag phase');
-log('  -   Push is prompted at the end of the workflow; `--yes` skips any prompts.');
-log('  - If package.json version already exists remotely, you are offered a patch bump automatically.');
-log('  - If no changes are staged but release/package files are unchanged from HEAD, it can proceed with an existing commit + tag flow.');
-log('  - Working tree dirty is allowed, but you are prompted before staging all changes.');
-log('  - In detached HEAD mode, the script aborts and asks you to checkout a branch.');
-log('  - User confirmations are required for commit/tag and push decisions.');
-log('===============================================================');
-
-// Early exit if help argument is passed
-if (argv.includes('-h') || argv.includes('--help')) process.exit(0);
+// Read the notes now, so a wrong path or an empty file stops the script before any change
+let releaseNotes = null;
+if (opts.notesFile) {
+    // npm run starts scripts in the repo root; INIT_CWD is the folder the command was typed in
+    const notesPath = resolve(process.env.INIT_CWD || root, opts.notesFile);
+    if (!existsSync(notesPath)) fatal(`Notes file not found: ${notesPath}`);
+    // trim() also drops a BOM (U+FEFF counts as whitespace)
+    releaseNotes = readFileSync(notesPath, 'utf8').replace(/\r\n/g, '\n').trim();
+    if (!releaseNotes) fatal(`Notes file is empty: ${notesPath}`);
+    info(`Release notes read from ${notesPath} (${releaseNotes.split('\n').length} lines).`);
+}
 
 logWait('Gathering data, please wait...');
-
-const opts = { yes: false };
-for (const arg of argv) {
-    if (arg === '-y' || arg === '--yes') {
-        opts.yes = true;
-        continue;
-    }
-    if (arg.startsWith('-')) fatal(`Unknown flag ${arg}`);
-    fatal('Positional arguments are not accepted.');
-}
-skipPrompts = opts.yes;
 
 
 // =============================
@@ -232,47 +265,22 @@ function checkGitBase() {
     }
 }
 
-/** Check whether working tree has uncommitted changes. */
+/** Uncommitted changes, as `git status --porcelain` lines ("XY path": X the index, Y the working tree). */
 function getWorkingTreeStatus() {
     const statusRes = run('git', ['status', '--porcelain']);
     if (statusRes.error || statusRes.status !== 0) fatal('git status failed', statusRes);
-    const lines = statusRes.stdout ? statusRes.stdout.toString().trim().split(/\r?\n/).filter(Boolean) : [];
+    // No trim(): the first line's leading space is its index column
+    const lines = statusRes.stdout ? statusRes.stdout.toString().split(/\r?\n/).filter(Boolean) : [];
     return { isClean: lines.length === 0, lines };
 }
 
-/** Check whether current branch is ahead of upstream by commits or has upstream issues. */
-function isBranchAheadOfUpstream() {
+/** The current branch's upstream and how far HEAD is ahead of and behind it; `name` is '' when there is none. */
+function getUpstreamState() {
     const upstreamRes = run('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
-    if (upstreamRes.error || upstreamRes.status !== 0) {
-        const errText = String(upstreamRes.stderr || upstreamRes.stdout || '').toLowerCase();
-        if (/no upstream configured/.test(errText)) {
-            warn('No upstream configured for current branch. This is not fatal, but please consider setting an upstream.');
-        } else if (/ambiguous argument .*@\{u\}|no tracking information/.test(errText)) {
-            warn('Upstream is inaccessible or missing tracking information. This is not fatal, but please verify your remote settings.');
-        } else {
-            warn('Unable to resolve upstream branch (inaccessible or no upstream). This is not fatal, but please check git remote configuration.');
-        }
-        return true;
-    }
-
-    const aheadRes = run('git', ['rev-list', '--count', '@{u}..HEAD']);
-    if (aheadRes.error || aheadRes.status !== 0) {
-        warn('Could not determine upstream ahead/behind status even though an upstream exists. Please verify branch tracking.');
-        return true;
-    }
-
-    const aheadCount = parseInt(aheadRes.stdout.toString().trim(), 10);
-    if (Number.isNaN(aheadCount)) {
-        warn('Could not parse ahead count from git output.');
-        return true;
-    }
-
-    if (aheadCount > 0) {
-        warn(`Branch is ahead of upstream by ${aheadCount} commits.`);
-        return true;
-    }
-
-    return false;
+    if (upstreamRes.error || upstreamRes.status !== 0) return { name: '', ahead: 0, behind: 0 };
+    const [behind, ahead] = runAndCheck('git', ['rev-list', '--left-right', '--count', '@{u}...HEAD']).stdout
+        .trim().split(/\s+/).map(Number);
+    return { name: String(upstreamRes.stdout).trim(), ahead: ahead || 0, behind: behind || 0 };
 }
 
 /** Check if the release artifact exists in a given Git ref. */
@@ -288,24 +296,42 @@ function isTracked(filePath) {
 }
 
 /**
- * The nearest mod release tag reachable from `ref` (e.g. "v2.14.4b"), or '' if none.
+ * The nearest mod release tag reachable from `ref` (e.g. "v2.14.4b"), or '' if none; `exclude` is a tag to skip.
  * Only "v<digit>..." tags: other tags (e.g. the launcher's loader-vX.Y.Z) are separate releases.
  */
-function getPreviousReleaseTag(ref) {
-    const r = run('git', ['describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*', ref]);
+function getPreviousReleaseTag(ref, exclude) {
+    const excludeArgs = exclude ? ['--exclude', exclude] : [];
+    const r = run('git', ['describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*', ...excludeArgs, ref]);
     return r.status === 0 && !r.error ? String(r.stdout).trim() : '';
 }
 
-/** Return true if a local tag exists. */
-function doesLocalTagExist(tag) {
-    const r = run('git', ['tag', '--list', tag]);
-    return !r.error && r.status === 0 && String(r.stdout || '').trim().length > 0;
+/** What a local tag points to (the tag object for an annotated tag), or '' if there is no such tag. */
+function getLocalTagObject(tag) {
+    const r = run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}`]);
+    return r.status === 0 && !r.error ? String(r.stdout).trim() : '';
+}
+
+/** The commit a local tag points to, or ''. */
+function getTagCommit(tag) {
+    const r = run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}^{commit}`]);
+    return r.status === 0 && !r.error ? String(r.stdout).trim() : '';
+}
+
+/**
+ * What the tag points to on `origin`, or '' if it isn't there. `ls-remote` gives the tag object for an
+ * annotated tag, so compare it with getLocalTagObject(), not with the tagged commit.
+ */
+function getRemoteTagObject(tag) {
+    const r = run('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`]);
+    if (r.error || r.status !== 0) fatal('ls-remote failed.', r);
+    const line = String(r.stdout).split(/\r?\n/).find(l => l.trim().endsWith(`refs/tags/${tag}`));
+    return line ? line.trim().split(/\s+/)[0] : '';
 }
 
 
-// ======================================================
-// --- Check pkg.version + Infos dump + bump handling ---
-// ======================================================
+// =====================================
+// --- Check pkg.version + Infos dump ---
+// =====================================
 
 /** Read and validate package.json version field. */
 function readPackage() {
@@ -319,67 +345,33 @@ function readPackage() {
 function collectStatus() {
     checkGitBase();
 
-    const isBranchAhead = isBranchAheadOfUpstream();
-
-    const tree = getWorkingTreeStatus();
     const branch = runAndCheck('git', ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
+    if (branch === 'HEAD') fatal('Detached HEAD detected. Please checkout a branch before running this script.');
     const head = runAndCheck('git', ['rev-parse', 'HEAD']).stdout.trim();
 
-    if (branch === 'HEAD') fatal('Detached HEAD detected. Please checkout a branch before running this script.');
-
-    const headHasLatestReleaseFile = refHasRelease('HEAD');
-    if (!headHasLatestReleaseFile) {
-        info(`HEAD does not contain ${releaseFileRel}. This is okay, the release build will be generated.`);
-    }
-
+    // Fetch first: the upstream comparison and the tag lists need the remote's current state
     runAndCheck('git', ['fetch', '--tags', '--quiet']);
 
-    const localTags = semverSort(parseTagList(runAndCheck('git', ['tag']).stdout));
-    const remoteTags = semverSort(parseTagList(runAndCheck('git', ['ls-remote', '--tags', 'origin']).stdout));
-
     const pkg = readPackage();
-    const targetTag = `v${pkg.version}`;
-    const localTagExists = localTags.includes(pkg.version);
-    const remoteTagExists = remoteTags.includes(pkg.version);
-
-    const tracked = [];
-    const untracked = [];
-
-    if (isTracked(releaseFileRel)) tracked.push('release file'); else untracked.push('release file');
-    if (isTracked('package.json')) tracked.push('package.json'); else untracked.push('package.json');
-    if (isTracked('package-lock.json')) tracked.push('package-lock.json'); else untracked.push('package-lock.json');
+    const untracked = buildOutputs.filter(file => !isTracked(file));
 
     return {
-        // current branch and HEAD info
         branch,
-        isBranchAhead,
         head,
         headShort: head.substring(0, 7),
+        upstream: getUpstreamState(),
+        tree: getWorkingTreeStatus(),
 
-        // working tree status
-        tree,
+        localTags: semverSort(parseTagList(runAndCheck('git', ['tag']).stdout)),
+        remoteTags: semverSort(parseTagList(runAndCheck('git', ['ls-remote', '--tags', 'origin']).stdout)),
 
-        // tag lists and latest tag computation
-        localTags,
-        remoteTags,
-        latestLocal: localTags[0] || '(none)',
-        latestRemote: remoteTags[0] || '(none)',
-
-        // package metadata and target tag/version
+        // package metadata and target tag/version (changed by applyBump)
         pkg,
         pkgVersion: pkg.version,
-        targetVersion: pkg.version,
-        targetTag,
+        targetTag: `v${pkg.version}`,
 
-        // precomputed existence flags
-        localTagExists,
-        remoteTagExists,
-
-        // release file and package tracking state
-        headHasLatestReleaseFile,
-        tracked,
+        headHasLatestReleaseFile: refHasRelease('HEAD'),
         untracked,
-        allTracked: untracked.length === 0,
     };
 }
 
@@ -387,7 +379,6 @@ function collectStatus() {
 function printStatus(status) {
     info(`Branch: ${status.branch}`);
     info(`HEAD: ${status.headShort} - ${status.head}`);
-    info(`Target tag: ${status.targetTag}`);
     info(`package.json version: ${status.pkgVersion}`);
 
     if (!status.tree.isClean) {
@@ -396,49 +387,37 @@ function printStatus(status) {
     }
     info(`Working tree clean: ${status.tree.isClean ? 'yes' : 'no'}`);
 
-    if (status.localTagExists) {
-        warn(`Local target tag ${status.targetTag} already exists (will conflict).`);
-    }
-    if (status.remoteTagExists) {
-        warn(`Remote target tag ${status.targetTag} already exists (upstream conflict likely).`);
-    }
-
     info(`Latest release is in HEAD: ${status.headHasLatestReleaseFile ? 'yes' : 'no'}`);
+    info(`Local tags: ${status.localTags.length}, latest ${status.localTags[0] || '(none)'}`);
+    info(`Remote tags: ${status.remoteTags.length}, latest ${status.remoteTags[0] || '(none)'}`);
 
-    info(`Local tags (${status.localTags.length}): ${status.localTags.join(', ') || '(none)'}`);
-    info(`Remote tags (${status.remoteTags.length}): ${status.remoteTags.join(', ') || '(none)'}`);
-    info(`Latest local: ${status.latestLocal}`);
-    info(`Latest remote: ${status.latestRemote}`);
+    if (status.untracked.length > 0) warn(`Untracked files: ${status.untracked.join(', ')}`);
+}
 
-    if (status.allTracked) {
-        info('Release and package files are tracked.');
-    } else {
-        warn(`Untracked files: ${status.untracked.join(', ')}`);
+/** The branch must not be behind its upstream: the push would fail after the release commit and tag. */
+function checkUpstream(status) {
+    const { name, ahead, behind } = status.upstream;
+    if (!name) {
+        warn(`${status.branch} has no upstream: the push step will offer to set it.`);
+        return;
     }
+    if (behind > 0) fatal(`${status.branch} is ${behind} commit(s) behind ${name}: pull first.`);
+    info(`${status.branch} is ${ahead} commit(s) ahead of ${name}.`);
 }
 
 
 // =============================
-// --- Version Bump Handling ---
+// --- Tag and Version Choice ---
 // =============================
 
-/** Check if remote or local already has the current target version, prompt for bump and update package.json accordingly */
-async function chooseTarget(status) {
-    const conflicts = [];
-    if (status.remoteTags.includes(status.pkgVersion)) conflicts.push('remote');
-    if (status.localTagExists) conflicts.push('local');
-
-    if (conflicts.length === 0) {
-        info(`Target tag: ${status.targetTag}`);
-        return status;
-    }
-
-    const conflictText = conflicts.join(' and ');
-    warn(`Target version ${status.pkgVersion} already exists in ${conflictText}. Auto bump recommended.`);
-
+/**
+ * The version after `version`: next pre-release number (2.14.4b-dev1 -> 2.14.4b-dev2), next letter
+ * (2.14.4b -> 2.14.4c, after "z" the next patch) or next patch. null if the version can't be parsed.
+ */
+function nextVersion(version) {
     // Semver plus this project's optional letter suffix on the patch number: 2.14.4, 2.14.4b, 2.14.4b-dev1
-    const semverMatch = status.pkgVersion.match(/^(\d+)\.(\d+)\.(\d+)([a-z]?)(?:-([0-9A-Za-z-.]+))?$/);
-    if (!semverMatch) fatal('Unable to parse package version for bump. Expected a version like 2.10.0, 2.10.0b or 2.10.0b-dev3.');
+    const semverMatch = version.match(/^(\d+)\.(\d+)\.(\d+)([a-z]?)(?:-([0-9A-Za-z-.]+))?$/);
+    if (!semverMatch) return null;
 
     const major = Number(semverMatch[1]);
     const minor = Number(semverMatch[2]);
@@ -447,31 +426,70 @@ async function chooseTarget(status) {
     const pre = semverMatch[5] || '';
     const base = `${major}.${minor}.${patch}${letter}`;
 
-    let newVersion;
     if (pre) {
-        // Pre-release: next build of the same version (2.14.4b-dev1 -> 2.14.4b-dev2)
         const preMatch = pre.match(/^([a-zA-Z-]+)(\d+)$/);
-        if (preMatch) {
-            const preName = preMatch[1];
-            const preNum = Number(preMatch[2]);
-            newVersion = `${base}-${preName}${preNum + 1}`;
-        } else {
-            newVersion = `${major}.${minor}.${patch + 1}`;
-        }
-    } else if (letter) {
-        // Lettered release: next letter (2.14.4b -> 2.14.4c), or the next patch after "z"
-        newVersion = letter === 'z'
+        return preMatch
+            ? `${base}-${preMatch[1]}${Number(preMatch[2]) + 1}`
+            : `${major}.${minor}.${patch + 1}`;
+    }
+    if (letter) {
+        return letter === 'z'
             ? `${major}.${minor}.${patch + 1}`
             : `${major}.${minor}.${patch}${String.fromCharCode(letter.charCodeAt(0) + 1)}`;
-    } else {
-        newVersion = `${major}.${minor}.${patch + 1}`;
+    }
+    return `${major}.${minor}.${patch + 1}`;
+}
+
+/** The first version after package.json's that has no tag, locally or on origin; null if it can't be parsed. */
+function nextFreeVersion(status) {
+    const taken = new Set([...status.localTags, ...status.remoteTags]);
+    let version = nextVersion(status.pkgVersion);
+    while (version && taken.has(version)) version = nextVersion(version);
+    return version;
+}
+
+/**
+ * Decide which tag this run creates, without changing anything yet. Returns { mode, newVersion }:
+ * - mode 'new': create the tag; 'replace': create it again over a tag that exists only locally;
+ *   'resume': the tag is already on HEAD (and the same on origin, if there), only push and purge.
+ * - newVersion: the version package.json is bumped to before the build, or null.
+ */
+async function chooseTarget(status) {
+    const tag = status.targetTag;
+    const localObject = getLocalTagObject(tag);
+    const remoteObject = getRemoteTagObject(tag);
+    if (!localObject && !remoteObject) {
+        info(`Target tag: ${tag}`);
+        return { mode: 'new', newVersion: null };
     }
 
-    if (!await askYesNo(`Bump version from ${status.pkgVersion} to ${newVersion}?`)) {
-        info('Bump declined by user. Continuing with current version.');
-        return status;
+    const where = [localObject && 'locally', remoteObject && 'on origin'].filter(Boolean).join(' and ');
+    warn(`The tag ${tag} already exists ${where}.`);
+
+    const choices = [];
+    if (localObject && getTagCommit(tag) === status.head && (!remoteObject || remoteObject === localObject)) {
+        choices.push({ key: 'r', label: '[r]esume (push and purge with the existing tag)', mode: 'resume', newVersion: null });
+    }
+    if (localObject && !remoteObject) {
+        choices.push({ key: 'd', label: `[d]elete the local tag and tag this release as ${tag}`, mode: 'replace', newVersion: null });
+    }
+    const newVersion = nextFreeVersion(status);
+    if (newVersion) choices.push({ key: 'b', label: `[b]ump to v${newVersion}`, mode: 'new', newVersion });
+
+    if (skipPrompts) {
+        if (!newVersion) fatal(`Cannot bump ${status.pkgVersion}: expected a version like 2.10.0, 2.10.0b or 2.10.0b-dev3.`);
+        info(`[auto] Bump to v${newVersion}`);
+        return { mode: 'new', newVersion };
     }
 
+    const answer = (await askForInput(`Choose: ${choices.map(c => c.label).join(', ')}, [a]bort:`)).toLowerCase();
+    const choice = choices.find(c => answer.charAt(0) === c.key);
+    if (!choice) stop('Aborted by user.');
+    return { mode: choice.mode, newVersion: choice.newVersion };
+}
+
+/** Write the new version to package.json and package-lock.json, and update the status. */
+function applyBump(status, newVersion) {
     status.pkg.version = newVersion;
     writeFileSync(pkgPath, JSON.stringify(status.pkg, null, 2) + '\n', 'utf8');
 
@@ -489,17 +507,25 @@ async function chooseTarget(status) {
     }
 
     status.pkgVersion = newVersion;
-    status.targetVersion = newVersion;
     status.targetTag = `v${newVersion}`;
-
-    status.localTags = semverSort(parseTagList(runAndCheck('git', ['tag']).stdout));
-    status.remoteTags = semverSort(parseTagList(runAndCheck('git', ['ls-remote', '--tags', 'origin']).stdout));
-    status.localTagExists = status.localTags.includes(newVersion);
-    status.remoteTagExists = status.remoteTags.includes(newVersion);
-
     success(`Version bumped to ${newVersion}.`);
     info(`Target tag: ${status.targetTag}`);
-    return status;
+}
+
+/** Dirty working tree: all of it goes into the release commit, or the script stops. */
+async function askStageAll(status) {
+    if (status.tree.isClean) return false;
+    if (skipPrompts) fatal('--yes does not stage a dirty working tree: commit or stash the changes listed above first.');
+    if (!await askYesNo('The working tree has changes (listed above). Stage all of them into the release commit?')) {
+        stop('Aborted by user: commit or stash the changes first.');
+    }
+    return true;
+}
+
+/** The one-line suffix of the tag message, '' for none. */
+async function askTagMessageSuffix() {
+    const answer = await askForInput('Optional tag message suffix (`y` or empty to skip):');
+    return /^y?$/i.test(answer) ? '' : answer;
 }
 
 
@@ -531,8 +557,9 @@ function bumpLastNumber(version) {
  * - the patcher: its loaderVersion only labels the console logs, so just a reminder.
  * (hypersynergism.user.js is downloaded fresh by the bridge on every load: its @version is never used.)
  */
-async function checkLoaderVersions() {
-    const previousTag = getPreviousReleaseTag('HEAD');
+async function checkLoaderVersions(status) {
+    // Without the target tag: a local tag about to be replaced can sit on HEAD
+    const previousTag = getPreviousReleaseTag('HEAD', status.targetTag);
     if (!previousTag) {
         info('No previous release tag found: skipping loader version checks.');
         return;
@@ -581,108 +608,79 @@ async function checkLoaderVersions() {
 // ===============================
 
 /**
- * commitFlow performs the release commit and tagging operations.
+ * Build the release and commit it.
  *
  * Steps:
- *   1) Verify that target tag is not already present locally.
- *   2) Run `npm install --package-lock-only` (creates/updates package-lock.json).
- *   3) Run the release build (`node <esbuildScript> release`).
- *   4) Optionally stage all changes when working tree is dirty.
- *   5) Stage release artifact, package.json and package-lock.json.
- *   6) If no staged changes, allow tag-only flow when release/package files match HEAD.
- *   7) Commit staged files and create an annotated tag with optional user-provided description suffix.
- *
- * @param {object} status - release status and git/tag metadata.
- *   - status.targetTag: string tag to create (like v1.2.3)
- *   - status.localTagExists: boolean if tag exists locally
- *   - status.tree.isClean: boolean if working tree clean
+ *   1) Run `npm install --package-lock-only` (creates/updates package-lock.json).
+ *   2) Run the release build (`node <esbuildScript> release`).
+ *   3) Stage everything (`stageAll`, the dirty tree the user agreed to commit) or only the build outputs.
+ *   4) Changes still unstaged after the build (made by the build itself): ask to stage them, or stop.
+ *   5) Nothing staged: ask to tag the current commit. Otherwise confirm, then commit.
  */
-async function commitFlow(status) {
-    // commitFlow includes release build, staging, and tagging (w/ optional message).
+async function commitFlow(status, stageAll) {
     runAndCheck('npm install --package-lock-only', [], { shell: true });
     runAndCheck('node', [esbuildScript, 'release'], { cwd: root });
     success('Release build complete.');
 
-    if (!status.tree.isClean) {
-        warn('Unclean working tree.');
-        if (await askYesNo('Stage all changes for commit?')) {
-            runAndCheck('git', ['add', '-A']);
-            success('Staged all changes.');
-        } else {
-            info('Proceeding without staging changes.');
-        }
+    if (stageAll) {
+        runAndCheck('git', ['add', '-A']);
+        success('Staged all changes.');
+    } else {
+        runAndCheck('git', ['add', '--', ...buildOutputs]);
     }
 
-    runAndCheck('git', ['add', releaseFileRel, 'package.json', 'package-lock.json']);
+    // Read again after the build: a file it changed outside buildOutputs would be left out of the commit
+    const leftovers = getWorkingTreeStatus().lines.filter(line => line[1] !== ' ');
+    if (leftovers.length > 0) {
+        warn('Changes not staged for the release commit:');
+        leftovers.forEach(l => warn(`  ${l}`));
+        if (skipPrompts) fatal('--yes does not stage changes made outside the release files.');
+        if (!await askYesNo('Stage them too?')) {
+            stop('Aborted by user: nothing committed. The build and version changes are still in the working tree.');
+        }
+        runAndCheck('git', ['add', '-A']);
+    }
 
     const staged = runAndCheck('git', ['diff', '--cached', '--name-only']).stdout.trim();
-
     if (!staged) {
-        // Nothing staged yet: check whether release files are identical to HEAD before tagging
-        const unchanged = !run('git', ['diff', '--quiet', '--', releaseFileRel, 'package.json', 'package-lock.json']).status;
-        if (unchanged) {
-            const headInfo = runAndCheck('git', ['log', '-1', '--pretty=format:%h %s']).stdout.trim();
-            if (!await askYesNo(`No differences. Tag current commit (${headInfo}) as ${status.targetTag}?`)) {
-                info('Aborted by user.');
-                process.exit(0);
-            }
-        } else {
-            fatal('No staged files and release/package files differ from HEAD. Add and retry.');
+        const headInfo = runAndCheck('git', ['log', '-1', '--pretty=format:%h %s']).stdout.trim();
+        if (!await askYesNo(`Nothing to commit. Tag the current commit (${headInfo}) as ${status.targetTag}?`)) {
+            stop('Aborted by user.');
         }
-    } else {
-        success(`Files staged: ${staged}`);
-        if (!await askYesNo(`Commit staged changes and tag ${status.targetTag}?`)) {
-            info('Aborted by user.');
-            process.exit(0);
-        }
-        runAndCheck('git', ['commit', '-m', `release: ${status.targetTag}`]);
-        success('Commit created.');
+        return;
     }
 
-    const extraTagMessage = (await askForInput('Optional tag message suffix (`y` or empty to skip):')).trim();
-    const fullTagMessage = /^y?$/i.test(extraTagMessage)
-        ? `Release ${status.targetTag}`
-        : `Release ${status.targetTag} - ${extraTagMessage}`;
-
-    // Check current local tag state and handle existing tag with chooseTarget bump flow
-    let tagExists = doesLocalTagExist(status.targetTag);
-    if (tagExists) {
-        warn(`The tag ${status.targetTag} already exists locally.`);
-        const choice = (await askForInput('Choose: [y][u]se existing tag, [b]ump version, [a]bort:')).trim().toLowerCase();
-        if (choice !== 'y' && choice !== 'yes'
-            && choice !== 'u' && choice !== 'use'
-            && choice !== 'b' && choice !== 'bump') {
-            info('Aborted by user.');
-            process.exit(0);
-        }
-        if (choice === 'b' || choice === 'bump') {
-            status = await chooseTarget(status);
-            tagExists = doesLocalTagExist(status.targetTag);
-            if (tagExists) {
-                warn(`New bumped tag ${status.targetTag} still exists locally.`);
-                if (!await askYesNo('Delete and recreate this tag?')) {
-                    info('Aborted by user.');
-                    process.exit(0);
-                }
-                runAndCheck('git', ['tag', '-d', status.targetTag]);
-            }
-        } else {
-            info(`Using existing local tag ${status.targetTag}.`);
-            return;
-        }
+    success(`Files staged: ${staged.split(/\r?\n/).join(', ')}`);
+    if (!await askYesNo(`Commit staged changes and tag ${status.targetTag}?`)) {
+        stop('Aborted by user: nothing committed, the release files stay staged.');
     }
+    runAndCheck('git', ['commit', '-m', `release: ${status.targetTag}`]);
+    success('Commit created.');
+}
 
-    runAndCheck('git', ['tag', '-a', status.targetTag, '-m', fullTagMessage]);
-    success(`Tag ${status.targetTag} created with message: ${fullTagMessage}`);
+/** Create the annotated tag on HEAD; `replace` overwrites a tag that exists only locally. */
+function createTag(status, { replace, suffix }) {
+    const tag = status.targetTag;
+    // Title line, empty line, notes: the layout the loader release workflow reads too
+    const message = releaseNotes
+        ? `Release ${tag}\n\n${releaseNotes}`
+        : (suffix ? `Release ${tag} - ${suffix}` : `Release ${tag}`);
+
+    // The message goes through stdin; --cleanup=whitespace keeps the Markdown # headings (git's default strips them as comments)
+    const forceArgs = replace ? ['-f'] : [];
+    runAndCheck('git', ['tag', '-a', ...forceArgs, tag, '--cleanup=whitespace', '-F', '-'], { input: message });
+    success(releaseNotes
+        ? `Tag ${tag} created with the release notes (${releaseNotes.split('\n').length} lines).`
+        : `Tag ${tag} created with message: ${message}`);
 }
 
 /**
  * pushFlow performs the post-tag push operations in a safe, interactive way.
  *
  * Steps:
- *   1) Verify local annotated tag exists by resolving `refs/tags/<targetTag>`.
+ *   1) Verify the local tag exists.
  *   2) Ensure the tagged commit has the release artifact present (using `cat-file -e`).
- *   3) Compare tag object SHA with remote `origin` tag if already present, and error on mismatch.
+ *   3) If origin already has the tag, it must be the same tag object as the local one.
  *   4) Ask user for push consent, and optionally configure upstream if missing.
  *   5) Push the current branch and the annotated tag to `origin`.
  *
@@ -691,31 +689,25 @@ async function commitFlow(status) {
  *   - status.targetTag: tag name to push (e.g. `v1.2.3`).
  */
 async function pushFlow(status) {
-    // pushFlow validates tag state before pushing branch and tag.
-    const tagRev = run('git', ['rev-parse', '--verify', `refs/tags/${status.targetTag}`]);
-    if (tagRev.error || tagRev.status !== 0) fatal(`Local tag ${status.targetTag} missing.`);
+    const localObject = getLocalTagObject(status.targetTag);
+    if (!localObject) fatal(`Local tag ${status.targetTag} missing.`);
 
     // Ensure the release artifact actually exists in tagged commit.
     if (!refHasRelease(status.targetTag)) fatal(`Tagged commit does not contain ${releaseFileRel}.`);
 
-    const remoteTag = run('git', ['ls-remote', '--tags', 'origin', status.targetTag]);
-    if (remoteTag.error || remoteTag.status !== 0) fatal('ls-remote failed.', remoteTag);
-    const remoteTxt = remoteTag.stdout ? String(remoteTag.stdout).trim() : '';
-    if (remoteTxt) {
-        const remoteSHA = remoteTxt.split(/\s+/)[0];
-        const localSHA = runAndCheck('git', ['rev-list', '-n', '1', status.targetTag]).stdout.trim();
-        if (remoteSHA !== localSHA) fatal(`Remote tag ${status.targetTag} mismatch: ${remoteSHA} != ${localSHA}`);
-        info('Remote tag matches local commit.');
+    const remoteObject = getRemoteTagObject(status.targetTag);
+    if (remoteObject) {
+        if (remoteObject !== localObject) fatal(`The tag ${status.targetTag} on origin is not the local one: ${remoteObject} != ${localObject}`);
+        info('The tag on origin is the local one.');
     }
 
     if (!(await askYesNo(`Push branch and tag ${status.targetTag} to origin?`))) {
-        info('Push skipped. You can do it manually with `git push --follow-tags`.');
-        process.exit(0);
+        stop('Push skipped. You can do it manually with `git push --follow-tags`.');
     }
 
     const upstream = run('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
     if (upstream.status !== 0) {
-        if (!await askYesNo(`No upstream. Set upstream and push ${status.branch}?`)) { info('Aborted by user.'); process.exit(0); }
+        if (!await askYesNo(`No upstream. Set upstream and push ${status.branch}?`)) stop('Aborted by user.');
         runAndCheck('git', ['push', '--set-upstream', 'origin', status.branch]);
         success('Set upstream and pushed branch.');
     } else {
@@ -798,22 +790,23 @@ async function purgeModCache(status) {
 // ==========================
 
 (async () => {
-    const status = collectStatus(opts);
+    const status = collectStatus();
     printStatus(status);
+    checkUpstream(status);
 
-    if (status.isBranchAhead) {
-        warn('Branch check indicates upstream/advance issues (this is advisory only).');
-        if (!await askYesNo(`Continue anyway? (y/N)`)) {
-            info('Aborted by user.');
-            process.exit(0);
-        }
+    // Every choice first, so the answers can't come after a build, a commit or a bump
+    const target = await chooseTarget(status);
+    if (target.mode === 'resume') {
+        if (releaseNotes) warn('Resuming: the existing tag keeps its message, the notes file is not used.');
+    } else {
+        const stageAll = await askStageAll(status);
+        const suffix = releaseNotes ? '' : await askTagMessageSuffix();
+
+        if (target.newVersion) applyBump(status, target.newVersion);
+        await checkLoaderVersions(status);
+        await commitFlow(status, stageAll);
+        createTag(status, { replace: target.mode === 'replace', suffix });
     }
-
-    await chooseTarget(status);
-
-    await checkLoaderVersions();
-
-    await commitFlow(status);
 
     await pushFlow(status);
     await purgeModCache(status);
