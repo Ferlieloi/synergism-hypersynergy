@@ -9,8 +9,7 @@ type HeaterInputBase = Omit<HeaterOptimizerInput,
     | 'shopBonusLevelsNoAmbrosia'
     | 'panthemaLevel'
     | 'reactor'
-    | 'purple'
-    | 'shopUpgradesDisabled'>;
+    | 'purple'>;
 type HeaterInputKey = keyof HeaterInputBase;
 
 type HeaterFieldType = 'number' | 'percent' | 'boolean' | 'text' | 'select';
@@ -37,6 +36,27 @@ type HeaterInputField = HeaterSelectField | HeaterNonSelectField;
 
 export type { HeaterInputField, HeaterInputKey, HeaterInputBase };
 
+// Exalts by name: the game's own numbering doesn't agree with itself. The
+// values are GDS's getActiveExalt(), by unlock singularity, which the
+// optimizer's Exalt rules use.
+export const HEATER_EXALT_OPTIONS = [
+    { value: 0,  label: "None" },
+    { value: 1,  label: "No Golden Quark Upgrades" },
+    { value: 2,  label: "One Challenge Caps" },
+    { value: 3,  label: "Limited Ascensions" },
+    { value: 4,  label: "No Quark Upgrades" },
+    { value: 5,  label: "No Octeract Effects" },
+    { value: 6,  label: "No Ambrosia Upgrades" },
+    { value: 7,  label: "Grand Singularity Speedrun" },
+    { value: 8,  label: "Sadistic Prequel" },
+    { value: 9,  label: "Taxman's Last Stand" },
+    { value: 10, label: "Bar Charging" },
+] as const;
+
+export function getHeaterExaltName(exalt: number): string {
+    return HEATER_EXALT_OPTIONS.find((option) => option.value === exalt)?.label ?? `Exalt ${exalt}`;
+}
+
 export const inputDefinitions = [
     { key: "amb",                       label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "ramb",                      label: "Lifetime Red Ambrosia",     type: "number",  url: "Pictures/Achievements/Progressive/RedAmbrosiaCount.png" },
@@ -53,21 +73,9 @@ export const inputDefinitions = [
     { key: "cubesExpTotal",             label: "Total Cubes Exp.",          type: "number",  url: "Pictures/Default/WowCube.png" },
     { key: "currentSingularity",        label: "Current Singularity",       type: "number",  url: "Pictures/Default/Singularity.png" },
     { key: "singularityReducers",       label: "Singularity Reducers",      type: "number",  url: "Pictures/Default/BlueberrySingReduction.png" },
-    { key: "exalt", label: "Exalt?", type: "select", options: [
-        { value: 0,  label: "None" },
-        { value: 1,  label: "Exalt 1" },
-        { value: 2,  label: "Exalt 2" },
-        { value: 3,  label: "Exalt 3" },
-        { value: 4,  label: "Exalt 4" },
-        { value: 5,  label: "Exalt 5" },
-        { value: 6,  label: "Exalt 6" },
-        { value: 7,  label: "Exalt 7" },
-        { value: 8,  label: "Exalt 8" },
-        { value: 9,  label: "Exalt 9" },
-        { value: 10, label: "Exalt 10" },
-    ] as const, url: "Pictures/Default/TinySChalTime.png" },
-    { key: "exalt5Unlocked",            label: "Exalt 6x1 (No Amb) Done",     type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 0, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
-    { key: "exalt9Unlocked",            label: "Exalt 9x1 (Last Stand) Done", type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 192, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
+    { key: "exalt", label: "Exalt?", type: "select", options: HEATER_EXALT_OPTIONS, url: "Pictures/Default/TinySChalTime.png" },
+    { key: "exalt5Unlocked",            label: "No Ambrosia Upgrades x1 Done", type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 0, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
+    { key: "exalt9Unlocked",            label: "Taxman's Last Stand x1 Done",  type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 192, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
     { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",       type: "boolean", url: "Pictures/Runes/Antiquities.png" },
     { key: "oneMindUnlocked",           label: "One Mind Unlocked",         type: "boolean", url: "Pictures/Default/SingularityOneMind.png" },
     { key: "aquariusUnlocked",          label: "Aquarius Unlocked",         type: "boolean", url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Aquarius.png" },

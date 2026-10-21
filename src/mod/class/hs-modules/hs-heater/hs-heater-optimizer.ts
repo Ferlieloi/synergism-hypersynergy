@@ -4583,8 +4583,11 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         fusion, rBar, rSpeed, blueBarMaxWithoutTwoMindAndBrick, blueBarRequirementBeforeRounding, redBarMaxWithoutTwoMind,
         ossifiedTactics, redberries, viscount, ossifiedTactics2,
         ambrosiaUpgradeBonusLevels, ambrosiaUpgradeBlueberryCostReductions,
-        shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel, shopUpgradesDisabled,
+        shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel,
     } = input;
+    // Exalt 4 is No Quark Upgrades. It follows the modal's Exalt select, like
+    // every other Exalt rule here, not the save the inputs were exported from.
+    const shopUpgradesDisabled = exalt === 4;
 
     stats.amb            = amb;
     stats.rAmb           = ramb;

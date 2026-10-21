@@ -11,6 +11,7 @@ import type { HeaterBranchId } from "../hs-heater-result-config";
 import { HSInputType } from "../../../../types/module-types/hs-ui-types";
 import {
     exportFieldExtractors,
+    getHeaterExaltName,
     inputDefinitions,
     type HeaterInputBase,
     type HeaterInputField,
@@ -38,8 +39,7 @@ export class HSHeaterUIInput {
         | 'shopBonusLevelsNoAmbrosia'
         | 'panthemaLevel'
         | 'reactor'
-        | 'purple'
-        | 'shopUpgradesDisabled'> = {
+        | 'purple'> = {
             ambrosiaUpgradeBonusLevels: {},
             ambrosiaUpgradeBlueberryCostReductions: {},
             runeSiBonusLevelsTalismanNoAmbrosia: 0,
@@ -59,8 +59,9 @@ export class HSHeaterUIInput {
             panthemaLevel: 0,
             reactor: undefined,
             purple: undefined,
-            shopUpgradesDisabled: false,
         };
+    // The Exalt of the save the inputs came from, null without export data
+    static #exportExalt: number | null = null;
 
     static #cachedTypeSelects: HTMLSelectElement[] = [];
     static #cachedTypeIcons: HTMLButtonElement[] = [];
@@ -88,14 +89,14 @@ export class HSHeaterUIInput {
             panthemaLevel: hsData?.panthemaLevel ?? 0,
             reactor: hsData?.heaterReactor,
             purple: hsData?.heaterPurple,
-            shopUpgradesDisabled: Boolean(hsData?.shopUpgradesDisabled),
         };
+        this.#exportExalt = Number.isInteger(hsData?.exalt) ? hsData.exalt : null;
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
                 // Purple Ambrosia unlocks with the first Exalt 9 completion,
-                // the same condition as the "Exalt 9x1 Done" input
+                // the same condition as the "Taxman's Last Stand x1 Done" input
                 HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, branch.id !== 'purple' || Boolean(hsData?.exalt9Unlocked)])
             ) as Record<HeaterBranchId, boolean>,
         };
@@ -176,6 +177,7 @@ export class HSHeaterUIInput {
                 element.value = this.formatFieldValueForInput(field.type, input[field.key]);
             }
         });
+        this.refreshExaltWarning(modal);
     }
 
     static readInputValues(modal: HTMLElement): HeaterOptimizerInput {
@@ -226,8 +228,10 @@ export class HSHeaterUIInput {
 
             element.addEventListener('change', () => {
                 this.setFieldLockState(modal, field.key, true);
+                if (field.key === 'exalt') this.refreshExaltWarning(modal);
             });
         });
+        this.refreshExaltWarning(modal);
         this.#lockHandlersAttachedModals.add(modal);
     }
 
@@ -450,6 +454,10 @@ export class HSHeaterUIInput {
                 ? `<img src="${field.url}" alt="${escapeHtml(field.label)}" class="hs-heater-icon-image" />`
                 : '';
         const inputHtml = this.buildFieldInputHtml(field, value);
+        // The bases always come from the exported save, whatever Exalt is picked
+        const exaltWarningRow = field.key === 'exalt'
+            ? `<tr id="hs-heater-exalt-warning-row" hidden><td colspan="4" class="hs-heater-input-warning"></td></tr>`
+            : '';
 
         return `
                 <tr>
@@ -457,8 +465,26 @@ export class HSHeaterUIInput {
                     <td>${escapeHtml(field.label)}</td>
                     <td>${inputHtml}</td>
                     <td><button type="button" id="${lockId}" class="hs-heater-lock-button disable-hover-color" data-field-key="${field.key}" data-locked="false" aria-label="Toggle lock">🔓</button></td>
-                </tr>
+                </tr>${exaltWarningRow}
             `;
+    }
+
+    // Shown while the picked Exalt differs from the exported save's
+    static refreshExaltWarning(modal: HTMLElement): void {
+        const row = modal.querySelector<HTMLElement>('#hs-heater-exalt-warning-row');
+        const select = modal.querySelector<HTMLSelectElement>('#hs-heater-input-exalt');
+        if (!row || !select) return;
+
+        const exportExalt = this.#exportExalt;
+        if (exportExalt === null || Number(select.value) === exportExalt) {
+            row.hidden = true;
+            return;
+        }
+        const cell = row.firstElementChild as HTMLElement;
+        cell.textContent = exportExalt === 0
+            ? '⚠️ Base values come from a save outside any Exalt'
+            : `⚠️ Base values come from a save in ${getHeaterExaltName(exportExalt)}`;
+        row.hidden = false;
     }
 
     static mapFields(mapper: (field: HeaterInputField) => HeaterInputValue): HeaterInputBase;

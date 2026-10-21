@@ -8,6 +8,7 @@ import { clearHeaterIconOverride, getEffectiveHeaterIconSrc, getOverrideHeaterIc
 import { HSHeaterResultStore } from "../hs-heater-result-store";
 import type { NormalizedHeaterResultEntry } from "../hs-heater-result-store";
 import { getHeaterExaltRules } from "../hs-heater-result-config";
+import { getHeaterExaltName } from "../hs-heater-input-config";
 import type { HSAmbrosia } from "../../hs-ambrosia";
 
 // === Loadout Preview Metadata Type and Map ===
@@ -285,8 +286,9 @@ export class HSHeaterUIResult {
             const exaltBadge = document.createElement('div');
             exaltBadge.className = 'hs-heater-results-topbar-exalt';
             exaltBadge.tabIndex = 0;
-            exaltBadge.setAttribute('aria-label', `How the results read in Exalt ${exalt}`);
-            exaltBadge.innerHTML = `<img src="Pictures/Default/TinySChalTime.png" alt="Exalt ${exalt}" />`;
+            const exaltName = getHeaterExaltName(exalt);
+            exaltBadge.setAttribute('aria-label', `How the results read in ${exaltName}`);
+            exaltBadge.innerHTML = `<img src="Pictures/Default/TinySChalTime.png" alt="${escapeHtml(exaltName)}" />`;
             exaltBadge.addEventListener('mouseenter', () => this.#showTopbarTooltip(exaltBadge, exaltRules));
             exaltBadge.addEventListener('mouseleave', () => this.removeTopbarHelpTooltip());
             exaltBadge.addEventListener('focus', () => this.#showTopbarTooltip(exaltBadge, exaltRules));

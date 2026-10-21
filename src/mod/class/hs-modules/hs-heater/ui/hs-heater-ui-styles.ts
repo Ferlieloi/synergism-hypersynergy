@@ -353,6 +353,12 @@ export class HSHeaterUIStyles {
             }
 
             /* === Input Controls === */
+            .hs-heater-input-table td.hs-heater-input-warning {
+                height: auto;
+                color: #e0b84f;
+                text-align: center;
+            }
+
             .hs-heater-select-input {
                 width: 100%;
                 height: 20px;

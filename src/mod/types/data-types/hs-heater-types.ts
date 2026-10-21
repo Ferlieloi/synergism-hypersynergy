@@ -96,7 +96,6 @@ export interface HeaterOptimizerInput {
         infinity: number;
     };
     panthemaLevel: number;
-    shopUpgradesDisabled: boolean;
     heaterOptions: Record<HeaterBranchId, boolean>;
 }
 
