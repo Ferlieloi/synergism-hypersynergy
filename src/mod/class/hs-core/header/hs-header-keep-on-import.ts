@@ -1,12 +1,12 @@
-import { HSGlobal } from "./hs-global";
-import { HSLogger } from "./hs-logger";
-import { HSUI } from "./hs-ui";
-import { HSSettings } from "./settings/hs-settings";
+import { HSGlobal } from "../hs-global";
+import { HSLogger } from "../hs-logger";
+import { HSUI } from "../hs-ui";
+import { HSSettings } from "../settings/hs-settings";
 
 const CHECKBOX_ID = 'hs-keep-header-layout';
 
 /**
- * Class: HSKeepHeaderLayout
+ * Class: HSHeaderKeepOnImport
  * IsExplicitHSModule: No
  * Description:
  *     "[HS] Keep my header layout", a checkbox under the game's "Load from file" button (Settings). Ticked, a save
@@ -20,8 +20,8 @@ const CHECKBOX_ID = 'hs-keep-header-layout';
  *     keepHeaderLayoutOnImport.
  * Author: maenhiir
  */
-export class HSKeepHeaderLayout {
-    static #context = 'HSKeepHeaderLayout';
+export class HSHeaderKeepOnImport {
+    static #context = 'HSHeaderKeepOnImport';
     static #checkbox?: HTMLInputElement;
     // The layouts to put into the save being loaded, for one task
     static #pending?: unknown;
@@ -34,7 +34,7 @@ export class HSKeepHeaderLayout {
 
     /** Adds the checkbox after the game's "Load from file" button, and the hook into the game's save parse. */
     static install(importButton: HTMLElement): void {
-        if (HSKeepHeaderLayout.#checkbox || !HSKeepHeaderLayout.#isAvailable()) return;
+        if (HSHeaderKeepOnImport.#checkbox || !HSHeaderKeepOnImport.#isAvailable()) return;
 
         // As the game's own "copy to clipboard" checkbox in that column
         const row = document.createElement('div');
@@ -62,18 +62,18 @@ export class HSKeepHeaderLayout {
         checkbox.addEventListener('change', () => {
             HSSettings.getSetting('keepHeaderLayoutOnImport').setValue(checkbox.checked);
         });
-        HSKeepHeaderLayout.#checkbox = checkbox;
+        HSHeaderKeepOnImport.#checkbox = checkbox;
 
         // loadSynergy reads window.__HS_parseSave at each load: the save it parses gets the kept layouts
         const w = window as any;
         const parseSave = w.__HS_parseSave as (text: string) => any;
         w.__HS_parseSave = (text: string) => {
             const data = parseSave(text);
-            const pending = HSKeepHeaderLayout.#pending;
+            const pending = HSHeaderKeepOnImport.#pending;
             if (pending !== undefined && data && typeof data === 'object') {
-                HSKeepHeaderLayout.#pending = undefined;
+                HSHeaderKeepOnImport.#pending = undefined;
                 data.headerLayouts = pending;
-                HSLogger.log('Save loaded with your header layout (Keep my header layout)', HSKeepHeaderLayout.#context);
+                HSLogger.log('Save loaded with your header layout (Keep my header layout)', HSHeaderKeepOnImport.#context);
             }
             return data;
         };
@@ -85,16 +85,16 @@ export class HSKeepHeaderLayout {
      * import was refused): the note is dropped, it never reaches a later load.
      */
     static onSaveImport(): void {
-        if (!HSKeepHeaderLayout.#checkbox?.checked) return;
+        if (!HSHeaderKeepOnImport.#checkbox?.checked) return;
         try {
             const player = HSGlobal.exposedPlayer as { headerLayouts?: unknown } | null;
             if (!player?.headerLayouts || typeof player.headerLayouts !== 'object') return;
             const stripped = (window as any).__HS_stripHeaderModules({ headerLayouts: player.headerLayouts });
-            HSKeepHeaderLayout.#pending = structuredClone(stripped.headerLayouts);
+            HSHeaderKeepOnImport.#pending = structuredClone(stripped.headerLayouts);
         } catch (e) {
-            HSLogger.warn(`Could not keep the header layout for this save load: ${e}`, HSKeepHeaderLayout.#context);
+            HSLogger.warn(`Could not keep the header layout for this save load: ${e}`, HSHeaderKeepOnImport.#context);
             return;
         }
-        setTimeout(() => { HSKeepHeaderLayout.#pending = undefined; }, 0);
+        setTimeout(() => { HSHeaderKeepOnImport.#pending = undefined; }, 0);
     }
 }

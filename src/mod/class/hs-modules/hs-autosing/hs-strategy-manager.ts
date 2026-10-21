@@ -1,8 +1,8 @@
 import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../types/module-types/hs-autosing-types";
-import { HSModuleManager } from "../module/hs-module-manager";
-import { HSStorage } from "../hs-storage";
-import { HSGlobal } from "../hs-global";
-import { HSLogger } from "../hs-logger";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSStorage } from "../../hs-core/hs-storage";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { HSLogger } from "../../hs-core/hs-logger";
 import manifest from '../../../resource/json/strategies/manifest.json';
 
 export class HSStrategyManager {

@@ -1,10 +1,10 @@
-import { HSModuleOptions } from "../../types/hs-types";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSUI } from "../hs-core/hs-ui";
-import { HSModule } from "../hs-core/module/hs-module";
-import headerLoadoutIconsCSS from "inline:../../resource/css/module/hs-header-loadout-icons.css";
-import { HSLoadoutIconStore } from "./hs-qol-quickbar/hs-loadout-icon-store";
-import { HSQuickbarIconPickerController } from "./hs-qol-quickbar/hs-qolQuickbarIconPicker";
+import { HSModuleOptions } from "../../../types/hs-types";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSUI } from "../../hs-core/hs-ui";
+import { HSModule } from "../../hs-core/module/hs-module";
+import headerLoadoutIconsCSS from "inline:../../../resource/css/module/hs-header-loadout-icons.css";
+import { HSLoadoutIconStore } from "./hs-loadout-icon-store";
+import { HSQuickbarIconPickerController } from "./hs-loadout-icon-picker";
 
 type HSHeaderLoadoutKind = 'ambrosia' | 'corruption';
 

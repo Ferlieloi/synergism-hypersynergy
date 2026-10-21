@@ -1,4 +1,4 @@
-import { redAmbrosiaUpgradeCalculationCollection } from "./stored-vars-and-calculations";
+import { redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { HSGlobal } from "../hs-global";
 import type { GameData, RedAmbrosiaUpgrades } from "../../../types/data-types/hs-player-savedata";

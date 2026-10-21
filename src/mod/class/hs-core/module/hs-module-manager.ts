@@ -1,8 +1,8 @@
 import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 import { HSCodes } from "../../hs-modules/hs-codes";
-import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
-import { HSHepteractDistributor } from "../../hs-modules/hs-hepteract-distributor";
+import { HSHepteracts } from "../../hs-modules/hs-hepteracts/hs-hepteracts";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
@@ -19,7 +19,7 @@ import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
 import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
-import { HSHeaderLoadoutIcons } from "../../hs-modules/hs-header-loadout-icons";
+import { HSHeaderLoadoutIcons } from "../../hs-modules/hs-loadout-icons/hs-header-loadout-icons";
 
 /**
  * Class: HSModuleManager

@@ -5,7 +5,7 @@
     Author: maenhiir
 */
 
-import type { HepteractKeys } from "../../types/data-types/hs-player-savedata";
+import type { HepteractKeys } from "../../../types/data-types/hs-player-savedata";
 
 /** From the game's Hepteracts.ts: BASE_CAP, and HEPTERACT_CONVERSION (hepteracts for one unit, before the singularity debuff). */
 export const HEPTERACT_DATA: Record<HepteractKeys, { baseCapacity: number, conversion: number }> = {

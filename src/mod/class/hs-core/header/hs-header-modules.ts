@@ -1,7 +1,7 @@
-import { HSGlobal } from "./hs-global";
-import { HSLogger } from "./hs-logger";
-import { HSStorage } from "./hs-storage";
-import { HSModuleManager } from "./module/hs-module-manager";
+import { HSGlobal } from "../hs-global";
+import { HSLogger } from "../hs-logger";
+import { HSStorage } from "../hs-storage";
+import { HSModuleManager } from "../module/hs-module-manager";
 
 const STORAGE_KEY = 'header-modules';
 // The game's grid region (its cells keep their index, empty ones included); its other region is a plain row

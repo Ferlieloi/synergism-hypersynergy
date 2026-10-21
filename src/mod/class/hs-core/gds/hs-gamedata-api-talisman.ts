@@ -3,7 +3,7 @@ import { HSGlobal } from "../hs-global";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
 import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES, TALISMAN_CHRONOS_INSCRIPT_VALUES, TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES, TALISMAN_EXEMPTION_INSCRIPT_VALUES, TALISMAN_METAPHYSICS_INSCRIPT_VALUES, TALISMAN_MIDAS_INSCRIPT_VALUES, TALISMAN_MORTUUS_INSCRIPT_VALUES, TALISMAN_PLASTIC_INSCRIPT_VALUES, TALISMAN_POLYMATH_INSCRIPT_VALUES, TALISMAN_WOWSQUARE_INSCRIPT_VALUES, TALISMAN_HORSESHOE_INSCRIPT_VALUES } from "../../../types/data-types/hs-gamedata-api-types";
-import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./stored-vars-and-calculations";
+import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./hs-gamedata-tables";
 import { HSLogger } from "../hs-logger";
 
 const TALISMAN_KEYS = Object.keys(TALISMAN_BASE_COEFFICIENTS) as TalismanKeys[];

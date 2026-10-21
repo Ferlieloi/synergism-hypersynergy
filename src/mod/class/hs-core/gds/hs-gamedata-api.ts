@@ -27,7 +27,7 @@ import type { OcteractHelperContext } from "./hs-gamedata-api-octeract";
 import type { LuckHelperContext } from "./hs-gamedata-api-luck";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
-import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./stored-vars-and-calculations";
+import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 import { parseGameDataDecimal, calcECC, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
 import Decimal from "break_infinity.js";
 
@@ -179,7 +179,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     // calculateSynergismLevel's result for the current data, cleared with the calculation cache
     #synergismLevel: number | undefined;
 
-    // These are imported from stored-vars-and-calculations.ts
+    // These are imported from hs-gamedata-tables.ts
     #hepteractEffectiveValues = hepteractEffectiveValues;
     readonly #calculationHelperProviders: Array<object> = [];
 

@@ -1,6 +1,6 @@
 import { ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
 import { parseGameDataNumber } from "./hs-gamedata-utils";
-import { SHOP_UPGRADE_GROUPS_BY_KEY, SINGULARITY_CHALLENGE_DATA } from "./stored-vars-and-calculations"
+import { SHOP_UPGRADE_GROUPS_BY_KEY, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables"
 import type { ShopUpgradeHelperContext, CalculationCache, CalculationMode, SingularityChallengeDataKeys } from "../../../types/data-types/hs-gamedata-api-types"
 
 const QUARKSHOP_CACHE_PREFIX = 'QUARKSHOP_';

@@ -1,7 +1,7 @@
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSUIC } from "../../hs-core/hs-ui-components";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
-import { redAmbrosiaUpgradeCalculationCollection } from "../../hs-core/gds/stored-vars-and-calculations";
+import { redAmbrosiaUpgradeCalculationCollection } from "../../hs-core/gds/hs-gamedata-tables";
 import { HSHeaterResultStore } from "./hs-heater-result-store";
 import type { HeaterOptimizerInput, HeaterRedAmbCommonValues, HeaterRedAmbUpgradeEffects } from "../../../types/data-types/hs-heater-types";
 import type { RedAmbrosiaUpgradeCalculationConfig, RedAmbrosiaUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";

@@ -1,4 +1,4 @@
-import { octeractUpgradeMaxLevels } from "./stored-vars-and-calculations";
+import { octeractUpgradeMaxLevels } from "./hs-gamedata-tables";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { OcteractUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
 

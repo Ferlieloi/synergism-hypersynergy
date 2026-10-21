@@ -111,7 +111,7 @@ export const HSGlobal: IHSGlobal = class {
             HSQOLAutomationQuickbar: 'HSQOLButtons',
             HSCorruption: 'HSQOLButtons',
             HSHeaderModules: 'HSQOLButtons',
-            HSKeepHeaderLayout: 'HSQOLButtons',
+            HSHeaderKeepOnImport: 'HSQOLButtons',
             HSHeaderEditSettings: 'HSQOLButtons',
             HSLoadoutIconStore: 'HSHeaderLoadoutIcons',
             // UI

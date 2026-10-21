@@ -10,7 +10,7 @@ import { HSLogger } from "../hs-logger";
 import { HSPlatform } from "../hs-platform";
 import { HSSetting } from "./hs-setting";
 import { HSSettings } from "./hs-settings";
-import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";

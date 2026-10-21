@@ -13,7 +13,7 @@ import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
-import { HSKeepHeaderLayout } from "../hs-keep-header-layout";
+import { HSHeaderKeepOnImport } from "../header/hs-header-keep-on-import";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { CampaignData } from "../../../types/data-types/hs-campaign-data";
@@ -183,7 +183,7 @@ export class HSGameData extends HSModule {
                 this.#importSaveButton.addEventListener('click', this.#loadFromFileEventHandler, { capture: true });
                 HSLogger.log("Save file import interceptor registered", this.context);
             }
-            if (this.#importSaveButton) HSKeepHeaderLayout.install(this.#importSaveButton);
+            if (this.#importSaveButton) HSHeaderKeepOnImport.install(this.#importSaveButton);
         })();
     }
 
@@ -200,7 +200,7 @@ export class HSGameData extends HSModule {
     #onSaveImport(reset: boolean): void {
         if (reset) return;
 
-        HSKeepHeaderLayout.onSaveImport();
+        HSHeaderKeepOnImport.onSaveImport();
 
         setTimeout(() => {
             void HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia')?.matchActiveLoadoutToLoadedSave()

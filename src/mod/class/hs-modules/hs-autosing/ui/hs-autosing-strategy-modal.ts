@@ -3,7 +3,7 @@ import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NA
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
 import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
-import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager";
+import { HSStrategyManager } from "../hs-strategy-manager";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";

@@ -1,9 +1,9 @@
-import { HSSettingsDefinition } from "../../types/module-types/hs-settings-types";
-import { HSGlobal } from "./hs-global";
-import { HSLogger } from "./hs-logger";
-import { HSUI } from "./hs-ui";
-import { HSSettings } from "./settings/hs-settings";
-import headerEditSettingsCSS from "inline:../../resource/css/module/hs-header-edit-settings.css";
+import { HSSettingsDefinition } from "../../../types/module-types/hs-settings-types";
+import { HSGlobal } from "../hs-global";
+import { HSLogger } from "../hs-logger";
+import { HSUI } from "../hs-ui";
+import { HSSettings } from "../settings/hs-settings";
+import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'corruption' | 'ambrosia';
 
@@ -238,7 +238,7 @@ export class HSHeaderEditSettings {
             const definition = HSSettings.getSetting(toggle.setting)?.getDefinition();
             if (!definition) continue;
 
-            // As "[HS] Keep my header layout" (HSKeepHeaderLayout)
+            // As "[HS] Keep my header layout" (HSHeaderKeepOnImport)
             const label = document.createElement('label');
             label.className = 'hs-hes-toggle';
             const help = [definition.settingHelpText, hasHeaderModules() ? undefined : toggle.withoutPatch];

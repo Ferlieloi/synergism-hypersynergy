@@ -11,7 +11,7 @@ import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStr
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
-import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
 import { HSSettingsUIDependencies } from "./hs-settings-ui";
 import { HSModuleOptions } from "../../../types/hs-types";
 import { HSPlatform } from "../hs-platform";

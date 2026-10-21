@@ -8,7 +8,7 @@ import { HSGameData } from "../hs-core/gds/hs-gamedata";
 import { HSGameState } from "../hs-core/hs-gamestate";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
-import { HSLoadoutIconStore } from "./hs-qol-quickbar/hs-loadout-icon-store";
+import { HSLoadoutIconStore } from "./hs-loadout-icons/hs-loadout-icon-store";
 import { getEffectiveHeaterIconSrc } from "./hs-heater/hs-heater-icon-store";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
@@ -23,7 +23,7 @@ import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import minibarCSS from "inline:../../resource/css/module/hs-ambrosia-minibars.css";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
-import { HSHeaderModules } from "../hs-core/hs-header-modules";
+import { HSHeaderModules } from "../hs-core/header/hs-header-modules";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
 
 interface HSQuickImportSummary {
