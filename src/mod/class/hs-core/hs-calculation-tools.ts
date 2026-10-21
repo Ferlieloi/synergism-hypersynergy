@@ -227,8 +227,11 @@ export class HSCalculationTools {
         const args = definition.supportsReduce ? [!isComponentMode, ...params] : params;
 
         let result: unknown;
+        let total: unknown;
         try {
             result = calcFn(...args);
+            // The function's own total, on the same save: some multiply their components, luck returns { luckBase, luckMult, luckTotal }
+            if (isComponentMode) total = calcFn(true, ...params);
         } catch (err) {
             HSCalculationTools.#showError(`${fnName} failed: ${err}`);
             return;
@@ -241,8 +244,12 @@ export class HSCalculationTools {
 
         console.log(`--- CALCULATED ${fnName} ---`, ...args);
         console.log(result);
+        if (isComponentMode) console.log(total);
 
-        HSCalculationTools.#showResult(`Last calc result: ${HSCalculationTools.#formatResult(result)}`, false);
+        const text = isComponentMode
+            ? HSCalculationTools.#formatComponents(result as Record<string, unknown>, total)
+            : HSCalculationTools.#formatResult(result);
+        HSCalculationTools.#showResult(`Last calc result: ${text}`, false);
     }
 
     static #showError(message: string): void {
@@ -273,6 +280,22 @@ export class HSCalculationTools {
                 .join('');
         }
         return typeof result === 'number' ? HSUtils.N(result) : String(result);
+    }
+
+    // Components indented under their total. A total object (luck) gives its own keys first (luckTotal),
+    // then each group of components under its subtotal (luckBase, luckMult).
+    static #formatComponents(components: Record<string, unknown>, total: unknown): string {
+        const format = HSCalculationTools.#formatResult;
+        if (!HSCalculationTools.#isPlainObject(total)) return `\nTotal: ${format(total)}${format(components, 1)}`;
+
+        const totalsOnly = Object.entries(total)
+            .filter(([key]) => !(key in components))
+            .map(([key, value]) => `\n${key}: ${format(value)}`);
+        const groups = Object.entries(components)
+            .map(([key, value]) => HSCalculationTools.#isPlainObject(value)
+                ? `\n${key}: ${format(total[key])}${format(value, 1)}`
+                : `\n${key}: ${format(value)}`);
+        return [...totalsOnly, ...groups].join('');
     }
 
     static #dumpCache(): void {
