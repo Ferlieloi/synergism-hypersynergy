@@ -96,6 +96,7 @@ export class HSHeaderEditSettings {
     static #minusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
+    static #hideRuleInjected = false;
 
     /** Hides the slots above the counts, and adds the block next to the game's header tray. */
     static install(): void {
@@ -220,8 +221,9 @@ export class HSHeaderEditSettings {
                 rules.push(`#${SLOT_COUNTS[kind].containerId} > .headerLoadoutSlot:nth-child(n+${count + 1}) { display: none; }`);
             }
         }
-        // injectStyle keeps an existing block of the same id
-        HSUI.removeInjectedStyle(HIDE_STYLE_ID);
+        // injectStyle keeps an existing block of the same id; removing a missing one logs a warning
+        if (HSHeaderEditSettings.#hideRuleInjected) HSUI.removeInjectedStyle(HIDE_STYLE_ID);
+        HSHeaderEditSettings.#hideRuleInjected = rules.length > 0;
         if (rules.length > 0) HSUI.injectStyle(rules.join('\n'), HIDE_STYLE_ID);
     }
 
