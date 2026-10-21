@@ -61,12 +61,6 @@ export class HSUI extends HSModule {
 
     readonly #tabConfigMap: Map<number, HSPanelTabDefinition>;
 
-    readonly #quickbarSubMenuItems = [
-        { label: 'Ambrosia',     btnId: 'hs-setting-qol-ambrosia-quickbar-btn',          icon: 'Pictures/Default/Blueberries.png',           hoverColor: '#0a1085' },
-        { label: 'Amb minibars', btnId: 'hs-setting-ambrosia-minibar-btn',               icon: 'Pictures/Default/Blueberries.png',           hoverColor: '#0a1085' },
-        { label: 'Automation',   btnId: 'hs-setting-qol-enable-syn-ui-btn',              icon: 'Pictures/Default/Generators.png',            hoverColor: '#083d02' }
-    ];
-
     #tabs: HSPanelTabDefinition[] = [
         {
             tabId: 1,
@@ -368,20 +362,16 @@ export class HSUI extends HSModule {
 
         const quickMenu = this.#buildQuickAccessMenuContainer();
         this.#uiQuickAccessMenu = quickMenu;
-        const quickbarsSubmenu = this.#buildQuickbarsSubmenu();
-        const quickbarsBtn     = this.#buildQuickbarsButton();
         const autoSingBtn     = this.#buildQuickAccessButton('autosing',   '▶', 'Start Auto-Sing (S216+)', () => this.#toggleAutoSing());
         const heaterHSBtn     = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater (HS)',         () => this.#triggerHeaterHS());
         const heaterExportBtn = this.#buildQuickAccessButton('amb-heater', '🔥', 'Amb Heater (Export)',     () => this.#triggerHeaterExport());
 
-        quickMenu.appendChild(quickbarsSubmenu);
-        quickMenu.appendChild(quickbarsBtn);
         quickMenu.appendChild(heaterHSBtn);
         quickMenu.appendChild(heaterExportBtn);
         quickMenu.appendChild(autoSingBtn);
         document.body.appendChild(quickMenu);
 
-        this.#attachQuickAccessMenuHandlers(quickMenu, quickbarsBtn, quickbarsSubmenu);
+        this.#attachQuickAccessMenuHandlers(quickMenu);
     }
 
     #buildQuickAccessMenuContainer(): HTMLDivElement {
@@ -389,32 +379,6 @@ export class HSUI extends HSModule {
         quickMenu.id = 'hs-quick-access-menu';
         quickMenu.style.display = 'none';
         return quickMenu;
-    }
-
-    #buildQuickbarsSubmenu(): HTMLDivElement {
-        const quickbarsSubmenu = document.createElement('div');
-        quickbarsSubmenu.id = 'hs-quickbars-submenu';
-        quickbarsSubmenu.style.display = 'none';
-
-        this.#quickbarSubMenuItems.forEach(({ label, btnId, icon, hoverColor }) => {
-            quickbarsSubmenu.appendChild(this.#createQuickbarToggle(label, btnId, icon, hoverColor));
-        });
-
-        return quickbarsSubmenu;
-    }
-
-    #buildQuickbarsButton(): HTMLButtonElement {
-        const quickbarsBtn = document.createElement('button');
-        quickbarsBtn.setAttribute('data-type', 'quickbars');
-        quickbarsBtn.innerHTML = `
-            <span style="display: inline-block; width: 20px; text-align: center; margin-right: 5px;">☰</span>
-            <span>Quickbars</span>
-            <span class="quickbars-arrow">&gt;</span>
-        `;
-
-        quickbarsBtn.addEventListener('click', () => this.#toggleQuickbarsBulk());
-
-        return quickbarsBtn;
     }
 
     #buildQuickAccessButton(type: string, icon: string, label: string, onClick: () => void): HTMLButtonElement {
@@ -428,49 +392,7 @@ export class HSUI extends HSModule {
         return button;
     }
 
-    #createQuickbarToggle(label: string, btnId: string, icon: string, hoverColor?: string): HTMLElement {
-        const btn = document.createElement('button');
-
-        const iconSpan = document.createElement('span');
-        iconSpan.classList.add('hs-quickbar-icon-container');
-        iconSpan.style.marginRight = '8px';
-        
-        const img = document.createElement('img');
-        img.src = icon;
-        img.alt = `${label} icon`;
-        img.style.width = '18px'; 
-        img.style.height = '18px';
-        img.style.verticalAlign = 'middle';
-        
-        iconSpan.appendChild(img);
-        btn.appendChild(iconSpan);
-
-        const labelSpan = document.createElement('span');
-        labelSpan.textContent = label;
-        labelSpan.style.verticalAlign = 'middle';
-        btn.appendChild(labelSpan);
-
-        if (hoverColor) {
-            const originalBg = btn.style.backgroundColor;
-            btn.addEventListener('mouseenter', () => {
-                btn.style.backgroundColor = hoverColor;
-            });
-            btn.addEventListener('mouseleave', () => {
-                btn.style.backgroundColor = originalBg;
-            });
-        }
-
-        btn.addEventListener('click', () => {
-            const toggleBtn = document.getElementById(btnId) as HTMLElement | null;
-            if (toggleBtn) {
-                toggleBtn.click();
-                HSLogger.debug(() => `${label} quickbar toggled via quickbars submenu`, this.context);
-            }
-        });
-        return btn;
-    }
-
-    #attachQuickAccessMenuHandlers(quickMenu: HTMLDivElement, quickbarsBtn: HTMLButtonElement, quickbarsSubmenu: HTMLDivElement) {
+    #attachQuickAccessMenuHandlers(quickMenu: HTMLDivElement) {
         let hoverTimeout: number | null = null;
 
         const showMenu = () => {
@@ -483,34 +405,10 @@ export class HSUI extends HSModule {
             }, 200);
         };
 
-        const showSubmenu = () => { quickbarsSubmenu.style.display = 'block'; };
-        const hideSubmenu = () => { quickbarsSubmenu.style.display = 'none'; };
-
         this.#uiPanelOpenBtn?.addEventListener('mouseenter', showMenu);
         this.#uiPanelOpenBtn?.addEventListener('mouseleave', hideMenu);
         quickMenu.addEventListener('mouseenter', showMenu);
         quickMenu.addEventListener('mouseleave', hideMenu);
-
-        quickbarsBtn.addEventListener('mouseenter', showSubmenu);
-        quickbarsBtn.addEventListener('mouseleave', hideSubmenu);
-        quickbarsSubmenu.addEventListener('mouseenter', showSubmenu);
-        quickbarsSubmenu.addEventListener('mouseleave', hideSubmenu);
-    }
-
-    #toggleQuickbarsBulk() {
-        const toggleIds = this.#quickbarSubMenuItems.map(({ btnId }) => btnId);
-
-        const toggles = toggleIds.map(id => document.getElementById(id));
-        const states = toggles.map(btn => btn ? !btn.classList.contains('hs-disabled') : false);
-        const enabledCount = states.filter(Boolean).length;
-
-        if (enabledCount > 0 && enabledCount < states.length) {
-            toggles.forEach((btn, i) => {
-                if (!states[i] && btn) btn.click();
-            });
-        } else {
-            toggles.forEach(btn => { if (btn) btn.click(); });
-        }
     }
 
     #toggleAutoSing() {
