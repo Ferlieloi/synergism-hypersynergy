@@ -98,7 +98,6 @@ export interface HSSettingsDefinition {
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
-    corruptionHeaderCleanse: QOLButtonsCorruptionHeaderCleanseSetting;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
 
@@ -254,7 +253,6 @@ export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<bool
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCorruptionHeaderLevelsSetting extends HSSettingBase<boolean> { }
-export interface QOLButtonsCorruptionHeaderCleanseSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHeaderStatsAtBottomSetting extends HSSettingBase<boolean> { }
 

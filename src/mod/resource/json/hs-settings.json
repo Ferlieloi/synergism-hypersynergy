@@ -1427,7 +1427,7 @@
   "corruptionHeaderLevels": {
     "settingName": "corruptionHeaderLevels",
     "settingDescription": "Corruption levels in the header",
-    "settingHelpText": "Your corruption levels on a line under the Corruption loadouts module: the current ones, then the next ones when they differ. Turned off while Auto-Sing runs.",
+    "settingHelpText": "Your corruption levels on a line under the corruption loadout modules: the current ones, then the next ones when they differ. Turned off while Auto-Sing runs.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": true,
@@ -1437,21 +1437,6 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
-    }
-  },
-  "corruptionHeaderCleanse": {
-    "settingName": "corruptionHeaderCleanse",
-    "settingDescription": "Cleanse button in the header",
-    "settingHelpText": "Turns the Corruption loadouts module's icon into a cleanse button: one click sets your current and next corruptions to 0, with no confirmation.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": true,
-    "settingAction": "corruptionHeaderCleanseAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-cleanse-btn"
     }
   },
   "centerQuickbars": {

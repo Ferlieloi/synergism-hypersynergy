@@ -232,13 +232,9 @@ export class HSSettingActions {
             (mod) => mod.disableAutomationQuickbar()
         ),
 
-        // The game's "Corruption loadouts" header module, which is in the page from the start
+        // The game's corruption loadout header modules, which are in the page from the start
         corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
             HSCorruption.setHeaderLevels(params.disable !== true);
-        },
-
-        corruptionHeaderCleanseAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderCleanse(params.disable !== true);
         }
     }
 

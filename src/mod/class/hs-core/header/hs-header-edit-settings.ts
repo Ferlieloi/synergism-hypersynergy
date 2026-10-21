@@ -64,10 +64,9 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         ],
     },
     {
-        title: 'Corruption module',
+        title: 'Corruption modules',
         toggles: [
             { setting: 'corruptionHeaderLevels', label: 'Levels line' },
-            { setting: 'corruptionHeaderCleanse', label: 'Cleanse on icon' },
         ],
     },
 ];
