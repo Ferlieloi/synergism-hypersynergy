@@ -191,7 +191,7 @@ export class HSAmbrosia extends HSModule
             color: 'var(--red-text-color)', title: 'Red ambrosia', exalt: 'noAmbrosiaUpgrades'
         },
         {
-            id: 'hsPurpleHoneyRate', resource: 'phoney', icon: 'Pictures/PurpleAmbrosia/PurpleAmbrosia.png',
+            id: 'hsPurpleHoneyRate', resource: 'phoney', icon: 'Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png',
             color: 'var(--purple-text-color)', title: 'Purple honey', exalt: 'taxmanLastStand'
         },
     ];
