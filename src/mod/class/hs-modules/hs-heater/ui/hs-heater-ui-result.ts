@@ -1,14 +1,14 @@
-import { HSUI } from "../../hs-core/hs-ui";
-import { HSLogger } from "../../hs-core/hs-logger";
-import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
-import { HSQuickbarIconPickerController } from "../hs-loadout-icons/hs-loadout-icon-picker";
-import { escapeHtml } from "./hs-heater-utils";
+import { HSUI } from "../../../hs-core/hs-ui";
+import { HSLogger } from "../../../hs-core/hs-logger";
+import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
+import { HSQuickbarIconPickerController } from "../../hs-loadout-icons/hs-loadout-icon-picker";
+import { escapeHtml } from "../hs-heater-utils";
 import { buildResultTableHtmlFromNormalized } from "./hs-heater-ui-result-renderer";
-import { clearHeaterIconOverride, getEffectiveHeaterIconSrc, getOverrideHeaterIconSrc, setHeaterIconOverride, } from "./hs-heater-icon-store";
-import { HSHeaterResultStore } from "./hs-heater-result-store";
-import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
-import { getHeaterExaltRules } from "./hs-heater-result-config";
-import type { HSAmbrosia } from "../hs-ambrosia";
+import { clearHeaterIconOverride, getEffectiveHeaterIconSrc, getOverrideHeaterIconSrc, setHeaterIconOverride, } from "../hs-heater-icon-store";
+import { HSHeaterResultStore } from "../hs-heater-result-store";
+import type { NormalizedHeaterResultEntry } from "../hs-heater-result-store";
+import { getHeaterExaltRules } from "../hs-heater-result-config";
+import type { HSAmbrosia } from "../../hs-ambrosia";
 
 // === Loadout Preview Metadata Type and Map ===
 type LoadoutPreviewMeta = { iconFile: string };

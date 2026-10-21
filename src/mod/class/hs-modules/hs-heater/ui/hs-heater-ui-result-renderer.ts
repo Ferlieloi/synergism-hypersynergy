@@ -1,8 +1,8 @@
-import { escapeHtml, formatNumber } from "./hs-heater-utils";
-import { getEffectiveHeaterIconSrc } from "./hs-heater-icon-store";
-import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "./hs-heater-result-config";
-import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "./hs-heater-result-store";
-import type { HeaterResultArrayKey, HeaterResultRow } from "../../../types/data-types/hs-heater-types";
+import { escapeHtml, formatNumber } from "../hs-heater-utils";
+import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
+import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
+import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
+import type { HeaterResultArrayKey, HeaterResultRow } from "../../../../types/data-types/hs-heater-types";
 
 type ResultKey = HeaterResultArrayKey;
 

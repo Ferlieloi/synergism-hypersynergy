@@ -1,4 +1,4 @@
-import { HSUI } from "../../hs-core/hs-ui";
+import { HSUI } from "../../../hs-core/hs-ui";
 
 export class HSHeaterUIStyles {
     static #heaterStylesInjected = false;

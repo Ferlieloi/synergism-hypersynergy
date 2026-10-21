@@ -1,22 +1,22 @@
 import Decimal from "break_infinity.js";
-import { HSUIC } from "../../hs-core/hs-ui-components";
-import { HSSettings } from "../../hs-core/settings/hs-settings";
-import { HSIcons } from "../../hs-utils/hs-icons";
-import { HSUtils } from "../../hs-utils/hs-utils";
-import { escapeHtml } from "./hs-heater-utils";
-import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "./hs-heater-icon-store";
-import { HSHeaterResultStore } from "./hs-heater-result-store";
-import type { HeaterOptimizerInput } from "../../../types/data-types/hs-heater-types";
-import type { HeaterBranchId } from "./hs-heater-result-config";
-import { HSInputType } from "../../../types/module-types/hs-ui-types";
+import { HSUIC } from "../../../hs-core/hs-ui-components";
+import { HSSettings } from "../../../hs-core/settings/hs-settings";
+import { HSIcons } from "../../../hs-utils/hs-icons";
+import { HSUtils } from "../../../hs-utils/hs-utils";
+import { escapeHtml } from "../hs-heater-utils";
+import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "../hs-heater-icon-store";
+import { HSHeaterResultStore } from "../hs-heater-result-store";
+import type { HeaterOptimizerInput } from "../../../../types/data-types/hs-heater-types";
+import type { HeaterBranchId } from "../hs-heater-result-config";
+import { HSInputType } from "../../../../types/module-types/hs-ui-types";
 import {
     exportFieldExtractors,
     inputDefinitions,
     type HeaterInputBase,
     type HeaterInputField,
     type HeaterInputKey,
-} from "./hs-heater-input-config";
-import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
+} from "../hs-heater-input-config";
+import { HEATER_BRANCH_DEFINITIONS } from "../hs-heater-result-config";
 
 type HeaterInputValue = HeaterInputBase[HeaterInputKey];
 

@@ -1,8 +1,8 @@
-import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
-import { HSUI } from "../../hs-core/hs-ui";
+import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
+import { HSUI } from "../../../hs-core/hs-ui";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { buildRedAmbrosiaUpgradeTableHtml, type RedAmbrosiaUpgradeSortKey, type RedAmbrosiaUpgradeSortState } from "./hs-heater-red-ambrosia-table";
-import { EPredefinedPosition } from "../../../types/module-types/hs-ui-types";
+import { EPredefinedPosition } from "../../../../types/module-types/hs-ui-types";
 
 function buildRedAmbrosiaModalHtml(
     compactView = true,

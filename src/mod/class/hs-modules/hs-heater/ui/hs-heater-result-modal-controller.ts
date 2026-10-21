@@ -1,11 +1,11 @@
-import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
-import { HSUI } from "../../hs-core/hs-ui";
+import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
+import { HSUI } from "../../../hs-core/hs-ui";
 import { HSHeaterUIStyles } from "./hs-heater-ui-styles";
 import { HSHeaterUIResult } from "./hs-heater-ui-result";
-import { HSHeaterResultStore } from "./hs-heater-result-store";
+import { HSHeaterResultStore } from "../hs-heater-result-store";
 import { buildResultTableHtmlFromNormalized } from "./hs-heater-ui-result-renderer";
-import type { HeaterOptimizationResult } from "../../../types/data-types/hs-heater-types";
-import type { NormalizedHeaterResultEntry } from "./hs-heater-result-store";
+import type { HeaterOptimizationResult } from "../../../../types/data-types/hs-heater-types";
+import type { NormalizedHeaterResultEntry } from "../hs-heater-result-store";
 
 export class HSHeaterResultModalController {
     static currentResultModalId: string | null = null;
