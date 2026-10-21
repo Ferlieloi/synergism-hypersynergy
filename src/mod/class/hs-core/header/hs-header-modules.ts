@@ -14,6 +14,9 @@ const STACK_CAPACITY = 2;
 const MAX_SLOT_INDEX = 200;
 const SIZES = ['S', 'M', 'L'];
 
+// Only the mod's modules in it: a slot the patcher's strip empties
+const isModSlot = (slot: string[]) => slot.length > 0 && slot.every(id => /^hs[A-Z]/.test(id));
+
 /** One layout of the game's header (player.headerLayouts.desktop / .mobile), the parts the mod reads and writes. */
 interface HSHeaderLayout {
     regions: Record<string, string[][]>;
@@ -26,6 +29,10 @@ interface HSHeaderLayout {
 interface HSHeaderModulePlace {
     region: string;
     index: number;
+    // In a row: the game's slots before it. The mod's slots there come and go (each module is put back at its own
+    // register()), so counting them would put a module one slot further each time another one before it comes later.
+    // None in notes from before it was kept (index then)
+    gameIndex?: number;
     // The modules stacked with it
     partners: string[];
     size?: string;
@@ -165,7 +172,7 @@ export class HSHeaderModules {
             // Every missing module back first, then every place noted: a module noted before its partner is put back
             // into its slot would be noted alone
             for (const id of HSHeaderModules.#modules.keys()) {
-                if (!HSHeaderModules.#findPlace(layout, id)) HSHeaderModules.#putBack(layout, id, notes.layouts[key]?.[id]);
+                if (!HSHeaderModules.#findPlace(layout, id)) HSHeaderModules.#putBack(layout, id, notes.layouts[key]);
             }
             for (const id of HSHeaderModules.#modules.keys()) {
                 const place = HSHeaderModules.#findPlace(layout, id);
@@ -198,6 +205,7 @@ export class HSHeaderModules {
                 partners: slots[index].filter(other => other !== id),
                 hidden: layout.hidden.includes(id)
             };
+            if (region !== GRID_REGION) place.gameIndex = slots.slice(0, index).filter(slot => Array.isArray(slot) && !isModSlot(slot)).length;
             if (layout.sizes[id]) place.size = layout.sizes[id];
             if (place.partners.length > 0) place.stackIndex = slots[index].indexOf(id);
             return place;
@@ -206,7 +214,8 @@ export class HSHeaderModules {
     }
 
     /** Put a module back at its remembered place, as the game would have it; hidden when there's none or it's taken. */
-    static #putBack(layout: HSHeaderLayout, id: string, place: HSHeaderModulePlace | undefined): void {
+    static #putBack(layout: HSHeaderLayout, id: string, noted: Record<string, HSHeaderModulePlace> | undefined): void {
+        const place = noted?.[id];
         const slots = place ? layout.regions[place.region] : undefined;
         let placed = false;
 
@@ -230,7 +239,7 @@ export class HSHeaderModules {
                     placed = true;
                 }
             } else {
-                slots.splice(Math.min(place.index, slots.length), 0, [id]);
+                slots.splice(HSHeaderModules.#rowIndex(slots, place, noted!), 0, [id]);
                 placed = true;
             }
             // Alone, not the S size its stack had
@@ -244,6 +253,19 @@ export class HSHeaderModules {
             delete layout.sizes[id];
         }
         if ((!placed || place?.hidden) && !layout.hidden.includes(id)) layout.hidden.push(id);
+    }
+
+    /** Where a module goes back in a row: after its game slots, and after the mod's modules back there that were before it. */
+    static #rowIndex(slots: string[][], place: HSHeaderModulePlace, noted: Record<string, HSHeaderModulePlace>): number {
+        if (place.gameIndex === undefined) return Math.min(place.index, slots.length);
+
+        let at = 0;
+        for (let seen = 0; at < slots.length && seen < place.gameIndex; at++) {
+            if (Array.isArray(slots[at]) && !isModSlot(slots[at])) seen++;
+        }
+        while (at < slots.length && Array.isArray(slots[at]) && isModSlot(slots[at])
+            && slots[at].some(other => (noted[other]?.index ?? Infinity) < place.index)) at++;
+        return at;
     }
 
     /** Take a module out of a layout, as the game takes one out of a stack. */
@@ -281,6 +303,8 @@ export class HSHeaderModules {
                 const valid = /^hs[A-Z]/.test(id) && !!place && typeof place === 'object'
                     && typeof place.region === 'string'
                     && Number.isInteger(place.index) && place.index! >= 0 && place.index! <= MAX_SLOT_INDEX
+                    && (place.gameIndex === undefined
+                        || (Number.isInteger(place.gameIndex) && place.gameIndex >= 0 && place.gameIndex <= MAX_SLOT_INDEX))
                     && Array.isArray(place.partners) && place.partners.every(partner => typeof partner === 'string')
                     && typeof place.hidden === 'boolean'
                     && (place.size === undefined || SIZES.includes(place.size))
@@ -288,7 +312,9 @@ export class HSHeaderModules {
                         || (Number.isInteger(place.stackIndex) && place.stackIndex >= 0 && place.stackIndex < STACK_CAPACITY));
                 if (!valid) continue;
                 (notes.layouts[key] ??= {})[id] = {
-                    region: place.region!, index: place.index!, partners: [...place.partners!], hidden: place.hidden!,
+                    region: place.region!, index: place.index!,
+                    ...(place.gameIndex !== undefined ? { gameIndex: place.gameIndex } : {}),
+                    partners: [...place.partners!], hidden: place.hidden!,
                     ...(place.size ? { size: place.size } : {}),
                     ...(place.stackIndex !== undefined ? { stackIndex: place.stackIndex } : {})
                 };
