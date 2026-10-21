@@ -26,8 +26,8 @@
    #mobileHeaderContent's column, where the game orders the row 1, the grid 2 and the panel 4 */
 html.hs-header-stats-bottom #ascensionStats {
    order: 3;
-   /* The grid's 5px bottom margin plus this: the row's 10px gap to the grid, as at the top */
-   margin-top: 5px;
+   /* Only the grid's 5px bottom margin: a tighter gap than the row's 10px at the top */
+   margin-top: 0;
 }
 
 /* The row's top margin no longer keeps the grid off the top of the page (mobile has its own) */
