@@ -53,14 +53,14 @@ const CORRUPTION_NAME_OPTIONS = optionsFromKeys([
 
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
-        calculationName: "Consumable Event Buff",
+        calculationName: "Event Buff: Consumables",
         fnName: "calculateConsumableEventBuff",
         fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Shop Upgrade",
+        calculationName: "Ambrosia Speed: Shop Upgrade",
         fnName: "calculateAmbrosiaGenerationShopUpgrade",
         fnParams: [
             {
@@ -74,7 +74,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Singularity Upgrade",
+        calculationName: "Ambrosia Speed: Singularity Upgrade",
         fnName: "calculateAmbrosiaGenerationSingularityUpgrade",
         fnParams: [
             {
@@ -87,7 +87,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Octeract Upgrade",
+        calculationName: "Ambrosia Speed: Octeract Upgrade",
         fnName: "calculateAmbrosiaGenerationOcteractUpgrade",
         fnParams: [
             {
@@ -100,28 +100,28 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Milestone Blueberries",
+        calculationName: "Ambrosia Blueberries: Singularity Milestones",
         fnName: "calculateSingularityMilestoneBlueberries",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Dilated Five Leaf Bonus",
+        calculationName: "Ambrosia Luck: Dilated Five-Leaf Clover",
         fnName: "calculateDilatedFiveLeafBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Ambrosia Luck Milestone Bonus",
+        calculationName: "Ambrosia Luck: Singularity Milestones",
         fnName: "calculateSingularityAmbrosiaLuckMilestoneBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Shop Upgrade",
+        calculationName: "Ambrosia Luck: Shop Upgrade",
         fnName: "calculateAmbrosiaLuckShopUpgrade",
         fnParams: [
             {
@@ -135,7 +135,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Singularity Upgrade",
+        calculationName: "Ambrosia Luck: Singularity Upgrade",
         fnName: "calculateAmbrosiaLuckSingularityUpgrade",
         fnParams: [
             {
@@ -148,7 +148,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Octeract Upgrade",
+        calculationName: "Ambrosia Luck: Octeract Upgrade",
         fnName: "calculateAmbrosiaLuckOcteractUpgrade",
         fnParams: [
             {
@@ -161,7 +161,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Total Cubes",
+        calculationName: "Cubes Opened (log10 sum)",
         fnName: "calculateTotalCubesExp",
         fnParams: [],
         supportsReduce: false,
@@ -181,49 +181,49 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Campaign Ambrosia Speed Bonus",
+        calculationName: "Ambrosia Speed: Campaign Bonus",
         fnName: "calculateCampaignAmbrosiaSpeedBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Campaign Luck Bonus",
+        calculationName: "Ambrosia Luck: Campaign Bonus",
         fnName: "calculateCampaignLuckBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Cookie Upgrade 29 Luck",
+        calculationName: "Ambrosia Luck: Cookie Upgrade 29",
         fnName: "calculateCookieUpgrade29Luck",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Sum Of Exalt Completions",
+        calculationName: "Exalt Completions",
         fnName: "calculateSumOfExaltCompletions",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Number Of Thresholds",
+        calculationName: "Ambrosia Thresholds",
         fnName: "calculateNumberOfThresholds",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "To Next Threshold",
+        calculationName: "Ambrosia Thresholds: Ambrosia to Next",
         fnName: "calculateToNextThreshold",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Required Blueberry Time",
+        calculationName: "Ambrosia Bar Requirement",
         fnName: "calculateRequiredBlueberryTime",
         fnParams: [
             {
@@ -241,7 +241,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Required Red Ambrosia Time",
+        calculationName: "Red Ambrosia Bar Requirement",
         fnName: "calculateRequiredRedAmbrosiaTime",
         fnParams: [
             {
@@ -261,7 +261,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Hepteract Effective",
+        calculationName: "Hepteract Effective Amount",
         fnName: "calculateHepteractEffective",
         fnParams: [
             {
@@ -288,14 +288,14 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Limited Ascensions Debuff",
+        calculationName: "Exalt Debuff: Limited Ascensions",
         fnName: "calculateLimitedAscensionsDebuff",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Reductions",
+        calculationName: "Singularity Debuff: Reductions",
         fnName: "calculateSingularityReductions",
         fnParams: [
             {
@@ -313,7 +313,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Effective Singularities",
+        calculationName: "Singularity Debuff: Effective Singularities",
         fnName: "calculateEffectiveSingularities",
         fnParams: [SINGULARITY_COUNT_PARAM],
         supportsReduce: false,
@@ -361,7 +361,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Raw Ascension Speed Mult",
+        calculationName: "Ascension Speed Multiplier: Raw",
         fnName: "calculateRawAscensionSpeedMult",
         fnParams: [
             {
@@ -375,7 +375,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ascension Speed Mult",
+        calculationName: "Ascension Speed Multiplier",
         fnName: "calculateAscensionSpeedMult",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -396,7 +396,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Blueberry Inventory",
+        calculationName: "Ambrosia Blueberries",
         fnName: "calculateBlueberryInventory",
         fnParams: [
             {
@@ -409,7 +409,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Luck",
+        calculationName: "Ambrosia Luck",
         fnName: "calculateLuck",
         fnParams: [
             {
@@ -423,7 +423,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Luck Conversion",
+        calculationName: "Red Ambrosia Luck: Conversion",
         fnName: "calculateLuckConversion",
         fnParams: [
             {
@@ -458,21 +458,21 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Total Salvage",
+        calculationName: "Rune Salvage",
         fnName: "calculateTotalSalvage",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Positive Salvage",
+        calculationName: "Rune Salvage: Positive",
         fnName: "calculatePositiveSalvage",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Negative Salvage",
+        calculationName: "Rune Salvage: Negative",
         fnName: "calculateNegativeSalvage",
         fnParams: [],
         supportsReduce: false,
@@ -513,14 +513,14 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Panthema Ambrosia Luck",
+        calculationName: "Ambrosia Luck: Panthema",
         fnName: "calculatePanthemaAmbrosiaLuck",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Panthema Red Luck",
+        calculationName: "Red Ambrosia Luck: Panthema",
         fnName: "calculatePanthemaRedLuck",
         fnParams: [MODE_PARAM],
         supportsReduce: false,
@@ -549,42 +549,42 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     // ----- Cubes, ascension, corruptions -----
     {
-        calculationName: "Cube Multiplier",
+        calculationName: "Cube Multiplier: Cubes",
         fnName: "calculateCubeMultiplier",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Cube Multiplier With Tau",
+        calculationName: "Cube Multiplier: Cubes With Tau",
         fnName: "calculateCubeMultiplierWithTau",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Tesseract Multiplier",
+        calculationName: "Cube Multiplier: Tesseracts",
         fnName: "calculateTesseractMultiplier",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Hypercube Multiplier",
+        calculationName: "Cube Multiplier: Hypercubes",
         fnName: "calculateHypercubeMultiplier",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Platonic Multiplier",
+        calculationName: "Cube Multiplier: Platonics",
         fnName: "calculatePlatonicMultiplier",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Hepteract Multiplier",
+        calculationName: "Cube Multiplier: Hepteracts",
         fnName: "calculateHepteractMultiplier",
         fnParams: [],
         supportsReduce: false,
@@ -620,14 +620,14 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     // ----- Runes, talismans, other -----
     {
-        calculationName: "Total Rune Levels",
+        calculationName: "Rune Levels (Total)",
         fnName: "calculateTotalRuneLevels",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Talisman Rarity Total",
+        calculationName: "Talisman Rarity (Total)",
         fnName: "calculateTalismanRarityTotal",
         fnParams: [],
         supportsReduce: false,
@@ -641,7 +641,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "True Ant Level",
+        calculationName: "Ant Upgrade True Level",
         fnName: "calculateTrueAntLevel",
         fnParams: [
             {
@@ -654,7 +654,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Event Source Buff",
+        calculationName: "Event Buff",
         fnName: "calculateEventSourceBuff",
         fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,

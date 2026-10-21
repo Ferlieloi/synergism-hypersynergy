@@ -85,8 +85,10 @@ export class HSCalculationTools {
     // ------------ Params -----------
     // ===============================
 
+    // A→Z: names start with their topic ("Ambrosia Luck: Shop Upgrade"), so related entries sit together
     static #definitions(): HSCalculationDefinition[] {
-        return HSGameDataAPI.getCalculationDefinitions({ toolingSupport: "true" });
+        return HSGameDataAPI.getCalculationDefinitions({ toolingSupport: "true" })
+            .sort((a, b) => a.calculationName.localeCompare(b.calculationName, 'en'));
     }
 
     static #selectedDefinition(): HSCalculationDefinition | undefined {
