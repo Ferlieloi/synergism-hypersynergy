@@ -29,6 +29,7 @@
 #hs-header-loadout-pick-row {
    display: flex;
    justify-content: center;
+   gap: 8px;
    padding: 0 15px 15px;
 }
 #hs-header-loadout-pick-row > button {

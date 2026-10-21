@@ -199,7 +199,13 @@ export class HSHeaderLoadoutIcons extends HSModule {
         pickButton.textContent = '[HS] Pick any game icon…';
         pickButton.title = 'HyperSynergism: click this, then click any icon or image of the game';
         pickButton.addEventListener('click', this.#onPickClick);
-        newRow.appendChild(pickButton);
+        // The game closes its icon modal only on one of its choices
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.textContent = 'Close';
+        closeButton.title = 'Close without changing the icon';
+        closeButton.addEventListener('click', HSHeaderLoadoutIcons.#closeGameIconModal);
+        newRow.append(pickButton, closeButton);
         modal.appendChild(newRow);
     }
 
@@ -207,8 +213,15 @@ export class HSHeaderLoadoutIcons extends HSModule {
         const target = this.#pressedSlot;
         if (!target) return;
 
-        // Close the game's modal through its own choice that changes nothing (the current one): its
-        // listener closes it and stops its update timer. Not trusted, so it doesn't clear the mod icon.
+        HSHeaderLoadoutIcons.#closeGameIconModal();
+        this.#iconPicker.start(target);
+    };
+
+    /**
+     * Closes the game's icon modal through its own choice that changes nothing (the current one): its listener
+     * closes it and stops its update timer. Not trusted, so it doesn't clear the mod icon.
+     */
+    static #closeGameIconModal = (): void => {
         const modalContent = document.getElementById('modalContent');
         const current = modalContent?.querySelector<HTMLButtonElement>('.headerLoadoutIcons > button[aria-pressed="true"]');
         if (current) {
@@ -218,8 +231,6 @@ export class HSHeaderLoadoutIcons extends HSModule {
             if (modal) modal.style.display = 'none';
         }
         document.getElementById(PICK_ROW_ID)?.remove();
-
-        this.#iconPicker.start(target);
     };
 
     /** The player's choice in the game's icon modal (an icon or the plain number) clears the mod icon. */
