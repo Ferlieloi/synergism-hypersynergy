@@ -26,6 +26,8 @@ type AscensionIncomeSnapshot = {
 type PlatonicResourceEstimate = {
     resource: string;
     seconds: number;
+    // Not owned yet: the next ascension's gain is needed
+    needsAscension: boolean;
 };
 
 type HepteractQuickExpandEstimate = {
@@ -655,14 +657,18 @@ export class HSHepteracts extends HSModule {
         statsElement: HTMLElement,
         incomeElement: HTMLElement,
         unitElement: HTMLElement,
-        targetPerSecond: boolean
+        targetPerSecond: boolean,
+        waitForAmount = true
     ): Promise<boolean> {
         const previousIncomeText = incomeElement.textContent ?? '';
-        const incomeUpdated = HSUtils.waitForInnerText(
+        const incomeUpdated = !waitForAmount ? Promise.resolve(true) : HSUtils.waitForInnerText(
             incomeElement,
             text => text !== previousIncomeText,
             500
-        ).catch(() => undefined);
+        ).then(() => true, () => {
+            HSLogger.debug(() => `#${incomeElement.id}: amount still "${previousIncomeText}" 500 ms after switching to ${targetPerSecond ? '/s' : 'on ascension'}`, this.context);
+            return false;
+        });
 
         statsElement.click();
 
@@ -694,6 +700,9 @@ export class HSHepteracts extends HSModule {
         const readDisplayedIncome = () => HSNumberParser.parse(incomeElement.innerText);
         let rawPerSecond: number;
         let onAscension: number;
+        // Nothing on ascension means 0/s too: both modes show the same amount,
+        // so waiting for it to change would only run into the timeout.
+        let nothingOnAscension = false;
 
         try {
             if (wasPerSecond) {
@@ -711,13 +720,16 @@ export class HSHepteracts extends HSModule {
                 }
 
                 onAscension = readDisplayedIncome();
+                nothingOnAscension = onAscension === 0;
             } else {
                 onAscension = readDisplayedIncome();
+                nothingOnAscension = onAscension === 0;
                 const switched = await this.#switchAscensionIncomeMode(
                     statsElement,
                     incomeElement,
                     unitElement,
-                    true
+                    true,
+                    !nothingOnAscension
                 );
 
                 if (!switched) {
@@ -732,6 +744,9 @@ export class HSHepteracts extends HSModule {
             const ascensionSpeed = ascensionSpeedText.endsWith('*')
                 ? 1e6
                 : HSNumberParser.parse(ascensionSpeedText);
+
+            HSLogger.debug(() => `#${incomeElementIds[resourceId]}: ${onAscension} on ascension, ${rawPerSecond}/s`
+                + ` at ascension speed "${ascensionSpeedText}" (read as ${ascensionSpeed})`, this.context);
 
             if (Number.isNaN(rawPerSecond) || Number.isNaN(onAscension) || Number.isNaN(ascensionSpeed)) {
                 return null;
@@ -751,7 +766,8 @@ export class HSHepteracts extends HSModule {
                     statsElement,
                     incomeElement,
                     unitElement,
-                    wasPerSecond
+                    wasPerSecond,
+                    !nothingOnAscension
                 );
             }
         }
@@ -803,16 +819,23 @@ export class HSHepteracts extends HSModule {
         owned: number,
         income: AscensionIncomeSnapshot | null
     ): PlatonicResourceEstimate {
-        if (required <= owned) return { resource, seconds: 0 };
-        if (!income) return { resource, seconds: Number.POSITIVE_INFINITY };
+        const estimate = this.#estimateResourceSeconds(required, owned, income);
+        HSLogger.debug(() => `${resource}: need ${required}, own ${owned}, `
+            + (income ? `+${income.onAscension} on ascension, ${income.perSecond}/s real time` : 'no income read')
+            + ` -> ${this.#formatDuration(estimate)}`, this.context);
+        return { resource, seconds: estimate, needsAscension: required > owned };
+    }
+
+    #estimateResourceSeconds(required: number, owned: number, income: AscensionIncomeSnapshot | null): number {
+        if (required <= owned) return 0;
+        if (!income) return Number.POSITIVE_INFINITY;
 
         const remainingAfterAscension = Math.max(0, required - owned - income.onAscension);
-        const seconds = remainingAfterAscension === 0
+        return remainingAfterAscension === 0
             ? 0
             : income.perSecond > 0
                 ? remainingAfterAscension / income.perSecond
                 : Number.POSITIVE_INFINITY;
-        return { resource, seconds };
     }
 
     async #updatePlatonicUpgradeEstimate(upgradeId: number) {
@@ -827,7 +850,7 @@ export class HSHepteracts extends HSModule {
         const levelText = document.querySelector('#platonicUpgradeLevel')?.textContent ?? '';
         const levelValues = HSNumberParser.parseAll(levelText);
         if (levelValues.length >= 2 && levelValues[0] >= levelValues[1]) {
-            this.#showPlatonicUpgradeEstimate('Time until next level: maxed | Longest requirement: none');
+            this.#showPlatonicUpgradeEstimate('Time until next level: maxed\nLongest requirement: none');
             return;
         }
 
@@ -844,13 +867,20 @@ export class HSHepteracts extends HSModule {
             return;
         }
 
+        const startTime = performance.now();
         const income = await this.#readAllAscensionIncome();
-        if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
+        const incomeTime = performance.now();
+        if (this.#hoveredPlatonicUpgradeId !== upgradeId) {
+            HSLogger.debug(() => `Platonic upgrade ${upgradeId}: no longer hovered after the income read (${Math.round(incomeTime - startTime)} ms)`, this.context);
+            return;
+        }
 
         // Read owned resources after sampling the header modes so the ETA does
         // not use the older periodic GDS snapshot. This forces one save-derived
         // refresh without enabling GDS turbo mode.
         const gameData = await gameDataAPI.getForcedGameData();
+        HSLogger.debug(() => `Platonic upgrade ${upgradeId}: income read in ${Math.round(incomeTime - startTime)} ms,`
+            + ` save forced in ${Math.round(performance.now() - incomeTime)} ms`, this.context);
         if (this.#hoveredPlatonicUpgradeId !== upgradeId) return;
         if (!gameData) {
             this.#showPlatonicUpgradeEstimate('Upgrade time unavailable: could not refresh current resources.');
@@ -890,10 +920,47 @@ export class HSHepteracts extends HSModule {
         ];
 
         const bottleneck = estimates.reduce((longest, current) => current.seconds > longest.seconds ? current : longest);
-        const longestRequirement = bottleneck.seconds > 0 ? bottleneck.resource : 'none';
+        // Offerings and Obtainium have no rate to estimate from: the game's own
+        // check (its red/lime cost colour, set on hover) only tells whether they are short.
+        const notEstimated = [
+            { resource: 'Offerings', elementId: 'platonicOfferingCost' },
+            { resource: 'Obtainium', elementId: 'platonicObtainiumCost' }
+        ].filter(({ elementId }) => document.querySelector<HTMLElement>(`#${elementId}`)?.style.color !== 'lime')
+            .map(({ resource }) => resource);
+        HSLogger.debug(() => `Platonic upgrade ${upgradeId}: short and not estimated: ${notEstimated.join(', ') || 'none'}`, this.context);
+
+        // The time follows the cubes; Offerings / Obtainium only matter once the
+        // cubes are already owned (nothing left to wait for but them).
+        let time: string;
+        let longestRequirement = 'none';
+        if (bottleneck.seconds > 0) {
+            time = this.#formatDuration(bottleneck.seconds);
+            longestRequirement = bottleneck.resource;
+        } else if (estimates.some(estimate => estimate.needsAscension)) {
+            time = 'ready after ascending';
+        } else if (notEstimated.length > 0) {
+            time = 'unknown';
+            longestRequirement = `${notEstimated.join(' and ')} (not estimated)`;
+        } else {
+            time = 'ready now';
+        }
+        // Past Exalt 7's time limit, cube gains shrink every second, so the
+        // estimate (current rates kept) is too short.
+        const limitedTime = gameData.singularityChallenges?.limitedTime;
+        const exalt7Overtime = limitedTime?.enabled === true
+            && gameData.singChallengeTimer > this.#exalt7TimeLimit(limitedTime.completions);
+
         this.#showPlatonicUpgradeEstimate(
-            `Time until next level: ${this.#formatDuration(bottleneck.seconds)} | Longest requirement: ${longestRequirement}`
+            `Time until next level: ${time}${exalt7Overtime ? ' (Exalt 7 overtime: will take longer)' : ''}`
+            + `\nLongest requirement: ${longestRequirement}`
         );
+    }
+
+    // The game's calculateExalt6TimeLimit (the game's code numbers Exalt 7 as 6).
+    #exalt7TimeLimit(completions: number): number {
+        return completions >= 10
+            ? 114 - 6 * (completions - 10)
+            : 660 - 60 * completions;
     }
 
     #formatDuration(seconds: number): string {
