@@ -1,0 +1,40 @@
+/* Icons on the game's header loadout slots (HSHeaderLoadoutIcons). Injected by the module before it paints:
+   without position: relative on the slot, the game's absolute img (inset: 0) takes a far ancestor's size. */
+
+/* The mod's icons: placed as the game places its own, which it does only on slots with a data-icon */
+#mainHeader .headerLoadoutSlot.hs-header-loadout-custom {
+   position: relative;
+}
+
+/* The slot number on any icon (the game's or the mod's): small, in the top-left corner, as on the ambrosia quickbar */
+#mainHeader .headerLoadoutSlot.hs-header-loadout-custom > span,
+#mainHeader .headerLoadoutSlot[data-icon] > span {
+   position: absolute;
+   top: 0;
+   left: 2px;
+   font-size: 0.7em;
+   line-height: 1.1;
+   text-shadow: 0 0 2px black, 0 0 2px black, 0 0 2px black;
+}
+
+/* Above the game's slot borders (#corruptionLoadoutsHeaderSlots > …) and the loaded slot's rainbow/silver border
+   (hs-animations.css, !important, a border-image). Not a direct child of .headerLoadoutSlots: the corruption slots
+   sit in a display: contents span inside it */
+#mainHeader .headerLoadoutSlots .headerLoadoutSlot.hs-quickbar-slot-pickmode {
+   border: 2px dashed #ffff00 !important;
+   border-image: none !important;
+}
+
+/* Under the game's icon modal for a header slot, outside #modalContent (which the game patches) */
+#hs-header-loadout-pick-row {
+   display: flex;
+   justify-content: center;
+   gap: 8px;
+   padding: 0 15px 15px;
+}
+#hs-header-loadout-pick-row > button {
+   padding: 4px 10px;
+   border: 2px solid #ffffff40;
+   border-radius: 5px;
+   font-size: 1em;
+}

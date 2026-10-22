@@ -4,7 +4,7 @@ import { CalculationCache, CachedValue, ShopUpgradeGroups } from "../../../types
 import { ACHIEVEMENT_REWARD_TYPES } from "../../../types/data-types/hs-gamedata-api-types";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { SHOP_UPGRADE_GROUPS_BY_KEY, SHOP_UPGRADE_TYPE_KEYS } from "./stored-vars-and-calculations";
+import { SHOP_UPGRADE_GROUPS_BY_KEY, SHOP_UPGRADE_TYPE_KEYS } from "./hs-gamedata-tables";
 import type { AmbrosiaHelper } from "./hs-gamedata-api-ambrosia";
 
 export const checkCalculationCache = <T = number>(
@@ -93,6 +93,8 @@ export const createQuarkShopCalculationCacheEntries = (): Record<string, CachedV
         'shopSingularityPotency',
         'shopHorseShoe',
         'shopSingularityPenaltyDebuff',
+        'shopPurpleBarRebate',
+        'shopInfiniteShopUpgrades',
     ];
 
     for (const groupKeys of Object.values(SHOP_UPGRADE_TYPE_KEYS)) {
@@ -115,6 +117,7 @@ export const createQuarkShopCalculationCacheEntries = (): Record<string, CachedV
     }
 
     addCacheEntry('QUARKSHOP_FREE_QUARK_BONUS_LEVELS');
+    addCacheEntry('QUARKSHOP_FREE_QUARK_BONUS_LEVELS_TRUE_BASE');
     return entries;
 };
 
@@ -174,15 +177,12 @@ export const createCoreCalculationCacheEntries = (): Record<string, CachedValue>
         'AmbrosiaGenerationShopUpgrade',
         'AmbrosiaGenerationShopUpgrade_TRUE_BASE',
         'AmbrosiaGenerationShopUpgrade_NO_AMB',
-        'AmbrosiaGenerationSingularityUpgrade',
-        'AmbrosiaGenerationOcteractUpgrade',
         'AmbrosiaGenerationSpeedRaw',
         'AmbrosiaGenerationSpeedRaw_TRUE_BASE',
         'AmbrosiaGenerationSpeedRaw_NO_AMB',
         'AmbrosiaLuckShopUpgrade',
         'AmbrosiaLuckShopUpgrade_TRUE_BASE',
         'AmbrosiaLuckShopUpgrade_NO_AMB',
-        'AmbrosiaLuckSingularityUpgrade',
         'AmbrosiaLuckOcteractUpgrade',
         'PanthemaAmbrosiaLuck',
         'PanthemaAmbrosiaLuck_TRUE_BASE',
@@ -212,7 +212,11 @@ export const createCoreCalculationCacheEntries = (): Record<string, CachedValue>
         'HepteractEffective',
         'NumberOfThresholds',
         'RequiredBlueberryTime',
+        'RequiredBlueberryTime_IGNORE_TWO_MIND',
+        'RequiredBlueberryTime_IGNORE_BRICK',
+        'RequiredBlueberryTime_IGNORE_TWO_MIND_IGNORE_BRICK',
         'RequiredRedAmbrosiaTime',
+        'RequiredRedAmbrosiaTime_IGNORE_TWO_MIND',
         'RawAscensionSpeedMult',
         'RawAscensionSpeedMult_TRUE_BASE',
         'RawAscensionSpeedMult_NO_AMB',

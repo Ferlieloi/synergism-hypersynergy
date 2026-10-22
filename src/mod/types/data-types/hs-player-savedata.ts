@@ -27,30 +27,21 @@ export type WowTesseracts = number
 export type WowHypercubes = number
 export type WowPlatonicCubes = number
 
-export type JsonDecimal = string | number
-export type JsonDate = string | null
-
 
 export type ArrayStartingWithNull<T> = [null, ...T[]]
-export type AutoResetModes = 'amount' | 'time'
-export type AutoAscensionModes = 'amount' | 'percentage'
-export type AutoAscensionResetModes = 'c10Completions' | 'realAscensionTime'
-export type Tabs =
-  | 'Buildings'
-  | 'Upgrades'
-  | 'Achievements'
-  | 'Runes'
-  | 'Challenges'
-  | 'Research'
-  | 'AntHill'
-  | 'WowCubes'
-  | 'Campaign'
-  | 'Corruption'
-  | 'Singularity'
-  | 'Settings'
-  | 'Shop'
-  | 'Event'
-  | 'Purchase'
+// The game stores these modes as numbers (enums in its Toggles.ts); old string saves are converted on load.
+export enum AutoResetModes {
+  amount = 0,
+  time = 1
+}
+export enum AutoAscensionModes {
+  amount = 0,
+  percentage = 1
+}
+export enum AutoAscensionResetModes {
+  c10Completions = 0,
+  realAscensionTime = 1
+}
 
 
 export interface CampaignManager {
@@ -106,16 +97,6 @@ export interface PlayerAnts {
     alwaysSacrificeMaxRebornELO: boolean
     onlySacrificeMaxRebornELO: boolean
   }
-}
-
-/**
- * Represents the state of a single type of building or generator (Coins, Diamonds, Mythos, etc.).
- */
-export interface GeneratorStats {
-    owned: number;
-    generated: string; // Often large numbers stored as strings
-    cost: string;      // Often large numbers stored as strings
-    produce: number;
 }
 
 /**
@@ -347,12 +328,6 @@ export interface ShopToggles {
     reincarnate: boolean;
     // Add others if they exist
 }
-
-/**
- * Represents the structure for talisman enhancement levels (or similar attributes).
- * The first element is often null, followed by numbers.
- */
-export type TalismanEnhancementArray = (number | null)[];
 
 /**
  * Represents the blessings associated with Cubes, Tesseracts, and Hypercubes.
@@ -592,15 +567,6 @@ export interface History {
     ascend: AscendHistoryEntry[];
     reset: ResetHistoryEntry[];
     singularity: SingularityHistoryEntry[];
-}
-
-/**
- * Represents the timer settings for auto challenge retries.
- */
-export interface AutoChallengeTimer {
-    start: number;
-    exit: number;
-    enter: number;
 }
 
 /**
@@ -851,6 +817,8 @@ export interface SingularityChallengeRewards {
         talismanUnlock: boolean;
         talismanFreeLevel: number;
         talismanRuneEffect: number;
+        purpleHoneyLuck: number;
+        purpleBarSize: number;
         antiquityOOM: number;
         horseShoeOOM: number;
     };
@@ -1877,7 +1845,7 @@ export interface GameData {
 
     ascendShards: string; // Large values stored as string
     autoAscend: boolean;
-    autoAscendMode: string; // e.g., "realAscensionTime"
+    autoAscendMode: AutoAscensionResetModes;
     autoAscendThreshold: number;
     roombaResearchIndex: number;
     ascStatToggles: AscStatToggles;

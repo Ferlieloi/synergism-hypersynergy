@@ -1,5 +1,4 @@
 import { EKeyBoardKeys, HSMousePosition } from "../../types/hs-input-types";
-import { HSModuleOptions } from "../../types/hs-types";
 import { HSGlobal } from "./hs-global";
 import { HSLogger } from "./hs-logger";
 import { HSUI } from "./hs-ui";
@@ -15,24 +14,13 @@ import { HSSettings } from "./settings/hs-settings";
  */
 export class HSMouse extends HSModule {
 
-    static #staticContext = '';
-
     static #mousePosition: HSMousePosition = { x: 0, y: 0 };
     static #mousePositionDebugElement?: HTMLDivElement;
 
     static #hoverUpdateInterval: number | null;
     static #autoClickUpdateInterval: number | null;
 
-    static #ignoredElements: string[] = [];
-
-    constructor(moduleOptions : HSModuleOptions) {
-        super(moduleOptions);
-        HSMouse.#staticContext = moduleOptions.context;
-    }
-
     async init() {
-        const self = this;
-
         HSLogger.log(`Capturing mouse events`, this.context);
 
         // Bind mouse move
@@ -157,9 +145,5 @@ export class HSMouse extends HSModule {
             clearInterval(HSMouse.#autoClickUpdateInterval);
             HSMouse.#autoClickUpdateInterval = null;
         }
-    }
-
-    static getPosition() : HSMousePosition {
-        return this.#mousePosition;
     }
 }

@@ -1,7 +1,10 @@
-import { AMBROSIA_LOADOUT_SLOT } from "../../types/module-types/hs-ambrosia-types";
+import { AMBROSIA_LOADOUT_SLOT, BlueberryLoadoutMode } from "../../types/module-types/hs-ambrosia-types";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSUtils } from "../hs-utils/hs-utils";
 import { HSElementHooker } from "../hs-core/hs-elementhooker";
+import { HSGlobal } from "../hs-core/hs-global";
+import { HSModuleManager } from "../hs-core/module/hs-module-manager";
+import type { HSGameData } from "../hs-core/gds/hs-gamedata";
 
 /**
  * Class: HSAmbrosiaHelper
@@ -14,7 +17,13 @@ export class HSAmbrosiaHelper {
     static #context: string = 'HSAmbrosiaHelper';
 
     static #cachedBlueberryToggleModeButton: HTMLButtonElement | undefined;
-    static #cachedQuickbarSummaryElements: HTMLElement[] | undefined;
+    // Texts of the mode toggle button (normalized), in every language seen this session: the game writes
+    // the button from ambrosia.loadouts.load/save and doesn't re-translate it on a language switch.
+    static readonly #modeLabels: Record<BlueberryLoadoutMode, Set<string>> = {
+        loadTree: new Set(['MODE: LOAD LOADOUT']),
+        saveTree: new Set(['MODE: SAVE LOADOUT'])
+    };
+    static #modeLabelsLanguage?: string;
 
     static async cacheBlueberryToggleModeButton(): Promise<HTMLButtonElement | undefined> {
         if (this.#cachedBlueberryToggleModeButton instanceof HTMLButtonElement) {
@@ -23,19 +32,11 @@ export class HSAmbrosiaHelper {
         const element = await HSElementHooker.HookElement('#blueberryToggleMode');
         if (element instanceof HTMLButtonElement) {
             this.#cachedBlueberryToggleModeButton = element;
+            this.#refreshModeLabelsIfLanguageChanged();
             return element;
         }
         HSLogger.warn('Could not cache blueberry loadout mode toggle button', this.#context);
         return undefined;
-    }
-
-    static getCachedQuickbarSummaryElements(): HTMLElement[] {
-        if (this.#cachedQuickbarSummaryElements) {
-            return this.#cachedQuickbarSummaryElements;
-        }
-        const elements = Array.from(document.querySelectorAll<HTMLElement>('.hs-quickbar-summary-wrapper'));
-        this.#cachedQuickbarSummaryElements = elements;
-        return elements;
     }
 
     /** Resolve an ambrosia loadout slot enum by its slot ID string. */
@@ -88,24 +89,72 @@ export class HSAmbrosiaHelper {
         return loadoutEnum;
     }
 
+    static #normalizeModeLabel(text: string): string {
+        return text.replace(/\s+/g, ' ').trim().toUpperCase();
+    }
+
+    /** Add the mode button texts of the current game language, when it changed since the last load. */
+    static #refreshModeLabelsIfLanguageChanged(): void {
+        const language = localStorage.getItem('language') || 'en';
+        if (language === this.#modeLabelsLanguage) return;
+        this.#modeLabelsLanguage = language;
+
+        void Promise.all([
+            HSUtils.getGameTranslation('ambrosia.loadouts.load'),
+            HSUtils.getGameTranslation('ambrosia.loadouts.save')
+        ]).then(([loadLabel, saveLabel]) => {
+            if (loadLabel) this.#modeLabels.loadTree.add(this.#normalizeModeLabel(loadLabel));
+            if (saveLabel) this.#modeLabels.saveTree.add(this.#normalizeModeLabel(saveLabel));
+        });
+    }
+
+    /** The mode shown by the toggle button's text, if it matches a known label. Cheap: no save involved. */
+    static #readLoadoutModeFromButton(): BlueberryLoadoutMode | undefined {
+        const modeButton = this.#cachedBlueberryToggleModeButton;
+        if (!modeButton) return undefined;
+
+        this.#refreshModeLabelsIfLanguageChanged();
+        const text = this.#normalizeModeLabel(modeButton.textContent ?? '');
+        if (this.#modeLabels.loadTree.has(text)) return 'loadTree';
+        if (this.#modeLabels.saveTree.has(text)) return 'saveTree';
+        return undefined;
+    }
+
+    /**
+     * Read the game's loadout mode, independent of the game language, cheapest source first:
+     * 1. live player object (patched loaders),
+     * 2. the toggle button's text, compared with the game's labels in every language seen this session,
+     * 3. a fresh save captured synchronously by GDS (a full game save: only when the text is unknown).
+     * Returns undefined when none is available.
+     */
+    static #readLoadoutMode(): BlueberryLoadoutMode | undefined {
+        const playerMode = HSGlobal.exposedPlayer?.blueberryLoadoutMode;
+        if (playerMode === 'loadTree' || playerMode === 'saveTree') return playerMode;
+
+        const buttonMode = this.#readLoadoutModeFromButton();
+        if (buttonMode) return buttonMode;
+
+        const rawSave = HSModuleManager.getModule<HSGameData>('HSGameData')?.forceCaptureRawSaveSync();
+        const savedMode = rawSave?.match(/"blueberryLoadoutMode"\s*:\s*"(loadTree|saveTree)"/)?.[1];
+        return savedMode as BlueberryLoadoutMode | undefined;
+    }
+
+    /** Whether the game is currently in the specified loadout mode. Rarely, may trigger a game save (GDS). */
+    static isLoadoutMode(mode: BlueberryLoadoutMode): boolean {
+        const currentMode = this.#readLoadoutMode();
+        if (currentMode) return currentMode === mode;
+
+        HSLogger.warn(`Could not determine the Ambrosia loadout mode.`, this.#context);
+        return false;
+    }
+
     /** Ensure the game is in the specified loadout mode before clicking slots. */
-    static ensureLoadoutMode(mode: 'LOAD' | 'SAVE'): void {
+    static ensureLoadoutMode(mode: BlueberryLoadoutMode): void {
         const modeButton = this.#cachedBlueberryToggleModeButton;
         if (!modeButton) { HSLogger.warn(`modeButton not found.`, this.#context); return; }
 
-        const currentMode = modeButton.innerText?.trim().toUpperCase();
-        const expectedMode = `MODE: ${mode} LOADOUT`;
-        if (currentMode !== expectedMode) {
+        if (!this.isLoadoutMode(mode)) {
             modeButton.click();
         }
-    }
-
-    /** Show or hide other quickbars' summary headers. */
-    static setQuickbarTopTextVisibility(visibility: boolean): void {
-        const quickbarSummaryElements = this.getCachedQuickbarSummaryElements();
-
-        quickbarSummaryElements.forEach(
-            (el) => el.classList.toggle('hs-hidden', !visibility)
-        );
     }
 }

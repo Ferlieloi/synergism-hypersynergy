@@ -3,11 +3,24 @@ import type { GameData } from "../../../types/data-types/hs-player-savedata";
 export interface PurpleHelperContext {
     getGameData: () => GameData | undefined;
     calculateBlueberryInventory: () => number;
+    calculateSynergismLevel: () => number;
+    getPCoinUpgradeLevel: (upgradeKey: string) => number;
+    getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number;
+    getRuneEffects: (runeKey: string) => any;
+    getTalismanEffects: (talismanKey: string) => any;
     getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
 }
 
 export type PurpleReactorUpgradeKey =
     | 'tutorial'
+    | 'purpleEfficiency1'
+    | 'purpleEfficiency2'
+    | 'purpleEfficiency3'
+    | 'purpleEfficiency4'
+    | 'purpleHoneyLuck1'
+    | 'purpleHoneyLuck2'
+    | 'purpleHoneyLuck3'
+    | 'purpleHoneyLuck4'
     | 'purpleHoneyRequirementReduction1'
     | 'purpleHoneyRequirementReduction2'
     | 'purpleHoneyRequirementReduction3'
@@ -33,6 +46,14 @@ interface PurpleUpgradeDefinition {
 // cumulative Purple Honey investments, so levels must be reconstructed.
 const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDefinition> = {
     tutorial: { maxLevel: 15, costFormula: (level) => level * (level + 1) / 2 },
+    purpleEfficiency1: { maxLevel: 20, costFormula: (level) => 3 * level },
+    purpleEfficiency2: { maxLevel: 20, costFormula: (level) => 60 * level },
+    purpleEfficiency3: { maxLevel: 30, costFormula: (level) => 1_200 * level },
+    purpleEfficiency4: { maxLevel: 30, costFormula: (level) => 24_000 * level },
+    purpleHoneyLuck1: { maxLevel: 10, costFormula: (level) => 7 * level },
+    purpleHoneyLuck2: { maxLevel: 15, costFormula: (level) => 140 * level },
+    purpleHoneyLuck3: { maxLevel: 20, costFormula: (level) => 2_800 * level },
+    purpleHoneyLuck4: { maxLevel: 25, costFormula: (level) => 56_000 * level },
     purpleHalfLife1: { maxLevel: 50, costFormula: (level) => 12 * level },
     purpleHalfLife2: { maxLevel: 50, costFormula: (level) => 240 * level },
     purpleHalfLife3: { maxLevel: 50, costFormula: (level) => 4_800 * level },
@@ -101,6 +122,12 @@ export class PurpleHelper {
         const lifetimePurpleHoney = Number(data.purpleReactor?.lifetimePurpleHoney ?? 0);
 
         if (upgradeKey === 'tutorial') return 1 + 0.01 * level;
+        if (upgradeKey.startsWith('purpleEfficiency') && effectKey === 'purpleEfficiency') {
+            return 0.01 * level;
+        }
+        if (upgradeKey.startsWith('purpleHoneyLuck') && effectKey === 'purpleHoneyLuck') {
+            return level;
+        }
         // SynergismOfficial/src/Purple.ts: all four catalysts add 3/50 per level.
         if (upgradeKey.startsWith('purpleHalfLife') && effectKey === 'encabulatorSpeed') {
             return 3 / 50 * level;
@@ -124,6 +151,56 @@ export class PurpleHelper {
             return 1 + +(level > 0) * (0.02 + 0.002 * level) * logHoney;
         }
         return 0;
+    }
+
+    calculatePurpleHoneyLuckBreakdown(): Record<string, number> | null {
+        const data = this.#ctx.getGameData();
+        if (!data) return null;
+
+        const highestSingularity = Number(data.highestSingularityCount ?? 0);
+        const irishAntLuck = highestSingularity >= 285
+            ? (highestSingularity - 280) * (highestSingularity >= 293 ? 3 : 2)
+            : 0;
+        const reactorLuckUpgrades = (['purpleHoneyLuck1', 'purpleHoneyLuck2', 'purpleHoneyLuck3', 'purpleHoneyLuck4'] as const)
+            .reduce((total, key) => total + this.getPurpleReactorUpgradeEffects(key, 'purpleHoneyLuck'), 0);
+
+        const components = {
+            base: 100,
+            pseudoCoin: this.#ctx.getPCoinUpgradeLevel('PURPLE_LUCK_BUFF') * 5,
+            synergismLevel: Math.max(0, this.#ctx.calculateSynergismLevel() - 299),
+            purpleGemTalisman: Number(this.#ctx.getTalismanEffects('purpleGem').purpleHoneyLuck ?? 0),
+            irishAnt3: irishAntLuck,
+            purpleReactorUpgrades: reactorLuckUpgrades,
+            taxmanLastStand: this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'purpleHoneyLuck'),
+            barDependence: this.#ctx.getSingularityChallengeEffect('barDependence', 'purpleHoneyLuck'),
+            horseShoeRune: Number(this.#ctx.getRuneEffects('horseShoe').purpleHoneyLuck ?? 0),
+        };
+        return {
+            ...components,
+            total: Object.values(components).reduce((total, value) => total + value, 0),
+        };
+    }
+
+    calculatePurpleHoneyLuck(): number {
+        return this.calculatePurpleHoneyLuckBreakdown()?.total ?? 0;
+    }
+
+    calculatePurpleHoneyPerExtraction(): number {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0;
+
+        const highestSingularity = Number(data.highestSingularityCount ?? 0);
+        const blueberryEfficiency = highestSingularity < 283
+            ? 0
+            : Math.floor(this.#ctx.calculateBlueberryInventory() / 2)
+                * (highestSingularity >= 289 ? 0.03 : 0.02);
+        const reactorEfficiencyUpgrades = (['purpleEfficiency1', 'purpleEfficiency2', 'purpleEfficiency3', 'purpleEfficiency4'] as const)
+            .reduce((total, key) => total + this.getPurpleReactorUpgradeEffects(key, 'purpleEfficiency'), 0);
+
+        return 1
+            + this.#ctx.getPCoinUpgradeLevel('PURPLE_HONEY_BUFF') * 0.04
+            + blueberryEfficiency
+            + reactorEfficiencyUpgrades;
     }
 
     getPurpleAmbrosiaUpgradeLevel(upgradeKey: keyof typeof purpleAmbrosiaUpgradeData): number {

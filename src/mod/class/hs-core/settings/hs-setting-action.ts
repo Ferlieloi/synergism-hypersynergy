@@ -1,8 +1,8 @@
 import { HSSettingActionParams } from "../../../types/module-types/hs-settings-types";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
-import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
+import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
@@ -10,8 +10,27 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSCorruption } from "../../hs-modules/hs-corruption";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
+import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
+
+// Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
+// Does nothing if the module isn't loaded.
+function moduleToggle<T extends HSModule>(
+    moduleName: string,
+    on: (mod: T, params: HSSettingActionParams) => unknown,
+    off: (mod: T, params: HSSettingActionParams) => unknown
+): (params: HSSettingActionParams) => Promise<void> {
+    return async (params: HSSettingActionParams) => {
+        const mod = HSModuleManager.getModule<T>(moduleName);
+        if (!mod) return;
+
+        await (params.disable === true ? off(mod, params) : on(mod, params));
+    };
+}
 
 /**
  * Class: HSSettingActions
@@ -31,7 +50,6 @@ export class HSSettingActions {
         // Care should be taken to handle this case so the setting will know what to do when it is enabled/disabled
         syncNotificationOpacity: async (params: HSSettingActionParams) => {
             const notifElement = document.querySelector('#notification') as HTMLDivElement;
-            const context = params.contextName ?? "HSSettings";
 
             if (params.disable && params.disable === true) {
                 notifElement.style.removeProperty('opacity');
@@ -44,19 +62,25 @@ export class HSSettingActions {
             }
         },
 
-        // Auto validate Confirm & Alert (not Prompt)
+        // Auto validate Confirm & Alert (not Prompt). Only has an effect without the dialog hook (old patcher):
+        // with the hook, the patcher leaves the answers to HSGameDialogs.
         autoConfirmPopups: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
             if (params.disable && params.disable === true) {
                 HSUtils.setAutoConfirm(false);
             } else {
-                const isAutoConfirmPatched = HSUtils.isAutoConfirmPatched();
-                if (isAutoConfirmPatched) {
+                if (HSUtils.isAutoConfirmPatched()) {
                     HSUtils.setAutoConfirm(true);
                 } else {
                     HSLogger.warn("autoConfirmPopups enabled, but __HS_AUTO_CONFIRM not patched", context);
                 }
             }
+        },
+
+        // "Hide game dialogs": the checkbox in the game's Confirm and Alert, and the hidden dialogs answered.
+        // Also run at load, which adds the ready-made entries a newer mod version brought.
+        hideGameDialogs: async (params: HSSettingActionParams) => {
+            HSHiddenDialogs.setEnabled(!params.disable);
         },
 
         logTimestamp: async (params: HSSettingActionParams) => {
@@ -72,132 +96,55 @@ export class HSSettingActions {
         },
 
         reactiveMouseHover: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
             if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('hover');
             }
         },
 
         autoClick: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
             if (params.disable && params.disable === true) {
                 HSMouse.clearInterval('click');
             }
         },
 
-        ambrosiaQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.hideQuickBar();
-                } else {
-                    await ambrosiaMod.showQuickBar();
+        ambrosiaMinibarAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod, params) => {
+                // Where they need GDS (bookmarklet: no live player to read), they turn it on
+                const minibars = HSSettings.getSetting('ambrosiaMinibars')?.getDefinition();
+                const gameDataSetting = HSSettings.getSetting('useGameData');
+                if (minibars && HSSettings.usesGameData(minibars) && !gameDataSetting?.isEnabled()) {
+                    gameDataSetting?.enable();
                 }
-            }
-        },
+                return mod.enableBerryMinibars();
+            },
+            (mod) => mod.disableBerryMinibars()
+        ),
 
-        ambrosiaMinibarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.disableBerryMinibars();
-                } else {
-                    // Auto-enable GDS if not already enabled
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
-                    }
-                    await ambrosiaMod.enableBerryMinibars();
-                }
-            }
-        },
+        // Needs GDS (usesGameData): the settings keep it off while GDS is off
+        ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.enableRateHeader(),
+            (mod) => mod.disableRateHeader()
+        ),
 
         hiddenVanillaTabsAction: async (params: HSSettingActionParams) => {
             HSSettingsUI.applyHiddenVanillaTabsSetting();
         },
 
-        patch: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
+        // Not awaited: the GDS start and stop run on their own
+        useGameData: moduleToggle<HSGameData>('HSGameData',
+            (mod) => { void mod.enableGDS(); },
+            (mod) => { void mod.disableGDS(); }
+        ),
 
-            if (!params.patchConfig || !params.patchConfig.patchName) {
-                HSLogger.error("No patch config provided for setting action", context);
-                return;
-            }
+        persistentAmbrosiaLevelsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.applyPersistentAmbrosiaLevelsSetting(true),
+            (mod) => mod.applyPersistentAmbrosiaLevelsSetting(false)
+        ),
 
-            const patchMod = HSModuleManager.getModule<HSPatches>('HSPatches');
-
-            if (patchMod) {
-                if (params.disable && params.disable === true) {
-                    console.log("Disabling patch", params.patchConfig.patchName, context);
-                    await patchMod.revertPatch(params.patchConfig.patchName);
-                } else {
-                    console.log("Enabling patch", params.patchConfig.patchName, context);
-                    await patchMod.applyPatch(params.patchConfig.patchName);
-                }
-            }
-        },
-
-        useGameData: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const gameDataMod = HSModuleManager.getModule<HSGameData>('HSGameData');
-
-            if (gameDataMod) {
-                if (params.disable && params.disable === true) {
-                    gameDataMod.disableGDS();
-                } else {
-                    gameDataMod.enableGDS();
-                }
-            }
-        },
-
-        addTimeAutoLoadoutsAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    await ambrosiaMod.disableAutoLoadout();
-                } else {
-                    await ambrosiaMod.enableAutoLoadout();
-                }
-            }
-        },
-
-        /* RETIRED: The Ambrosia AFK/idle swapper is no longer useful after the
-         * corresponding game update. Keep the old action here as commented
-         * reference so the feature can be reconstructed if the game changes.
-        ambrosiaIdleSwapAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-
-            const ambrosiaMod = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
-
-            const startAutosingEnabled = HSSettings.getSetting('startAutosing')?.isEnabled() ?? false;
-            HSLogger.debug(() => `ambrosiaIdleSwapAction called disable=${Boolean(params.disable)} startAutosingEnabled=${startAutosingEnabled}`, context);
-
-            if (ambrosiaMod) {
-                if (params.disable && params.disable === true) {
-                    // HSLogger.debug(() => `ambrosiaIdleSwapAction disable stack: ${new Error().stack ?? 'n/a'}`, context);
-                    ambrosiaMod.disableIdleSwap();
-                } else {
-                    // Auto-enable GDS if not already enabled
-                    const gdsSettingEnabled = HSSettings.getSetting('useGameData')?.isEnabled();
-                    if (!gdsSettingEnabled) {
-                        HSSettings.getSetting('useGameData')?.enable();
-                    }
-                    await ambrosiaMod.enableIdleSwap();
-                }
-            }
-        },
-        */
+        addTimeAutoLoadoutsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
+            (mod) => mod.enableAutoLoadout(),
+            (mod) => mod.disableAutoLoadout()
+        ),
 
         startAutosingAction: async (params: HSSettingActionParams) => {
             const context = params.contextName ?? "HSSettings";
@@ -220,31 +167,35 @@ export class HSSettingActions {
         },
 
         createAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSAutosingStrategyModal.open();
         },
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.exportSelectedStrategy();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             await HSSettingsUI.importStrategy();
         },
 
+        // A class on <html>, so it applies whenever #quickbarsRow is created (hs-quickbars.css)
+        centerQuickbarsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-quickbars-centered', params.disable !== true);
+        },
+
+        // A class on <html>: CSS order only, the game's DOM stays as it is (hs-header-edit-settings.css)
+        headerStatsAtBottomAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-stats-bottom', params.disable !== true);
+        },
+
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
                 qolButtonsMod.setMaxedGQUpgradesVisibility();
@@ -252,59 +203,38 @@ export class HSSettingActions {
         },
 
         hideMaxedOctUpgradesAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
             if (qolButtonsMod) {
                 qolButtonsMod.setMaxedOctUpgradesVisibility();
             }
         },
 
-        enableGQDistributorAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (qolButtonsMod) {
-                if (params.disable && params.disable === true) {
-                    qolButtonsMod.hideGQDistributor();
-                } else {
-                    await qolButtonsMod.showGQDistributor();
-                }
-            }
+        enableGQDistributorAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.showGQDistributor(),
+            (mod) => mod.hideGQDistributor()
+        ),
+
+        autoExportSaveFolderAction: async (params: HSSettingActionParams) => {
+            await HSModuleManager.getModule<HSAutoExport>('HSAutoExport')?.chooseFolder();
         },
 
-        enableAutomationQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
-
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableAutomationQuickbar();
-            } else {
-                qolButtonsMod.enableAutomationQuickbar();
-            }
+        autoExportSaveForgetFolderAction: async (params: HSSettingActionParams) => {
+            await HSModuleManager.getModule<HSAutoExport>('HSAutoExport')?.forgetFolder();
         },
 
-        enableEventsQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
+        enableHepteractDistributorAction: moduleToggle<HSHepteractDistributor>('HSHepteractDistributor',
+            (mod) => mod.showDistributor(),
+            (mod) => mod.hideDistributor()
+        ),
 
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableEventsQuickbar();
-            } else {
-                qolButtonsMod.enableEventsQuickbar();
-            }
-        },
+        enableAutomationQuickBarAction: moduleToggle<HSQOLButtons>('HSQOLButtons',
+            (mod) => mod.enableAutomationQuickbar(),
+            (mod) => mod.disableAutomationQuickbar()
+        ),
 
-        enableCorruptionQuickBarAction: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
-            if (!qolButtonsMod) return;
-
-            if (params.disable && params.disable === true) {
-                qolButtonsMod.disableCorruptionQuickbar();
-            } else {
-                qolButtonsMod.enableCorruptionQuickbar();
-            }
+        // The game's corruption loadout header modules, which are in the page from the start
+        corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderLevels(params.disable !== true);
         }
     }
 
@@ -314,8 +244,13 @@ export class HSSettingActions {
         const self = this;
 
         if (actionName in this.#settingActions) {
+            // The action's promise is not returned, on purpose: no caller waits for a setting action
+            // (at load, each one would hold back the next settings). So a failure is logged here.
             return (params: HSSettingActionParams) => {
-                self.#settingActions[actionName](params);
+                void (async () => self.#settingActions[actionName](params))().catch((err) => {
+                    HSLogger.error(`Setting action ${actionName} failed: ${err}`, params.contextName ?? "HSSettings");
+                    console.error(err);
+                });
             };
         } else {
             return null;

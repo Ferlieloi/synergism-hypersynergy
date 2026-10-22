@@ -1,5 +1,5 @@
 import { EventBuffType } from "./hs-event-data";
-import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, Runes, CorruptionLevels, GameData } from "./hs-player-savedata";
+import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, CorruptionLevels, GameData } from "./hs-player-savedata";
 
 export type CalculationMode = 'normal' | 'true_base' | 'non_ambrosia';
 
@@ -16,12 +16,6 @@ export enum ShopUpgradeGroups {
   Utility
 }
 
-export interface ShopUpgradeTypeInfo {
-  HTMLColor: string
-  symbol: string
-  bonusLevels: () => number
-}
-
 export interface ShopUpgradeEffectEnvironment {
   getGameData: () => GameData | undefined
   getPCoinUpgradeLevel: (upgradeKey: string) => number
@@ -36,7 +30,7 @@ export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getRuneEffects: (rune: RuneKeys) => any
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode?: CalculationMode) => number[]
+  calculateFreeShopInfinityUpgrades: (mode?: CalculationMode) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -74,6 +68,7 @@ export interface AmbrosiaHelperContext {
   getGameData: () => GameData | undefined
   getMeData: () => any
   calculateLuck: (reduce_vals?: boolean, true_base?: boolean) => { luckBase: number; luckMult: number; luckTotal: number } | any
+  calculateRedAmbrosiaLuck: () => number
   getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
@@ -82,6 +77,8 @@ export interface AmbrosiaHelperContext {
   getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
   getPurpleReactorUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
+  getPurpleHoneyLuck: () => number
+  getPurpleHoneyPerExtraction: () => number
   getPCoinUpgradeLevel: (upgradeName: string) => number
   getCampaignTokens: () => number
   getEventBellAmount: () => number
@@ -109,6 +106,12 @@ export interface RuneHelperContext {
   getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K]
   calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
   calculateChallenge15Reward: (rewardName: string) => number
+  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
+  calculateHepteractEffective: (type: HepteractType) => number
+  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
+  calculateSynergismLevel: () => number
+  getShopLevel: (upgradeKey: string) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -146,131 +149,6 @@ export interface AchievementHelperContext {
 export const FAVORITE_UPGRADE_GQ_DEPENDENCIES = ['goldenQuarks1', 'platonicDelta', 'oneMind'] as const;
 export const FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES = ['octeractImprovedFree', 'octeractCorruption', 'octeractBlueberries'] as const;
 export const FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES = ['tutorial', 'infiniteShopUpgrades', 'blueberryGenerationSpeed2'] as const;
-
-export type GoldenQuarkUpgradeRewards = {
-  goldenQuarks1: { goldenQuarkMult: number }
-  goldenQuarks2: { goldenQuarkCostMult: number }
-  goldenQuarks3: { exportGQPerHour: number }
-  starterPack: {
-    obtainiumMult: number
-    offeringMult: number
-    cubeMult: number
-  }
-  cookies: { unlocked: boolean }
-  cookies2: { unlocked: boolean }
-  cookies3: { unlocked: boolean }
-  cookies4: { unlocked: boolean }
-  cookies5: { unlocked: boolean }
-  ascensions: { ascensionCountMult: number }
-  corruptionFourteen: { unlocked: boolean }
-  corruptionFifteen: { freeCorruptionLevel: number }
-  singOfferings1: { offeringMult: number }
-  singOfferings2: { offeringMult: number }
-  singOfferings3: { offeringMult: number }
-  singObtainium1: { obtainiumMult: number }
-  singObtainium2: { obtainiumMult: number }
-  singObtainium3: { obtainiumMult: number }
-  singCubes1: { cubeMult: number }
-  singCubes2: { cubeMult: number }
-  singCubes3: { cubeMult: number }
-  singCitadel: {
-    offeringMult: number
-    obtainiumMult: number
-    cubeMult: number
-  }
-  singCitadel2: {
-    offeringMult: number
-    obtainiumMult: number
-    cubeMult: number
-    citadel1FreeLevels: number
-  }
-  octeractUnlock: { unlocked: boolean }
-  singOcteractPatreonBonus: { octeractMult: number }
-  offeringAutomatic: { unlocked: boolean }
-  intermediatePack: {
-    globalSpeedMult: number
-    ascensionSpeedMult: number
-    packQuarkAdd: number
-  }
-  advancedPack: {
-    packQuarkAdd: number
-    corruptionScoreIncrease: number
-  }
-  expertPack: {
-    packQuarkAdd: number
-    ascensionScoreMult: number
-    addCodeAscensionTimeMult: number
-  }
-  masterPack: {
-    packQuarkAdd: number
-    ascensionScoreMult: number
-  }
-  divinePack: {
-    packQuarkAdd: number
-    octeractMult: number
-  }
-  wowPass: { unlocked: boolean }
-  wowPass2: { unlocked: boolean }
-  wowPass3: { unlocked: boolean }
-  wowPass4: { unlocked: boolean }
-  potionBuff: { potionPowerMult: number }
-  potionBuff2: { potionPowerMult: number }
-  potionBuff3: { potionPowerMult: number }
-  singChallengeExtension: {
-    reincarnationCapIncrease: number
-    ascensionCapIncrease: number
-  }
-  singChallengeExtension2: {
-    reincarnationCapIncrease: number
-    ascensionCapIncrease: number
-  }
-  singChallengeExtension3: {
-    reincarnationCapIncrease: number
-    ascensionCapIncrease: number
-  }
-  singQuarkImprover1: { quarkMult: number }
-  singQuarkHepteract: { quarkHeptExponent: number }
-  singQuarkHepteract2: { quarkHeptExponent: number }
-  singQuarkHepteract3: { quarkHeptExponent: number }
-  singOcteractGain: { octeractMult: number }
-  singOcteractGain2: { octeractMult: number }
-  singOcteractGain3: { octeractMult: number }
-  singOcteractGain4: { octeractMult: number }
-  singOcteractGain5: { octeractMult: number }
-  platonicTau: {
-    unlocked: boolean
-    tauPower: number
-  }
-  platonicAlpha: { unlocked: boolean }
-  platonicDelta: { cubeMult: number }
-  platonicPhi: { dailyCodes: number }
-  singFastForward: { lookahead: number }
-  singFastForward2: { lookahead: number }
-  singAscensionSpeed: { exponentSpread: number }
-  singAscensionSpeed2: { exponentSpread: number }
-  ultimatePen: { platonicPowers: boolean }
-  halfMind: { unlocked: boolean }
-  oneMind: { unlocked: boolean }
-  blueberries: { blueberries: number }
-  singAmbrosiaLuck: { ambrosiaLuck: number }
-  singAmbrosiaLuck2: { ambrosiaLuck: number }
-  singAmbrosiaLuck3: { ambrosiaLuck: number }
-  singAmbrosiaLuck4: { ambrosiaLuck: number }
-  singAmbrosiaGeneration: { ambrosiaBarSpeedMult: number }
-  singAmbrosiaGeneration2: { ambrosiaBarSpeedMult: number }
-  singAmbrosiaGeneration3: { ambrosiaBarSpeedMult: number }
-  singAmbrosiaGeneration4: { ambrosiaBarSpeedMult: number }
-  singBonusTokens1: { firstCompletionBonusTokens: number }
-  singBonusTokens2: { tokenMultiplier: number }
-  singBonusTokens3: { lastCompletionBonusTokens: number }
-  singBonusTokens4: { initialTokenBonus: number }
-  singInfiniteShopUpgrades: { infinityVouchers: number }
-  singTalismanBonusRunes1: { talismanRuneEffect: number }
-  singTalismanBonusRunes2: { talismanRuneEffect: number }
-  singTalismanBonusRunes3: { talismanRuneEffect: number }
-  singTalismanBonusRunes4: { talismanRuneEffect: number }
-  favoriteUpgrade: { quarkMult: number }
-}
 
 export const offeringPotionThresholds = [
     1,
@@ -321,7 +199,6 @@ export const TALISMAN_MORTUUS_INSCRIPT_VALUES = [1, 1.05, 1.1, 1.15, 1.2, 1.3, 1
 export const TALISMAN_PLASTIC_INSCRIPT_VALUES = [1, 1.005, 1.01, 1.015, 1.02, 1.025, 1.03, 1.04, 1.045, 1.05, 1.0666]
 export const TALISMAN_WOWSQUARE_INSCRIPT_VALUES = [1, 1.025, 1.05, 1.075, 1.1, 1.125, 1.15, 1.2, 1.225, 1.25, 1.30]
 export const TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.03]
-export const TALISMAN_ACHIEVEMENT_DESC_INSCRIPT_VALUES = [1, 1, 1, 1, 1, 1, 1, 1.01, 1.015, 1.02, 1.03]
 export const TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10]
 export const TALISMAN_HORSESHOE_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.012, 0.015, 0.02]
 
@@ -524,7 +401,6 @@ export type TalismanKeys = keyof TalismanTypeMap
 export type GoldenQuarkUpgradeKey = keyof goldenQuarkUpgrades;
 export type OcteractUpgradeKey = keyof octUpgrades;
 export type RedAmbrosiaUpgradeKey = keyof RedAmbrosiaUpgrades;
-export type RuneType = keyof Runes;
 
 export interface CachedValue {
     value: unknown;
@@ -1065,10 +941,23 @@ export type SingularityDebuffs =
     | 'Platonic Costs'
     | 'Hepteract Costs';
 
+// What a calculation returns with reduce_vals = false: each component by name (the game's stat line name when it has one)
+export type HSCalculationComponents = Record<string, number>;
+
+export interface HSCalculationParamOption {
+    label: string;
+    value: unknown;
+}
+
 export interface HSCalculationParams {
     paramName: string;
     paramType: string;
     defaultValue?: any;
+    // Shown in the Tools tab instead of the param's name
+    label?: string;
+    // What the Tools tab offers for it: a list, or one read from the save when the calculation is picked.
+    // Without it, a boolean gets true / false and a number a number field: any other param can't be set there.
+    options?: readonly HSCalculationParamOption[] | ((data: GameData | undefined) => readonly HSCalculationParamOption[]);
 }
 
 export interface HSCalculationDefinition {
@@ -1077,6 +966,7 @@ export interface HSCalculationDefinition {
     // from HSGameDataAPI or from registered helper providers.
     // TODO later: derive the union from GameDataAPI + actual helper keys
     fnName: string;
+    // In the function's order. With supportsReduce, the first one is reduce_vals: the Tools tab's two buttons fill it.
     fnParams: HSCalculationParams[];
     supportsReduce: boolean;
     toolingSupport: boolean;

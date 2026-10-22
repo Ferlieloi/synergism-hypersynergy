@@ -2,12 +2,10 @@ import { HSUI } from "../../../hs-core/hs-ui"
 import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../../types/module-types/hs-autosing-types"
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { openStrategyPhaseModal } from "./hs-autosing-strategyPhase-modal";
-import { HSSettings } from "../../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
-import { HSStrategyManager } from "../../../hs-core/settings/hs-strategy-manager";
+import { HSStrategyManager } from "../hs-strategy-manager";
 import { openAutosingCorruptionLoadoutsModal } from "./hs-autosing-corruption-loadouts-modal";
 import { HSLogger } from '../../../hs-core/hs-logger';
-import { HSGlobal } from '../../../hs-core/hs-global';
 import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 
 /**

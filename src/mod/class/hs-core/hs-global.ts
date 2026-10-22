@@ -33,7 +33,6 @@ export const HSGlobal: IHSGlobal = class {
     // --- Release check configuration ---
     static Release = {
         githubOwner: 'Ferlieloi',    // The Live repo: version check fallback and the Mod Github link
-        isLatestVersion: true,
         checkIntervalMs: 1800000     // 30min
     }
 
@@ -42,7 +41,6 @@ export const HSGlobal: IHSGlobal = class {
         // Version number bumping should be done in package.json.version
         currentModVersion: (typeof HS_BUILD_VERSION !== 'undefined') ? HS_BUILD_VERSION : '0.0.0',
         isModFullyLoaded: false,
-        isDev: ((window as any).__HS_IS_DEV ? (window as any).__HS_IS_DEV : false),
 
         get modGithubUrl() { return `https://github.com/${HSGlobal.Release.githubOwner}/synergism-hypersynergy/`; },
         get modDiscordThreadUrl() { return 'https://discord.com/channels/677271830838640680/1456904896099127367'; },
@@ -93,7 +91,54 @@ export const HSGlobal: IHSGlobal = class {
     // --- HSLogger ---
     static HSLogger = {
         logLevel: ELogLevel.NONE,
-        logSize: 5000
+        logSize: 5000,
+
+        // Log tab colors of the contexts that aren't modules (modules have their moduleColor, in index.ts).
+        // A module's name gives that module's color, anything else is a CSS color.
+        contextColors: {
+            // Autosing
+            HSAutosingModal: 'HSAutosing',
+            HSAutosingSettingsFixer: 'HSAutosing',
+            HSAutosingCorruption: 'HSAutosing',
+            HSAutosingStrategyModal: 'HSAutosing',
+            // Ambrosia
+            HSAmbrosiaHelper: 'HSAmbrosia',
+            // Settings
+            HSSetting: 'HSSettings',
+            HSSettingsUI: 'HSSettings',
+            // QoL quickbars
+            HSQuickbarManager: 'HSQOLButtons',
+            HSQOLAutomationQuickbar: 'HSQOLButtons',
+            HSCorruption: 'HSQOLButtons',
+            HSHeaderModules: 'HSQOLButtons',
+            HSHeaderKeepOnImport: 'HSQOLButtons',
+            HSHeaderEditSettings: 'HSQOLButtons',
+            HSLoadoutIconStore: 'HSHeaderLoadoutIcons',
+            // UI
+            HSUIC: 'HSUI',
+            Notify: 'HSUI',
+            // Heater
+            HSHeater: 'darkorange',
+            HSHeaterOptimizer: 'darkorange',
+            HSHeaterUIResult: 'darkorange',
+            HSHeaterInputModalController: 'darkorange',
+            // Game dialogs
+            HSGameDialogs: 'hotpink',
+            HSHiddenDialogs: 'hotpink',
+            HSDialogIdentity: 'hotpink',
+            // Core and the rest
+            HSMain: 'plum',
+            HSLogger: 'plum',
+            HSModuleManager: 'plum',
+            HSElementHooker: 'plum',
+            HSUtils: 'plum',
+            Once: 'plum',
+            HSBackup: 'plum',
+            HSCalculationTools: 'plum',
+            HSGithub: 'plum',
+            HSBookmarkletNotice: 'plum',
+            HSDevTools: 'plum',
+        }
     }
 
     // --- HSStorage ---
@@ -125,8 +170,9 @@ export const HSGlobal: IHSGlobal = class {
             'defaultValue',
             'settingControl',
             'settingAction',
-            'patchConfig',
             'usesGameData',
+            'hidden',
+            'platforms',
         ],
         gameDataRequiredTooltip: 'This feature requires Game Data Sniffing to be enabled.',
 
@@ -134,10 +180,8 @@ export const HSGlobal: IHSGlobal = class {
         // this list may enable GDS themselves when switched on.
         gameDataCheckBlacklist: [
             'useGameData',
-            'stopSniffOnError',
             // These settings below auto-enable GDS when toggled on,
             // so they should be allowed to toggle even when GDS is off
-            // RETIRED: 'ambrosiaIdleSwap',
             'ambrosiaMinibars'
         ]
     }
@@ -241,20 +285,13 @@ export const HSGlobal: IHSGlobal = class {
         ]
     }
 
+    // HSHiddenDialogs
+    static HSHiddenDialogs = {
+        storageKey: 'hidden-dialogs',
+    }
+
     // HSAmbrosia
     static HSAmbrosia = {
-        storageKey: 'ambrosia-loadouts',
-        quickBarId: 'hs-ambrosia-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-ambrosia-quickbar',
-
-        // RETIRED: Ambrosia AFK/idle swapper constants.
-        // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png',
-        // idleSwapIndicatorId: 'hs-ambrosia-loadout-idle-swap-indicator',
-        // idleSwapMaxBlueThreshold: 97,
-        // idleSwapMinBlueThreshold: 3,
-        // idleSwapMaxRedThreshold: 99,
-        // idleSwapMinRedThreshold: 1,
-
         // Constants ripped from the game code
         TIME_PER_AMBROSIA: 45,
         TIME_PER_RED_AMBROSIA: 1000,
@@ -269,25 +306,6 @@ export const HSGlobal: IHSGlobal = class {
         purpleBarId: 'hs-purple-progress-bar',
         purpleBarProgressId: 'hs-purple-progress',
         barWrapperId: 'hs-minibars-wrapper',
-    }
-
-    // HSCorruptionQuickbar
-    static HSCorruptionQuickbar = {
-        storageKey: 'corruption-loadouts',
-        quickBarId: 'hs-corruption-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-corruption-quickbar',
-    }
-
-    // HSQOLAutomationQuickbar
-    static HSQOLAutomationQuickbar = {
-        quickBarId: 'hs-automation-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-automation-quickbar',
-    }
-
-    // HSQOLEventsQuickbar
-    static HSQOLEventsQuickbar = {
-        quickBarId: 'hs-events-slots-wrapper',
-        quickBarLoadoutIdPrefix: 'hs-events-quickbar',
     }
 
     // HSGameState
@@ -404,7 +422,8 @@ export const HSGlobal: IHSGlobal = class {
     // HSGameData
     static HSGameData = {
         consumablesPollInterval: 1000, // a read of the game's Happy Hour Bells, no request
-        gdsSpeedMs: 66,
+        // A save every 500ms: the Ambrosia tab's rates refresh at that pace, and the minibars read the live player
+        gdsSpeedMs: 500,
         gdsCSSId: 'hs-game-data-turbo-css'
     }
 }

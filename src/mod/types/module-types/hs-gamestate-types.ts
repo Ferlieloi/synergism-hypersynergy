@@ -1,21 +1,7 @@
-import { GameView, MainView, BuildingView, AchievementView, RuneView, ChallengeView, AntView, CubeView, SingularityView, SettingsView, PseudoCoinView, TraitsView } from "../../class/hs-core/hs-gamestate";
+import { GameView } from "../../class/hs-core/hs-gamestate";
 
 export type VIEW_TYPE = MAIN_VIEW | BUILDING_VIEW | ACHIEVEMENT_VIEW | RUNE_VIEW | CHALLENGE_VIEW | ANT_VIEW | CUBE_VIEW | TRAITS_VIEW | SINGULARITY_VIEW | SETTINGS_VIEW | PSEUDOCOIN_VIEW;
 export type VIEW_KEY = 'MAIN_VIEW' | 'BUILDING_VIEW' | 'ACHIEVEMENT_VIEW' | 'RUNE_VIEW' | 'CHALLENGE_VIEW' | 'ANT_VIEW' | 'CUBE_VIEW' | 'TRAITS_VIEW' | 'SINGULARITY_VIEW' | 'SETTINGS_VIEW' | 'PSEUDOCOIN_VIEW';
-
-export interface View {
-    MAIN_VIEW: MainView;
-    BUILDING_VIEW: BuildingView;
-    ACHIEVEMENT_VIEW: AchievementView;
-    RUNE_VIEW: RuneView;
-    CHALLENGE_VIEW: ChallengeView;
-    ANT_VIEW: AntView;
-    CUBE_VIEW: CubeView;
-    TRAITS_VIEW: TraitsView;
-    SINGULARITY_VIEW: SingularityView;
-    SETTINGS_VIEW: SettingsView;
-    PSEUDOCOIN_VIEW: PseudoCoinView;
-}
 
 export enum MAIN_VIEW {
     UNKNOWN = -1,

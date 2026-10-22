@@ -1,24 +1,25 @@
 import { HSLogger } from "../hs-logger";
 import { HSExternalModule, HSModule } from "./hs-module";
 import { HSCodes } from "../../hs-modules/hs-codes";
-import { HSHepteracts } from "../../hs-modules/hs-hepteracts";
+import { HSHepteracts } from "../../hs-modules/hs-hepteracts/hs-hepteracts";
+import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSTalismans } from "../../hs-modules/hs-talismans";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
-import { HSExternalModuleOptions, HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
+import { HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../types/hs-types";
 import { HSPrototypes } from "../hs-prototypes";
 import { HSMouse } from "../hs-mouse";
-import { HSShadowDOM } from "../hs-shadowdom";
 import { HSStorage } from "../hs-storage";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
-import { HSPatches } from "../../hs-modules/hs-patches";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
-import { HSDebug } from "../hs-debug";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
+import { HSAutoExport } from "../../hs-modules/hs-auto-export";
+import { HSHeaderLoadoutIcons } from "../../hs-modules/hs-loadout-icons/hs-header-loadout-icons";
 
 /**
  * Class: HSModuleManager
@@ -38,21 +39,22 @@ export class HSModuleManager {
         "HSUI": HSUI,
         "HSCodes": HSCodes,
         "HSHepteracts": HSHepteracts,
+        "HSHepteractDistributor": HSHepteractDistributor,
         "HSTalismans": HSTalismans,
         "HSSettings": HSSettings,
         "HSPrototypes": HSPrototypes,
         "HSMouse": HSMouse,
-        "HSShadowDOM": HSShadowDOM,
         "HSStorage": HSStorage,
         "HSAmbrosia": HSAmbrosia,
         "HSStats": HSStats,
         "HSGameState": HSGameState,
-        "HSPatches": HSPatches,
         "HSGameData": HSGameData,
         "HSGameDataAPI": HSGameDataAPI,
-        "HSDebug": HSDebug,
         "HSAutosing": HSAutosing,
-        "HSQOLButtons": HSQOLButtons
+        "HSQOLButtons": HSQOLButtons,
+        "HSSubtabMemory": HSSubtabMemory,
+        "HSAutoExport": HSAutoExport,
+        "HSHeaderLoadoutIcons": HSHeaderLoadoutIcons
     };
 
     constructor(context: string, modulesToEnable: HSModuleDefinition[]) {
@@ -171,16 +173,10 @@ export class HSModuleManager {
     async initModules() {
         // Go through the modules added to module manager and initialize all of them
 
-        HSModuleManager.#enabledModules.forEach
-        for (const [className, module] of HSModuleManager.#enabledModules.entries()) {
+        for (const module of HSModuleManager.#enabledModules.values()) {
             if (!module.isInitialized)
                 await module.init();
         }
-    }
-
-    // Returns a list of all of the enabled modules
-    getModules(): Map<string, HSModule> {
-        return HSModuleManager.#enabledModules;
     }
 
     // Returns a module by name

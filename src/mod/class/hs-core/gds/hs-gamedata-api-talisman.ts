@@ -3,7 +3,7 @@ import { HSGlobal } from "../hs-global";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
 import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES, TALISMAN_CHRONOS_INSCRIPT_VALUES, TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES, TALISMAN_EXEMPTION_INSCRIPT_VALUES, TALISMAN_METAPHYSICS_INSCRIPT_VALUES, TALISMAN_MIDAS_INSCRIPT_VALUES, TALISMAN_MORTUUS_INSCRIPT_VALUES, TALISMAN_PLASTIC_INSCRIPT_VALUES, TALISMAN_POLYMATH_INSCRIPT_VALUES, TALISMAN_WOWSQUARE_INSCRIPT_VALUES, TALISMAN_HORSESHOE_INSCRIPT_VALUES } from "../../../types/data-types/hs-gamedata-api-types";
-import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./stored-vars-and-calculations";
+import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./hs-gamedata-tables";
 import { HSLogger } from "../hs-logger";
 
 const TALISMAN_KEYS = Object.keys(TALISMAN_BASE_COEFFICIENTS) as TalismanKeys[];
@@ -15,7 +15,6 @@ export class TalismanHelper {
     #lastGameData?: ReturnType<TalismanHelperContext['getGameData']>
     readonly #talismanLevelCache = new Map<TalismanKeys, number>()
     readonly #talismanRarityCache = new Map<TalismanKeys, number>()
-    readonly #talismanLevelCapCache = new Map<TalismanKeys, number>()
     readonly #talismanUnlockedCache = new Map<TalismanKeys, boolean>()
     readonly #talismanEffectsCache = new Map<TalismanKeys, Map<number, unknown>>()
     #allRuneBonusesCache?: Record<RuneKeys, number>
@@ -32,7 +31,6 @@ export class TalismanHelper {
             this.#lastGameData = gameData;
             this.#talismanLevelCache.clear();
             this.#talismanRarityCache.clear();
-            this.#talismanLevelCapCache.clear();
             this.#talismanUnlockedCache.clear();
             this.#talismanEffectsCache.clear();
             this.#allRuneBonusesCache = undefined;
@@ -62,8 +60,9 @@ export class TalismanHelper {
     }
 
     #computeAllTalismanStats(): void {
-        if (this.#statsComputed) return;
+        // Before the early return: stats computed from an older save must not be kept
         this.#clearCachesIfGameDataChanged();
+        if (this.#statsComputed) return;
 
         const keys = this.#getTalismanKeys();
         for (const key of keys) {
@@ -87,8 +86,8 @@ export class TalismanHelper {
     }
 
     #computeAllRuneBonuses(mode: CalculationMode = 'normal'): Record<RuneKeys, number> {
-        if (mode === 'normal' && this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
         this.#computeAllTalismanStats();
+        if (mode === 'normal' && this.#allRuneBonusesCache) return this.#allRuneBonusesCache;
 
         const totalBonuses = TALISMAN_RUNE_KEYS.reduce((acc, rune) => {
             acc[rune] = 0;
@@ -178,11 +177,6 @@ export class TalismanHelper {
         return result;
     }
 
-    getTalismanLevel = (t: TalismanKeys): number => {
-        this.#computeAllTalismanStats();
-        return this.#talismanLevelCache.get(t) ?? 0;
-    }
-
     getTalismanRarity = (t: TalismanKeys): number => {
         this.#computeAllTalismanStats();
         return this.#talismanRarityCache.get(t) ?? 0;
@@ -202,23 +196,6 @@ export class TalismanHelper {
         this.#computeAllTalismanStats();
         const bonuses = this.#computeAllRuneBonuses(mode);
         return bonuses[rune] ?? 0;
-    }
-
-    getTalismanLevelCap = (t: TalismanKeys): number => {
-        this.#clearCachesIfGameDataChanged();
-        const cached = this.#talismanLevelCapCache.get(t);
-        if (cached !== undefined) return cached;
-
-        const result = getTalismanLevelCap(t, this.#ctx);
-        this.#talismanLevelCapCache.set(t, result);
-        return result;
-    }
-
-    universalTalismanMaxLevelIncreasers = (): number => universalTalismanMaxLevelIncreasers(this.#ctx)
-
-    isTalismanUnlocked = (t: TalismanKeys): boolean => {
-        this.#computeAllTalismanStats();
-        return this.#talismanUnlockedCache.get(t) ?? false;
     }
 }
 

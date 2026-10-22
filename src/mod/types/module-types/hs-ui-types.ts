@@ -24,11 +24,6 @@ export type HSPanelTabDefinition = {
     panelDisplayType: "flex" | "block";
 }
 
-export interface HTMLData {
-    key: string;
-    value: string;
-}
-
 export enum HSInputType {
     CHECK = 1,
     COLOR = 2,
@@ -77,10 +72,6 @@ export interface HSUICPOptions extends HSOptional<HSUICOptions, 'id'> {
 }
 
 export interface HSUICGridOptions extends HSOptional<HSUICOptions, 'id'> {
-    html?: string | string[];
-}
-
-export interface HSUICFlexOptions extends HSOptional<HSUICOptions, 'id'> {
     html?: string | string[];
 }
 

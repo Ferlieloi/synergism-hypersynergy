@@ -1,6 +1,5 @@
 import { Hypersynergism } from "./class/hypersynergism";
 import { HSExternalModuleKind, HSModuleDefinition, HSModuleType } from "./types/hs-types";
-import { HSQuickbarManager } from "./class/hs-modules/hs-qol-quickbar/hs-qolQuickbarManager";
 
 // Loader won't find the hypersynergism instance in window without this declaration
 declare global {
@@ -48,18 +47,6 @@ window.__HS_INIT_PROMISE = (async () => {
             loadOrder: 4,
         },
         {
-            className: 'HSDebug',
-            context: 'HSDebug',
-            moduleColor: '#ff2020',
-            loadOrder: 5,
-            initImmediate: true
-        },
-        {
-            className: 'HSShadowDOM',
-            context: 'HSShadowDOM',
-            moduleColor: 'hotpink',
-        },
-        {
             className: 'HSCodes',
             context: 'HSCodes',
             moduleColor: 'darkgoldenrod',
@@ -90,11 +77,6 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: 'indianred',
         },
         {
-            className: 'HSPatches',
-            context: 'HSPatches',
-            moduleColor: '#487eb0',
-        },
-        {
             className: 'HSGameData',
             context: 'HSGameData',
             moduleColor: '#fbc531',
@@ -105,9 +87,24 @@ window.__HS_INIT_PROMISE = (async () => {
             moduleColor: '#fbc531',
         },
         {
+            className: 'HSSubtabMemory',
+            context: 'HSSubtabMemory',
+            moduleColor: 'lightsalmon',
+        },
+        {
             className: 'HSAmbrosia',
             context: 'HSAmbrosia',
             moduleColor: 'blueviolet',
+        },
+        {
+            className: 'HSHeaderLoadoutIcons',
+            context: 'HSHeaderLoadoutIcons',
+            moduleColor: 'khaki',
+        },
+        {
+            className: 'HSHepteractDistributor',
+            context: 'HSHepteractDistributor',
+            moduleColor: 'mediumslateblue',
         },
         {
             className: 'HSAutosing',
@@ -118,6 +115,11 @@ window.__HS_INIT_PROMISE = (async () => {
             className: 'HSQOLButtons',
             context: 'HSQOLButtons',
             moduleColor: '#c0c0c0',
+        },
+        {
+            className: 'HSAutoExport',
+            context: 'HSAutoExport',
+            moduleColor: '#7fb3d5',
         },
         {
             className: 'Chartist',
@@ -135,8 +137,5 @@ window.__HS_INIT_PROMISE = (async () => {
     window.hypersynergism = hypersynergism;
 
     await hypersynergism.init();
-
-    // Ensure all quickbar sections are injected after all modules are initialized
-    // HSQuickbarManager.getInstance().injectAll();
 })();
 void window.__HS_INIT_PROMISE.catch(error => console.error('[HS] Mod initialization failed', error));

@@ -3,14 +3,12 @@ import {
     HSInputType,
     HSUICButtonOptions,
     HSUICDivOptions,
-    HSUICFlexOptions,
     HSUICGridOptions,
     HSUICImageOptions,
     HSUICInputOptions,
     HSUICModalOptions,
     HSUICPOptions,
     HSUICSelectOption,
-    HTMLData,
     HTMLProps
 } from "../../types/module-types/hs-ui-types";
 import { HSUtils } from "../hs-utils/hs-utils";
@@ -121,7 +119,6 @@ export class HSUIC {
     // Input Component
     static Select(options: HSUICInputOptions, selectOptions: HSUICSelectOption[]): string {
         const comp_class = options.class ?? '';
-        const comp_type = this.#resolveInputType(options.type);
         const comp_input_class = this.#resolveInputClass(options.type);
         const id = options.id ?? HSUtils.domid();
         const propString = this.#getPropString(options.props);
@@ -231,37 +228,12 @@ export class HSUIC {
         return `<div class="hs-panel-div ${comp_class}" id="${id}"${propString} ${dataString}>${comp_html}</div>`;
     }
 
-    // Grid Component
-    static Flex(options: HSUICFlexOptions): string {
-        const comp_class = options.class ?? '';
-        const id = options.id ?? HSUtils.domid();
-        let comp_html = '';
-        const propString = this.#getPropString(options.props);
-        const dataString = this.#dataString(options.data);
-
-        if (options.html) {
-            if (Array.isArray(options.html)) {
-                comp_html = options.html.join('\n');
-            } else {
-                comp_html = options.html;
-            }
-        }
-
-        HSUI.injectStyle(`#${id} {
-            display: flex;
-            ${HSUtils.objectToCSS(options.styles as CSSKeyValueObject)}
-        }`);
-
-        return `<div class="hs-panel-div ${comp_class}" id="${id}"${propString} ${dataString}>${comp_html}</div>`;
-    }
-
     // Pseudo-private method, do not use
     static _modal(options: HSUICModalOptions): string {
         const comp_class        = options.class ?? '';
         const comp_header_class = options.headerClass ?? '';
         const comp_body_class   = options.bodyClass ?? '';
         const comp_html         = options.htmlContent ?? '';
-        const comp_data         = options.data ?? [];
         const comp_title        = options.title ?? '';
         const id                = options.id ?? HSUtils.domid();
         const propString = this.#getPropString(options.props);

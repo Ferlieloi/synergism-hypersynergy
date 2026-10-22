@@ -5,10 +5,6 @@ import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "./hs-settings";
 
-export interface HSSettingToggleOptions {
-    preserveGameDataDependents?: boolean;
-}
-
 /**
  * Class: HSSetting
  * IsExplicitHSModule: No
@@ -18,8 +14,6 @@ export interface HSSettingToggleOptions {
  * Author: Swiffy
  */
 export abstract class HSSetting<T extends HSSettingType> {
-    static #isDisablingGameDataDependents = false;
-
     protected context = 'HSSetting';
 
     #settingEnabledString;
@@ -27,6 +21,10 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     protected definition: HSSettingBase<T>;
     protected settingAction?: ((params: HSSettingActionParams) => any) | null;
+
+    // On the GDS setting only: the settings it turned off when it was turned off,
+    // turned back on with it. Not saved: forgotten at a page reload.
+    #gameDataDependentsToRestore: HSSetting<HSSettingType>[] = [];
 
     constructor(
         settingDefinition: HSSettingBase<T>,
@@ -46,29 +44,26 @@ export abstract class HSSetting<T extends HSSettingType> {
         return this.definition;
     }
 
-    setDefinition(setting: HSSettingBase<T>) {
-        this.definition = setting;
-    }
-
     enable() {
         this.#handleManualToggle(true);
     }
 
-    disable(options?: HSSettingToggleOptions) {
-        this.#handleManualToggle(false, options);
+    disable() {
+        this.#handleManualToggle(false);
     }
 
     #getEnabledGameDataDependents() {
         return Object.values(HSSettings.getSettings()).filter((setting) => {
             const definition = setting.getDefinition();
             return definition.settingName !== 'useGameData'
-                && definition.usesGameData === true
+                && HSSettings.usesGameData(definition)
                 && setting.isEnabled();
         });
     }
 
     #disableGameDataDependentsWithWarning(): void {
         const dependents = this.#getEnabledGameDataDependents();
+        this.#gameDataDependentsToRestore = dependents;
         if (dependents.length === 0) return;
 
         const dependentNames = dependents.map((setting) => setting.getDefinition().settingDescription);
@@ -82,30 +77,20 @@ export abstract class HSSetting<T extends HSSettingType> {
             height: dependentNames.length > 2 ? 80 : 60,
         });
 
-        HSSetting.#isDisablingGameDataDependents = true;
-        try {
-            for (const setting of dependents) {
-                setting.disable();
-            }
-        } finally {
-            HSSetting.#isDisablingGameDataDependents = false;
+        for (const setting of dependents) {
+            setting.disable();
         }
     }
 
-    #disableGameDataIfUnused(): void {
-        if (
-            HSSetting.#isDisablingGameDataDependents
-            || this.definition.settingName === 'useGameData'
-            || this.definition.usesGameData !== true
-            || this.definition.enabled
-        ) return;
+    // Turns back on what #disableGameDataDependentsWithWarning() turned off.
+    // enable() does nothing for a setting the player has turned back on meanwhile.
+    #restoreGameDataDependents(): void {
+        const dependents = this.#gameDataDependentsToRestore;
+        this.#gameDataDependentsToRestore = [];
 
-        if (this.#getEnabledGameDataDependents().length > 0) return;
-
-        const gameDataSetting = HSSettings.getSetting('useGameData');
-        if (gameDataSetting?.isEnabled()) {
-            HSLogger.info('No enabled settings require GDS; turning GDS off.', this.context);
-            gameDataSetting.disable();
+        for (const setting of dependents) {
+            HSLogger.log(`Turning ${setting.getDefinition().settingName} back on with GDS`, this.context);
+            setting.enable();
         }
     }
 
@@ -125,7 +110,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         // We're trying to prevent enabling settings which use game data when game data is not enabled
         if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(this.definition.settingName)) {
             if (gameDataSetting) {
-                if (this.definition.usesGameData &&
+                if (HSSettings.usesGameData(this.definition) &&
                     hasStateChanged &&
                     newState &&
                     !gameDataSetting.isEnabled()) {
@@ -147,6 +132,7 @@ export abstract class HSSetting<T extends HSSettingType> {
         if (!hasStateChanged) return;
 
         this.definition.enabled = newState;
+        HSSettings.notifyStateChange(this.definition.settingName);
 
         if (this.definition.settingType === 'boolean') {
             (this.definition as HSSettingBase<boolean>).settingValue = newState;
@@ -164,24 +150,28 @@ export abstract class HSSetting<T extends HSSettingType> {
         }
 
         await this.handleSettingAction('state', newState);
-        this.#disableGameDataIfUnused();
+
+        if (this.definition.settingName === 'useGameData' && newState) {
+            this.#restoreGameDataDependents();
+        }
 
         // Persist the changed enabled state to storage so UI toggles stick
         HSSettings.saveSettingsToStorage();
     }
 
-    #handleManualToggle(newState: boolean, options?: HSSettingToggleOptions) {
+    #handleManualToggle(newState: boolean) {
         const hasStateChanged = this.definition.enabled !== newState;
         if (!hasStateChanged) return;
 
         if (this.definition.settingName === 'useGameData') {
-            if (hasStateChanged && !newState && !options?.preserveGameDataDependents) {
+            if (hasStateChanged && !newState) {
                 this.#disableGameDataDependentsWithWarning();
             }
         }
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.enabled} -> ${newState}`, this.context);
         this.definition.enabled = newState;
+        HSSettings.notifyStateChange(this.definition.settingName);
 
         if (this.definition.settingType === 'boolean') {
             (this.definition as HSSettingBase<boolean>).settingValue = newState;
@@ -206,13 +196,14 @@ export abstract class HSSetting<T extends HSSettingType> {
             }
         }
 
-        void this.handleSettingAction('state', newState).then(
-            () => this.#disableGameDataIfUnused(),
-            (error) => {
-                HSLogger.error(`Setting action failed for ${this.definition.settingName}: ${error}`, this.context);
-                this.#disableGameDataIfUnused();
-            }
+        void this.handleSettingAction('state', newState).catch(
+            (error) => HSLogger.error(`Setting action failed for ${this.definition.settingName}: ${error}`, this.context)
         );
+
+        if (this.definition.settingName === 'useGameData' && newState) {
+            this.#restoreGameDataDependents();
+        }
+
         HSSettings.saveSettingsToStorage();
     }
 
@@ -230,11 +221,7 @@ export abstract class HSSetting<T extends HSSettingType> {
 
             const actionConfig: HSSettingActionParams = {
                 contextName: this.context,
-                value: this.definition.calculatedSettingValue ?? null
-            }
-
-            if (this.definition.patchConfig && this.definition.patchConfig.patchName) {
-                actionConfig.patchConfig = this.definition.patchConfig;
+                value: this.definition.calculatedSettingValue ?? null,
             }
 
             if (action && action instanceof Function) {
@@ -270,10 +257,6 @@ export abstract class HSSetting<T extends HSSettingType> {
 
     getCalculatedValue() {
         return this.definition.calculatedSettingValue;
-    }
-
-    toString() {
-        return JSON.stringify(this.definition);
     }
 
     abstract getValue(): T;
@@ -402,7 +385,9 @@ export class HSBooleanSetting extends HSSetting<boolean> {
     setValue(value: boolean) {
         this.definition.settingValue = value;
         this.definition.calculatedSettingValue = value;
+        const changed = this.definition.enabled !== value;
         this.definition.enabled = value;
+        if (changed) HSSettings.notifyStateChange(this.definition.settingName);
         HSSettings.saveSettingsToStorage();
     }
 

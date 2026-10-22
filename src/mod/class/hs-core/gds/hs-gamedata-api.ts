@@ -21,13 +21,13 @@ import { GoldenQuarkHelper, dailyFreeLevelCaps } from "./hs-gamedata-api-goldenQ
 import { OcteractHelper, dailyOcteractFreeLevelCaps } from "./hs-gamedata-api-octeract";
 import { LuckHelper } from "./hs-gamedata-api-luck";
 import { PurpleHelper } from "./hs-gamedata-api-purple";
-import type { ShopUpgradeHelperContext, AntUpgradeHelperContext, TalismanHelperContext, RuneHelperContext, AchievementHelperContext, AmbrosiaHelperContext, AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
+import type { HSCalculationComponents, ShopUpgradeHelperContext, AntUpgradeHelperContext, TalismanHelperContext, RuneHelperContext, AchievementHelperContext, AmbrosiaHelperContext, AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GoldenQuarkHelperContext } from "./hs-gamedata-api-goldenQuark";
 import type { OcteractHelperContext } from "./hs-gamedata-api-octeract";
 import type { LuckHelperContext } from "./hs-gamedata-api-luck";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
-import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./stored-vars-and-calculations";
+import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 import { parseGameDataDecimal, calcECC, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
 import Decimal from "break_infinity.js";
 
@@ -176,7 +176,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     #calculationCacheTemplate: CalculationCache;
 
-    // These are imported from stored-vars-and-calculations.ts
+    // calculateSynergismLevel's result for the current data, cleared with the calculation cache
+    #synergismLevel: number | undefined;
+
+    // These are imported from hs-gamedata-tables.ts
     #hepteractEffectiveValues = hepteractEffectiveValues;
     readonly #calculationHelperProviders: Array<object> = [];
 
@@ -509,8 +512,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             case 'speed': {
                 return (
                     talismanRuneBonuses.speed
-                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 10))
-                        + Math.max(0, Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 50) - 10))))
+                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 10))
+                        + Math.max(0, Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 50) - 10))))
                     + ((this.gameData.upgrades[29] ?? 0) * Math.floor(
                         Math.min(
                             100,
@@ -530,8 +533,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                                 + (this.gameData.fifthOwnedCoin ?? 0)) / 400
                         )
                     ))
-                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 30))
-                        + Math.min(50, Math.floor(this.gameData.coins.add(1).log10() / 300))))
+                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 30))
+                        + Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 300))))
                 )
             }
             case 'prism':
@@ -589,6 +592,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getGameData: () => this.gameData,
             getMeData: () => this.meData,
             calculateLuck: (reduce_vals = true, true_base = false) => this.luck.calculateLuck(reduce_vals, true_base),
+            calculateRedAmbrosiaLuck: () => this.luck.calculateRedAmbrosiaLuck() as number,
             getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
             getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
             getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => this.ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
@@ -597,6 +601,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
             getPurpleReactorUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleReactorUpgradeEffects(upgradeKey as any, effectKey),
             getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
+            getPurpleHoneyLuck: () => purple.calculatePurpleHoneyLuck(),
+            getPurpleHoneyPerExtraction: () => purple.calculatePurpleHoneyPerExtraction(),
             getPCoinUpgradeLevel: (upgradeName: string) => this.getPCoinUpgradeLevel(upgradeName as any),
             getCampaignTokens: () => this.campaignData?.tokens ?? 0,
             getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
@@ -611,6 +617,11 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         purple = this.registerCalculationHelper(new PurpleHelper({
             getGameData: () => this.gameData,
             calculateBlueberryInventory: () => ambrosia.calculateBlueberryInventory(true) as number,
+            calculateSynergismLevel: () => this.calculateSynergismLevel(),
+            getPCoinUpgradeLevel: (upgradeKey) => this.getPCoinUpgradeLevel(upgradeKey as any),
+            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
+            getRuneEffects: (runeKey) => rune.getRuneEffects(runeKey as any),
+            getTalismanEffects: (talismanKey) => talisman.getTalismanEffects(talismanKey as any),
             getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
         }));
         this.purple = purple;
@@ -627,8 +638,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
             getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
             calculateSumOfExaltCompletions: () => this.calculateSumOfExaltCompletions(),
-            calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode: CalculationMode = 'normal') =>
-                this.calculateAllShopTablets(reduce_vals, mode) as number[],
+            calculateFreeShopInfinityUpgrades: (mode: CalculationMode = 'normal') => this.calculateAllShopTablets(true, mode),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };
@@ -704,6 +714,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
             calculateHypercubeBlessingMultiplierPlatonicBlessing: () => this.calculateHypercubeBlessingMultiplierPlatonicBlessing(),
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
+            getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
+            calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
+            calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
+            calculateSingularityDebuff: (debuff) => this.calculateSingularityDebuff(debuff),
+            calculateSynergismLevel: () => this.calculateSynergismLevel(),
+            getShopLevel: (upgradeKey) => quarkShop.getShopLevel(upgradeKey),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };
@@ -807,7 +823,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         );
     }
 
-    public getCalculationFunction(fnName: string): ((...args: unknown[]) => number | number[]) | undefined {
+    public getCalculationFunction(fnName: string): ((...args: unknown[]) => unknown) | undefined {
         const directFn = (this as any)[fnName];
         if (typeof directFn === 'function') {
             return directFn.bind(this);
@@ -825,6 +841,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     clearCache() {
         this.#calculationCache = clearCalculationCache(this.#calculationCacheTemplate);
+        this.#synergismLevel = undefined;
     }
 
     dumpCache() {
@@ -879,7 +896,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     getFavoriteUpgradeMaxedDependencyCount(): number {
         if (!this.gameData) return 0
-        const data = this.gameData
 
         const goldenQuarkMaxed = FAVORITE_UPGRADE_GQ_DEPENDENCIES.reduce((count, key) =>
             count + (this.goldenQuark.getGQUpgradeLevel(key) >= goldenQuarkUpgradeMaxLevels[key].maxLevel ? 1 : 0),
@@ -1066,6 +1082,39 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             corruptionMultiplier: scores.corruptionMultiplier,
             effectiveScore: Math.floor(scores.effectiveScore),
         };
+    }
+
+    /**
+     * The ascension score multiplier of a corruption loadout.
+     * Mirrors SynergismOfficial/src/Corruptions.ts calculateIndividualRawMultiplier, multiplied over the 8 corruptions
+     * (totalCorruptionAscensionMultiplier).
+     */
+    calculateCorruptionScoreMultiplier(loadout: CorruptionLevels): number {
+        if (!this.gameData) return 1;
+        const data = this.gameData;
+        const scoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35];
+
+        const bonusVal = this.getGQUpgradeEffect('advancedPack', 'corruptionScoreIncrease')
+            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'corrScoreIncrease') ?? 0)
+            + 0.3 * (data.cubeUpgrades[74] ?? 0);
+        const bonusLevels = this.getGQUpgradeEffect('corruptionFifteen', 'freeCorruptionLevel')
+            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'freeCorruptionLevel') ?? 0)
+            + Number(this.talisman.getTalismanEffects('cookieGrandma').freeCorruptionLevel ?? 0)
+            + Number(this.rune.getRuneEffects('finiteDescent').corruptionFreeLevels ?? 0);
+        const p4x2 = data.platonicUpgrades[17] ?? 0;
+
+        const corruptions: (keyof CorruptionLevels)[] = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'];
+        return corruptions.reduce((product, corruption) => {
+            // P4x2: exponent 3 + 0.04 per level on viscosity's multiplier, from viscosity 10
+            const power = (p4x2 > 0 && loadout.viscosity >= 10 && corruption === 'viscosity') ? 3 + 0.04 * p4x2 : 1;
+            const totalLevel = (loadout[corruption] ?? 0) + bonusLevels;
+            const last = scoreMults.length - 1;
+            const multiplier = totalLevel < last
+                ? scoreMults[Math.floor(totalLevel)] + bonusVal
+                    + (totalLevel % 1) * (scoreMults[Math.ceil(totalLevel)] - scoreMults[Math.floor(totalLevel)])
+                : (scoreMults[last] + bonusVal) * Math.pow(1.2, totalLevel - last);
+            return product * Math.pow(multiplier, power);
+        }, 1);
     }
 
     calculateCorruptionEffect(loadout: CorruptionLevels, corruption: string): number {
@@ -1394,45 +1443,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return chalData.achievementPointValue(completions);
     }
 
-    calculateSingularityAmbrosiaLuckMilestoneBonus() {
-        if (!this.gameData) return 0;
-        const data = this.gameData;
-        let bonus = 0
-        const singThresholds1 = [35, 42, 49, 56, 63, 70, 77];
-        const singThresholds2 = [135, 142, 149, 156, 163, 170, 177];
-
-        for (const sing of singThresholds1) {
-            if (data.highestSingularityCount >= sing) {
-                bonus += 5
-            }
-        }
-
-        for (const sing of singThresholds2) {
-            if (data.highestSingularityCount >= sing) {
-                bonus += 6
-            }
-        }
-
-        const reduced = bonus;
-
-        return reduced;
-    }
-
-    calculateAmbrosiaLuckSingularityUpgrade(reduce_vals = true) {
-        if (!this.gameData) return 0;
-        const data = this.gameData;
-        const vals = [
-            this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck', 'ambrosiaLuck'),
-            this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck2', 'ambrosiaLuck'),
-            this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck3', 'ambrosiaLuck'),
-            this.goldenQuark.getGQUpgradeEffect('singAmbrosiaLuck4', 'ambrosiaLuck')
-        ]
-
-        const reduced = vals.reduce((a, b) => a + b, 0);
-
-        return reduce_vals ? reduced : vals;
-    }
-
     calculateSingularityReductions(reduce_vals = true, true_base = false) {
         if (!this.gameData) return 0;
         const data = this.gameData;
@@ -1462,23 +1472,48 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             }
         }
 
-        const vals = [
-            this.quarkShop.getShopUpgradeEffects(
+        const vals: HSCalculationComponents = {
+            'A Singularity Tenderizer': this.quarkShop.getShopUpgradeEffects(
                 'shopSingularityPenaltyDebuff',
                 'singularityPenaltyReducers',
                 true_base ? 'true_base' : 'normal',
             ) as number,
-            redu
-        ]
+            [data.insideSingularityChallenge
+                ? 'Ambrosia - Exo-Chromatic Kinetic Post-Modulated Singularity Stabilizer Module'
+                : 'Ambrosia - Singularity Stabilizer Module']: redu,
+        }
 
-        const reduced = vals.reduce((a, b) => a + b, 0)
+        const reduced = Object.values(vals).reduce((a, b) => a + b, 0)
 
         updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
 
         return reduce_vals ? reduced : vals;
     }
 
-    calculateSingularityDebuff(debuff: SingularityDebuffs, singularityCount: number = -1) {
+    /**
+     * The Horseshoe shop upgrade's singularity penalty multiplier (Shop.ts) as if the ambrosia upgrade "Talisman
+     * Power" (ambrosiaTalismanBonusRuneLevel) had this many bought levels: it multiplies what the talismans give
+     * to the Horseshoe rune, whose level sets that multiplier.
+     */
+    #horseShoePenaltyWithTalismanUpgrade(talismanUpgradeLevel: number): number {
+        const shopLevel = this.quarkShop.getShopLevel('shopHorseShoe');
+        let runeLevel = this.rune.getRuneEffectiveLevel('horseShoe');
+        // 0: the rune is locked, and stays at 0 whatever the talismans give
+        if (runeLevel > 0) {
+            const talismanMultiplier = this.talisman.allTalismanRuneBonusStatsSum();
+            const fromTalismans = this.talisman.getRuneBonusFromAllTalismans('horseShoe');
+            const current = this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel').talismanBonusRuneLevel;
+            const wanted = this.ambrosia.getAmbrosiaUpgradeEffectsAtLevel('ambrosiaTalismanBonusRuneLevel', talismanUpgradeLevel).talismanBonusRuneLevel;
+            if (talismanMultiplier > 0) runeLevel += fromTalismans / talismanMultiplier * (wanted - current);
+        }
+        return 1 - Math.min(300, runeLevel * shopLevel) / 1000;
+    }
+
+    /**
+     * @param talismanUpgradeLevel the debuff as if the ambrosia upgrade "Talisman Power" had this many bought
+     * levels (#horseShoePenaltyWithTalismanUpgrade). Left out: the save's own level.
+     */
+    calculateSingularityDebuff(debuff: SingularityDebuffs, singularityCount: number = -1, talismanUpgradeLevel?: number) {
         if (!this.gameData) return 1;
         const data = this.gameData;
         const resolvedSingularityCount = singularityCount === -1 ? data.singularityCount : singularityCount;
@@ -1496,7 +1531,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             'Platonic Costs',
             'Hepteract Costs',
         ].indexOf(debuff);
-        const shopPenalty = this.quarkShop.getShopUpgradeEffects('shopHorseShoe', 'singularityPenaltyMult') as number;
+        const shopPenalty = talismanUpgradeLevel === undefined
+            ? this.quarkShop.getShopUpgradeEffects('shopHorseShoe', 'singularityPenaltyMult') as number
+            : this.#horseShoePenaltyWithTalismanUpgrade(talismanUpgradeLevel);
         const antiquitiesLevel = this.rune.getRuneLevelFromEXP('antiquities', parseGameDataDecimal(data.runes.antiquities));
         const cacheName = 'SingularityDebuff' as keyof CalculationCache;
         const calculationVars = [
@@ -1743,8 +1780,39 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return totalAP;
     }
 
+    /**
+     * Mirrors getSynthesisRedAmbrosiaCost / getSynthesisPurpleHoneyCost in
+     * SynergismOfficial/src/Synthesis.ts: the Red Ambrosia and Purple Honey
+     * spent to craft one Purple Ambrosia.
+     */
+    calculatePurpleAmbrosiaCraftCosts(): { craftRedAmbrosiaCost: number; craftPurpleHoneyCost: number } {
+        const synthesis = (this.gameData as unknown as { synthesisUpgrades?: Record<string, Record<string, number>> } | undefined)?.synthesisUpgrades;
+        // A synthesis level is the highest level whose linear cumulative cost
+        // fits every invested resource.
+        const level = (key: string, maxLevel: number, costPerLevel: Record<string, number>): number => {
+            const affordable = Object.entries(costPerLevel).map(([resource, cost]) =>
+                Math.floor(Number(synthesis?.[key]?.[resource] ?? 0) / cost));
+            return Math.min(maxLevel, Math.max(0, Math.min(...affordable)));
+        };
+        const redReduction = level('redAmbrosiaReduction', 500, { purpleAmbrosia: 1, redAmbrosia: 1_250 });
+        const honeyReduction = level('purpleHoneyReduction', 100, { purpleAmbrosia: 5, purpleHoney: 2_500 });
+        const discount = Number(this.talisman.getTalismanEffects('purpleGem').purpleAmbrosiaDiscount ?? 1)
+            * Number(this.getSingularityChallengeEffect('barDependence', 'purpleAmbrosiaCostReduction') ?? 1);
+
+        return {
+            craftRedAmbrosiaCost: (2_500 - redReduction) * discount,
+            craftPurpleHoneyCost: (500 - honeyReduction) * discount,
+        };
+    }
+
+    /**
+     * Cached until the next clearCache(): about 0.1 ms, and an ambrosia rate refresh asks for it 8 times
+     * (luck, red luck, red speed, purple honey…). Everything it reads comes in through the _update* methods,
+     * which all clear the cache.
+     */
     calculateSynergismLevel() {
         if (!this.gameData) return 0;
+        if (this.#synergismLevel !== undefined) return this.#synergismLevel;
         const data = this.gameData;
 
         let achievementPoints = 0;
@@ -1768,6 +1836,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             level = 50 + Math.floor((achievementPoints - 2500) / 100)
         }
 
+        this.#synergismLevel = level;
         return level
     }
 
@@ -1903,13 +1972,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     calculateAscensionSpread(reduce_vals = true, mode: CalculationMode = 'normal') {
         if (!this.gameData) return 0;
-        const vals = [
-            this.goldenQuark.getGQUpgradeEffect('singAscensionSpeed', 'exponentSpread'),
-            this.goldenQuark.getGQUpgradeEffect('singAscensionSpeed2', 'exponentSpread'),
-            this.quarkShop.getShopUpgradeEffects('chronometerInfinity', 'exponentSpread', mode) as number
-        ]
+        const vals: HSCalculationComponents = {
+            'A hecking good Ascension speedup!': this.goldenQuark.getGQUpgradeEffect('singAscensionSpeed', 'exponentSpread'),
+            'Ascended Ascension Speedup!': this.goldenQuark.getGQUpgradeEffect('singAscensionSpeed2', 'exponentSpread'),
+            'Chronometer INF Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometerInfinity', 'exponentSpread', mode) as number,
+        }
 
-        const reduced = vals.reduce((a, b) => a + b, 0);
+        const reduced = Object.values(vals).reduce((a, b) => a + b, 0);
 
         return reduce_vals ? reduced : vals;
     }
@@ -1962,6 +2031,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return 1 + effectPerBlessing * limitMult1 * limitMult2 * Math.pow(globalSpeedBlessing, DR2);
     }
 
+    /** Mirrors CampaignManager.ascensionScoreMultiplier in SynergismOfficial/src/Campaign.ts. */
+    calculateCampaignAscensionScoreBonus(): number {
+        const tokens = this.campaignData?.tokens ?? 0;
+        return 1
+            + 0.2 * 1 / 100 * Math.min(tokens, 100)
+            + 0.3 * (1 - Math.exp(-Math.max(tokens - 100, 0) / 1000))
+            + 0.5 * (1 - Math.exp(-Math.max(tokens - 2500, 0) / 5000));
+    }
+
     calculateAscensionScore() {
         if (!this.gameData) {
             return { baseScore: 0, corruptionMultiplier: 0, bonusMultiplier: 0, effectiveScore: 0 };
@@ -1979,6 +2057,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const challenge15ScoreBonus = this.calculateChallenge15Reward('score') || 1;
         const masterPackAscensionScoreMult = this.getGQUpgradeEffect('masterPack', 'ascensionScoreMult') || 1;
         const expertPackAscensionScoreMult = this.getGQUpgradeEffect('expertPack', 'ascensionScoreMult') || 1;
+        const campaignScoreBonus = this.calculateCampaignAscensionScoreBonus();
         const finiteDescentScore = this.rune.getRuneEffects('finiteDescent').ascensionScore;
         const achievementAscensionScoreBonus = Number(this.achievement.AchRewards['ascensionScore']()) || 1;
         const eventAscensionScoreBonus = this.isEvent ? this.calculateEventSourceBuff(EventBuffType.AscensionScore) : 0;
@@ -2006,6 +2085,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             challenge15ScoreBonus,
             masterPackAscensionScoreMult,
             expertPackAscensionScoreMult,
+            campaignScoreBonus,
             finiteDescentScore,
             achievementAscensionScoreBonus,
             this.isEvent ? 1 : 0,
@@ -2013,16 +2093,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         ];
 
         return this.memoizeCalculation<AscensionScoreResult>('calculateAscensionScore', calculationVars, () => {
-            const corruptionMultiplier = [
-                'viscosity',
-                'drought',
-                'deflation',
-                'extinction',
-                'illiteracy',
-                'recession',
-                'dilation',
-                'hyperchallenge'
-            ].reduce((product, corruption) => product * this.calculateCorruptionEffect(data.corruptions.used, corruption), 1);
+            const corruptionMultiplier = this.calculateCorruptionScoreMultiplier(data.corruptions.used);
 
             const challengeScoreArrays1 = [0, 8, 10, 12, 15, 20, 60, 80, 120, 180, 300];
             const challengeScoreArrays2 = [0, 10, 12, 15, 20, 30, 80, 120, 180, 300, 450];
@@ -2069,6 +2140,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const bonusMultiplier =
                 challenge15ScoreBonus *
                 this.calculateAscensionScorePlatonicBlessing() *
+                campaignScoreBonus *
                 finiteDescentScore *
                 (1 + 0.05 * cube21) *
                 (1 + 0.05 * cube31) *
@@ -2184,36 +2256,36 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         if (reduce_vals && cached !== undefined) return cached;
 
-        const vals: number[] = [
-            this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'ascensionSpeed'),
-            this.talisman.getTalismanEffects('polymath').ascensionSpeedBonus,
-            this.quarkShop.getShopUpgradeEffects('chronometer', 'ascensionSpeedMult', mode) as number,
-            this.quarkShop.getShopUpgradeEffects('chronometer2', 'ascensionSpeedMult', mode) as number,
-            this.quarkShop.getShopUpgradeEffects('chronometer3', 'ascensionSpeedMult', mode) as number,
-            1 + (0.6 / 1000) * this.calculateHepteractEffective('chronos'),
-            1 + 0.002 * this.getCorruptionTotalLevel() * data.platonicUpgrades[15],
-            this.calculateChallenge15Reward('ascensionSpeed'),
-            1 + (1 / 400) * cube59,
-            this.goldenQuark.getGQUpgradeEffect('intermediatePack', 'ascensionSpeedMult'),
-            this.quarkShop.getShopUpgradeEffects('chronometerZ', 'ascensionSpeedMult', mode) as number,
-            this.octeract.getOcteractUpgradeEffect('octeractImprovedAscensionSpeed', 'ascensionSpeedMult'),
-            this.octeract.getOcteractUpgradeEffect('octeractImprovedAscensionSpeed2', 'ascensionSpeedMult'),
-            this.quarkShop.getShopUpgradeEffects('chronometerInfinity', 'ascensionSpeedMult', mode) as number,
-            Math.pow(
+        const vals: HSCalculationComponents = {
+            'Ants - Mortuus Iterum Formicidae': this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'ascensionSpeed'),
+            'Polymath Talisman - Inscription Bonus': this.talisman.getTalismanEffects('polymath').ascensionSpeedBonus,
+            'Chronometer Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometer', 'ascensionSpeedMult', mode) as number,
+            'Chronometer 2 Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometer2', 'ascensionSpeedMult', mode) as number,
+            'Chronometer 3 Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometer3', 'ascensionSpeedMult', mode) as number,
+            'Chronos Hepteract Bonus': 1 + (0.6 / 1000) * this.calculateHepteractEffective('chronos'),
+            'Platonic OMEGA Bonus': 1 + 0.002 * this.getCorruptionTotalLevel() * data.platonicUpgrades[15],
+            'Challenge 15 Reward': this.calculateChallenge15Reward('ascensionSpeed'),
+            'Cookie Upgrade 9 Bonus': 1 + (1 / 400) * cube59,
+            'Intermediate Pack Bonus': this.goldenQuark.getGQUpgradeEffect('intermediatePack', 'ascensionSpeedMult'),
+            'Chronometer Z Shop Upgrade': this.quarkShop.getShopUpgradeEffects('chronometerZ', 'ascensionSpeedMult', mode) as number,
+            'Abstract Photokinetics': this.octeract.getOcteractUpgradeEffect('octeractImprovedAscensionSpeed', 'ascensionSpeedMult'),
+            'Abstract Exokinetics': this.octeract.getOcteractUpgradeEffect('octeractImprovedAscensionSpeed2', 'ascensionSpeedMult'),
+            'Chronometer INF Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometerInfinity', 'ascensionSpeedMult', mode) as number,
+            'EXALT - Twenty Ascensions': Math.pow(
                 this.getSingularityChallengeEffect('limitedAscensions', 'ascensionSpeedMult'),
                 1 + Math.max(0, Math.floor(Math.log10(data.ascensionCount))),
             ),
-            this.quarkShop.getShopUpgradeEffects('shopPanthema', 'ascensionSpeedMult', mode) as number,
-            this.getSingularityChallengeEffect('limitedTime', 'ascensionSpeed'),
-            this.quarkShop.getShopUpgradeEffects('shopChronometerS', 'ascensionSpeedMult') as number,
-            1 / this.calculateLimitedAscensionsDebuff(),
-            this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead', mode).ascensionSpeedMult,
-            1 / this.calculateSingularityDebuff('Ascension Speed'),
-            1 + this.calculateEventSourceBuff(EventBuffType.AscensionSpeed),
-            this.purple.getPurpleReactorUpgradeEffects('lifetimeHoneyAscensionSpeed', 'ascensionSpeedMultiplier'),
-        ]
+            'The Jack of all Trades': this.quarkShop.getShopUpgradeEffects('shopPanthema', 'ascensionSpeedMult', mode) as number,
+            'EXALT - Limited Time': this.getSingularityChallengeEffect('limitedTime', 'ascensionSpeed'),
+            'Chronometer S Quark Upgrade': this.quarkShop.getShopUpgradeEffects('shopChronometerS', 'ascensionSpeedMult') as number,
+            'Limited Ascensions - Too Many Ascensions': 1 / this.calculateLimitedAscensionsDebuff(),
+            'Ambrosia - The Brick of Lead': this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaBrickOfLead', mode).ascensionSpeedMult,
+            'Singularity Debuff': 1 / this.calculateSingularityDebuff('Ascension Speed'),
+            'Event Bonus': 1 + this.calculateEventSourceBuff(EventBuffType.AscensionSpeed),
+            'Lifetime Purple Honey Power': this.purple.getPurpleReactorUpgradeEffects('lifetimeHoneyAscensionSpeed', 'ascensionSpeedMultiplier'),
+        }
 
-        const reduced = vals.reduce((a, b) => a * b, 1)
+        const reduced = Object.values(vals).reduce((a, b) => a * b, 1)
 
         updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
 
@@ -2322,41 +2394,12 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return acc + 8
     }, 0) + 8 * Object.keys(dailyOcteractFreeLevelCaps).length
 
-    computeFreeLevelMultiplierGQ(): number {
-        return this.goldenQuark.computeFreeLevelMultiplierGQ()
-    }
-
-    computeGQUpgradeFreeLevelSoftcap(upgradeKey: GoldenQuarkUpgradeKey): number {
-        return this.goldenQuark.computeGQUpgradeFreeLevelSoftcap(upgradeKey)
-    }
-
     getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey, effectKey?: string): number => {
         return this.octeract.getOcteractUpgradeEffect(upgradeKey, effectKey)
     }
 
-    computeFreeLevelMultiplierOCT(): number {
-        return this.octeract.computeFreeLevelMultiplierOCT()
-    }
-
-    computeOcteractFreeLevelSoftcap = (upgradeKey: OcteractUpgradeKey): number => {
-        return this.octeract.computeOcteractFreeLevelSoftcap(upgradeKey)
-    }
-
-    actualOcteractUpgradeTotalLevels(upgradeKey: OcteractUpgradeKey): number {
-        return this.octeract.actualOcteractUpgradeTotalLevels(upgradeKey)
-    }
-
-    actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
-        return this.goldenQuark.actualGQUpgradeTotalLevels(upgradeKey)
-    }
-
     getGQUpgradeEffect(upgradeKey: GoldenQuarkUpgradeKey, effectKey?: string): number {
         return this.goldenQuark.getGQUpgradeEffect(upgradeKey, effectKey)
-    }
-
-    calculateFavoriteUpgradeEffect(totalLevels: number): number {
-        const maxedCount = this.getFavoriteUpgradeMaxedDependencyCount()
-        return 1 + totalLevels / 5000 * (maxedCount + 6)
     }
 
     firstFiveFreeLevels = () => {
@@ -2371,8 +2414,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     calculateAllShopTablets(reduce_vals?: true, mode?: CalculationMode): number;
-    calculateAllShopTablets(reduce_vals: false, mode?: CalculationMode): number[];
-    calculateAllShopTablets(reduce_vals: boolean, mode?: CalculationMode): number | number[];
+    calculateAllShopTablets(reduce_vals: false, mode?: CalculationMode): HSCalculationComponents;
+    calculateAllShopTablets(reduce_vals: boolean, mode?: CalculationMode): number | HSCalculationComponents;
     calculateAllShopTablets(reduce_vals = true, mode: CalculationMode = 'normal') {
         if (!this.gameData) return 0;
         const data = this.gameData;
@@ -2385,6 +2428,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             data.shopUpgrades.shopInfiniteShopUpgrades,
             data.redAmbrosiaUpgrades.infiniteShopUpgrades,
             data.singularityChallenges.sadisticPrequel.enabled ? 1 : 0,
+            data.singularityChallenges.noQuarkUpgrades.enabled ? 1 : 0,
             mode === 'true_base' ? 1 : mode === 'non_ambrosia' ? 2 : 0,
             ...(Object.values(data.singularityChallenges) as SingularityChallengeStatus[]).map((c) => c.completions),
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
@@ -2415,22 +2459,22 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             }
         }
 
-        const vals: number[] = [
-            this.ambrosia.getRedAmbrosiaUpgradeEffects('infiniteShopUpgrades').freeLevels,
-            dunno(),
-            this.goldenQuark.getGQUpgradeEffect('singInfiniteShopUpgrades', 'infinityVouchers'),
-            this.octeract.getOcteractUpgradeEffect('octeractInfiniteShopUpgrades', 'infinityVouchers'),
-            Math.floor(0.01 * data.shopUpgrades.shopInfiniteShopUpgrades * this.calculateSumOfExaltCompletions()),
+        const vals: HSCalculationComponents = {
+            'Red Vouchers [Red Ambrosia]': this.ambrosia.getRedAmbrosiaUpgradeEffects('infiniteShopUpgrades').freeLevels,
+            'Orange Vouchers [Singularity Perk]': dunno(),
+            'Yellow Vouchers [Golden Quarks]': this.goldenQuark.getGQUpgradeEffect('singInfiniteShopUpgrades', 'infinityVouchers'),
+            'Green Vouchers [Octeracts]': this.octeract.getOcteractUpgradeEffect('octeractInfiniteShopUpgrades', 'infinityVouchers'),
+            'Blue Vouchers [Quarks]': this.quarkShop.getShopUpgradeEffects('shopInfiniteShopUpgrades', 'infiniteVouchers') as number,
             ...(data.singularityChallenges.noAmbrosiaUpgrades.enabled
-                ? []
-                : [
-                    +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades1', mode).freeLevels,
-                    +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades2', mode).freeLevels,
-                    +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades3', mode).freeLevels,
-                ]),
-        ]
+                ? {}
+                : {
+                    'Indigo Vouchers [Ambrosia 1]': +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades1', mode).freeLevels,
+                    'Violet Vouchers [Ambrosia 2]': +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades2', mode).freeLevels,
+                    'Periwinkle Vouchers [Ambrosia 3]': +this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaInfiniteShopUpgrades3', mode).freeLevels,
+                }),
+        }
 
-        const reduced = vals.reduce((a, b) => a + b, 0);
+        const reduced = Object.values(vals).reduce((a, b) => a + b, 0);
 
         updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
 
@@ -2531,118 +2575,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             total += leaderboard[i].elo * LEADERBOARD_WEIGHTS[i]
         }
         return Math.floor(total)
-    }
-
-    calculateDilatedFiveLeafBonus() {
-        if (!this.gameData) return 0;
-        const data = this.gameData;
-        const cacheName = 'DilatedFiveLeafBonus' as keyof CalculationCache;
-
-        const calculationVars: number[] = [
-            data.highestSingularityCount
-        ]
-
-        const cached = checkCalculationCache(this.#calculationCache, cacheName, calculationVars);
-
-        if (cached !== undefined) return cached;
-
-        const singThresholds = [100, 150, 200, 225, 250, 255, 260, 265, 269, 272]
-        let val = singThresholds.length / 100;
-
-        for (let i = 0; i < singThresholds.length; i++) {
-            if (data.highestSingularityCount < singThresholds[i]) {
-                val = i / 100;
-                break;
-            }
-        }
-
-        const reduced = val;
-
-        updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
-
-        return reduced;
-    }
-
-    calculateAmbrosiaLuckShopUpgrade(reduce_vals = true, true_base = false) {
-        const cacheName = (`AmbrosiaLuckShopUpgrade${true_base ? '_TRUE_BASE' : ''}`) as keyof CalculationCache;
-
-        const calculationVars = [...this.getAmbrosiaLuckShopUpgradeCalculationDeps(), true_base ? 1 : 0];
-
-        const cached = checkCalculationCache(this.#calculationCache, cacheName, calculationVars);
-
-        if (reduce_vals && cached !== undefined) return cached;
-
-        const data = this.gameData;
-        const noQuarkUpgrades = data?.singularityChallenges.noQuarkUpgrades.enabled;
-        const ambrosiaLuckBonusLevels = true_base
-            ? this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaFreeLuckUpgrades', 'true_base').freeLuckUpgrades
-            : this.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaFreeLuckUpgrades').freeLuckUpgrades;
-
-        const effectiveLevels = noQuarkUpgrades
-            ? [0, 0, 0, 0]
-            : [
-                (data?.shopUpgrades.shopAmbrosiaLuck1 ?? 0) + ambrosiaLuckBonusLevels,
-                (data?.shopUpgrades.shopAmbrosiaLuck2 ?? 0) + ambrosiaLuckBonusLevels,
-                (data?.shopUpgrades.shopAmbrosiaLuck3 ?? 0) + ambrosiaLuckBonusLevels,
-                (data?.shopUpgrades.shopAmbrosiaLuck4 ?? 0) + ambrosiaLuckBonusLevels,
-            ];
-
-        const vals = [
-            2 * effectiveLevels[0],
-            2 * effectiveLevels[1],
-            2 * effectiveLevels[2],
-            0.6 * effectiveLevels[3],
-        ];
-
-        const reduced = vals.reduce((a, b) => a + b, 0);
-
-        updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
-
-        return reduce_vals ? reduced : vals;
-    }
-
-    calculateCampaignAmbrosiaSpeedBonus() {
-        const cacheName = 'CampaignAmbrosiaSpeedBonus' as keyof CalculationCache;
-
-        const tokens = this.campaignData?.tokens ?? 0;
-
-        const calculationVars: number[] = [
-            tokens
-        ]
-
-        const cached = checkCalculationCache(this.#calculationCache, cacheName, calculationVars);
-
-        if (cached !== undefined) return cached;
-
-        let campaignBlueberrySpeedBonus;
-
-        if (tokens < 2000) {
-            campaignBlueberrySpeedBonus = 1;
-        } else {
-            campaignBlueberrySpeedBonus = 1 + 0.02 * 1 / 2000 * Math.min(tokens - 2000, 2000) + 0.03 * (1 - Math.exp(-Math.max(tokens - 4000, 0) / 2000))
-        }
-
-        const reduced = campaignBlueberrySpeedBonus;
-
-        updateCalculationCache(this.#calculationCache, cacheName, { value: reduced, cachedBy: calculationVars });
-
-        return reduced;
-    }
-
-    private getAmbrosiaLuckShopUpgradeCalculationDeps(): number[] {
-        if (!this.gameData) return [0];
-        const data = this.gameData;
-
-        return [
-            data.shopUpgrades.shopAmbrosiaLuck1,
-            data.shopUpgrades.shopAmbrosiaLuck2,
-            data.shopUpgrades.shopAmbrosiaLuck3,
-            data.shopUpgrades.shopAmbrosiaLuck4,
-            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.ambrosiaInvested,
-            data.ambrosiaUpgrades.ambrosiaFreeLuckUpgrades.purpleAmbrosiaInvested ?? 0,
-            data.redAmbrosiaUpgrades.freeLevelsRow2,
-            data.singularityChallenges.noAmbrosiaUpgrades.enabled ? 1 : 0,
-        ];
     }
 
     calculateGoldenRevolution(): number {
@@ -2884,7 +2816,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     totalTalismanPowerMultiplierNoAmb: new Decimal(noAmbTalismanPower),
                     patreonBonus:               this.getPatreonBonus(),
                     activeBells:                activeBells,
-                    jack:                       gameData.shopUpgrades.shopPanthema > 0,
+                    jack:                       this.quarkShop.getShopLevel('shopPanthema') > 0,
                     freeShopLevelsInfinityNoAmb: this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),
                     freeShopLevelsSpeed:        this.quarkShop.getShopFreeLevelsAscensionSpeed(),
@@ -2944,11 +2876,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                             && this.purple.getPurpleAmbrosiaUpgradeEffects('libra', 'overcapToggleUnlocked')),
                         barDependenceEnabled: Boolean(gameData.singularityChallenges.barDependence.enabled),
                     },
+                    // Purple Honey luck and per-extraction values do not depend on
+                    // purchased Ambrosia levels; the bar-income model applies Two Mind.
+                    heaterPurple: {
+                        purpleHoneyLuck: this.purple.calculatePurpleHoneyLuck(),
+                        purpleHoneyPerExtraction: this.purple.calculatePurpleHoneyPerExtraction(),
+                        ...this.calculatePurpleAmbrosiaCraftCosts(),
+                    },
                     ambrosiaUpgradeBonusLevels,
                     ambrosiaUpgradeBlueberryCostReductions,
                     shopUpgradeRawLevels,
                     shopBonusLevelsNoAmbrosia,
                     panthemaLevel:            this.quarkShop.getShopLevel('shopPanthema', 'non_ambrosia'),
+                    // Not read by the heater any more: it follows its Exalt select (4 = No Quark Upgrades)
                     shopUpgradesDisabled:     gameData.singularityChallenges.noQuarkUpgrades.enabled,
                     purpleHoney:                gameData.purpleReactor?.purpleHoney ?? 0,
                     lifetimePurpleHoney:        gameData.purpleReactor?.lifetimePurpleHoney ?? 0,
@@ -2968,7 +2908,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     redAmbrosiaBarMax:      this.ambrosia.calculateRequiredRedAmbrosiaTime(),
                     ambrosiaGainChance:       ambrosiaGainChance,
                     trueAmbrosiaGainChance:   trueAmbrosiaGainChance,
-                    ambrosiaAcceleratorCount: gameData.shopUpgrades.shopAmbrosiaAccelerator,
+                    ambrosiaAcceleratorCount: this.quarkShop.getShopLevel('shopAmbrosiaAccelerator'),
                     pseudoCoinUpgrades: {
                         ambrosiaGenerationBuffLevel:    this.getPCoinUpgradeLevel('AMBROSIA_GENERATION_BUFF'),
                         ambrosiaLuckBuffLevel:          this.getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF'),

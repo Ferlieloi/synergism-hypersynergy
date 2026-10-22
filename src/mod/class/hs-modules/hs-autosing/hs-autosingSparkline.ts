@@ -5,12 +5,9 @@ export interface SparklineMetric {
     duration: number;
     quarksGained: number;
     goldenQuarksGained: number;
-    phases: Record<string, number>;
-    c15?: string;
     runningAvgDuration: number;
     runningAvgQuarksPerSecond: number;
     runningAvgGoldenQuarksPerSecond: number;
-    happyHourStackAmount: number;
 }
 
 /**

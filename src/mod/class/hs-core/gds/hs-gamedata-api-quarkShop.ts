@@ -1,13 +1,10 @@
 import { ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
 import { parseGameDataNumber } from "./hs-gamedata-utils";
-import { SHOP_UPGRADE_GROUPS_BY_KEY } from "./stored-vars-and-calculations"
-import type { ShopUpgradeHelperContext, CalculationCache, CalculationMode } from "../../../types/data-types/hs-gamedata-api-types"
-import { HSLogger } from "../hs-logger";
+import { SHOP_UPGRADE_GROUPS_BY_KEY, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables"
+import type { ShopUpgradeHelperContext, CalculationCache, CalculationMode, SingularityChallengeDataKeys } from "../../../types/data-types/hs-gamedata-api-types"
 
 const QUARKSHOP_CACHE_PREFIX = 'QUARKSHOP_';
 
-const getShopFreeLevelsCubeCacheName                                = (): string => `${QUARKSHOP_CACHE_PREFIX}FREE_CUBE_LEVELS`;
-const getShopFreeLevelsAscensionSpeedCacheName                      = (): string => `${QUARKSHOP_CACHE_PREFIX}FREE_ASCENSION_SPEED_LEVELS`;
 const getShopFreeLevelsQuarkCacheName                               = (): string => `${QUARKSHOP_CACHE_PREFIX}FREE_QUARK_BONUS_LEVELS`;
 const getShopLevelCacheName                       = (upgradeKey: string): string => `${QUARKSHOP_CACHE_PREFIX}SHOP_LEVEL_${upgradeKey}`;
 const getShopBonusLevelsCacheName                 = (upgradeKey: string): string => `${QUARKSHOP_CACHE_PREFIX}BONUS_LEVELS_${upgradeKey}`;
@@ -147,8 +144,8 @@ export class ShopUpgradeHelper {
             getShopUpgradeTypeBonusLevels: (type: ShopUpgradeGroups) => getShopUpgradeTypeBonusLevelsFreeLevelsOnly(type, freeEnv),
             getAmbrosiaUpgradeEffects: (upgradeKey: string, mode: CalculationMode = 'true_base') =>
                 baseEnv.getAmbrosiaUpgradeEffects(upgradeKey, mode),
-            calculateFreeShopInfinityUpgrades: (reduce_vals: boolean, mode: CalculationMode = 'true_base') =>
-                baseEnv.calculateFreeShopInfinityUpgrades(reduce_vals, mode),
+            calculateFreeShopInfinityUpgrades: (mode: CalculationMode = 'true_base') =>
+                baseEnv.calculateFreeShopInfinityUpgrades(mode),
         } as ShopUpgradeHelperContext;
         return freeEnv;
     }
@@ -161,8 +158,8 @@ export class ShopUpgradeHelper {
                 SHOP_UPGRADE_GROUP_CONFIG[type]?.getBonusLevels(noAmbrosiaEnv, 'non_ambrosia') ?? 0,
             getAmbrosiaUpgradeEffects: (upgradeKey: string) =>
                 baseEnv.getAmbrosiaUpgradeEffects(upgradeKey, 'non_ambrosia'),
-            calculateFreeShopInfinityUpgrades: (reduce_vals: boolean) =>
-                baseEnv.calculateFreeShopInfinityUpgrades(reduce_vals, 'non_ambrosia'),
+            calculateFreeShopInfinityUpgrades: () =>
+                baseEnv.calculateFreeShopInfinityUpgrades('non_ambrosia'),
         } as ShopUpgradeHelperContext;
         return noAmbrosiaEnv;
     }
@@ -286,6 +283,39 @@ const getRawShopUpgradeLevel = (upgradeKey: string, env: ShopUpgradeHelperContex
     return gameData?.shopUpgrades[upgradeKey as keyof typeof gameData.shopUpgrades] ?? 0
 }
 
+// The Exalt reward that unlocks a shop upgrade (SynergismOfficial/src/Shop.ts isUnlocked). The game's getShopLevel counts a
+// locked upgrade as level 0, even a bought one. The other unlock conditions (shop passes, early game) are left out: every
+// player past singularity 1 meets them, and an upgrade can't be bought before them.
+const SHOP_UPGRADE_EXALT_UNLOCKS: Record<string, [SingularityChallengeDataKeys, string]> = {
+    shopSingularityPenaltyDebuff: ['noSingularityUpgrades', 'shopUpgrade'],
+    shopCashGrabUltra: ['noSingularityUpgrades', 'shopUpgrade2'],
+    shopAmbrosiaLuckMultiplier4: ['oneChallengeCap', 'shopUpgrade'],
+    shopOcteractAmbrosiaLuck: ['noOcteracts', 'shopUpgrade'],
+    shopInfiniteShopUpgrades: ['limitedAscensions', 'shopUpgrade'],
+    calculator7: ['limitedAscensions', 'shopUpgrade2'],
+    shopAmbrosiaAccelerator: ['noAmbrosiaUpgrades', 'shopUpgrade'],
+    shopEXUltra: ['noAmbrosiaUpgrades', 'shopUpgrade2'],
+    shopChronometerS: ['limitedTime', 'shopUpgrade'],
+    shopAmbrosiaUltra: ['limitedTime', 'shopUpgrade2'],
+    shopSingularitySpeedup: ['sadisticPrequel', 'shopUpgrade'],
+    shopSingularityPotency: ['sadisticPrequel', 'shopUpgrade2'],
+    shopSadisticRune: ['sadisticPrequel', 'shopUpgrade3'],
+    shopPurpleBarRebate: ['taxmanLastStand', 'shopUpgrade'],
+    shopPanthema: ['noQuarkUpgrades', 'shopUpgrade'],
+    shopHorseShoe: ['barDependence', 'shopUpgrade'],
+};
+
+const isShopUpgradeLocked = (
+    upgradeKey: string,
+    gameData: ReturnType<ShopUpgradeHelperContext["getGameData"]>,
+): boolean => {
+    const unlock = SHOP_UPGRADE_EXALT_UNLOCKS[upgradeKey];
+    if (!unlock || !gameData) return false;
+    const [challenge, rewardKey] = unlock;
+    const completions = gameData.singularityChallenges[challenge]?.completions ?? 0;
+    return !(SINGULARITY_CHALLENGE_DATA[challenge].effect(completions) as Record<string, unknown>)[rewardKey];
+}
+
 const buildShopLevelDependencies = (
     upgradeKey: string,
     rawLevel: number,
@@ -294,9 +324,10 @@ const buildShopLevelDependencies = (
     getShopUpgradeTypeBonusLevelCalculationVars: (group: ShopUpgradeGroups) => number[],
 ): number[] => {
     const noQuarkLock = gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility ? 1 : 0;
+    const exaltLock = isShopUpgradeLocked(upgradeKey, gameData) ? 1 : 0;
     const shouldIncludeGroupVars = upgradeKey !== 'shopPanthema' && !isUtility;
 
-    const vars: number[] = [rawLevel, noQuarkLock];
+    const vars: number[] = [rawLevel, noQuarkLock, exaltLock];
     if (shouldIncludeGroupVars) {
         const groups = getShopUpgradeGroups(upgradeKey);
         for (const group of groups) {
@@ -314,7 +345,7 @@ const buildShopLevelResult = (
     isUtility: boolean,
     getBonusLevels: () => number,
 ): number => {
-    if (gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility) {
+    if ((gameData?.singularityChallenges.noQuarkUpgrades.enabled && !isUtility) || isShopUpgradeLocked(upgradeKey, gameData)) {
         return 0;
     }
 
@@ -466,7 +497,7 @@ const SHOP_UPGRADE_GROUP_CONFIG: Record<ShopUpgradeGroups, ShopUpgradeGroupConfi
         },
         getBonusLevels: (env, mode = 'normal') => {
             const topHat = getTopHatRuneEffects(env);
-            return env.calculateFreeShopInfinityUpgrades(false, mode).reduce((sum, value) => sum + value, 0)
+            return env.calculateFreeShopInfinityUpgrades(mode)
                 + env.getSingularityChallengeEffect('noQuarkUpgrades', 'freeInfinityLevels')
                 + topHat.freeInfinityLevels;
         },
@@ -567,48 +598,6 @@ const getRawFreeShopInfinityDependencies = (env: ShopUpgradeHelperContext): numb
         data.ambrosiaUpgrades.ambrosiaInfiniteShopUpgrades3?.purpleAmbrosiaInvested ?? 0,
         ...getRawTopHatDependencies(env),
     ]
-}
-
-const getShopLevel = (upgradeKey: string, env: ShopUpgradeHelperContext): number => {
-    const cacheName = getShopLevelCacheName(upgradeKey) as keyof CalculationCache;
-    const calculationVars = getShopLevelDependencies(upgradeKey, env);
-    const cached = env.checkCalculationCache(cacheName, calculationVars);
-    if (cached !== undefined) return cached;
-
-    const rawLevel = getRawShopUpgradeLevel(upgradeKey, env);
-    const gameData = env.getGameData();
-    const isUtility = isUtilityShopUpgrade(upgradeKey);
-    const result = buildShopLevelResult(
-        upgradeKey,
-        rawLevel,
-        gameData,
-        isUtility,
-        () => getShopBonusLevels(upgradeKey, env),
-    );
-
-    env.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
-    return result;
-}
-
-const getShopLevelFreeLevelsOnly = (upgradeKey: string, env: ShopUpgradeHelperContext): number => {
-    const cacheName = (`${getShopLevelCacheName(upgradeKey)}_FREE`) as keyof CalculationCache;
-    const calculationVars = getShopLevelDependencies(upgradeKey, env);
-    const cached = env.checkCalculationCache(cacheName, calculationVars);
-    if (cached !== undefined) return cached;
-
-    const rawLevel = getRawShopUpgradeLevel(upgradeKey, env);
-    const gameData = env.getGameData();
-    const isUtility = isUtilityShopUpgrade(upgradeKey);
-    const result = buildShopLevelResult(
-        upgradeKey,
-        rawLevel,
-        gameData,
-        isUtility,
-        () => getShopBonusLevels(upgradeKey, env, 'true_base'),
-    );
-
-    env.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
-    return result;
 }
 
 const getShopLevelDependencies = (upgradeKey: string, env: ShopUpgradeHelperContext): number[] => {

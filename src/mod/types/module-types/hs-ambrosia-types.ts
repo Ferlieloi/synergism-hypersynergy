@@ -16,3 +16,6 @@ export enum AMBROSIA_LOADOUT_SLOT {
     SLOT_15 = 'blueberryLoadout15',
     SLOT_16 = 'blueberryLoadout16'
 }
+
+/** Values of the game's player.blueberryLoadoutMode */
+export type BlueberryLoadoutMode = 'loadTree' | 'saveTree';

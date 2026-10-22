@@ -47,6 +47,25 @@ test('remembers the build only after the game process starts', async t => {
     assert.equal(saved.modRef, 'browsed-tag')
 })
 
+test('a local launch keeps the last played build and only sets lastPlayedLocal, a public launch clears it', async t => {
+    const { app, exePath } = fixture(t)
+    saveConfig(app, { ...loadConfig(app), lastPlayedChannel: 'dev', lastPlayedModRef: 'master' })
+    const launch = (channel, modRef) => launchGame({
+        app, exePath, channel, modRef, spawnProcess: () => childThatEmits('spawn')
+    })
+
+    assert.equal((await launch('local', 'local')).ok, true)
+    let saved = loadConfig(app)
+    assert.equal(saved.lastPlayedLocal, true)
+    assert.equal(saved.lastPlayedChannel, 'dev')
+    assert.equal(saved.lastPlayedModRef, 'master')
+
+    assert.equal((await launch('live', 'v2.14.5')).ok, true)
+    saved = loadConfig(app)
+    assert.equal(saved.lastPlayedLocal, false)
+    assert.equal(saved.lastPlayedChannel, 'live')
+})
+
 test('a failed launch does not replace the previously played build', async t => {
     const { app, exePath } = fixture(t)
     saveConfig(app, { ...loadConfig(app), lastPlayedChannel: 'dev', lastPlayedModRef: 'v2.13.5' })

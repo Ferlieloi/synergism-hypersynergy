@@ -293,7 +293,7 @@ export class RuneHelper {
             effectiveLevelMult: () => 1,
             freeLevels: () => 0,
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean((this.#ctx.getGameData()?.shopUpgrades.shopSadisticRune ?? 0) > 0),
+            isUnlocked: () => this.#ctx.getShopLevel('shopSadisticRune') > 0,
         },
         topHat: {
             ignoreChal9: false,
@@ -345,11 +345,6 @@ export class RuneHelper {
         const result = this.runes[rune].freeLevels();
         this.#runeFreeLevelsCache.set(rune, result);
         return result;
-    }
-
-    public computeEXPToLevel = (rune: RuneKeys, level: number): Decimal => {
-        const levelPerOOM = this.getLevelsPerOOM(rune)
-        return this.runes[rune].costCoefficient.times(Decimal.pow(10, level / levelPerOOM).minus(1))
     }
 
     public getLevelsPerOOM = (rune: RuneKeys, mode: CalculationMode = 'normal'): number => {
@@ -464,26 +459,6 @@ export class RuneHelper {
         return Math.max(0, Math.floor(this.getLevelsPerOOM(rune) * log10ExpOverCostPlus1))
     }
 
-    public calculateHeaterMaxRuneExp(): number {
-        const data = this.#ctx.getGameData();
-        if (!data) return 0
-
-        const runeValues = [
-            parseGameDataDecimal(data.runes.speed),
-            parseGameDataDecimal(data.runes.duplication),
-            parseGameDataDecimal(data.runes.prism),
-            parseGameDataDecimal(data.runes.thrift),
-            parseGameDataDecimal(data.runes.superiorIntellect),
-            parseGameDataDecimal(data.runes.infiniteAscent),
-        ]
-
-        const maxLog = runeValues.reduce((currentMax, value) => {
-            return Math.max(currentMax, value.gt(0) ? value.log10() : Number.NEGATIVE_INFINITY)
-        }, Number.NEGATIVE_INFINITY)
-
-        return Math.max(0, maxLog === Number.NEGATIVE_INFINITY ? 0 : maxLog)
-    }
-
     public calculateRuneEffectivenessHypercubeBlessing = () => {
         const data = this.#ctx.getGameData();
         const DR = 1 / 64
@@ -532,13 +507,120 @@ export class RuneHelper {
         return 1 + ((this.#ctx.getGameData()?.researches[84] ?? 0) / 200)
     }
 
-    public calculateSalvageRuneEXPMultiplier = (): Decimal => {
-        const antSalvage = this.#ctx.getAntUpgradeEffectValue(AntUpgrades.Salvage, 'salvage')
-        const achievementSalvage = (this.#ctx.getAchievementReward('salvage') as number)
-        const totalSalvage = Math.max(0, antSalvage + achievementSalvage)
-        const recycleChance = Math.min(0.95, totalSalvage / 100)
+    // SynergismOfficial/src/Hypercubes.ts calculateSalvageHypercubeBlessing
+    public calculateSalvageHypercubeBlessing = (): number => {
+        const factor = Math.pow(Math.log10((this.#ctx.getGameData()?.hypercubeBlessings.runeExp ?? 0) + 1), 1.25)
+        const cap = 3 / 2
+        return 1 + cap * factor / (40 + factor)
+    }
 
-        return new Decimal(1).div(new Decimal(1).minus(recycleChance))
+    // SynergismOfficial/src/Tesseracts.ts calculateSalvageTesseractBlessing
+    public calculateSalvageTesseractBlessing = (): number => {
+        const factor = Math.pow(Math.log10((this.#ctx.getGameData()?.tesseractBlessings.runeExp ?? 0) + 1), 1.25)
+        const cap = 1 / 2 * this.calculateSalvageHypercubeBlessing()
+        return 1 + cap * factor / (20 + factor)
+    }
+
+    // SynergismOfficial/src/Cubes.ts calculateSalvageCubeBlessing
+    public calculateSalvageCubeBlessing = (): number => {
+        const data = this.#ctx.getGameData()
+        const limit = 1000
+        const blessings = data?.cubeBlessings.runeExp ?? 0
+        const effectMultiplier = (1 + (data?.cubeUpgrades[14] ?? 0) / 100) * this.calculateSalvageTesseractBlessing()
+
+        if (blessings < limit) {
+            return effectMultiplier * (blessings * 10 / limit)
+        }
+        const limitBonus = 10
+        return effectMultiplier * (limitBonus + 10 * Math.log10(blessings / limit))
+    }
+
+    // SynergismOfficial/src/Levels.ts synergismLevelRewards.salvage: +1 per level for the first 100 levels, +2 per level for the next 100, and so on
+    #synergismLevelSalvage = (): number => {
+        let salvage = 0
+        let salvagePerLevel = 1
+        let remainingLevels = this.#ctx.calculateSynergismLevel()
+        while (remainingLevels >= 100) {
+            salvage += salvagePerLevel * 100
+            remainingLevels -= 100
+            salvagePerLevel += 1
+        }
+        return salvage + salvagePerLevel * remainingLevels
+    }
+
+    // SynergismOfficial/src/Statistics.ts positiveSalvageStats
+    #rawPositiveSalvage = (): number => {
+        const data = this.#ctx.getGameData()
+        const completions = data?.challengecompletions
+        // SynergismOfficial/src/Hepteracts.ts hepteracts.abyss.EFFECTS
+        const abyssHepteract = this.#ctx.calculateHepteractEffective('abyss')
+        const abyssSalvage = 0.1 * Math.floor(10 * Math.log2(Math.max(1, abyssHepteract * 2)))
+
+        return (
+            Number(this.#ctx.getAchievementReward('salvage') ?? 0)
+            + this.#synergismLevelSalvage()
+            + this.#ctx.getLevelMilestone('salvageChallengeBuff')
+            + 7 * (data?.upgrades[61] ?? 0)
+            + this.#ctx.getRuneEffects('thrift').salvage
+            + 0.3 * calcECC('reincarnation', completions?.[6] ?? 0)
+            + 0.3 * calcECC('reincarnation', completions?.[7] ?? 0)
+            + 0.4 * calcECC('reincarnation', completions?.[8] ?? 0)
+            + 0.5 * calcECC('reincarnation', completions?.[9] ?? 0)
+            + this.#ctx.getAntUpgradeEffectValue(AntUpgrades.Salvage, 'salvage')
+            + this.calculateSalvageCubeBlessing()
+            + 3 * (data?.cubeUpgrades[2] ?? 0)
+            + abyssSalvage
+            + Math.min(50, 5 * (data?.highestSingularityCount ?? 0))
+            + this.#ctx.getRuneEffects('infiniteAscent').salvage
+            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').positiveSalvage
+            + this.#ctx.getPurpleAmbrosiaUpgradeEffects('virgo', 'assignedBlueberrySalvage')
+        )
+    }
+
+    // SynergismOfficial/src/Statistics.ts positiveSalvageStatMultiplier
+    #positiveSalvageMultiplier = (): number => {
+        const highestSingularity = this.#ctx.getGameData()?.highestSingularityCount ?? 0
+        const perkSings = [230, 245, 260, 275, 290]
+        return 1
+            + perkSings.filter((x) => x <= highestSingularity).length / 100
+            + this.#ctx.getTalismanEffects('achievement').positiveSalvageMult
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculatePositiveSalvage
+    public calculatePositiveSalvage = (): number => {
+        const rawSalvage = this.#rawPositiveSalvage()
+        if (this.#ctx.getGameData()?.singularityChallenges.taxmanLastStand.enabled) {
+            return 100 + (rawSalvage * this.#positiveSalvageMultiplier()) / Math.max(1, Math.log(rawSalvage))
+        }
+        return rawSalvage * this.#positiveSalvageMultiplier()
+    }
+
+    // SynergismOfficial/src/Statistics.ts negativeSalvageStats and negativeSalvageStatMultiplier,
+    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvage
+    public calculateNegativeSalvage = (): number => {
+        const data = this.#ctx.getGameData()
+        if (!data) return 0
+
+        const rawSalvage = this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'drought')
+            + this.#ctx.calculateSingularityDebuff('Salvage')
+            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').negativeSalvage
+
+        const perkSings = [75, 85, 105, 125, 155, 185, 215, 245, 260, 275]
+        const multiplier = 1
+            - perkSings.filter((x) => x <= (data.highestSingularityCount ?? 0)).length / 100
+            + this.#ctx.getTalismanEffects('achievement').negativeSalvageMult
+
+        return rawSalvage * multiplier
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateTotalSalvage
+    public calculateTotalSalvage = (): number => {
+        return this.calculatePositiveSalvage() + this.calculateNegativeSalvage()
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateSalvageRuneEXPMultiplier
+    public calculateSalvageRuneEXPMultiplier = (): Decimal => {
+        return Decimal.pow(10, this.calculateTotalSalvage() / 30)
     }
 
     public universalRuneEXPMult = (purchasedLevels: number): Decimal => {

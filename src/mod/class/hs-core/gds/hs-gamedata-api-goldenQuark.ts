@@ -1,4 +1,4 @@
-import { goldenQuarkUpgradeMaxLevels } from "./stored-vars-and-calculations";
+import { goldenQuarkUpgradeMaxLevels } from "./hs-gamedata-tables";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CalculationMode, GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
 

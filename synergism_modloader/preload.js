@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('loader', {
 
     runPatch: (args) => ipcRenderer.invoke('patch:run', args),
     checkUpdateNeeded: (args) => ipcRenderer.invoke('game:check-update-needed', args),
+    checkPatcherChanged: (args) => ipcRenderer.invoke('patcher:check-changed', args),
     checkVersionMismatch: (args) => ipcRenderer.invoke('mod:check-version-mismatch', args),
     quickSwitchMod: (args) => ipcRenderer.invoke('mod:quick-switch', args),
     launchGame: (exePath, modUrl, channel, modRef) => ipcRenderer.invoke('game:launch', exePath, modUrl, channel, modRef),

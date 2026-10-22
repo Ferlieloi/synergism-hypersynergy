@@ -4,12 +4,14 @@ export type { HeaterTypeSemanticId, HeaterResultSectionId } from "../../../types
 export type HeaterResultSectionConfig = {
     title: string;
     showP4x4: boolean;
+    showRouting: boolean;
     effectHeader: string;
     order: number;
 };
 
 type HeaterResultTypeConfig = {
     label: string;
+    description: string;
     section: HeaterResultSectionId;
     icon?: string;
     rowLabels?: readonly string[];
@@ -24,92 +26,146 @@ const HEATER_RESULT_SECTION_CONFIG: Record<HeaterResultSectionId, HeaterResultSe
     common: {
         title: "Common Loadouts",
         showP4x4: false,
+        showRouting: true,
         effectHeader: "Effect",
         order: 0,
     },
     obtOff: {
         title: "Obtainium & Offering Loadouts",
         showP4x4: false,
+        showRouting: false,
         effectHeader: "Effect",
         order: 1,
     },
     p4x4: {
         title: "p4x4 (pre-AoAG) Loadouts",
         showP4x4: true,
+        showRouting: false,
         effectHeader: "Effect",
         order: 2,
     },
     hybrid: {
         title: "Hybrid Loadouts",
         showP4x4: false,
+        showRouting: false,
         effectHeader: "Oct Effect",
         order: 3,
     },
 };
 
 const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
+    allAmb: {
+        label: "All Ambrosia",
+        description: "General Ambrosia generation.",
+        section: "common",
+        icon: "Pictures/Default/BlueberryFreeGenerationLevels.png",
+    },
     luck: {
-        label: "Blue Luck",
+        label: "Blue Ambrosia",
+        description: "Blue Ambrosia generation focus.",
         section: "common",
         icon: "Pictures/Default/BlueberryLuck2.png",
     },
     rLuck: {
-        label: "Red Luck",
+        label: "Red Ambrosia",
+        description: "Red Ambrosia generation focus.",
         section: "common",
         icon: "Pictures/Default/BlueberryFreeRedLuckUpgrades.png",
     },
-    allAmb: {
-        label: "All Ambrosia",
-        section: "common",
-        icon: "Pictures/Default/BlueberryFreeGenerationLevels.png",
-    },
     quarks: {
         label: "Quarks",
+        description: "QUACK!!",
         section: "common",
         icon: "Pictures/Default/BlueberryQuarks2.png",
     },
     cubes: {
         label: "3-7D Cubes",
+        description: "Post-AOAG only, check the H loadouts below for pre-aoag cube loadouts.",
         section: "common",
         icon: "Pictures/Default/BlueberryCubes.png",
     },
     oct: {
         label: "Octeracts",
+        description: "Intended for Post-AOAG.",
         section: "common",
         icon: "Pictures/Default/BlueberryCubes3.png",
     },
+    purpleHoney: {
+        label: "Purple Honey",
+        description: "Maximizes Purple Honey per second, at your current Purple Reactor routing percentages. Use it when saving Honey for Purple Reactor or Synthesis upgrades.",
+        section: "common",
+        icon: "Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png",
+    },
+    purpleHoneyOpt: {
+        label: "Phoney (best econ)",
+        description: "Same goal as Purple Honey, but the loadout and the Purple Reactor routing are optimized together.\nRouting is not saved in Ambrosia loadouts: applying it also changes the income of your other loadouts.",
+        section: "common",
+        icon: "Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png",
+    },
+    purpleAmb: {
+        label: "Purple Ambrosia",
+        description: "Maximizes Purple Ambrosia crafted per second, at your current Purple Reactor routing percentages. Crafting needs both Red Ambrosia and Purple Honey, so this balances the two.",
+        section: "common",
+        icon: "Pictures/PurpleAmbrosia/PurpleAmbrosia.png",
+    },
+    purpleAmbOpt: {
+        label: "Pamb (best econ)",
+        description: "Same goal as Purple Ambrosia, but the loadout and the Purple Reactor routing are optimized together.\nRouting is not saved in Ambrosia loadouts: applying it also changes the income of your other loadouts.",
+        section: "common",
+        icon: "Pictures/PurpleAmbrosia/PurpleAmbrosia.png",
+    },
     obt: {
         label: "Obtainium",
+        description: "Pre-AOAG OR Post-AOAG, based on the 'Post-AoAG (Obt/Off)' field. You should have pre-AOAG inputs if you want to use it pre-AOAG, and vice versa.",
         section: "obtOff",
         icon: "Pictures/Default/BlueberryObtainium.png",
     },
     off: {
         label: "Offering",
+        description: "Pre-AOAG OR Post-AOAG, based on the 'Post-AoAG (Obt/Off)' field. You should have pre-AOAG inputs if you want to use it pre-AOAG, and vice versa.",
         section: "obtOff",
         icon: "Pictures/Default/BlueberryOffering.png",
     },
     hyperflux: {
         label: "Hyperflux (H0–H7)",
+        description: "(Pre-AOAG only) H loadouts from Hyperflux lvl 0 to 7.\nCheck the p4x4eq tooltip to understand how to chose from them. H0-3 are for early players with low amb. H4 will usually be good for early sing while the rest would be for the middle/end of pre-aoag. (again, check p4x4eq)\n\"★ now\" marks the best H at your current P4x4. In Your Loadout Order, \"Best H (P4x4 now)\" imports that row, picked from your P4x4 at the moment you import.",
         section: "p4x4",
         rowLabels: ["H0", "H1", "H2", "H3", "H4", "H5", "H6", "H7"],
         rowIcons: Array(8).fill("Pictures/Default/BlueberryHyperflux.png"),
     },
     sr1: {
         label: "Max SR1",
+        description: "(Pre-AOAG only) Max SR1 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout. Check the H loadouts above and the p4x4eq tooltip.",
         section: "p4x4",
         icon: "Pictures/Default/BlueberrySingReduction.png",
     },
     sr2: {
         label: "Max SR2",
+        description: "(Pre-AOAG only) Max SR2 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout. Check the H loadouts above and the p4x4eq tooltip.",
         section: "p4x4",
         icon: "Pictures/Default/BlueberrySingReduction2.png",
     },
     ambOct: {
         label: "Max Amb + Oct",
+        description: "Late game loadout, only usable once you can max Ambrosia (which requires several tens of millions of amb).",
         section: "hybrid",
         icon: "Pictures/Default/BlueberryLuck4.png",
     },
 });
+
+// How the results read inside an Exalt, shown by the Exalt badge of the
+// results modal when the heat ran with that Exalt. No entry, no badge.
+const HEATER_EXALT_RULES: Readonly<Partial<Record<number, string>>> = {
+    10: "Bar Charging: the bars give time instead of Ambrosia.\n"
+        + "- Blue Ambrosia = global time, Red Ambrosia = ascension time, All Ambrosia = both multiplied.\n"
+        + "- Each Purple Reactor extraction gives both bars' effect once per 100 Purple Honey Luck, so the Reactor routing matters most.\n"
+        + "- The bar lengths are fixed: Brick of Lead only adds Luck here. TWO MIND's shorter bars are cancelled by its lower reward Luck.\n"
+        + "- With One Mind, ascension speed multiplies cubes and ascension count. Brick of Lead lowers it (-25% at max) and SR2 raises it. These scores don't count that.",
+};
+
+export function getHeaterExaltRules(exalt: number): string | null {
+    return HEATER_EXALT_RULES[exalt] ?? null;
+}
 
 export type HeaterResultArrayKey = keyof typeof HEATER_RESULT_TYPE_CONFIG;
 export type RowBasedResultKey = {
@@ -150,6 +206,7 @@ export function getHeaterTypeConfig(key: ResultKey): HeaterResultTypeConfig | nu
 }
 
 export function getHeaterTypeBranchId(semanticId: string): HeaterBranchId | null {
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) return "hyperflux";
     const parsed = parseHeaterTypeSemanticId(semanticId);
     if (!parsed) return null;
 
@@ -161,7 +218,8 @@ export function getHeaterTypeBranchId(semanticId: string): HeaterBranchId | null
 }
 
 export const HEATER_BRANCH_DEFINITIONS = [
-    { id: "luck",      label: "Luck",                        resultKeys: ["luck", "rLuck", "allAmb"], optionKey: "calculateAmb" },
+    { id: "luck",      label: "Ambrosia",                    resultKeys: ["luck", "rLuck", "allAmb"], optionKey: "calculateAmb" },
+    { id: "purple",    label: "Purple Ambrosia",             resultKeys: ["purpleHoney", "purpleAmb", "purpleHoneyOpt", "purpleAmbOpt"], optionKey: "calculatePurple" },
     { id: "quarks",    label: "Quarks",                      resultKeys: ["quarks"],                  optionKey: "calculateQuarks" },
     { id: "cubes",     label: "3-7D Cubes",                  resultKeys: ["cubes"],                   optionKey: "calculateCubes" },
     { id: "oct",       label: "Octeracts",                   resultKeys: ["oct"],                     optionKey: "calculateOct" },
@@ -173,7 +231,6 @@ export const HEATER_BRANCH_DEFINITIONS = [
 
 export type HeaterBranchDefinition = typeof HEATER_BRANCH_DEFINITIONS[number];
 export type HeaterBranchId = HeaterBranchDefinition["id"];
-export type HeaterOptionKey = HeaterBranchDefinition["optionKey"];
 
 export function getHeaterTypeRowCount(key: ResultKey): number {
     return HEATER_RESULT_TYPE_CONFIG[key]?.rowLabels?.length ?? 1;
@@ -196,12 +253,13 @@ function isRowBasedResultKey(value: string): value is RowBasedResultKey {
     return getHeaterTypeRowCount(value as ResultKey) > 1;
 }
 
+// A slot choice, not a result row: HSHeaterResultStore.resolveSemanticId turns
+// it into the Hyperflux row that wins at the live P4x4.
+export const HEATER_BEST_H_SEMANTIC_ID = "hyperflux:best" satisfies HeaterTypeSemanticId;
+const HEATER_BEST_H_LABEL = "Best H (P4x4 now)";
+
 export function buildHeaterTypeSemanticId(key: ResultKey, rowIndex?: number): HeaterTypeSemanticId {
     return rowIndex === undefined ? key as HeaterTypeSemanticId : `${key}:${rowIndex}` as HeaterTypeSemanticId;
-}
-
-export function isHeaterTypeSemanticId(semanticId: string): semanticId is HeaterTypeSemanticId {
-    return parseHeaterTypeSemanticId(semanticId) !== null;
 }
 
 type ParsedHeaterTypeSemanticId =
@@ -229,6 +287,7 @@ function parseHeaterTypeSemanticId(semanticId: string): ParsedHeaterTypeSemantic
 
 export function resolveHeaterTypeLabel(key: string): string | null {
     if (key === "none") return "None";
+    if (key === HEATER_BEST_H_SEMANTIC_ID) return HEATER_BEST_H_LABEL;
     const parsed = parseHeaterTypeSemanticId(key);
     if (!parsed) return null;
 
@@ -242,8 +301,18 @@ export function resolveHeaterTypeLabel(key: string): string | null {
     return config.label;
 }
 
+export function resolveHeaterTypeDescription(semanticId: string): string | null {
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) semanticId = "hyperflux:0";
+    const parsed = parseHeaterTypeSemanticId(semanticId);
+    if (!parsed) return null;
+
+    const description = HEATER_RESULT_TYPE_CONFIG[parsed.baseKey].description.trim();
+    return description || null;
+}
+
 export function resolveHeaterTypeIconSrc(semanticId: string): string | null {
     if (semanticId === "none") { return "Pictures/RedAmbrosia/RedAmbrosiaFreeTutorialLevels.png"; }
+    if (semanticId === HEATER_BEST_H_SEMANTIC_ID) semanticId = "hyperflux:0";
 
     const parsed = parseHeaterTypeSemanticId(semanticId);
     if (!parsed) return null;

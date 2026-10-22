@@ -7,9 +7,10 @@ import { HSGlobal } from "../hs-global";
 import { HSUIC } from "../hs-ui-components";
 import { HSInputType, HSUICSelectOption } from "../../../types/module-types/hs-ui-types";
 import { HSLogger } from "../hs-logger";
+import { HSPlatform } from "../hs-platform";
 import { HSSetting } from "./hs-setting";
 import { HSSettings } from "./hs-settings";
-import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
@@ -34,7 +35,7 @@ export interface HSSettingsUIDependencies {
     settingsParsed: boolean;
     settings: HSSettingRecord;
     settingsControlGroups: Record<string, HSSettingControlGroup>;
-    settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
+    settingsControlPages: Record<string, HSSettingControlPage>;
     settingEnabledString: string;
     settingDisabledString: string;
     settingChangeDelegate: (e: Event, settingObj: HSSetting<HSSettingType>) => Promise<void>;
@@ -529,8 +530,8 @@ export class HSSettingsUI {
         });
     }
 
-    static #sortPagesByOrder(pages: Record<keyof HSSettingControlPage, HSSettingControlPage>): [keyof HSSettingControlPage, HSSettingControlPage][] {
-        return (Object.entries(pages) as [keyof HSSettingControlPage, HSSettingControlPage][]).sort((a, b) => {
+    static #sortPagesByOrder(pages: Record<string, HSSettingControlPage>): [string, HSSettingControlPage][] {
+        return Object.entries(pages).sort((a, b) => {
             const aPage = a[1].order;
             const bPage = b[1].order;
 
@@ -546,13 +547,16 @@ export class HSSettingsUI {
     }
 
     static #buildSubTabNav(
-        sortedPages: [keyof HSSettingControlPage, HSSettingControlPage][],
+        sortedPages: [string, HSSettingControlPage][],
         sortedSettings: [string, HSSetting<HSSettingType>][],
     ): string {
         const subTabs: string[] = [];
 
         for (const [key, page] of sortedPages) {
-            const haveAnySettingsForPage = sortedSettings.some(setting => setting[1].getDefinition().settingControl?.controlPage === key);
+            const haveAnySettingsForPage = sortedSettings.some(([, settingObj]) => {
+                const setting = settingObj.getDefinition() as HSSettingBaseWithHidden<HSSettingType>;
+                return setting.settingControl?.controlPage === key && this.#isShownInPanel(setting);
+            });
             if (!haveAnySettingsForPage) continue;
 
             subTabs.push(HSUIC.Div({
@@ -572,18 +576,26 @@ export class HSSettingsUI {
         });
     }
 
+    // Not hidden, and meant for the platform the mod was loaded on (shown when it isn't known yet)
+    static #isShownInPanel(setting: HSSettingBaseWithHidden<HSSettingType>): boolean {
+        if (setting.hidden === true) return false;
+        if (!setting.platforms) return true;
+        const platform = HSPlatform.get();
+        return platform === null || setting.platforms.includes(platform);
+    }
+
     static #buildPagesHTML(
         sortedSettings: [string, HSSetting<HSSettingType>][],
         controlGroups: Record<string, HSSettingControlGroup>,
     ) {
-        const pagesHTML: Map<keyof HSSettingControlPage, string[]> = new Map();
+        const pagesHTML: Map<string, string[]> = new Map();
         let didBuild = true;
         let currentControlGroup: string | null = null;
 
         for (const [key, settingObj] of sortedSettings) {
             const setting = settingObj.getDefinition() as HSSettingBaseWithHidden<HSSettingType>;
 
-            if (setting.hidden === true) continue;
+            if (!this.#isShownInPanel(setting)) continue;
 
             const controls = setting.settingControl;
             if (!controls) {
@@ -631,7 +643,7 @@ export class HSSettingsUI {
     ): string | null {
         let gameDataIcon = "";
 
-        if (setting.usesGameData) {
+        if (HSSettings.usesGameData(setting)) {
             gameDataIcon = HSUIC.Image({
                 class: 'hs-panel-setting-block-gamedata-icon',
                 src: sIconB64,
@@ -648,7 +660,8 @@ export class HSSettingsUI {
         } else if (controls.controlType === 'button') {
             components.push(HSUIC.Button({
                 id: controls.controlId!,
-                text: setting.settingDescription || 'Error: No button text'
+                text: setting.settingDescription || 'Error: No button text',
+                props: setting.settingHelpText ? { title: setting.settingHelpText } : undefined
             }));
         } else {
             const convertedType = this.#resolveControlTypeInput(controls.controlType);
@@ -672,12 +685,34 @@ export class HSSettingsUI {
         }
 
         let blockClass = 'hs-panel-setting-block';
-        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+        if (controls.controlType === 'button' && (controls.controlGroup === 'auto-sing-strategy-controls' || controls.controlGroup === 'save-export')) {
             blockClass += ' hs-inline-button';
+        }
+        // The strategy buttons keep a width of their own (hs-panel-core.css)
+        if (controls.controlType === 'button' && controls.controlGroup === 'auto-sing-strategy-controls') {
+            blockClass += ' hs-button-group-autosing-strategy';
+        }
+
+        // A setting that belongs to another one (controlParent) is indented under its label. With
+        // controlHideWhenParentOff it is hidden while the parent is off: a CSS rule on the parent's switch, which
+        // the settings UI keeps marked .hs-disabled while off
+        let blockId = setting.settingBlockId;
+        if (controls.controlParent) {
+            blockClass += ' hs-panel-setting-block-child';
+            blockId ??= `hs-setting-block-${setting.settingName}`;
+            if (controls.controlHideWhenParentOff) {
+                const parentSwitchId = HSSettings.getSetting(controls.controlParent)?.getDefinition().settingControl?.controlEnabledId;
+                if (parentSwitchId) {
+                    HSUI.injectStyle(`.hs-panel-setting-block:has(#${parentSwitchId}.hs-disabled) ~ #${blockId} { display: none; }`,
+                        `hs-setting-child-${setting.settingName}`);
+                } else {
+                    HSLogger.warn(`Setting ${setting.settingName}: its parent ${controls.controlParent} has no switch, it is always shown`, this.#context);
+                }
+            }
         }
 
         return HSUIC.Div({
-            id: setting.settingBlockId,
+            id: blockId,
             class: blockClass,
             html: components
         });

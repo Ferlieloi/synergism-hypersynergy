@@ -15,7 +15,6 @@ import { HSSettings } from "./settings/hs-settings";
  * Author: Swiffy
 */
 export class HSLogger {
-    static #context = 'HSLogger';
 
     static #integratedToUI = false;
     static #logElement: HTMLElement;
@@ -81,6 +80,29 @@ export class HSLogger {
 
         this.#logElement.appendChild(fragment);
         HSLogger.scrollToBottom(true);
+    }
+
+    /**
+     * Every log line kept, oldest first, as plain text with its time: the Log tab's lines,
+     * then the ones still waiting for that tab to be shown.
+     */
+    static getLogLines(): string[] {
+        const lines: string[] = [];
+        if (!this.#integratedToUI) return lines;
+
+        for (const line of Array.from(this.#logElement.querySelectorAll('.hs-ui-log-line'))) {
+            lines.push((line.textContent ?? '').trimEnd());
+        }
+
+        // Same text as #renderLogLineToUi gives them, without rendering them
+        const plainText = document.createElement('div');
+        for (const record of this.#pendingLogRecords) {
+            plainText.innerHTML = `${record.timeString} ${record.level}[${record.contextString}]: ${record.formattedMessage}`;
+            const repeat = record.repeatCount > 1 ? ` (x${record.repeatCount})` : '';
+            lines.push(`${plainText.textContent ?? ''}${repeat}`);
+        }
+
+        return lines;
     }
 
     static updateDebugEnabled(): void {
@@ -179,10 +201,7 @@ export class HSLogger {
         if (!this.#integratedToUI) return;
 
         const { level, className } = this.#getLogLevelMeta(logType);
-        const moduleFromContext = HSModuleManager.getModule(context);
-        const contextString = (moduleFromContext && moduleFromContext.moduleColor)
-            ? HSUtils.parseColorTags(context.colorTag(moduleFromContext.moduleColor))
-            : context;
+        const contextString = this.#colorContext(context);
         const formattedMessage = HSUtils.parseColorTags(msg);
         const timeString = HSUtils.getTime();
         const logHash = HSUtils.hashCode(`${level}${contextString}${msg}`);
@@ -262,7 +281,7 @@ export class HSLogger {
         }
 
         const hiddenTS = this.#displayTimestamp ? "" : "hs-log-ts-hidden";
-        logLine.innerHTML = `${level} [<span class="hs-log-ctx">${contextString}</span><span class="hs-log-ts ${hiddenTS}"> (${timeString})</span>]: ${formattedMessage}\n`;
+        logLine.innerHTML = `<span class="hs-log-ts ${hiddenTS}">${timeString} </span>${level}[<span class="hs-log-ctx">${contextString}</span>]: ${formattedMessage}\n`;
 
         if (this.#lastLogHash !== logHash) {
             parentElement.appendChild(logLine);
@@ -366,6 +385,14 @@ export class HSLogger {
         }
     }
 
+    // A module's context takes its moduleColor, another context the color listed for it in HSGlobal
+    static #colorContext(context: string): string {
+        const listed = HSGlobal.HSLogger.contextColors[context];
+        const module = HSModuleManager.getModule(context) ?? (listed ? HSModuleManager.getModule(listed) : undefined);
+        const color = module?.moduleColor ?? listed;
+        return color ? HSUtils.parseColorTags(context.colorTag(color)) : context;
+    }
+
     static #getLogLevelMeta(logType: ELogType): { level: string; className: string | null } {
         switch (logType) {
             case ELogType.WARN:
@@ -393,20 +420,6 @@ export class HSLogger {
                 this.#oneShotLogHistory.delete(key);
             }
         }
-    }
-
-    static #maybeStartOneShotIvl() {
-        /*if(!this.#oneShotLogHistoryIvl) {
-            this.#oneShotLogHistoryIvl = setInterval(() => {
-                this.#oneShotLogHistory.forEach((value, key) => {
-                    if(value.logged) {
-                        if(Date.now() - value.timestamp > 10 * 60 * 1000) {
-                            this.#oneShotLogHistory.delete(key);
-                        }
-                    }
-                });
-            }, 5 * 60 * 1000);
-        }*/
     }
 
 

@@ -1,5 +1,6 @@
 import type Decimal from "break_infinity.js";
 import type { HeaterBranchId, HeaterResultArrayKey } from "../../class/hs-modules/hs-heater/hs-heater-result-config";
+import type { AmbrosiaBarIncomeReactor } from "./hs-ambrosia-income-types";
 export type { HeaterResultArrayKey } from "../../class/hs-modules/hs-heater/hs-heater-result-config";
 
 export interface HeaterOptimizerInput {
@@ -77,22 +78,9 @@ export interface HeaterOptimizerInput {
     blueBarRequirementBeforeRounding: number;
     redBarMaxWithoutTwoMind: number;
     /** Fixed game-state inputs for the new bar-fill income objectives. */
-    reactor?: {
-        blueRoutingPercent: number;
-        redRoutingPercent: number;
-        blueStoredPoints: number;
-        redStoredPoints: number;
-        blueCapacity: number;
-        encabulatorSpeed: number;
-        purpleRequirementWithoutTwoMind: number;
-        cancerPurplePointsPerBlueOrRedFill: number;
-        purpleFillBluePoints: number;
-        purpleFillRedPoints: number;
-        scorpioConversionMultiplier: number;
-        ariesBarPointMultiplier: number;
-        overcapEnabled: boolean;
-        barDependenceEnabled: boolean;
-    };
+    reactor?: AmbrosiaBarIncomeReactor;
+    /** Fixed game-state inputs for the Purple Honey / Purple Ambrosia objectives. */
+    purple?: HeaterPurpleInput;
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;
@@ -108,8 +96,28 @@ export interface HeaterOptimizerInput {
         infinity: number;
     };
     panthemaLevel: number;
-    shopUpgradesDisabled: boolean;
     heaterOptions: Record<HeaterBranchId, boolean>;
+}
+
+export interface HeaterPurpleInput {
+    purpleHoneyLuck: number;
+    purpleHoneyPerExtraction: number;
+    /** Red Ambrosia spent per crafted Purple Ambrosia. */
+    craftRedAmbrosiaCost: number;
+    /** Purple Honey spent per crafted Purple Ambrosia. */
+    craftPurpleHoneyCost: number;
+}
+
+export type HeaterPurpleRoutedResultKey = 'purpleHoney' | 'purpleAmb' | 'purpleHoneyOpt' | 'purpleAmbOpt';
+
+/** Purple Reactor routing used by a purple result row. */
+export interface HeaterPurpleRouting {
+    blueRoutingPercent: number;
+    redRoutingPercent: number;
+    /** Row objective per hour: Purple Honey, or crafted Purple Ambrosia. */
+    perHour: number;
+    /** Best-routing rows only: the same objective per hour at the current routing. */
+    currentRoutingPerHour?: number;
 }
 
 export type HeaterResultAffordableRow = [
@@ -135,25 +143,10 @@ export type HeaterResultUnaffordableRow = [
 export type HeaterResultRow = HeaterResultAffordableRow | HeaterResultUnaffordableRow;
 export type HeaterResultRowMatrix = HeaterResultRow[];
 
-export type HeaterResultSheetRow = {
-    loadout:        string;
-    blueberryCost:  number | "N / A";
-    cost:           number | "N / A";
-    costDetail:     number | "Maxed" | "N / A";
-    effect:         string;
-    p4x4Eq:         number | "Never" | "" | "N / A";
-    maxed:          boolean;
-    p4Effect:       number | "-" | "N / A";
-    p4CefLog:       number | "-" | "N / A" | "Never";
-    p9Effect:       number | "-" | "N / A";
-    p9CefLog:       number | "-" | "N / A" | "Never";
-};
-
-export type HeaterResultSheetRowMatrix = HeaterResultSheetRow[];
-
 export type RowBasedResultKey = import("../../class/hs-modules/hs-heater/hs-heater-result-config").RowBasedResultKey;
 export type SingleResultKey = Exclude<HeaterResultArrayKey, RowBasedResultKey>;
-export type HeaterTypeSemanticId = 'none' | SingleResultKey | `${RowBasedResultKey}:${number}`;
+/** 'hyperflux:best': the H row that wins at the live P4x4, resolved when it's read (HSHeaterResultStore). */
+export type HeaterTypeSemanticId = 'none' | SingleResultKey | `${RowBasedResultKey}:${number}` | 'hyperflux:best';
 export type HeaterResultSectionId = 'common' | 'obtOff' | 'p4x4' | 'hybrid';
 
 export type HeaterRedAmbUpgradeEffectName =
@@ -189,6 +182,7 @@ export type NormalizedHeaterResultEntry = {
     section: HeaterResultSectionId;
     rowIndex: number;
     isRowBased: boolean;
+    purpleRouting?: HeaterPurpleRouting;
 };
 
 export interface HeaterOptimizationResult {
@@ -201,11 +195,15 @@ export interface HeaterOptimizationResult {
     oct?: HeaterResultRowMatrix;
     obt?: HeaterResultRowMatrix;
     off?: HeaterResultRowMatrix;
-    voucher?: HeaterResultRowMatrix;
     hyperflux?: HeaterResultRowMatrix;
     sr1?: HeaterResultRowMatrix;
     sr2?: HeaterResultRowMatrix;
     ambOct?: HeaterResultRowMatrix;
+    purpleHoney?: HeaterResultRowMatrix;
+    purpleAmb?: HeaterResultRowMatrix;
+    purpleHoneyOpt?: HeaterResultRowMatrix;
+    purpleAmbOpt?: HeaterResultRowMatrix;
+    purpleRouting?: Partial<Record<HeaterPurpleRoutedResultKey, HeaterPurpleRouting>>;
     redAmbUpgradeEffects?: HeaterRedAmbUpgradeEffects;
     redAmbCommonValues?: HeaterRedAmbCommonValues;
 }

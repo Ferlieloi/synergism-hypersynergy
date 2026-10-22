@@ -1,22 +1,77 @@
 // Shared bundle patcher for browser userscripts and the desktop launcher.
 // The browser startup code below uses this same function with Steam changes disabled.
+
+// For the header modules patch (see there). Self-contained: its source is written into the game bundle.
+// A copy of the player without the mod's module ids ("hs" then a capital letter) in its headerLayouts (slots, hidden,
+// sizes, positions), or the same object when there are none. Never changes what it's given.
+function stripHeaderModules(player) {
+    const isMod = id => typeof id === 'string' && /^hs[A-Z]/.test(id);
+    const layouts = player && player.headerLayouts;
+    if (!layouts || typeof layouts !== 'object') return player;
+    const withoutMod = record => {
+        if (!record || typeof record !== 'object' || !Object.keys(record).some(isMod)) return record;
+        const copy = Object.assign({}, record);
+        for (const id of Object.keys(copy)) if (isMod(id)) delete copy[id];
+        return copy;
+    };
+    let changed = false;
+    const strippedLayouts = {};
+    for (const key of Object.keys(layouts)) {
+        const layout = layouts[key];
+        strippedLayouts[key] = layout;
+        if (!layout || typeof layout !== 'object' || !layout.regions || typeof layout.regions !== 'object') continue;
+        let found = false;
+        // Left alone in a slot, a module loses the stack's S size, as when the game unstacks it
+        const unstacked = [];
+        const regions = {};
+        for (const region of Object.keys(layout.regions)) {
+            const slots = layout.regions[region];
+            regions[region] = !Array.isArray(slots) ? slots : slots.map(slot => {
+                if (!Array.isArray(slot) || !slot.some(isMod)) return slot;
+                found = true;
+                const kept = slot.filter(id => !isMod(id));
+                if (kept.length === 1) unstacked.push(kept[0]);
+                return kept;
+            });
+        }
+        let sizes = withoutMod(layout.sizes);
+        const positions = withoutMod(layout.positions);
+        const hidden = Array.isArray(layout.hidden) ? layout.hidden.filter(id => !isMod(id)) : layout.hidden;
+        if (!found && sizes === layout.sizes && positions === layout.positions
+            && (!Array.isArray(hidden) || hidden.length === layout.hidden.length)) continue;
+        if (sizes && typeof sizes === 'object' && unstacked.some(id => sizes[id] === 'S')) {
+            sizes = Object.assign({}, sizes);
+            for (const id of unstacked) if (sizes[id] === 'S') delete sizes[id];
+        }
+        strippedLayouts[key] = Object.assign({}, layout, { regions, sizes, hidden, positions });
+        changed = true;
+    }
+    return changed ? Object.assign({}, player, { headerLayouts: strippedLayouts }) : player;
+}
+
 function patchBundle(code, options = {}) {
     const log = options.log || ((...a) => console.log('[PATCH]', ...a));
     const warn = options.warn || ((...a) => console.warn('[PATCH]', ...a));
+    // What each patch did ({ name: applied }): one summary line at the end, and window.__HS_PATCH_REPORT in the
+    // bundle, read by the browser loader and the mod
+    const report = {};
+    // The patches whose anchor matched more than one place (labels), as window.__HS_PATCH_AMBIGUOUS
+    const ambiguous = [];
+    // Lines for the top of the bundle, written after its "use strict" directive (see the end)
+    const topLines = [];
     // ==================================================================================
     // ───────────────────────────────── BUNDLE PATCHES ─────────────────────────────────
 
-    // Locate a minified function from stable behavior inside its body instead of
-    // depending on a particular minifier spelling (for example `true` vs `!0`).
-    // Candidates are checked nearest-first so nested callbacks between the
-    // function entry and its semantic anchor are ignored unless they also contain
-    // every required marker.
-    const findMatchingBrace = (src, bodyStart) => {
+    // Walks src from bodyStart (just after a `{`), skipping strings and comments. Returns the index of the matching
+    // `}` (-1 if none), or, with `until`, the brace depth at that index (1 = directly inside, 0 = closed before it).
+    const walkBraces = (src, bodyStart, until = -1) => {
         let depth = 1;
         let quote = null;
         let escaped = false;
+        const notFound = () => (until >= 0 ? depth : -1);
 
         for (let i = bodyStart; i < src.length; i++) {
+            if (until >= 0 && i >= until) return depth;
             const char = src[i];
             const next = src[i + 1];
 
@@ -33,28 +88,61 @@ function patchBundle(code, options = {}) {
             }
             if (char === '/' && next === '/') {
                 i = src.indexOf('\n', i + 2);
-                if (i === -1) return -1;
+                if (i === -1) return notFound();
                 continue;
             }
             if (char === '/' && next === '*') {
                 i = src.indexOf('*/', i + 2);
-                if (i === -1) return -1;
+                if (i === -1) return notFound();
                 i++;
                 continue;
             }
             if (char === '{') depth++;
-            else if (char === '}' && --depth === 0) return i;
+            else if (char === '}' && --depth === 0) return until >= 0 ? 0 : i;
         }
 
-        return -1;
+        return notFound();
+    };
+    const findMatchingBrace = (src, bodyStart) => walkBraces(src, bodyStart);
+
+    // A parameter list, defaults with one level of parentheses included: (e,t=f())
+    const PARAMS = String.raw`\((?:[^()]|\([^()]*\))*\)`;
+    // A parameter list without its parentheses, split at its own commas: "e,t=f(a,b)" gives ["e", "t=f(a,b)"]
+    const splitParams = list => {
+        const params = [];
+        let depth = 0;
+        let current = '';
+        for (const char of list) {
+            if ('([{'.includes(char)) depth++;
+            else if (')]}'.includes(char)) depth--;
+            if (char === ',' && depth === 0) {
+                params.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        if (current.trim()) params.push(current.trim());
+        return params;
+    };
+
+    // Warn when an anchor no longer tells a patch's target apart: the tack patch once landed in addTimers that way.
+    // The first place found is still patched, as before this warning existed.
+    const warnIfAmbiguous = (label, names) => {
+        if (names.length > 1) {
+            ambiguous.push(label);
+            warn(`${label}: ${names.length} places match its anchor — patched ${names[0]}, also ${names.slice(1).join(', ')}. Applied, but check this patch`);
+        }
     };
 
     const findFunctionBodyByName = (src, fnName) => {
         const escapedName = fnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Not \b: minified names can start with "$" (e.g. "$w"), and \b never matches before a "$"
+        const notInName = '(?<![\\w$])';
         const headerPatterns = [
-            new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>\\s*\\{`, 'g'),
-            new RegExp(`\\b${escapedName}\\s*=\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`, 'g'),
-            new RegExp(`(?:async\\s+)?function\\s+${escapedName}\\s*\\([^)]*\\)\\s*\\{`, 'g')
+            new RegExp(`${notInName}${escapedName}\\s*=\\s*(?:async\\s*)?(?:${PARAMS}|[a-zA-Z_$][\\w$]*)\\s*=>\\s*\\{`, 'g'),
+            new RegExp(`${notInName}${escapedName}\\s*=\\s*(?:async\\s+)?function\\s*${PARAMS}\\s*\\{`, 'g'),
+            new RegExp(`(?:async\\s+)?function\\s+${escapedName}\\s*${PARAMS}\\s*\\{`, 'g')
         ];
 
         for (const pattern of headerPatterns) {
@@ -91,213 +179,256 @@ function patchBundle(code, options = {}) {
         return null;
     };
 
-    const findFunctionBodyBySemantics = (src, anchorStr, requiredMarkers, lookBehind = 20000) => {
-        const headerPatterns = [
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/g,
-            /(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g
-        ];
+    // The function headers minified code uses: x=(…)=>{  x=async e=>{  x=function(…){  function x(…){
+    const functionHeaders = () => [
+        new RegExp(String.raw`([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:${PARAMS}|[a-zA-Z_$][\w$]*)\s*=>\s*\{`, 'g'),
+        new RegExp(String.raw`([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*${PARAMS}\s*\{`, 'g'),
+        new RegExp(String.raw`(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*${PARAMS}\s*\{`, 'g')
+    ];
 
-        let anchorIdx = src.indexOf(anchorStr);
-        while (anchorIdx !== -1) {
-            const windowStart = Math.max(0, anchorIdx - lookBehind);
-            const beforeAnchor = src.slice(windowStart, anchorIdx);
-            const candidates = [];
-
-            for (const pattern of headerPatterns) {
-                pattern.lastIndex = 0;
-                let match;
-                while ((match = pattern.exec(beforeAnchor)) !== null) {
-                        const bodyStart = windowStart + match.index + match[0].length;
-                        candidates.push({ bodyStart, bodyEnd: findMatchingBrace(src, bodyStart), fnName: match[1] });
-                }
+    // The nearest named function around src[index] whose body holds every marker, or null. Locates a minified
+    // function from stable behavior inside its body instead of a minifier spelling (for example `true` vs `!0`).
+    // Candidates are checked nearest-first, so nested callbacks between the function entry and the anchor are
+    // skipped unless they also hold every marker.
+    const findFunctionAround = (src, index, markers) => {
+        const start = Math.max(0, index - 100000);
+        const prefix = src.slice(start, index);
+        const candidates = [];
+        for (const header of functionHeaders()) {
+            let match;
+            while ((match = header.exec(prefix)) !== null) {
+                candidates.push({ bodyStart: start + match.index + match[0].length, fnName: match[1] });
             }
-
-            candidates.sort((a, b) => b.bodyStart - a.bodyStart);
-            for (const candidate of candidates) {
-                const candidatePrefix = src.slice(candidate.bodyStart, anchorIdx);
-                if (requiredMarkers.every(marker => candidatePrefix.includes(marker))) {
-                    return candidate;
-                }
-            }
-
-            anchorIdx = src.indexOf(anchorStr, anchorIdx + anchorStr.length);
         }
-
+        candidates.sort((a, b) => b.bodyStart - a.bodyStart);
+        for (const candidate of candidates) {
+            const bodyEnd = findMatchingBrace(src, candidate.bodyStart);
+            if (bodyEnd <= index) continue;
+            const body = src.slice(candidate.bodyStart, bodyEnd);
+            if (markers.every(marker => body.includes(marker))) return { ...candidate, bodyEnd };
+        }
         return null;
     };
 
-    // Find the function containing a behavior marker, even when its header is
-    // far away or a nested callback lies between the header and marker.
-    const findEnclosingFunction = (src, anchorRe, markers, lookBehind = 100000) => {
-        const headers = [
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*\{/g,
-            /([a-zA-Z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\([^)]*\)\s*\{/g,
-            /(?:async\s+)?function\s+([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g
-        ];
+    // Find the function a patch targets by what it does: around each match of anchorRe (a /g regex), the nearest
+    // named function holding every marker (findFunctionAround). Returns the first one; more than one is reported
+    // under the patch's label.
+    const findEnclosingFunction = (src, anchorRe, markers, label) => {
+        const found = [];
         anchorRe.lastIndex = 0;
         let anchor;
         while ((anchor = anchorRe.exec(src)) !== null) {
-            const start = Math.max(0, anchor.index - lookBehind);
-            const prefix = src.slice(start, anchor.index);
-            const candidates = [];
-            for (const header of headers) {
-                header.lastIndex = 0;
-                let match;
-                while ((match = header.exec(prefix)) !== null) {
-                    candidates.push({ bodyStart: start + match.index + match[0].length, fnName: match[1] });
+            const result = findFunctionAround(src, anchor.index, markers);
+            if (result && !found.some(f => f.bodyStart === result.bodyStart)) found.push(result);
+        }
+        warnIfAmbiguous(label, found.map(f => f.fnName));
+        return found[0] ?? null;
+    };
+
+    // The object literal assigned to a variable (x={…}) that holds a key matched by keyRe (a /g regex) at its own
+    // level, wherever the key sits in it, and every marker. Returns { start, end, name } (its braces) for the first
+    // one; more than one is reported under the patch's label.
+    const findAssignedObjectLiteral = (src, keyRe, markers, label) => {
+        const found = [];
+        keyRe.lastIndex = 0;
+        let key;
+        while ((key = keyRe.exec(src)) !== null) {
+            const windowStart = Math.max(0, key.index - 100000);
+            const assignOpen = /([a-zA-Z_$][\w$]*)\s*=\s*\{/g;
+            const opens = [];
+            let open;
+            while ((open = assignOpen.exec(src.slice(windowStart, key.index))) !== null) {
+                opens.push({ start: windowStart + open.index + open[0].length - 1, name: open[1] });
+            }
+            // Nearest first: skip the literals closed before the key; the first one around it must hold it directly
+            for (const candidate of opens.reverse()) {
+                const depth = walkBraces(src, candidate.start + 1, key.index);
+                if (depth === 0) continue;
+                if (depth === 1) {
+                    const end = findMatchingBrace(src, candidate.start + 1);
+                    const literal = src.slice(candidate.start, end);
+                    if (end > key.index && markers.every(marker => literal.includes(marker))
+                        && !found.some(f => f.start === candidate.start)) {
+                        found.push({ ...candidate, end });
+                    }
                 }
+                break;
             }
-            candidates.sort((a, b) => b.bodyStart - a.bodyStart);
-            for (const candidate of candidates) {
-                const bodyEnd = findMatchingBrace(src, candidate.bodyStart);
-                if (bodyEnd <= anchor.index) continue;
-                const body = src.slice(candidate.bodyStart, bodyEnd);
-                if (markers.every(marker => body.includes(marker))) return { ...candidate, bodyEnd };
-            }
+        }
+        warnIfAmbiguous(label, found.map(f => f.name));
+        return found[0] ?? null;
+    };
+
+    // Expose a function found by findEnclosingFunction as window[globalName], without calling or wrapping it.
+    // Where it's defined when it's an arrow or a function expression, so it exists as soon as the bundle runs:
+    //   eK=e=>{  becomes  eK=window.__HS_x=e=>{
+    // Otherwise at the start of its body: it then exists once the game has called it.
+    const exposeFunction = (src, result, globalName) => {
+        // Escaped, and not \b: minified names can start with "$"
+        const escapedFn = result.fnName.replace(/\$/g, '\\$');
+        const headerStart = Math.max(0, result.bodyStart - 300);
+        const header = src.slice(headerStart, result.bodyStart);
+        const exprHeader = new RegExp(
+            String.raw`(?<![\w$.])${escapedFn}\s*=\s*(?=(?:async\s*)?(?:${PARAMS}|[\w$]+)\s*=>\s*\{$|(?:async\s+)?function\s*${PARAMS}\s*\{$)`
+        ).exec(header);
+        if (exprHeader) {
+            const insertAt = headerStart + exprHeader.index + exprHeader[0].length;
+            return { code: src.slice(0, insertAt) + `window.${globalName}=` + src.slice(insertAt), atDefinition: true };
+        }
+        return {
+            code: src.slice(0, result.bodyStart) + `\nwindow.${globalName}=${result.fnName};\n` + src.slice(result.bodyStart),
+            atDefinition: false
+        };
+    };
+
+    // The functions a function awaits by name (`await xY(`), found by findFunctionBodyByName.
+    const findAwaitedFunctions = (src, fnResult) => {
+        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
+        const awaitedCall = /(?<![\w$.])await\s+([a-zA-Z_$][\w$]*)\s*\(/g;
+        const found = [];
+        let match;
+        while ((match = awaitedCall.exec(body)) !== null) {
+            if (match[1] === fnResult.fnName) continue;
+            const result = findFunctionBodyByName(src, match[1]);
+            if (result && result.bodyEnd > result.bodyStart) found.push(result);
+        }
+        return found;
+    };
+
+    // ImportExport.ts exportData: writes the save to the clipboard or a file, as the "saveType" checkbox says.
+    const writesSaveOut = (src, fnResult) => {
+        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
+        return (body.includes('"saveType"') || body.includes("'saveType'"))
+            && (body.includes('clipboard') || body.includes('createObjectURL') || body.includes('Blob'));
+    };
+
+    // exportSynergism's output step: the function it awaits that writes the save out (exportData), or that awaits it.
+    // Today exportSynergism awaits exportStoredSave (reads the stored save), which awaits exportData; older games
+    // awaited exportData directly. The guard goes at the start of that step, so nothing is read or written.
+    // No guess when neither shape is there: an await added after the output step must not get the guard.
+    const findExportDataFunction = (src, fnResult) => {
+        if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
+        for (const step of findAwaitedFunctions(src, fnResult)) {
+            if (writesSaveOut(src, step)) return step;
+            if (findAwaitedFunctions(src, step).some(inner => writesSaveOut(src, inner))) return step;
         }
         return null;
     };
 
-    const findExportDataFunction = (src, fnResult) => {
-        if (!fnResult || fnResult.bodyEnd < fnResult.bodyStart) return null;
-        const body = src.slice(fnResult.bodyStart, fnResult.bodyEnd);
-        const awaitedCall = /\bawait\s+([a-zA-Z_$][\w$]*)\s*\(/g;
-        let match;
-        const awaitedNames = [];
-        while ((match = awaitedCall.exec(body)) !== null) awaitedNames.push(match[1]);
-
-        let terminalFallback = null;
-        for (const fnName of awaitedNames.reverse()) {
-            if (fnName === fnResult.fnName) continue;
-            const result = findFunctionBodyByName(src, fnName);
-            if (!result || result.bodyEnd < result.bodyStart) continue;
-            terminalFallback ??= result;
-            const candidateBody = src.slice(result.bodyStart, result.bodyEnd);
-            const readsExportMode = candidateBody.includes('"saveType"') || candidateBody.includes("'saveType'");
-            const writesClipboardOrFile = candidateBody.includes('clipboard')
-                || candidateBody.includes('createObjectURL')
-                || candidateBody.includes('Blob');
-            if (readsExportMode && writesClipboardOrFile) return result;
-        }
-
-        // Older/minimal bundles may strip the recognizable DOM/output markers.
-        // In exportSynergism the save-output call has historically been the final await.
-        return terminalFallback;
-    };
-
     // ==================================================================================
-    // ────── EXPORT PATCH ─ Expose exportSynergism and suppress only its final
-    // save-output helper when autosing requests a quark-only export.
-    // Primary strategy: follow the stable exportgame click listener to the
-    // minified function it invokes. Fall back to save-export behavior if the
-    // listener wiring changes. Neither strategy depends on parameter spelling.
-    const exportListenerResult = findExportFunctionFromClickHandler(code);
-    const exportResult = exportListenerResult || findFunctionBodyBySemantics(
-        code, 'Synergysave2', ['.offlinetick', '.lastExportedSave']
-    );
-    if (exportResult) {
-        const exportFn = exportResult.fnName;
-        const exportDataResult = findExportDataFunction(code, exportResult);
-        const exportDataFn = exportDataResult?.fnName;
-        let suppressOutput = '';
-        if (exportDataResult && exportDataFn) {
-            suppressOutput = `\nif(window.__HS_SUPPRESS_EXPORT_ONCE){` +
-                `window.__HS_SUPPRESS_EXPORT_ONCE=false;` +
-                `console.log('[HS-PATCH] ✅ Save output suppressed (quarks awarded)');` +
-                `return;` +
-                `}\n`;
-            log(`Patched exportData output guard (fn=${exportDataFn})`);
-        } else {
-            warn('Found exportSynergism but could not identify its final awaited exportData helper');
-        }
+    // ────── EXPORT PATCH ─ Expose exportSynergism and suppress only its save output
+    // when autosing requests a quark-only export.
+    // Found by what it does: the function awarding the export's golden quarks ("exportGQPerHour") and stamping
+    // the save (.lastExportedSave, .offlinetick). Fallback: the function the exportgame click listener calls.
+    // Its output step: see findExportDataFunction.
+    report.export = false;
+    report.exportOutput = false;
+    try {
+        const exportSemanticResult = findEnclosingFunction(code, /["']exportGQPerHour["']/g,
+            ['.lastExportedSave', '.offlinetick'], 'exportSynergism');
+        const exportResult = exportSemanticResult || findExportFunctionFromClickHandler(code);
+        if (exportResult) {
+            const exportFn = exportResult.fnName;
+            const exportDataResult = findExportDataFunction(code, exportResult);
+            const exportDataFn = exportDataResult?.fnName;
+            let suppressOutput = '';
+            if (exportDataResult && exportDataFn) {
+                suppressOutput = `\nif(window.__HS_SUPPRESS_EXPORT_ONCE){` +
+                    `window.__HS_SUPPRESS_EXPORT_ONCE=false;` +
+                    `console.log('[HS-PATCH] ✅ Save output suppressed (quarks awarded)');` +
+                    `return;` +
+                    `}\n`;
+                log(`Patched exportData output guard (fn=${exportDataFn})`);
+            } else {
+                warn('Found exportSynergism but not its save output step (no awaited function writing the save out by "saveType")');
+            }
 
-        const expose = exportFn
-            ? `\nif(!window.__HS_EXPORT_EXPOSED){` +
-            `window.__HS_exportSynergism=${exportFn};` +
-            (exportDataFn ? `window.__HS_exportData=${exportDataFn};window.__HS_EXPORT_OUTPUT_PATCHED=true;` : '') +
-            `window.__HS_EXPORT_EXPOSED=true;` +
-            `console.log('[HS-PATCH] \u2705 exportSynergism exposed');` +
-            `}` +
-            `if(window.__HS_SILENT_EXPORT)return;` +
-            `\n`
-            : `\nif(!window.__HS_EXPORT_EXPOSED){` +
-            `window.__HS_EXPORT_EXPOSED=true;` +
-            `console.log('[HS-PATCH] \u26a0\ufe0f exportSynergism found but fn name unknown');` +
-            `}` +
-            `if(window.__HS_SILENT_EXPORT)return;` +
-            `\n`;
-        const insertions = [{ index: exportResult.bodyStart, text: expose }];
-        if (exportDataResult && suppressOutput) {
-            insertions.push({ index: exportDataResult.bodyStart, text: suppressOutput });
+            const expose =
+                `\nif(!window.__HS_EXPORT_EXPOSED){` +
+                `window.__HS_exportSynergism=${exportFn};` +
+                (exportDataFn ? `window.__HS_exportData=${exportDataFn};window.__HS_EXPORT_OUTPUT_PATCHED=true;` : '') +
+                `window.__HS_EXPORT_EXPOSED=true;` +
+                `console.log('[HS-PATCH] ✅ exportSynergism exposed');` +
+                `}` +
+                `if(window.__HS_SILENT_EXPORT)return;` +
+                `\n`;
+            const insertions = [{ index: exportResult.bodyStart, text: expose }];
+            if (exportDataResult && suppressOutput) {
+                insertions.push({ index: exportDataResult.bodyStart, text: suppressOutput });
+            }
+            insertions.sort((a, b) => b.index - a.index);
+            for (const insertion of insertions) {
+                code = code.slice(0, insertion.index) + insertion.text + code.slice(insertion.index);
+            }
+            report.export = true;
+            report.exportOutput = !!suppressOutput;
+            log(`Patched exportSynergism (fn=${exportFn}, output=${exportDataFn ?? 'unavailable'}, via=${exportSemanticResult ? 'golden-quark-export' : 'click-handler'})`);
+        } else {
+            warn('Could not patch exportSynergism — neither the golden quark export nor the exportgame click handler matched');
         }
-        insertions.sort((a, b) => b.index - a.index);
-        for (const insertion of insertions) {
-            code = code.slice(0, insertion.index) + insertion.text + code.slice(insertion.index);
-        }
-        log(`Patched exportSynergism (fn=${exportFn ?? 'unknown'}, output=${exportDataFn ?? 'unavailable'}, via=${exportListenerResult ? 'click-handler' : 'semantic-fallback'})`);
-    } else {
-        warn('Could not patch exportSynergism — click handler and semantic fallback did not match');
+    } catch (e) {
+        warn('Error while patching exportSynergism', e);
     }
 
     // ==================================================================================
     // ────── STAGE PATCH — inject at the entry of loadMiscellaneousStats.
-    // Locate the unique anchor, extract variable names, find the enclosing
-    // no-arg arrow function, and inject at its opening brace.
-    const stageAnchorIdx = code.indexOf('"gameStageStatistic"');
-    if (stageAnchorIdx !== -1) {
-        const ctx = code.slice(Math.max(0, stageAnchorIdx - 80), stageAnchorIdx + 300);
-        const domFn = ctx.match(/([a-zA-Z_$][\w$]*)\("gameStageStatistic"\)/)?.[1];
-        const i18nObj = ctx.match(/\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/)?.[1];
-        const stageFn = ctx.match(/\bstage\s*:\s*([a-zA-Z_$][\w$]*)\(/)?.[1];
-        if (domFn && i18nObj && stageFn) {
-            const expose =
-                `\nif(!window.__HS_STAGE_EXPOSED){` +
-                `window.DOMCacheGetOrSet=${domFn};` +
-                `window.__HS_synergismStage=${stageFn};` +
-                `window.__HS_i18next=${i18nObj};` +
-                `window.__HS_STAGE_EXPOSED=true;` +
-                `window.__HS_EXPOSED=true;` +
-                `console.log('[HS-PATCH] \u2705 Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');` +
-                `}\n`;
-            const backWin = code.slice(Math.max(0, stageAnchorIdx - 4000), stageAnchorIdx);
-            const noArgArrow = /=\s*\(\s*\)\s*=>\s*\{/g;
-            let am, lastBodyStart = -1;
-            while ((am = noArgArrow.exec(backWin)) !== null) lastBodyStart = am.index + am[0].length;
-            if (lastBodyStart !== -1) {
-                const insertAt = Math.max(0, stageAnchorIdx - 4000) + lastBodyStart;
-                code = code.slice(0, insertAt) + expose + code.slice(insertAt);
-                log(`Patched stage at fn entry (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-            } else {
-                code = code.slice(0, stageAnchorIdx) + expose + code.slice(stageAnchorIdx);
-                log(`Patched stage via fallback injection (dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
-            }
+    // Found by what it does: the function filling "gameStageStatistic" on the Misc stats ("miscStats").
+    // The game's names are read from that statement, without the minifier's spelling of anything else:
+    //   cQ=()=>{Be(w7,"miscStats",…),c("gameStageStatistic").innerHTML=s.t("statistics.gameStage",{stage:gk(0)})}
+    // DOMCacheGetOrSet = the bare call holding the id (a member call such as document.getElementById is refused).
+    report.stage = false;
+    try {
+        const stageAnchor = /["']gameStageStatistic["']/;
+        const stageResult = findEnclosingFunction(code, new RegExp(stageAnchor.source, 'g'), ['miscStats'], 'stage');
+        if (!stageResult) {
+            warn('Could not patch stage — loadMiscellaneousStats ("gameStageStatistic" with "miscStats") not found in bundle');
         } else {
-            warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+            const body = code.slice(stageResult.bodyStart, stageResult.bodyEnd);
+            const anchorAt = body.search(stageAnchor);
+            const domFn = /(?<![\w$.])([a-zA-Z_$][\w$]*)\(\s*$/.exec(body.slice(0, anchorAt))?.[1];
+            const statement = body.slice(anchorAt);
+            const i18nObj = /^["']gameStageStatistic["']\s*\)\s*\.innerHTML\s*=\s*([a-zA-Z_$][\w$]*)\.t\(/.exec(statement)?.[1];
+            const stageFn = /(?<![\w$])stage\s*:\s*([a-zA-Z_$][\w$]*)\(/.exec(statement)?.[1];
+            if (domFn && i18nObj && stageFn) {
+                const expose =
+                    `\nif(!window.__HS_STAGE_EXPOSED){` +
+                    `window.DOMCacheGetOrSet=${domFn};` +
+                    `window.__HS_synergismStage=${stageFn};` +
+                    `window.__HS_i18next=${i18nObj};` +
+                    `window.__HS_STAGE_EXPOSED=true;` +
+                    `window.__HS_EXPOSED=true;` +
+                    `console.log('[HS-PATCH] ✅ Stage exposed (dom=${domFn} stage=${stageFn} i18n=${i18nObj})');` +
+                    `}\n`;
+                code = code.slice(0, stageResult.bodyStart) + expose + code.slice(stageResult.bodyStart);
+                report.stage = true;
+                log(`Patched stage at fn entry (fn=${stageResult.fnName} dom=${domFn} stage=${stageFn} i18n=${i18nObj})`);
+            } else {
+                warn(`Stage var extraction failed — dom=${domFn} stage=${stageFn} i18n=${i18nObj}`);
+            }
         }
-    } else {
-        warn('Could not patch stage — "gameStageStatistic" not found in bundle');
+    } catch (e) {
+        warn('Error while patching stage', e);
     }
 
     // ==================================================================================
     // ────── PLAYER PATCH ─ Capture the game's player initializer regardless of its minified name.
+    // Found by what it is: the object literal assigned to a variable with firstPlayed as one of its own keys,
+    // wherever it sits, and the save's challengecompletions and worlds. Wrapped in a call that keeps a reference:
+    //   n={firstPlayed:…}  becomes  n=(function(player){…;return player})({firstPlayed:…})
+    report.player = false;
     try {
-        const re = /\b([a-zA-Z_$][\w$]*)\s*=\s*\{\s*firstPlayed\s*:\s*new Date\(\)\.toISOString\(\)\s*,\s*worlds\s*:/g;
-        let m;
-        let patched = false;
-        while ((m = re.exec(code)) !== null) {
-            const objectStart = m.index + m[0].lastIndexOf('{');
-            const objectEnd = findMatchingBrace(code, objectStart + 1);
-            if (objectEnd < 0 || !code.slice(objectStart, objectEnd).includes('challengecompletions:')) continue;
+        const player = findAssignedObjectLiteral(code, /(?<![\w$.])["']?firstPlayed["']?\s*:/g,
+            ['challengecompletions', 'worlds'], 'player initializer');
+        if (player) {
             const capture = '(function(player){window.symp=window.symp||Symbol();' +
                 'Object.defineProperty(window,window.symp,{enumerable:false,configurable:true,writable:true,value:player});' +
-                'console.log("[HS-PATCH] \u2705 Symbol exposed");return player})(';
-            code = code.slice(0, objectStart) + capture + code.slice(objectStart, objectEnd + 1) + ')' + code.slice(objectEnd + 1);
-            log(`Patched player initializer (variable=${m[1]})`);
-            patched = true;
-            break;
+                'console.log("[HS-PATCH] ✅ Symbol exposed");return player})(';
+            code = code.slice(0, player.start) + capture + code.slice(player.start, player.end + 1) + ')' + code.slice(player.end + 1);
+            report.player = true;
+            log(`Patched player initializer (variable=${player.name})`);
+        } else {
+            warn('Could not find player initializer in game bundle');
         }
-        if (!patched) warn('Could not find player initializer in game bundle');
     } catch (e) {
         warn('Error while patching player initializer', e);
     }
@@ -305,18 +436,20 @@ function patchBundle(code, options = {}) {
     // ==================================================================================
     // ── GETMAXCHALLENGES PATCH — expose Challenges.ts getMaxChallenges as window.__HS_getMaxChallenges
     // Match challenge-cap behavior without assuming minified variable names.
+    report.getMaxChallenges = false;
     try {
         const gmcResult = findEnclosingFunction(code, /\.cubeUpgrades\s*\[\s*29\s*\]/g,
-            ['researches[105]', 'oneChallengeCap', 'reincarnationChallengeCap']);
+            ['researches[105]', 'oneChallengeCap', 'reincarnationChallengeCap'], 'getMaxChallenges');
         if (gmcResult) {
             const gmcFn = gmcResult.fnName;
             const expose =
                 `\nif(!window.__HS_CHALLENGES_EXPOSED){` +
                     `window.__HS_getMaxChallenges=${gmcFn};` +
                     `window.__HS_CHALLENGES_EXPOSED=true;` +
-                    `console.log('[HS-PATCH] \u2705 getMaxChallenges exposed (fn=${gmcFn})');` +
+                    `console.log('[HS-PATCH] ✅ getMaxChallenges exposed (fn=${gmcFn})');` +
                 `}\n`;
             code = code.slice(0, gmcResult.bodyStart) + expose + code.slice(gmcResult.bodyStart);
+            report.getMaxChallenges = true;
             log(`Patched getMaxChallenges (fn=${gmcFn})`);
         } else {
             warn('Could not patch getMaxChallenges — challenge-cap behavior not found in bundle');
@@ -326,21 +459,26 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
-    // ── TACK PATCH — wrap tack() to fire registered after-tack hooks
-    // Find the enclosing update from its timer behavior, not a nearby arrow.
+    // ── TACK PATCH — fire registered after-tack hooks after each game tick (Synergism.ts tack)
+    // Found by what it does: the tick skipping its timers during a time warp (.timeWarp), adding time to every timer
+    // (autoPotion and purpleReactor among them), then running the automatic tools (runeSacrifice).
+    // addTimers, which tack calls, holds the same timer names but neither .timeWarp nor runeSacrifice. It must not get
+    // the hook: the game also calls it outside a tick (codes, PseudoCoin time skips, offline progress).
+    report.tack = false;
     try {
-        const tackResult = findEnclosingFunction(code, /["']autoPotion["']/g,
-            ['prestige', 'autoPotion', 'ascension', 'quarks']);
+        const tackResult = findEnclosingFunction(code, /\.timeWarp\b/g,
+            ['autoPotion', 'purpleReactor', 'runeSacrifice'], 'tack()');
         if (tackResult) {
             const tackPatch =
                 `if(!window.__HS_TACK_PATCHED){` +
                     `window.__HS_TACK_PATCHED=true;` +
                     `window.__HS_tackHooks=[];` +
                     `window.__HS_onAfterTack=function(fn){window.__HS_tackHooks.push(fn);};` +
-                    `console.log('[HS-PATCH] \u2705 tack() patched (fn=${tackResult.fnName})');` +
+                    `console.log('[HS-PATCH] ✅ tack() patched (fn=${tackResult.fnName})');` +
                 `}` +
                 `queueMicrotask(()=>{const h=window.__HS_tackHooks.splice(0);for(let i=0;i<h.length;i++)h[i]();});`;
             code = code.slice(0, tackResult.bodyStart) + tackPatch + code.slice(tackResult.bodyStart);
+            report.tack = true;
             log(`Patched tack() (fn=${tackResult.fnName})`);
         } else {
             warn('Could not patch tack() — game-time timer behavior not found in bundle');
@@ -350,119 +488,202 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
-    // ── AUTO-CONFIRM PATCH — make Confirm/Alert auto-resolve when window.__HS_AUTO_CONFIRM is set to true
-    // Confirm resolves true (OK clicked) and Alert resolves void, bypassing all DOM/queue overhead.
-    // 'Unique' anchors: 'confirmationBox' appears exactly 3× in the bundle: 1st = Confirm body, 2nd = Alert body, 3rd = Prompt.
-    // We use the 1st for Confirm and 2nd for Alert. Walk back to the `() => {` of the enqueue action.
-    // Toggle: window.__HS_AUTO_CONFIRM = true (no pop-up) / false (normal play with pop-ups).
+    // ── DIALOG HOOK PATCH — let the mod see every game dialog when it's queued, and answer it before it's shown.
+    // The 5 dialog functions (Confirm, Alert, InfoAlert, Prompt, PurchasePrompt) share one queue and one shape:
+    //   je=async e=>Jf.enqueue(()=>{let t=c("confirmationBox"),r=c("confirmWrapper"), …
+    // Each queued action (`.enqueue(()=>{` holding "confirmationBox") is told apart by its own wrapper id (DOM ids the
+    // mod already relies on): each action hides the 4 others (c("alertWrapper").style.display="none"), and reads
+    // its own, whatever the order of its lines. Its dialog function returns that enqueue (`name=params=>` right before).
+    // 1. An extra default parameter records the dialog's origin when it's queued (defaults are evaluated at call time):
+    //    e=>  becomes  (e,__hsO=window.__HS_dialogOrigin?.("confirm",e))=>
+    // 2. At the start of the queued action (when the dialog reaches the front of the queue), the mod may answer it:
+    //    window.__HS_onDialog(kind, origin) returns { value } to resolve the dialog without showing it, or undefined to show it.
+    // Without the mod's hook (older mod), window.__HS_AUTO_CONFIRM still auto-answers Confirm and Alert, as the old patch did.
+    // All 5 or none: with a partial match, the mod falls back to clicking dialogs through the DOM.
+    report.dialogHook = false;
     try {
-        const cbRe = /['"]confirmationBox['"]/g;
-        const cbMatch1 = cbRe.exec(code);
-        const cbMatch2 = cbMatch1 ? cbRe.exec(code) : null;
+        const dialogKinds = {
+            confirmWrapper: 'confirm',
+            alertWrapper: 'alert',
+            infoAlertWrapper: 'infoAlert',
+            promptWrapper: 'prompt',
+            purchasePromptWrapper: 'purchasePrompt'
+        };
+        // Old mod versions only know __HS_AUTO_CONFIRM, for these two kinds
+        const legacyAnswers = { confirm: '!0', alert: 'void 0' };
+        const wrapperRe = /["'](confirmWrapper|alertWrapper|infoAlertWrapper|promptWrapper|purchasePromptWrapper)["']/g;
+        const actionRe = /[\w$.]+\.enqueue\(\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g;
+        const dialogHeaderRe = new RegExp(String.raw`(?<![\w$.])[\w$]+\s*=\s*(?:async\s*)?(${PARAMS}|[\w$]+)\s*=>\s*$`, 'd');
 
-        // Collect both patch sites against the unmodified code, then apply highest-index first
-        // so earlier insertions don't invalidate later indices.
-        const autoConfirmSites = [];
-        if (cbMatch1) {
-            const backCtx = code.slice(Math.max(0, cbMatch1.index - 200), cbMatch1.index);
-            const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
-            if (lastArrow) {
-                autoConfirmSites.push({
-                    bodyStart: (cbMatch1.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
-                    inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(!0);\n`,
-                    label: 'Confirm'
-                });
-            } else { warn('autoConfirm: could not find Confirm action body start'); }
-        } else { warn('Could not patch Confirm — confirmationBox anchor not found'); }
+        const hiddenRe = /^\s*\)\s*\.style\.display\s*=\s*["']none["']/;
 
-        if (cbMatch2) {
-            const backCtx = code.slice(Math.max(0, cbMatch2.index - 200), cbMatch2.index);
-            const lastArrow = [...backCtx.matchAll(/\(\s*\)\s*=>\s*\{/g)].at(-1);
-            if (lastArrow) {
-                autoConfirmSites.push({
-                    bodyStart: (cbMatch2.index - backCtx.length) + lastArrow.index + lastArrow[0].length,
-                    inject: `\nif(window.__HS_AUTO_CONFIRM)return Promise.resolve(void 0);\n`,
-                    label: 'Alert'
-                });
-            } else { warn('autoConfirm: could not find Alert action body start'); }
-        } else { warn('Could not patch Alert — second confirmationBox anchor not found'); }
-
-        autoConfirmSites.sort((a, b) => b.bodyStart - a.bodyStart);
-        for (const site of autoConfirmSites) {
-            code = code.slice(0, site.bodyStart) + site.inject + code.slice(site.bodyStart);
-            log(`Patched ${site.label} (auto-confirm support)`);
+        const sites = [];
+        let action;
+        while ((action = actionRe.exec(code)) !== null) {
+            const bodyStart = action.index + action[0].length;
+            const bodyEnd = findMatchingBrace(code, bodyStart);
+            if (bodyEnd < 0) continue;
+            const body = code.slice(bodyStart, bodyEnd);
+            if (!body.includes('confirmationBox')) continue;
+            // Its own wrapper: read by the action itself (not a callback inside it), and not hidden right away
+            const own = new Set();
+            let m;
+            wrapperRe.lastIndex = 0;
+            while ((m = wrapperRe.exec(body)) !== null) {
+                if (walkBraces(code, bodyStart, bodyStart + m.index) !== 1) continue;
+                if (hiddenRe.test(body.slice(m.index + m[0].length))) continue;
+                own.add(m[1]);
+            }
+            if (own.size !== 1) continue;
+            const headerStart = Math.max(0, action.index - 300);
+            const header = dialogHeaderRe.exec(code.slice(headerStart, action.index));
+            if (!header) continue;
+            const [paramsStart, paramsEnd] = header.indices[1];
+            sites.push({
+                kind: dialogKinds[[...own][0]], params: header[1],
+                paramsStart: headerStart + paramsStart, paramsEnd: headerStart + paramsEnd, bodyStart
+            });
         }
-        if (autoConfirmSites.length === 2) {
-            code = 'window.__HS_AUTO_CONFIRM_PATCHED = true;\n' + code;
+
+        const foundKinds = sites.map(site => site.kind);
+        const allFoundOnce = Object.values(dialogKinds).every(kind => foundKinds.filter(k => k === kind).length === 1);
+        if (!allFoundOnce) {
+            warn(`Could not patch the game dialogs — expected each of the 5 once, found: [${foundKinds.join(', ')}]`);
+        } else {
+            // Highest index first, so earlier insertions don't move later ones
+            const edits = [];
+            for (const site of sites) {
+                const list = site.params.startsWith('(') ? site.params.slice(1, -1).trim() : site.params.trim();
+                const firstParam = splitParams(list)[0] ?? '';
+                const originArgs = /^[\w$]+$/.test(firstParam) ? `"${site.kind}",${firstParam}` : `"${site.kind}"`;
+                const originParam = `__hsO=window.__HS_dialogOrigin?.(${originArgs})`;
+                edits.push({
+                    start: site.paramsStart, end: site.paramsEnd,
+                    text: `(${list ? `${list},` : ''}${originParam})`
+                });
+                const legacy = legacyAnswers[site.kind];
+                edits.push({
+                    start: site.bodyStart, end: site.bodyStart,
+                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);` +
+                        (legacy ? `if(!window.__HS_onDialog&&window.__HS_AUTO_CONFIRM)return Promise.resolve(${legacy});` : '') +
+                        `\n`
+                });
+            }
+            edits.sort((a, b) => b.start - a.start);
+            for (const edit of edits) {
+                code = code.slice(0, edit.start) + edit.text + code.slice(edit.end);
+            }
+            // __HS_AUTO_CONFIRM_PATCHED: older mod versions check it before relying on __HS_AUTO_CONFIRM
+            topLines.push('window.__HS_DIALOG_HOOK_PATCHED = true;window.__HS_AUTO_CONFIRM_PATCHED = true;');
+            report.dialogHook = true;
+            log('Patched the 5 game dialogs (dialog hook)');
         }
     } catch (e) {
-        warn('Error while patching Confirm/Alert', e);
+        warn('Error while patching the game dialogs', e);
     }
 
     // ==================================================================================
     // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
-    // Unique anchor: e.includes('/') only appears inside applyCorruptions (legacy corruption format check)
+    // Found by what it does, not by minified or parameter names: the function reading the legacy "a/b/c" format
+    // (.includes("/")) or JSON (JSON.parse), then setting the next corruptions (setCorruptionLevelsWithChallengeRequirement).
+    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
+    //   fx=e=>{  becomes  fx=window.__HS_applyCorruptions=e=>{
+    report.applyCorruptions = false;
     try {
-        const corrAnchor = 'e.includes("/")';
-        const corrAnchorIdx = code.indexOf(corrAnchor);
-        if (corrAnchorIdx !== -1) {
-            const backCtx = code.slice(Math.max(0, corrAnchorIdx - 400), corrAnchorIdx);
-            // applyCorruptions is assigned as: fnName = e => {
-            const allFnMatches = [...backCtx.matchAll(/([a-zA-Z_$][\w$]*)\s*=\s*e\s*=>\s*\{/g)];
-            const corrFn = allFnMatches.at(-1)?.[1];
-            if (corrFn) {
-                const fnHeaderRe = new RegExp(`\\b${corrFn}\\s*=\\s*e\\s*=>\\s*\\{`, 'g');
-                let bodyStart = -1, fhm;
-                const preAnchor = code.slice(0, corrAnchorIdx);
-                while ((fhm = fnHeaderRe.exec(preAnchor)) !== null) bodyStart = fhm.index + fhm[0].length;
-                if (bodyStart !== -1) {
-                    const expose =
-                        `\nif(!window.__HS_CORRUPTIONS_EXPOSED){` +
-                        `window.__HS_applyCorruptions=${corrFn};` +
-                        `window.__HS_CORRUPTIONS_EXPOSED=true;` +
-                        `console.log('[HS-PATCH] \u2705 applyCorruptions exposed (fn=${corrFn})');` +
-                        `}\n`;
-                    code = code.slice(0, bodyStart) + expose + code.slice(bodyStart);
-                    log(`Patched applyCorruptions (fn=${corrFn})`);
-                } else {
-                    warn(`applyCorruptions: found fn name '${corrFn}' but could not locate body start`);
-                }
-            } else {
-                warn('applyCorruptions: could not extract fn name from anchor context');
-            }
+        const corrResult = findEnclosingFunction(code, /\.includes\(\s*["']\/["']\s*\)/g,
+            ['setCorruptionLevelsWithChallengeRequirement', 'JSON.parse('], 'applyCorruptions');
+        if (corrResult) {
+            const exposed = exposeFunction(code, corrResult, '__HS_applyCorruptions');
+            code = exposed.code;
+            report.applyCorruptions = true;
+            log(`Patched applyCorruptions${exposed.atDefinition ? '' : ' at its first call'} (fn=${corrResult.fnName})`);
         } else {
-            warn('Could not patch applyCorruptions — anchor not found in bundle');
+            warn('Could not patch applyCorruptions — corruption import not found in bundle');
         }
     } catch (e) {
         warn('Error while patching applyCorruptions', e);
     }
 
     // ==================================================================================
+    // ── VALIDATEBLUEBERRYTREE PATCH — expose BlueberryUpgrades.ts validateBlueberryTree as window.__HS_validateBlueberryTree
+    // Lets the mod check an ambrosia tree before writing it into a loadout slot itself (no import through the game,
+    // which replaces the live tree and shows dialogs). It only reads the player's state.
+    // Found by what it does, not by minified names or call shapes: the function checking the Exalt unlock criteria
+    // (string literals "Exalt1x1", "Exalt5x1", "Exalt9x1") against the ambrosia budget (player.lifetimeAmbrosia).
+    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
+    //   eK=e=>{  becomes  eK=window.__HS_validateBlueberryTree=e=>{
+    // A function declaration is exposed once the game has validated a tree (at the first loadout load).
+    report.validateBlueberryTree = false;
+    try {
+        const vbtResult = findEnclosingFunction(code, /["']Exalt9x1["']/g, ['lifetimeAmbrosia', 'Exalt1x1', 'Exalt5x1'],
+            'validateBlueberryTree');
+        if (vbtResult) {
+            const exposed = exposeFunction(code, vbtResult, '__HS_validateBlueberryTree');
+            code = exposed.code;
+            report.validateBlueberryTree = true;
+            log(`Patched validateBlueberryTree${exposed.atDefinition ? '' : ' at its first call'} (fn=${vbtResult.fnName})`);
+        } else {
+            warn('Could not patch validateBlueberryTree — Exalt unlock check not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching validateBlueberryTree', e);
+    }
+
+    // ==================================================================================
+    // ── SAVE IMPORT HOOK PATCH — tell the mod when the game is about to load a save
+    // ImportExport.ts importSynergism(input, reset) loads every save: a file, a cloud save, the Steam cloud, and with
+    // reset = true a singularity, an Exalt and the game reset. The mod stops autosing on the first three.
+    // Found by what it does, not by minified names or call shapes: the function holding the import's own error keys
+    // ("importexport.loadTestInLive", "importexport.unableImport") and the save's "exporttest" check.
+    // At the start of its body, with its second parameter (reset):
+    //   Ic=(e,t=!1)=>{  becomes  Ic=(e,t=!1)=>{try{window.__HS_onSaveImport?.(t)}catch(__hsE){}
+    // The try: importSynergism ends every singularity, and an error from the mod must not stop the game there.
+    report.saveImportHook = false;
+    try {
+        const importResult = findEnclosingFunction(code, /["']importexport\.loadTestInLive["']/g,
+            ['importexport.unableImport', 'exporttest'], 'save import hook');
+        if (importResult) {
+            const header = code.slice(Math.max(0, importResult.bodyStart - 300), importResult.bodyStart);
+            const params = new RegExp(String.raw`(${PARAMS})\s*(?:=>\s*)?\{$`).exec(header);
+            const resetParam = params && splitParams(params[1].slice(1, -1))[1]?.split('=')[0].trim();
+            if (resetParam && /^[\w$]+$/.test(resetParam)) {
+                code = code.slice(0, importResult.bodyStart) +
+                    `\ntry{window.__HS_onSaveImport?.(${resetParam})}catch(__hsE){}\n` +
+                    code.slice(importResult.bodyStart);
+                topLines.push('window.__HS_SAVE_IMPORT_HOOK_PATCHED = true;');
+                report.saveImportHook = true;
+                log(`Patched importSynergism (save import hook, fn=${importResult.fnName})`);
+            } else {
+                warn('Could not patch the save import hook — importSynergism has no second (reset) parameter');
+            }
+        } else {
+            warn('Could not patch the save import hook — importSynergism not found in bundle');
+        }
+    } catch (e) {
+        warn('Error while patching the save import hook', e);
+    }
+
+    // ==================================================================================
     // ── CONSUMABLES PATCH — expose Login.ts allDurableConsumables as window.__HS_consumables
     // The game's own consumables WebSocket keeps the active Happy Hour Bells in that object; the mod
     // reads it instead of opening a second connection for the same account (refused by the server).
-    // Captured by its initializer, the same way as the player: no minified name is read.
+    // Captured by its initializer, the same way as the player: no minified name is read. Found by what it is: the
+    // object literal assigned to a variable with a HAPPY_HOUR_BELL entry (amount, ends, displayName), wherever it sits.
     //   Ro={HAPPY_HOUR_BELL:{amount:0,ends:[],displayName:""}}
     //   becomes  Ro=(function(o){window.__HS_consumables=o;return o})({HAPPY_HOUR_BELL:{...}})
     // The game only replaces the entries of this object (resetWebSocket), never the object, so the reference stays live.
+    report.consumables = false;
     try {
-        const re = /HAPPY_HOUR_BELL["']?\s*:\s*\{\s*amount\s*:\s*0\s*,\s*ends\s*:\s*\[\s*\]/g;
-        let m;
-        let patched = false;
-        while ((m = re.exec(code)) !== null) {
-            // The enclosing object literal, assigned to a variable: `=` then `{` right before the key
-            const before = /=\s*\{\s*["']?$/.exec(code.slice(Math.max(0, m.index - 50), m.index));
-            if (!before) continue;
-            const objectStart = m.index - before[0].length + before[0].indexOf('{');
-            const objectEnd = findMatchingBrace(code, objectStart + 1);
-            if (objectEnd < 0 || !code.slice(objectStart, objectEnd).includes('displayName')) continue;
+        const record = findAssignedObjectLiteral(code, /(?<![\w$.])["']?HAPPY_HOUR_BELL["']?\s*:\s*\{/g,
+            ['amount', 'ends', 'displayName'], 'consumables');
+        if (record) {
             const capture = '(function(o){window.__HS_consumables=o;return o})(';
-            code = code.slice(0, objectStart) + capture + code.slice(objectStart, objectEnd + 1) + ')' + code.slice(objectEnd + 1);
-            log('Patched consumables (window.__HS_consumables)');
-            patched = true;
-            break;
+            code = code.slice(0, record.start) + capture + code.slice(record.start, record.end + 1) + ')' + code.slice(record.end + 1);
+            report.consumables = true;
+            log(`Patched consumables (window.__HS_consumables, variable=${record.name})`);
+        } else {
+            warn('Could not patch consumables — the HAPPY_HOUR_BELL initializer was not found in bundle');
         }
-        if (!patched) warn('Could not patch consumables — the HAPPY_HOUR_BELL initializer was not found in bundle');
     } catch (e) {
         warn('Error while patching consumables', e);
     }
@@ -475,15 +696,18 @@ function patchBundle(code, options = {}) {
     //   oL=async()=>{if(!n.dayCheck)return;let e=await fetch("https://synergism.cc/events/get");...
     //   becomes  oL=async()=>{const fetch=(...a)=>window.fetch(...a).then(<copy of an ok answer to the mod>);if(!n.dayCheck)...
     // The game gets the browser's response untouched; the mod reads a clone. Nothing from the mod can throw into the game.
+    report.globalEvent = false;
     try {
-        const eventResult = findEnclosingFunction(code, /["']https:\/\/synergism\.cc\/events\/get["']/g, ['dayCheck', '.json()']);
+        const eventResult = findEnclosingFunction(code, /["']https:\/\/synergism\.cc\/events\/get["']/g,
+            ['dayCheck', '.json()'], 'global event');
         if (eventResult) {
             const shadow =
                 '\nconst fetch=(...__hsA)=>window.fetch(...__hsA).then(__hsR=>{try{if(__hsR&&__hsR.ok)' +
                 '__hsR.clone().json().then(__hsJ=>{window.__HS_globalEvent=__hsJ;' +
                 'try{window.__HS_onGlobalEvent?.(__hsJ)}catch(__hsE){}},()=>{})}catch(__hsE){}return __hsR});\n';
             code = code.slice(0, eventResult.bodyStart) + shadow + code.slice(eventResult.bodyStart);
-            code = 'window.__HS_GLOBAL_EVENT_PATCHED = true;\n' + code;
+            topLines.push('window.__HS_GLOBAL_EVENT_PATCHED = true;');
+            report.globalEvent = true;
             log(`Patched eventCheck (global event, fn=${eventResult.fnName})`);
         } else {
             warn('Could not patch the global event — eventCheck not found in bundle');
@@ -493,32 +717,122 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── HEADER MODULES PATCH — let the mod add its own modules to the game's editable header (HeaderModules.ts)
+    // The mod's module ids start with "hs" then a capital letter (no game id does). They live only in the live
+    // player.headerLayouts: the game's save schema checks every id against its own list, and one unknown id resets the
+    // whole layout. So no save ever holds them, and a save loaded by an unpatched game keeps the player's header.
+    // The mod remembers where its modules are, and puts them back before each render.
+    // 1. saveSynergy, found by its "testing.gameSaved" message and the talismans it writes (fragmentsInvested):
+    //    its one schema parse of the player saves a copy without the mod's ids:
+    //      let t=Yp.parse(n)  becomes  let t=Yp.parse(window.__HS_stripHeaderModules(n))
+    // 2. loadSynergy, found by its "testing.saveInLive2" message: the save it parses loses the mod's ids (a singularity
+    //    reloads the live layout, and importSynergism stores that save as is until the next saveSynergy):
+    //      let t=JSON.parse(atob(e))  becomes  let t=window.__HS_parseSave(atob(e))
+    // 3. headerModuleUnlocks, the object literal with a key per module (ascCubeStats … singularitybtn): captured as
+    //    window.__HS_headerModuleUnlocks, where the mod adds its modules (the render calls it for each placed id).
+    // 4. renderHeaderLayout, found by "--header-button-slots" and "headerTray": exposed as window.__HS_renderHeaderLayout,
+    //    and calls window.__HS_beforeHeaderRender at the start (where the mod puts its modules back).
+    // All four or none: without 1, a save would hold the mod's ids; without 2-4, the mod has nothing to add them with.
+    report.headerModules = false;
+    try {
+        let next = code;
+        const problems = [];
+
+        const saveResult = findEnclosingFunction(next, /["']testing\.gameSaved["']/g, ['fragmentsInvested'], 'header modules (saveSynergy)');
+        const schemaParse = /(?<![\w$.])(?!JSON\.)([a-zA-Z_$][\w$]*)\.parse\(\s*([a-zA-Z_$][\w$]*)\s*\)/g;
+        const saveParses = saveResult ? [...next.slice(saveResult.bodyStart, saveResult.bodyEnd).matchAll(schemaParse)] : [];
+        if (saveParses.length === 1) {
+            const [match, schema, playerVar] = saveParses[0];
+            const at = saveResult.bodyStart + saveParses[0].index;
+            next = next.slice(0, at) + `${schema}.parse(window.__HS_stripHeaderModules(${playerVar}))` + next.slice(at + match.length);
+        } else {
+            problems.push(saveResult
+                ? `expected 1 schema parse in saveSynergy (fn=${saveResult.fnName}), found ${saveParses.length}`
+                : 'saveSynergy ("testing.gameSaved") not found');
+        }
+
+        const loadResult = findEnclosingFunction(next, /["']testing\.saveInLive2["']/g, [], 'header modules (loadSynergy)');
+        const loadParseAt = loadResult ? next.slice(loadResult.bodyStart, loadResult.bodyEnd).search(/(?<![\w$.])JSON\.parse\(/) : -1;
+        if (loadParseAt >= 0) {
+            const at = loadResult.bodyStart + loadParseAt;
+            next = next.slice(0, at) + 'window.__HS_parseSave(' + next.slice(at + 'JSON.parse('.length);
+        } else {
+            problems.push(loadResult ? `no JSON.parse in loadSynergy (fn=${loadResult.fnName})` : 'loadSynergy ("testing.saveInLive2") not found');
+        }
+
+        const unlocks = findAssignedObjectLiteral(next, /(?<![\w$.])["']?ascCubeStats["']?\s*:/g,
+            ['singularitybtn', 'ascensionChallengeProgress'], 'header modules (headerModuleUnlocks)');
+        if (unlocks) {
+            const capture = '(function(o){window.__HS_headerModuleUnlocks=o;return o})(';
+            next = next.slice(0, unlocks.start) + capture + next.slice(unlocks.start, unlocks.end + 1) + ')' + next.slice(unlocks.end + 1);
+        } else {
+            problems.push('headerModuleUnlocks (ascCubeStats … singularitybtn) not found');
+        }
+
+        const renderResult = findEnclosingFunction(next, /["']--header-button-slots["']/g, ['headerTray'], 'header modules (renderHeaderLayout)');
+        if (renderResult) {
+            next = next.slice(0, renderResult.bodyStart) + '\ntry{window.__HS_beforeHeaderRender?.()}catch(__hsE){}\n' +
+                next.slice(renderResult.bodyStart);
+            next = exposeFunction(next, renderResult, '__HS_renderHeaderLayout').code;
+        } else {
+            problems.push('renderHeaderLayout ("--header-button-slots") not found');
+        }
+
+        if (problems.length === 0) {
+            code = next;
+            topLines.push(`window.__HS_stripHeaderModules=${String(stripHeaderModules)};` +
+                'window.__HS_parseSave=function(t){return window.__HS_stripHeaderModules(JSON.parse(t))};' +
+                'window.__HS_HEADER_MODULES_PATCHED = true;');
+            report.headerModules = true;
+            log(`Patched the header modules (save=${saveResult.fnName}, load=${loadResult.fnName}, ` +
+                `unlocks=${unlocks.name}, render=${renderResult.fnName})`);
+        } else {
+            warn(`Could not patch the header modules — ${problems.join('; ')}`);
+        }
+    } catch (e) {
+        warn('Error while patching the header modules', e);
+    }
+
+    // ==================================================================================
     if (options.steam) {
-        // ── STEAM AUTO-SYNC PATCH — remove manual trigger (e || ...)
+        // ── STEAM AUTO-SYNC PATCH — sync the Steam cloud on its 60 s clock only, not at each manual save
+        // (remove the manual trigger: e || ...). In saveSynergy, found by its "testing.gameSaved" message,
+        // on the one throttle test there:
+        //   {let o=Date.now();(e||o-eG>=6e4)&&(eG=o,zY(r))}  becomes  {let o=Date.now();(o - eG >= 6e4)&&(eG=o,zY(r))}
+        report.steamAutoSync = false;
         try {
-            const steamSyncRe = /\(\s*([a-zA-Z_$][\w$]*)\s*\|\|\s*([a-zA-Z_$][\w$]*)\s*-\s*([a-zA-Z_$][\w$]*)\s*>=\s*6e4\s*\)\s*&&/;
-
-            const m = steamSyncRe.exec(code);
-            if (m) {
-                const [, buttonVar, nowVar, lastVar] = m;
-
-                const replacement = `(${nowVar} - ${lastVar} >= 6e4)&&`;
-
-                code = code.replace(steamSyncRe, replacement);
-
+            const saveResult = findEnclosingFunction(code, /["']testing\.gameSaved["']/g, [], 'Steam auto-sync');
+            const steamSyncRe = /\(\s*([a-zA-Z_$][\w$]*)\s*\|\|\s*([a-zA-Z_$][\w$]*)\s*-\s*([a-zA-Z_$][\w$]*)\s*>=\s*6e4\s*\)\s*&&/g;
+            const matches = saveResult ? [...code.slice(saveResult.bodyStart, saveResult.bodyEnd).matchAll(steamSyncRe)] : [];
+            if (matches.length === 1) {
+                const [match, buttonVar, nowVar, lastVar] = matches[0];
+                const at = saveResult.bodyStart + matches[0].index;
+                code = code.slice(0, at) + `(${nowVar} - ${lastVar} >= 6e4)&&` + code.slice(at + match.length);
+                report.steamAutoSync = true;
                 log(`Patched Steam auto-sync (removed ${buttonVar} trigger)`);
+            } else if (saveResult) {
+                warn(`Could not patch Steam auto-sync — expected 1 throttle test in saveSynergy (fn=${saveResult.fnName}), found ${matches.length}`);
             } else {
-                warn('Could not patch Steam auto-sync — pattern not found');
+                warn('Could not patch Steam auto-sync — saveSynergy ("testing.gameSaved") not found');
             }
         } catch (e) {
             warn('Error while patching Steam auto-sync', e);
         }
-
     }
 
     // ==================================================================================
+    // Flags at the top of the bundle go after its "use strict" directive: a statement before it would make the
+    // directive a plain string, and the whole game would run in sloppy mode.
+    topLines.unshift(`window.__HS_PATCH_REPORT=${JSON.stringify(report)};window.__HS_PATCH_AMBIGUOUS=${JSON.stringify(ambiguous)};`);
+    const prologue = /^\s*(?:(["'])use strict\1\s*;?)?/.exec(code)[0];
+    const prologueEnd = prologue.trim() && !prologue.trim().endsWith(';') ? ';' : '';
+    code = prologue + prologueEnd + '\n' + topLines.join('\n') + '\n' + code.slice(prologue.length);
 
-    log('Bundle patching complete');
+    const patchNames = Object.keys(report);
+    const missing = patchNames.filter(name => !report[name]);
+    log(`Bundle patching complete: ${patchNames.length - missing.length}/${patchNames.length} applied` +
+        (missing.length ? ` — missing: ${missing.join(', ')}` : '') +
+        (ambiguous.length ? ` — to check (several matches): ${ambiguous.join(', ')}` : ''));
     return code;
 }
 
@@ -528,7 +842,9 @@ function guardBrowserGameElements(getPatchedScript, onBlocked) {
     const gameElements = ['tab-row', 'sub-tab'];
     const assertUnclaimed = () => {
         if (gameElements.some(name => customElements.get(name))) {
-            throw new Error('The original game registered its UI before the loader started. Enable the userscript at document-start and refresh.');
+            const error = new Error('The original game registered its UI before the loader started. Enable the userscript at document-start and refresh.');
+            error.hsGameStartedFirst = true;
+            throw error;
         }
     };
     assertUnclaimed();
@@ -570,7 +886,7 @@ function startBrowserLoader(options) {
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '4.1';
+    const loaderVersion = '4.4';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -583,9 +899,71 @@ function startBrowserLoader(options) {
     // ─── State ────────────────────────────────────────────────────────────────
     let gameScriptDetected = false;
     let patchedScript = null;
+
+    // ─── Late start ───────────────────────────────────────────────────────────
+    // The original game ran before the userscript (Tampermonkey injected it late, e.g. its
+    // worker was asleep): it can't be patched any more. A reload usually wins the race.
+    // At most LATE_START_MAX_RELOADS in a row, counted in sessionStorage so it can't loop.
+    // The mod's reloadOnLateLoaderStart setting (read from localStorage) can turn the reload off.
+    const LATE_START_KEY = 'hs-loader-late-start-reloads';
+    const LATE_START_MAX_RELOADS = 2;
+    const LATE_START_WINDOW_MS = 60000;
+    const LATE_START_RELOAD_DELAY_MS = 1500;
+
+    // null when sessionStorage can't be used: then no automatic reload, nothing would stop a loop
+    function readLateStartReloads() {
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(LATE_START_KEY) || 'null');
+            return saved && Date.now() - saved.at < LATE_START_WINDOW_MS ? saved.count : 0;
+        } catch {
+            return null;
+        }
+    }
+
+    function clearLateStartReloads() {
+        try { sessionStorage.removeItem(LATE_START_KEY); } catch { }
+    }
+
+    function showLoaderBanner(text, closable) {
+        const show = () => {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;padding:8px 36px;' +
+                'background:#2b2108;color:#ffd27a;border-bottom:2px solid #fa4;font:14px/1.4 sans-serif;text-align:center;';
+            banner.textContent = text;
+            if (closable) {
+                const close = document.createElement('button');
+                close.textContent = '✕';
+                close.style.cssText = 'position:absolute;top:4px;right:8px;background:none;border:none;color:inherit;font-size:16px;cursor:pointer;';
+                close.addEventListener('click', () => banner.remove());
+                banner.appendChild(close);
+            }
+            (document.body || document.documentElement).appendChild(banner);
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show, { once: true });
+        else show();
+    }
+
+    function recoverFromLateStart() {
+        const reloads = readModBooleanSetting('reloadOnLateLoaderStart', true) ? readLateStartReloads() : null;
+        if (reloads !== null && reloads < LATE_START_MAX_RELOADS) {
+            try {
+                sessionStorage.setItem(LATE_START_KEY, JSON.stringify({ count: reloads + 1, at: Date.now() }));
+            } catch { }
+            log(`Game started before the loader: reloading (${reloads + 1}/${LATE_START_MAX_RELOADS})`);
+            showLoaderBanner(`HyperSynergism: the game started before the mod's loader. Reloading… (${reloads + 1}/${LATE_START_MAX_RELOADS})`, false);
+            setTimeout(() => location.reload(), LATE_START_RELOAD_DELAY_MS);
+            return;
+        }
+        // A manual refresh gets its automatic reloads again
+        clearLateStartReloads();
+        showLoaderBanner('HyperSynergism could not start: Tampermonkey ran the loader too late. Refresh the page.' +
+            (isFirefox ? '' : ' If it keeps happening, turn on "Allow User Scripts" in Chrome\'s extension details for Tampermonkey.'), true);
+    }
+
     const fail = error => {
         window.__HS_LOADER_ERROR = String(error?.message || error);
         warn('Loader stopped:', error);
+        if (error?.hsGameStartedFirst) recoverFromLateStart();
     };
     let assertUnclaimed;
     try {
@@ -827,6 +1205,7 @@ function startBrowserLoader(options) {
         }
         // Restore fetch — the block on /dist/out*.js is no longer needed.
         window.fetch = originalFetch;
+        clearLateStartReloads();
         log('Bundle executed; late original game copies remain guarded');
 
 
@@ -863,6 +1242,10 @@ function startBrowserLoader(options) {
                         `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
                         `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
+                        `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
+                        `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
+                        `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +
+                        `headerModulesPatched: !!window.__HS_HEADER_MODULES_PATCHED,` +
                         `tackHooks:           Array.isArray(window.__HS_tackHooks) ? window.__HS_tackHooks.length : 'n/a'` +
                     `};` +
                 `}` +
@@ -875,58 +1258,134 @@ function startBrowserLoader(options) {
     // ─── Phases 4–6: Wait for game, dismiss offline modal, expose, load mod ───────────
     // ==================================================================================
 
+    // Read a boolean mod setting from the mod's own storage (HSSettings → HSStorage:
+    // key 'hs-settings', JSON encoded twice, { [settingName]: { enabled, ... } }).
+    // The mod isn't loaded yet at this point, so fall back to its default.
+    function readModBooleanSetting(settingName, fallback) {
+        try {
+            const raw = localStorage.getItem('hs-settings');
+            if (!raw) return fallback;
+            let settings = JSON.parse(raw);
+            if (typeof settings === 'string') settings = JSON.parse(settings);
+            const enabled = settings?.[settingName]?.enabled;
+            return typeof enabled === 'boolean' ? enabled : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     async function runPostLoadSequence() {
         try {
             // Phase 4: Wait for the game to finish loading.
             // The offline container is the game's own "loading done" signal —
             // it only appears after the save has been read and the UI is ready.
+            // Also accept body.loading being gone: the page starts with it and only
+            // the popup's exit removes it, so the player already closed the popup.
             log('Phase 4 — waiting for offlineContainer to appear...');
             await waitFor(
                 () => {
                     const el = document.getElementById('offlineContainer');
-                    return el && getComputedStyle(el).display !== 'none';
+                    return (el && getComputedStyle(el).display !== 'none')
+                        || !document.body.classList.contains('loading');
                 },
                 60000,
                 'offlineContainer to become visible'
             );
-            log('offlineContainer visible — game is loaded');
+            log('Game is loaded (offlineContainer visible or already closed)');
 
-            // Dismiss the offline container.
-            const offlineContainer = document.getElementById('offlineContainer');
-            log('Dismissing offlineContainer...');
-            const exitBtn = document.getElementById('exitOffline')
-                || offlineContainer.querySelector('button');
-            if (exitBtn) exitBtn.click();
+            // What the bundle patch applied (written by patchBundle). A missing patch only costs what it adds:
+            // the mod still loads, with its fallbacks for what's missing (as for bookmarklet players).
+            const patchReport = window.__HS_PATCH_REPORT || {};
+            const stagePatched = patchReport.stage !== false;
+            const exportPatched = patchReport.export !== false;
+            // A wait that times out is reported, and the sequence goes on
+            const waitOrWarn = async (condition, label) => {
+                try {
+                    await waitFor(condition, 20000, label);
+                    return true;
+                } catch {
+                    warn(`${label} not set after 20 s — loading the mod without it`);
+                    return false;
+                }
+            };
+            const isOfflineOpen = () => {
+                const el = document.getElementById('offlineContainer');
+                return !!el && getComputedStyle(el).display !== 'none';
+            };
+            const dismissOffline = async () => {
+                if (!isOfflineOpen()) return;
+                log('Dismissing offlineContainer...');
+                const offlineContainer = document.getElementById('offlineContainer');
+                const exitBtn = document.getElementById('exitOffline')
+                    || offlineContainer.querySelector('button');
+                if (exitBtn) exitBtn.click();
+                // Wait 100 ms for the dismissal animation and any post-modal setup.
+                await new Promise(r => setTimeout(r, 100));
+            };
+            const navigateForExposure = async () => {
+                await clickWhenAvailable('settingstab');
+                await new Promise(r => setTimeout(r, 300));
+                if (stagePatched) {
+                    await clickWhenAvailable('switchSettingSubTab4');
+                    await new Promise(r => setTimeout(r, 300));
+                    await clickWhenAvailable('kMisc');
+                    await new Promise(r => setTimeout(r, 300));
+                }
 
-            // Wait 100 ms for the dismissal animation and any post-modal setup.
-            await new Promise(r => setTimeout(r, 100));
+                // Trigger exportSynergism silently to expose both export functions. Never without the export
+                // patch: the click would run a real export (a file or the clipboard, and its rewards).
+                if (exportPatched) {
+                    window.__HS_SILENT_EXPORT = true;
+                    await clickWhenAvailable('exportgame');
+                    window.__HS_SILENT_EXPORT = false;
+                }
+            };
 
             // Phase 5: Trigger exposure by navigating to Settings → Misc → Export.
-            log('Phase 5 — navigating to Settings to trigger exposure...');
-            await clickWhenAvailable('settingstab');
-            await new Promise(r => setTimeout(r, 300));
-            await clickWhenAvailable('switchSettingSubTab4');
-            await new Promise(r => setTimeout(r, 300));
-            await clickWhenAvailable('kMisc');
-            await new Promise(r => setTimeout(r, 300));
+            // Done behind the offline popup: the game's tab buttons don't check for it,
+            // so the player doesn't see the tab switching. The export exposes itself
+            // right away (its click handler runs it directly).
+            if (stagePatched || exportPatched) {
+                log('Phase 5 — navigating to Settings (behind the offline popup) to trigger exposure...');
+                await navigateForExposure();
+                if (exportPatched) await waitOrWarn(() => window.__HS_EXPORT_EXPOSED, '__HS_EXPORT_EXPOSED');
+            } else {
+                warn('Phase 5 skipped — neither the stage nor the export patch applied');
+            }
 
-            // Trigger exportSynergism silently to expose both export functions.
-            window.__HS_SILENT_EXPORT = true;
-            await clickWhenAvailable('exportgame');
-            window.__HS_SILENT_EXPORT = false;
+            // The stage is only exposed when the game renders the Misc stats, and the game
+            // pauses its display updates while the offline popup is open. So it happens on
+            // the first update after the popup closes, with Misc still active behind it.
+            if (readModBooleanSetting('autoDismissOfflinePopup', true)) {
+                await dismissOffline();
+            }
 
-            // Wait for both exposure flags.
-            log('Waiting for stage and export exposure flags...');
-            await waitFor(
-                () => window.__HS_EXPOSED && window.__HS_EXPORT_EXPOSED,
-                20000,
-                '__HS_EXPOSED and __HS_EXPORT_EXPOSED'
-            );
-            log('Exposure complete — stage and export are ready');
+            if (!stagePatched) {
+                // No stage to wait for: back to Buildings now (behind the popup when it's still open)
+                if (exportPatched) {
+                    await clickWhenAvailable('buildingstab');
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            } else if (!isOfflineOpen()) {
+                log('Waiting for the stage exposure flag...');
+                if (await waitOrWarn(() => window.__HS_EXPOSED, '__HS_EXPOSED')) {
+                    log('Exposure complete — stage and export are ready');
+                }
 
-            // Return to Buildings tab so the game looks normal to the player.
-            await clickWhenAvailable('buildingstab');
-            await new Promise(r => setTimeout(r, 300));
+                // Return to Buildings tab so the game looks normal to the player.
+                await clickWhenAvailable('buildingstab');
+                await new Promise(r => setTimeout(r, 300));
+            } else {
+                // Popup kept open (autoDismissOfflinePopup is off): load the mod now, the stage
+                // gets exposed when the player closes the popup, then go back to Buildings.
+                log('Keeping offlineContainer open (autoDismissOfflinePopup is off) — stage will be exposed when it closes');
+                waitFor(() => window.__HS_EXPOSED, 24 * 3600 * 1000, '__HS_EXPOSED')
+                    .then(() => {
+                        log('Exposure complete — stage and export are ready');
+                        return clickWhenAvailable('buildingstab');
+                    })
+                    .catch(e => warn('Stage exposure after the offline popup failed:', e));
+            }
 
             // Phase 6: Load the mod.
             await loadMod();
@@ -939,7 +1398,6 @@ function startBrowserLoader(options) {
     function loadMod() {
         const modSource = dev ? 'LOCAL DEV SERVER' : 'CDN';
         log(`Phase 6 — loading mod from ${modSource}...`);
-        if (dev) window.__HS_IS_DEV = true;
         window.__HS_REPO = window.__HS_REPO || (dev ? 'maenhiir' : 'Ferlieloi');
         window.__HS_VERSION = window.__HS_VERSION ? window.__HS_VERSION : 'master';
         return new Promise((resolve, reject) => {

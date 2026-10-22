@@ -1,8 +1,8 @@
 import { EventBuffType } from "../../types/data-types/hs-event-data";
 import { HSSettingType } from "../../types/module-types/hs-settings-types";
 import { CSSValue } from "../../types/module-types/hs-ui-types";
-import { HSElementHooker } from "../hs-core/hs-elementhooker";
 import { HSLogger } from "../hs-core/hs-logger";
+import { HSGlobal } from "../hs-core/hs-global";
 
 /**
  * Class: HSUtils
@@ -19,30 +19,18 @@ import { HSLogger } from "../hs-core/hs-logger";
  */
 export class HSUtils {
     static #context = 'HSUtils';
-    static #dialogWatcherInterval: number | null = null;
     static sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
-    static dialogWatcherTime = 5; // More than that ?
     static tackTime = 5; // for bookmark/steam (no tack hook)
 
-    static #autoConfirmPatchState: boolean | null = null;
     static #_onAfterTack: ((fn: () => void) => void) | null = null;
 
-    static cacheAutoConfirmPatchState(): boolean {
-        const patched = (window as any).__HS_AUTO_CONFIRM_PATCHED ?? false;
-        HSUtils.#autoConfirmPatchState = patched;
-        return patched;
-    }
-
+    /** The patcher honours __HS_AUTO_CONFIRM (Confirm and Alert). Set before the mod loads, by any patcher version. */
     static isAutoConfirmPatched(): boolean {
-        return HSUtils.#autoConfirmPatchState ?? HSUtils.cacheAutoConfirmPatchState();
+        return !!(window as any).__HS_AUTO_CONFIRM_PATCHED;
     }
 
     static setAutoConfirm(value: boolean): void {
         (window as any).__HS_AUTO_CONFIRM = value;
-    }
-
-    static disableAutoConfirmForDialogAutomation(): void {
-        HSUtils.setAutoConfirm(false);
     }
 
     // Reusable MessageChannel for sub-millisecond event-loop yielding.
@@ -66,10 +54,6 @@ export class HSUtils {
 
     static cacheAfterTackHook(): boolean {
         HSUtils.#_onAfterTack = (window as any).__HS_onAfterTack ?? null;
-        return HSUtils.#_onAfterTack !== null;
-    }
-
-    static isAfterTackHooked(): boolean {
         return HSUtils.#_onAfterTack !== null;
     }
 
@@ -138,10 +122,6 @@ export class HSUtils {
         );
     }
 
-    static getExponent(num: number): number {
-        return Math.pow(10, num);
-    }
-
     static hashCode(str: string): number {
         let hash = 0;
         let i;
@@ -156,16 +136,6 @@ export class HSUtils {
         }
 
         return hash;
-    }
-
-    static async computeHash(data: string): Promise<string> {
-        const encoder = new TextEncoder();
-        const dataBuffer = encoder.encode(data);
-        const hashBuffer = await crypto.subtle.digest('SHA-1', dataBuffer);
-
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
     }
 
     static N(num: string | number, precision: number = 2, expDecimals: number = 2) {
@@ -246,34 +216,6 @@ export class HSUtils {
         return (typeof n == "boolean");
     }
 
-    // JS native float parsing is fucky and won't work for when the number uses , like "123,456"...
-    static parseFloat2(value: any): number {
-        if (value === null || value === undefined) return NaN;
-
-        let str = String(value).trim();
-        if (!str) return NaN;
-
-        const lastComma = str.lastIndexOf(',');
-        const lastDot = str.lastIndexOf('.');
-
-        if (lastComma !== -1 && lastDot !== -1) {
-            // Both separators exist.
-            // The last one is assumed to be the decimal separator.
-            if (lastComma > lastDot) {
-                // e.g. "1.234,56" -> "1234.56"
-                str = str.replace(/\./g, '').replace(',', '.');
-            } else {
-                // e.g. "1,234.56" -> "1234.56"
-                str = str.replace(/,/g, '');
-            }
-        } else if (lastComma !== -1) {
-            // e.g. "1234,56" -> "1234.56"
-            str = str.replace(',', '.');
-        }
-
-        return parseFloat(str);
-    }
-
     static nullProxy<T>(proxyName: string): T {
         const nullProxy = new Proxy({}, {
             get: () => {
@@ -287,6 +229,71 @@ export class HSUtils {
         });
 
         return nullProxy as T;
+    }
+
+    /**
+     * A CSS url() value for any URL. Always quoted: an unquoted url() is invalid when the URL contains
+     * spaces, quotes or parentheses (e.g. "Pictures/PurpleAmbrosia/Purple Upgrades/PurpleHoney.png"),
+     * and the browser then silently ignores the whole CSS value.
+     */
+    static cssUrl(url: string): string {
+        return `url(${JSON.stringify(url)})`;
+    }
+
+    static #translationFiles = new Map<string, Promise<Record<string, unknown> | undefined>>();
+
+    /**
+     * Fetch a game translation file the same way the game does (cached per language).
+     * Only for players without the patcher's __HS_i18next (bookmarklet): the game's i18next holds the same files.
+     */
+    static #loadTranslationFile(lang: string): Promise<Record<string, unknown> | undefined> {
+        let file = this.#translationFiles.get(lang);
+        if (!file) {
+            const init = { headers: HSGlobal.Common.modRequestHeaders };
+            file = fetch(`./translations/${lang}.json`, init)
+                .catch(() => fetch(`https://synergism.cc/translations/${lang}.json`, init))
+                .then(r => r.ok ? r.json() as Promise<Record<string, unknown>> : undefined)
+                .catch(() => undefined)
+                .then(json => {
+                    // Don't cache failures, so a later call can retry
+                    if (!json) this.#translationFiles.delete(lang);
+                    return json;
+                });
+            this.#translationFiles.set(lang, file);
+        }
+        return file;
+    }
+
+    /** A whole game translation file (e.g. 'en'), fetched as the game does and cached. Undefined if unreachable. */
+    static getGameTranslationFile(lang: string): Promise<Record<string, unknown> | undefined> {
+        return this.#loadTranslationFile(lang);
+    }
+
+    /**
+     * Get a game UI string (e.g. 'ambrosia.importTree.success') in the player's language.
+     * Uses the game's i18next when the patcher exposed it, else the game's translation files,
+     * with English as fallback like the game. Returns undefined if the key can't be resolved.
+     * Optional `vars` fill the {{placeholders}}, like i18next.t(key, vars).
+     */
+    static async getGameTranslation(key: string, vars?: Record<string, string | number>): Promise<string | undefined> {
+        const i18n = (window as any).__HS_i18next;
+        if (typeof i18n?.t === 'function') {
+            // i18next returns the key itself when it has no text for it. Its files are the ones a fetch would get, so no fetch then
+            const text = i18n.t(key, vars);
+            return typeof text === 'string' && text !== key ? text : undefined;
+        }
+
+        const resolve = (file: Record<string, unknown> | undefined): string | undefined => {
+            const value = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], file);
+            if (typeof value !== 'string' || value.length === 0) return undefined;
+            if (!vars) return value;
+            return value.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) => name in vars ? String(vars[name]) : match);
+        };
+
+        const lang = localStorage.getItem('language') || 'en';
+        const text = resolve(await this.#loadTranslationFile(lang));
+        if (text || lang === 'en') return text;
+        return resolve(await this.#loadTranslationFile('en'));
     }
 
     // Replace color tags for panel logging
@@ -311,196 +318,6 @@ export class HSUtils {
             console.warn("Error removing color tags from log message", e);
             return `${msg}`;
         }
-    }
-
-    static unfuckNumericString(str: string): string {
-        if (!str) return str;
-
-        // if the number is in e-notation, we can just parse it normally
-        if (str.toLowerCase().includes('e')) {
-            const cleaned = str.replace(/[^0-9eE+.,-]/g, '');
-            const lower = cleaned.toLowerCase();
-            const eIndex = lower.lastIndexOf('e');
-
-            if (eIndex > 0) {
-                let mantissa = cleaned.slice(0, eIndex);
-                const exponent = lower.slice(eIndex);
-
-                const lastComma = mantissa.lastIndexOf(',');
-                const lastDot = mantissa.lastIndexOf('.');
-
-                if (lastComma !== -1 && lastDot !== -1) {
-                    const decimalSeparator = lastComma > lastDot ? ',' : '.';
-                    const thousandsSeparator = decimalSeparator === ',' ? '.' : ',';
-
-                    mantissa = mantissa.replace(new RegExp(`\\${thousandsSeparator}`, 'g'), '');
-                    if (decimalSeparator === ',') {
-                        mantissa = mantissa.replace(',', '.');
-                    }
-                } else if (lastComma !== -1) {
-                    const parts = mantissa.split(',');
-                    if (parts.length === 2 && parts[1].length <= 2) {
-                        mantissa = `${parts[0]}.${parts[1]}`;
-                    } else {
-                        mantissa = mantissa.replace(/,/g, '');
-                    }
-                }
-
-                return `${mantissa}${exponent}`;
-            }
-
-            return cleaned.replace(/,/g, '');
-        }
-
-        // Remove all non-numeric characters except for . and -
-        const cleanedStr = str.replace(/[^0-9.,-]/g, '');
-
-        // Remove , if it is used as thousand separator
-        // and replace . with , if it is used as decimal separator
-        const parts = cleanedStr.split('.');
-
-        let finalStr = '';
-
-        if (parts.length > 1) {
-            finalStr = parts[0].replace(/,/g, '') + '.' + parts[1].replace(/,/g, '');
-        } else {
-            finalStr = cleanedStr.replace(/,/g, '');
-        }
-
-        return finalStr;
-    }
-
-    /*
-        Warning: This is really hacky
-
-        We override the original display property setter and getters, as well as setProperty method for the element's style
-
-        This is becase the game forces the inline display style in a weird way when it wants to show e.g. alert modals
-        and thus we can't simply force the display to none, but instead we need to prevent the game from setting it in the first place
-    */
-    static #killElementDisplayProperties(element: HTMLElement) {
-        const originalSetProperty = CSSStyleDeclaration.prototype.setProperty;
-        let originalDisplayDescriptor;
-
-        try {
-            // First try the prototype (which might be CSSStyleDeclaration.prototype)
-            originalDisplayDescriptor = Object.getOwnPropertyDescriptor(
-                Object.getPrototypeOf(element.style),
-                'display'
-            );
-
-            // If that fails, try getting it from CSSStyleDeclaration.prototype directly
-            if (!originalDisplayDescriptor) {
-                originalDisplayDescriptor = Object.getOwnPropertyDescriptor(
-                    CSSStyleDeclaration.prototype,
-                    'display'
-                );
-            }
-
-            // If still not found, create a default descriptor that will at least restore functionality
-            if (!originalDisplayDescriptor) {
-                originalDisplayDescriptor = {
-                    configurable: true,
-                    enumerable: true,
-
-                    get: function () {
-                        return this.getPropertyValue('display');
-                    },
-
-                    set: function (value: any) {
-                        this.setProperty('display', value, '');
-                    }
-                };
-            }
-        } catch (e) {
-            // Create a fallback descriptor that will restore basic functionality
-            originalDisplayDescriptor = {
-                configurable: true,
-                enumerable: true,
-
-                get: function () {
-                    return this.getPropertyValue('display');
-                },
-
-                set: function (value: any) {
-                    this.setProperty('display', value, '');
-                }
-            };
-        }
-
-        Object.defineProperty(element.style, 'display', { get: function () { return 'none'; }, set: function () { return; }, configurable: true });
-
-        element.style.setProperty = function (propertyName, value, priority) {
-            if (propertyName === 'display')
-                return originalSetProperty.call(this, propertyName, 'none');
-
-            return originalSetProperty.call(this, propertyName, value, priority);
-        };
-
-        return {
-            restore: () => {
-                Object.defineProperty(element.style, 'display', originalDisplayDescriptor);
-                element.style.setProperty = originalSetProperty;
-            }
-        };
-    }
-
-    static #cachedBG: HTMLElement | null = null;
-    static #cachedConfirmBox: HTMLElement | null = null;
-    static #cachedAlertWrapper: HTMLElement | null = null;
-
-    static async killAlertConfirmElementDisplayProperties(): Promise<{ restore: () => void }> {
-        const bg = !this.#cachedBG ? await HSElementHooker.HookElement('#transparentBG') as HTMLElement : this.#cachedBG;
-        const confirmBox = !this.#cachedConfirmBox ? await HSElementHooker.HookElement('#confirmationBox') as HTMLElement : this.#cachedConfirmBox;
-        const alertWrapper = !this.#cachedAlertWrapper ? await HSElementHooker.HookElement('#alertWrapper') as HTMLElement : this.#cachedAlertWrapper;
-
-        this.#cachedBG = bg;
-        this.#cachedConfirmBox = confirmBox;
-        this.#cachedAlertWrapper = alertWrapper;
-
-        const killedBg = HSUtils.#killElementDisplayProperties(bg);
-        const killedConfirm = HSUtils.#killElementDisplayProperties(confirmBox);
-        const killedAlertWrapper = HSUtils.#killElementDisplayProperties(alertWrapper);
-
-        return {
-            restore: () => {
-                killedBg.restore();
-                killedConfirm.restore();
-                killedAlertWrapper.restore();
-            }
-        };
-    }
-
-    // This might be very volatile, but it works for now and hides alert/confirmation boxes
-    static async hiddenAction(action: (...args: any[]) => any, alertOrConfirm: "alert" | "confirm" = "alert", isDoubleModal = false, waitMs = 25) {
-        const okAlert = document.querySelector('#ok_alert') as HTMLButtonElement;
-        const okConfirm = document.querySelector('#ok_confirm') as HTMLButtonElement;
-
-        const protector = await HSUtils.killAlertConfirmElementDisplayProperties();
-
-        await action();
-        await HSUtils.wait(waitMs);
-
-        if (isDoubleModal) {
-            okConfirm.click();
-            await HSUtils.wait(waitMs);
-
-            protector.restore();
-
-            okAlert.click();
-        } else {
-            protector.restore();
-
-            if (alertOrConfirm === "alert") {
-                okAlert.click();
-            } else {
-                okConfirm.click();
-            }
-        }
-    }
-
-    static async Noop() {
-        return;
     }
 
     static eventBuffNumToName(buff: EventBuffType) {
@@ -568,265 +385,6 @@ export class HSUtils {
         });
     }
 
-
-    static waitForNextMutation(
-        el: HTMLElement,
-        timeoutMs = 2000
-    ): Promise<void> {
-        const root = el.parentElement ?? el;
-
-        return new Promise((resolve, reject) => {
-            let finished = false;
-
-            const observer = new MutationObserver(() => {
-                cleanup();
-                resolve();
-            });
-
-            const timeout = window.setTimeout(() => {
-                cleanup();
-                reject(new Error("Timed out waiting for next mutation"));
-            }, timeoutMs);
-
-            const cleanup = () => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeout);
-                observer.disconnect();
-            };
-
-            observer.observe(root, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        });
-    }
-
-    static waitForClassCondition(
-        element: Element, condition: () => boolean,
-        timeoutMs: number
-    ): Promise<boolean> {
-        if (condition()) return Promise.resolve(true);
-        return new Promise<boolean>((resolve) => {
-            let finished = false;
-            const cleanup = (success: boolean): void => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeoutId);
-                observer.disconnect();
-                resolve(success);
-            };
-            const observer = new MutationObserver(() => { if (condition()) cleanup(true); });
-            const timeoutId = window.setTimeout(() => cleanup(false), timeoutMs);
-            observer.observe(element, { attributes: true, attributeFilter: ['class'] });
-            if (condition()) cleanup(true);
-        });
-    }
-
-    static async click(button: HTMLButtonElement): Promise<void> {
-        button.click();
-        await HSUtils.sleep(HSUtils.tackTime);
-        return Promise.resolve();
-    }
-
-    static async DblClick(element: HTMLElement): Promise<void> {
-        element.click();
-        await new Promise(res => setTimeout(res, 5));
-        element.click();
-        await HSUtils.sleep(HSUtils.tackTime);
-        element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-        return Promise.resolve();
-    }
-
-    static startDialogWatcher(dialogWatcherTime: number | undefined = undefined): void {
-        // Prevent multiple watchers
-        if (this.#dialogWatcherInterval !== null) { return; }
-
-        if (dialogWatcherTime !== undefined) {
-            this.dialogWatcherTime = dialogWatcherTime;
-        }
-
-        HSUtils.disableAutoConfirmForDialogAutomation();
-        HSLogger.debug(() => `Dialog watcher started, triggers every ${this.dialogWatcherTime}ms`, HSUtils.#context);
-
-        let confirmWrapper: HTMLElement | null = null;
-        let alertWrapper: HTMLElement | null = null;
-        let promptWrapper: HTMLElement | null = null;
-        let okConfirm: HTMLButtonElement | null = null;
-        let okAlert: HTMLButtonElement | null = null;
-        let okPrompt: HTMLButtonElement | null = null;
-
-        this.#dialogWatcherInterval = window.setInterval(() => {
-            // Check for confirm dialog
-            if (!confirmWrapper || !confirmWrapper.isConnected) {
-                confirmWrapper = document.getElementById('confirmWrapper');
-            }
-            if (confirmWrapper && confirmWrapper.style.display === 'block') {
-                if (!okConfirm || !okConfirm.isConnected) {
-                    okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
-                }
-                if (okConfirm) {
-                    okConfirm.click();
-                    // HSLogger.debug(() => `Confirm dialog detected and OK button clicked`, HSUtils.#context);
-                }
-            }
-            // Check for alert dialog
-            if (!alertWrapper || !alertWrapper.isConnected) {
-                alertWrapper = document.getElementById('alertWrapper');
-            }
-            if (alertWrapper && alertWrapper.style.display === 'block') {
-                if (!okAlert || !okAlert.isConnected) {
-                    okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
-                }
-                if (okAlert) {
-                    okAlert.click();
-                    // HSLogger.debug(() => `Alert dialog detected and OK button clicked`, HSUtils.#context);
-                }
-            }
-            // Check for prompt dialog
-            if (!promptWrapper || !promptWrapper.isConnected) {
-                promptWrapper = document.getElementById("promptWrapper");
-            }
-            if (promptWrapper && promptWrapper.style.display === "block") {
-                if (!okPrompt || !okPrompt.isConnected) {
-                    okPrompt = document.getElementById('ok_prompt') as HTMLButtonElement;
-                }
-                if (okPrompt) {
-                    okPrompt.click();
-                    // HSLogger.debug(() => `Prompt dialog detected and OK button clicked`, HSUtils.#context);
-                }
-            }
-
-        }, this.dialogWatcherTime); // Check every 10ms for fast response
-    }
-
-    static async stopDialogWatcher(): Promise<void> {
-        return new Promise((resolve) => {
-            let emptyLoopCount = 0;
-            const maxEmptyLoops = 3; // Wait for 3 consecutive empty loops before stopping
-
-            let confirmWrapper: HTMLElement | null = null;
-            let alertWrapper: HTMLElement | null = null;
-            let okConfirm: HTMLButtonElement | null = null;
-            let okAlert: HTMLButtonElement | null = null;
-
-            const shutdownInterval = window.setInterval(() => {
-                let foundDialog = false;
-
-                // Check for confirm dialog
-                if (!confirmWrapper || !confirmWrapper.isConnected) {
-                    confirmWrapper = document.getElementById('confirmWrapper');
-                }
-                if (confirmWrapper && confirmWrapper.style.display === 'block') {
-                    if (!okConfirm || !okConfirm.isConnected) {
-                        okConfirm = document.getElementById('ok_confirm') as HTMLButtonElement;
-                    }
-                    if (okConfirm) {
-                        okConfirm.click();
-                        foundDialog = true;
-                    }
-                }
-
-                // Check for alert dialog
-                if (!alertWrapper || !alertWrapper.isConnected) {
-                    alertWrapper = document.getElementById('alertWrapper');
-                }
-                if (alertWrapper && alertWrapper.style.display === 'block') {
-                    if (!okAlert || !okAlert.isConnected) {
-                        okAlert = document.getElementById('ok_alert') as HTMLButtonElement;
-                    }
-                    if (okAlert) {
-                        okAlert.click();
-                        foundDialog = true;
-                    }
-                }
-
-                if (foundDialog) {
-                    emptyLoopCount = 0; // Reset counter if we found a dialog
-                } else {
-                    emptyLoopCount++;
-                }
-
-                // If we've had enough empty loops, shut down
-                if (emptyLoopCount >= maxEmptyLoops) {
-                    window.clearInterval(shutdownInterval);
-
-                    if (this.#dialogWatcherInterval !== null) {
-                        window.clearInterval(this.#dialogWatcherInterval);
-                        this.#dialogWatcherInterval = null;
-                    }
-
-                    HSLogger.debug(() => 'Dialog watcher stopped after clearing all dialogs', HSUtils.#context);
-                    resolve();
-                }
-            }, HSUtils.dialogWatcherTime);
-        });
-    }
-    /*
-        static async closeExpectedDialogs(expectedClosures: number, timeoutMs = 500): Promise<boolean> {
-            HSUtils.disableAutoConfirmForDialogAutomation();
-            HSLogger.debug(() => `entering closeExpectedDialogs(expectedClosures=${expectedClosures}, timeoutMs=${timeoutMs})`, HSUtils.#context);
-    
-            let closedCount = 0;
-            let prevConfirmOpen = false;
-            let prevAlertOpen = false;
-            let prevPromptOpen = false;
-            let resolved = false;
-    
-            return new Promise((resolve) => {
-                let timeoutId: number | null = null;
-                const intervalId = window.setInterval(() => {
-                    const confirmWrapper = document.getElementById('confirmWrapper');
-                    const alertWrapper = document.getElementById('alertWrapper');
-                    const promptWrapper = document.getElementById('promptWrapper');
-    
-                    const confirmOpen = confirmWrapper?.style.display === 'block';
-                    const alertOpen = alertWrapper?.style.display === 'block';
-                    const promptOpen = promptWrapper?.style.display === 'block';
-    
-                    if (confirmOpen && !prevConfirmOpen) {
-                        document.getElementById('ok_confirm')?.click();
-                    }
-                    if (alertOpen && !prevAlertOpen) {
-                        document.getElementById('ok_alert')?.click();
-                    }
-                    if (promptOpen && !prevPromptOpen) {
-                        document.getElementById('ok_prompt')?.click();
-                    }
-    
-                    if (prevConfirmOpen && !confirmOpen) closedCount++;
-                    if (prevAlertOpen && !alertOpen) closedCount++;
-                    if (prevPromptOpen && !promptOpen) closedCount++;
-    
-                    prevConfirmOpen = confirmOpen;
-                    prevAlertOpen = alertOpen;
-                    prevPromptOpen = promptOpen;
-    
-                    if (closedCount >= expectedClosures) {
-                        if (!resolved) {
-                            resolved = true;
-                            window.clearInterval(intervalId);
-                            if (timeoutId !== null) {
-                                window.clearTimeout(timeoutId);
-                            }
-                            HSLogger.debug(() => `closeExpectedDialogs resolved successfully after ${closedCount} closures`, HSUtils.#context);
-                            resolve(true);
-                        }
-                    }
-                }, HSUtils.dialogWatcherTime);
-    
-                timeoutId = window.setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        window.clearInterval(intervalId);
-                        HSLogger.warn(`closeExpectedDialogs timed out after ${timeoutMs}ms before reaching expected ${expectedClosures} closure(s); only ${closedCount} were closed.`, HSUtils.#context);
-                        resolve(false);
-                    }
-                }, timeoutMs);
-            });
-        }
-    */
     static base64WithCRLF(
         base64: string,
         chunkSize = 49000
@@ -843,84 +401,6 @@ export class HSUtils {
         }
 
         return parts.join("\r\n");
-    }
-
-    static getCorruptions(mode: "current" | "next") {
-        const getLevel = (id: string): number => {
-            const element = document.getElementById(id);
-            // Use parseInt and default to 0 if the element is missing or text is invalid
-            return element ? parseInt(element.textContent || '0', 10) : 0;
-        };
-        if (mode === "current") {
-            const a = {
-                viscosity: getLevel('corrCurrentviscosity'),
-                drought: getLevel('corrCurrentdrought'),
-                deflation: getLevel('corrCurrentdeflation'),
-                extinction: getLevel('corrCurrentextinction'),
-                illiteracy: getLevel('corrCurrentilliteracy'),
-                recession: getLevel('corrCurrentrecession'),
-                dilation: getLevel('corrCurrentdilation'),
-                hyperchallenge: getLevel('corrCurrenthyperchallenge')
-            };
-            return a;
-        } else {
-            return {
-                viscosity: getLevel('corrNextviscosity'),
-                drought: getLevel('corrNextdrought'),
-                deflation: getLevel('corrNextdeflation'),
-                extinction: getLevel('corrNextextinction'),
-                illiteracy: getLevel('corrNextilliteracy'),
-                recession: getLevel('corrNextrecession'),
-                dilation: getLevel('corrNextdilation'),
-                hyperchallenge: getLevel('corrNexthyperchallenge')
-            };
-        }
-    }
-
-    static isGreaterThan200(input: any): number {
-        if (input == null) return 0;
-
-        const str = String(input)
-            .trim()
-            .replace(/,/g, ".");
-
-        // If it contains anything other than digits or dot, it's huge
-        if (!/^[0-9.]+$/.test(str)) {
-            return 10000;
-        }
-
-        // Plain number case
-        const num = Number(str);
-        return num;
-    }
-
-    static parseBigNumber(input: any): number {
-        if (input == null) return 0;
-
-        const inputStr = String(input)
-            .replace(/,/g, ".")
-            .trim()
-            .toLowerCase();
-
-        const number = Number(inputStr);
-        return Number.isFinite(number) ? number : 0;
-    }
-
-
-    static currentCoins(input: any): number {
-        if (input == null) return 0;
-
-        const raw = String(input).trim();
-
-        // If the input contains any character other than digits, '.' or ',' => big number
-        if (!/^[0-9.,]+$/.test(raw)) {
-            return 1001;
-        }
-
-        // Replace commas with dots for locales that use comma as decimal separator
-        const normalized = raw.replace(/,/g, '.');
-        const parsed = parseFloat(normalized);
-        return parsed;
     }
 
     static sumContents(arr: (number | null)[]): number {

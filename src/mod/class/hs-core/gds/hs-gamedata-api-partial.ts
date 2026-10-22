@@ -45,12 +45,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     protected vanillaGlobalEvent: VanillaGlobalEvent | null = null;
     protected isEvent: boolean = false;
 
-    // Subscribers for event data changes
-    #eventDataSubscribers: Set<(eventData: ConsumableGameEvents | undefined) => void> = new Set();
-
-    // Subscribers for vanilla global event data changes
-    #vanillaGlobalEventSubscribers: Set<(eventData: VanillaGlobalEvent | null) => void> = new Set();
-
     static readonly Calculations: HSCalculationDefinition[] = HSCalculationDefinitions;
 
     constructor(moduleOptions: HSModuleOptions) {
@@ -58,7 +52,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
     }
 
     async init() {
-        const self = this;
         HSLogger.log(`Initializing HSGameDataAPI module`, this.context);
         this.gameDataModule = HSModuleManager.getModule<HSGameData>('HSGameData');
 
@@ -94,15 +87,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
         if (!this.isEvent && this.vanillaGlobalEvent) {
             this.isEvent = true;
-        }
-
-        // Notify subscribers
-        for (const cb of this.#eventDataSubscribers) {
-            try {
-                cb(this.eventData);
-            } catch (e) {
-                HSLogger.error("EventData subscriber error: " + e, this.context);
-            }
         }
     }
 
@@ -161,24 +145,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         if (!this.isEvent && this.vanillaGlobalEvent) {
             this.isEvent = true;
         }
-
-        for (const cb of this.#vanillaGlobalEventSubscribers) {
-            try {
-                cb(this.vanillaGlobalEvent);
-            } catch (e) { HSLogger.error("VanillaGlobalEvent subscriber error: " + e, this.context); }
-        }
-    }
-
-    getVanillaGlobalEvent(): VanillaGlobalEvent | null {
-        return this.vanillaGlobalEvent;
-    }
-
-    public subscribeVanillaGlobalEventChange(cb: (eventData: VanillaGlobalEvent | null) => void): () => void {
-        this.#vanillaGlobalEventSubscribers.add(cb);
-        cb(this.vanillaGlobalEvent);
-        return () => {
-            this.#vanillaGlobalEventSubscribers.delete(cb);
-        };
     }
 
     async getForcedGameData(): Promise<GameData | undefined> {
@@ -196,18 +162,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     async getLatestAutosingData(): Promise<{ quarks: number; goldenQuarks: number; } | null> {
         return await this.gameDataModule?.getLatestAutosingData() || null;
-    }
-
-    /**
-     * Subscribe to event data changes. Returns an unsubscribe function.
-     */
-    public subscribeEventDataChange(cb: (eventData: ConsumableGameEvents | undefined) => void): () => void {
-        this.#eventDataSubscribers.add(cb);
-        // Immediately call with current data
-        cb(this.eventData);
-        return () => {
-            this.#eventDataSubscribers.delete(cb);
-        };
     }
 
     static getCalculationDefinitions(filter?: {

@@ -6,6 +6,7 @@
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
 import { HSUICSelectOption, HTMLProps } from "./hs-ui-types";
+import type { HSPlatformName } from "../../class/hs-core/hs-platform";
 
 export type HSSettingType = number | string | string[] | boolean | null;
 export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSettingType>>;
@@ -13,15 +14,36 @@ export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSet
 export interface HSSettingsDefinition {
     // Expand Cost Protection Settings
     expandCostProtection: ExpandCostProtectionSetting;
-    expandCostProtectionDoubleCap: ExpandCostProtectionDoubleCap
     expandCostProtectionNotifications: ExpandCostProtectionNotifications;
+
+    // Hepteract Distributor Settings
+    enableHepteractDistributor: EnableHepteractDistributorSetting;
+    hepteractDistributorOpen: HepteractDistributorOpenSetting;
+    hepteractDistributorAllowPartial: HepteractDistributorAllowPartialSetting;
+    hepteractDistributorUseReducers: HepteractDistributorUseReducersSetting;
+    hepteractDistributorTalismanAlone: HepteractDistributorTalismanAloneSetting;
+    hepteractDistributorRatios: HepteractDistributorRatiosSetting;
+    hepteractDistributorOrbsPercent: HepteractDistributorOrbsPercentSetting;
+    hepteractDistributorKeep: HepteractDistributorKeepSetting;
+
+    // Save import
+    keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
+
+    // Header loadout slots shown
+    headerCorruptionSlotsShown: HeaderCorruptionSlotsShownSetting;
+    headerAmbrosiaSlotsShown: HeaderAmbrosiaSlotsShownSetting;
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
     autoConfirmPopups: AutoConfirmPopupsSetting;
 
     // UI Settings
+    hideGameDialogs: HideGameDialogsSetting;
+    hideGameDialogsNotify: HideGameDialogsNotifySetting;
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
+    autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
+    reloadOnLateLoaderStart: ReloadOnLateLoaderStartSetting;
+    rememberSubtabs: RememberSubtabsSetting;
 
     // Log Settings
     logTimestamp: LogTimestampSetting;
@@ -32,25 +54,21 @@ export interface HSSettingsDefinition {
     autoClick: AutoclickSetting;
     autoClickIgnoreElements: AutoClickIgnoreElementsSetting;
 
+    // Timed save export
+    autoExportSave: AutoExportSaveSetting;
+    autoExportSaveLoadout: AutoExportSaveLoadoutSetting;
+    autoExportSaveKeep: AutoExportSaveKeepSetting;
+
     // Ambrosia Settings
+    persistentAmbrosiaLevels: PersistentAmbrosiaLevelsSetting;
     addTimeAutoLoadouts: AddTimeAutoLoadoutsSetting;
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
-    // RETIRED: Ambrosia AFK/idle swapper settings are retained as hidden JSON
-    // definitions only, so old saved settings can be ignored safely.
-    // ambrosiaIdleSwap: AmbrosiaIdleSwapSetting;
-    // ambrosiaIdleSwapOcteractLoadout: AmbrosiaIdleSwapOcteractLoadoutSetting;
-    // ambrosiaIdleSwapNormalLuckLoadout: AmbrosiaIdleSwapNormalLuckLoadoutSetting;
-    // ambrosiaIdleSwapRedLuckLoadout: AmbrosiaIdleSwapRedLuckLoadoutSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
-
-    // Patch Settings
-    patch_testPatch: PATCH_TestPatch;
-    patch_shopItemNameMapping: PATCH_shopItemNameMapping;
+    ambrosiaRateHeader: AmbrosiaRateHeaderSetting;
 
     // Game Data Settings
     useGameData: UseGameDataSetting;
-    stopSniffOnError: StopSniffOnErrorSetting;
 
     // Auto Sing Settings
     startAutosing: StartAutosing;
@@ -62,7 +80,6 @@ export interface HSSettingsDefinition {
     autosingOffLoadout: AutosingOffLoadout;
     autosingAmbrosiaLoadout: AutosingAmbrosiaLoadout;
     autosingStrategy: AutosingStrategy;
-    autosingSelectStrategy: AutosingSelectStrategy;
 
     // Advanced AutoSing Settings
     advancedDataCollection: AutosingAdvancedDataCollection; // disabled for now...
@@ -76,30 +93,24 @@ export interface HSSettingsDefinition {
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;
 
     // QOL Buttons Settings
-    ambrosiaQuickBar: QOLButtonsQuickBarSetting;
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
-    enableCorruptionQuickBar: QOLButtonsEnableCorruptionQuickBarSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
-    enableEventsQuickBar: QOLButtonsEnableEventsQuickBarSetting;
+    corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
+    centerQuickbars: QOLButtonsCenterQuickbarsSetting;
+    headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
     // GQ Distributor Ratio Settings
     gqDistributorRatios: GQDistributorRatiosSetting;
     gqDistributorBalanceInvestments: GQDistributorBalanceInvestmentsSetting;
-    gqDistributorRatio1: GQDistributorRatio1Setting;
-    gqDistributorRatio2: GQDistributorRatio2Setting;
-    gqDistributorRatio3: GQDistributorRatio3Setting;
-    gqDistributorRatio4: GQDistributorRatio4Setting;
-    gqDistributorRatio5: GQDistributorRatio5Setting;
-    gqDistributorRatio6: GQDistributorRatio6Setting;
-    gqDistributorRatio7: GQDistributorRatio7Setting;
-    gqDistributorRatio8: GQDistributorRatio8Setting;
+    gqDistributorKeepSkippedShare: GQDistributorKeepSkippedShareSetting;
 }
 
 export interface AmbrosiaMinibarsSetting extends HSSettingBase<boolean> { }
+export interface AmbrosiaRateHeaderSetting extends HSSettingBase<boolean> { }
 
 export interface HSSettingControlOptions {
     min?: number;
@@ -115,7 +126,6 @@ export interface HSSettingActionParams {
     contextName?: string,
     value?: any,
     disable?: boolean,
-    patchConfig?: HSPatchConfig;
 }
 
 export interface HSSettingControlGroup {
@@ -127,22 +137,21 @@ export interface HSSettingControl {
     controlId: string;
     controlType: HSSettingsControlType;
     controlGroup: string;
-    controlPage: keyof HSSettingControlPage;
+    controlPage: string;
     controlEnabledId?: string;
+    /** The setting this one belongs to: shown indented under its label. It must come before this one on the page */
+    controlParent?: keyof HSSettingsDefinition;
+    /** With controlParent: hidden while the parent's switch is off */
+    controlHideWhenParentOff?: boolean;
     controlOptions?: HSSettingControlOptions;
     selectOptions?: HSUICSelectOption[];
     props?: HTMLProps;
 }
 
 export interface HSSettingControlPage {
-    page: string;
     order: number;
     pageName: string;
     pageColor: string;
-}
-
-export interface HSPatchConfig {
-    patchName: string;
 }
 
 export interface HSSettingBase<T> {
@@ -158,17 +167,33 @@ export interface HSSettingBase<T> {
     defaultValue?: T;
     settingControl?: HSSettingControl;
     settingAction?: string;
-    patchConfig?: HSPatchConfig;
-    usesGameData?: boolean;
+    /** Needs GDS: everywhere (true) or only on these platforms. Read it through HSSettings.usesGameData() */
+    usesGameData?: boolean | HSPlatformName[];
     skipInit?: boolean;
+    /** Shown in the settings panel only on these platforms (all when absent). The setting itself still works everywhere */
+    platforms?: HSPlatformName[];
 }
-
-export interface HSSelectStringsSetting extends HSSettingBase<string[]> { }
 
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
-export interface ExpandCostProtectionDoubleCap extends HSSettingBase<boolean> { }
 export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean> { }
+
+// Hepteract Distributor Settings
+export interface EnableHepteractDistributorSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorOpenSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorAllowPartialSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorUseReducersSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorTalismanAloneSetting extends HSSettingBase<boolean> { }
+export interface HepteractDistributorRatiosSetting extends HSSettingBase<string> { }
+export interface HepteractDistributorOrbsPercentSetting extends HSSettingBase<number> { }
+export interface HepteractDistributorKeepSetting extends HSSettingBase<number> { }
+
+// Save import
+export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
+
+// Header loadout slots shown
+export interface HeaderCorruptionSlotsShownSetting extends HSSettingBase<number> { }
+export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
@@ -182,27 +207,26 @@ export interface ShowDebugLogsSetting extends HSSettingBase<boolean> { }
 export interface ReactiveMouseHoverSetting extends HSSettingBase<number> { }
 export interface AutoclickSetting extends HSSettingBase<number> { }
 export interface AutoClickIgnoreElementsSetting extends HSSettingBase<boolean> { }
+export interface HideGameDialogsSetting extends HSSettingBase<boolean> { }
+export interface HideGameDialogsNotifySetting extends HSSettingBase<boolean> { }
 export interface HiddenVanillaTabsSetting extends HSSettingBase<string[]> { }
+export interface AutoDismissOfflinePopupSetting extends HSSettingBase<boolean> { }
+export interface ReloadOnLateLoaderStartSetting extends HSSettingBase<boolean> { }
+export interface RememberSubtabsSetting extends HSSettingBase<boolean> { }
+
+// Timed save export
+export interface AutoExportSaveSetting extends HSSettingBase<number> { }
+export interface AutoExportSaveLoadoutSetting extends HSSettingBase<string> { }
+export interface AutoExportSaveKeepSetting extends HSSettingBase<number> { }
 
 // Ambrosia Settings
+export interface PersistentAmbrosiaLevelsSetting extends HSSettingBase<boolean> { }
 export interface AddTimeAutoLoadoutsSetting extends HSSettingBase<boolean> { }
 export interface AutoLoadoutAddSetting extends HSSettingBase<string> { }
 export interface AutoLoadoutTimeSetting extends HSSettingBase<string> { }
 
-// RETIRED: Ambrosia AFK/idle swapper setting types.
-// export interface AmbrosiaIdleSwapSetting extends HSSettingBase<boolean> { }
-// export interface AmbrosiaIdleSwapOcteractLoadoutSetting extends HSSettingBase<string> { }
-// export interface AmbrosiaIdleSwapNormalLuckLoadoutSetting extends HSSettingBase<string> { }
-// export interface AmbrosiaIdleSwapRedLuckLoadoutSetting extends HSSettingBase<string> { }
-
-
-// Patch Settings
-export interface PATCH_TestPatch extends HSSettingBase<boolean> { }
-export interface PATCH_shopItemNameMapping extends HSSettingBase<boolean> { }
-
 // Game Data Settings
 export interface UseGameDataSetting extends HSSettingBase<boolean> { }
-export interface StopSniffOnErrorSetting extends HSSettingBase<boolean> { }
 
 // Auto Sing Settings
 export interface StartAutosing extends HSSettingBase<boolean> { }
@@ -214,7 +238,6 @@ export interface AutosingAmbrosiaLoadout extends HSSettingBase<string> { }
 export interface AutosingObtLoadout extends HSSettingBase<string> { }
 export interface AutosingOffLoadout extends HSSettingBase<string> { }
 export interface AutosingStrategy extends HSSettingBase<string> { }
-export interface AutosingSelectStrategy extends HSSettingBase<string> { }
 
 // Advanced AutoSing Settings
 export interface AutosingAdvancedDataCollection extends HSSettingBase<boolean> { }
@@ -225,28 +248,21 @@ export interface AutosingAutoChallTimerExit extends HSSettingBase<number> { }
 export interface AutosingAutoChallTimerEnter extends HSSettingBase<number> { }
 
 // QOL Buttons Settings
-export interface QOLButtonsQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
-export interface QOLButtonsEnableCorruptionQuickBarSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
-export interface QOLButtonsEnableEventsQuickBarSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsCorruptionHeaderLevelsSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
+export interface QOLButtonsHeaderStatsAtBottomSetting extends HSSettingBase<boolean> { }
 
 // Talismans Settings
 export interface EnableTalismansModuleSetting extends HSSettingBase<boolean> { }
 
 // GQ Distributor Ratio Settings
-export interface GQDistributorRatio1Setting extends HSSettingBase<number> { }
 export interface GQDistributorRatiosSetting extends HSSettingBase<string> { }
 export interface GQDistributorBalanceInvestmentsSetting extends HSSettingBase<boolean> { }
-export interface GQDistributorRatio2Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio3Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio4Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio5Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio6Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio7Setting extends HSSettingBase<number> { }
-export interface GQDistributorRatio8Setting extends HSSettingBase<number> { }
+export interface GQDistributorKeepSkippedShareSetting extends HSSettingBase<boolean> { }
 
 // Heater Settings
 export interface HeaterTypeLoadoutSelectionsSetting extends HSSettingBase<string[]> { }

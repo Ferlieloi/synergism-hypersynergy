@@ -11,9 +11,10 @@ import { HSBooleanSetting, HSNumericSetting, HSSelectNumericSetting, HSSelectStr
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSStorage } from "../hs-storage";
 import { HSGlobal } from "../hs-global";
-import { HSStrategyManager } from "./hs-strategy-manager";
+import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
 import { HSSettingsUIDependencies } from "./hs-settings-ui";
 import { HSModuleOptions } from "../../../types/hs-types";
+import { HSPlatform } from "../hs-platform";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
 type StringIndexedObject = Record<string, unknown>;
@@ -36,11 +37,13 @@ export class HSSettings extends HSModule {
 
     static #settings: HSSettingRecord = {} as HSSettingRecord;
     static #settingsControlGroups: Record<string, HSSettingControlGroup>;
-    static #settingsControlPages: Record<keyof HSSettingControlPage, HSSettingControlPage>;
+    static #settingsControlPages: Record<string, HSSettingControlPage>;
     static #settingsParsed = false;
     static #saveTimeout: ReturnType<typeof setTimeout> | undefined;
     static #settingEnabledString = "✓";
     static #settingDisabledString = "✗";
+    // Told when a setting is turned on or off, whoever does it (HSHeaderEditSettings' checkboxes)
+    static #stateListeners = new Set<(settingName: string) => void>();
 
     #settingActions: HSSettingActions;
 
@@ -60,7 +63,7 @@ export class HSSettings extends HSModule {
         // Parse settings_control_pages
         try {
             HSLogger.log(`Parsing settings_control_pages`, this.context);
-            HSSettings.#settingsControlPages = JSON.parse(settings_control_pages) as Record<keyof HSSettingControlPage, HSSettingControlPage>;
+            HSSettings.#settingsControlPages = JSON.parse(settings_control_pages) as Record<string, HSSettingControlPage>;
         } catch (e) {
             HSLogger.error(`Error parsing settings_control_pages ${e}`, this.context);
             HSSettings.#settingsParsed = false;
@@ -83,7 +86,7 @@ export class HSSettings extends HSModule {
                     settingDef.settingValue = false;
                 }
                 // Disable settings that use game data if game data is off
-                if (setting.usesGameData && setting.enabled && !gameDataSettingState) {
+                if (HSSettings.usesGameData(setting) && setting.enabled && !gameDataSettingState) {
                     if (!HSGlobal.HSSettings.gameDataCheckBlacklist.includes(key)) {
                         HSLogger.info(`Disabled ${setting.settingDescription} on load because GDS is not on`, this.context);
                         setting.enabled = false;
@@ -218,6 +221,33 @@ export class HSSettings extends HSModule {
         return HSSettings.#settings;
     };
 
+    /** Run `listener` each time a setting is turned on or off: the panel, enable()/disable(), a boolean setValue(). */
+    static onStateChange(listener: (settingName: string) => void): void {
+        HSSettings.#stateListeners.add(listener);
+    }
+
+    /** Called by HSSetting right after a setting's enabled state is written, before its action runs. */
+    static notifyStateChange(settingName: string): void {
+        for (const listener of HSSettings.#stateListeners) {
+            try {
+                listener(settingName);
+            } catch (e) {
+                HSLogger.warn(`A setting state listener failed for ${settingName}: ${e}`, HSSettings.#staticContext);
+            }
+        }
+    }
+
+    /**
+     * Whether a setting needs GDS on the platform the mod was loaded on (its usesGameData: true, or a list of
+     * platforms). A list counts as no while the platform isn't known yet (before HSGameData is initialised).
+     */
+    static usesGameData(definition: Pick<HSSettingBase<HSSettingType>, 'usesGameData'>): boolean {
+        const usesGameData = definition.usesGameData;
+        if (!Array.isArray(usesGameData)) return usesGameData === true;
+        const platform = HSPlatform.get();
+        return platform !== null && usesGameData.includes(platform);
+    }
+
     static getStrategies(): HSAutosingStrategy[] {
         return HSStrategyManager.getStrategies();
     }
@@ -250,14 +280,6 @@ export class HSSettings extends HSModule {
         return HSStrategyManager.validateStrategy(strategy, HSSettings.#staticContext);
     }
 
-    static ensureAoagPhase(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        return HSStrategyManager.ensureAoagPhase(strategy);
-    }
-
-    static ensureCorruptionLoadouts(strategy: HSAutosingStrategy): HSAutosingStrategy {
-        return HSStrategyManager.ensureCorruptionLoadouts(strategy);
-    }
-
 
     // ===============================
     // --------- Persistence ---------
@@ -273,7 +295,6 @@ export class HSSettings extends HSModule {
 
             if (storageMod) {
                 const serializedSettings = this.#serializeSettings();
-                const parsed = JSON.parse(serializedSettings);
 
                 const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
 
@@ -314,7 +335,7 @@ export class HSSettings extends HSModule {
     #parseDefaultSettings(): HSSettingsDefinition {
         const defaultSettings = JSON.parse(settings) as Partial<HSSettingsDefinition>;
 
-        for (const [key, setting] of Object.typedEntries<Partial<HSSettingsDefinition>>(defaultSettings)) {
+        for (const setting of Object.values(defaultSettings)) {
             if (!setting) continue;
             const settingDef = setting as HSSettingBaseWithHidden<HSSettingType>;
 
@@ -415,6 +436,8 @@ export class HSSettings extends HSModule {
                     if (!loadedTopLevel || !defaultTopLevel) return;
 
                     Object.keys(loadedTopLevel).forEach(nestedKey => {
+                        // Keys only the JSON decides: never saved now, but a copy saved by an older version may hold them
+                        if (HSGlobal.HSSettings.serializationBlackList.includes(nestedKey)) return;
                         if (nestedKey in defaultTopLevel) {
                             const bValue = loadedTopLevel[nestedKey];
                             const defaultValue = defaultTopLevel[nestedKey];

@@ -221,15 +221,4 @@ export class HSElementHooker {
         HSLogger.warn(`No watcher found for uuid: ${id}`, this.#context);
         return false;
     }
-
-    // Stops all watchers
-    static stopWatchers() {
-        HSLogger.log(`Stopping all watchers`, this.#context);
-
-        this.#watchers.forEach(({ observer }) => {
-            if (observer) observer.disconnect();
-        });
-
-        this.#watchers.clear();
-    }
 }

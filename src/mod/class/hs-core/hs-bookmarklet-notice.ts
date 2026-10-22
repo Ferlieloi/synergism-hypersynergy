@@ -2,7 +2,7 @@ import { HSLogger } from "./hs-logger";
 import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
 import { HSModuleManager } from "./module/hs-module-manager";
-import { HSGameData } from "./gds/hs-gamedata";
+import { HSPlatform } from "./hs-platform";
 import noticeCSS from "inline:../../resource/css/module/hs-bookmarklet-notice.css";
 // The userscript itself, as it is in the repo: what the Copy button copies
 import bridgeScript from "inline:../../../loader/tampermonkey-bridge.user.js";
@@ -41,10 +41,7 @@ export class HSBookmarkletNotice {
      * To call once the modules are initialised (HSGameData tells Steam from a browser).
      */
     static isBookmarkletLoad(): boolean {
-        if ((window as any).HS_LOADER_INITIALIZED) return false;
-
-        const gameData = HSModuleManager.getModule<HSGameData>('HSGameData');
-        return !!gameData && !gameData.isSteam;
+        return HSPlatform.get() === 'bookmarklet';
     }
 
     /** The Tools tab section, empty unless the mod was loaded with the bookmark. */

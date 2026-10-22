@@ -1,6 +1,7 @@
 import type { HeaterOptimizationResult, HeaterOptimizerInput } from '../../../types/data-types/hs-heater-types'
 import Decimal from 'break_infinity.js'
-import { HSHeaterOptimizer } from './hs-heater-optimizer'
+import { HSHeaterOptimizer, takeHeaterOptimizerLogs } from './hs-heater-optimizer'
+import type { HeaterOptimizerLog } from './hs-heater-optimizer'
 
 type SerializedHeaterOptimizerInput = Omit<
   HeaterOptimizerInput,
@@ -19,8 +20,8 @@ type HeaterWorkerRequest = {
 }
 
 type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult }
-  | { id: number; ok: false; error: string }
+  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[] }
+  | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }
 
 const workerScope = self as unknown as {
   onmessage: ((event: MessageEvent<HeaterWorkerRequest>) => void) | null
@@ -39,12 +40,13 @@ workerScope.onmessage = (event): void => {
       baseTalismanPower: new Decimal(serializedInput.baseTalismanPower),
     }
     const result = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(input)
-    workerScope.postMessage({ id, ok: true, result })
+    workerScope.postMessage({ id, ok: true, result, logs: takeHeaterOptimizerLogs() })
   } catch (error) {
     workerScope.postMessage({
       id,
       ok: false,
       error: error instanceof Error ? error.stack ?? error.message : String(error),
+      logs: takeHeaterOptimizerLogs(),
     })
   }
 }

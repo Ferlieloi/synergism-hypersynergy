@@ -3,7 +3,13 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-types';
 import { HSGameState } from '../../hs-core/hs-gamestate';
 import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
+import type { HSGameData } from '../../hs-core/gds/hs-gamedata';
 import { HSAmbrosiaHelper } from '../hs-ambrosiaHelper';
+import { HSUtils } from '../../hs-utils/hs-utils';
+import { HSGlobal } from '../../hs-core/hs-global';
+import { isTesseractAutoBuyPercentageMode } from '../../hs-core/gds/hs-gamedata-utils';
+import { PlayerData } from '../../../types/data-types/hs-player-savedata';
+import { HSGameDialogs } from '../../hs-core/dialogs/hs-game-dialogs';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -12,12 +18,16 @@ import { HSAmbrosiaHelper } from '../hs-ambrosiaHelper';
  */
 export class HSAutosingSettingsFixer {
     static readonly #context = 'HSAutosingSettingsFixer';
+    // Pause taken on the GDS engine for the duration of autosing
+    static readonly GDS_PAUSE_REASON = 'autosing';
 
     /**
      * List of toggle requirements: selector and expected text.
-     * Each entry specifies a selector and the text that should be present when ON.
+     * Each entry specifies a selector and the text (or border style) that should be present when ON.
+     * Text entries also give the game's translation key (expectedTranslationKey), since the game writes them in
+     * the player's language; `expected` is the English text, kept as fallback.
      */
-    static readonly #TOGGLE_REQUIREMENTS: Array<{ selector: string, expected: string }> = [
+    static readonly #TOGGLE_REQUIREMENTS: Array<{ selector: string, expected: string, expectedTranslationKey?: string, isCorrectForPlayer?: (player: PlayerData) => boolean }> = [
         // Buildings
         { selector: '#toggle1.auto.autobuyerToggleButton', expected: '2px solid green' },
         { selector: '#toggle2.auto.autobuyerToggleButton', expected: '2px solid green' },
@@ -51,7 +61,8 @@ export class HSAutosingSettingsFixer {
         { selector: '#toggle21.auto', expected: '2px solid red' },
         { selector: '#toggle27.auto', expected: '2px solid red' },
         { selector: '#tesseractautobuytoggle', expected: '2px solid green' },
-        { selector: '#tesseractautobuymode', expected: 'Mode: PERCENTAGE' },
+        // Its text can be wrong after a language switch (static i18n attribute): use the player state when available
+        { selector: '#tesseractautobuymode', expected: 'Mode: PERCENTAGE', expectedTranslationKey: 'toggles.modePercentage', isCorrectForPlayer: (player) => isTesseractAutoBuyPercentageMode(player.resetToggleModes) },
         // Upgrades
         { selector: '#coinAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
         { selector: '#prestigeAutoUpgrade.autobuyerToggleButton', expected: '2px solid green' },
@@ -67,11 +78,11 @@ export class HSAutosingSettingsFixer {
         // Challenges
         { selector: '#toggleAutoChallengeStart', expected: '2px solid red' },
         // Researches
-        { selector: '#toggleresearchbuy', expected: 'Upgrade: MAX [if possible]' },
-        { selector: '#toggleautoresearch', expected: 'Automatic: ON' },
-        { selector: '#toggleautoresearchmode', expected: 'Automatic mode: Cheapest' },
+        { selector: '#toggleresearchbuy', expected: 'Upgrade: MAX [if possible]', expectedTranslationKey: 'researches.upgradeMax' },
+        { selector: '#toggleautoresearch', expected: 'Automatic: ON', expectedTranslationKey: 'researches.automaticOn' },
+        { selector: '#toggleautoresearchmode', expected: 'Automatic mode: Cheapest', expectedTranslationKey: 'researches.autoModeCheapest' },
         // Ants
-        { selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: OFF' },
+        { selector: '#toggleAutoSacrificeAnt', expected: 'Auto Sacrifice: OFF', expectedTranslationKey: 'ants.autoSacrificeOff' },
         // Cube
         { selector: '#toggleAutoCubeUpgrades', expected: '2px solid green' },
         { selector: '#toggleAutoPlatonicUpgrades', expected: '2px solid green' },
@@ -125,7 +136,7 @@ export class HSAutosingSettingsFixer {
      * reconstructing the fixer instance.
      */
     public static async fixAllSettings(): Promise<string[]> {
-        HSAmbrosiaHelper.ensureLoadoutMode('LOAD');
+        HSAmbrosiaHelper.ensureLoadoutMode('loadTree');
         await HSAutosingSettingsFixer.#ensureAllTogglesOn();
         await HSAutosingSettingsFixer.#ensurePercentSuffixElements();
         await HSAutosingSettingsFixer.#ensureGreenButtons();
@@ -184,11 +195,25 @@ export class HSAutosingSettingsFixer {
                 failedSelectors.push(toggleReq.selector);
                 continue;
             }
-            if ((toggleElement.textContent || '').trim() !== toggleReq.expected && (toggleElement.style.border || '').trim() !== toggleReq.expected) {
+
+            // Accept the text in the player's language, and English as fallback
+            const accepted = new Set([toggleReq.expected]);
+            if (toggleReq.expectedTranslationKey) {
+                const translated = await HSUtils.getGameTranslation(toggleReq.expectedTranslationKey);
+                if (translated) accepted.add(translated.trim());
+            }
+            const isCorrect = () => {
+                const player = HSGlobal.exposedPlayer;
+                if (toggleReq.isCorrectForPlayer && player) return toggleReq.isCorrectForPlayer(player);
+                return accepted.has((toggleElement.textContent || '').trim())
+                    || accepted.has((toggleElement.style.border || '').trim());
+            };
+
+            if (!isCorrect()) {
                 try {
                     toggleElement.click();
                     await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-                    if ((toggleElement.textContent || '').trim() !== toggleReq.expected && (toggleElement.style.border || '').trim() !== toggleReq.expected) {
+                    if (!isCorrect()) {
                         failedSelectors.push(toggleReq.selector);
                     } else {
                         correctedSelectors.push(toggleReq.selector);
@@ -383,8 +408,14 @@ export class HSAutosingSettingsFixer {
 
         // Loop through challenges 1-10 and ensure correct auto state
         for (let challengeIndex = 1; challengeIndex <= 10; challengeIndex++) {
-            const expectedPrefix = `Automatically Run Chal.${challengeIndex}`;
-            const expectedFullText = `${expectedPrefix} [ON]`;
+            // The game writes these in the player's language; English kept as fallback
+            const onTexts = new Set([`Automatically Run Chal.${challengeIndex} [ON]`]);
+            const offTexts = new Set([`Automatically Run Chal.${challengeIndex} [OFF]`]);
+            const translatedOn = await HSUtils.getGameTranslation('challenges.autoRunChalOn', { x: challengeIndex });
+            const translatedOff = await HSUtils.getGameTranslation('challenges.autoRunChalOff', { x: challengeIndex });
+            if (translatedOn) onTexts.add(translatedOn.trim());
+            if (translatedOff) offTexts.add(translatedOff.trim());
+
             const challengeElement = document.querySelector(`#challenge${challengeIndex}.challenge`) as HTMLElement | null;
 
             if (!challengeElement) {
@@ -399,8 +430,9 @@ export class HSAutosingSettingsFixer {
                 continue;
             }
             await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
+            // Only act when the toggle shows this challenge's OFF state (already ON, or not this challenge: skip)
             const toggleText = (toggleElement.textContent || '').trim();
-            if (!toggleText.startsWith(expectedPrefix) || toggleText === expectedFullText) continue;
+            if (!offTexts.has(toggleText)) continue;
 
             try {
                 toggleElement.click();
@@ -410,7 +442,7 @@ export class HSAutosingSettingsFixer {
             }
 
             await new Promise(res => setTimeout(res, 50)); // Wait for DOM update
-            if ((toggleElement.textContent || '').trim() !== expectedFullText) {
+            if (!onTexts.has((toggleElement.textContent || '').trim())) {
                 failedChallenges.push(`chal${challengeIndex}`);
             } else {
                 correctedChallenges.push(`chal${challengeIndex}`);
@@ -426,12 +458,15 @@ export class HSAutosingSettingsFixer {
     }
 
     static async #disableUnwantedSettings(): Promise<string[]> {
+        // GDS: only its engine is paused, the setting is kept, so a reload during autosing can't
+        // leave GDS turned off. Released by stopAutosing().
+        await HSModuleManager.getModule<HSGameData>('HSGameData')?.pauseGDS(HSAutosingSettingsFixer.GDS_PAUSE_REASON);
+
         const performanceSettingKeys = [
-            'enableCorruptionQuickBar',
+            'corruptionHeaderLevels',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
-            // RETIRED: 'ambrosiaIdleSwap',
-            'useGameData'
+            'ambrosiaRateHeader',
         ] as const;
 
         const disabledSettings: string[] = [];
@@ -449,16 +484,20 @@ export class HSAutosingSettingsFixer {
                 HSLogger.debug(() => `disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
             }
         }
-        // Enable autoConfirmPopups for autosing. Tracked with '+' prefix so restore knows to disable it.
-        const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups');
-        if (autoConfirmSetting) {
-            if (!autoConfirmSetting.isEnabled()) {
-                autoConfirmSetting.enable();
-                disabledSettings.push('+autoConfirmPopups');
-                HSLogger.debug(() => `disableUnwantedSettings: enabled "autoConfirmPopups" for autosing`, HSAutosingSettingsFixer.#context);
+        // Older patcher only (auto-confirm without the dialog hook): enable autoConfirmPopups for autosing. With the
+        // hook, or without any patch (bookmarklet), HSGameDialogs answers autosing's dialogs (same test as
+        // setAutosingActive). Tracked with '+' prefix so restore knows to disable it.
+        if (!HSGameDialogs.isHookPatched() && HSUtils.isAutoConfirmPatched()) {
+            const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups');
+            if (autoConfirmSetting) {
+                if (!autoConfirmSetting.isEnabled()) {
+                    autoConfirmSetting.enable();
+                    disabledSettings.push('+autoConfirmPopups');
+                    HSLogger.debug(() => `disableUnwantedSettings: enabled "autoConfirmPopups" for autosing`, HSAutosingSettingsFixer.#context);
+                }
+            } else {
+                HSLogger.warn(`disableUnwantedSettings: setting "autoConfirmPopups" not found`, HSAutosingSettingsFixer.#context);
             }
-        } else {
-            HSLogger.warn(`disableUnwantedSettings: setting "autoConfirmPopups" not found`, HSAutosingSettingsFixer.#context);
         }
 
         if (disabledSettings.length > 0) {
@@ -470,7 +509,7 @@ export class HSAutosingSettingsFixer {
     }
 
     public static restoreUnwantedSettings(settingsToRestore: string[]): void {
-        // Reverse order to re-enable GDS first.
+        // Reverse order of disabling. GDS is not in the list: stopAutosing() resumes it before this.
         // Keys prefixed with '+' were enabled by autosing and must be disabled on restore.
         for (let i = settingsToRestore.length - 1; i >= 0; i--) {
             const raw = settingsToRestore[i];

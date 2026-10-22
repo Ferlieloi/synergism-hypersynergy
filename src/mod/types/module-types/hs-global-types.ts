@@ -16,14 +16,12 @@ export interface HSGlobalDebug {
 
 export interface HSGlobalRelease {
     githubOwner: string;
-    isLatestVersion: boolean;
     checkIntervalMs: number;
 }
 
 export interface HSGlobalGeneral {
     currentModVersion: string;
     isModFullyLoaded: boolean;
-    isDev: boolean;
     modGithubUrl: string;
     modDiscordThreadUrl: string;
     heaterUrl: string;
@@ -52,6 +50,7 @@ export interface HSGlobalElementHooker {
 export interface HSGlobalLogger {
     logLevel: ELogLevel,
     logSize: number;
+    contextColors: Record<string, string>;
 }
 
 export interface HSGlobalStorage {
@@ -73,18 +72,9 @@ export interface HSGlobalMouse {
     autoClickIgnoredElements: string[];
 }
 
-export interface HSGlobalAmbrosia extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
+export interface HSGlobalHiddenDialogs extends IStoreable { }
 
-    // RETIRED: Ambrosia AFK/idle swapper globals.
-    // idleSwapQuickIconUrl: './Pictures/Simplified/Blueberries.png';
-    // idleSwapIndicatorId: string;
-    // idleSwapMaxBlueThreshold: number;
-    // idleSwapMinBlueThreshold: number;
-    // idleSwapMaxRedThreshold: number;
-    // idleSwapMinRedThreshold: number;
-
+export interface HSGlobalAmbrosia {
     TIME_PER_AMBROSIA: number;
     TIME_PER_RED_AMBROSIA: number;
     digitReduction: number;
@@ -98,21 +88,6 @@ export interface HSGlobalAmbrosia extends IStoreable {
     purpleBarId: string;
     purpleBarProgressId: string;
     barWrapperId: string;
-}
-
-export interface HSGlobalCorruptionQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-}
-
-export interface HSGlobalAutomationQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
-}
-
-export interface HSGlobalEventsQuickbar extends IStoreable {
-    quickBarId: string;
-    quickBarLoadoutIdPrefix: string;
 }
 
 
@@ -149,6 +124,7 @@ export interface IHSGlobal {
     HSStorage: HSGlobalStorage;
     HSSettings: HSGlobalSettings;
     HSMouse: HSGlobalMouse;
+    HSHiddenDialogs: HSGlobalHiddenDialogs;
     HSAmbrosia: HSGlobalAmbrosia;
     HSGameData: HSGlobalGameData;
     HSUI: HSGlobalHSUI;

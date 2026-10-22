@@ -68,12 +68,6 @@ export class HSGameState extends HSModule {
         callback: (isActive: boolean, previousMain: GameView<MAIN_VIEW>, previousSub: GameView<SINGULARITY_VIEW>, currentMain: GameView<MAIN_VIEW>, currentSub: GameView<SINGULARITY_VIEW>) => void;
     }> = new Map();
 
-    #predicateSubscriptions: Map<string, {
-        predicate: () => boolean;
-        lastActive: boolean;
-        callback: (active: boolean) => void;
-    }> = new Map();
-
     #mainUIViews: string[] = [
         'buildings',
         'upgrades',
@@ -138,7 +132,6 @@ export class HSGameState extends HSModule {
                     });
 
                     this.#resolveSubViewChanges(uiView.getId());
-                    self.#evaluatePredicateSubscriptions();
                 }
                 // else HSLogger.debug(() => `[MainTabDiag] #${viewElement.id} display is '${display}' - treated as hidden, ignoring`, self.context);
 
@@ -215,7 +208,6 @@ export class HSGameState extends HSModule {
                             HSLogger.error(`Error when trying to call subtab VIEW change subscriber callback: ${e}`, self.context);
                         }
                     });
-                    self.#evaluatePredicateSubscriptions();
                 },
                 {
                     characterData: false,
@@ -339,55 +331,6 @@ export class HSGameState extends HSModule {
         this.#combinedViewSubscriptions.delete(subscriptionId);
     }
 
-    subscribeWhen(
-        predicate: () => boolean,
-        callback: (active: boolean) => void
-    ): string | undefined {
-        const id = HSUtils.uuidv4();
-        const lastActive = predicate();
-
-        this.#predicateSubscriptions.set(id, {
-            predicate,
-            lastActive,
-            callback,
-        });
-
-        try {
-            callback(lastActive);
-        } catch (e) {
-            HSLogger.error(`Error when trying to call predicate subscription callback: ${e}`, this.context);
-        }
-
-        return id;
-    }
-
-    unsubscribeWhen(subscriptionId: string) {
-        if (!this.#predicateSubscriptions.delete(subscriptionId)) {
-            HSLogger.warn(`Predicate subscription ID ${subscriptionId} not found`, this.context);
-        }
-    }
-
-    #evaluatePredicateSubscriptions() {
-        this.#predicateSubscriptions.forEach((entry, id) => {
-            let active: boolean;
-            try {
-                active = entry.predicate();
-            } catch (e) {
-                HSLogger.error(`Error evaluating predicate subscription ${id}: ${e}`, this.context);
-                return;
-            }
-
-            if (active !== entry.lastActive) {
-                entry.lastActive = active;
-                try {
-                    entry.callback(active);
-                } catch (e) {
-                    HSLogger.error(`Error when trying to call predicate subscription callback: ${e}`, this.context);
-                }
-            }
-        });
-    }
-
     async #resolveSubViewChanges(mainViewId: MAIN_VIEW) {
         const self = this;
         const viewProperties = HSGlobal.HSGameState.viewProperties.get(mainViewId);
@@ -486,28 +429,6 @@ export class HSGameState extends HSModule {
             () => `refreshCurrentViewsFromDOM: MAIN_VIEW=${this.#viewStates.MAIN_VIEW.currentView.getName()}`,
             this.context
         );
-    }
-
-    /** Get the previous sub-view (if any) for a given main view */
-    getPreviousSubViewForMainView(mainView: MainView): GameView<VIEW_TYPE> | undefined {
-        // TODO: Add subview restore feature
-        const mainViewId = mainView.getId();
-
-        const subViewMap: Record<number, VIEW_KEY> = {
-            [MAIN_VIEW.BUILDINGS]: 'BUILDING_VIEW',
-            [MAIN_VIEW.ACHIEVEMENTS]: 'ACHIEVEMENT_VIEW',
-            [MAIN_VIEW.RUNES]: 'RUNE_VIEW',
-            [MAIN_VIEW.CHALLENGES]: 'CHALLENGE_VIEW',
-            [MAIN_VIEW.ANTS]: 'ANT_VIEW',
-            [MAIN_VIEW.CUBES]: 'CUBE_VIEW',
-            [MAIN_VIEW.TRAITS]: 'TRAITS_VIEW',
-            [MAIN_VIEW.SINGULARITY]: 'SINGULARITY_VIEW',
-            [MAIN_VIEW.SETTINGS]: 'SETTINGS_VIEW',
-            [MAIN_VIEW.PSEUDOCOINS]: 'PSEUDOCOIN_VIEW',
-        };
-
-        const viewKey = subViewMap[mainViewId];
-        return viewKey ? this.getCurrentUIView(viewKey) : undefined;
     }
 }
 

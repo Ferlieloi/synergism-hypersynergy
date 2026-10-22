@@ -11,10 +11,6 @@
     "groupName": "Notification settings",
     "order": 3
   },
-  "log": {
-    "groupName": "Log settings",
-    "order": 4
-  },
   "talismans": {
     "groupName": "Talisman settings",
     "order": 5
@@ -27,25 +23,17 @@
     "groupName": "Add+Time Amb loadouts auto-switch settings",
     "order": 8
   },
-  "ambrosia2": {
-    "groupName": "Idle Swapper settings",
-    "order": 7
-  },
-  "ambrosia3": {
-    "groupName": "Minibar settings",
-    "order": 9
-  },
-  "patch": {
-    "groupName": "Old Patch settings",
-    "order": 13
+  "ambrosia-tree": {
+    "groupName": "Ambrosia tree settings",
+    "order": 7.5
   },
   "gamedata": {
     "groupName": "Game data settings",
     "order": 11
   },
-  "shop": {
-    "groupName": "Shop settings",
-    "order": 12
+  "save-export": {
+    "groupName": "Timed save export settings",
+    "order": 11.5
   },
   "debug": {
     "groupName": "Debugging settings",

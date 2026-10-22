@@ -4,32 +4,17 @@
    border-right: none;
 }
 
-/* Quick import button in Ambrosia subtab */
+/* Quick import button in Ambrosia subtab
++ resizing of all the buttons around so they fit in a line.*/
 #hs-ambrosia-extra-btn {
    border: 2px solid orange;
 }
-
-/* RETIRED: AFK Swapper toggle button in Ambrosia subtab.
-#hs-ambrosia-loadout-idle-swap-toggle {
-    font-size: 1.0em;
-    font-family: fantasy;
-    letter-spacing: 3px;
-    border: 2px solid;
-    border-color: #0190cd;
-    padding: 10px 20px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    color: #774ed1;
+.ambrosiaLoadoutBtn {
+   width: 15% !important;
 }
-*/
 
 /* Always hide the visually-useless ambrosia minibars numbers to avoid a 'jump' when enabling them. */
 #hs-blue-progress-text,
 #hs-red-progress-text {
    display: none;
-}
-
-/* Add some empty space at the bottom of the game to avoid having elements too close to it */
-body {
-   margin-bottom: 150px;
 }

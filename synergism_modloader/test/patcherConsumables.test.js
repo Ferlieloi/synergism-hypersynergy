@@ -45,6 +45,15 @@ test('consumables: unminified spacing and a name starting with "$"', () => {
     assert.equal(window.__HS_consumables.HAPPY_HOUR_BELL.amount, 0)
 })
 
+test('consumables: another consumable before the bell, quoted keys', () => {
+    const window = {}
+    const { warnings } = run(
+        'let Ro={"LOTUS_OF_TIME":{amount:0,ends:[],displayName:""},"HAPPY_HOUR_BELL":{amount:0,ends:[],displayName:""}};' +
+        'function Xy(){}function consumed(){}let Tk=()=>Ro.HAPPY_HOUR_BELL.amount;', window)
+    assert.deepEqual(warnings, [])
+    assert.deepEqual(Object.keys(window.__HS_consumables), ['LOTUS_OF_TIME', 'HAPPY_HOUR_BELL'])
+})
+
 test('consumables: a destructuring or a reset entry alone is not captured', () => {
     const window = {}
     const { warnings } = run(

@@ -1,33 +1,80 @@
-import { HSCalculationDefinition } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades, CalculationMode, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams, hepteractTypeList, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
+import { EventBuffType } from "../../../types/data-types/hs-event-data";
+import { CorruptionLevels } from "../../../types/data-types/hs-player-savedata";
+import { challenge15Rewards, redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
+
+// ===== Param options for the Tools tab =====
+
+const optionsFromKeys = (keys: readonly string[]): HSCalculationParamOption[] => keys.map((key) => ({ label: key, value: key }));
+
+// A numeric enum also maps its values back to its names
+const optionsFromNumericEnum = (enumObject: Record<string, string | number>): HSCalculationParamOption[] => Object.entries(enumObject)
+    .filter(([, value]) => typeof value === "number")
+    .map(([label, value]) => ({ label, value }));
+
+const MODE_PARAM: HSCalculationParams = {
+    paramName: "mode",
+    paramType: "CalculationMode",
+    defaultValue: "normal",
+    options: optionsFromKeys(["normal", "true_base", "non_ambrosia"] satisfies CalculationMode[])
+};
+
+const SINGULARITY_COUNT_PARAM: HSCalculationParams = {
+    paramName: "singularityCount",
+    paramType: "number",
+    defaultValue: -1,
+    label: "Singularity (-1: current)"
+};
+
+const EVENT_BUFF_PARAM: HSCalculationParams = {
+    paramName: "buff",
+    paramType: "EventBuffType",
+    options: optionsFromNumericEnum(EventBuffType)
+};
+
+const SINGULARITY_DEBUFF_OPTIONS = optionsFromKeys([
+    "Offering", "Obtainium", "Salvage", "Global Speed", "Researches", "Ant ELO",
+    "Ascension Speed", "Cubes", "Cube Upgrades", "Platonic Costs", "Hepteract Costs"
+] satisfies SingularityDebuffs[]);
+
+// Read from the save again at the click, after its forced save
+const CORRUPTION_LOADOUT_PARAM: HSCalculationParams = {
+    paramName: "loadout",
+    paramType: "CorruptionLevels",
+    options: (data) => [
+        { label: "current", value: data?.corruptions.used },
+        { label: "next", value: data?.corruptions.next },
+    ]
+};
+
+const CORRUPTION_NAME_OPTIONS = optionsFromKeys([
+    "viscosity", "drought", "deflation", "extinction", "illiteracy", "recession", "dilation", "hyperchallenge"
+] satisfies (keyof CorruptionLevels)[]);
 
 export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     {
-        calculationName: "Consumable Event Buff",
+        calculationName: "Event Buff: Consumables",
         fnName: "calculateConsumableEventBuff",
-        fnParams: [
-            {
-                paramName: "buff",
-                paramType: "EventBuffType"
-            }
-        ],
+        fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Shop Upgrade",
+        calculationName: "Ambrosia Speed: Shop Upgrade",
         fnName: "calculateAmbrosiaGenerationShopUpgrade",
         fnParams: [
             {
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Singularity Upgrade",
+        calculationName: "Ambrosia Speed: Singularity Upgrade",
         fnName: "calculateAmbrosiaGenerationSingularityUpgrade",
         fnParams: [
             {
@@ -40,7 +87,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Generation Octeract Upgrade",
+        calculationName: "Ambrosia Speed: Octeract Upgrade",
         fnName: "calculateAmbrosiaGenerationOcteractUpgrade",
         fnParams: [
             {
@@ -53,41 +100,42 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Milestone Blueberries",
+        calculationName: "Ambrosia Blueberries: Singularity Milestones",
         fnName: "calculateSingularityMilestoneBlueberries",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Dilated Five Leaf Bonus",
+        calculationName: "Ambrosia Luck: Dilated Five-Leaf Clover",
         fnName: "calculateDilatedFiveLeafBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Ambrosia Luck Milestone Bonus",
+        calculationName: "Ambrosia Luck: Singularity Milestones",
         fnName: "calculateSingularityAmbrosiaLuckMilestoneBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Shop Upgrade",
+        calculationName: "Ambrosia Luck: Shop Upgrade",
         fnName: "calculateAmbrosiaLuckShopUpgrade",
         fnParams: [
             {
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Singularity Upgrade",
+        calculationName: "Ambrosia Luck: Singularity Upgrade",
         fnName: "calculateAmbrosiaLuckSingularityUpgrade",
         fnParams: [
             {
@@ -100,7 +148,7 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Ambrosia Luck Octeract Upgrade",
+        calculationName: "Ambrosia Luck: Octeract Upgrade",
         fnName: "calculateAmbrosiaLuckOcteractUpgrade",
         fnParams: [
             {
@@ -113,147 +161,95 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Cube To Quark Shop Upgrade",
-        fnName: "calculateCubeToQuarkShopUpgrade",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Tesseract To Quark Shop Upgrade",
-        fnName: "calculateTesseractToQuarkShopUpgrade",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Hypercube To Quark Shop Upgrade",
-        fnName: "calculateHypercubeToQuarkShopUpgrade",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cube To Quark All Shop Upgrade",
-        fnName: "calculateCubeToQuarkAllShopUpgrade",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cash Grab 2 Shop Upgrade",
-        fnName: "calculateCashGrab2ShopUpgrade",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Total Cubes",
+        calculationName: "Cubes Opened (log10 sum)",
         fnName: "calculateTotalCubesExp",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
-    /*
-
-                            SHOULD WE ADD ANYTHING ELSE ????
-
-    */
     {
         calculationName: "Red Ambrosia Upgrade Value",
         fnName: "calculateRedAmbrosiaUpgradeValue",
         fnParams: [
             {
                 paramName: "upgradeName",
-                paramType: "keyof RedAmbrosiaUpgrades"
+                paramType: "keyof RedAmbrosiaUpgrades",
+                options: optionsFromKeys(Object.keys(redAmbrosiaUpgradeCalculationCollection))
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
+        toolingSupport: true
     },
     {
-        calculationName: "Campaign Ambrosia Speed Bonus",
+        calculationName: "Ambrosia Speed: Campaign Bonus",
         fnName: "calculateCampaignAmbrosiaSpeedBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Campaign Luck Bonus",
+        calculationName: "Ambrosia Luck: Campaign Bonus",
         fnName: "calculateCampaignLuckBonus",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Cookie Upgrade 29 Luck",
+        calculationName: "Ambrosia Luck: Cookie Upgrade 29",
         fnName: "calculateCookieUpgrade29Luck",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Sum Of Exalt Completions",
+        calculationName: "Exalt Completions",
         fnName: "calculateSumOfExaltCompletions",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Number Of Thresholds",
+        calculationName: "Ambrosia Thresholds",
         fnName: "calculateNumberOfThresholds",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "To Next Threshold",
+        calculationName: "Ambrosia Thresholds: Ambrosia to Next",
         fnName: "calculateToNextThreshold",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Required Blueberry Time",
+        calculationName: "Ambrosia Bar Requirement",
         fnName: "calculateRequiredBlueberryTime",
-        fnParams: [],
+        fnParams: [
+            {
+                paramName: "ignoreTwoMind",
+                paramType: "boolean",
+                defaultValue: false
+            },
+            {
+                paramName: "ignoreBrickOfLead",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Required Red Ambrosia Time",
+        calculationName: "Red Ambrosia Bar Requirement",
         fnName: "calculateRequiredRedAmbrosiaTime",
-        fnParams: [],
+        fnParams: [
+            {
+                paramName: "ignoreTwoMind",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
         supportsReduce: false,
         toolingSupport: true
     },
@@ -265,167 +261,42 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Hepteract Effective",
+        calculationName: "Hepteract Effective Amount",
         fnName: "calculateHepteractEffective",
         fnParams: [
             {
                 paramName: "heptType",
-                paramType: "HepteractType"
+                paramType: "HepteractType",
+                options: optionsFromKeys(hepteractTypeList)
             }
         ],
         supportsReduce: false,
-        toolingSupport: false
-    },
-    {
-        calculationName: "Free Shop Infinity Upgrades",
-        fnName: "calculateFreeShopInfinityUpgrades",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
         toolingSupport: true
     },
     {
-        calculationName: "All Shop Tablets",
+        calculationName: "Vouchers",
         fnName: "calculateAllShopTablets",
         fnParams: [
             {
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
     },
     {
-        calculationName: "Limited Ascensions Debuff",
+        calculationName: "Exalt Debuff: Limited Ascensions",
         fnName: "calculateLimitedAscensionsDebuff",
         fnParams: [],
         supportsReduce: false,
         toolingSupport: true
     },
     {
-        calculationName: "Singularity Reductions",
+        calculationName: "Singularity Debuff: Reductions",
         fnName: "calculateSingularityReductions",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Effective Singularities",
-        fnName: "calculateEffectiveSingularities",
-        fnParams: [
-            {
-                paramName: "singularityCount",
-                paramType: "number",
-                defaultValue: -1
-            }
-        ],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Singularity Debuff",
-        fnName: "calculateSingularityDebuff",
-        fnParams: [
-            {
-                paramName: "debuff",
-                paramType: "SingularityDebuffs"
-            },
-            {
-                paramName: "singularityCount",
-                paramType: "number",
-                defaultValue: -1
-            }
-        ],
-        supportsReduce: false,
-        toolingSupport: false
-    },
-    {
-        calculationName: "Ascension Speed Exponent Spread",
-        fnName: "calculateAscensionSpread",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Challenge 15 Reward",
-        fnName: "calculateChallenge15Reward",
-        fnParams: [
-            {
-                paramName: "rewardName",
-                paramType: "keyof typeof challenge15Rewards"
-            }
-        ],
-        supportsReduce: false,
-        toolingSupport: false
-    },
-    {
-        calculationName: "Raw Ascension Speed Mult",
-        fnName: "calculateRawAscensionSpeedMult",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Ascension Speed Mult",
-        fnName: "calculateAscensionSpeedMult",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Ambrosia Speed",
-        fnName: "calculateAmbrosiaGenerationSpeedRaw",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Blueberry Inventory",
-        fnName: "calculateBlueberryInventory",
-        fnParams: [
-            {
-                paramName: "reduce_vals",
-                paramType: "boolean",
-                defaultValue: true
-            }
-        ],
-        supportsReduce: true,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Luck",
-        fnName: "calculateLuck",
         fnParams: [
             {
                 paramName: "reduce_vals",
@@ -442,14 +313,125 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         toolingSupport: true
     },
     {
-        calculationName: "Luck Conversion",
-        fnName: "calculateLuckConversion",
+        calculationName: "Singularity Debuff: Effective Singularities",
+        fnName: "calculateEffectiveSingularities",
+        fnParams: [SINGULARITY_COUNT_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Singularity Debuff",
+        fnName: "calculateSingularityDebuff",
+        fnParams: [
+            {
+                paramName: "debuff",
+                paramType: "SingularityDebuffs",
+                options: SINGULARITY_DEBUFF_OPTIONS
+            },
+            SINGULARITY_COUNT_PARAM
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ascension Speed Exponent Spread",
+        fnName: "calculateAscensionSpread",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            MODE_PARAM
+        ],
+        supportsReduce: true,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Challenge 15 Reward",
+        fnName: "calculateChallenge15Reward",
+        fnParams: [
+            {
+                paramName: "rewardName",
+                paramType: "keyof typeof challenge15Rewards",
+                options: optionsFromKeys(Object.keys(challenge15Rewards))
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ascension Speed Multiplier: Raw",
+        fnName: "calculateRawAscensionSpeedMult",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            MODE_PARAM
+        ],
+        supportsReduce: true,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ascension Speed Multiplier",
+        fnName: "calculateAscensionSpeedMult",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Speed",
+        fnName: "calculateAmbrosiaGenerationSpeed",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            MODE_PARAM
+        ],
+        supportsReduce: true,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Blueberries",
+        fnName: "calculateBlueberryInventory",
         fnParams: [
             {
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
             }
+        ],
+        supportsReduce: true,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Luck",
+        fnName: "calculateLuck",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            MODE_PARAM
+        ],
+        supportsReduce: true,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Red Ambrosia Luck: Conversion",
+        fnName: "calculateLuckConversion",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -462,7 +444,8 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
                 paramName: "reduce_vals",
                 paramType: "boolean",
                 defaultValue: true
-            }
+            },
+            MODE_PARAM
         ],
         supportsReduce: true,
         toolingSupport: true
@@ -471,6 +454,209 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
         calculationName: "Golden Revolution",
         fnName: "calculateGoldenRevolution",
         fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Rune Salvage",
+        fnName: "calculateTotalSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Rune Salvage: Positive",
+        fnName: "calculatePositiveSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Rune Salvage: Negative",
+        fnName: "calculateNegativeSalvage",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Ambrosia, luck, purple -----
+    {
+        // The HSGameDataAPI copy, which hides the helper's: no reduce_vals, hence no components
+        calculationName: "Red Ambrosia Speed",
+        fnName: "calculateRedAmbrosiaGenerationSpeed",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Bar Income",
+        fnName: "calculateAmbrosiaBarIncome",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Upgrade Value",
+        fnName: "calculateAmbrosiaUpgradeValue",
+        fnParams: [
+            {
+                paramName: "upgradeName",
+                paramType: "AmbrosiaUpgradeNames",
+                options: (data) => optionsFromKeys(Object.keys(data?.ambrosiaUpgrades ?? {}))
+            },
+            {
+                paramName: "freeLevelsOnly",
+                paramType: "boolean",
+                defaultValue: false
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ambrosia Luck: Panthema",
+        fnName: "calculatePanthemaAmbrosiaLuck",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Red Ambrosia Luck: Panthema",
+        fnName: "calculatePanthemaRedLuck",
+        fnParams: [MODE_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Luck",
+        fnName: "calculatePurpleHoneyLuck",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Luck Breakdown",
+        fnName: "calculatePurpleHoneyLuckBreakdown",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Purple Honey Per Extraction",
+        fnName: "calculatePurpleHoneyPerExtraction",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Cubes, ascension, corruptions -----
+    {
+        calculationName: "Cube Multiplier: Cubes",
+        fnName: "calculateCubeMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier: Cubes With Tau",
+        fnName: "calculateCubeMultiplierWithTau",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier: Tesseracts",
+        fnName: "calculateTesseractMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier: Hypercubes",
+        fnName: "calculateHypercubeMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier: Platonics",
+        fnName: "calculatePlatonicMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Cube Multiplier: Hepteracts",
+        fnName: "calculateHepteractMultiplier",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ascension Score",
+        fnName: "calculateAscensionScore",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Corruption Score Multiplier",
+        fnName: "calculateCorruptionScoreMultiplier",
+        fnParams: [CORRUPTION_LOADOUT_PARAM],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Corruption Effect",
+        fnName: "calculateCorruptionEffect",
+        fnParams: [
+            CORRUPTION_LOADOUT_PARAM,
+            {
+                paramName: "corruption",
+                paramType: "keyof CorruptionLevels",
+                options: CORRUPTION_NAME_OPTIONS
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    // ----- Runes, talismans, other -----
+    {
+        calculationName: "Rune Levels (Total)",
+        fnName: "calculateTotalRuneLevels",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Talisman Rarity (Total)",
+        fnName: "calculateTalismanRarityTotal",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Synergism Level",
+        fnName: "calculateSynergismLevel",
+        fnParams: [],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Ant Upgrade True Level",
+        fnName: "calculateTrueAntLevel",
+        fnParams: [
+            {
+                paramName: "antUpgrade",
+                paramType: "AntUpgrades",
+                options: optionsFromNumericEnum(AntUpgrades)
+            }
+        ],
+        supportsReduce: false,
+        toolingSupport: true
+    },
+    {
+        calculationName: "Event Buff",
+        fnName: "calculateEventSourceBuff",
+        fnParams: [EVENT_BUFF_PARAM],
         supportsReduce: false,
         toolingSupport: true
     },

@@ -1,0 +1,255 @@
+import { escapeHtml, formatNumber } from "../hs-heater-utils";
+import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
+import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
+import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
+import type { HeaterResultArrayKey, HeaterResultRow } from "../../../../types/data-types/hs-heater-types";
+
+type ResultKey = HeaterResultArrayKey;
+
+const RESULT_COL_INDEX = {
+    loadout:       0,
+    blueberryCost: 2,
+    cost:          3,
+    effect:        4,
+    p4x4:          5,
+    maxed:         6,
+} as const;
+
+const RESULT_TABLE_TOTAL_COLS = 7;
+
+type NormalizedResultRow = {
+    loadoutValue:       HeaterResultRow[typeof RESULT_COL_INDEX.loadout];
+    blueberryCostValue: HeaterResultRow[typeof RESULT_COL_INDEX.blueberryCost];
+    costValue:          HeaterResultRow[typeof RESULT_COL_INDEX.cost];
+    effectValue:        HeaterResultRow[typeof RESULT_COL_INDEX.effect];
+    p4x4Value:          HeaterResultRow[typeof RESULT_COL_INDEX.p4x4];
+    maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
+};
+
+function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
+    const safeLabel = escapeHtml(label);
+    const safeInfoTitle = escapeHtml(infoTitle);
+    const description = semanticId ? resolveHeaterTypeDescription(semanticId) : null;
+    const effectiveIconSrc = semanticId ? getEffectiveHeaterIconSrc(semanticId) : null;
+    const typeLabel = effectiveIconSrc
+        ? `<button type="button" class="hs-heater-type-icon-button" data-heater-icon-id="${escapeHtml(semanticId ?? '')}" title="Alt+click to edit icon; right-click to clear override">
+            <img class="hs-heater-type-icon" src="${escapeHtml(effectiveIconSrc)}" alt="" aria-hidden="true" />
+            <span class="hs-heater-type-label">${safeLabel}</span>
+        </button>`
+        : `<span class="hs-heater-type-label">${safeLabel}</span>`;
+
+    const infoTrigger = description
+        ? `<div class="hs-heater-type-info-trigger" tabindex="0" role="note"
+                data-info-title="${safeInfoTitle}"
+                data-info-content="${escapeHtml(description)}"
+                aria-label="More information about ${safeInfoTitle}">?</div>`
+        : '';
+
+    return `
+        <div class="hs-heater-type-cell-content">
+            ${typeLabel}
+            ${infoTrigger}
+        </div>`;
+}
+
+function formatCostCellValue(value: HeaterResultRow[typeof RESULT_COL_INDEX.cost | typeof RESULT_COL_INDEX.blueberryCost]): string {
+    const raw = String(value).trim();
+    if (!/^-?\d+$/.test(raw)) {
+        return escapeHtml(String(value));
+    }
+    const sign = raw.startsWith("-") ? "-" : "";
+    const digits = sign ? raw.slice(1) : raw;
+    const groupedDigits = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return escapeHtml(`${sign}${groupedDigits}`);
+}
+
+function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
+    return {
+        loadoutValue:       row[RESULT_COL_INDEX.loadout],
+        blueberryCostValue: row[RESULT_COL_INDEX.blueberryCost],
+        costValue:          row[RESULT_COL_INDEX.cost],
+        effectValue:        row[RESULT_COL_INDEX.effect],
+        p4x4Value:          row[RESULT_COL_INDEX.p4x4],
+        maxedValue:         row[RESULT_COL_INDEX.maxed],
+    };
+}
+
+function buildHeaderTooltipLabel(label: string, tooltip: string): string {
+    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
+}
+
+function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string {
+    const { showP4x4, showRouting, effectHeader } = sectionDef;
+    const blueberryHeader = `<img src="Pictures/Default/Blueberries.png" class="hs-heater-header-icon" />`;
+    if (showRouting) {
+        const splitHeader = `<th colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${escapeHtml(effectHeader)}</span><span>Routing</span></div></th>`;
+        return `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${splitHeader}<th>Maxed?</th></tr>`;
+    }
+    const effectLabel = showP4x4
+        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50")
+        : `<th>${escapeHtml(effectHeader)}</th>`;
+    const p4x4Label = showP4x4
+        ? buildHeaderTooltipLabel("p4x4 eq", `"p4x4 eq" indicates the amount\n`
+                                            + `of p4x4 you need to buy for the\n`
+                                            + `loadout in this row to be better\n`
+                                            + `than the ones above it.\n`
+                                            + `"★ now" marks the best one\n`
+                                            + `at your current P4x4.`)
+        : `<th>p4x4 eq</th>`;
+
+    return showP4x4
+        ? `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
+        : `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
+}
+
+// The H row that wins at the live P4x4 when the table is drawn (it's redrawn
+// at each heat and slot change).
+type BestHMarker = { rowIndex: number; p4x4: number };
+
+function getBestHMarker(hyperfluxEntries: NormalizedHeaterResultEntry[] | undefined): BestHMarker | null {
+    if (!hyperfluxEntries?.length) return null;
+    const p4x4 = HSHeaterResultStore.getLiveP4x4();
+    if (p4x4 === null) return null;
+    const rowIndex = pickBestHyperfluxRowIndex(hyperfluxEntries, p4x4);
+    return rowIndex < 0 ? null : { rowIndex, p4x4 };
+}
+
+function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLabel: string, isValidJson: boolean): string {
+    if (!isValidJson) return "";
+    const copyButton = `<button class="hs-heater-copy-loadout-btn hs-heater-json-tooltip-trigger" type="button" data-loadout="${escapedFullLoadout}" data-loadout-label="${escapedLoadoutLabel}">Copy</button>`;
+    const importButton = `<button class="hs-heater-import-loadout-btn" type="button" data-loadout="${escapedFullLoadout}" data-loadout-label="${escapedLoadoutLabel}">Import</button>`;
+    return `${copyButton}${importButton}`;
+}
+
+// Purple rows show the Purple Reactor routing they assume, next to the effect
+// (the other rows of their section have none).
+// Best-routing rows also compare with the current routing and offer to apply
+// theirs.
+function buildPurpleRoutingHtml(entry: NormalizedHeaterResultEntry): string {
+    const routing = entry.purpleRouting;
+    if (!routing) return "";
+
+    const blue = routing.blueRoutingPercent;
+    const red = routing.redRoutingPercent;
+    const unit = entry.key === "purpleHoney" || entry.key === "purpleHoneyOpt" ? "Purple Honey" : "Purple Ambrosia";
+    const current = routing.currentRoutingPerHour;
+    const tooltipLines = current === undefined
+        ? [`Your current routing: Blue ${blue}% / Red ${red}%`, `≈ ${formatNumber(routing.perHour)} ${unit} / hour`]
+        : [
+            `Recommended routing: Blue ${blue}% / Red ${red}%`,
+            `≈ ${formatNumber(routing.perHour)} ${unit} / hour`,
+            `vs ${formatNumber(current)} / hour at your current routing`
+                + (current > 0 ? ` (+${formatNumber((routing.perHour / current - 1) * 100)}%)` : ""),
+            "Routing is global: it also changes your other loadouts' income.",
+        ];
+    const applyButton = current === undefined
+        ? ""
+        : `<button class="hs-heater-apply-routing-btn" type="button" data-blue-routing="${blue}" data-red-routing="${red}" title="Set your Purple Reactor to this routing" aria-label="Apply this routing">➜</button>`;
+
+    const blueIcon = `<img class="hs-heater-routing-icon" src="Pictures/Default/Ambrosia.png" alt="Blue" />`;
+    const redIcon = `<img class="hs-heater-routing-icon" src="Pictures/RedAmbrosia/RedAmbrosia.png" alt="Red" />`;
+
+    return `<div class="hs-heater-purple-routing" title="${escapeHtml(tooltipLines.join("\n"))}">`
+        + `${blueIcon}<span>${blue}%</span>${redIcon}<span>${red}%</span>${applyButton}</div>`;
+}
+
+function buildArraySectionDataRow(
+    entry: NormalizedHeaterResultEntry,
+    sectionDef: HeaterResultSectionDef,
+    rowSpan: number,
+    selectedSemanticIds: Set<string> = new Set(),
+    bestH: BestHMarker | null = null,
+): string {
+    const { showP4x4, showRouting } = sectionDef;
+    const rowModel = normalizeArrayResultRow(entry.rowData);
+    const loadoutValue = rowModel.loadoutValue;
+    const isUnaffordable = loadoutValue === "Unaffordable";
+    const fullLoadout = isUnaffordable ? "" : loadoutValue;
+    const escapedFullLoadout = escapeHtml(fullLoadout);
+    const isValidJson = !isUnaffordable && fullLoadout.trim().startsWith("{") && fullLoadout.trim().endsWith("}");
+    const actionControlsHtml = buildLoadoutActionControls(escapedFullLoadout, escapeHtml(entry.label), isValidJson);
+    const isSelectedType = selectedSemanticIds.has(entry.semanticId);
+    const infoTitle = getHeaterTypeConfig(entry.key)?.label ?? entry.label;
+    const typeCellClass = isSelectedType ? ' class="hs-heater-selected-type-cell"' : '';
+
+    const loadoutCell = isUnaffordable
+        ? `<td>${escapeHtml(String(loadoutValue))}</td>`
+        : `<td><div class="hs-heater-loadout-buttons">${actionControlsHtml}</div></td>`;
+    const resultCell = rowSpan === 1
+        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+        : entry.rowIndex === 0
+            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+            : "";
+    const blueberryCostCell = `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
+    const costCell = `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
+    // Effect takes two columns, or shares them with p4x4 eq. With the routing,
+    // it stays one cell, split inside (see .hs-heater-split-cell).
+    const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectCell = showRouting
+        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
+        : showP4x4
+            ? `<td>${effectHtml}</td>`
+            : `<td colspan="2">${effectHtml}</td>`;
+    const bestHMarker = bestH && entry.key === "hyperflux" && entry.rowIndex === bestH.rowIndex
+        ? ` <span class="hs-heater-best-h-marker" title="Best H at your current P4x4 (${bestH.p4x4})">★ now</span>`
+        : "";
+    const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
+    const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
+    // A type picked in "Your loadout order" that can't be afforded: the whole row in red
+    const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
+    return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
+}
+
+function buildArraySectionRows(sectionDef: HeaterResultSectionDef, entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set(), bestH: BestHMarker | null = null): string {
+    const matching = sectionDef.keys
+        .filter((key) => entriesByKey.has(key))
+        .map((key) => ({ key, entries: entriesByKey.get(key)! }));
+    if (matching.length === 0) return "";
+
+    // The Routing column is only there when a row has a routing to show (the
+    // Purple branch was heated); the section's other rows leave it empty.
+    const hasRouting = matching.some(({ entries }) => entries.some((entry) => entry.purpleRouting));
+    const shownDef = sectionDef.showRouting && !hasRouting ? { ...sectionDef, showRouting: false } : sectionDef;
+    const titleRow = `<tr><td colspan="${RESULT_TABLE_TOTAL_COLS}" class="hs-heater-title-row">${escapeHtml(sectionDef.title)}</td></tr>`;
+    const headerRow = buildArraySectionHeaderRow(shownDef);
+    const dataRows = matching
+        .map(({ key, entries }) => {
+            const rowSpan = entries[0].isRowBased ? 1 : entries.length;
+            return entries.map((entry) => buildArraySectionDataRow(entry, shownDef, rowSpan, selectedSemanticIds, bestH)).join("");
+        })
+        .join("");
+    return titleRow + headerRow + dataRows;
+}
+
+function buildArrayResultSection(entriesByKey: Map<ResultKey, NormalizedHeaterResultEntry[]>, selectedSemanticIds: Set<string> = new Set()): string {
+    const sectionDefs = getHeaterResultSectionDefinitions();
+    const bestH = getBestHMarker(entriesByKey.get("hyperflux"));
+    const allRows = sectionDefs.map((sectionDef) => buildArraySectionRows(sectionDef, entriesByKey, selectedSemanticIds, bestH)).join("");
+    return `
+        <div class="hs-heater-results-wrapper">
+            <div class="hs-heater-results-topbar">
+                <div class="hs-heater-results-topbar-help" aria-label="Heater results help" tabindex="0">?</div>
+            </div>
+            <table class="hs-heater-subtable hs-heater-results-table">
+                <tbody>${allRows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function groupNormalizedResultEntriesByKey(entries: NormalizedHeaterResultEntry[]): Map<ResultKey, NormalizedHeaterResultEntry[]> {
+    const map = new Map<ResultKey, NormalizedHeaterResultEntry[]>();
+    for (const entry of entries) {
+        const group = map.get(entry.key);
+        if (group) group.push(entry);
+        else map.set(entry.key, [entry]);
+    }
+    return map;
+}
+
+export function buildResultTableHtmlFromNormalized(normalizedEntries: NormalizedHeaterResultEntry[], selectedSemanticIds: Set<string> = new Set()): string {
+    if (normalizedEntries.length === 0) return "";
+
+    const entriesByKey = groupNormalizedResultEntriesByKey(normalizedEntries);
+    return buildArrayResultSection(entriesByKey, selectedSemanticIds);
+}
