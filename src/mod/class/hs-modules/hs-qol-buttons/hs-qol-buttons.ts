@@ -1,23 +1,23 @@
-import { HSModuleOptions } from "../../types/hs-types";
-import { SINGULARITY_VIEW } from "../../types/module-types/hs-gamestate-types";
-import { HSGameState, SingularityView } from "../hs-core/hs-gamestate";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSModule } from "../hs-core/module/hs-module";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import { HSSettings } from "../hs-core/settings/hs-settings";
-import { HSSettingsUI } from "../hs-core/settings/hs-settings-ui";
-import { HSUtils } from "../hs-utils/hs-utils";
-import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
-import { goldenQuarkUpgradeMinimumSingularity } from "../hs-core/gds/hs-gamedata-tables";
-import { GoldenQuarkUpgradeKey } from "../../types/data-types/hs-gamedata-api-types";
-import { HSQOLAutomationQuickbar } from "./hs-qol-quickbar/hs-qolQuickbarAutomation";
-import { HSQuickbarManager } from "./hs-qol-quickbar/hs-qolQuickbarManager";
-import type { QUICKBAR_ID } from "./hs-qol-quickbar/hs-qolQuickbarManager";
-import type { GameData } from "../../types/data-types/hs-player-savedata";
-import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
-import { HSGlobal } from "../hs-core/hs-global";
-import { HSUI } from "../hs-core/hs-ui";
-import { HSHeaderModules } from "../hs-core/header/hs-header-modules";
+import { HSModuleOptions } from "../../../types/hs-types";
+import { SINGULARITY_VIEW } from "../../../types/module-types/hs-gamestate-types";
+import { HSGameState, SingularityView } from "../../hs-core/hs-gamestate";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSModule } from "../../hs-core/module/hs-module";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
+import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
+import { goldenQuarkUpgradeMinimumSingularity } from "../../hs-core/gds/hs-gamedata-tables";
+import { GoldenQuarkUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
+import { HSQOLAutomationQuickbar } from "../hs-qol-quickbar/hs-qolQuickbarAutomation";
+import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
+import type { QUICKBAR_ID } from "../hs-qol-quickbar/hs-qolQuickbarManager";
+import type { GameData } from "../../../types/data-types/hs-player-savedata";
+import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { HSUI } from "../../hs-core/hs-ui";
+import { HSHeaderModules } from "../../hs-core/header/hs-header-modules";
 
 const MAXED_UPGRADE_TOGGLES = {
     toggleMaxedGoldenQuarkUpgrades: 'hideMaxedGQUpgrades',

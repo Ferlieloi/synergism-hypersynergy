@@ -9,7 +9,7 @@ import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
-import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
 import { HSCorruption } from "../../hs-modules/hs-corruption";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
