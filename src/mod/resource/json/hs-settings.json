@@ -1525,6 +1525,21 @@
       "controlEnabledId": "hs-setting-qol-remove-header-gap-btn"
     }
   },
+  "headerHideLoadoutIcons": {
+    "settingName": "headerHideLoadoutIcons",
+    "settingDescription": "Hide the header's loadout icons",
+    "settingHelpText": "Hides the icon on the left of the Corruption and Ambrosia loadouts modules. The corruption icon stays while it cleanses corruptions.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "headerHideLoadoutIconsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-hide-loadout-icons-btn"
+    }
+  },
   "headerStatsAtBottom": {
     "settingName": "headerStatsAtBottom",
     "settingDescription": "Header top row at the bottom",

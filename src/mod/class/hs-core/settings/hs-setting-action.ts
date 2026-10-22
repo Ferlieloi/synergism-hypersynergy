@@ -209,6 +209,10 @@ export class HSSettingActions {
         removeHeaderGapAction: async (params: HSSettingActionParams) => {
             HSHeaderGap.setEnabled(params.disable !== true);
         },
+        // A class on <html> (hs-header-edit-settings.css)
+        headerHideLoadoutIconsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-no-loadout-icons', params.disable !== true);
+        },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');

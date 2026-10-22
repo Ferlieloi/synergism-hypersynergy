@@ -7,6 +7,17 @@ html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-empty 
    display: none;
 }
 
+/* "Hide loadout icons": the leading icon of the game's Corruption and Ambrosia loadouts modules, not of the loadout
+   page modules (a click outside a slot turns their page). "Icon cleanses corruptions" moves the corruption icon into
+   the cleanse button, out of these selectors: it stays. */
+html.hs-header-no-loadout-icons :is(#corruptionLoadoutsHeader, #ambrosiaLoadoutsHeader) > img {
+   display: none;
+}
+/* The levels line's grid (hs-quickbars.css) keeps a first column for the icon: the slots take the whole row */
+html.hs-header-no-loadout-icons #corruptionLoadoutsHeader.hs-corruption-levels-shown > img + .headerLoadoutSlots {
+   grid-column: 1 / -1;
+}
+
 /* The original corruption icon inside the game's existing cleanse button. */
 #mainHeader :is(#corruptionCleanseHeader, #corruptionCleansePageHeader).hs-corruption-icon-cleanse {
    display: inline-flex;

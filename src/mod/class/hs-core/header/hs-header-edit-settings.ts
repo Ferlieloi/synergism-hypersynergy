@@ -54,6 +54,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
+            { setting: 'headerHideLoadoutIcons', label: 'Hide loadout icons' },
         ],
     },
     {

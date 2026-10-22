@@ -105,6 +105,7 @@ export interface HSSettingsDefinition {
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
     removeHeaderGap: HSSettingBase<boolean>;
+    headerHideLoadoutIcons: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
