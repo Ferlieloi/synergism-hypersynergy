@@ -55,6 +55,18 @@ export class HSAmbrosiaHelper {
         return Number.isInteger(value) && value > 0 ? value : undefined;
     }
 
+    /** A loadout slot button's number (blueberryLoadout1 -> 1). */
+    static getSlotNumber(slot: HTMLElement): number | undefined {
+        const slotEnum = this.getSlotEnumBySlotId(slot.id);
+        return slotEnum ? this.getLoadoutNumberFromSlot(slotEnum) : undefined;
+    }
+
+    /** Whether the game shows its ambrosia (Exalt 1 completed), as its own ambrosia header modules check. */
+    static isAmbrosiaUnlocked(): boolean {
+        const completions = HSGlobal.exposedPlayer?.singularityChallenges?.noSingularityUpgrades?.completions;
+        return completions === undefined || completions > 0;
+    }
+
     /** Normalize a saved/loadout string to a real AMBROSIA_LOADOUT_SLOT enum value. */
     static resolveAmbrosiaLoadout(value?: string | AMBROSIA_LOADOUT_SLOT | null): AMBROSIA_LOADOUT_SLOT | undefined {
         if (value === null || value === undefined) return undefined;
