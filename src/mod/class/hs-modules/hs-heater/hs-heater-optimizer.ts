@@ -3780,28 +3780,88 @@ function findResourceVoucherOpt(
   voucherTable: Loadout[],
   stat: "obt" | "off",
 ): Loadout {
-    let best = new Loadout()
     const module = stat === "obt" ? "ambrosiaObtainium1" : "ambrosiaOffering1"
-    for (const vouchers of voucherTable) {
-      const groups = new Map<number, Loadout[]>()
+    const effectsEnabled = stats.exalt !== 6 && stats.exalt !== 8
+    // The highest Luck any affordable Luck row can bring to a left row with
+    // these vouchers, in createLuckScaledResourceEvaluator's formula. Purple
+    // Leo is counted for every Blueberry: a blueberry repair can free some.
+    const luckRows = luckTable.filter(right => right.cost <= stats.amb).map(right => {
+      const mLuck = right.getStat("mLuck")
+      return {
+        additiveLuck: right.getStat("luck") / (1 + mLuck),
+        mLuck,
+        freeLuckLevel: right.effectiveLevel("ambrosiaFreeLuckUpgrades")
+          - (stats.bonus[upgrades.ambrosiaFreeLuckUpgrades.row] ?? 0),
+        vouchers: right.getStat("vouchers"),
+      }
+    })
+    const maxLuck = (vouchers: number): number => {
+      let max = 0
+      for (const right of luckRows) {
+        const panthemaDelta = effectsEnabled && stats.exalt !== 4
+          ? 0.2 * stats.panthemaLevel
+            * (stats.shopBonusLevels.ambrosiaLuck + right.freeLuckLevel)
+            * 0.01 * stats.panthemaLevel * Math.max(0, vouchers - right.vouchers)
+          : 0
+        max = Math.max(max, (right.additiveLuck + stats.blueberries * stats.purpleLeoLevel + panthemaDelta)
+          * (1 + right.mLuck))
+      }
+      return max
+    }
+
+    // One group per voucher count and resource-module level
+    const groupLoadouts = (vouchers: Loadout, level?: number): Map<number, Loadout[]> => {
+      const byLevel = new Map<number, Loadout[]>()
       for (const resource of resourceTable) {
         const candidate = Loadout.union(resource, vouchers)
         if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
           continue
-        const level = candidate.effectiveLevel(module)
-        const group = groups.get(level) ?? []
+        const candidateLevel = candidate.effectiveLevel(module)
+        if (level !== undefined && candidateLevel !== level)
+          continue
+        const group = byLevel.get(candidateLevel) ?? []
         group.push(candidate)
-        groups.set(level, group)
+        byLevel.set(candidateLevel, group)
       }
-      for (const group of groups.values()) {
-        const frontier = trimTable(group, stat)
-        const candidate = stat === "off" && cubeExperimentConfig?.useLegacyOfferingSearch
-          ? findOpt(frontier, luckTable, stat)
-          : findLuckScaledResourceOpt(frontier, luckTable, stat)
-        const difference = candidate.getStat(stat) - best.getStat(stat)
-        if (difference > 0 || (difference === 0 && candidate.cost < best.cost))
-          best = candidate
+      return byLevel
+    }
+
+    // A group's bound is the most its search can return: each row alone, or
+    // each row with the highest Luck. Searching the groups from the highest
+    // bound down, the first bound below the best result ends the search: the
+    // full search per group is the slow part, and at a high budget nearly
+    // every group is searched. Only the bounds are kept here, the searched
+    // groups are built again: all of them at once take hundreds of MB.
+    const groups: { vouchers: Loadout; level: number; bound: number }[] = []
+    for (const vouchers of voucherTable) {
+      for (const [level, loadouts] of groupLoadouts(vouchers)) {
+        const resourceLevel = effectsEnabled ? level : 0
+        const luck = maxLuck(loadouts[0].getStat("vouchers"))
+        let bound = 0
+        for (const loadout of loadouts) {
+          const value = loadout.getStat(stat)
+          const withMaxLuck = value / (1 + 0.001 * loadout.luck * resourceLevel)
+            * (1 + 0.001 * luck * resourceLevel)
+          bound = Math.max(bound, value, withMaxLuck)
+        }
+        groups.push({ vouchers, level, bound })
       }
+    }
+    groups.sort((a, b) => b.bound - a.bound)
+
+    let best = new Loadout()
+    for (const group of groups) {
+      // A bound equal to the best can still tie it at a lower cost
+      if (group.bound < best.getStat(stat))
+        break
+      const loadouts = groupLoadouts(group.vouchers, group.level).get(group.level)!
+      const frontier = trimTable(loadouts, stat)
+      const candidate = stat === "off" && cubeExperimentConfig?.useLegacyOfferingSearch
+        ? findOpt(frontier, luckTable, stat)
+        : findLuckScaledResourceOpt(frontier, luckTable, stat)
+      const difference = candidate.getStat(stat) - best.getStat(stat)
+      if (difference > 0 || (difference === 0 && candidate.cost < best.cost))
+        best = candidate
     }
     return best
 }
