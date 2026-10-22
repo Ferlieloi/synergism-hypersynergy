@@ -68,6 +68,14 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         title: 'Corruption modules',
         toggles: [
             { setting: 'corruptionHeaderLevels', label: 'Levels line' },
+            { setting: 'corruptionHeaderIconCleanse', label: 'Icon cleanses corruptions' },
+        ],
+    },
+    {
+        title: 'Octeracts',
+        toggles: [
+            { setting: 'matchOcteractIconSize', label: 'Match octeract icon size' },
+            { setting: 'matchOcteractText', label: 'Match octeract text' },
         ],
     },
 ];

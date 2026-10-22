@@ -16,6 +16,7 @@ import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
+import { HSOcteractHeader } from "../header/hs-octeract-header";
 
 // Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
 // Does nothing if the module isn't loaded.
@@ -235,6 +236,15 @@ export class HSSettingActions {
         // The game's corruption loadout header modules, which are in the page from the start
         corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
             HSCorruption.setHeaderLevels(params.disable !== true);
+        },
+        corruptionHeaderIconCleanseAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderIconCleanse(params.disable !== true);
+        },
+        matchOcteractIconSizeAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-match-octeract-icon-size', params.disable !== true);
+        },
+        matchOcteractTextAction: async (params: HSSettingActionParams) => {
+            HSOcteractHeader.setConsistentText(params.disable !== true);
         }
     }
 

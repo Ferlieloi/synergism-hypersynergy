@@ -1439,6 +1439,51 @@
       "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
     }
   },
+  "corruptionHeaderIconCleanse": {
+    "settingName": "corruptionHeaderIconCleanse",
+    "settingDescription": "Cleanse corruptions with the header icon",
+    "settingHelpText": "Use the left icon of both corruption loadout modules as the Cleanse button, removing the separate button at the end. Turn this off to restore the original layout.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "corruptionHeaderIconCleanseAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
+    }
+  },
+  "matchOcteractIconSize": {
+    "settingName": "matchOcteractIconSize",
+    "settingDescription": "Match the octeract header icon size",
+    "settingHelpText": "Size the octeract icon like the other cube icons in the header's top row, following the module's Small, Medium or Large size.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "matchOcteractIconSizeAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-match-octeract-icon-size-btn"
+    }
+  },
+  "matchOcteractText": {
+    "settingName": "matchOcteractText",
+    "settingDescription": "Match the octeract header text",
+    "settingHelpText": "Add a white Oct or Oct/s unit label beside the octeract value, like the other cube modules. Clicking the module still switches between the amount and the rate.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "matchOcteractTextAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-match-octeract-text-btn"
+    }
+  },
   "centerQuickbars": {
     "settingName": "centerQuickbars",
     "settingDescription": "Center quick bars",

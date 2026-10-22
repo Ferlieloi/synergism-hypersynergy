@@ -22,6 +22,7 @@ import { HSUtils } from "../hs-utils/hs-utils";
 import { HSGameDataAPI } from "../hs-core/gds/hs-gamedata-api";
 import { HSAmbrosiaHelper } from "./hs-ambrosiaHelper";
 import minibarCSS from "inline:../../resource/css/module/hs-ambrosia-minibars.css";
+import { HSMinibarResize } from "../hs-core/header/hs-minibar-resize";
 import { HSGameDialogs } from "../hs-core/dialogs/hs-game-dialogs";
 import { HSHeaderModules } from "../hs-core/header/hs-header-modules";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
@@ -606,6 +607,7 @@ export class HSAmbrosia extends HSModule
         minibarWrapper.appendChild(purpleBar);
 
         this.#minibarWrapper = minibarWrapper;
+        HSMinibarResize.install(minibarWrapper);
         this.#blueProgressMinibarElement = blueBarProgress;
         this.#redProgressMinibarBarElement = redBar;
         this.#redProgressMinibarElement = redBarProgress;

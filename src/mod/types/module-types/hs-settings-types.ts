@@ -98,6 +98,9 @@ export interface HSSettingsDefinition {
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
+    corruptionHeaderIconCleanse: HSSettingBase<boolean>;
+    matchOcteractIconSize: HSSettingBase<boolean>;
+    matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
 
