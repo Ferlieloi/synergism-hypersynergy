@@ -16,6 +16,10 @@ import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
+import { HSOcteractHeader } from "../header/hs-octeract-header";
+import { HSHeaderGap } from "../header/hs-header-gap";
+import { HSHeaderEditSettings } from "../header/hs-header-edit-settings";
+import { HSHeaderChallengeProgress } from "../header/hs-header-challenge-progress";
 
 // Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
 // Does nothing if the module isn't loaded.
@@ -130,6 +134,14 @@ export class HSSettingActions {
             HSSettingsUI.applyHiddenVanillaTabsSetting();
         },
 
+        editGameHeaderAction: async () => {
+            await HSHeaderEditSettings.openEditor();
+        },
+
+        compactChallengeTextAction: async (params: HSSettingActionParams) => {
+            HSHeaderChallengeProgress.setEnabled(params.disable !== true);
+        },
+
         // Not awaited: the GDS start and stop run on their own
         useGameData: moduleToggle<HSGameData>('HSGameData',
             (mod) => { void mod.enableGDS(); },
@@ -194,6 +206,9 @@ export class HSSettingActions {
         headerStatsAtBottomAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-header-stats-bottom', params.disable !== true);
         },
+        removeHeaderGapAction: async (params: HSSettingActionParams) => {
+            HSHeaderGap.setEnabled(params.disable !== true);
+        },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');
@@ -235,6 +250,15 @@ export class HSSettingActions {
         // The game's corruption loadout header modules, which are in the page from the start
         corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
             HSCorruption.setHeaderLevels(params.disable !== true);
+        },
+        corruptionHeaderIconCleanseAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderIconCleanse(params.disable !== true);
+        },
+        matchOcteractIconSizeAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-match-octeract-icon-size', params.disable !== true);
+        },
+        matchOcteractTextAction: async (params: HSSettingActionParams) => {
+            HSOcteractHeader.setConsistentText(params.disable !== true);
         }
     }
 

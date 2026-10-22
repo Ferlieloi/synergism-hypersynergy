@@ -3,6 +3,7 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
+import { HSHeaderCellSettings } from "./hs-header-cell-settings";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'corruption' | 'ambrosia';
@@ -44,7 +45,7 @@ const SLOT_COUNTS: Record<HSSlotCountKind, HSSlotCountDef> = {
 
 // The mod's modules are header modules only with the patcher's header modules patch; without it, they are in the
 // mod's own row (#quickbarsRow), which "Center quick bars" moves
-const hasHeaderModules = () => !!(window as any).__HS_HEADER_MODULES_PATCHED;
+const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
 
 // In the block's order, before the visible slots
 const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
@@ -52,6 +53,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         title: 'Layout',
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
+            { setting: 'removeHeaderGap', label: 'Remove header gap' },
         ],
     },
     {
@@ -64,9 +66,23 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         ],
     },
     {
+        title: 'Challenge progress',
+        toggles: [
+            { setting: 'compactChallengeText', label: 'Compact challenge text' },
+        ],
+    },
+    {
         title: 'Corruption modules',
         toggles: [
             { setting: 'corruptionHeaderLevels', label: 'Levels line' },
+            { setting: 'corruptionHeaderIconCleanse', label: 'Icon cleanses corruptions' },
+        ],
+    },
+    {
+        title: 'Octeracts',
+        toggles: [
+            { setting: 'matchOcteractIconSize', label: 'Match octeract icon size' },
+            { setting: 'matchOcteractText', label: 'Match octeract text' },
         ],
     },
 ];
@@ -102,10 +118,42 @@ export class HSHeaderEditSettings {
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
     static #hideRuleInjected = false;
+    static #openingEditor = false;
+
+    /** Use the game's own long-press handler on the region, without starting a module drag. */
+    static async openEditor(): Promise<void> {
+        const header = document.getElementById('mainHeader');
+        const region = document.getElementById('headerGrid');
+        if (!header || !region || HSHeaderEditSettings.#openingEditor) return;
+        if (HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
+        if (!header.classList.contains('headerEditMode')) {
+            HSHeaderEditSettings.#openingEditor = true;
+            // Target the region itself: a module target would also begin pointer capture and dragging.
+            region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            try {
+                await new Promise(resolve => window.setTimeout(resolve, 750));
+            } finally {
+                region.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: -1 }));
+                HSHeaderEditSettings.#openingEditor = false;
+            }
+        }
+        if (header.classList.contains('headerEditMode')) {
+            header.scrollIntoView({ block: 'start' });
+            document.getElementById('headerEditDone')?.focus({ preventScroll: true });
+        }
+    }
 
     /** Hides the slots above the counts, and adds the block next to the game's header tray. */
     static install(): void {
+        HSHeaderCellSettings.install();
         if (document.getElementById(BLOCK_ID)) return;
+
+        // Vanilla Done only exits the editor. Its handler runs first and finishes the layout redraw;
+        // then save the live layout through the game's normal save path, without waiting for autosave.
+        document.getElementById('headerEditDone')?.addEventListener('click', () => {
+            HSSettings.flushSettingsToStorage();
+            document.getElementById('savegame')?.click();
+        });
 
         HSUI.injectStyle(headerEditSettingsCSS, 'hs-header-edit-settings-css');
         HSHeaderEditSettings.#writeHideRule();

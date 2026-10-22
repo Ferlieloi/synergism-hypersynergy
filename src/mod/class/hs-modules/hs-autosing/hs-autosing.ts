@@ -173,9 +173,9 @@ export class HSAutosing extends HSModule {
     };
 
     // Game References
-    #stageFunc?: (arg0: number) => any;
-    #getMaxChallengesFunc?: (i: number) => number;
-    #applyCorruptionsFunc?: (json: string) => boolean;
+    #stageFunc?: ((mode: number) => string) | null;
+    #getMaxChallengesFunc?: ((challenge: number) => number) | null;
+    #applyCorruptionsFunc?: ((json: string) => boolean) | null;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -456,8 +456,8 @@ export class HSAutosing extends HSModule {
 
     async #cacheExposedFunctions(): Promise<void> {
         this.#exposedPlayer = HSGlobal.exposedPlayer ?? null;
-        this.#stageFunc = (window as any).__HS_synergismStage ?? null;
-        this.#getMaxChallengesFunc = (window as any).__HS_getMaxChallenges ?? null;
+        this.#stageFunc = window.__HS_synergismStage ?? null;
+        this.#getMaxChallengesFunc = window.__HS_getMaxChallenges ?? null;
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
 
         // Autosing's dialogs are answered by the dialog hook (HSGameDialogs), or by an older patcher's
@@ -468,13 +468,13 @@ export class HSAutosing extends HSModule {
         await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
 
         // Read again, __HS_applyCorruptions should now be set on window.
-        this.#applyCorruptionsFunc = (window as any).__HS_applyCorruptions ?? null;
+        this.#applyCorruptionsFunc = window.__HS_applyCorruptions ?? null;
         this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
 
         this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && areDialogsAnswered && isAfterTackHooked && this.#applyCorruptionsFunc);
 
         // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
-        const isExportOutputPatched = !!(window as any).__HS_EXPORT_OUTPUT_PATCHED;
+        const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
         const exposureMsg = `Exposure status: ${this.#isExposureReady}
             (stageFunc: ${!!this.#stageFunc},
             exposedPlayer: ${!!this.#exposedPlayer},
@@ -1729,14 +1729,14 @@ export class HSAutosing extends HSModule {
 
         // Export to gather a few quarks
         await this.#setAmbrosiaLoadout(this.#ambrosia_quark);
-        const exportSynergism = (window as any).__HS_exportSynergism;
-        if (typeof exportSynergism === 'function' && (window as any).__HS_EXPORT_OUTPUT_PATCHED) {
-            (window as any).__HS_SUPPRESS_EXPORT_ONCE = true;
+        const exportSynergism = window.__HS_exportSynergism;
+        if (typeof exportSynergism === 'function' && window.__HS_EXPORT_OUTPUT_PATCHED) {
+            window.__HS_SUPPRESS_EXPORT_ONCE = true;
             try {
                 await exportSynergism();
             } finally {
                 // Clear a stale guard if exportSynergism returned before reaching exportData.
-                (window as any).__HS_SUPPRESS_EXPORT_ONCE = false;
+                window.__HS_SUPPRESS_EXPORT_ONCE = false;
             }
         } else {
             HSLogger.warn('Quark-only export unavailable: the game export-output hook was not patched.', this.context);

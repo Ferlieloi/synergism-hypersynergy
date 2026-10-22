@@ -10,6 +10,7 @@ import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
 import { HSAmbrosiaHelper } from "./hs-ambrosia-helper";
 import type { HSAmbrosiaGameDataLink } from "./hs-ambrosia-parts";
 import minibarCSS from "inline:../../../resource/css/module/hs-ambrosia-minibars.css";
+import { HSMinibarResize } from "../../hs-core/header/hs-minibar-resize";
 
 /** What the minibars read, from the live player or a GDS save: fields GameData doesn't declare added. */
 type HSMinibarsPlayer = GameData & {
@@ -166,6 +167,7 @@ export class HSAmbrosiaMinibars {
         minibarWrapper.appendChild(purpleBar);
 
         this.#minibarWrapper = minibarWrapper;
+        HSMinibarResize.install(minibarWrapper);
         this.#blueProgressMinibarElement = blueBarProgress;
         this.#redProgressMinibarBarElement = redBar;
         this.#redProgressMinibarElement = redBarProgress;

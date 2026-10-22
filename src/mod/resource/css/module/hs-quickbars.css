@@ -115,6 +115,11 @@
    letter-spacing: 0.03em;
    line-height: 1.2;
 }
+/* Size the module from its controls. Changing level strings must keep centered slots in the same columns. */
+#headerGrid .hs-corruption-header-levels {
+   contain: inline-size;
+   min-width: 0;
+}
 :is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader)[data-size="L"] .hs-corruption-header-levels {
    font-size: 0.75em;
 }

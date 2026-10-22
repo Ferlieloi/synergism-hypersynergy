@@ -27,7 +27,7 @@ export class HSHeaderKeepOnImport {
     static #pending?: unknown;
 
     static #isAvailable(): boolean {
-        const w = window as any;
+        const w = window;
         return !!w.__HS_SAVE_IMPORT_HOOK_PATCHED && typeof w.__HS_parseSave === 'function'
             && typeof w.__HS_stripHeaderModules === 'function';
     }
@@ -65,8 +65,8 @@ export class HSHeaderKeepOnImport {
         HSHeaderKeepOnImport.#checkbox = checkbox;
 
         // loadSynergy reads window.__HS_parseSave at each load: the save it parses gets the kept layouts
-        const w = window as any;
-        const parseSave = w.__HS_parseSave as (text: string) => any;
+        const w = window;
+        const parseSave = w.__HS_parseSave!; // Checked by #isAvailable() before installing.
         w.__HS_parseSave = (text: string) => {
             const data = parseSave(text);
             const pending = HSHeaderKeepOnImport.#pending;
@@ -89,7 +89,7 @@ export class HSHeaderKeepOnImport {
         try {
             const player = HSGlobal.exposedPlayer as { headerLayouts?: unknown } | null;
             if (!player?.headerLayouts || typeof player.headerLayouts !== 'object') return;
-            const stripped = (window as any).__HS_stripHeaderModules({ headerLayouts: player.headerLayouts });
+            const stripped = window.__HS_stripHeaderModules!({ headerLayouts: player.headerLayouts });
             HSHeaderKeepOnImport.#pending = structuredClone(stripped.headerLayouts);
         } catch (e) {
             HSLogger.warn(`Could not keep the header layout for this save load: ${e}`, HSHeaderKeepOnImport.#context);

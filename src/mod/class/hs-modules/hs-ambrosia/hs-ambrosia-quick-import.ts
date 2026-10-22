@@ -243,7 +243,7 @@ export class HSAmbrosiaQuickImport {
         }
         if (!tree || typeof tree !== 'object' || Array.isArray(tree)) return { success: false, reason: 'Not a loadout (invalid JSON)' };
 
-        const validate = (window as any).__HS_validateBlueberryTree;
+        const validate = window.__HS_validateBlueberryTree;
         if (typeof validate === 'function') {
             if (!validate(tree)) {
                 return { success: false, reason: 'Rejected by the game: locked upgrade, missing prerequisite, or not enough ambrosia or blueberries' };

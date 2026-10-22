@@ -40,6 +40,8 @@ export interface HSSettingsDefinition {
     hideGameDialogs: HideGameDialogsSetting;
     hideGameDialogsNotify: HideGameDialogsNotifySetting;
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
+    editGameHeader: HSSettingBase<string>;
+    compactChallengeText: HSSettingBase<boolean>;
     autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
     reloadOnLateLoaderStart: ReloadOnLateLoaderStartSetting;
     rememberSubtabs: RememberSubtabsSetting;
@@ -97,8 +99,12 @@ export interface HSSettingsDefinition {
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
+    corruptionHeaderIconCleanse: HSSettingBase<boolean>;
+    matchOcteractIconSize: HSSettingBase<boolean>;
+    matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
+    removeHeaderGap: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;

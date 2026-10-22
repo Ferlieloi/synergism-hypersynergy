@@ -290,22 +290,26 @@ export class HSSettings extends HSModule {
             clearTimeout(this.#saveTimeout);
         }
 
-        this.#saveTimeout = setTimeout(() => {
-            const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
+        this.#saveTimeout = setTimeout(() => this.flushSettingsToStorage(), 250);
+    }
 
-            if (storageMod) {
-                const serializedSettings = this.#serializeSettings();
+    /** Persist a pending settings change before an action that may be followed by a reload. */
+    static flushSettingsToStorage(): void {
+        if (this.#saveTimeout === undefined) return;
+        clearTimeout(this.#saveTimeout);
+        this.#saveTimeout = undefined;
+        const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
 
-                const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
+        if (storageMod) {
+            const serializedSettings = this.#serializeSettings();
+            const saved = storageMod.setData(HSGlobal.HSSettings.storageKey, serializedSettings);
 
-                if (!saved) {
-                    HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
-                } else {
-                    HSLogger.debug(() => `<green>Settings saved to localStorage</green>`, this.#staticContext);
-                }
+            if (!saved) {
+                HSLogger.warn(`Could not save settings to localStorage`, this.#staticContext);
+            } else {
+                HSLogger.debug(() => `<green>Settings saved to localStorage</green>`, this.#staticContext);
             }
-            this.#saveTimeout = undefined;
-        }, 250);
+        }
     }
 
     static #serializeSettings(): string {

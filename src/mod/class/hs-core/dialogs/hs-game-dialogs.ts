@@ -134,9 +134,9 @@ export class HSGameDialogs {
         if (HSGameDialogs.#initialized) return;
         HSGameDialogs.#initialized = true;
 
-        HSGameDialogs.#hookPatched = !!(window as any).__HS_DIALOG_HOOK_PATCHED;
-        (window as any).__HS_dialogOrigin = (kind: HSDialogKind, firstArg?: unknown) => HSGameDialogs.#getOrigin(kind, firstArg);
-        (window as any).__HS_onDialog = (kind: HSDialogKind, origin: unknown) => HSGameDialogs.#onDialog(kind, origin);
+        HSGameDialogs.#hookPatched = !!window.__HS_DIALOG_HOOK_PATCHED;
+        window.__HS_dialogOrigin = (kind: HSDialogKind, firstArg?: unknown) => HSGameDialogs.#getOrigin(kind, firstArg);
+        window.__HS_onDialog = (kind: HSDialogKind, origin: unknown) => HSGameDialogs.#onDialog(kind, origin);
 
         HSGameDialogs.#box = document.getElementById('confirmationBox');
         if (HSGameDialogs.#box) {
@@ -167,7 +167,7 @@ export class HSGameDialogs {
      */
     static setAutosingActive(active: boolean): void {
         HSGameDialogs.#autosingActive = active;
-        const answersByDom = active && !HSGameDialogs.#hookPatched && !(window as any).__HS_AUTO_CONFIRM_PATCHED;
+        const answersByDom = active && !HSGameDialogs.#hookPatched && !window.__HS_AUTO_CONFIRM_PATCHED;
         HSGameDialogs.#autosingAnswersByDom = answersByDom;
         if (answersByDom) HSGameDialogs.#startWatcher();
         else HSGameDialogs.#stopWatcher();

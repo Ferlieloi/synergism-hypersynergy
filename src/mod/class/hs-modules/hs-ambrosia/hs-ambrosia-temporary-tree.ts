@@ -80,7 +80,7 @@ export class HSAmbrosiaTemporaryTree {
      */
     prepareSingReducerSwap(options: HSSingReducerSwapOptions): HSSingReducerPlan {
         const player = HSGlobal.exposedPlayer;
-        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        const gameValidate = window.__HS_validateBlueberryTree;
         if (!player || typeof gameValidate !== 'function') {
             return { note: 'Singularity reducers not used: the game\'s patch is too old (patch the game again).' };
         }
@@ -298,7 +298,7 @@ export class HSAmbrosiaTemporaryTree {
         }
 
         // The tree is only written into a slot when the game's check (patcher) accepts it: else the slot is loaded back
-        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        const gameValidate = window.__HS_validateBlueberryTree;
         let treeToRestore: HSAmbrosiaTree | undefined;
         if (liveTree && typeof gameValidate === 'function') {
             try { if (gameValidate(liveTree) === true) treeToRestore = liveTree; } catch { treeToRestore = undefined; }

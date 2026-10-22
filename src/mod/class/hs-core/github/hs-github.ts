@@ -24,7 +24,7 @@ export class HSGithub {
     static #announcedLiveTag: string | null = null;
 
     // Set by the browser loaders and by the Steam injector (loader 0.2.9 and later)
-    static readonly owner: string | null = (typeof (window as any).__HS_REPO === 'string' && (window as any).__HS_REPO) ? (window as any).__HS_REPO : null;
+    static readonly owner: string | null = (typeof window.__HS_REPO === 'string' && window.__HS_REPO) ? window.__HS_REPO : null;
     static readonly currentTag: string = `v${HSGlobal.General.currentModVersion}`;
 
     // The latest Live release, as last read for a Dev channel player (null for a Live player)

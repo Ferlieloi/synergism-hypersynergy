@@ -152,6 +152,30 @@
       "controlEnabledId": "hs-setting-hide-game-dialogs-notify-btn"
     }
   },
+  "compactChallengeText": {
+    "settingName": "compactChallengeText",
+    "settingDescription": "Compact challenge progress text",
+    "settingHelpText": "Show current/required amounts or Challenge 15 scores without the challenge name, at any cell height. Hover for the full description. Inactive modules keep the game's challenge-name preview in the editor.",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true,
+    "settingAction": "compactChallengeTextAction"
+  },
+  "editGameHeader": {
+    "settingName": "editGameHeader",
+    "settingDescription": "Edit game header",
+    "settingHelpText": "Open the game's header editor to move and resize modules, with HS alignment and half-height controls. You can also open it by holding down on the header. Click Done in the header when finished.",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "editGameHeaderAction",
+    "settingControl": {
+      "controlId": "hs-setting-edit-game-header-button",
+      "controlType": "button",
+      "controlGroup": "ui",
+      "controlPage": "ui"
+    }
+  },
   "hiddenVanillaTabs": {
     "settingName": "hiddenVanillaTabs",
     "settingDescription": "Hide vanilla tabs",
@@ -1426,6 +1450,51 @@
       "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
     }
   },
+  "corruptionHeaderIconCleanse": {
+    "settingName": "corruptionHeaderIconCleanse",
+    "settingDescription": "Cleanse corruptions with the header icon",
+    "settingHelpText": "Use the left icon of both corruption loadout modules as the Cleanse button, removing the separate button at the end. Turn this off to restore the original layout.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "corruptionHeaderIconCleanseAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
+    }
+  },
+  "matchOcteractIconSize": {
+    "settingName": "matchOcteractIconSize",
+    "settingDescription": "Match the octeract header icon size",
+    "settingHelpText": "Size the octeract icon like the other cube icons in the header's top row, following the module's Small, Medium or Large size.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "matchOcteractIconSizeAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-match-octeract-icon-size-btn"
+    }
+  },
+  "matchOcteractText": {
+    "settingName": "matchOcteractText",
+    "settingDescription": "Match the octeract header text",
+    "settingHelpText": "Add a white Oct or Oct/s unit label beside the octeract value, like the other cube modules. Clicking the module still switches between the amount and the rate.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "matchOcteractTextAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-match-octeract-text-btn"
+    }
+  },
   "centerQuickbars": {
     "settingName": "centerQuickbars",
     "settingDescription": "Center quick bars",
@@ -1439,6 +1508,21 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-center-quickbars-btn"
+    }
+  },
+  "removeHeaderGap": {
+    "settingName": "removeHeaderGap",
+    "settingDescription": "Remove the gap below the header",
+    "settingHelpText": "Bring the game's main tabs up to the header by collapsing unused trailing space and margins. Keeps the corruption levels visible and restores the full grid while editing.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "removeHeaderGapAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-remove-header-gap-btn"
     }
   },
   "headerStatsAtBottom": {

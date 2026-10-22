@@ -286,8 +286,8 @@ export class HSBackup {
     }
 
     static #collectInfo(save: string | null): HSBackupInfo {
-        const w = window as any;
-        const has = (name: string) => w[name] !== undefined && w[name] !== null && w[name] !== false;
+        const w = window;
+        const has = (name: keyof Window) => w[name] !== undefined && w[name] !== null && w[name] !== false;
         const summary = save ? HSBackup.#readSave(save) : null;
 
         const info: HSBackupInfo = {

@@ -3,6 +3,7 @@ import type {
   HeaterOptimizerInput,
   HeaterRedAmbUpgradeEffects,
 } from '../../../types/data-types/hs-heater-types'
+import type { HeaterWorkerRequest, HeaterWorkerResponse, SerializedHeaterOptimizerInput } from '../../../types/data-types/hs-heater-worker-types'
 import type { HeaterBranchId } from './hs-heater-result-config'
 import { HSHeaterOptimizer, takeHeaterOptimizerLogs } from './hs-heater-optimizer'
 import type { HeaterOptimizerLog } from './hs-heater-optimizer'
@@ -12,21 +13,6 @@ import { escapeLogText } from './hs-heater-utils'
 declare const HS_HEATER_WORKER_SOURCE: string
 
 const LOG_CONTEXT = 'HSHeater'
-
-type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[] }
-  | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }
-
-type SerializedHeaterOptimizerInput = Omit<
-  HeaterOptimizerInput,
-  'runeSiExp' | 'runeIaExp' | 'runeIaBonusLevelsTotal' | 'runeIaBonusLevelsTalisman' | 'baseTalismanPower'
-> & {
-  runeSiExp: string
-  runeIaExp: string
-  runeIaBonusLevelsTotal: string
-  runeIaBonusLevelsTalisman: string
-  baseTalismanPower: string
-}
 
 const BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
   // Groups run sequentially in disposable workers. Cube/SR reuse their
@@ -166,7 +152,8 @@ function runWorker(sourceUrl: string, id: number, input: HeaterOptimizerInput): 
       cleanup()
       reject(new Error(event.message || 'Heater worker failed'))
     }
-    worker.postMessage({ id, input: serializeInput(input) })
+    const request: HeaterWorkerRequest = { id, input: serializeInput(input) }
+    worker.postMessage(request)
   })
 }
 

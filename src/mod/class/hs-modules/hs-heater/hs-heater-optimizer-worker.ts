@@ -1,27 +1,7 @@
-import type { HeaterOptimizationResult, HeaterOptimizerInput } from '../../../types/data-types/hs-heater-types'
+import type { HeaterOptimizerInput } from '../../../types/data-types/hs-heater-types'
 import Decimal from 'break_infinity.js'
 import { HSHeaterOptimizer, takeHeaterOptimizerLogs } from './hs-heater-optimizer'
-import type { HeaterOptimizerLog } from './hs-heater-optimizer'
-
-type SerializedHeaterOptimizerInput = Omit<
-  HeaterOptimizerInput,
-  'runeSiExp' | 'runeIaExp' | 'runeIaBonusLevelsTotal' | 'runeIaBonusLevelsTalisman' | 'baseTalismanPower'
-> & {
-  runeSiExp: string
-  runeIaExp: string
-  runeIaBonusLevelsTotal: string
-  runeIaBonusLevelsTalisman: string
-  baseTalismanPower: string
-}
-
-type HeaterWorkerRequest = {
-  id: number
-  input: SerializedHeaterOptimizerInput
-}
-
-type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[] }
-  | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }
+import type { HeaterWorkerRequest, HeaterWorkerResponse } from '../../../types/data-types/hs-heater-worker-types'
 
 const workerScope = self as unknown as {
   onmessage: ((event: MessageEvent<HeaterWorkerRequest>) => void) | null

@@ -18,6 +18,6 @@ export class HSPlatform {
         const gameData = HSModuleManager.getModule<HSGameData>('HSGameData');
         if (!gameData) return null;
         if (gameData.isSteam) return 'steam';
-        return (window as any).HS_LOADER_INITIALIZED ? 'userscript' : 'bookmarklet';
+        return window.HS_LOADER_INITIALIZED ? 'userscript' : 'bookmarklet';
     }
 }
