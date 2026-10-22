@@ -16,7 +16,7 @@ export interface HSCorruptionLevels {
  * Class: HSCorruption
  * IsExplicitHSModule: No
  * Description: The mod's addition to the game's corruption header modules ("Corruption loadouts" and its loadout
- *     page module): the corruption levels under their slots, and an optional cleanse action on their leading icon.
+ *     page module): the corruption levels under their slots, and optionally the game's cleanse button in place of their leading icon.
  *     Autosing has its own corruption import (HSAutosingCorruption).
  */
 export class HSCorruption {
@@ -37,43 +37,34 @@ export class HSCorruption {
     ];
 
     static #levelsDisplay: { lines: { module: HTMLElement; element: HTMLElement; current: HTMLElement; next: HTMLElement }[]; observer: MutationObserver } | null = null;
-    static #cleanseIcons = new Map<string, {
-        button: HTMLButtonElement; icon: HTMLImageElement; contents: Node[]; place: Comment;
-        title: string | null; label: string | null;
-    }>();
+    static #cleanseButtons = new Map<string, { button: HTMLButtonElement; icon: HTMLImageElement; place: Comment }>();
 
-    /** Move the native cleanse button to the leading icon, retaining the game's click and keyboard behavior. */
+    /**
+     * Move the game's cleanse button (a slot, with its own icon, click and keyboard behavior) from the end of the slots
+     * to the place of the module's leading icon, which is hidden meanwhile. Put right after the icon, so a module's
+     * children stay icon, then slots for the CSS that follows them (hs-header-edit-settings.css).
+     */
     static setHeaderIconCleanse(enabled: boolean): void {
         if (!enabled) {
-            for (const state of HSCorruption.#cleanseIcons.values()) {
-                state.button.before(state.icon);
-                state.button.replaceChildren(...state.contents);
-                state.place.replaceWith(state.button);
-                state.button.classList.remove('hs-corruption-icon-cleanse');
-                for (const [name, value] of [['title', state.title], ['aria-label', state.label]] as const) {
-                    if (value === null) state.button.removeAttribute(name);
-                    else state.button.setAttribute(name, value);
-                }
+            for (const { button, icon, place } of HSCorruption.#cleanseButtons.values()) {
+                place.replaceWith(button);
+                button.classList.remove('hs-corruption-icon-cleanse');
+                icon.style.display = '';
             }
-            HSCorruption.#cleanseIcons.clear();
+            HSCorruption.#cleanseButtons.clear();
             return;
         }
         for (const [index, id] of HSCorruption.#HEADER_MODULE_IDS.entries()) {
-            if (HSCorruption.#cleanseIcons.has(id)) continue;
-            const module = document.getElementById(id);
-            const icon = module?.querySelector<HTMLImageElement>(':scope > img');
+            if (HSCorruption.#cleanseButtons.has(id)) continue;
+            const icon = document.getElementById(id)?.querySelector<HTMLImageElement>(':scope > img');
             const button = document.getElementById(index === 0 ? 'corruptionCleanseHeader' : 'corruptionCleansePageHeader');
             if (!icon || !(button instanceof HTMLButtonElement)) continue;
             const place = document.createComment('HS cleanse button position');
-            const state = { button, icon, contents: Array.from(button.childNodes), place,
-                title: button.getAttribute('title'), label: button.getAttribute('aria-label') };
             button.before(place);
-            button.replaceChildren(icon);
-            module!.prepend(button);
+            icon.after(button);
             button.classList.add('hs-corruption-icon-cleanse');
-            button.title = 'Cleanse corruptions';
-            button.setAttribute('aria-label', 'Cleanse corruptions');
-            HSCorruption.#cleanseIcons.set(id, state);
+            icon.style.display = 'none';
+            HSCorruption.#cleanseButtons.set(id, { button, icon, place });
         }
     }
 

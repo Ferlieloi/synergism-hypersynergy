@@ -1453,7 +1453,7 @@
   "corruptionHeaderIconCleanse": {
     "settingName": "corruptionHeaderIconCleanse",
     "settingDescription": "Cleanse corruptions with the header icon",
-    "settingHelpText": "Use the left icon of both corruption loadout modules as the Cleanse button, removing the separate button at the end. Turn this off to restore the original layout.",
+    "settingHelpText": "Puts the Cleanse button in place of the icon on the left of both corruption loadout modules.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": false,
@@ -1528,7 +1528,7 @@
   "headerHideLoadoutIcons": {
     "settingName": "headerHideLoadoutIcons",
     "settingDescription": "Hide the header's loadout icons",
-    "settingHelpText": "Hides the icon on the left of the Corruption and Ambrosia loadouts modules. The corruption icon stays while it cleanses corruptions.",
+    "settingHelpText": "Hides the icon on the left of the Corruption and Ambrosia loadouts modules.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": false,

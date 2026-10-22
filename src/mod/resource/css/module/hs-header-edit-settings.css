@@ -8,8 +8,9 @@ html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-empty 
 }
 
 /* "Hide loadout icons": the leading icon of the game's Corruption and Ambrosia loadouts modules, not of the loadout
-   page modules (a click outside a slot turns their page). "Icon cleanses corruptions" moves the corruption icon into
-   the cleanse button, out of these selectors: it stays. */
+   page modules (a click outside a slot turns their page). With "Icon cleanses corruptions", the cleanse button takes
+   the corruption icon's place (HSCorruption) and stays; it then sits between the icon and the slots, so the grid
+   rule below doesn't apply. */
 html.hs-header-no-loadout-icons :is(#corruptionLoadoutsHeader, #ambrosiaLoadoutsHeader) > img {
    display: none;
 }
@@ -18,36 +19,12 @@ html.hs-header-no-loadout-icons #corruptionLoadoutsHeader.hs-corruption-levels-s
    grid-column: 1 / -1;
 }
 
-/* The original corruption icon inside the game's existing cleanse button. */
-#mainHeader :is(#corruptionCleanseHeader, #corruptionCleansePageHeader).hs-corruption-icon-cleanse {
-   display: inline-flex;
-   align-items: center;
-   align-self: center;
+/* "Icon cleanses corruptions": the game's cleanse button, moved in place of the module's icon (HSCorruption), as
+   far from the first slot as the slots are from each other */
+#mainHeader .hs-corruption-icon-cleanse {
    flex-shrink: 0;
-   min-width: 0;
-   min-height: 0;
-   width: auto;
-   height: auto;
-   padding: 0;
-   margin: 0;
-   border: 0;
-   background: transparent;
-   font: inherit;
-   cursor: pointer;
+   margin-right: 1px;
 }
-#mainHeader .hs-corruption-icon-cleanse > img {
-   position: static;
-   inset: auto;
-   width: var(--hs-cleanse-icon-size, 20px);
-   height: var(--hs-cleanse-icon-size, 20px);
-   margin: auto 4px auto 0;
-}
-.headerModule[data-size="S"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 12px; }
-.headerModule:is([data-size="L"], [data-size="XL"]) .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 28px; }
-#headerGrid .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 32px; }
-#headerGrid .hs-corruption-icon-cleanse > img { margin-right: 6px; }
-#headerGrid [data-size="S"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 16px; }
-#headerGrid [data-size="L"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 48px; }
 
 /* The currency icon uses 32px by default; the cube icons in the top row use 20px. */
 html.hs-match-octeract-icon-size #ascensionStats #octeractHeader > img {
