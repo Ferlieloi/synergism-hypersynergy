@@ -1632,7 +1632,7 @@ export class HSAmbrosia extends HSModule
         }
         if (!tree || typeof tree !== 'object' || Array.isArray(tree)) return { success: false, reason: 'Not a loadout (invalid JSON)' };
 
-        const validate = (window as any).__HS_validateBlueberryTree;
+        const validate = window.__HS_validateBlueberryTree;
         if (typeof validate === 'function') {
             if (!validate(tree)) {
                 return { success: false, reason: 'Rejected by the game: locked upgrade, missing prerequisite, or not enough ambrosia or blueberries' };
@@ -1671,7 +1671,7 @@ export class HSAmbrosia extends HSModule
      */
     prepareSingReducerSwap(options: HSSingReducerSwapOptions): HSSingReducerPlan {
         const player = HSGlobal.exposedPlayer;
-        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        const gameValidate = window.__HS_validateBlueberryTree;
         if (!player || typeof gameValidate !== 'function') {
             return { note: 'Singularity reducers not used: the game\'s patch is too old (patch the game again).' };
         }
@@ -1889,7 +1889,7 @@ export class HSAmbrosia extends HSModule
         }
 
         // The tree is only written into a slot when the game's check (patcher) accepts it: else the slot is loaded back
-        const gameValidate = (window as any).__HS_validateBlueberryTree;
+        const gameValidate = window.__HS_validateBlueberryTree;
         let treeToRestore: HSAmbrosiaTree | undefined;
         if (liveTree && typeof gameValidate === 'function') {
             try { if (gameValidate(liveTree) === true) treeToRestore = liveTree; } catch { treeToRestore = undefined; }

@@ -121,7 +121,7 @@ export class Hypersynergism {
      * window.__HS_PATCH_REPORT. Undefined without a patched bundle (bookmarklet) or with a patcher older than it.
      */
     #getPatchReport(): Record<string, boolean> | undefined {
-        return (window as any).__HS_PATCH_REPORT;
+        return window.__HS_PATCH_REPORT;
     }
 
     /**
@@ -136,7 +136,7 @@ export class Hypersynergism {
         const report = this.#getPatchReport();
         if (!report) return;
         const missing = Object.keys(report).filter(name => !report[name]);
-        const ambiguous: string[] = Array.isArray((window as any).__HS_PATCH_AMBIGUOUS) ? (window as any).__HS_PATCH_AMBIGUOUS : [];
+        const ambiguous: string[] = Array.isArray(window.__HS_PATCH_AMBIGUOUS) ? window.__HS_PATCH_AMBIGUOUS : [];
         if (missing.length === 0 && ambiguous.length === 0) return;
 
         if (missing.length) {
@@ -200,7 +200,7 @@ export class Hypersynergism {
      * instead of requiring a new exe launcher. Skipped when the loader already did it (browser).
      */
     async #ensurePatcherExposure(autoDismissPopup: boolean): Promise<void> {
-        const w = window as any;
+        const w = window;
         // Without the patched bundle (bookmarklet loader), navigating can't expose anything
         if (!HSGlobal.exposedPlayer) return;
 

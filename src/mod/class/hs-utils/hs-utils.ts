@@ -26,11 +26,11 @@ export class HSUtils {
 
     /** The patcher honours __HS_AUTO_CONFIRM (Confirm and Alert). Set before the mod loads, by any patcher version. */
     static isAutoConfirmPatched(): boolean {
-        return !!(window as any).__HS_AUTO_CONFIRM_PATCHED;
+        return !!window.__HS_AUTO_CONFIRM_PATCHED;
     }
 
     static setAutoConfirm(value: boolean): void {
-        (window as any).__HS_AUTO_CONFIRM = value;
+        window.__HS_AUTO_CONFIRM = value;
     }
 
     // Reusable MessageChannel for sub-millisecond event-loop yielding.
@@ -53,7 +53,7 @@ export class HSUtils {
         });
 
     static cacheAfterTackHook(): boolean {
-        HSUtils.#_onAfterTack = (window as any).__HS_onAfterTack ?? null;
+        HSUtils.#_onAfterTack = window.__HS_onAfterTack ?? null;
         return HSUtils.#_onAfterTack !== null;
     }
 
@@ -276,7 +276,7 @@ export class HSUtils {
      * Optional `vars` fill the {{placeholders}}, like i18next.t(key, vars).
      */
     static async getGameTranslation(key: string, vars?: Record<string, string | number>): Promise<string | undefined> {
-        const i18n = (window as any).__HS_i18next;
+        const i18n = window.__HS_i18next;
         if (typeof i18n?.t === 'function') {
             // i18next returns the key itself when it has no text for it. Its files are the ones a fetch would get, so no fetch then
             const text = i18n.t(key, vars);

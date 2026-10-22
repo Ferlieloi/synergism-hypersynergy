@@ -44,7 +44,7 @@ const SLOT_COUNTS: Record<HSSlotCountKind, HSSlotCountDef> = {
 
 // The mod's modules are header modules only with the patcher's header modules patch; without it, they are in the
 // mod's own row (#quickbarsRow), which "Center quick bars" moves
-const hasHeaderModules = () => !!(window as any).__HS_HEADER_MODULES_PATCHED;
+const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
 
 // In the block's order, before the visible slots
 const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [

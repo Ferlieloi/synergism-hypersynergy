@@ -84,7 +84,7 @@ export class HSHeaderModules {
 
     /** Whether the game's header can take the mod's modules: the patcher's header modules patch, a player, the tray. */
     static isAvailable(): boolean {
-        const w = window as any;
+        const w = window;
         return !!w.__HS_HEADER_MODULES_PATCHED && !!w.__HS_headerModuleUnlocks && typeof w.__HS_renderHeaderLayout === 'function'
             && !!HSHeaderModules.#layouts() && !!document.getElementById('headerTray');
     }
@@ -117,10 +117,10 @@ export class HSHeaderModules {
         // The game checks its locks only at its next revealStuff() (a tab change, a reset): locked from the start
         try { element.classList.toggle('headerModuleLocked', !unlocked()); } catch { /* the game's next check decides */ }
         HSHeaderModules.#modules.set(id, unlocked);
-        (window as any).__HS_headerModuleUnlocks[id] = () => {
+        window.__HS_headerModuleUnlocks![id] = () => {
             try { return unlocked(); } catch { return false; }
         };
-        (window as any).__HS_beforeHeaderRender = () => HSHeaderModules.#beforeRender();
+        window.__HS_beforeHeaderRender = () => HSHeaderModules.#beforeRender();
         HSHeaderModules.#render();
         HSLogger.debug(() => `Header module ${id} registered`, HSHeaderModules.#context);
         return element;
@@ -129,7 +129,7 @@ export class HSHeaderModules {
     /** Take a module out of the header and its tray. Its place stays remembered for the next register(). */
     static unregister(id: string): void {
         if (!HSHeaderModules.#modules.delete(id)) return;
-        delete (window as any).__HS_headerModuleUnlocks?.[id];
+        delete window.__HS_headerModuleUnlocks?.[id];
 
         const layouts = HSHeaderModules.#layouts();
         for (const layout of Object.values(layouts ?? {})) {
@@ -142,7 +142,7 @@ export class HSHeaderModules {
 
     static #render(): void {
         try {
-            (window as any).__HS_renderHeaderLayout();
+            window.__HS_renderHeaderLayout!();
         } catch (e) {
             HSLogger.warn(`The game's header could not be rendered: ${e}`, HSHeaderModules.#context);
         }
