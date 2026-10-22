@@ -7,17 +7,11 @@ import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../hs-core/settings/hs-settings-ui";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
-import { goldenQuarkUpgradeMinimumSingularity } from "../../hs-core/gds/hs-gamedata-tables";
-import { GoldenQuarkUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
-import { HSQOLAutomationQuickbar } from "../hs-qol-quickbar/hs-qolQuickbarAutomation";
-import { HSQuickbarManager } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import type { QUICKBAR_ID } from "../hs-qol-quickbar/hs-qolQuickbarManager";
-import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSUI } from "../../hs-core/hs-ui";
-import { HSHeaderModules } from "../../hs-core/header/hs-header-modules";
+import { HSGQDistributor } from "./hs-gq-distributor";
+import { HSAutomationQuickbarPlacement } from "../hs-qol-quickbar/hs-automation-quickbar-placement";
 
 const MAXED_UPGRADE_TOGGLES = {
     toggleMaxedGoldenQuarkUpgrades: 'hideMaxedGQUpgrades',
@@ -25,56 +19,37 @@ const MAXED_UPGRADE_TOGGLES = {
 } as const;
 type MaxedUpgradeToggleId = keyof typeof MAXED_UPGRADE_TOGGLES;
 
+const POTIONS = {
+    offering: 'Offering',
+    obtainium: 'Obtainium',
+} as const;
+type PotionKind = keyof typeof POTIONS;
+
 /**
  *  Class: HSQOLButtons
  *  IsExplicitHSModule: Yes
- *  Description: 
+ *  Description:
  *    Hypersynergism module which adds qol buttons to the game.
+ *    Creates HSGQDistributor (the GQ Distributor) and HSAutomationQuickbarPlacement (the Automation Quickbar).
  *  Author: Swiffy, XxmolkxX, Shewchou, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
 */
 export class HSQOLButtons extends HSModule {
-    // Tracks active tab visit unsubscribers per SINGULARITY_VIEW. 
+    // Tracks active tab visit unsubscribers per SINGULARITY_VIEW.
     #tabVisitUnsubscribers: Map<SINGULARITY_VIEW, () => void> = new Map();
 
-    #automationQuickbarHandler: HSQOLAutomationQuickbar | null = null;
-    // The Automation Quickbar's id as a module of the game's header (see HSHeaderModules)
-    static readonly #AUTOMATION_HEADER_MODULE = 'hsAutomationHeader';
-
-    #offeringPotion: HTMLElement | null;
-    #obtainiumPotion: HTMLElement | null;
-    #config: MutationObserverInit;
-    #offeringPotionObserver: MutationObserver;
-    #obtainiumPotionObserver: MutationObserver;
-    #maxedUpgradeToggleObserver: MutationObserver;
-    #scanningGQUpgrades = false;
-    #gqDistributorRenderVersion = 0;
+    #gqDistributor: HSGQDistributor;
+    #automationQuickbar: HSAutomationQuickbarPlacement;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
 
-        this.#offeringPotion = document.getElementById('offeringPotionHide');
-        this.#obtainiumPotion = document.getElementById('obtainiumPotionHide');
-        this.#config = { attributes: false, childList: true, subtree: true };
-
-        this.#offeringPotionObserver = new MutationObserver(
-            () => this.#offeringMutationTrigger()
-        );
-        this.#obtainiumPotionObserver = new MutationObserver(
-            () => this.#obtainiumMutationTrigger()
-        );
-        this.#maxedUpgradeToggleObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.target instanceof HTMLButtonElement) {
-                    this.#syncMaxedUpgradeSettingFromButton(mutation.target);
-                }
-            }
-        });
+        this.#gqDistributor = new HSGQDistributor(this.context);
+        this.#automationQuickbar = new HSAutomationQuickbarPlacement(this.context);
     }
 
     async init(): Promise<void> {
         if (this.isInitialized) return;
         HSLogger.log('Initialising HSQOLButtons module', this.context);
-        this.observe();
         this.isInitialized = true;
 
         // Register tab visit handlers
@@ -95,88 +70,42 @@ export class HSQOLButtons extends HSModule {
 
         // Any settings-driven feature activation is handled by HSSettings.syncSettings().
         // Only perform module-specific DOM setup here if not settings-driven.
+        this.#injectPotionButtons('offering');
+        this.#injectPotionButtons('obtainium');
         this.#injectAdd10Button();
         this.#injectPurchaseBuyMaxButton();
     }
 
-    observe() {
-        if (this.#offeringPotion) {
-            this.#offeringPotionObserver.observe(this.#offeringPotion, this.#config);
+    /** CONSUME 10x and BUY 10x next to the game's own potion buttons (in the game's page from the start). */
+    #injectPotionButtons(potion: PotionKind) {
+        if (document.getElementById(`${potion}PotionMultiUseButton`)) return;
+
+        const usePotionButton = document.getElementById(`use${potion}potion`);
+        const buyPotionButton = document.getElementById(`buy${potion}potion`);
+        if (!usePotionButton?.parentNode || !buyPotionButton?.parentNode) {
+            HSLogger.warn(`Could not find native buttons for use/buy ${potion} potions`, this.context);
+            return;
         }
-        if (this.#obtainiumPotion) {
-            this.#obtainiumPotionObserver.observe(this.#obtainiumPotion, this.#config);
-        }
+
+        // The clones lose the game's i18n attribute: a language switch would put the game's text back on them
+        const clone = usePotionButton.cloneNode(true) as HTMLElement;
+        clone.id = `${potion}PotionMultiUseButton`;
+        clone.removeAttribute('i18n');
+        clone.textContent = 'CONSUME 10x';
+        clone.addEventListener('click', () => {
+            for (let i = 0; i < 10; i++) usePotionButton.click();
+        });
+        usePotionButton.parentNode.insertBefore(clone, usePotionButton.nextSibling);
+
+        const clone2 = buyPotionButton.cloneNode(true) as HTMLElement;
+        clone2.id = `${potion}PotionMultiBuyButton`;
+        clone2.removeAttribute('i18n');
+        clone2.textContent = 'BUY 10x';
+        clone2.addEventListener('click', () => { void this.#buyPotions10(buyPotionButton); });
+        buyPotionButton.parentNode.insertBefore(clone2, buyPotionButton.nextSibling);
+
+        HSLogger.log(`${POTIONS[potion]} potion multi buy / consume buttons injected`, this.context);
     }
-
-    #offeringMutationTrigger() {
-        const moddedButton = document.getElementById('offeringPotionMultiUseButton');
-
-        if (moddedButton === null) {
-            const useOfferingPotionButton = document.getElementById('useofferingpotion');
-            const buyOfferingPotionButton = document.getElementById('buyofferingpotion');
-
-            if (!useOfferingPotionButton || !buyOfferingPotionButton) {
-                HSLogger.warn('Could not find native buttons for use/buy offering potions', this.context);
-                return;
-            }
-
-            if (useOfferingPotionButton) {
-                const clone = useOfferingPotionButton.cloneNode(true) as HTMLElement;
-                clone.id = 'offeringPotionMultiUseButton';
-                clone.textContent = 'CONSUME 10x';
-                clone.addEventListener('click', () => {
-                    for (let i = 0; i < 10; i++) useOfferingPotionButton.click();
-                });
-                useOfferingPotionButton.parentNode?.insertBefore(clone, useOfferingPotionButton.nextSibling);
-            }
-
-            if (buyOfferingPotionButton) {
-                const clone2 = buyOfferingPotionButton.cloneNode(true) as HTMLElement;
-                clone2.id = 'offeringPotionMultiBuyButton';
-                clone2.textContent = 'BUY 10x';
-                clone2.addEventListener('click', () => { void this.#buyPotions10(buyOfferingPotionButton); });
-                buyOfferingPotionButton.parentNode?.insertBefore(clone2, buyOfferingPotionButton.nextSibling);
-            }
-
-            this.#offeringPotionObserver.disconnect();
-            HSLogger.log('Offering potion multi buy / consume buttons injected', this.context);
-        }
-    };
-
-    #obtainiumMutationTrigger() {
-        const moddedButton = document.getElementById('obtainiumPotionMultiUseButton');
-
-        if (moddedButton === null) {
-            const useObtainiumPotionButton = document.getElementById('useobtainiumpotion');
-            const buyObtainiumPotionButton = document.getElementById('buyobtainiumpotion');
-
-            if (!useObtainiumPotionButton || !buyObtainiumPotionButton) {
-                HSLogger.warn('Could not find native buttons for use/buy obtainium potions', this.context);
-                return;
-            }
-
-            if (useObtainiumPotionButton) {
-                const clone = useObtainiumPotionButton.cloneNode(true) as HTMLElement;
-                clone.id = 'obtainiumPotionMultiUseButton';
-                clone.textContent = 'CONSUME 10x';
-                clone.addEventListener('click', () => {
-                    for (let i = 0; i < 10; i++) useObtainiumPotionButton.click();
-                });
-                useObtainiumPotionButton.parentNode?.insertBefore(clone, useObtainiumPotionButton.nextSibling);
-            }
-
-            if (buyObtainiumPotionButton) {
-                const clone2 = buyObtainiumPotionButton.cloneNode(true) as HTMLElement;
-                clone2.id = 'obtainiumPotionMultiBuyButton';
-                clone2.textContent = 'BUY 10x';
-                clone2.addEventListener('click', () => { void this.#buyPotions10(buyObtainiumPotionButton); });
-                buyObtainiumPotionButton.parentNode?.insertBefore(clone2, buyObtainiumPotionButton.nextSibling);
-            }
-
-            this.#obtainiumPotionObserver.disconnect();
-            HSLogger.log('Obtainium potion multi buy / consume buttons injected', this.context);
-        }
-    };
 
     /**
      * Buys 10 potions, whatever the shop's buy mode: Buy ANY asks the amount in a Prompt (answered 10),
@@ -233,7 +162,7 @@ export class HSQOLButtons extends HSModule {
         add10Btn.addEventListener('click', () => {
             // Answers the amount Prompt with 10 and dismisses the result Alert. Without a maxed calculator, the game
             // then asks the sum in a second Prompt: shown (a prompt value answers only the first Prompt).
-            // The click also triggers Auto-Loadout (if enabled), through HSAmbrosia.#addCodeButtonHandler
+            // The click also triggers Auto-Loadout (if enabled), through HSAmbrosiaAutoLoadout's Add code listener
             HSGameDialogs.act('addCode10', { prompt: { ok: '10' }, alert: 'dismiss' }, () => addBtn.click());
         });
 
@@ -277,21 +206,15 @@ export class HSQOLButtons extends HSModule {
     }
 
     #initializeMaxedUpgradeToggleSync(): void {
-        for (const buttonId of Object.keys(MAXED_UPGRADE_TOGGLES)) {
-            this.#applyMaxedUpgradePreference(buttonId as MaxedUpgradeToggleId);
+        for (const buttonId of Object.keys(MAXED_UPGRADE_TOGGLES) as MaxedUpgradeToggleId[]) {
+            // The game changes aria-pressed only in its own click listener on the button. Read once that one has run,
+            // whichever was added first (the mod can start before the game on Steam). Also runs for the mod's clicks.
+            const button = document.getElementById(buttonId);
+            button?.addEventListener('click', () => {
+                window.setTimeout(() => this.#syncMaxedUpgradeSettingFromButton(button as HTMLButtonElement), 0);
+            });
+            this.#applyMaxedUpgradePreference(buttonId);
         }
-
-        // Capture lets this work even if the game's handler stops propagation.
-        // Reading is deferred until after the game's click handler changes aria-pressed.
-        document.addEventListener('click', (event) => {
-            const target = event.target;
-            if (!(target instanceof Element)) return;
-
-            const button = target.closest<HTMLButtonElement>('button.toggleMaxedUpgrades');
-            if (!button || !(button.id in MAXED_UPGRADE_TOGGLES)) return;
-
-            window.setTimeout(() => this.#syncMaxedUpgradeSettingFromButton(button), 0);
-        }, true);
     }
 
     #applyMaxedUpgradePreference(
@@ -299,11 +222,6 @@ export class HSQOLButtons extends HSModule {
     ): void {
         const button = document.getElementById(buttonId) as HTMLButtonElement | null;
         if (!button) return;
-
-        this.#maxedUpgradeToggleObserver.observe(button, {
-            attributes: true,
-            attributeFilter: ['aria-pressed'],
-        });
 
         const settingName = MAXED_UPGRADE_TOGGLES[buttonId];
         const shouldHide = HSSettings.getSetting(settingName).getValue() === true;
@@ -313,7 +231,7 @@ export class HSQOLButtons extends HSModule {
 
     #syncMaxedUpgradeSettingFromButton(button: HTMLButtonElement): void {
         if (!(button.id in MAXED_UPGRADE_TOGGLES)) return;
-        if (this.#scanningGQUpgrades && button.id === 'toggleMaxedGoldenQuarkUpgrades') return;
+        if (this.#gqDistributor.isScanning() && button.id === 'toggleMaxedGoldenQuarkUpgrades') return;
 
         const buttonId = button.id as MaxedUpgradeToggleId;
         const settingName = MAXED_UPGRADE_TOGGLES[buttonId];
@@ -345,634 +263,29 @@ export class HSQOLButtons extends HSModule {
         ok.parentNode.insertBefore(button, ok);
     }
 
-    #getUnmaxedGQUpgrades(highestSingularity: number): { id: string, src: string }[] {
-        const toggle = document.getElementById('toggleMaxedGoldenQuarkUpgrades') as HTMLButtonElement | null;
-        const container = document.getElementById('actualSingularityUpgradeContainer');
-        if (!toggle || !container) return [];
-        const wasHidden = toggle.getAttribute('aria-pressed') === 'true';
-        this.#scanningGQUpgrades = true;
-        try {
-            if (!wasHidden) toggle.click();
-            if (toggle.getAttribute('aria-pressed') !== 'true') return [];
-            // The game's toggle synchronously adds this class to maxed upgrades.
-            return Array.from(container.querySelectorAll<HTMLButtonElement>('button.singularityUpgrade'))
-                .filter(button => !button.classList.contains('upgradeHiddenByMaxLevel')
-                    && highestSingularity >= (goldenQuarkUpgradeMinimumSingularity[button.id as GoldenQuarkUpgradeKey] ?? 0))
-                .map(button => ({ id: button.id, src: button.querySelector('img')?.src ?? '' }))
-                .filter(upgrade => upgrade.id && upgrade.src);
-        } finally {
-            if (!wasHidden && toggle.getAttribute('aria-pressed') === 'true') toggle.click();
-            this.#scanningGQUpgrades = false;
-        }
-    }
-
-    #getGQDistributorRatios(): Record<string, number> {
-        const saved = HSSettings.getSetting('gqDistributorRatios').getValue();
-        if (typeof saved === 'string' && saved) {
-            try {
-                const ratios = JSON.parse(saved) as Record<string, unknown>;
-                if (ratios && typeof ratios === 'object' && !Array.isArray(ratios)) {
-                    return Object.fromEntries(Object.entries(ratios).filter(([, value]) =>
-                        typeof value === 'number' && Number.isFinite(value) && value >= 0
-                    )) as Record<string, number>;
-                }
-            } catch { /* Ignore malformed saved ratios. */ }
-        }
-        return {};
-    }
-
     async showGQDistributor(): Promise<void> {
         this.#injectPurchaseBuyMaxButton();
-        const renderVersion = ++this.#gqDistributorRenderVersion;
-        const container = document.getElementById('goldenQuarksDisplay');
-        if (!container) return;
-        let gameData: GameData | undefined;
-        try {
-            gameData = await HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.getForcedGameData();
-        } catch (error) {
-            HSLogger.warn(`Could not load GQ distributor save data: ${error}`, this.context);
-        }
-        if (!gameData || renderVersion !== this.#gqDistributorRenderVersion) return;
-        document.getElementById('hs-gq-distributor')?.remove();
-
-        const distributor = document.createElement('div');
-        distributor.id = 'hs-gq-distributor';
-        distributor.style.display = 'flex';
-        distributor.style.flexDirection = 'column';
-        distributor.style.alignItems = 'center';
-        distributor.style.marginTop = '10px';
-        distributor.style.padding = '10px';
-        distributor.style.border = '1px solid #ccc';
-        distributor.style.borderRadius = '5px';
-        distributor.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-
-        const title = document.createElement('h3');
-        title.textContent = 'GQ Distributor';
-        title.style.margin = '0 0 10px 0';
-        distributor.appendChild(title);
-
-        const inputsContainer = document.createElement('div');
-        inputsContainer.style.display = 'flex';
-        inputsContainer.style.flexWrap = 'wrap';
-        inputsContainer.style.justifyContent = 'center';
-        inputsContainer.style.gap = '10px';
-        distributor.appendChild(inputsContainer);
-
-        const unmaxedUpgrades = this.#getUnmaxedGQUpgrades(gameData.highestSingularityCount);
-        const savedRatios = this.#getGQDistributorRatios();
-
-        const inputs: { [key: string]: HTMLInputElement } = {};
-        // The inputs show 2 decimals at most; savedRatios keeps the exact values, and Distribute reads those
-        const shownRatio = (ratio: number): string => (Math.round(ratio * 100) / 100).toString();
-        // No spin buttons: they take room on the right, which pushes the number off the icon's axis
-        HSUI.injectStyle(`
-            #hs-gq-distributor input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
-            #hs-gq-distributor input[type="number"]::-webkit-outer-spin-button,
-            #hs-gq-distributor input[type="number"]::-webkit-inner-spin-button { appearance: none; -webkit-appearance: none; margin: 0; }
-        `, 'hs-gq-distributor-css');
-        // The game's name of each upgrade, for the skip summary (the id until resolved)
-        const upgradeNames = new Map<string, string>();
-
-        unmaxedUpgrades.forEach((upgrade) => {
-            const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
-            wrapper.style.flexDirection = 'column';
-            wrapper.style.alignItems = 'center';
-
-            const img = document.createElement('img');
-            img.src = upgrade.src;
-            img.alt = upgrade.id;
-            img.style.width = '32px';
-            img.style.height = '32px';
-            img.style.marginBottom = '5px';
-            wrapper.appendChild(img);
-            void HSUtils.getGameTranslation(`singularity.data.${upgrade.id}.name`).then((name) => {
-                if (!name) return;
-                upgradeNames.set(upgrade.id, name);
-                img.title = name;
-            });
-
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.step = 'any';
-            input.setAttribute('aria-label', `${upgrade.id} distribution ratio`);
-            input.value = shownRatio(savedRatios[upgrade.id] ?? 0);
-            input.style.width = '60px';
-            input.style.textAlign = 'center';
-            // The game gives every input a left padding, which shifts centred text to the right
-            input.style.padding = '0';
-            inputs[upgrade.id] = input;
-            wrapper.appendChild(input);
-
-            input.addEventListener('input', () => {
-                const val = parseFloat(input.value) || 0;
-                savedRatios[upgrade.id] = Number.isFinite(val) ? Math.max(0, val) : 0;
-                HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
-            });
-            // Once the player is done typing (blur or Enter), not at each key
-            input.addEventListener('change', () => {
-                input.value = shownRatio(savedRatios[upgrade.id] ?? 0);
-            });
-
-            inputsContainer.appendChild(wrapper);
-        });
-
-        const distributeBtn = document.createElement('button');
-        distributeBtn.id = 'hs-gq-distribute';
-        distributeBtn.textContent = 'Distribute';
-
-        const statusLabel = document.createElement('div');
-        statusLabel.style.marginTop = '6px';
-        statusLabel.style.fontSize = '12px';
-        statusLabel.style.color = '#aaa';
-        statusLabel.style.minHeight = '16px';
-        statusLabel.style.textAlign = 'center';
-        // The skip summary takes one line per reason, and can be selected and copied (the game blocks it on mobile)
-        statusLabel.style.whiteSpace = 'pre-line';
-        statusLabel.style.userSelect = 'text';
-
-        // Any new status cancels a pending auto-clear, so an older timer can't wipe a newer message
-        let statusClearTimer: ReturnType<typeof setTimeout> | undefined;
-        const setStatus = (text: string, clearAfterMs?: number) => {
-            clearTimeout(statusClearTimer);
-            statusClearTimer = undefined;
-            statusLabel.textContent = text;
-            if (clearAfterMs !== undefined) {
-                statusClearTimer = setTimeout(() => { statusLabel.textContent = ''; }, clearAfterMs);
-            }
-        };
-
-        const matchRatios = document.createElement('button');
-        matchRatios.id = 'hs-gq-match-invested-ratios';
-        matchRatios.type = 'button';
-        matchRatios.textContent = 'Match invested ratios';
-        matchRatios.title = 'Set the inputs to the proportions of GQ already invested, without spending any GQ.';
-
-        const resetRatios = document.createElement('button');
-        resetRatios.id = 'hs-gq-reset-ratios';
-        resetRatios.type = 'button';
-        resetRatios.textContent = 'Reset';
-        resetRatios.addEventListener('click', () => {
-            for (const id of Object.keys(savedRatios)) savedRatios[id] = 0;
-            for (const [id, input] of Object.entries(inputs)) {
-                savedRatios[id] = 0;
-                input.value = '0';
-            }
-            HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
-            setStatus('Ratios reset.');
-        });
-
-        const actions = document.createElement('div');
-        actions.style.display = 'flex';
-        actions.style.justifyContent = 'center';
-        actions.style.alignItems = 'center';
-        actions.style.gap = '8px';
-        actions.style.marginTop = '10px';
-        for (const button of [distributeBtn, matchRatios, resetRatios]) {
-            button.style.padding = '5px 15px';
-            button.style.cursor = 'pointer';
-            actions.appendChild(button);
-        }
-
-        const balanceLabel = document.createElement('label');
-        balanceLabel.style.marginTop = '10px';
-        balanceLabel.title = 'On: bring total GQ investments as close as possible to the entered ratios using your available GQ. Off: split only your unspent GQ using those ratios.';
-        const balanceInvestments = document.createElement('input');
-        balanceInvestments.id = 'hs-gq-balance-investments';
-        balanceInvestments.type = 'checkbox';
-        balanceInvestments.checked = HSSettings.getSetting('gqDistributorBalanceInvestments').getValue() === true;
-        balanceInvestments.addEventListener('change', () => {
-            HSSettings.getSetting('gqDistributorBalanceInvestments').setValue(balanceInvestments.checked);
-        });
-        balanceLabel.appendChild(balanceInvestments);
-        const balanceText = document.createElement('span');
-        balanceText.textContent = ' Balance total investments';
-        balanceLabel.appendChild(balanceText);
-        distributor.appendChild(balanceLabel);
-
-        const keepSkippedLabel = document.createElement('label');
-        keepSkippedLabel.style.marginTop = '4px';
-        keepSkippedLabel.title = 'On: the GQ share of skipped upgrades (maxed, or next level too expensive) stays unspent. Off: it is shared between the other upgrades.';
-        const keepSkippedShare = document.createElement('input');
-        keepSkippedShare.id = 'hs-gq-keep-skipped-share';
-        keepSkippedShare.type = 'checkbox';
-        keepSkippedShare.checked = HSSettings.getSetting('gqDistributorKeepSkippedShare').getValue() === true;
-        keepSkippedShare.addEventListener('change', () => {
-            HSSettings.getSetting('gqDistributorKeepSkippedShare').setValue(keepSkippedShare.checked);
-        });
-        keepSkippedLabel.appendChild(keepSkippedShare);
-        const keepSkippedText = document.createElement('span');
-        keepSkippedText.textContent = ' Keep the share of skipped upgrades';
-        keepSkippedLabel.appendChild(keepSkippedText);
-        distributor.appendChild(keepSkippedLabel);
-
-        const syncInvestedRatios = (data: GameData): boolean => {
-            const investments = Object.keys(inputs).map(id => ({
-                id, invested: Math.max(0, data.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0)
-            }));
-            const largest = Math.max(0, ...investments.map(entry => entry.invested));
-            if (largest === 0) return false;
-            // Normalize to a largest weight of 100 for readable inputs and huge balances.
-            for (const { id, invested } of investments) {
-                savedRatios[id] = invested / largest * 100;
-                inputs[id].value = shownRatio(savedRatios[id]);
-            }
-            HSSettings.getSetting('gqDistributorRatios').setValue(JSON.stringify(savedRatios));
-            return true;
-        };
-
-        matchRatios.addEventListener('click', async () => {
-            distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = true;
-            try {
-                const data = await HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.getForcedGameData();
-                if (!data) throw new Error('Player save unavailable.');
-                setStatus(syncInvestedRatios(data) ? 'Ratios matched to existing investments.' : 'No GQ invested yet; ratios unchanged.');
-            } catch (error) {
-                HSLogger.warn(`Could not match invested GQ ratios: ${error}`, this.context);
-                setStatus('Could not read your current save. Try again.');
-            } finally {
-                distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = false;
-            }
-        });
-
-        const costInput = document.getElementById('purchasePromptCost') as HTMLInputElement | null;
-        const okPurchase = document.getElementById('ok_purchasePrompt') as HTMLButtonElement | null;
-        const cancelPurchase = document.getElementById('cancel_purchasePrompt') as HTMLButtonElement | null;
-        const purchaseWrapper = document.getElementById('purchasePromptWrapper');
-        const confirmationBox = document.getElementById('confirmationBox');
-
-        // The game refuses an unaffordable or maxed upgrade with an alert instead (dismissed by the session),
-        // which ends in the timeout below
-        const waitForPurchaseDialog = (): Promise<void> =>
-            new Promise((resolve, reject) => {
-                const isVisible = () => purchaseWrapper?.style.display === 'block';
-                if (isVisible()) { resolve(); return; }
-
-                const observer = new MutationObserver(() => {
-                    if (isVisible()) finish();
-                });
-                const finish = (error?: Error) => {
-                    clearTimeout(timer);
-                    observer.disconnect();
-                    if (error) reject(error);
-                    else resolve();
-                };
-                observer.observe(confirmationBox!, { attributes: true, subtree: true, attributeFilter: ['style'] });
-                // Short: the game opens it synchronously on click, and unbuyable upgrades are filtered out beforehand
-                const timer = setTimeout(() => finish(new Error('Purchase dialog did not open.')), 2000);
-            });
-
-        distributeBtn.addEventListener('click', async () => {
-            if (!costInput || !okPurchase || !cancelPurchase || !purchaseWrapper || !confirmationBox) {
-                setStatus('Purchase dialog unavailable.');
-                return;
-            }
-
-            distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = true;
-            distributeBtn.style.opacity = '0.6';
-            distributeBtn.style.cursor = 'not-allowed';
-            if (!HSGameDialogs.isQueueIdle()) setStatus('Waiting for the open game dialog to close…');
-            try {
-                // Holds the dialog lock from the save snapshot to the last purchase
-                await HSGameDialogs.run('gqDistributor', {}, async (s) => {
-                    // One fresh save snapshot per distribution; continuous GDS stays unchanged.
-                    const gameData = await HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.getForcedGameData();
-                    if (!gameData) throw new Error('Player save unavailable.');
-                    const totalGQ = gameData.goldenQuarks;
-                    const ratios: Record<string, number> = {};
-                    for (const id in inputs) {
-                        const val = savedRatios[id] ?? 0;
-                        if (Number.isFinite(val) && val > 0) ratios[id] = val;
-                    }
-                    if (Object.keys(ratios).length === 0) {
-                        setStatus('No ratio set.');
-                        return;
-                    }
-
-                    // Skip the upgrades the game would refuse with an alert instead of the purchase dialog:
-                    // maxed since the list was built (e.g. a previous distribution), or next level costing
-                    // more than the whole balance.
-                    // Their share goes to the other upgrades, or stays unspent with "Keep the share of skipped upgrades".
-                    const gqHelper = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.goldenQuark;
-                    type SkipReason = 'maxed' | 'tooExpensive' | 'shareTooSmall' | 'aboveRatio';
-                    const skipped: Record<SkipReason, string[]> = { maxed: [], tooExpensive: [], shareTooSmall: [], aboveRatio: [] };
-                    // One line per skip reason. `share` says what became of the share of the upgrades skipped
-                    // before the allocation; a share too small for a level is never spent, whatever the checkbox.
-                    const skipSummary = (header: string, share?: string): string => {
-                        const shareNote = share ? ` (${share})` : '';
-                        const labels: Record<SkipReason, string> = {
-                            maxed: `Maxed${shareNote}`,
-                            tooExpensive: `Next level costs more than all your GQ${shareNote}`,
-                            shareTooSmall: 'Share too small for one level (left unspent)',
-                            aboveRatio: 'Already at or above its ratio'
-                        };
-                        const lines = (Object.keys(labels) as SkipReason[])
-                            .filter(reason => skipped[reason].length > 0)
-                            .map(reason => `${labels[reason]}: ${skipped[reason].map(id => upgradeNames.get(id) ?? id).join(' · ')}`);
-                        const count = Object.values(skipped).reduce((sum, ids) => sum + ids.length, 0);
-                        return [`${header} ${count} skipped:`, ...lines].join('\n');
-                    };
-                    const nextLevelCostById = new Map<string, number>();
-                    const buyableIds = Object.keys(ratios).filter((id) => {
-                        if (!gqHelper) return true;
-                        const key = id as GoldenQuarkUpgradeKey;
-                        const level = gqHelper.getGQUpgradeLevel(key);
-                        if (level >= gqHelper.computeGQUpgradeMaxLevel(key)) {
-                            skipped.maxed.push(id);
-                            return false;
-                        }
-                        const nextLevelCost = gqHelper.getGQUpgradeCumulativeCost(key, level + 1)
-                            - gqHelper.getGQUpgradeCumulativeCost(key, level);
-                        if (nextLevelCost > totalGQ) {
-                            skipped.tooExpensive.push(id);
-                            return false;
-                        }
-                        nextLevelCostById.set(id, nextLevelCost);
-                        return true;
-                    });
-                    if (buyableIds.length === 0) {
-                        setStatus(skipSummary('Nothing to buy.'));
-                        return;
-                    }
-                    // Keeping their share: skipped upgrades still take part in the allocation (so the others
-                    // get the same share as if they were buyable), then their own share is not spent.
-                    const keepSkipped = keepSkippedShare.checked;
-                    const buyable = new Set(buyableIds);
-                    const ids = keepSkipped ? Object.keys(ratios) : buyableIds;
-                    const gqBudget = Math.max(0, Math.floor(totalGQ));
-                    const weightEntries = ids.map((id) => {
-                        const weight = ratios[id] ?? 0;
-                        const upgradeData = gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey];
-                        const invested = Math.max(0, upgradeData?.goldenQuarksInvested ?? 0);
-                        return { id, weight, invested };
-                    }).filter(entry => entry.weight > 0);
-
-                    if (weightEntries.length === 0 || gqBudget <= 0) {
-                        setStatus('No Golden Quarks to spend.');
-                        return;
-                    }
-
-                    let additionalAmounts: number[];
-                    if (!balanceInvestments.checked) {
-                        // Allocate only the new budget; past investments can dwarf it.
-                        const largestWeight = Math.max(...weightEntries.map(entry => entry.weight));
-                        const weightSum = weightEntries.reduce((sum, entry) => sum + entry.weight / largestWeight, 0);
-                        additionalAmounts = weightEntries.map(entry => gqBudget * (entry.weight / largestWeight / weightSum));
-                    } else {
-                        // Cumulative target allocation:
-                        // choose final invested totals so that each upgrade tracks its weight ratio,
-                        // while never reducing upgrades that are already over target.
-                        const targetTotalInvested = weightEntries.reduce((sum, entry) => sum + entry.invested, 0) + gqBudget;
-                        let activeIndices = weightEntries.map((_, idx) => idx);
-                        let activeWeightSum = weightEntries.reduce((sum, entry) => sum + entry.weight, 0);
-                        let inactiveInvestedSum = 0;
-
-                        while (activeIndices.length > 0 && activeWeightSum > 0) {
-
-                            const lambda = (targetTotalInvested - inactiveInvestedSum) / activeWeightSum;
-                            const newlyInactive = activeIndices.filter(idx => weightEntries[idx].invested > lambda * weightEntries[idx].weight);
-
-                            if (newlyInactive.length === 0) break;
-                            const newlyInactiveSet = new Set<number>(newlyInactive);
-                            for (const idx of newlyInactive) {
-                                inactiveInvestedSum += weightEntries[idx].invested;
-                                activeWeightSum -= weightEntries[idx].weight;
-                            }
-                            activeIndices = activeIndices.filter(idx => !newlyInactiveSet.has(idx));
-                        }
-
-                        const activeSet = new Set<number>(activeIndices);
-                        const lambda = activeWeightSum > 0
-                            ? (targetTotalInvested - inactiveInvestedSum) / activeWeightSum
-                            : 0;
-
-                        additionalAmounts = weightEntries.map((entry, idx) => {
-                            const targetFinalInvested = activeSet.has(idx)
-                                ? Math.max(entry.invested, lambda * entry.weight)
-                                : entry.invested;
-                            return Math.max(0, targetFinalInvested - entry.invested);
-                        });
-                    }
-
-                    const exactAdditional = weightEntries.map((entry, idx) => {
-                        const additional = additionalAmounts[idx];
-                        return {
-                            id: entry.id,
-                            floorAdditional: Math.floor(additional),
-                            fraction: additional - Math.floor(additional)
-                        };
-                    });
-
-                    const floorTotal = exactAdditional.reduce((sum, entry) => sum + entry.floorAdditional, 0);
-                    let remaining = Math.max(0, gqBudget - floorTotal);
-                    const byFractionDesc = [...exactAdditional].sort((a, b) => b.fraction - a.fraction);
-                    for (let i = 0; i < byFractionDesc.length && remaining > 0; i++) {
-                        byFractionDesc[i].floorAdditional += 1;
-                        remaining -= 1;
-                    }
-
-                    const plannedSpendById = new Map<string, number>(
-                        exactAdditional.map(entry => [entry.id, buyable.has(entry.id) ? entry.floorAdditional : 0])
-                    );
-                    const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
-
-                    HSLogger.debug(() =>
-                        `GQ Distributor: budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
-                            ids.map(id => ({
-                                id,
-                                weight: ratios[id] ?? 0,
-                                invested: Math.max(0, gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0),
-                                spend: plannedSpendById.get(id) ?? 0
-                            }))
-                        )}`,
-                        this.context
-                    );
-
-                    let current = 0;
-                    for (const id of buyableIds) {
-                        current++;
-                        const amountToSpend = plannedSpendById.get(id) ?? 0;
-                        setStatus(`Buying ${current}/${buyableIds.length} — spending ${amountToSpend.toLocaleString()} GQ…`);
-
-                        if (amountToSpend <= 0) {
-                            // Balancing gives nothing to an upgrade already at its target; otherwise the share rounds to 0
-                            skipped[balanceInvestments.checked ? 'aboveRatio' : 'shareTooSmall'].push(id);
-                            setStatus(`Skipped ${current}/${buyableIds.length} (0 GQ)`);
-                            continue;
-                        }
-                        // Checked here, not left to the purchase dialog: the game refuses with an alert instead of
-                        // opening it when the balance left after the previous purchases can't buy a level.
-                        // The balance always covers what's left to spend, so an allocation that buys a level can't be refused.
-                        if (amountToSpend < (nextLevelCostById.get(id) ?? 0)) {
-                            skipped.shareTooSmall.push(id);
-                            setStatus(`Skipped ${current}/${buyableIds.length} (share too small for one level)`);
-                            continue;
-                        }
-
-                        const btn = document.getElementById(id) as HTMLButtonElement;
-                        if (!btn) continue;
-
-                        if (s.ended) throw new Error('Time limit reached.');
-                        // A dialog opened meanwhile (the player's, the game's) would delay the purchase dialog
-                        if (!HSGameDialogs.isQueueIdle()) throw new Error('A game dialog opened.');
-                        s.act({ purchasePrompt: 'show', alert: 'dismiss' }, () => {
-                            btn.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
-                        });
-                        try {
-                            await waitForPurchaseDialog();
-                        } catch {
-                            // Unbuyable upgrades are filtered out beforehand: a missing dialog is unexpected,
-                            // so stop the whole distribution here and name the upgrade (the outer catch reports it).
-                            // If it opens later, the hook cancels it (the session has ended by then).
-                            throw new Error(`Purchase dialog did not open for ${id}.`);
-                        }
-
-                        // Let the game calculate affordable levels and enforce upgrade caps.
-                        costInput.value = amountToSpend.toString();
-                        costInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        if (okPurchase.disabled) {
-                            cancelPurchase.click();
-                            skipped.shareTooSmall.push(id);
-                            setStatus(`Skipped ${current}/${buyableIds.length} (share too small for one level)`);
-                        } else {
-                            // The game confirms multi-level and One Mind purchases with an Alert, chained after this click
-                            if (!s.act({ alert: 'dismiss' }, () => okPurchase.click())) {
-                                cancelPurchase.click();
-                                throw new Error('Time limit reached.');
-                            }
-                        }
-
-                        // Let the purchase settle, and its alert be dismissed
-                        await HSUtils.sleep(0);
-
-                        // Dismiss any hover tooltip the programmatic click may have triggered
-                        btn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-                        btn.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-                        btn.blur();
-                    }
-                    if (Object.values(skipped).some(ids => ids.length > 0)) {
-                        // Stays until the next status, so it can be read and copied
-                        setStatus(skipSummary('Done.', keepSkipped ? 'share kept' : 'share given to the others'));
-                    } else {
-                        setStatus('Done!', 3000);
-                    }
-                });
-            } catch (error) {
-                HSLogger.warn(`GQ distribution failed: ${error}`, this.context);
-                setStatus(`Distribution stopped: ${error instanceof Error ? error.message : 'purchase failed.'}`);
-            } finally {
-                distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = false;
-                distributeBtn.style.opacity = '';
-                distributeBtn.style.cursor = 'pointer';
-            }
-        });
-        distributor.appendChild(actions);
-        distributor.appendChild(statusLabel);
-
-        container.parentNode?.insertBefore(distributor, container.nextSibling);
+        await this.#gqDistributor.show();
     }
 
     hideGQDistributor(): void {
-        this.#gqDistributorRenderVersion++;
-        const distributor = document.getElementById('hs-gq-distributor');
-        if (distributor) {
-            distributor.style.display = 'none';
-        }
+        this.#gqDistributor.hide();
     }
 
-    /**
-     * Enable the Automation Quickbar: a module of the game's header, which the player places in the header's edit mode
-     * (it starts in the tray), or the mod's quickbar row without the patcher's header modules patch.
-     */
+    /** Enable the Automation Quickbar (see HSAutomationQuickbarPlacement). */
     public enableAutomationQuickbar(): void {
-        if (!this.#automationQuickbarHandler) this.#automationQuickbarHandler = new HSQOLAutomationQuickbar();
-        const handler = this.#automationQuickbarHandler;
-
-        const headerModule = HSHeaderModules.register(HSQOLButtons.#AUTOMATION_HEADER_MODULE);
-        if (headerModule) {
-            // Already filled: enabled twice
-            if (headerModule.childElementCount > 0) return;
-            const section = handler.createSection() as HTMLDivElement;
-            headerModule.appendChild(section);
-            handler.setup(section).catch(e => HSLogger.log(`Error during automation quickbar setup: ${e}`, this.context));
-            return;
-        }
-
-        this.#enableQuickbar(
-            HSQuickbarManager.QUICKBAR_IDS.AUTOMATION,
-            () => ({
-                element: handler!.createSection(),
-                teardown: () => {
-                    HSLogger.debug(() => 'Automation quickbar teardown invoked', this.context);
-                    try { handler!.teardown(); }
-                    catch (e) { HSLogger.log(`Error during automation quickbar teardown: ${e}`, this.context); }
-                }
-            }),
-            (section) => { try { handler!.setup(section as HTMLDivElement); } catch (e) { HSLogger.log(`Error during automation quickbar setup: ${e}`, this.context); } }
-        );
+        this.#automationQuickbar.enable();
     }
 
     /** Disable the Automation Quickbar, wherever it is (its place in the header stays remembered). */
     public disableAutomationQuickbar(): void {
-        const id = HSQOLButtons.#AUTOMATION_HEADER_MODULE;
-        if (HSHeaderModules.isRegistered(id)) {
-            try { this.#automationQuickbarHandler?.teardown(); }
-            catch (e) { HSLogger.log(`Error during automation quickbar teardown: ${e}`, this.context); }
-            // Taken before unregister() takes it out of the page; emptied so the next enable fills it again
-            const headerModule = document.getElementById(id);
-            HSHeaderModules.unregister(id);
-            headerModule?.replaceChildren();
-        } else {
-            // Manager will call the stored teardown; just remove the section and drop handler reference.
-            this.#disableQuickbar(HSQuickbarManager.QUICKBAR_IDS.AUTOMATION);
-        }
-        this.#automationQuickbarHandler = null;
-    }
-
-    /**
-     * Generic method to enable a quickbar using HSQuickbarManager.
-     * @param id - The quickbar ID (use HSQuickbarManager.QUICKBAR_IDS)
-     * @param factory - Factory function to create the quickbar section
-     * @param setupCallback - Optional setup callback after injection
-     * @param containerSetter - Optional setter for the quickbar container
-     */
-    #enableQuickbar(
-        id: QUICKBAR_ID,
-        factory: () => { element: HTMLElement; teardown?: () => void },
-        setupCallback?: (section: HTMLElement) => void,
-        teardownCallback?: () => void
-    ): Promise<HTMLElement> {
-        HSLogger.debug(() => `Enabling Quickbar: ${id}`, this.context);
-        const managerSetup = (section: HTMLElement) => {
-            if (setupCallback) setupCallback(section);
-        };
-        return HSQuickbarManager.getInstance().enableQuickbar(
-            id,
-            factory as any,
-            managerSetup,
-            teardownCallback
-        );
-    }
-
-    /**
-     * Generic method to disable a quickbar using HSQuickbarManager.
-     * @param id - The quickbar ID (use HSQuickbarManager.QUICKBAR_IDS)
-     * @param teardownCallback - Optional teardown callback before removal
-     */
-    #disableQuickbar(
-        id: QUICKBAR_ID,
-        teardownCallback?: () => void
-    ): void {
-        HSLogger.debug(() => `Disabling Quickbar: ${id}`, this.context);
-        if (teardownCallback) teardownCallback();
-        HSQuickbarManager.getInstance().disableQuickbar(id);
+        this.#automationQuickbar.disable();
     }
 
     /**
      * Subscribe to a SINGULARITY_VIEW tab visit and run a callback.
      * Deduplicates subscriptions per tab.
-     * Returns an unsubscribe function 
+     * Returns an unsubscribe function
      */
     #subscribeToTabVisit( tabId: SINGULARITY_VIEW, onTabVisit: () => void ): (() => void) | null {
         const gameState = HSModuleManager.getModule<HSGameState>('HSGameState');
@@ -998,7 +311,7 @@ export class HSQOLButtons extends HSModule {
                 }
             }
         );
-        
+
         if (subId) {
             const unsubscribe = () => gameState.unsubscribeGameStateChange('SINGULARITY_VIEW', subId);
             this.#tabVisitUnsubscribers.set(tabId, unsubscribe);
