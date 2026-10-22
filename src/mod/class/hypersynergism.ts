@@ -15,7 +15,7 @@ import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
 import strategyEditionCSS from "inline:../resource/css/hs-strategy-edition.css";
 import { HSNotifyPosition, HSNotifyType } from "../types/module-types/hs-ui-types";
 import { HSGameDataAPI } from "./hs-core/gds/hs-gamedata-api";
-import { HSAmbrosia } from "./hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "./hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSHeaterInputModalController } from "./hs-modules/hs-heater/ui/hs-heater-input-modal-controller";
 import { HSUtils } from "./hs-utils/hs-utils";
 import { HSGithub } from "./hs-core/github/hs-github";

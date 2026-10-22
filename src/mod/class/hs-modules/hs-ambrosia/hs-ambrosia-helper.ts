@@ -1,10 +1,10 @@
-import { AMBROSIA_LOADOUT_SLOT, BlueberryLoadoutMode } from "../../types/module-types/hs-ambrosia-types";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSUtils } from "../hs-utils/hs-utils";
-import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSGlobal } from "../hs-core/hs-global";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import type { HSGameData } from "../hs-core/gds/hs-gamedata";
+import { AMBROSIA_LOADOUT_SLOT, BlueberryLoadoutMode } from "../../../types/module-types/hs-ambrosia-types";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSElementHooker } from "../../hs-core/hs-elementhooker";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import type { HSGameData } from "../../hs-core/gds/hs-gamedata";
 
 /**
  * Class: HSAmbrosiaHelper

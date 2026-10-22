@@ -12,7 +12,7 @@ import { HSNumberParser } from "../../hs-utils/hs-number-parser";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import type { HSAutosing } from "../hs-autosing/hs-autosing";
-import type { HSAmbrosia, HSSingReducerSwap } from "../hs-ambrosia";
+import type { HSAmbrosia, HSSingReducerSwap } from "../hs-ambrosia/hs-ambrosia";
 import type { HepteractKeys } from "../../../types/data-types/hs-player-savedata";
 import { HepteractPlan, HepteractPlanState, HepteractPlanType, planHepteractDistribution } from "./hs-hepteract-distributor-plan";
 import { HEPTERACT_DATA, HepteractState, readHepteract } from "./hs-hepteract-state";

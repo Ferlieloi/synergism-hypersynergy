@@ -1,5 +1,5 @@
 import { HSSettingActionParams } from "../../../types/module-types/hs-settings-types";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";

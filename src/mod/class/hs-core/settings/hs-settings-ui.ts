@@ -1,6 +1,6 @@
 ﻿import { HSSettingBase, HSSettingControl, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
 import { HSModuleManager } from "../module/hs-module-manager";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSStorage } from "../hs-storage";
 import { HSUI } from "../hs-ui";
 import { HSGlobal } from "../hs-global";

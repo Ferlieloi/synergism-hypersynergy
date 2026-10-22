@@ -12,7 +12,7 @@ import { HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSHeaderKeepOnImport } from "../header/hs-header-keep-on-import";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";

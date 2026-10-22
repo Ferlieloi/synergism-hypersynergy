@@ -7,7 +7,7 @@ import { HSUI } from "../hs-core/hs-ui";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSettings } from "../hs-core/settings/hs-settings";
-import type { HSAmbrosia } from "./hs-ambrosia";
+import type { HSAmbrosia } from "./hs-ambrosia/hs-ambrosia";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
 
 const TICK_MS = 10_000;

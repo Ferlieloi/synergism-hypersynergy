@@ -10,7 +10,7 @@ import { HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../type
 import { HSPrototypes } from "../hs-prototypes";
 import { HSMouse } from "../hs-mouse";
 import { HSStorage } from "../hs-storage";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
 import { HSGameData } from "../gds/hs-gamedata";

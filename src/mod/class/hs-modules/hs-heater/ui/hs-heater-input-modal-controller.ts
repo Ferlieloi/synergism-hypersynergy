@@ -18,7 +18,7 @@ import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
 import { HSLogger } from "../../../hs-core/hs-logger";
 import { HSSettingsDefinition } from "../../../../types/module-types/hs-settings-types";
 import type { HeaterBranchId } from "../hs-heater-result-config";
-import type { HSAmbrosia } from "../../hs-ambrosia";
+import type { HSAmbrosia } from "../../hs-ambrosia/hs-ambrosia";
 
 export class HSHeaterInputModalController {
     static context = 'HSHeaterInputModalController';
