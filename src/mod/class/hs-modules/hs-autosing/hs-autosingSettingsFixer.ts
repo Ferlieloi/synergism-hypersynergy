@@ -4,7 +4,7 @@ import { HSSettingsDefinition } from '../../../types/module-types/hs-settings-ty
 import { HSGameState } from '../../hs-core/hs-gamestate';
 import { HSModuleManager } from '../../hs-core/module/hs-module-manager';
 import type { HSGameData } from '../../hs-core/gds/hs-gamedata';
-import { HSAmbrosiaHelper } from '../hs-ambrosiaHelper';
+import { HSAmbrosiaHelper } from '../hs-ambrosia/hs-ambrosia-helper';
 import { HSUtils } from '../../hs-utils/hs-utils';
 import { HSGlobal } from '../../hs-core/hs-global';
 import { isTesseractAutoBuyPercentageMode } from '../../hs-core/gds/hs-gamedata-utils';

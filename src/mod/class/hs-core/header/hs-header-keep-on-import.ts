@@ -18,7 +18,7 @@ const CHECKBOX_ID = 'hs-keep-header-layout';
  *     would reset a whole layout over one), and put into the save loadSynergy parses, in the same synchronous step.
  *     The mod's modules come back as at every load (HSHeaderModules). The checkbox's state is the hidden setting
  *     keepHeaderLayoutOnImport.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHeaderKeepOnImport {
     static #context = 'HSHeaderKeepOnImport';

@@ -47,7 +47,7 @@ type ChallengeAccessor = {
  * Class: HSAutosing
  * IsExplicitHSModule: Yes
  * Description: Hypersynergism module that performs autosings.
- * Author: XxMolkxX
+ * Author: XxMolkxX, Shewchou
  */
 export class HSAutosing extends HSModule {
     static readonly #DECIMAL_INFINITY = new Decimal(Infinity);

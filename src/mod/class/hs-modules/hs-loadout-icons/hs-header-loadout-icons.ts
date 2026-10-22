@@ -54,7 +54,7 @@ const PICK_MODE_CLASS = 'hs-quickbar-slot-pickmode';
  *       row (outside #modalContent, which the game patches every 250 ms), which starts the icon picker.
  *     - Clearing: the player's choice in that modal (an icon or the plain number) clears the mod icon.
  *     No patcher feature: works for every player.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHeaderLoadoutIcons extends HSModule {
     // The slot the player last pressed in the header's edit mode: the game's icon modal is for it

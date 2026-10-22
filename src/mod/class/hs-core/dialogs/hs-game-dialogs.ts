@@ -91,7 +91,7 @@ export class HSDialogSession {
  *     dialogs are answered once shown.
  *     Features use act() for synchronous actions, and run() for longer ones: run() waits for an idle queue and
  *     holds a lock, so two features never interleave their dialogs.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSGameDialogs {
     static #context = 'HSGameDialogs';

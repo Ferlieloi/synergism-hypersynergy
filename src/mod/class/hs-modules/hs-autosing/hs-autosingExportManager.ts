@@ -19,7 +19,7 @@ export interface SingularityBundle {
  *     - Updates export button state based on data availability and settings.
  *     - Exports all autosing data as a CSV file, including dynamic phase columns.
  *     - Handles batch flushing and bundle decompression for export.
- * Author: XxMolkxX
+ * Author: XxMolkxX, Shewchou
  */
 export class HSAutosingExportManager {
     #db: HSAutosingDB;

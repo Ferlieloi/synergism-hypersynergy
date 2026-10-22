@@ -6,7 +6,7 @@ import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
 import { HSModuleManager } from "../hs-core/module/hs-module-manager";
 import { HSSettings } from "../hs-core/settings/hs-settings";
-import type { HSAmbrosia } from "./hs-ambrosia";
+import type { HSAmbrosia } from "./hs-ambrosia/hs-ambrosia";
 import type { HSAutosing } from "./hs-autosing/hs-autosing";
 import { HSAutoExportFolder } from "./hs-auto-export-folder";
 
@@ -29,7 +29,7 @@ const MINUTE_MS = 60_000;
  *     writes the file there itself, in place of the game's download. It is the only way on Steam, where
  *     every download opens a "Save as" dialog. The folder is kept in IndexedDB with the names of the files
  *     written, so that only those are ever removed ("Keep only the last X files").
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSAutoExport extends HSModule {
     #loadedAt = Date.now();

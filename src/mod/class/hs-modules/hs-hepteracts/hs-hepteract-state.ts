@@ -2,7 +2,7 @@
     Hepteracts: capacities, the live read, and the walk that fills and expands.
     Shared by HSHepteracts and the Hepteract Distributor. Pure functions: no DOM, no game access (the caller
     passes the live player), so the Distributor's planner can use them headless.
-    Author: maenhiir
+    Author: Shewchou
 */
 
 import type { HepteractKeys } from "../../../types/data-types/hs-player-savedata";

@@ -1,7 +1,7 @@
 /*
     Type definition collection: HS settings types
     Description: Collection of types specific to hs-settings module
-    Author: Swiffy
+    Author: Swiffy, Shewchou
 */
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";
@@ -14,7 +14,6 @@ export type HSSettingRecord = Record<keyof HSSettingsDefinition, HSSetting<HSSet
 export interface HSSettingsDefinition {
     // Expand Cost Protection Settings
     expandCostProtection: ExpandCostProtectionSetting;
-    expandCostProtectionNotifications: ExpandCostProtectionNotifications;
 
     // Hepteract Distributor Settings
     enableHepteractDistributor: EnableHepteractDistributorSetting;
@@ -182,7 +181,6 @@ export interface HSSettingBase<T> {
 
 // Expand Cost Protection Settings
 export interface ExpandCostProtectionSetting extends HSSettingBase<number> { }
-export interface ExpandCostProtectionNotifications extends HSSettingBase<boolean> { }
 
 // Hepteract Distributor Settings
 export interface EnableHepteractDistributorSetting extends HSSettingBase<boolean> { }

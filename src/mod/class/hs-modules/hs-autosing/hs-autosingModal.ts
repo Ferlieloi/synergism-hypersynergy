@@ -28,7 +28,7 @@ import { SingularityBundle } from "./hs-autosingExportManager";
  *   - Integrates modular helpers for phase stats, charting, and export.
  *   - Maintains unified metrics with running averages for time, quarks, and golden quarks.
  *
- * Author: XxmolkxX
+ * Author: XxmolkxX, Shewchou
  */
 export class HSAutosingModal {
     static readonly #MIN_RENDER_INTERVAL_MS = 100;

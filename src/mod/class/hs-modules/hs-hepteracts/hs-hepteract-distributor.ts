@@ -12,7 +12,8 @@ import { HSNumberParser } from "../../hs-utils/hs-number-parser";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import type { HSAutosing } from "../hs-autosing/hs-autosing";
-import type { HSAmbrosia, HSSingReducerSwap } from "../hs-ambrosia";
+import type { HSAmbrosia } from "../hs-ambrosia/hs-ambrosia";
+import type { HSSingReducerSwap } from "../hs-ambrosia/hs-ambrosia-temporary-tree";
 import type { HepteractKeys } from "../../../types/data-types/hs-player-savedata";
 import { HepteractPlan, HepteractPlanState, HepteractPlanType, planHepteractDistribution } from "./hs-hepteract-distributor-plan";
 import { HEPTERACT_DATA, HepteractState, readHepteract } from "./hs-hepteract-state";
@@ -108,7 +109,7 @@ const HELP_LINES = [
  *     tree is replaced by one holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap), so
  *     hepteracts cost less. That tree also gets Talisman Power where it lowers the cost, and "Also when only
  *     Talisman Power can be added" (off by default) loads it when no reducer can be added.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHepteractDistributor extends HSModule {
     #tab?: HTMLElement;

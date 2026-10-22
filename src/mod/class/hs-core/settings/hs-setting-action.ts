@@ -1,5 +1,5 @@
 import { HSSettingActionParams } from "../../../types/module-types/hs-settings-types";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
@@ -9,7 +9,7 @@ import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
-import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
 import { HSCorruption } from "../../hs-modules/hs-corruption";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
@@ -42,7 +42,7 @@ function moduleToggle<T extends HSModule>(
  * Description: 
  *     Helper wrapper for HSSettings.
  *     Encapsulates SettingActions and their functionality.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSSettingActions {
     // Record for SettingActions

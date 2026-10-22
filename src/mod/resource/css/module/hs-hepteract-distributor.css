@@ -43,9 +43,18 @@
     /* The game's own box border, which follows its theme */
     border: 3px solid;
     border-color: var(--boxmain-bordercolor);
-    border-radius: 5px;
     background-color: rgba(0, 0, 0, 0.5);
     font-size: 0.85em;
+}
+
+/* As wide as the game's #heptGrid below (left-aligned, sized by its columns: Synergism.css .hepteractGrid):
+   4 columns of 60px + 7.6em, 3 gaps of 15px, 8px padding and 3px border on each side.
+   The grid's em is min(1em, 20px) of #cubeTab7; this panel's is 0.85 of it. Narrower screens: the grid changes, 100% kept. */
+@media (width > 1024px) {
+    #hs-hept-distributor {
+        width: calc(4 * (60px + 7.6 * min(1em / 0.85, 20px)) + 3 * 15px + 2 * 8px + 2 * 3px);
+        align-self: flex-start;
+    }
 }
 
 #hs-hept-distributor-minimize {

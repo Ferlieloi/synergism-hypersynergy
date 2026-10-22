@@ -1,10 +1,10 @@
-import { AMBROSIA_LOADOUT_SLOT, BlueberryLoadoutMode } from "../../types/module-types/hs-ambrosia-types";
-import { HSLogger } from "../hs-core/hs-logger";
-import { HSUtils } from "../hs-utils/hs-utils";
-import { HSElementHooker } from "../hs-core/hs-elementhooker";
-import { HSGlobal } from "../hs-core/hs-global";
-import { HSModuleManager } from "../hs-core/module/hs-module-manager";
-import type { HSGameData } from "../hs-core/gds/hs-gamedata";
+import { AMBROSIA_LOADOUT_SLOT, BlueberryLoadoutMode } from "../../../types/module-types/hs-ambrosia-types";
+import { HSLogger } from "../../hs-core/hs-logger";
+import { HSUtils } from "../../hs-utils/hs-utils";
+import { HSElementHooker } from "../../hs-core/hs-elementhooker";
+import { HSGlobal } from "../../hs-core/hs-global";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import type { HSGameData } from "../../hs-core/gds/hs-gamedata";
 
 /**
  * Class: HSAmbrosiaHelper
@@ -53,6 +53,18 @@ export class HSAmbrosiaHelper {
 
         const value = Number(match[1]);
         return Number.isInteger(value) && value > 0 ? value : undefined;
+    }
+
+    /** A loadout slot button's number (blueberryLoadout1 -> 1). */
+    static getSlotNumber(slot: HTMLElement): number | undefined {
+        const slotEnum = this.getSlotEnumBySlotId(slot.id);
+        return slotEnum ? this.getLoadoutNumberFromSlot(slotEnum) : undefined;
+    }
+
+    /** Whether the game shows its ambrosia (Exalt 1 completed), as its own ambrosia header modules check. */
+    static isAmbrosiaUnlocked(): boolean {
+        const completions = HSGlobal.exposedPlayer?.singularityChallenges?.noSingularityUpgrades?.completions;
+        return completions === undefined || completions > 0;
     }
 
     /** Normalize a saved/loadout string to a real AMBROSIA_LOADOUT_SLOT enum value. */

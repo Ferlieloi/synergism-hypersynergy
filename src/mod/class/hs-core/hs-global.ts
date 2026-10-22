@@ -10,7 +10,7 @@ declare const HS_BUILD_VERSION: string;
  * IsExplicitHSModule: No
  * Description:
  *     Static class containing global configuration and constants for the Hypersynergism mod.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export const HSGlobal: IHSGlobal = class {
 
@@ -113,6 +113,8 @@ export const HSGlobal: IHSGlobal = class {
             HSHeaderModules: 'HSQOLButtons',
             HSHeaderKeepOnImport: 'HSQOLButtons',
             HSHeaderEditSettings: 'HSQOLButtons',
+            HSHeaderCellSettings: 'HSQOLButtons',
+            HSMinibarResize: 'HSAmbrosia',
             HSLoadoutIconStore: 'HSHeaderLoadoutIcons',
             // UI
             HSUIC: 'HSUI',

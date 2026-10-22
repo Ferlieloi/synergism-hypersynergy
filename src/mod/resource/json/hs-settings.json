@@ -1,7 +1,7 @@
 {
   "expandCostProtection": {
     "settingName": "expandCostProtection",
-    "settingDescription": "Hept. expand cost protection",
+    "settingDescription": "Hept. quick expand cost protection",
     "settingHelpText": "When enabled, makes clicking hepteract icons in the hepteract view (quick expand and max feature) not do anything if it would cost \u003e= settingValue percentage hepteracts",
     "settingType": "numeric",
     "enabled": true,
@@ -17,19 +17,6 @@
         "max": 1,
         "step": 0.1
       }
-    }
-  },
-  "expandCostProtectionNotifications": {
-    "settingName": "expandCostProtectionNotifications",
-    "settingDescription": "Suppress cost protection logs",
-    "settingHelpText": "Check this if you want to suppress the rather spammy cost protection notifications in the log",
-    "settingType": "boolean",
-    "enabled": true,
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "hepteracts",
-      "controlPage": "hepteract",
-      "controlEnabledId": "hs-setting-hepteract-cost-protection-notifications-btn"
     }
   },
   "enableHepteractDistributor": {

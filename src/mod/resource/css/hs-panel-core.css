@@ -659,6 +659,12 @@ select::-webkit-scrollbar-corner {
     background-position: center;
 }
 
+/* The mod icon wins over the game's: its img (from the header's icon modal, also drawn on the tab's slots) is hidden,
+   and shows again once the mod icon is cleared */
+.blueberryLoadoutSlot.hs-ambrosia-slot > img {
+    display: none;
+}
+
 /* ===== NOTIFICATIONS ===== */
 
 .hs-notification {

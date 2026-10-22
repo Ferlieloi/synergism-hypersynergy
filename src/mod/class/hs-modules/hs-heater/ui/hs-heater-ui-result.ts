@@ -9,7 +9,7 @@ import { HSHeaterResultStore } from "../hs-heater-result-store";
 import type { NormalizedHeaterResultEntry } from "../hs-heater-result-store";
 import { getHeaterExaltRules } from "../hs-heater-result-config";
 import { getHeaterExaltName } from "../hs-heater-input-config";
-import type { HSAmbrosia } from "../../hs-ambrosia";
+import type { HSAmbrosia } from "../../hs-ambrosia/hs-ambrosia";
 
 // === Loadout Preview Metadata Type and Map ===
 type LoadoutPreviewMeta = { iconFile: string };

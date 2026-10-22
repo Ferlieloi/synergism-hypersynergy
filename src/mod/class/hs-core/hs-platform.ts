@@ -10,7 +10,7 @@ export type HSPlatformName = 'steam' | 'userscript' | 'bookmarklet';
  * Description:
  *     Tells how the mod was loaded. Every userscript loader sets HS_LOADER_INITIALIZED before the game runs,
  *     so a userscript whose patch failed still counts as a userscript. Static only.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSPlatform {
     /** null before HSGameData is initialised (it tells Steam from a browser) */

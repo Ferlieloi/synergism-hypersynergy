@@ -15,7 +15,7 @@ import { HSGlobal } from "../hs-core/hs-global";
  *         - domid() method for generating DOM-compliant unique ids
  *         - hashCode() for calculating a unique hash for arbitrary string
  *         - N() for pretty printing numbers
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export class HSUtils {
     static #context = 'HSUtils';

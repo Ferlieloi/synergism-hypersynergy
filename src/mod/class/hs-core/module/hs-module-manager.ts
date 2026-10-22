@@ -10,13 +10,13 @@ import { HSModuleDefinition, HSModuleOptions, HSModuleType } from "../../../type
 import { HSPrototypes } from "../hs-prototypes";
 import { HSMouse } from "../hs-mouse";
 import { HSStorage } from "../hs-storage";
-import { HSAmbrosia } from "../../hs-modules/hs-ambrosia";
+import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSStats } from "../../hs-modules/hs-stats";
 import { HSGameState } from "../hs-gamestate";
 import { HSGameData } from "../gds/hs-gamedata";
 import { HSGameDataAPI } from "../gds/hs-gamedata-api";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
-import { HSQOLButtons } from "../../hs-modules/hs-qolButtons";
+import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
 import { HSSubtabMemory } from "../../hs-modules/hs-subtab-memory";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSHeaderLoadoutIcons } from "../../hs-modules/hs-loadout-icons/hs-header-loadout-icons";

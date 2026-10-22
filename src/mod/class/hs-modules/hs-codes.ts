@@ -10,7 +10,7 @@ import type { HSAutosing } from "./hs-autosing/hs-autosing";
  * Class: HSCodes
  * IsExplicitHSModule: Yes
  * Description: Hypersynergism module aimed to make reusable code input more convenient.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSCodes extends HSModule {
     #codeBoxLabel?: HTMLLabelElement;

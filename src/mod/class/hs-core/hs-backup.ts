@@ -106,7 +106,7 @@ interface HSBackupImport {
  *       autosave and the mod's own saves can't put the old values back.
  *     - A save exported by the game itself can be imported too.
  *     - Refused while autosing is active.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSBackup {
     static #context = 'HSBackup';

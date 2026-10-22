@@ -27,7 +27,7 @@ interface HSTampermonkeyStore {
  *     Tells players who loaded the mod with the bookmark (after the game, so without the patcher) how to
  *     switch to the Tampermonkey userscript: a modal at each load, and a section at the top of the Tools tab
  *     to open it again. Static only.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSBookmarkletNotice {
     static #context = 'HSBookmarkletNotice';
