@@ -153,7 +153,7 @@ export class HSGameData extends HSModule {
         this.#cacheDomElements();
 
         // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
-        (window as any).__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
+        window.__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
 
         // Set before the fetches: the fetched data only reaches the API through this reference.
         // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
@@ -416,14 +416,14 @@ export class HSGameData extends HSModule {
      * @returns void
      */
     #startConsumablesPoll() {
-        if (!(window as any).__HS_consumables) {
+        if (!window.__HS_consumables) {
             HSLogger.log(`Happy Hour Bells not readable (the game is not patched for it): counted as 0`, this.context);
             return;
         }
 
         let lastKey = '';
         const read = () => {
-            const bell = (window as any).__HS_consumables?.HAPPY_HOUR_BELL;
+            const bell = window.__HS_consumables?.HAPPY_HOUR_BELL;
             const amount = typeof bell?.amount === 'number' ? bell.amount : 0;
             const ends: number[] = Array.isArray(bell?.ends) ? bell.ends.filter((e: unknown) => typeof e === 'number') : [];
             const key = `${amount}|${ends.join(',')}`;
@@ -453,7 +453,7 @@ export class HSGameData extends HSModule {
      * @returns void
      */
     #startGlobalEventCapture() {
-        const w = window as any;
+        const w = window;
         if (!w.__HS_GLOBAL_EVENT_PATCHED) {
             HSLogger.log(`Global event not readable (the game is not patched for it): counted as none`, this.context);
             return;

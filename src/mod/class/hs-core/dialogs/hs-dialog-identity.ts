@@ -36,7 +36,7 @@ export class HSDialogIdentity {
 
     /** The game's current language. */
     static #currentLang(): string {
-        const i18n = (window as any).__HS_i18next;
+        const i18n = window.__HS_i18next;
         const lang = typeof i18n?.language === 'string' && i18n.language ? i18n.language : localStorage.getItem('language');
         return lang || 'en';
     }
@@ -174,7 +174,7 @@ export class HSDialogIdentity {
      * No fetch when i18next is there, even for a language it lacks.
      */
     static async #loadFile(lang: string): Promise<Record<string, unknown> | undefined> {
-        const i18n = (window as any).__HS_i18next;
+        const i18n = window.__HS_i18next;
         if (typeof i18n?.getResourceBundle !== 'function') return HSUtils.getGameTranslationFile(lang);
         const bundle = i18n.getResourceBundle(lang, 'translation');
         return bundle && typeof bundle === 'object' && Object.keys(bundle).length > 0 ? bundle : undefined;

@@ -17,6 +17,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "test:auto-export": "node scripts/test-auto-export.cjs",
     "test:heater": "node scripts/test-heater-vouchers.cjs",
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
