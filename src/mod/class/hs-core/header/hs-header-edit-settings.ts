@@ -148,6 +148,13 @@ export class HSHeaderEditSettings {
         HSHeaderCellSettings.install();
         if (document.getElementById(BLOCK_ID)) return;
 
+        // Vanilla Done only exits the editor. Its handler runs first and finishes the layout redraw;
+        // then save the live layout through the game's normal save path, without waiting for autosave.
+        document.getElementById('headerEditDone')?.addEventListener('click', () => {
+            HSSettings.flushSettingsToStorage();
+            document.getElementById('savegame')?.click();
+        });
+
         HSUI.injectStyle(headerEditSettingsCSS, 'hs-header-edit-settings-css');
         HSHeaderEditSettings.#writeHideRule();
         HSUI.flushInjectedStyles();
