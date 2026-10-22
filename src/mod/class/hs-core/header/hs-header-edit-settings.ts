@@ -3,6 +3,7 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
+import { HSHeaderCellSettings } from "./hs-header-cell-settings";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'corruption' | 'ambrosia';
@@ -105,6 +106,7 @@ export class HSHeaderEditSettings {
 
     /** Hides the slots above the counts, and adds the block next to the game's header tray. */
     static install(): void {
+        HSHeaderCellSettings.install();
         if (document.getElementById(BLOCK_ID)) return;
 
         HSUI.injectStyle(headerEditSettingsCSS, 'hs-header-edit-settings-css');

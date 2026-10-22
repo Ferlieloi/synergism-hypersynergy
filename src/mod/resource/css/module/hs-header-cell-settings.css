@@ -1,0 +1,39 @@
+#headerEditToolbar .hs-header-cell-controls > span {
+    color: #ccc;
+    font-size: 0.85em;
+    margin-right: 2px;
+}
+
+/* Keep the cell's grid position and span; move its content within that space. */
+.headerRegion > [data-hs-header-align="left"] {
+    justify-self: start;
+    justify-content: flex-start;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.headerRegion > [data-hs-header-align="center"] {
+    justify-self: center;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.headerRegion > [data-hs-header-align="right"] {
+    justify-self: end;
+    justify-content: flex-end;
+    align-items: flex-end;
+    text-align: right;
+}
+
+/* Single stat modules are flex rows: their icons and text remain vertically centered. */
+.headerRegion > .headerModule[data-hs-header-align] {
+    align-items: center;
+}
+
+/* The game's grid rows stay full height, just as when a slot contains two small modules. */
+#headerGrid .headerModule.hs-header-half {
+    align-self: start;
+    min-height: 0;
+    height: 16px;
+}

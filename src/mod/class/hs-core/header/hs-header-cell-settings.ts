@@ -1,0 +1,212 @@
+import { HSGlobal } from '../hs-global';
+import { HSLogger } from '../hs-logger';
+import { HSStorage } from '../hs-storage';
+import { HSUI } from '../hs-ui';
+import { HSModuleManager } from '../module/hs-module-manager';
+import cellSettingsCSS from 'inline:../../../resource/css/module/hs-header-cell-settings.css';
+
+type Alignment = 'left' | 'center' | 'right';
+type LayoutKey = 'desktop' | 'mobile';
+interface CellSettings { align?: Alignment; half?: true; }
+interface StoredSettings {
+    version: 1;
+    layouts: Record<LayoutKey, Record<string, CellSettings>>;
+}
+interface HeaderCell {
+    key: string;
+    element: HTMLElement;
+    modules: HTMLElement[];
+}
+
+const STORAGE_KEY = 'header-cells';
+const REGIONS = ['ascensionStats', 'headerGrid'] as const;
+const MAX_SLOT = 200;
+const ALIGNMENTS: Alignment[] = ['left', 'center', 'right'];
+
+/** Per-cell presentation, kept outside vanilla saves. Uses the same selection as the game's size buttons. */
+export class HSHeaderCellSettings {
+    static #context = 'HSHeaderCellSettings';
+    static #settings: StoredSettings = { version: 1, layouts: { desktop: {}, mobile: {} } };
+    static #alignButtons = new Map<Alignment, HTMLButtonElement>();
+    static #heightButtons = new Map<'full' | 'half', HTMLButtonElement>();
+    static #seenLayouts?: object;
+    static #seenLayout: Partial<Record<LayoutKey, object>> = {};
+
+    static install(): void {
+        const toolbar = document.getElementById('headerEditToolbar');
+        if (!toolbar || document.getElementById('hs-header-cell-alignment')) return;
+        HSHeaderCellSettings.#load();
+        HSUI.injectStyle(cellSettingsCSS, 'hs-header-cell-settings-css');
+        HSUI.flushInjectedStyles();
+
+        const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Alignment');
+        for (const value of ALIGNMENTS) {
+            const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
+                HSHeaderCellSettings.#change({ align: value });
+            });
+            button.id = `hs-header-align-${value}`;
+            alignment.append(button);
+            HSHeaderCellSettings.#alignButtons.set(value, button);
+        }
+        const height = HSHeaderCellSettings.#group('hs-header-cell-height', 'Height');
+        for (const value of ['full', 'half'] as const) {
+            const button = HSHeaderCellSettings.#button(value === 'full' ? 'Full' : 'Half', () => {
+                HSHeaderCellSettings.#change({ half: value === 'half' ? true : undefined });
+            });
+            button.id = `hs-header-height-${value}`;
+            height.append(button);
+            HSHeaderCellSettings.#heightButtons.set(value, button);
+        }
+        // Keep both groups beside the native size controls, ahead of Reset and Done.
+        toolbar.firstElementChild?.after(alignment, height);
+
+        const observer = new MutationObserver(records => HSHeaderCellSettings.#refresh(records.some(record => record.type === 'childList')));
+        for (const id of REGIONS) {
+            const region = document.getElementById(id);
+            // The game's renderer replaces the slots directly. Currency/text updates below them are ignored.
+            if (region) observer.observe(region, { childList: true });
+        }
+        const header = document.getElementById('mainHeader');
+        if (header) observer.observe(header, { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mobile'] });
+        HSHeaderCellSettings.#refresh();
+    }
+
+    static #group(id: string, label: string): HTMLElement {
+        const group = document.createElement('div');
+        group.id = id;
+        group.className = 'headerEditGroup hs-header-cell-controls';
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', label);
+        const title = document.createElement('span');
+        title.textContent = label;
+        group.append(title);
+        return group;
+    }
+
+    static #button(label: string, action: () => void): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.disabled = true;
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', action);
+        return button;
+    }
+
+    static #layoutKey(): LayoutKey {
+        return document.documentElement.dataset.mobile === 'true' ? 'mobile' : 'desktop';
+    }
+
+    static #cells(): HeaderCell[] {
+        const cells: HeaderCell[] = [];
+        for (const id of REGIONS) {
+            const region = document.getElementById(id);
+            for (const child of Array.from(region?.children ?? [])) {
+                if (!(child instanceof HTMLElement)) continue;
+                const index = Number(child.dataset.headerSlot);
+                if (child.dataset.headerSlot === undefined || !Number.isInteger(index) || index < 0 || index > MAX_SLOT) continue;
+                const modules = child.classList.contains('headerModule') ? [child]
+                    : Array.from(child.querySelectorAll<HTMLElement>(':scope > .headerModule'));
+                if (modules.length > 0) cells.push({ key: `${id}:${index}`, element: child, modules });
+            }
+        }
+        return cells;
+    }
+
+    static #selected(cells: HeaderCell[]): HeaderCell | undefined {
+        if (!document.getElementById('mainHeader')?.classList.contains('headerEditMode')) return;
+        return cells.find(cell => cell.modules.some(module => module.classList.contains('headerModuleSelected')));
+    }
+
+    static #canHalf(cell: HeaderCell): boolean {
+        return cell.key.startsWith('headerGrid:') && cell.modules.length === 1
+            && !cell.element.classList.contains('headerStackRow');
+    }
+
+    static #change(change: CellSettings): void {
+        const selected = HSHeaderCellSettings.#selected(HSHeaderCellSettings.#cells());
+        if (!selected || ('half' in change && !HSHeaderCellSettings.#canHalf(selected))) return;
+        const cells = HSHeaderCellSettings.#settings.layouts[HSHeaderCellSettings.#layoutKey()];
+        const next = { ...cells[selected.key], ...change };
+        if (next.half === undefined) delete next.half;
+        if (next.align === undefined && next.half === undefined) delete cells[selected.key];
+        else cells[selected.key] = next;
+        HSHeaderCellSettings.#save();
+        HSHeaderCellSettings.#refresh();
+    }
+
+    static #refresh(rendered = false): void {
+        const key = HSHeaderCellSettings.#layoutKey();
+        const layouts = (HSGlobal.exposedPlayer as { headerLayouts?: Record<string, object> } | null)?.headerLayouts;
+        const layout = layouts?.[key];
+        // Reset replaces one layout inside the same player layouts object. Save imports replace the whole object.
+        if (layouts && layouts === HSHeaderCellSettings.#seenLayouts && layout
+            && HSHeaderCellSettings.#seenLayout[key] && layout !== HSHeaderCellSettings.#seenLayout[key]) {
+            HSHeaderCellSettings.#settings.layouts[key] = {};
+            HSHeaderCellSettings.#save();
+        }
+        HSHeaderCellSettings.#seenLayouts = layouts;
+        HSHeaderCellSettings.#seenLayout[key] = layout;
+
+        const cells = HSHeaderCellSettings.#cells();
+        const settings = HSHeaderCellSettings.#settings.layouts[key];
+        for (const cell of cells) {
+            const value = settings[cell.key];
+            if (value?.align) cell.element.dataset.hsHeaderAlign = value.align;
+            else delete cell.element.dataset.hsHeaderAlign;
+            const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell);
+            for (const module of cell.modules) {
+                if (half) {
+                    // Use the game's small-module rules, exactly as it does when forming a two-module stack.
+                    if (rendered || module.dataset.size !== 'S') module.dataset.hsHeaderFullSize = module.dataset.size ?? 'M';
+                    module.dataset.size = 'S';
+                } else if (module.dataset.hsHeaderFullSize) {
+                    // A game redraw may already have restored its own size. Never overwrite that newer value.
+                    if (!rendered && module.classList.contains('hs-header-half') && module.dataset.size === 'S') {
+                        module.dataset.size = module.dataset.hsHeaderFullSize;
+                    }
+                    delete module.dataset.hsHeaderFullSize;
+                }
+                module.classList.toggle('hs-header-half', half);
+            }
+        }
+        const selected = HSHeaderCellSettings.#selected(cells);
+        const value = selected ? settings[selected.key] : undefined;
+        for (const [alignment, button] of HSHeaderCellSettings.#alignButtons) {
+            button.disabled = !selected;
+            button.setAttribute('aria-pressed', String(!!selected && (value?.align ?? 'center') === alignment));
+            button.title = selected ? 'Align the selected cell' : 'Select a module in a header cell first';
+        }
+        for (const [height, button] of HSHeaderCellSettings.#heightButtons) {
+            button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected);
+            button.setAttribute('aria-pressed', String(!button.disabled && (value?.half ? 'half' : 'full') === height));
+            button.title = button.disabled ? 'Select a single module in the header grid (stacks already use half height)'
+                : 'Use the full cell height or its upper half';
+        }
+    }
+
+    static #load(): void {
+        if (localStorage.getItem(`${HSGlobal.HSStorage.storagePrefix}${STORAGE_KEY}`) === null) return;
+        const stored = HSModuleManager.getModule<HSStorage>('HSStorage')?.getData<Partial<StoredSettings>>(STORAGE_KEY);
+        if (!stored || stored.version !== 1 || !stored.layouts || typeof stored.layouts !== 'object') return;
+        for (const key of ['desktop', 'mobile'] as const) {
+            const cells = stored.layouts[key];
+            if (!cells || typeof cells !== 'object') continue;
+            for (const [name, value] of Object.entries(cells)) {
+                const match = /^(ascensionStats|headerGrid):(0|[1-9]\d*)$/.exec(name);
+                if (!match || Number(match[2]) > MAX_SLOT || !value || typeof value !== 'object') continue;
+                const clean: CellSettings = {};
+                if (ALIGNMENTS.includes(value.align!)) clean.align = value.align;
+                if (value.half === true) clean.half = true;
+                if (clean.align || clean.half) HSHeaderCellSettings.#settings.layouts[key][name] = clean;
+            }
+        }
+    }
+
+    static #save(): void {
+        if (!HSModuleManager.getModule<HSStorage>('HSStorage')?.setData(STORAGE_KEY, HSHeaderCellSettings.#settings)) {
+            HSLogger.warn('Could not save the header cell settings', HSHeaderCellSettings.#context);
+        }
+    }
+}
