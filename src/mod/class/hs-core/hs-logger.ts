@@ -12,7 +12,7 @@ import { HSSettings } from "./settings/hs-settings";
  * Description: 
  *     Logging module for Hypersynergism. 
  *     Contains methods to log things in both the devtools console and the mod's panel's log
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSLogger {
 

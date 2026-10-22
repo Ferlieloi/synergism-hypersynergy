@@ -19,7 +19,7 @@ interface HSNumberLocale {
  *     from that same Intl, like the game's cached formatters.
  *     Only for text formatted that way: a raw JS number ("1.5") is misread where "." groups thousands.
  *     Not read (NaN): the notations the game uses above e1,000,000 ("1.23e1.234M", "E1.234e6").
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSNumberParser {
     static #locale?: HSNumberLocale;

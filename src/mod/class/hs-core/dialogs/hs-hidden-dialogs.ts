@@ -33,7 +33,7 @@ interface HSHiddenDialogsData {
  *     with it ticked; from then on, HSGameDialogs answers that dialog (OK / dismissed) without showing it.
  *     Turning the setting on also adds a ready-made list of useless dialogs, each added once.
  *     The list is kept under its own storage key, and shown in the panel ("Hidden dialogs") to forget entries.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHiddenDialogs {
     static #context = 'HSHiddenDialogs';

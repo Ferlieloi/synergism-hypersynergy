@@ -15,7 +15,7 @@ export type AscensionIncomeSnapshot = {
  *     the amount gained on ascension and the real-time rate per second (the /s amount times the ascension speed).
  *     Each read clicks the stat to switch between "/s" and "on ascension" and clicks it back, so reads are queued:
  *     one instance is shared by every reader.
- * Author: maenhiir
+ * Author: XxMolkxX, Shewchou
  */
 export class HSAscensionIncome {
     #context: string;

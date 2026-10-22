@@ -93,7 +93,7 @@ const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
  *     restarts each time #headerEditPanel goes from display: none to shown, and its animationstart event triggers
  *     the refresh (no observer, no polling).
  *     No patcher feature: works for every player.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHeaderEditSettings {
     static #context = 'HSHeaderEditSettings';

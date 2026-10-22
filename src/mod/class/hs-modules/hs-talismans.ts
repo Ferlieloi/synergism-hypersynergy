@@ -10,7 +10,7 @@ import { HSSettings } from "../hs-core/settings/hs-settings";
  * IsExplicitHSModule: Yes
  * Description: 
  *     Hypersynergism module which adds an enhanced "Cycle BUY" button next to the vanilla talisman "Buy All" button that cycles through fragments
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSTalismans extends HSModule {
     #talismanBuyButtons : HTMLButtonElement[] = []; 

@@ -11,7 +11,7 @@ import { HSLogger } from "../../hs-core/hs-logger";
  *     (HSAmbrosia), the heater results' slot row and the game's header (HSHeaderLoadoutIcons). Its storage
  *     key still bears the name of the removed ambrosia quickbar, so the icons players picked stay.
  *     Corruption: keyed by the slot number (1…), left by the old corruption quickbar, shown on the header.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSLoadoutIconStore {
     static readonly ambrosia = new HSLoadoutIconStore('hs-ambrosia-quickbar-icons');

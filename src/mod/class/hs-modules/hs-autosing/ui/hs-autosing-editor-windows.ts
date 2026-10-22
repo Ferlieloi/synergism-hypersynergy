@@ -33,7 +33,7 @@ interface HSAutosingEditorWindow {
  *     handlers, the second one saving its own stale copy of the data over the first one's changes.
  *     Opening a kind that is already open brings the open window to the front instead. A window whose parent
  *     was closed is removed at once and the new one opens, so no two windows of a kind are ever in the page.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSAutosingEditorWindows {
     static #windows = new Map<HSAutosingEditorWindowKind, HSAutosingEditorWindow>();

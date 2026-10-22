@@ -24,7 +24,7 @@ import { HSModuleOptions } from "../../types/hs-types";
  *         - injectCSS() for injecting arbitrary styles in to the DOM
  *         - injectHTML() for injecting arbitrary HTML in to the DOM
  *         - Modal() for creating and displaying custom modals
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSUI extends HSModule {
     static #staticContext = 'HSUI';

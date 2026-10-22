@@ -41,7 +41,7 @@ type HepteractQuickExpandEstimate = {
  *         - In-game hepteract ratio display (HSHepteractRatios)
  *         - Time until a Platonic upgrade's next level (HSPlatonicUpgradeTime)
  *     Both time estimates read the ascension income through one shared HSAscensionIncome.
- * Author: Swiffy
+ * Author: Swiffy, XxMolkxX, Shewchou
 */
 export class HSHepteracts extends HSModule {
     #heptGrid?: Element;

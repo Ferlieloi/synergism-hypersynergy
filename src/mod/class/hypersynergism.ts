@@ -30,7 +30,7 @@ declare const HS_DEV_BUILD: boolean;
  * Description: 
  *     Hypersynergism main class.
  *     Instantiates the module manager and handles calls to building the mod's panel and working with mod's settings
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class Hypersynergism {
     // Class context, mainly for HSLogger

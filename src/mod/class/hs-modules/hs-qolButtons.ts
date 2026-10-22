@@ -30,7 +30,7 @@ type MaxedUpgradeToggleId = keyof typeof MAXED_UPGRADE_TOGGLES;
  *  IsExplicitHSModule: Yes
  *  Description: 
  *    Hypersynergism module which adds qol buttons to the game.
- *  Author: Swiffy, XxmolkxX, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
+ *  Author: Swiffy, XxmolkxX, Shewchou, the creator of original autosing script (httpsnet?) (hide gq/oct buttons) and Core (syn UI bar)
 */
 export class HSQOLButtons extends HSModule {
     // Tracks active tab visit unsubscribers per SINGULARITY_VIEW. 

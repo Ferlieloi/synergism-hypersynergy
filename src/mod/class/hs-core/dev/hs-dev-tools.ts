@@ -128,7 +128,7 @@ const ROW_GROUPS: { title: string, rows: HSDevRowDefinition[] }[] = [
  *     Never reaches players: its only use is under `if (HS_DEV_BUILD)`, a build-time constant that is false
  *     in the release build, so esbuild drops this file from the release bundle (the release build checks it).
  *     For that to hold, keep this class free of static fields and of imports that run code when loaded.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSDevTools {
     #context = 'HSDevTools';

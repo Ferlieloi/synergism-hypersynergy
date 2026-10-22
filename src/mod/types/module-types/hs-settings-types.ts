@@ -1,7 +1,7 @@
 /*
     Type definition collection: HS settings types
     Description: Collection of types specific to hs-settings module
-    Author: Swiffy
+    Author: Swiffy, Shewchou
 */
 
 import { HSSetting } from "../../class/hs-core/settings/hs-setting";

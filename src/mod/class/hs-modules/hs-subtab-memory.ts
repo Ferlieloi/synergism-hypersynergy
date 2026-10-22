@@ -41,7 +41,7 @@ interface HSOpenTab {
  *     Only a tab opened by the player counts (a trusted event is being handled): the mod's own visits
  *     (stage read, settings fixer, autosing's tab restore) and a loader's visit to Settings > Stats are
  *     neither restored nor remembered.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSSubtabMemory extends HSModule {
     #gameState?: HSGameState;

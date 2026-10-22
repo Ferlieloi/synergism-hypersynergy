@@ -13,7 +13,7 @@ import { HEPTERACT_DATA, readHepteract } from "./hs-hepteract-state";
  * Description:
  *     Created by HSHepteracts. Shows the ratios between the hepteracts' capacities above the Hepteract Forge's grid
  *     (CHR/HYP/CHL, ACC/BST/MLT, CHR/ACC), updated whenever a meter changes. Only shown once every hepteract has a capacity.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export class HSHepteractRatios {
     #context: string;

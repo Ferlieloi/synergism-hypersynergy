@@ -26,7 +26,7 @@ const BOOLEAN_OPTIONS: HSCalculationParamOption[] = [
  *       With supportsReduce, the first param is reduce_vals, filled by the two buttons.
  *     - Options read from the save (a corruption loadout) are read again from the save taken at the click.
  *     - Errors are shown in the result line, and logged.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSCalculationTools {
     static #context = 'HSCalculationTools';

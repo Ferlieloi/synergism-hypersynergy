@@ -102,7 +102,7 @@ export interface HSSingReducerPlan {
  * Description: Hypersynergism module which manages ambrosia loadouts: the slot shown as loaded (rainbow or silver
  *     border, on the Ambrosia tab's slots and the game's Ambrosia loadouts and loadout page header modules), imports,
  *     Auto-Loadout, custom slot icons on the tab, the minibars and the hourly rates.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export class HSAmbrosia extends HSModule
     implements HSGameDataSubscriber {

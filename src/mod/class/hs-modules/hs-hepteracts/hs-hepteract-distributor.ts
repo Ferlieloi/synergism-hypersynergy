@@ -108,7 +108,7 @@ const HELP_LINES = [
  *     tree is replaced by one holding the singularity reducers (HSAmbrosia.prepareSingReducerSwap), so
  *     hepteracts cost less. That tree also gets Talisman Power where it lowers the cost, and "Also when only
  *     Talisman Power can be added" (off by default) loads it when no reducer can be added.
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHepteractDistributor extends HSModule {
     #tab?: HTMLElement;

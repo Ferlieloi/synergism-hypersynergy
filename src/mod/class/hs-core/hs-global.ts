@@ -10,7 +10,7 @@ declare const HS_BUILD_VERSION: string;
  * IsExplicitHSModule: No
  * Description:
  *     Static class containing global configuration and constants for the Hypersynergism mod.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export const HSGlobal: IHSGlobal = class {
 

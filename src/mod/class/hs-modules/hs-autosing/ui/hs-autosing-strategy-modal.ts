@@ -14,7 +14,7 @@ import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
  *   - Supports strategy duplication from defaults, with safeguards to prevent overwriting default strategies.
  *   - Provides UI for adding/editing/deleting phases, including a special AoAG phase that can be toggled on/off.
  *   - Integrates with corruption loadout management for phase-specific loadout assignment.
- * Author: XxMolkxX
+ * Author: XxMolkxX, Shewchou
  */
 export class HSAutosingStrategyModal {
     static async open(

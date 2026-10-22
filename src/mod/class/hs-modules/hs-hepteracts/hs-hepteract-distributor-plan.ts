@@ -1,7 +1,7 @@
 /*
     Hepteract Distributor: the planning rule.
     Pure functions: no DOM, no game access (also run headless, against a copy of the game's auto-craft).
-    Author: maenhiir
+    Author: Shewchou
 */
 
 import { expandHepteract, HepteractState } from "./hs-hepteract-state";

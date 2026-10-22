@@ -23,7 +23,7 @@ type PlatonicResourceEstimate = {
  *     Platonic upgrade's description: the cube costs (with the Wow! Cubes and Hepteracts the Abyss hepteracts
  *     still to craft cost) against the owned amounts and the ascension income. Offerings and Obtainium are only
  *     reported as short. Warns when Exalt 7 is past its time limit.
- * Author: maenhiir
+ * Author: XxMolkxX, Shewchou
  */
 export class HSPlatonicUpgradeTime {
     #context: string;

@@ -48,7 +48,7 @@ type HSExportFolderState = 'none' | 'ready' | 'locked' | 'asking' | 'refused';
  *     writes the file there itself, in place of the game's download. It is the only way on Steam, where
  *     every download opens a "Save as" dialog. The folder is kept in IndexedDB with the names of the files
  *     written, so that only those are ever removed ("Keep only the last X files").
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSAutoExport extends HSModule {
     #loadedAt = Date.now();

@@ -58,7 +58,7 @@ interface HSHeaderModuleNotes {
  *     from every save and every loaded save (the game's save schema would reset the whole layout over an unknown id).
  *     So their place is remembered here, per browser (HSStorage), and put back before each render of the header
  *     (a save load, a singularity, the header's Reset button, each edit).
- * Author: maenhiir
+ * Author: Shewchou
  */
 export class HSHeaderModules {
     static #context = 'HSHeaderModules';

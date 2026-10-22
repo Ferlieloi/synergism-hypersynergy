@@ -30,7 +30,7 @@ type StringIndexedObject = Record<string, unknown>;
  *         - Building the settings panel with setting inputs
  *         - Binding appropriate events to setting changes and on/off toggles
  *         - Keeping internal settings states in sync with DOM
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
  */
 export class HSSettings extends HSModule {
     static #staticContext = '';

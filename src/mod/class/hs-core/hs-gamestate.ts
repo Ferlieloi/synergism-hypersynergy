@@ -24,7 +24,7 @@ import { HSModule } from "./module/hs-module";
  * IsExplicitHSModule: Yes
  * Description:
  *     Manages the game state, including views and their transitions.
- * Author: Swiffy
+ * Author: Swiffy, XxMolkxX, Shewchou
  */
 export class HSGameState extends HSModule {
 

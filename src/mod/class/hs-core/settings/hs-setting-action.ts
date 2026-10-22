@@ -38,7 +38,7 @@ function moduleToggle<T extends HSModule>(
  * Description: 
  *     Helper wrapper for HSSettings.
  *     Encapsulates SettingActions and their functionality.
- * Author: Swiffy
+ * Author: Swiffy, Shewchou
 */
 export class HSSettingActions {
     // Record for SettingActions
