@@ -556,8 +556,21 @@ export class HSAmbrosia extends HSModule
 
         for (const [resource, display] of Object.entries(this.#rateHeaderDisplays) as [HSAmbrosiaRateResource, HTMLDivElement][]) {
             const rate = rates?.[resource];
-            const text = rate !== undefined && Number.isFinite(rate) ? `${HSUtils.N(rate)}/h` : '—';
-            if (display.textContent !== text) display.textContent = text;
+            const known = rate !== undefined && Number.isFinite(rate);
+            const value = known ? HSUtils.N(rate) : '—';
+            if (display.dataset.hsRate === value) continue;
+            display.dataset.hsRate = value;
+
+            if (!known) {
+                display.textContent = value;
+                continue;
+            }
+
+            // The unit in white, the number in the currency's color
+            const unit = document.createElement('span');
+            unit.style.color = 'white';
+            unit.textContent = '\u00a0/h';
+            display.replaceChildren(value, unit);
         }
     }
 
