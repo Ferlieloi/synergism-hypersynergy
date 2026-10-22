@@ -37,3 +37,7 @@
     min-height: 0;
     height: 16px;
 }
+
+#headerGrid .headerModule.hs-header-half[data-hs-header-half-position="bottom"] {
+    align-self: end;
+}

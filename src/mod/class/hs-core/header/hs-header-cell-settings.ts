@@ -6,8 +6,9 @@ import { HSModuleManager } from '../module/hs-module-manager';
 import cellSettingsCSS from 'inline:../../../resource/css/module/hs-header-cell-settings.css';
 
 type Alignment = 'left' | 'center' | 'right';
+type HalfPosition = 'top' | 'bottom';
 type LayoutKey = 'desktop' | 'mobile';
-interface CellSettings { align?: Alignment; half?: true; }
+interface CellSettings { align?: Alignment; half?: true; halfPosition?: 'bottom'; }
 interface StoredSettings {
     version: 1;
     layouts: Record<LayoutKey, Record<string, CellSettings>>;
@@ -29,6 +30,7 @@ export class HSHeaderCellSettings {
     static #settings: StoredSettings = { version: 1, layouts: { desktop: {}, mobile: {} } };
     static #alignButtons = new Map<Alignment, HTMLButtonElement>();
     static #heightButtons = new Map<'full' | 'half', HTMLButtonElement>();
+    static #positionButtons = new Map<HalfPosition, HTMLButtonElement>();
     static #seenLayouts?: object;
     static #seenLayout: Partial<Record<LayoutKey, object>> = {};
 
@@ -57,8 +59,17 @@ export class HSHeaderCellSettings {
             height.append(button);
             HSHeaderCellSettings.#heightButtons.set(value, button);
         }
-        // Keep both groups beside the native size controls, ahead of Reset and Done.
-        toolbar.firstElementChild?.after(alignment, height);
+        const position = HSHeaderCellSettings.#group('hs-header-cell-position', 'Position');
+        for (const value of ['top', 'bottom'] as const) {
+            const button = HSHeaderCellSettings.#button(value === 'top' ? 'Top' : 'Bottom', () => {
+                HSHeaderCellSettings.#change({ halfPosition: value === 'bottom' ? 'bottom' : undefined });
+            });
+            button.id = `hs-header-position-${value}`;
+            position.append(button);
+            HSHeaderCellSettings.#positionButtons.set(value, button);
+        }
+        // Keep the cell controls beside the native size controls, ahead of Reset and Done.
+        toolbar.firstElementChild?.after(alignment, height, position);
 
         const observer = new MutationObserver(records => HSHeaderCellSettings.#refresh(records.some(record => record.type === 'childList')));
         for (const id of REGIONS) {
@@ -126,11 +137,12 @@ export class HSHeaderCellSettings {
 
     static #change(change: CellSettings): void {
         const selected = HSHeaderCellSettings.#selected(HSHeaderCellSettings.#cells());
-        if (!selected || ('half' in change && !HSHeaderCellSettings.#canHalf(selected))) return;
+        if (!selected || (('half' in change || 'halfPosition' in change) && !HSHeaderCellSettings.#canHalf(selected))) return;
         const cells = HSHeaderCellSettings.#settings.layouts[HSHeaderCellSettings.#layoutKey()];
         const next = { ...cells[selected.key], ...change };
         if (next.half === undefined) delete next.half;
-        if (next.align === undefined && next.half === undefined) delete cells[selected.key];
+        if (next.halfPosition === undefined) delete next.halfPosition;
+        if (next.align === undefined && next.half === undefined && next.halfPosition === undefined) delete cells[selected.key];
         else cells[selected.key] = next;
         HSHeaderCellSettings.#save();
         HSHeaderCellSettings.#refresh();
@@ -169,6 +181,8 @@ export class HSHeaderCellSettings {
                     delete module.dataset.hsHeaderFullSize;
                 }
                 module.classList.toggle('hs-header-half', half);
+                if (half && value?.halfPosition === 'bottom') module.dataset.hsHeaderHalfPosition = 'bottom';
+                else delete module.dataset.hsHeaderHalfPosition;
             }
         }
         const selected = HSHeaderCellSettings.#selected(cells);
@@ -182,7 +196,13 @@ export class HSHeaderCellSettings {
             button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected);
             button.setAttribute('aria-pressed', String(!button.disabled && (value?.half ? 'half' : 'full') === height));
             button.title = button.disabled ? 'Select a single module in the header grid (stacks already use half height)'
-                : 'Use the full cell height or its upper half';
+                : 'Use the full cell height or half height';
+        }
+        for (const [position, button] of HSHeaderCellSettings.#positionButtons) {
+            button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected) || !value?.half;
+            button.setAttribute('aria-pressed', String(!button.disabled && (value?.halfPosition ?? 'top') === position));
+            button.title = button.disabled ? 'Choose Half height for a single module first'
+                : 'Place the half-height module at the top or bottom of its cell';
         }
     }
 
@@ -199,7 +219,8 @@ export class HSHeaderCellSettings {
                 const clean: CellSettings = {};
                 if (ALIGNMENTS.includes(value.align!)) clean.align = value.align;
                 if (value.half === true) clean.half = true;
-                if (clean.align || clean.half) HSHeaderCellSettings.#settings.layouts[key][name] = clean;
+                if (value.halfPosition === 'bottom') clean.halfPosition = 'bottom';
+                if (clean.align || clean.half || clean.halfPosition) HSHeaderCellSettings.#settings.layouts[key][name] = clean;
             }
         }
     }

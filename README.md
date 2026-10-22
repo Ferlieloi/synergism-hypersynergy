@@ -16,7 +16,7 @@ Here are some of Hypersynergism’s standout features:
 - **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
 - **Ambrosia tools:** Manage and quick-switch loadouts, automatically switch loadouts when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
 - **Quickbars:** View and interact with Ambrosia, Corruption and Automation controls from the game header.
-- **Header cell controls:** In header edit mode, select a module and choose Left, Center, or Right alignment for its cell. Use Full or Half height for a single module in the grid; Half matches the compact modules in a two-module stack. Choices are remembered separately for desktop and mobile.
+- **Header cell controls:** In header edit mode, select a module and choose Left, Center, or Right alignment for its cell. Use Full or Half height for a single module in the grid; Half matches the compact modules in a two-module stack and can sit at the Top or Bottom of its cell. Choices are remembered separately for desktop and mobile.
 - **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set. (Soon to be: Hept Optimizer)
 - **Golden Quark tools:** Split your Golden Quarks between upgrades with the GQ Distributor, using ratios you set.
 - **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the "Since you were away" box at load.
