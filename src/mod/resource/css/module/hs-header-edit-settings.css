@@ -1,5 +1,12 @@
 /* "[HS] Header", the block next to the game's header tray in edit mode (HSHeaderEditSettings) */
 
+html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-last {
+   margin-bottom: var(--hs-header-gap-margin, 0px);
+}
+html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-empty {
+   display: none;
+}
+
 /* The original corruption icon inside the game's existing cleanse button. */
 #mainHeader :is(#corruptionCleanseHeader, #corruptionCleansePageHeader).hs-corruption-icon-cleanse {
    display: inline-flex;

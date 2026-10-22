@@ -31,13 +31,73 @@
     align-items: center;
 }
 
+/* Progress modules need their cell width for native text fitting, especially size-contained 1x2 modules. */
+.headerRegion > .headerProgress[data-hs-header-align] {
+    justify-self: stretch;
+    min-width: 0;
+}
+
+.headerRegion > [data-hs-header-vertical="top"] {
+    --hs-header-vertical: start;
+    --hs-header-vertical-content: flex-start;
+}
+
+.headerRegion > [data-hs-header-vertical="center"] {
+    --hs-header-vertical: center;
+    --hs-header-vertical-content: center;
+}
+
+.headerRegion > [data-hs-header-vertical="bottom"] {
+    --hs-header-vertical: end;
+    --hs-header-vertical-content: flex-end;
+}
+
+.headerRegion > [data-hs-header-vertical] {
+    align-self: var(--hs-header-vertical);
+}
+
+/* Size-contained progress modules must fill their row span; align their text inside that box. */
+.headerRegion > .headerProgress[data-hs-header-vertical] {
+    align-self: stretch;
+    align-items: var(--hs-header-vertical-content);
+}
+
 /* The game's grid rows stay full height, just as when a slot contains two small modules. */
 #headerGrid .headerModule.hs-header-half {
-    align-self: start;
+    align-self: var(--hs-header-vertical, start);
     min-height: 0;
     height: 16px;
 }
 
-#headerGrid .headerModule.hs-header-half[data-hs-header-half-position="bottom"] {
-    align-self: end;
+#headerGrid .headerProgress.hs-header-half {
+    overflow: hidden;
+}
+
+.hs-header-progress-compact {
+    display: none;
+}
+
+html.hs-compact-challenge-text .headerProgress {
+    position: relative;
+    justify-self: stretch;
+    min-width: 0;
+}
+
+/* Keep native text measurable so switching back to Full preserves the game's text fitting. */
+html.hs-compact-challenge-text .headerProgress > .fitText {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+html.hs-compact-challenge-text .headerProgress > .hs-header-progress-compact {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: inherit;
+    line-height: 1.2;
 }

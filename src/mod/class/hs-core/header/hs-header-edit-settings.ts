@@ -53,6 +53,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         title: 'Layout',
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
+            { setting: 'removeHeaderGap', label: 'Remove header gap' },
         ],
     },
     {
@@ -62,6 +63,12 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
             { setting: 'ambrosiaMinibars', label: 'Ambrosia minibars', withoutPatch: "They show in the mod's row under the header, and need GDS (turned on with them)." },
             { setting: 'ambrosiaRateHeader', label: 'Ambrosia per hour', shown: hasHeaderModules },
             { setting: 'centerQuickbars', label: 'Center quick bars', shown: () => !hasHeaderModules() },
+        ],
+    },
+    {
+        title: 'Challenge progress',
+        toggles: [
+            { setting: 'compactChallengeText', label: 'Compact challenge text' },
         ],
     },
     {
@@ -111,6 +118,30 @@ export class HSHeaderEditSettings {
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
     static #hideRuleInjected = false;
+    static #openingEditor = false;
+
+    /** Use the game's own long-press handler on the region, without starting a module drag. */
+    static async openEditor(): Promise<void> {
+        const header = document.getElementById('mainHeader');
+        const region = document.getElementById('headerGrid');
+        if (!header || !region || HSHeaderEditSettings.#openingEditor) return;
+        if (HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
+        if (!header.classList.contains('headerEditMode')) {
+            HSHeaderEditSettings.#openingEditor = true;
+            // Target the region itself: a module target would also begin pointer capture and dragging.
+            region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            try {
+                await new Promise(resolve => window.setTimeout(resolve, 750));
+            } finally {
+                region.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: -1 }));
+                HSHeaderEditSettings.#openingEditor = false;
+            }
+        }
+        if (header.classList.contains('headerEditMode')) {
+            header.scrollIntoView({ block: 'start' });
+            document.getElementById('headerEditDone')?.focus({ preventScroll: true });
+        }
+    }
 
     /** Hides the slots above the counts, and adds the block next to the game's header tray. */
     static install(): void {

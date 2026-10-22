@@ -3,12 +3,13 @@ import { HSLogger } from '../hs-logger';
 import { HSStorage } from '../hs-storage';
 import { HSUI } from '../hs-ui';
 import { HSModuleManager } from '../module/hs-module-manager';
+import { HSHeaderChallengeProgress } from './hs-header-challenge-progress';
 import cellSettingsCSS from 'inline:../../../resource/css/module/hs-header-cell-settings.css';
 
 type Alignment = 'left' | 'center' | 'right';
-type HalfPosition = 'top' | 'bottom';
+type VerticalAlignment = 'top' | 'center' | 'bottom';
 type LayoutKey = 'desktop' | 'mobile';
-interface CellSettings { align?: Alignment; half?: true; halfPosition?: 'bottom'; }
+interface CellSettings { align?: Alignment; vertical?: VerticalAlignment; half?: true; }
 interface StoredSettings {
     version: 1;
     layouts: Record<LayoutKey, Record<string, CellSettings>>;
@@ -23,6 +24,7 @@ const STORAGE_KEY = 'header-cells';
 const REGIONS = ['ascensionStats', 'headerGrid'] as const;
 const MAX_SLOT = 200;
 const ALIGNMENTS: Alignment[] = ['left', 'center', 'right'];
+const VERTICAL_ALIGNMENTS: VerticalAlignment[] = ['top', 'center', 'bottom'];
 
 /** Per-cell presentation, kept outside vanilla saves. Uses the same selection as the game's size buttons. */
 export class HSHeaderCellSettings {
@@ -30,7 +32,7 @@ export class HSHeaderCellSettings {
     static #settings: StoredSettings = { version: 1, layouts: { desktop: {}, mobile: {} } };
     static #alignButtons = new Map<Alignment, HTMLButtonElement>();
     static #heightButtons = new Map<'full' | 'half', HTMLButtonElement>();
-    static #positionButtons = new Map<HalfPosition, HTMLButtonElement>();
+    static #verticalButtons = new Map<VerticalAlignment, HTMLButtonElement>();
     static #seenLayouts?: object;
     static #seenLayout: Partial<Record<LayoutKey, object>> = {};
 
@@ -40,8 +42,9 @@ export class HSHeaderCellSettings {
         HSHeaderCellSettings.#load();
         HSUI.injectStyle(cellSettingsCSS, 'hs-header-cell-settings-css');
         HSUI.flushInjectedStyles();
+        HSHeaderChallengeProgress.install();
 
-        const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Alignment');
+        const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Horizontal');
         for (const value of ALIGNMENTS) {
             const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
                 HSHeaderCellSettings.#change({ align: value });
@@ -59,17 +62,17 @@ export class HSHeaderCellSettings {
             height.append(button);
             HSHeaderCellSettings.#heightButtons.set(value, button);
         }
-        const position = HSHeaderCellSettings.#group('hs-header-cell-position', 'Position');
-        for (const value of ['top', 'bottom'] as const) {
-            const button = HSHeaderCellSettings.#button(value === 'top' ? 'Top' : 'Bottom', () => {
-                HSHeaderCellSettings.#change({ halfPosition: value === 'bottom' ? 'bottom' : undefined });
+        const vertical = HSHeaderCellSettings.#group('hs-header-cell-vertical-alignment', 'Vertical');
+        for (const value of VERTICAL_ALIGNMENTS) {
+            const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
+                HSHeaderCellSettings.#change({ vertical: value });
             });
-            button.id = `hs-header-position-${value}`;
-            position.append(button);
-            HSHeaderCellSettings.#positionButtons.set(value, button);
+            button.id = `hs-header-vertical-${value}`;
+            vertical.append(button);
+            HSHeaderCellSettings.#verticalButtons.set(value, button);
         }
         // Keep the cell controls beside the native size controls, ahead of Reset and Done.
-        toolbar.firstElementChild?.after(alignment, height, position);
+        toolbar.firstElementChild?.after(alignment, vertical, height);
 
         const observer = new MutationObserver(records => HSHeaderCellSettings.#refresh(records.some(record => record.type === 'childList')));
         for (const id of REGIONS) {
@@ -137,12 +140,11 @@ export class HSHeaderCellSettings {
 
     static #change(change: CellSettings): void {
         const selected = HSHeaderCellSettings.#selected(HSHeaderCellSettings.#cells());
-        if (!selected || (('half' in change || 'halfPosition' in change) && !HSHeaderCellSettings.#canHalf(selected))) return;
+        if (!selected || ('half' in change && !HSHeaderCellSettings.#canHalf(selected))) return;
         const cells = HSHeaderCellSettings.#settings.layouts[HSHeaderCellSettings.#layoutKey()];
         const next = { ...cells[selected.key], ...change };
         if (next.half === undefined) delete next.half;
-        if (next.halfPosition === undefined) delete next.halfPosition;
-        if (next.align === undefined && next.half === undefined && next.halfPosition === undefined) delete cells[selected.key];
+        if (next.align === undefined && next.half === undefined && next.vertical === undefined) delete cells[selected.key];
         else cells[selected.key] = next;
         HSHeaderCellSettings.#save();
         HSHeaderCellSettings.#refresh();
@@ -168,6 +170,9 @@ export class HSHeaderCellSettings {
             if (value?.align) cell.element.dataset.hsHeaderAlign = value.align;
             else delete cell.element.dataset.hsHeaderAlign;
             const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell);
+            const vertical = value?.vertical ?? (half ? 'top' : undefined);
+            if (vertical) cell.element.dataset.hsHeaderVertical = vertical;
+            else delete cell.element.dataset.hsHeaderVertical;
             for (const module of cell.modules) {
                 if (half) {
                     // Use the game's small-module rules, exactly as it does when forming a two-module stack.
@@ -181,8 +186,6 @@ export class HSHeaderCellSettings {
                     delete module.dataset.hsHeaderFullSize;
                 }
                 module.classList.toggle('hs-header-half', half);
-                if (half && value?.halfPosition === 'bottom') module.dataset.hsHeaderHalfPosition = 'bottom';
-                else delete module.dataset.hsHeaderHalfPosition;
             }
         }
         const selected = HSHeaderCellSettings.#selected(cells);
@@ -198,11 +201,10 @@ export class HSHeaderCellSettings {
             button.title = button.disabled ? 'Select a single module in the header grid (stacks already use half height)'
                 : 'Use the full cell height or half height';
         }
-        for (const [position, button] of HSHeaderCellSettings.#positionButtons) {
-            button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected) || !value?.half;
-            button.setAttribute('aria-pressed', String(!button.disabled && (value?.halfPosition ?? 'top') === position));
-            button.title = button.disabled ? 'Choose Half height for a single module first'
-                : 'Place the half-height module at the top or bottom of its cell';
+        for (const [vertical, button] of HSHeaderCellSettings.#verticalButtons) {
+            button.disabled = !selected;
+            button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : 'center')) === vertical));
+            button.title = selected ? 'Align the selected cell vertically' : 'Select a module in a header cell first';
         }
     }
 
@@ -218,9 +220,11 @@ export class HSHeaderCellSettings {
                 if (!match || Number(match[2]) > MAX_SLOT || !value || typeof value !== 'object') continue;
                 const clean: CellSettings = {};
                 if (ALIGNMENTS.includes(value.align!)) clean.align = value.align;
+                if (VERTICAL_ALIGNMENTS.includes(value.vertical!)) clean.vertical = value.vertical;
+                // Earlier versions offered Bottom only for half-height cells. Keep that placement when upgrading.
+                else if ((value as { halfPosition?: unknown }).halfPosition === 'bottom') clean.vertical = 'bottom';
                 if (value.half === true) clean.half = true;
-                if (value.halfPosition === 'bottom') clean.halfPosition = 'bottom';
-                if (clean.align || clean.half || clean.halfPosition) HSHeaderCellSettings.#settings.layouts[key][name] = clean;
+                if (clean.align || clean.half || clean.vertical) HSHeaderCellSettings.#settings.layouts[key][name] = clean;
             }
         }
     }
