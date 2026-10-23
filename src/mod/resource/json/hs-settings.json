@@ -1465,6 +1465,21 @@
       "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
     }
   },
+  "corruptionHeaderAlwaysShown": {
+    "settingName": "corruptionHeaderAlwaysShown",
+    "settingDescription": "Keep the corruption loadout modules visible",
+    "settingHelpText": "Keeps both corruption loadout modules in the header before Challenge 11 is completed in the singularity.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "corruptionHeaderAlwaysShownAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-corruption-header-always-shown-btn"
+    }
+  },
   "matchOcteractIconSize": {
     "settingName": "matchOcteractIconSize",
     "settingDescription": "Match the octeract header icon size",

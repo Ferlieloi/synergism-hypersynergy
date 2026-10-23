@@ -262,6 +262,9 @@ export class HSSettingActions {
         corruptionHeaderIconCleanseAction: async (params: HSSettingActionParams) => {
             HSCorruption.setHeaderIconCleanse(params.disable !== true);
         },
+        corruptionHeaderAlwaysShownAction: async (params: HSSettingActionParams) => {
+            HSCorruption.setHeaderAlwaysShown(params.disable !== true);
+        },
         matchOcteractIconSizeAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-match-octeract-icon-size', params.disable !== true);
         },

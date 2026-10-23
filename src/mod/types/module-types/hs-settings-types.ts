@@ -100,6 +100,7 @@ export interface HSSettingsDefinition {
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
     corruptionHeaderIconCleanse: HSSettingBase<boolean>;
+    corruptionHeaderAlwaysShown: HSSettingBase<boolean>;
     matchOcteractIconSize: HSSettingBase<boolean>;
     matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
