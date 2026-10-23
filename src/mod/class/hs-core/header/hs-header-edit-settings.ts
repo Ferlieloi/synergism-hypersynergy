@@ -55,6 +55,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
             { setting: 'headerHideLoadoutIcons', label: 'Hide loadout icons' },
+            { setting: 'headerEditButton', label: '✎ Header edit button' },
         ],
     },
     {
@@ -92,6 +93,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
 const MAX_SLOTS = 16;
 const BLOCK_ID = 'hs-header-edit-settings';
 const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
+const EDIT_BUTTON_ID = 'hs-header-edit-button';
 
 /**
  * Class: HSHeaderEditSettings
@@ -109,6 +111,7 @@ const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
  *     The counters refresh when edit mode shows the block (the slots owned may have changed): a 1 ms CSS animation
  *     restarts each time #headerEditPanel goes from display: none to shown, and its animationstart event triggers
  *     the refresh (no observer, no polling).
+ *     Also the faint pencil right of the mod icon that toggles edit mode (setting headerEditButton, on by default).
  *     No patcher feature: works for every player.
  * Author: Shewchou
  */
@@ -129,10 +132,26 @@ export class HSHeaderEditSettings {
         if (HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
         if (!header.classList.contains('headerEditMode')) {
             HSHeaderEditSettings.#openingEditor = true;
-            // Target the region itself: a module target would also begin pointer capture and dragging.
-            region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            // The game's hold timer (650 ms, started by its pointerdown handler through window.setTimeout) is run
+            // at once instead. Not caught (a game change): wait for it as a real hold.
+            let hold: (() => void) | undefined;
+            const realSetTimeout = window.setTimeout;
+            window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+                if (!hold && typeof handler === 'function' && (timeout ?? 0) >= 500) {
+                    hold = () => handler(...args);
+                    return 0;
+                }
+                return realSetTimeout(handler, timeout, ...args);
+            }) as typeof window.setTimeout;
             try {
-                await new Promise(resolve => window.setTimeout(resolve, 750));
+                // Target the region itself: a module target would also begin pointer capture and dragging.
+                region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            } finally {
+                window.setTimeout = realSetTimeout;
+            }
+            try {
+                if (hold) hold();
+                else await new Promise(resolve => window.setTimeout(resolve, 750));
             } finally {
                 region.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: -1 }));
                 HSHeaderEditSettings.#openingEditor = false;
@@ -165,6 +184,7 @@ export class HSHeaderEditSettings {
             HSLogger.warn('The game\'s header tray was not found: no [HS] Header block (the saved slot counts still apply)', HSHeaderEditSettings.#context);
             return;
         }
+        HSHeaderEditSettings.#buildEditButton();
 
         const block = document.createElement('div');
         block.id = BLOCK_ID;
@@ -189,6 +209,25 @@ export class HSHeaderEditSettings {
         });
         tray.after(block);
         HSHeaderEditSettings.#refresh();
+    }
+
+    // Right of the mod icon, for players who don't know the header can be edited. Shown by CSS: setting headerEditButton
+    // (a class on <html>), also in edit mode, so its checkbox shows its effect. In edit mode it clicks the game's Done
+    // (the mod's Done listener saves too)
+    static #buildEditButton(): void {
+        const button = document.createElement('button');
+        button.id = EDIT_BUTTON_ID;
+        button.type = 'button';
+        button.title = 'Toggle header edit mode';
+        button.textContent = '✎';
+        button.addEventListener('click', () => {
+            if (document.getElementById('mainHeader')?.classList.contains('headerEditMode')) {
+                document.getElementById('headerEditDone')?.click();
+            } else {
+                void HSHeaderEditSettings.openEditor();
+            }
+        });
+        document.body.append(button);
     }
 
     static #buildSection(title: string): HTMLElement {

@@ -1540,6 +1540,21 @@
       "controlEnabledId": "hs-setting-qol-header-hide-loadout-icons-btn"
     }
   },
+  "headerEditButton": {
+    "settingName": "headerEditButton",
+    "settingDescription": "✎ Header edit button",
+    "settingHelpText": "A small pencil next to the mod icon that opens and closes the header's edit mode.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerEditButtonAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-edit-button-btn"
+    }
+  },
   "headerStatsAtBottom": {
     "settingName": "headerStatsAtBottom",
     "settingDescription": "Header top row at the bottom",

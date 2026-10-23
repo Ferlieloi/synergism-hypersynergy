@@ -213,6 +213,10 @@ export class HSSettingActions {
         headerHideLoadoutIconsAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-header-no-loadout-icons', params.disable !== true);
         },
+        // A class on <html>: the button itself is created once (HSHeaderEditSettings.install)
+        headerEditButtonAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-edit-button', params.disable !== true);
+        },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');

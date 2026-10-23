@@ -106,6 +106,7 @@ export interface HSSettingsDefinition {
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
     removeHeaderGap: HSSettingBase<boolean>;
     headerHideLoadoutIcons: HSSettingBase<boolean>;
+    headerEditButton: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;

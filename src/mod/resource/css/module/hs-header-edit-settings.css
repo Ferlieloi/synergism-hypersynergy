@@ -185,3 +185,30 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    color: #bbb;
    text-align: center;
 }
+
+/* "✎ Header edit button": a faint pencil right of the mod icon (#hs-panel-control, 35px at 10px, 10px) that
+   toggles edit mode, kept in edit mode so its checkbox shows its effect. */
+#hs-header-edit-button {
+   all: unset;
+   display: none;
+   position: fixed;
+   z-index: 12000;
+   top: 10px;
+   left: 48px;
+   width: 18px;
+   font-size: 14px;
+   line-height: 35px;
+   text-align: center;
+   color: #ccc;
+   opacity: 0.3;
+   cursor: pointer;
+}
+html.hs-header-edit-button #hs-header-edit-button {
+   display: block;
+}
+/* Fully lit while edit mode is open: a click closes it */
+#hs-header-edit-button:hover,
+#hs-header-edit-button:focus-visible,
+html:has(#mainHeader.headerEditMode) #hs-header-edit-button {
+   opacity: 1;
+}
