@@ -2688,14 +2688,19 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
       value: number;
       factor: number;
     }
-    let candidates: VoucherCandidate[] = []
-    let untrimmedCandidateCount = 0
+    // The rows kept by the last trim, already in trim order; new rows wait
+    // in pending until the next trim.
+    let frontier: VoucherCandidate[] = []
+    let pending: VoucherCandidate[] = []
+    let maxBlueberryCost = 0
+    const trimOrder = (a: VoucherCandidate, b: VoucherCandidate): number =>
+      a.cost - b.cost || b.value - a.value || a.blueberryCost - b.blueberryCost
     const trimCandidates = (): void => {
-      if (candidates.length === 0)
+      if (pending.length === 0)
         return
-      const berryValues = [...new Set(candidates.map(row => row.blueberryCost))].sort((a, b) => a - b)
-      const berryIndices = new Map(berryValues.map((value, index) => [value, index + 1]))
-      const tree = new Float64Array(berryValues.length + 1)
+      pending.sort(trimOrder)
+      // Prefix maximum of the kept values by Blueberry cost (index cost + 1).
+      const tree = new Float64Array(maxBlueberryCost + 2)
       tree.fill(-Infinity)
       const query = (index: number): number => {
         let best = -Infinity
@@ -2711,18 +2716,25 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
           index += index & -index
         }
       }
-      candidates.sort((a, b) => a.cost - b.cost || b.value - a.value
-        || a.blueberryCost - b.blueberryCost)
+      // Merging the sorted frontier with the sorted batch, frontier first on
+      // ties, gives the same order as a stable sort of both.
       const kept: VoucherCandidate[] = []
-      for (const row of candidates) {
-        const index = berryIndices.get(row.blueberryCost)!
+      let frontierIndex = 0
+      let pendingIndex = 0
+      while (frontierIndex < frontier.length || pendingIndex < pending.length) {
+        const row = pendingIndex >= pending.length
+          || (frontierIndex < frontier.length && trimOrder(frontier[frontierIndex], pending[pendingIndex]) <= 0)
+          ? frontier[frontierIndex++]
+          : pending[pendingIndex++]
+        const index = row.blueberryCost + 1
         if (query(index) >= row.value)
           continue
         update(index, row.value)
         kept.push(row)
       }
-      candidates = kept
-      if (candidates.length > 500_000)
+      frontier = kept
+      pending = []
+      if (frontier.length > 500_000)
         throw new Error('Heater voucher frontier exceeded its 500000-build memory safety limit. Try fewer builds at once.')
     }
     const octeracts = stat === "oct"
@@ -2882,30 +2894,32 @@ function mergeVoucherTable(table: Loadout[], voucherTable: Loadout[], stat: "cub
               factor = effectFactor(item, rows[index])
               factors[index] = factor
             }
-            candidates.push({
+            const blueberryCost = itemBlueberries + adjustments.blueberries[index]
+            if (blueberryCost > maxBlueberryCost)
+              maxBlueberryCost = blueberryCost
+            pending.push({
               item,
               voucher: rows[index].loadout,
               cost: itemCost + adjustments.costs[index],
-              blueberryCost: itemBlueberries + adjustments.blueberries[index],
+              blueberryCost,
               value: itemValue * factor,
               factor,
             })
-            if (++untrimmedCandidateCount >= 20_000) {
+            // Trimming walks the whole frontier, so the batch grows with it.
+            if (pending.length >= 20_000 && pending.length >= frontier.length)
               trimCandidates()
-              untrimmedCandidateCount = 0
-            }
           }
         }
       }
     }
-    if (candidates.length === 0)
+    if (frontier.length === 0 && pending.length === 0)
       return [new Loadout()]
 
     // Batch trimming is exact because Pareto-dominated rows cannot become
     // useful when another independent table is merged later.
     trimCandidates()
     const result: Loadout[] = []
-    for (const row of candidates) {
+    for (const row of frontier) {
       const union = Loadout.union(row.item, row.voucher)
       if (cubeExperimentConfig?.validateVoucherMergeScores) {
         const actual = union.getStat(stat)

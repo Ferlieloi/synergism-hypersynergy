@@ -4,6 +4,7 @@ import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
 import { HSHeaderCellSettings } from "./hs-header-cell-settings";
+import { HSCorruption } from "../../hs-modules/hs-corruption";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'corruption' | 'ambrosia';
@@ -20,7 +21,7 @@ interface HSSlotCountDef {
 interface HSToggleDef {
     setting: keyof HSSettingsDefinition;
     label: string;
-    // Shown only when this holds (the line makes no sense otherwise)
+    // Shown only when this holds (the line makes no sense otherwise), checked at each refresh
     shown?: () => boolean;
     // Added to the tooltip without the header modules patch (bookmarklet)
     withoutPatch?: string;
@@ -54,6 +55,8 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
+            { setting: 'headerHideLoadoutIcons', label: 'Hide loadout icons' },
+            { setting: 'headerEditButton', label: '✎ Header edit button' },
         ],
     },
     {
@@ -76,6 +79,8 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         toggles: [
             { setting: 'corruptionHeaderLevels', label: 'Levels line' },
             { setting: 'corruptionHeaderIconCleanse', label: 'Icon cleanses corruptions' },
+            // Without Tau, corruptions are locked before Challenge 11 and the setting does nothing
+            { setting: 'corruptionHeaderAlwaysShown', label: 'Keep the bar visible', shown: () => hasHeaderModules() && HSCorruption.hasPlatonicTau() },
         ],
     },
     {
@@ -91,6 +96,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
 const MAX_SLOTS = 16;
 const BLOCK_ID = 'hs-header-edit-settings';
 const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
+const EDIT_BUTTON_ID = 'hs-header-edit-button';
 
 /**
  * Class: HSHeaderEditSettings
@@ -108,6 +114,7 @@ const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
  *     The counters refresh when edit mode shows the block (the slots owned may have changed): a 1 ms CSS animation
  *     restarts each time #headerEditPanel goes from display: none to shown, and its animationstart event triggers
  *     the refresh (no observer, no polling).
+ *     Also the faint pencil right of the mod icon that toggles edit mode (setting headerEditButton, on by default).
  *     No patcher feature: works for every player.
  * Author: Shewchou
  */
@@ -117,6 +124,7 @@ export class HSHeaderEditSettings {
     static #minusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
+    static #toggleSections: { section: HTMLElement; toggles: { label: HTMLElement; shown?: () => boolean }[] }[] = [];
     static #hideRuleInjected = false;
     static #openingEditor = false;
 
@@ -128,10 +136,26 @@ export class HSHeaderEditSettings {
         if (HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
         if (!header.classList.contains('headerEditMode')) {
             HSHeaderEditSettings.#openingEditor = true;
-            // Target the region itself: a module target would also begin pointer capture and dragging.
-            region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            // The game's hold timer (650 ms, started by its pointerdown handler through window.setTimeout) is run
+            // at once instead. Not caught (a game change): wait for it as a real hold.
+            let hold: (() => void) | undefined;
+            const realSetTimeout = window.setTimeout;
+            window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+                if (!hold && typeof handler === 'function' && (timeout ?? 0) >= 500) {
+                    hold = () => handler(...args);
+                    return 0;
+                }
+                return realSetTimeout(handler, timeout, ...args);
+            }) as typeof window.setTimeout;
             try {
-                await new Promise(resolve => window.setTimeout(resolve, 750));
+                // Target the region itself: a module target would also begin pointer capture and dragging.
+                region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
+            } finally {
+                window.setTimeout = realSetTimeout;
+            }
+            try {
+                if (hold) hold();
+                else await new Promise(resolve => window.setTimeout(resolve, 750));
             } finally {
                 region.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: -1 }));
                 HSHeaderEditSettings.#openingEditor = false;
@@ -164,6 +188,7 @@ export class HSHeaderEditSettings {
             HSLogger.warn('The game\'s header tray was not found: no [HS] Header block (the saved slot counts still apply)', HSHeaderEditSettings.#context);
             return;
         }
+        HSHeaderEditSettings.#buildEditButton();
 
         const block = document.createElement('div');
         block.id = BLOCK_ID;
@@ -173,8 +198,7 @@ export class HSHeaderEditSettings {
         const sections = document.createElement('div');
         sections.className = 'hs-hes-sections';
         for (const section of SECTIONS) {
-            const element = HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles);
-            if (element) sections.append(element);
+            sections.append(HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles));
         }
         sections.append(HSHeaderEditSettings.#buildSlotSection());
         block.append(title, sections);
@@ -188,6 +212,25 @@ export class HSHeaderEditSettings {
         });
         tray.after(block);
         HSHeaderEditSettings.#refresh();
+    }
+
+    // Right of the mod icon, for players who don't know the header can be edited. Shown by CSS: setting headerEditButton
+    // (a class on <html>), also in edit mode, so its checkbox shows its effect. In edit mode it clicks the game's Done
+    // (the mod's Done listener saves too)
+    static #buildEditButton(): void {
+        const button = document.createElement('button');
+        button.id = EDIT_BUTTON_ID;
+        button.type = 'button';
+        button.title = 'Toggle header edit mode';
+        button.textContent = '✎';
+        button.addEventListener('click', () => {
+            if (document.getElementById('mainHeader')?.classList.contains('headerEditMode')) {
+                document.getElementById('headerEditDone')?.click();
+            } else {
+                void HSHeaderEditSettings.openEditor();
+            }
+        });
+        document.body.append(button);
     }
 
     static #buildSection(title: string): HTMLElement {
@@ -284,12 +327,11 @@ export class HSHeaderEditSettings {
     // ---------------------- Settings ----------------------
     // ======================================================
 
-    static #buildToggleSection(title: string, toggles: HSToggleDef[]): HTMLElement | null {
-        const shown = toggles.filter(toggle => !toggle.shown || toggle.shown());
-        if (shown.length === 0) return null;
-
+    // Every line is built; those whose shown() fails are hidden at each refresh, with their section when it has none left
+    static #buildToggleSection(title: string, toggles: HSToggleDef[]): HTMLElement {
         const section = HSHeaderEditSettings.#buildSection(title);
-        for (const toggle of shown) {
+        const built: { label: HTMLElement; shown?: () => boolean }[] = [];
+        for (const toggle of toggles) {
             const definition = HSSettings.getSetting(toggle.setting)?.getDefinition();
             if (!definition) continue;
 
@@ -304,8 +346,10 @@ export class HSHeaderEditSettings {
             label.append(checkbox, toggle.label);
 
             HSHeaderEditSettings.#checkboxes.set(toggle.setting, checkbox);
+            built.push({ label, shown: toggle.shown });
             section.append(label);
         }
+        HSHeaderEditSettings.#toggleSections.push({ section, toggles: built });
         return section;
     }
 
@@ -344,6 +388,10 @@ export class HSHeaderEditSettings {
         }
         for (const [name, checkbox] of HSHeaderEditSettings.#checkboxes) {
             checkbox.checked = HSSettings.getSetting(name).isEnabled();
+        }
+        for (const { section, toggles } of HSHeaderEditSettings.#toggleSections) {
+            for (const toggle of toggles) toggle.label.hidden = toggle.shown ? !toggle.shown() : false;
+            section.hidden = toggles.every(toggle => toggle.label.hidden);
         }
     }
 }

@@ -100,11 +100,14 @@ export interface HSSettingsDefinition {
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
     corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
     corruptionHeaderIconCleanse: HSSettingBase<boolean>;
+    corruptionHeaderAlwaysShown: HSSettingBase<boolean>;
     matchOcteractIconSize: HSSettingBase<boolean>;
     matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
     removeHeaderGap: HSSettingBase<boolean>;
+    headerHideLoadoutIcons: HSSettingBase<boolean>;
+    headerEditButton: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;

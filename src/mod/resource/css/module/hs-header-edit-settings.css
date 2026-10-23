@@ -7,36 +7,37 @@ html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-empty 
    display: none;
 }
 
-/* The original corruption icon inside the game's existing cleanse button. */
-#mainHeader :is(#corruptionCleanseHeader, #corruptionCleansePageHeader).hs-corruption-icon-cleanse {
-   display: inline-flex;
-   align-items: center;
-   align-self: center;
+/* "Hide loadout icons": the leading icon of the game's Corruption and Ambrosia loadouts modules, not of the loadout
+   page modules (a click outside a slot turns their page). With "Icon cleanses corruptions", the cleanse button takes
+   the corruption icon's place (HSCorruption) and stays; it then sits between the icon and the slots, so the grid
+   rule below doesn't apply. */
+html.hs-header-no-loadout-icons :is(#corruptionLoadoutsHeader, #ambrosiaLoadoutsHeader) > img {
+   display: none;
+}
+/* The levels line's grid (hs-quickbars.css) keeps a first column for the icon: the slots take the whole row */
+html.hs-header-no-loadout-icons #corruptionLoadoutsHeader.hs-corruption-levels-shown > img + .headerLoadoutSlots {
+   grid-column: 1 / -1;
+}
+
+/* "Icon cleanses corruptions": the game's cleanse button, moved in place of the module's icon (HSCorruption), as
+   far from the first slot as the slots are from each other when it fills the room. It takes the hidden icon's room
+   (its width and right margin), so the slots keep the columns of the Ambrosia loadouts module's slots: a slot's
+   width at most (the game's 1.75em), at the left of that room as the icon above, narrower when the room is smaller.
+   The sizes are the game's rules for that icon (.headerStat img, by region and size; square images, so the width is
+   the height in the top row). */
+#mainHeader .hs-corruption-icon-cleanse {
+   --hs-cleanse-room: calc(var(--hs-cleanse-icon, 20px) + var(--hs-cleanse-icon-margin, 4px) - 1px);
    flex-shrink: 0;
    min-width: 0;
-   min-height: 0;
-   width: auto;
-   height: auto;
-   padding: 0;
-   margin: 0;
-   border: 0;
-   background: transparent;
-   font: inherit;
-   cursor: pointer;
+   width: min(1.75em, var(--hs-cleanse-room));
+   margin-right: calc(var(--hs-cleanse-room) - min(1.75em, var(--hs-cleanse-room)) + 1px);
 }
-#mainHeader .hs-corruption-icon-cleanse > img {
-   position: static;
-   inset: auto;
-   width: var(--hs-cleanse-icon-size, 20px);
-   height: var(--hs-cleanse-icon-size, 20px);
-   margin: auto 4px auto 0;
-}
-.headerModule[data-size="S"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 12px; }
-.headerModule:is([data-size="L"], [data-size="XL"]) .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 28px; }
-#headerGrid .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 32px; }
-#headerGrid .hs-corruption-icon-cleanse > img { margin-right: 6px; }
-#headerGrid [data-size="S"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 16px; }
-#headerGrid [data-size="L"] .hs-corruption-icon-cleanse { --hs-cleanse-icon-size: 48px; }
+.headerModule[data-size="S"] > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 12px; }
+.headerModule:is([data-size="L"], [data-size="XL"]) > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 28px; }
+.headerGrid .headerModule > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 32px; --hs-cleanse-icon-margin: 6px; }
+.headerGrid .headerModule[data-size="S"] > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 16px; }
+.headerGrid .headerModule[data-size="L"] > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 48px; }
+.headerGrid .headerModule[data-size="XL"] > .hs-corruption-icon-cleanse { --hs-cleanse-icon: 28px; }
 
 /* The currency icon uses 32px by default; the cube icons in the top row use 20px. */
 html.hs-match-octeract-icon-size #ascensionStats #octeractHeader > img {
@@ -154,6 +155,11 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    cursor: pointer;
 }
 
+#hs-header-edit-settings .hs-hes-section[hidden],
+#hs-header-edit-settings .hs-hes-toggle[hidden] {
+   display: none;
+}
+
 #hs-header-edit-settings .hs-hes-toggle > input {
    margin: 0;
    cursor: pointer;
@@ -196,4 +202,31 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    min-width: 2em;
    color: #bbb;
    text-align: center;
+}
+
+/* "✎ Header edit button": a faint pencil right of the mod icon (#hs-panel-control, 35px at 10px, 10px) that
+   toggles edit mode, kept in edit mode so its checkbox shows its effect. */
+#hs-header-edit-button {
+   all: unset;
+   display: none;
+   position: fixed;
+   z-index: 12000;
+   top: 10px;
+   left: 48px;
+   width: 18px;
+   font-size: 14px;
+   line-height: 35px;
+   text-align: center;
+   color: #ccc;
+   opacity: 0.3;
+   cursor: pointer;
+}
+html.hs-header-edit-button #hs-header-edit-button {
+   display: block;
+}
+/* Fully lit while edit mode is open: a click closes it */
+#hs-header-edit-button:hover,
+#hs-header-edit-button:focus-visible,
+html:has(#mainHeader.headerEditMode) #hs-header-edit-button {
+   opacity: 1;
 }

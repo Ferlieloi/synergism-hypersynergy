@@ -886,7 +886,7 @@ function startBrowserLoader(options) {
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '4.4';
+    const loaderVersion = '4.5';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -1144,6 +1144,13 @@ function startBrowserLoader(options) {
     // ─── Phase 1 & 2: Fetch, patch, and inject the game bundle ───────────────
     // ==================================================================================
 
+    // The bundle of the page's own copy of the game: the game is also served elsewhere (pseudo-corp.github.io/SynergismOfficial/,
+    // for players whose network blocks synergism.cc), and its page loads "./dist/out.js" from wherever it is
+    function gameBundleUrl() {
+        if (location.hostname === 'synergism.cc') return 'https://synergism.cc/dist/out.js';
+        return new URL('dist/out.js', document.baseURI).href;
+    }
+
     async function injectPatchedBundle() {
         if (window.__HS_INJECTED__) return;
         window.__HS_INJECTED__ = true;
@@ -1151,7 +1158,7 @@ function startBrowserLoader(options) {
         log('Fetching game bundle...');
         let code;
         try {
-            const res = await originalFetch(`https://synergism.cc/dist/out.js?t=${Date.now()}`, {
+            const res = await originalFetch(`${gameBundleUrl()}?t=${Date.now()}`, {
                 cache: 'no-store',
                 // The mod's header (HSGlobal.Common.modRequestHeaders); the mod isn't loaded yet, so no version
                 headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'X-HyperSynergism-Version': 'loader' }

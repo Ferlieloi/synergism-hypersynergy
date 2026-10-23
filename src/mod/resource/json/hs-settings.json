@@ -1453,7 +1453,7 @@
   "corruptionHeaderIconCleanse": {
     "settingName": "corruptionHeaderIconCleanse",
     "settingDescription": "Cleanse corruptions with the header icon",
-    "settingHelpText": "Use the left icon of both corruption loadout modules as the Cleanse button, removing the separate button at the end. Turn this off to restore the original layout.",
+    "settingHelpText": "Puts the Cleanse button in place of the icon on the left of both corruption loadout modules.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": false,
@@ -1463,6 +1463,21 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
+    }
+  },
+  "corruptionHeaderAlwaysShown": {
+    "settingName": "corruptionHeaderAlwaysShown",
+    "settingDescription": "Keep the corruption loadout modules visible",
+    "settingHelpText": "Keeps both corruption loadout modules in the header before Challenge 11 is completed in the singularity.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "corruptionHeaderAlwaysShownAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-corruption-header-always-shown-btn"
     }
   },
   "matchOcteractIconSize": {
@@ -1523,6 +1538,36 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-remove-header-gap-btn"
+    }
+  },
+  "headerHideLoadoutIcons": {
+    "settingName": "headerHideLoadoutIcons",
+    "settingDescription": "Hide the header's loadout icons",
+    "settingHelpText": "Hides the icon on the left of the Corruption and Ambrosia loadouts modules.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "headerHideLoadoutIconsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-hide-loadout-icons-btn"
+    }
+  },
+  "headerEditButton": {
+    "settingName": "headerEditButton",
+    "settingDescription": "✎ Header edit button",
+    "settingHelpText": "A small pencil next to the mod icon that opens and closes the header's edit mode.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerEditButtonAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-edit-button-btn"
     }
   },
   "headerStatsAtBottom": {

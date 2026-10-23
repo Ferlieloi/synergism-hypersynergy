@@ -16,7 +16,8 @@ export interface HSCorruptionLevels {
  * Class: HSCorruption
  * IsExplicitHSModule: No
  * Description: The mod's addition to the game's corruption header modules ("Corruption loadouts" and its loadout
- *     page module): the corruption levels under their slots, and an optional cleanse action on their leading icon.
+ *     page module): the corruption levels under their slots, optionally the game's cleanse button in place of their
+ *     leading icon, and both modules kept shown before Challenge 11 with Platonic Tau.
  *     Autosing has its own corruption import (HSAutosingCorruption).
  */
 export class HSCorruption {
@@ -37,44 +38,88 @@ export class HSCorruption {
     ];
 
     static #levelsDisplay: { lines: { module: HTMLElement; element: HTMLElement; current: HTMLElement; next: HTMLElement }[]; observer: MutationObserver } | null = null;
-    static #cleanseIcons = new Map<string, {
-        button: HTMLButtonElement; icon: HTMLImageElement; contents: Node[]; place: Comment;
-        title: string | null; label: string | null;
-    }>();
+    static #cleanseButtons = new Map<string, { button: HTMLButtonElement; icon: HTMLImageElement; place: Comment }>();
+    // The game's own unlock checks of the modules, while the mod's replace them
+    static #gameUnlocks = new Map<string, () => boolean>();
 
-    /** Move the native cleanse button to the leading icon, retaining the game's click and keyboard behavior. */
+    /**
+     * Move the game's cleanse button (a slot, with its own icon, click and keyboard behavior) from the end of the slots
+     * to the place of the module's leading icon, which is hidden meanwhile. Put right after the icon, so a module's
+     * children stay icon, then slots for the CSS that follows them (hs-header-edit-settings.css).
+     */
     static setHeaderIconCleanse(enabled: boolean): void {
         if (!enabled) {
-            for (const state of HSCorruption.#cleanseIcons.values()) {
-                state.button.before(state.icon);
-                state.button.replaceChildren(...state.contents);
-                state.place.replaceWith(state.button);
-                state.button.classList.remove('hs-corruption-icon-cleanse');
-                for (const [name, value] of [['title', state.title], ['aria-label', state.label]] as const) {
-                    if (value === null) state.button.removeAttribute(name);
-                    else state.button.setAttribute(name, value);
-                }
+            for (const { button, icon, place } of HSCorruption.#cleanseButtons.values()) {
+                place.replaceWith(button);
+                button.classList.remove('hs-corruption-icon-cleanse');
+                icon.style.display = '';
             }
-            HSCorruption.#cleanseIcons.clear();
+            HSCorruption.#cleanseButtons.clear();
             return;
         }
         for (const [index, id] of HSCorruption.#HEADER_MODULE_IDS.entries()) {
-            if (HSCorruption.#cleanseIcons.has(id)) continue;
-            const module = document.getElementById(id);
-            const icon = module?.querySelector<HTMLImageElement>(':scope > img');
+            if (HSCorruption.#cleanseButtons.has(id)) continue;
+            const icon = document.getElementById(id)?.querySelector<HTMLImageElement>(':scope > img');
             const button = document.getElementById(index === 0 ? 'corruptionCleanseHeader' : 'corruptionCleansePageHeader');
             if (!icon || !(button instanceof HTMLButtonElement)) continue;
             const place = document.createComment('HS cleanse button position');
-            const state = { button, icon, contents: Array.from(button.childNodes), place,
-                title: button.getAttribute('title'), label: button.getAttribute('aria-label') };
             button.before(place);
-            button.replaceChildren(icon);
-            module!.prepend(button);
+            icon.after(button);
             button.classList.add('hs-corruption-icon-cleanse');
-            button.title = 'Cleanse corruptions';
-            button.setAttribute('aria-label', 'Cleanse corruptions');
-            HSCorruption.#cleanseIcons.set(id, state);
+            icon.style.display = 'none';
+            HSCorruption.#cleanseButtons.set(id, { button, icon, place });
         }
+    }
+
+    // =================================
+    // ---- Header: before C11 ---------
+    // =================================
+
+    /**
+     * The game shows its corruption header modules only once Challenge 11 is completed (headerModuleUnlocks in
+     * HeaderModules.ts), so they hide at the start of each singularity. With Platonic Tau, corruption loadouts
+     * already work before it (Corruptions.ts lets every corruption be set): this keeps both modules shown then.
+     * Without Tau the game's check stays (a loaded loadout would be all 0, every slot marked active).
+     * The check is live, so a Tau bought or refunded counts at the game's next check (a tab change, a reset).
+     * Needs the patcher's capture of that object (window.__HS_headerModuleUnlocks, header modules patch).
+     * Action of the corruptionHeaderAlwaysShown setting.
+     */
+    static setHeaderAlwaysShown(enabled: boolean): void {
+        const unlocks = window.__HS_headerModuleUnlocks;
+        const render = window.__HS_renderHeaderLayout;
+        if (!unlocks || typeof render !== 'function') return;
+
+        let changed = false;
+        for (const id of HSCorruption.#HEADER_MODULE_IDS) {
+            const gameUnlock = HSCorruption.#gameUnlocks.get(id) ?? unlocks[id];
+            // The page module came with the game of 2026-10-21: none on an older game
+            if (typeof gameUnlock !== 'function') continue;
+            if (enabled) {
+                if (HSCorruption.#gameUnlocks.has(id)) continue;
+                HSCorruption.#gameUnlocks.set(id, gameUnlock);
+                unlocks[id] = () => gameUnlock() || HSCorruption.hasPlatonicTau();
+            } else {
+                if (!HSCorruption.#gameUnlocks.delete(id)) continue;
+                unlocks[id] = gameUnlock;
+            }
+            changed = true;
+            // The game checks its locks only at its next revealStuff(), as HSHeaderModules.register
+            try { document.getElementById(id)?.classList.toggle('headerModuleLocked', !unlocks[id]()); } catch { /* the game's next check decides */ }
+        }
+        if (!changed) return;
+        try {
+            render();
+        } catch (e) {
+            HSLogger.warn(`The game's header could not be rendered: ${e}`, HSCorruption.#context);
+        }
+    }
+
+    /** Platonic Tau owned (bought or a free level), from the live player; false without it (bookmarklet). */
+    static hasPlatonicTau(): boolean {
+        type GQLevels = { freeLevel?: number; goldenQuarksInvested?: number } | undefined;
+        const tau = (HSGlobal.exposedPlayer?.goldenQuarkUpgrades as Record<string, GQLevels> | undefined)?.platonicTau;
+        // Tau has a single level: any golden quark spent on it is that level
+        return Number(tau?.goldenQuarksInvested) > 0 || Number(tau?.freeLevel) > 0;
     }
 
 
