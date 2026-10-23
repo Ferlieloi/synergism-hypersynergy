@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader (Local Dev)
 // @namespace    https://github.com/Ferlieloi
-// @version      1.3
+// @version      1.4
 // @description  Loads the local game loader synchronously at document-start
 // @author       Developer
 // @match        https://synergism.cc/*
+// @match        https://pseudo-corp.github.io/SynergismOfficial/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==

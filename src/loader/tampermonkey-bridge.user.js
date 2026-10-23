@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         HyperSynergism Bridge Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      1.2
+// @version      1.3
 // @description  Bridge to the official HyperSynergism mod
 // @author       Ferlieloi
 // @match        https://synergism.cc/*
+// @match        https://pseudo-corp.github.io/SynergismOfficial/*
 // @grant        none
 // @run-at       document-start
 // @updateURL    https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js
