@@ -1109,7 +1109,7 @@ export class AchievementHelper {
                 unlockCondition: () => (this.#ctx.getGameData()?.ascensionCount ?? 0) >= 1000,
                 group: 'ascensionCount',
                 reward: {
-                ascensionCountMultiplier: () => Math.log10(this.#ctx.calculateAscensionScore().effectiveScore + 100) - 1
+                ascensionCountMultiplier: () => 1 + 0.8 * this.#ctx.getAscensionEffectiveCorruptionLevel()
                 }
             },
             {
@@ -1304,15 +1304,15 @@ export class AchievementHelper {
             { pointValue: 70, unlockCondition: () => (this.#ctx.getGameData()?.challengecompletions?.[14] ?? 0) >= 30, group: 'challenge14' },
             {
                 pointValue: 5,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e5,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 4,
                 group: 'ascensionScore',
             },
-            { pointValue: 10, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e6, group: 'ascensionScore' },
-            { pointValue: 15, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e7, group: 'ascensionScore' },
-            { pointValue: 20, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e8, group: 'ascensionScore' },
-            { pointValue: 25, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e9, group: 'ascensionScore' },
-            { pointValue: 30, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 5e9, group: 'ascensionScore' },
-            { pointValue: 35, unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 2.5e10, group: 'ascensionScore' },
+            { pointValue: 10, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 6, group: 'ascensionScore' },
+            { pointValue: 15, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 8, group: 'ascensionScore' },
+            { pointValue: 20, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 10, group: 'ascensionScore' },
+            { pointValue: 25, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 12, group: 'ascensionScore' },
+            { pointValue: 30, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 14, group: 'ascensionScore' },
+            { pointValue: 35, unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 16, group: 'ascensionScore' },
             { pointValue: 10, unlockCondition: () => parseGameDataDecimal(this.#ctx.getGameData()?.runeBlessings?.speed).gte(20), group: 'speedBlessing' },
             {
                 pointValue: 20,
@@ -1394,43 +1394,43 @@ export class AchievementHelper {
             },
             {
                 pointValue: 40,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e12,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 18,
                 group: 'ascensionScore',
                 reward: { wowHypercubeGain: () => 1.1 }
             },
             {
                 pointValue: 45,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e14,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 20,
                 group: 'ascensionScore',
                 reward: { wowCubeGain: () => 1.1 }
             },
             {
                 pointValue: 50,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e17,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 25,
                 group: 'ascensionScore',
                 reward: { wowTesseractGain: () => 1.1 }
             },
             {
                 pointValue: 55,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 2e18,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 30,
                 group: 'ascensionScore',
                 reward: { wowPlatonicGain: () => 1.1, overfluxConversionRate: () => 1.05 }
             },
             {
                 pointValue: 60,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 4e19,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 35,
                 group: 'ascensionScore',
                 reward: { overfluxConversionRate: () => 1.05 }
             },
             {
                 pointValue: 65,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e21,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 40,
                 group: 'ascensionScore',
                 reward: { wowHepteractGain: () => 1.1 }
             },
             {
                 pointValue: 70,
-                unlockCondition: () => this.#ctx.calcCorruptionStuff().effectiveScore >= 1e23,
+                unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 45,
                 group: 'ascensionScore',
                 reward: { ascensionScore: () => Math.pow(1.01, this.#ctx.getGameData()?.hepteracts?.abyss?.TIMES_CAP_EXTENDED ?? 0) },
             },

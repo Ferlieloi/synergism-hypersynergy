@@ -170,26 +170,27 @@ export class AcceleratorHelper {
         }
 
         accelerator *= this.getAcceleratorMultiplier()
-        const viscosityPower = this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'viscosity')
-        accelerator = Math.pow(
-            accelerator,
-            Math.min(1, (1 + (data.platonicUpgrades[6] ?? 0) / 30) * viscosityPower)
-        )
+        // SynergismOfficial/src/Calculate.ts calculateFreeAccelMult: Challenge 15's viscosity is a power
+        accelerator = Math.pow(accelerator, this.#ctx.getChallenge15CorruptionEffect('viscosity'))
 
         accelerator += 2000 * this.#ctx.calculateHepteractEffective('accelerator')
         accelerator *= this.#ctx.calculateChallenge15Reward('accelerator')
         accelerator *= 1 + 3 * this.#ctx.calculateHepteractEffective('accelerator') / 10000
-        accelerator = Math.min(1e100, Math.floor(accelerator))
-
-        const usedLevels = data.corruptions.used
-        if (usedLevels.viscosity >= 15) {
-            accelerator = Math.pow(accelerator, 0.2)
-        }
-        if (usedLevels.viscosity >= 16) {
-            accelerator = 1
-        }
+        // Capped at 1e300 here, and at 1e100 once divided by viscosity (getTotalAccelerator)
+        accelerator = Math.min(1e300, Math.floor(accelerator))
 
         return accelerator
+    }
+
+    // SynergismOfficial/src/Synergism.ts updateAllTick and SynergismOfficial/src/Calculate.ts
+    // calculateEffectiveFreeAccelMult: the corruption level's viscosity divides every accelerator, then the free ones
+    // are capped at 1e100
+    getTotalAccelerator = (): number => {
+        const data = this.#ctx.getGameData();
+        if (!data) return 0
+
+        const viscosity = this.#ctx.getCorruptionEffect(this.#ctx.getActiveCorruptionLevel(), 'viscosity') as number
+        return (data.acceleratorBought ?? 0) / viscosity + Math.min(1e100, this.getFreeAccelerator() / viscosity)
     }
 
     getAcceleratorPower = (): number => {
@@ -216,7 +217,7 @@ export class AcceleratorHelper {
         if (!data) return new Decimal(1)
 
         const acceleratorPower = this.getAcceleratorPower()
-        const totalAccelerator = (data.acceleratorBought ?? 0) + this.getFreeAccelerator()
+        const totalAccelerator = this.getTotalAccelerator()
         const totalMultiplier = data.multiplierBought
 
         const exponent = data.currentChallenge.transcension === 1

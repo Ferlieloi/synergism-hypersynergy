@@ -1,6 +1,6 @@
 import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { AchievementRewards, AmbrosiaUpgradeNames, AntProducers, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, SingularityChallengeDataKeys, SingularityDebuffs, PCoinUpgradeEffects, NumberStatLine, RuneKeys, TalismanKeys, SynergismLevelMilestones, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types";
-import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus, CorruptionLevels } from "../../../types/data-types/hs-player-savedata";
+import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
 import type { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
@@ -27,13 +27,13 @@ import type { OcteractHelperContext } from "./hs-gamedata-api-octeract";
 import type { LuckHelperContext } from "./hs-gamedata-api-luck";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
+import { CorruptionHelper } from "./hs-gamedata-api-corruption";
 import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 import { parseGameDataDecimal, calcECC, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
 import Decimal from "break_infinity.js";
 
 type AscensionScoreResult = {
     baseScore: number;
-    corruptionMultiplier: number;
     bonusMultiplier: number;
     effectiveScore: number;
 };
@@ -167,6 +167,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     readonly luck: LuckHelper;
     readonly purple: PurpleHelper;
     readonly accelerator: AcceleratorHelper;
+    readonly corruption: CorruptionHelper;
 
     getSingularityChallengeEffect = <
         T extends SingularityChallengeDataKeys,
@@ -446,17 +447,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     progressiveAchievements!: Record<ProgressiveAchievements, ProgressiveAchievement>;
 
-    #corruptionData = {
-        viscosityPower: [1, 0.87, 0.80, 0.75, 0.70, 0.6, 0.54, 0.45, 0.39, 0.33, 0.3, 0.2, 0.1, 0.05, 0, 0, 0],
-        dilationMultiplier: [1, 1 / 3, 1 / 10, 1 / 40, 1 / 200, 1 / 3e4, 1 / 3e6, 1 / 3e9, 1 / 3e12, 1 / 1e15, 1 / 1e19, 1 / 1e24, 1 / 1e34, 1 / 1e48, 1 / 1e65, 1 / 1e80, 1 / 1e100],
-        hyperchallengeMultiplier: [1, 1.2, 1.5, 1.7, 3, 5, 8, 13, 21, 34, 55, 100, 400, 1600, 7777, 18888, 88888],
-        illiteracyPower: [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.20, 0.15, 0.10, 0.08, 0.06, 0.04],
-        deflationMultiplier: [1, 0.3, 0.1, 0.03, 0.01, 1 / 1e6, 1 / 1e8, 1 / 1e10, 1 / 1e12, 1 / 1e15, 1 / 1e18, 1 / 1e25, 1 / 1e35, 1 / 1e50, 1 / 1e77, 0, 0],
-        extinctionDivisor: [1, 1.25, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        droughtSalvage: [0, -25, -50, -75, -100, -200, -300, -400, -600, -800, -1_000, -1_250, -2_000, -4_000, -8_000, -12_000, -16_000],
-        recessionPower: [1, 0.9, 0.7, 0.6, 0.5, 0.37, 0.30, 0.23, 0.18, 0.15, 0.12, 0.09, 0.03, 0.01, 0.007, 0.0007, 0.00007]
-    };
-
 
     getRuneBonusLevels(rune: RuneKeys): number {
         if (!this.gameData) return 0;
@@ -535,6 +525,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         let octeract!: OcteractHelper;
         let luck!: LuckHelper;
         let purple!: PurpleHelper;
+        let corruption!: CorruptionHelper;
 
         const cacheProvider = {
             checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) =>
@@ -624,7 +615,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
             calculateSigmoidExponential,
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
+            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
             CalcECC: (refinement, value) => calcECC(refinement as any, value),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
@@ -671,7 +662,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
             getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
             calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
-            calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
+            getCorruptionEffect: (level, key) => corruption.getCorruptionEffect(level, key),
+            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
+            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
             calculateSingularityDebuff: (debuff) => this.calculateSingularityDebuff(debuff),
             calculateSynergismLevel: () => this.calculateSynergismLevel(),
             getShopLevel: (upgradeKey) => quarkShop.getShopLevel(upgradeKey),
@@ -691,10 +684,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getRuneEffectiveLevel: (runeName) => rune.getRuneEffectiveLevel(runeName),
             getRuneFreeLevels: (runeName) => rune.getRuneFreeLevels(runeName),
             runes: () => rune.runes,
-            calcCorruptionStuff: () => this.calcCorruptionStuff(),
+            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
             calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            calculateAscensionScore: () => this.calculateAscensionScore(),
+            getAscensionEffectiveCorruptionLevel: () => corruption.getAscensionEffectiveCorruptionLevel(),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };
@@ -731,6 +724,16 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         luck = this.registerCalculationHelper(new LuckHelper(luckContext));
         this.luck = luck;
 
+        corruption = this.registerCalculationHelper(new CorruptionHelper({
+            getGameData: () => this.gameData,
+            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
+            getGQUpgradeEffect: (upgradeKey, effectKey) => goldenQuark.getGQUpgradeEffect(upgradeKey as any, effectKey),
+            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
+            getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
+            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
+        }));
+        this.corruption = corruption;
+
         const acceleratorContext: AcceleratorHelperContext = {
             getGameData: () => this.gameData,
             getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
@@ -739,7 +742,9 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
             calculateHypercubeBlessingMultiplierPlatonicBlessing: () => this.calculateHypercubeBlessingMultiplierPlatonicBlessing(),
             calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
-            calculateCorruptionEffect: (loadout, corruption) => this.calculateCorruptionEffect(loadout, corruption),
+            getCorruptionEffect: (level, key) => corruption.getCorruptionEffect(level, key),
+            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
+            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
         };
         this.accelerator = new AcceleratorHelper(acceleratorContext);
@@ -935,15 +940,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return reduced;
     }
 
-    getCorruptionTotalLevel() {
-        if (!this.gameData) return 0;
-        const data = this.gameData;
-
-        const corruptions = data.corruptions.used;
-        const sum = Object.values(corruptions).reduce((a, b) => a + b, 0);
-        return sum;
-    }
-
     calculateHepteractEffective = (heptType: HepteractType) => {
         if (!this.gameData) return 0;
         const data = this.gameData;
@@ -1003,7 +999,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 wowHepteracts: 0,
                 baseScore: 0,
                 bonusMultiplier: 0,
-                corruptionMultiplier: 0,
                 effectiveScore: 0,
             };
         }
@@ -1034,87 +1029,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             wowHepteracts: Math.min(1e300, Math.floor(hepteractGain)),
             baseScore: Math.floor(scores.baseScore),
             bonusMultiplier: scores.bonusMultiplier,
-            corruptionMultiplier: scores.corruptionMultiplier,
             effectiveScore: Math.floor(scores.effectiveScore),
         };
-    }
-
-    /**
-     * The ascension score multiplier of a corruption loadout.
-     * Mirrors SynergismOfficial/src/Corruptions.ts calculateIndividualRawMultiplier, multiplied over the 8 corruptions
-     * (totalCorruptionAscensionMultiplier).
-     */
-    calculateCorruptionScoreMultiplier(loadout: CorruptionLevels): number {
-        if (!this.gameData) return 1;
-        const data = this.gameData;
-        const scoreMults = [1, 3, 4, 5, 6, 7, 7.75, 8.5, 9.25, 10, 10.75, 11.5, 12.25, 13, 16, 20, 25, 33, 35];
-
-        const bonusVal = this.getGQUpgradeEffect('advancedPack', 'corruptionScoreIncrease')
-            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'corrScoreIncrease') ?? 0)
-            + 0.3 * (data.cubeUpgrades[74] ?? 0);
-        const bonusLevels = this.getGQUpgradeEffect('corruptionFifteen', 'freeCorruptionLevel')
-            + Number(this.getSingularityChallengeEffect('oneChallengeCap', 'freeCorruptionLevel') ?? 0)
-            + Number(this.talisman.getTalismanEffects('cookieGrandma').freeCorruptionLevel ?? 0)
-            + Number(this.rune.getRuneEffects('finiteDescent').corruptionFreeLevels ?? 0);
-        const p4x2 = data.platonicUpgrades[17] ?? 0;
-
-        const corruptions: (keyof CorruptionLevels)[] = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'];
-        return corruptions.reduce((product, corruption) => {
-            // P4x2: exponent 3 + 0.04 per level on viscosity's multiplier, from viscosity 10
-            const power = (p4x2 > 0 && loadout.viscosity >= 10 && corruption === 'viscosity') ? 3 + 0.04 * p4x2 : 1;
-            const totalLevel = (loadout[corruption] ?? 0) + bonusLevels;
-            const last = scoreMults.length - 1;
-            const multiplier = totalLevel < last
-                ? scoreMults[Math.floor(totalLevel)] + bonusVal
-                    + (totalLevel % 1) * (scoreMults[Math.ceil(totalLevel)] - scoreMults[Math.floor(totalLevel)])
-                : (scoreMults[last] + bonusVal) * Math.pow(1.2, totalLevel - last);
-            return product * Math.pow(multiplier, power);
-        }, 1);
-    }
-
-    calculateCorruptionEffect(loadout: CorruptionLevels, corruption: string): number {
-        if (!this.gameData) return 0;
-
-        const data = this.gameData;
-
-        switch (corruption) {
-            case 'deflation':
-                return this.#corruptionData.deflationMultiplier[loadout.deflation];
-            case 'dilation':
-                return this.#corruptionData.dilationMultiplier[loadout.dilation];
-            case 'drought': {
-                let baseSalvageReduction = this.#corruptionData.droughtSalvage[loadout.drought];
-                if (data.platonicUpgrades[13] > 0) {
-                    baseSalvageReduction *= 0.5;
-                }
-                return baseSalvageReduction;
-            }
-            case 'extinction':
-                return this.#corruptionData.extinctionDivisor[loadout.extinction];
-            case 'hyperchallenge': {
-                const baseEffect = this.#corruptionData.hyperchallengeMultiplier[loadout.hyperchallenge];
-                let divisor = 1;
-                divisor *= 1 + 2 / 5 * data.platonicUpgrades[8];
-                return Math.max(1, baseEffect / divisor);
-            }
-            case 'illiteracy': {
-                const base = this.#corruptionData.illiteracyPower[loadout.illiteracy];
-                const obtainiumValue = Number(data.obtainium);
-                const multiplier = (obtainiumValue > 0)
-                    ? 1 + (1 / 100) * data.platonicUpgrades[9] * Math.min(100, Math.log10(obtainiumValue))
-                    : 1;
-                return Math.min(base * multiplier, 1);
-            }
-            case 'recession':
-                return this.#corruptionData.recessionPower[loadout.recession];
-            case 'viscosity': {
-                const base = this.#corruptionData.viscosityPower[loadout.viscosity];
-                const multiplier = 1 + data.platonicUpgrades[6] / 30;
-                return Math.min(base * multiplier, 1);
-            }
-            default:
-                return 1;
-        }
     }
 
 
@@ -1579,7 +1495,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         if (this.gameData.currentChallenge.reincarnation === 10) {
             prestigePow = 1e-4
         }
-        prestigePow *= this.#corruptionData.deflationMultiplier[this.gameData.corruptions.used.deflation] ?? 1
+        prestigePow *= this.corruption.getChallenge15CorruptionEffect('deflation')
 
         let gain = Decimal.floor(
             Decimal.pow(
@@ -1596,7 +1512,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             gain = gain.times(
                 Decimal.min(
                     Decimal.pow(10, new Decimal('1e33')),
-                    Decimal.pow(this.accelerator.getAcceleratorEffect(), (1 / 3) * (this.#corruptionData.deflationMultiplier[this.gameData.corruptions.used.deflation] ?? 1))
+                    Decimal.pow(this.accelerator.getAcceleratorEffect(), (1 / 3) * this.corruption.getChallenge15CorruptionEffect('deflation'))
                 )
             )
         }
@@ -1997,7 +1913,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     calculateAscensionScore() {
         if (!this.gameData) {
-            return { baseScore: 0, corruptionMultiplier: 0, bonusMultiplier: 0, effectiveScore: 0 };
+            return { baseScore: 0, bonusMultiplier: 0, effectiveScore: 0 };
         }
 
         const data = this.gameData;
@@ -2010,10 +1926,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const platonic10 = data.platonicUpgrades[10] ?? 0;
         const globalSpeedBlessing = data.platonicBlessings.globalSpeed;
         const challenge15ScoreBonus = this.calculateChallenge15Reward('score') || 1;
-        const masterPackAscensionScoreMult = this.getGQUpgradeEffect('masterPack', 'ascensionScoreMult') || 1;
-        const expertPackAscensionScoreMult = this.getGQUpgradeEffect('expertPack', 'ascensionScoreMult') || 1;
         const campaignScoreBonus = this.calculateCampaignAscensionScoreBonus();
-        const finiteDescentScore = this.rune.getRuneEffects('finiteDescent').ascensionScore;
         const achievementAscensionScoreBonus = Number(this.achievement.AchRewards['ascensionScore']()) || 1;
         const eventAscensionScoreBonus = this.isEvent ? this.calculateEventSourceBuff(EventBuffType.AscensionScore) : 0;
 
@@ -2038,18 +1951,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             globalSpeedBlessing,
             data.challenge15Exponent ?? 0,
             challenge15ScoreBonus,
-            masterPackAscensionScoreMult,
-            expertPackAscensionScoreMult,
             campaignScoreBonus,
-            finiteDescentScore,
             achievementAscensionScoreBonus,
             this.isEvent ? 1 : 0,
             eventAscensionScoreBonus,
         ];
 
         return this.memoizeCalculation<AscensionScoreResult>('calculateAscensionScore', calculationVars, () => {
-            const corruptionMultiplier = this.calculateCorruptionScoreMultiplier(data.corruptions.used);
-
             const challengeScoreArrays1 = [0, 8, 10, 12, 15, 20, 60, 80, 120, 180, 300];
             const challengeScoreArrays2 = [0, 10, 12, 15, 20, 30, 80, 120, 180, 300, 450];
             const challengeScoreArrays3 = [0, 20, 30, 50, 100, 200, 250, 300, 400, 500, 750];
@@ -2096,21 +2004,18 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                 challenge15ScoreBonus *
                 this.calculateAscensionScorePlatonicBlessing() *
                 campaignScoreBonus *
-                finiteDescentScore *
                 (1 + 0.05 * cube21) *
                 (1 + 0.05 * cube31) *
                 (1 + 0.05 * cube41) *
                 achievementAscensionScoreBonus *
-                masterPackAscensionScoreMult *
                 (this.isEvent ? 1 + eventAscensionScoreBonus : 1);
 
-            let effectiveScore = baseScore * corruptionMultiplier * bonusMultiplier;
+            let effectiveScore = baseScore * bonusMultiplier;
             if (effectiveScore > 1e23) {
                 effectiveScore = Math.pow(effectiveScore, 0.5) * Math.pow(1e23, 0.5);
             }
-            effectiveScore *= expertPackAscensionScoreMult;
 
-            return { baseScore, corruptionMultiplier, bonusMultiplier, effectiveScore };
+            return { baseScore, bonusMultiplier, effectiveScore };
         });
     }
 
@@ -2218,7 +2123,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             'Chronometer 2 Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometer2', 'ascensionSpeedMult', mode) as number,
             'Chronometer 3 Quark Upgrade': this.quarkShop.getShopUpgradeEffects('chronometer3', 'ascensionSpeedMult', mode) as number,
             'Chronos Hepteract Bonus': 1 + (0.6 / 1000) * this.calculateHepteractEffective('chronos'),
-            'Platonic OMEGA Bonus': 1 + 0.002 * this.getCorruptionTotalLevel() * data.platonicUpgrades[15],
+            'Platonic OMEGA Bonus': 1 + 0.01 * (data.currentChallenge.ascension === 15 ? 20 : Math.min(20, this.corruption.getActiveEffectiveCorruptionLevel())) * data.platonicUpgrades[15],
             'Challenge 15 Reward': this.calculateChallenge15Reward('ascensionSpeed'),
             'Cookie Upgrade 9 Bonus': 1 + (1 / 400) * cube59,
             'Intermediate Pack Bonus': this.goldenQuark.getGQUpgradeEffect('intermediatePack', 'ascensionSpeedMult'),

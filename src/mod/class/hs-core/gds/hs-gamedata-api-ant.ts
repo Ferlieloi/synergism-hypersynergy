@@ -82,7 +82,7 @@ export class AntUpgradeHelper {
         const freeLevels = computeFreeAntUpgradeLevels(this.#ctx);
         const corruptionDivisor = upgradeData.exemptFromCorruption
             ? 1
-            : this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'extinction');
+            : this.#ctx.getChallenge15CorruptionEffect('extinction');
 
         if (data.currentChallenge.ascension === 11) {
             return Math.min(data.ants.upgrades[antUpgrade], freeLevels) / corruptionDivisor;

@@ -1030,17 +1030,17 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   },
   advancedPack: {
     maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default',
-    effect: (n, key) => key === 'corruptionScoreIncrease' ? (n > 0 ? 0.33 : 0) : (n > 0 ? 0.04 : 0),
+    effect: (n, key) => key === 'cubesBanked' ? (n > 0 ? 500 : 0) : (n > 0 ? 0.04 : 0),
   },
   expertPack: {
     maxLevel: 1, costPerLevel: 800, specialCostForm: 'Default',
     effect: (n, key) => key === 'addCodeAscensionTimeMult' ? (n > 0 ? 1.2 : 1)
-      : key === 'ascensionScoreMult' ? (n > 0 ? 1.5 : 1)
+      : key === 'freeCorruptionLevels' ? (n > 0 ? 1 : 0)
         : (n > 0 ? 0.06 : 0),
   },
   masterPack: {
     maxLevel: 1, costPerLevel: 3200, specialCostForm: 'Default',
-    effect: (n, key) => key === 'ascensionScoreMult' ? (n > 0 ? 2 : 1) : (n > 0 ? 0.08 : 0),
+    effect: (n, key) => key === 'freeCorruptionLevels' ? (n > 0 ? 1 : 0) : (n > 0 ? 0.08 : 0),
   },
   divinePack: { maxLevel: 1, costPerLevel: 12_800, specialCostForm: 'Default' },
   wowPass2: { maxLevel: 1, qualityOfLife: true, costPerLevel: 12_500, specialCostForm: 'Default' },
@@ -1268,10 +1268,9 @@ export const SINGULARITY_CHALLENGE_DATA: {
     uniquerewardcount: 4,
     effect: (n: number) => {
       return {
-        corrScoreIncrease: 0.05 * n,
         blueberrySpeedMult: (1 + n / 60),
         capIncrease: 3 * +(n > 0),
-        freeCorruptionLevel: +(n >= 12),
+        freeCorruptionLevel: n >= 1 ? 1 + 0.2 * n : 0,
         shopUpgrade: n >= 12,
         reinCapIncrease2: 7 * +(n >= 15),
         ascCapIncrease2: 2 * +(n >= 15)

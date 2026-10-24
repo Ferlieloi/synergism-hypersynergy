@@ -1,5 +1,6 @@
 import { EventBuffType } from "./hs-event-data";
-import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, CorruptionLevels, GameData } from "./hs-player-savedata";
+import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, GameData } from "./hs-player-savedata";
+import type { Challenge15CorruptionKey, CorruptionEffectKey } from "../../class/hs-core/gds/hs-gamedata-api-corruption";
 
 export type CalculationMode = 'normal' | 'true_base' | 'non_ambrosia';
 
@@ -41,7 +42,7 @@ export interface AntUpgradeHelperContext {
   calculateSigmoidExponential: (constant: number, coefficient: number) => number
   calculateChallenge15Reward: (rewardName: string) => number
   CalcECC: (refinement: string, value: number) => number
-  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -108,7 +109,9 @@ export interface RuneHelperContext {
   calculateChallenge15Reward: (rewardName: string) => number
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
   calculateHepteractEffective: (type: HepteractType) => number
-  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  getCorruptionEffect: (level: number, corruption: CorruptionEffectKey) => number | Decimal
+  getActiveCorruptionLevel: () => number
+  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
   calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
   calculateSynergismLevel: () => number
   getShopLevel: (upgradeKey: string) => number
@@ -124,7 +127,9 @@ export interface AcceleratorHelperContext {
   getRuneEffects: (rune: RuneKeys) => any
   calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
   calculateHepteractEffective: (type: HepteractType) => number
-  calculateCorruptionEffect: (loadout: CorruptionLevels, corruption: string) => number
+  getCorruptionEffect: (level: number, corruption: CorruptionEffectKey) => number | Decimal
+  getActiveCorruptionLevel: () => number
+  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
   calculateChallenge15Reward: (rewardName: string) => number
 }
 
@@ -135,13 +140,13 @@ export interface AchievementHelperContext {
   getPrestigePointGain: () => Decimal
   getTranscendPointGain: () => Decimal
   getReincarnationPointGain: () => Decimal
-  calcCorruptionStuff: () => { effectiveScore: number }
+  getActiveCorruptionLevel: () => number
   calculateChallenge15Reward: (rewardName: string) => number
   getRuneEffectiveLevel: (rune: RuneKeys) => number
   getRuneFreeLevels: (rune: RuneKeys) => number
   runes: () => Record<RuneKeys, any>
   calculateSynergismLevel: () => number
-  calculateAscensionScore: () => { effectiveScore: number }
+  getAscensionEffectiveCorruptionLevel: () => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
@@ -199,7 +204,7 @@ export const TALISMAN_MORTUUS_INSCRIPT_VALUES = [1, 1.05, 1.1, 1.15, 1.2, 1.3, 1
 export const TALISMAN_PLASTIC_INSCRIPT_VALUES = [1, 1.005, 1.01, 1.015, 1.02, 1.025, 1.03, 1.04, 1.045, 1.05, 1.0666]
 export const TALISMAN_WOWSQUARE_INSCRIPT_VALUES = [1, 1.025, 1.05, 1.075, 1.1, 1.125, 1.15, 1.2, 1.225, 1.25, 1.30]
 export const TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.03]
-export const TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10]
+export const TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 export const TALISMAN_HORSESHOE_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.012, 0.015, 0.02]
 
 export const ACHIEVEMENT_REWARD_TYPES: AchievementRewards[] = [
@@ -324,7 +329,7 @@ export type RuneTypeMap = {
         freeInfinityLevels: number
     }
     finiteDescent: {
-        ascensionScore: number
+        cubesBanked: number
         corruptionFreeLevels: number
         infiniteAscentFreeLevel: number
     }

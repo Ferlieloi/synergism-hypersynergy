@@ -80,7 +80,7 @@ export class RuneHelper {
             },
             effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
             freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('speed'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: () => true,
         },
         duplication: {
@@ -113,7 +113,7 @@ export class RuneHelper {
             },
             effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
             freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('duplication'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: () => Boolean(this.#ctx.getAchievementReward('duplicationRuneUnlock')),
         },
         prism: {
@@ -144,7 +144,7 @@ export class RuneHelper {
             },
             effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
             freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('prism'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: () => Boolean(this.#ctx.getAchievementReward('prismRuneUnlock')),
         },
         thrift: {
@@ -177,7 +177,7 @@ export class RuneHelper {
             },
             effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
             freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('thrift'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: () => Boolean(this.#ctx.getAchievementReward('thriftRuneUnlock')),
         },
         superiorIntellect: {
@@ -209,7 +209,7 @@ export class RuneHelper {
             },
             effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult() * this.SIEffectiveRuneLevelMult(),
             freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('superiorIntellect'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: (data?: GameData) => Boolean((data?.researches?.[82] ?? 0) > 0),
         },
         infiniteAscent: {
@@ -281,11 +281,11 @@ export class RuneHelper {
             levelsPerOOM: 0.1,
             levelsPerOOMIncrease: () => 0,
             effects: (level: number) => {
-                const ascensionScore = level >= 1 ? 1.04 + 0.96 * (level - 1) / (level + 25) : 1
-                const corruptionFreeLevels = level >= 1 ? 0.01 + 0.14 * (level - 1) / (level + 16) : 0
+                const cubesBanked = level >= 1 ? Math.round(40 + 960 * (level - 1) / (level + 25)) : 0
+                const corruptionFreeLevels = 0.01 * Math.min(level, 100)
                 const infiniteAscentFreeLevel = Math.floor(level / 2)
                 return {
-                    ascensionScore,
+                    cubesBanked,
                     corruptionFreeLevels,
                     infiniteAscentFreeLevel,
                 }
@@ -595,22 +595,36 @@ export class RuneHelper {
         return rawSalvage * this.#positiveSalvageMultiplier()
     }
 
-    // SynergismOfficial/src/Statistics.ts negativeSalvageStats and negativeSalvageStatMultiplier,
-    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvage
-    public calculateNegativeSalvage = (): number => {
+    // SynergismOfficial/src/Statistics.ts negativeSalvageStatMultiplier,
+    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvageMultiplier
+    public calculateNegativeSalvageMultiplier = (): number => {
         const data = this.#ctx.getGameData()
-        if (!data) return 0
-
-        const rawSalvage = this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'drought')
-            + this.#ctx.calculateSingularityDebuff('Salvage')
-            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').negativeSalvage
+        if (!data) return 1
 
         const perkSings = [75, 85, 105, 125, 155, 185, 215, 245, 260, 275]
-        const multiplier = 1
+        return Math.max(0, 1
             - perkSings.filter((x) => x <= (data.highestSingularityCount ?? 0)).length / 100
             + this.#ctx.getTalismanEffects('achievement').negativeSalvageMult
+            + (data.platonicUpgrades[13] > 0 ? -0.5 : 0))
+    }
 
-        return rawSalvage * multiplier
+    // SynergismOfficial/src/Statistics.ts negativeSalvageStats,
+    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvage
+    public calculateNegativeSalvage = (): number => {
+        const rawSalvage = this.#ctx.calculateSingularityDebuff('Salvage')
+            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').negativeSalvage
+        return rawSalvage * this.calculateNegativeSalvageMultiplier()
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateBadOfferingsSalvage: the corruption level's salvage
+    public calculateBadOfferingsSalvage = (): number => {
+        const salvage = this.#ctx.getCorruptionEffect(this.#ctx.getActiveCorruptionLevel(), 'salvage') as number
+        return salvage * this.calculateNegativeSalvageMultiplier()
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateChallenge15RuneSalvage
+    public calculateChallenge15RuneSalvage = (): number => {
+        return this.#ctx.getChallenge15CorruptionEffect('drought') * this.calculateNegativeSalvageMultiplier()
     }
 
     // SynergismOfficial/src/Calculate.ts calculateTotalSalvage
@@ -618,14 +632,25 @@ export class RuneHelper {
         return this.calculatePositiveSalvage() + this.calculateNegativeSalvage()
     }
 
-    // SynergismOfficial/src/Calculate.ts calculateSalvageRuneEXPMultiplier
-    public calculateSalvageRuneEXPMultiplier = (): Decimal => {
-        return Decimal.pow(10, this.calculateTotalSalvage() / 30)
+    // SynergismOfficial/src/Calculate.ts calculateFirstFiveRuneSalvage: the corruption salvage only counts for the
+    // first five runes
+    public calculateFirstFiveRuneSalvage = (): number => {
+        return this.calculateTotalSalvage() + this.calculateBadOfferingsSalvage() + this.calculateChallenge15RuneSalvage()
     }
 
-    public universalRuneEXPMult = (purchasedLevels: number): Decimal => {
+    // SynergismOfficial/src/Calculate.ts calculateSalvageRuneEXPMultiplier
+    public calculateSalvageRuneEXPMultiplier = (salvage = this.calculateTotalSalvage()): Decimal => {
+        return Decimal.pow(10, salvage / 30)
+    }
+
+    // SynergismOfficial/src/Runes.ts firstFiveRuneEXPMult
+    public firstFiveRuneEXPMult = (purchasedLevels: number): Decimal => {
+        return this.universalRuneEXPMult(purchasedLevels, this.calculateFirstFiveRuneSalvage())
+    }
+
+    public universalRuneEXPMult = (purchasedLevels: number, salvage = this.calculateTotalSalvage()): Decimal => {
         const data = this.#ctx.getGameData();
-        const recycleMultiplier = this.calculateSalvageRuneEXPMultiplier()
+        const recycleMultiplier = this.calculateSalvageRuneEXPMultiplier(salvage)
 
         const allRuneExpAdditiveMultiplier = (
             1

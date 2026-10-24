@@ -390,39 +390,19 @@ export interface AscStatToggles {
 }
 
 /**
- * Represents the levels of different corruption types.
- */
-export interface CorruptionLevels {
-    viscosity: number;
-    drought: number;
-    deflation: number;
-    extinction: number;
-    illiteracy: number;
-    recession: number;
-    dilation: number;
-    hyperchallenge: number;
-}
-
-/**
- * Represents saved loadouts for corruptions.
- * Keys are the names of the saved loadouts.
- */
-export interface CorruptionSaves {
-    [key: string]: CorruptionLevels;
-    // Example explicit keys:
-    // '3D': CorruptionLevels;
-    // 'Pre w5x10': CorruptionLevels;
-    // ...
-}
-
-/**
- * Contains the current, next, and saved corruption states.
+ * The corruption state since the game's 4.4.0 update: one level, no longer 8 corruptions.
  */
 export interface Corruptions {
-    used: CorruptionLevels;
-    next: CorruptionLevels;
-    saves: CorruptionSaves;
-    showStats: boolean;
+    used: number;
+    next: number;
+    /** The level the current ascension started at (at most used). */
+    ascensionLevel: number;
+    /** The highest level cleared: the climb goes 1 or 2 levels past it. */
+    highestCleared: number;
+    autoIncrease: boolean;
+    cleanseToHighest: boolean;
+    /** Saved levels, one per loadout slot. */
+    loadouts: number[];
     /** Best Challenge 10 completions per corruption level (index 0 unused): the source of the campaign tokens. */
     tokenCompletions?: number[];
 }
@@ -687,7 +667,6 @@ export interface SingularityChallengeRewards {
         shopUpgrade2: boolean;
     };
     oneChallengeCap: {
-        corrScoreIncrease: number;
         blueberrySpeedMult: number;
         capIncrease: number;
         freeCorruptionLevel: number;
@@ -1317,13 +1296,7 @@ export interface PlayerData {
   roombaResearchIndex: number
   ascStatToggles: Record<number, boolean>
 
-  corruptions: {
-    next: CorruptionLevels
-    used: CorruptionLevels
-    saves: CorruptionSaves
-    showStats: boolean
-    tokenCompletions?: number[]
-  }
+  corruptions: Corruptions
 
   constantUpgrades: ArrayStartingWithNull<number>
   history: Record<string, unknown[]>
