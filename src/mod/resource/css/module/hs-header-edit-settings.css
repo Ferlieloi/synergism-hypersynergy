@@ -7,7 +7,7 @@ html.hs-remove-header-gap #mainHeader:not(.headerEditMode) .hs-header-gap-empty 
    display: none;
 }
 
-/* "Hide loadout icons": the leading icon of the game's Ambrosia loadouts module, not of its loadout page module (a
+/* "Hide ambrosia bar icon": the leading icon of the game's Ambrosia loadouts module, not of its loadout page module (a
    click outside a slot turns its page). */
 html.hs-header-no-loadout-icons #ambrosiaLoadoutsHeader > img {
    display: none;

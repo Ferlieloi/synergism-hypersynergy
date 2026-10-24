@@ -1489,7 +1489,7 @@
   },
   "headerHideLoadoutIcons": {
     "settingName": "headerHideLoadoutIcons",
-    "settingDescription": "Hide the header's loadout icons",
+    "settingDescription": "Hide the header's ambrosia bar icon",
     "settingHelpText": "Hides the icon on the left of the Ambrosia loadouts module.",
     "settingType": "boolean",
     "hidden": true,
