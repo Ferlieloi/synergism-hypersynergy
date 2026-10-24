@@ -1,6 +1,6 @@
 import { AntUpgrades, CalculationMode, HSCalculationDefinition, HSCalculationParamOption, HSCalculationParams, hepteractTypeList, SingularityDebuffs } from "../../../types/data-types/hs-gamedata-api-types";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
-import { CHALLENGE15_CORRUPTION_KEYS, CORRUPTION_EFFECT_KEYS } from "./hs-gamedata-api-corruption";
+import { CHALLENGE15_CORRUPTION_KEYS, CORRUPTION_CUBE_TYPES, CORRUPTION_EFFECT_KEYS } from "./hs-gamedata-api-corruption";
 import { challenge15Rewards, redAmbrosiaUpgradeCalculationCollection } from "./hs-gamedata-tables";
 
 // ===== Param options for the Tools tab =====
@@ -43,6 +43,16 @@ const CORRUPTION_LEVEL_PARAM: HSCalculationParams = {
     paramType: "number",
     options: (data) => [
         { label: "current", value: data && data.currentChallenge.ascension === 0 ? data.corruptions.used : 0 },
+        { label: "next", value: data?.corruptions.next },
+    ]
+};
+
+// -1 is the current ascension's level with its free levels, 0 inside an ascension challenge, as in the game
+const CUBE_CORRUPTION_LEVEL_PARAM: HSCalculationParams = {
+    paramName: "level",
+    paramType: "number",
+    options: (data) => [
+        { label: "current", value: -1 },
         { label: "next", value: data?.corruptions.next },
     ]
 };
@@ -586,52 +596,35 @@ export const HSCalculationDefinitions: HSCalculationDefinition[] = [
     },
     // ----- Cubes, ascension, corruptions -----
     {
-        calculationName: "Cube Multiplier: Cubes",
-        fnName: "calculateCubeMultiplier",
-        fnParams: [],
-        supportsReduce: false,
+        calculationName: "Cube Bank",
+        fnName: "calculateCubeBank",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            }
+        ],
+        supportsReduce: true,
         toolingSupport: true
     },
     {
-        calculationName: "Cube Multiplier: Cubes With Tau",
-        fnName: "calculateCubeMultiplierWithTau",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cube Multiplier: Tesseracts",
-        fnName: "calculateTesseractMultiplier",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cube Multiplier: Hypercubes",
-        fnName: "calculateHypercubeMultiplier",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cube Multiplier: Platonics",
-        fnName: "calculatePlatonicMultiplier",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Cube Multiplier: Hepteracts",
-        fnName: "calculateHepteractMultiplier",
-        fnParams: [],
-        supportsReduce: false,
-        toolingSupport: true
-    },
-    {
-        calculationName: "Ascension Score",
-        fnName: "calculateAscensionScore",
-        fnParams: [],
-        supportsReduce: false,
+        calculationName: "Cube Gain: Corruption Lines",
+        fnName: "calculateCubeGainBase",
+        fnParams: [
+            {
+                paramName: "reduce_vals",
+                paramType: "boolean",
+                defaultValue: true
+            },
+            {
+                paramName: "cube",
+                paramType: "CorruptionCubeType",
+                options: optionsFromKeys(CORRUPTION_CUBE_TYPES)
+            },
+            CUBE_CORRUPTION_LEVEL_PARAM
+        ],
+        supportsReduce: true,
         toolingSupport: true
     },
     {

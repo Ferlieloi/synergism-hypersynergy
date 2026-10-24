@@ -10,6 +10,7 @@ export interface CorruptionHelperContext {
     getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
     getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K];
     getRuneEffects: (rune: RuneKeys) => any;
+    getChallenge15Reward: (rewardName: 'hepteractsUnlocked') => number;
 }
 
 // The 9 effects of the corruption level (CorruptionEffectValues in SynergismOfficial/src/Corruptions.ts)
@@ -24,7 +25,12 @@ export const CHALLENGE15_CORRUPTION_KEYS = [
 ] as const;
 export type Challenge15CorruptionKey = typeof CHALLENGE15_CORRUPTION_KEYS[number];
 
+// The cube types an ascension gives (CorruptionCubeType)
+export const CORRUPTION_CUBE_TYPES = ['cubes', 'tesseracts', 'hypercubes', 'platonics', 'hepteracts', 'octeracts'] as const;
+export type CorruptionCubeType = typeof CORRUPTION_CUBE_TYPES[number];
+
 const MIDGAME_LEVEL = 20;
+const LATE_GAME_LEVEL = 36;
 const ENDGAME_LEVEL = 45;
 const TWO_TO_THE_TWENTY = Math.pow(2, 20);
 const HYPERCHALLENGE_MID_BASE = Math.pow(1.25, 20);
@@ -80,6 +86,26 @@ const CORRUPTION_LEVEL_EFFECTS: Record<CorruptionEffectKey, [(l: number) => numb
     ]
 };
 
+// The effective level a cube type needs, hepteracts also Challenge 15's reward (corruptionCubeUnlocks)
+const CORRUPTION_CUBE_UNLOCKS: Record<CorruptionCubeType, { level: number; requiresChallenge15: boolean }> = {
+    cubes: { level: 0, requiresChallenge15: false },
+    tesseracts: { level: 0, requiresChallenge15: false },
+    hypercubes: { level: 8, requiresChallenge15: false },
+    platonics: { level: 14, requiresChallenge15: false },
+    hepteracts: { level: 20, requiresChallenge15: true },
+    octeracts: { level: 35, requiresChallenge15: false }
+};
+
+// Growth per effective level above the unlock: up to 36, up to 45, above (corruptionCubeRates)
+const CORRUPTION_CUBE_RATES: Record<CorruptionCubeType, { base: number; growth: number; lateGrowth?: number; endgameGrowth: number }> = {
+    cubes: { base: 1, growth: 1.1, endgameGrowth: 1.05 },
+    tesseracts: { base: 1e-3, growth: 1.15, endgameGrowth: 1.07 },
+    hypercubes: { base: 1e-3, growth: 1.2, endgameGrowth: 1.1 },
+    platonics: { base: 2e-4, growth: 1.3, endgameGrowth: 1.15 },
+    hepteracts: { base: 1e-4, growth: 1.4, lateGrowth: 1.05, endgameGrowth: 1.05 },
+    octeracts: { base: 1 / (5e19 * 3600 * 24 * 365), growth: 1.45, endgameGrowth: 1.1 }
+};
+
 const CHALLENGE15_CORRUPTION_NEUTRAL: Record<Challenge15CorruptionKey, number> = {
     viscosity: 1, drought: 0, deflation: 1, extinction: 1, illiteracy: 1, recession: 1, dilation: 1, hyperchallenge: 1, spirit: 1
 };
@@ -94,7 +120,7 @@ const CORRUPTION_SCALING_PER_MAXED_UPGRADE = 0.025;
  * IsExplicitHSModule: No
  * Description:
  *     The corruption level since the game's 4.4.0 update: one level (player.corruptions.used / next) with 9 effects,
- *     the free levels, and the effects Challenge 15 applies in its place.
+ *     the free levels, the effects Challenge 15 applies in its place, and each cube type's rate per level.
  *     Mirrors SynergismOfficial/src/Corruptions.ts.
  * Author: Shewchou
  */
@@ -161,6 +187,28 @@ export class CorruptionHelper {
             case 'spirit':
                 return 3;
         }
+    }
+
+    /** A cube type's gain per Cube Bank point before its multipliers (corruptionCubeBase). */
+    getCorruptionCubeBase(cube: CorruptionCubeType): number {
+        return CORRUPTION_CUBE_RATES[cube].base;
+    }
+
+    /** A cube type's multiplier at an effective level, even below its unlock (corruptionCubeRate). */
+    getCorruptionCubeRate(cube: CorruptionCubeType, effectiveLevel: number): number {
+        const unlockLevel = CORRUPTION_CUBE_UNLOCKS[cube].level;
+        const earlyLevels = Math.max(0, Math.min(effectiveLevel, LATE_GAME_LEVEL) - unlockLevel);
+        const lateLevels = Math.max(0, Math.min(effectiveLevel, ENDGAME_LEVEL) - Math.max(LATE_GAME_LEVEL, unlockLevel));
+        const { growth, lateGrowth = growth, endgameGrowth } = CORRUPTION_CUBE_RATES[cube];
+        return Math.pow(growth, earlyLevels) * Math.pow(lateGrowth, lateLevels)
+            * Math.pow(endgameGrowth, Math.max(0, effectiveLevel - ENDGAME_LEVEL));
+    }
+
+    /** Whether an ascension at an effective level gives a cube type (isCorruptionCubeUnlocked). */
+    isCorruptionCubeUnlocked(effectiveLevel: number, cube: CorruptionCubeType): boolean {
+        const unlock = CORRUPTION_CUBE_UNLOCKS[cube];
+        return effectiveLevel >= unlock.level
+            && (!unlock.requiresChallenge15 || this.#ctx.getChallenge15Reward('hepteractsUnlocked') > 0);
     }
 
     /** The level in use: 0 inside an ascension challenge (activeCorruptionLevel). */

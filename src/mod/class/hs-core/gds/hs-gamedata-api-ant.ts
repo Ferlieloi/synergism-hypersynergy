@@ -267,8 +267,8 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.AscensionScore]: {
         exemptFromCorruption: true,
         effect: (n: number) => ({
-            ascensionScoreBase: 100000 * (1 - Math.pow(0.999, n)),
-            cubesBanked: 3 * Math.min(200, n) + 2500 * (1 - Math.pow(1 - 1 / 2750, n)) + 96900 * (1 - Math.pow(1 - 1 / 969000, n)),
+            cubesBanked: Math.min(200, n) + Math.min(800, Math.max(0, n - 200) * 0.1)
+                + Math.min(5000, Math.max(0, n - 8200) / 100),
         }),
     },
     [AntUpgrades.WowCubes]: {

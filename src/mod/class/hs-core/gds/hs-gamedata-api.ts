@@ -27,15 +27,59 @@ import type { OcteractHelperContext } from "./hs-gamedata-api-octeract";
 import type { LuckHelperContext } from "./hs-gamedata-api-luck";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
-import { CorruptionHelper } from "./hs-gamedata-api-corruption";
+import { CorruptionHelper, type CorruptionCubeType } from "./hs-gamedata-api-corruption";
 import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 import { parseGameDataDecimal, calcECC, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
 import Decimal from "break_infinity.js";
 
-type AscensionScoreResult = {
-    baseScore: number;
-    bonusMultiplier: number;
-    effectiveScore: number;
+// The Cube Bank's weight per Challenge 1-5 completion, by tier (transcensionCubeBankTiers in SynergismOfficial/src/Challenges.ts)
+const TRANSCENSION_CUBE_BANK_TIERS: ReadonlyArray<{ from: number; to: number; weight: number }> = [
+    { from: 1, to: 100, weight: 2 },
+    { from: 101, to: 200, weight: 3 },
+    { from: 201, to: 300, weight: 4 },
+    { from: 301, to: Number.POSITIVE_INFINITY, weight: 5 }
+];
+
+// The Challenge 15 reward of each cube type (challenge15CubeRewards in SynergismOfficial/src/Statistics.ts)
+const CHALLENGE15_CUBE_REWARDS = {
+    cubes: 'wowCubes',
+    tesseracts: 'wowTesseracts',
+    hypercubes: 'wowHypercubes',
+    platonics: 'wowPlatonicCubes',
+    hepteracts: 'wowHepteracts',
+    octeracts: 'wowOcteracts'
+} as const satisfies Record<CorruptionCubeType, keyof typeof challenge15Rewards>;
+
+// High-Scoring Statue's power and normalization per cube type (highScoringStatueScaling in SynergismOfficial/src/PlatonicCubes.ts)
+const HIGH_SCORING_STATUE_SCALING: Record<CorruptionCubeType, { power: number; normalization: number }> = {
+    cubes: { power: 1 / 4.1, normalization: 0 },
+    tesseracts: { power: 0.35, normalization: 0 },
+    hypercubes: { power: 0.5, normalization: 0 },
+    platonics: { power: 0.75, normalization: 0 },
+    hepteracts: { power: 0.85, normalization: 1e12 },
+    octeracts: { power: 1, normalization: 1e25 }
+};
+const HIGH_SCORING_STATUE_SOFTCAP = 1e25;
+
+const highScoringStatueBase = (blessings: number) => {
+    const DR1 = 1 / 4;
+    const DR2 = 1 / 8;
+    const limit1 = 1e4;
+    const limit2 = 1e20;
+    const effectPerBlessing = 1 / 1e4;
+
+    if (blessings < limit1) {
+        return 1 + effectPerBlessing * blessings;
+    }
+
+    if (blessings < limit2) {
+        const limitMult = Math.pow(limit1, 1 - DR1);
+        return 1 + effectPerBlessing * limitMult * Math.pow(blessings, DR1);
+    }
+
+    const limitMult1 = Math.pow(limit1, 1 - DR1);
+    const limitMult2 = Math.pow(limit2, DR1 - DR2);
+    return 1 + effectPerBlessing * limitMult1 * limitMult2 * Math.pow(blessings, DR2);
 };
 
 /**
@@ -731,6 +775,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
             getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
             getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
+            getChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName),
         }));
         this.corruption = corruption;
 
@@ -988,51 +1033,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         updateCalculationCache(this.#calculationCache, cacheName, { value: effectiveValue, cachedBy: calculationVars });
         return effectiveValue;
     }
-
-    calcCorruptionStuff() {
-        if (!this.gameData) {
-            return {
-                wowCubes: 0,
-                wowTesseracts: 0,
-                wowHypercubes: 0,
-                wowPlatonicCubes: 0,
-                wowHepteracts: 0,
-                baseScore: 0,
-                bonusMultiplier: 0,
-                effectiveScore: 0,
-            };
-        }
-
-        const scores = this.calculateAscensionScore();
-        const cubeGain = this.calculateCubeMultiplierWithTau();
-
-        let tesseractGain = 1;
-        if (scores.effectiveScore >= 100000) {
-            tesseractGain += 0.5;
-        }
-        tesseractGain *= this.calculateTesseractMultiplier();
-
-        let hypercubeGain = scores.effectiveScore >= 1e9 ? 1 : 0;
-        hypercubeGain *= this.calculateHypercubeMultiplier();
-
-        let platonicGain = scores.effectiveScore >= 2.666e12 ? 1 : 0;
-        platonicGain *= this.calculatePlatonicMultiplier();
-
-        let hepteractGain = challenge15Rewards.hepteractsUnlocked.value && scores.effectiveScore >= 1.666e17 ? 1 : 0;
-        hepteractGain *= this.calculateHepteractMultiplier();
-
-        return {
-            wowCubes: Math.min(1e300, Math.floor(cubeGain)),
-            wowTesseracts: Math.min(1e300, Math.max(this.gameData.singularityCount ?? 0, Math.floor(tesseractGain))),
-            wowHypercubes: Math.min(1e300, Math.floor(hypercubeGain)),
-            wowPlatonicCubes: Math.min(1e300, Math.floor(platonicGain)),
-            wowHepteracts: Math.min(1e300, Math.floor(hepteractGain)),
-            baseScore: Math.floor(scores.baseScore),
-            bonusMultiplier: scores.bonusMultiplier,
-            effectiveScore: Math.floor(scores.effectiveScore),
-        };
-    }
-
 
     // =========================
     // ======= Challenge =======
@@ -1878,208 +1878,71 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return result;
     }
 
-    calculateAscensionScorePlatonicBlessing(): number {
-        if (!this.gameData) return 1;
-
-        const globalSpeedBlessing = this.gameData.platonicBlessings.globalSpeed;
-        const DR1 = 1 / 4;
-        const DR2 = 1 / 8;
-        const limit1 = 1e4;
-        const limit2 = 1e20;
-        const effectPerBlessing = 1 / 1e4;
-
-        if (globalSpeedBlessing < limit1) {
-            return 1 + effectPerBlessing * globalSpeedBlessing;
-        }
-
-        if (globalSpeedBlessing < limit2) {
-            const limitMult = Math.pow(limit1, 1 - DR1);
-            return 1 + effectPerBlessing * limitMult * Math.pow(globalSpeedBlessing, DR1);
-        }
-
-        const limitMult1 = Math.pow(limit1, 1 - DR1);
-        const limitMult2 = Math.pow(limit2, DR1 - DR2);
-        return 1 + effectPerBlessing * limitMult1 * limitMult2 * Math.pow(globalSpeedBlessing, DR2);
-    }
-
-    /** Mirrors CampaignManager.ascensionScoreMultiplier in SynergismOfficial/src/Campaign.ts. */
-    calculateCampaignAscensionScoreBonus(): number {
-        const tokens = this.campaignData?.tokens ?? 0;
-        return 1
-            + 0.2 * 1 / 100 * Math.min(tokens, 100)
-            + 0.3 * (1 - Math.exp(-Math.max(tokens - 100, 0) / 1000))
-            + 0.5 * (1 - Math.exp(-Math.max(tokens - 2500, 0) / 5000));
-    }
-
-    calculateAscensionScore() {
-        if (!this.gameData) {
-            return { baseScore: 0, bonusMultiplier: 0, effectiveScore: 0 };
-        }
-
-        const data = this.gameData;
-        const cube56 = data.cubeUpgrades[56] ?? 0;
-        const cube39 = data.cubeUpgrades[39] ?? 0;
-        const cube21 = data.cubeUpgrades[21] ?? 0;
-        const cube31 = data.cubeUpgrades[31] ?? 0;
-        const cube41 = data.cubeUpgrades[41] ?? 0;
-        const platonic5 = data.platonicUpgrades[5] ?? 0;
-        const platonic10 = data.platonicUpgrades[10] ?? 0;
-        const globalSpeedBlessing = data.platonicBlessings.globalSpeed;
-        const challenge15ScoreBonus = this.calculateChallenge15Reward('score') || 1;
-        const campaignScoreBonus = this.calculateCampaignAscensionScoreBonus();
-        const achievementAscensionScoreBonus = Number(this.achievement.AchRewards['ascensionScore']()) || 1;
-        const eventAscensionScoreBonus = this.isEvent ? this.calculateEventSourceBuff(EventBuffType.AscensionScore) : 0;
-
-        const calculationVars: number[] = [
-            data.highestchallengecompletions[1] ?? 0,
-            data.highestchallengecompletions[2] ?? 0,
-            data.highestchallengecompletions[3] ?? 0,
-            data.highestchallengecompletions[4] ?? 0,
-            data.highestchallengecompletions[5] ?? 0,
-            data.highestchallengecompletions[6] ?? 0,
-            data.highestchallengecompletions[7] ?? 0,
-            data.highestchallengecompletions[8] ?? 0,
-            data.highestchallengecompletions[9] ?? 0,
-            data.highestchallengecompletions[10] ?? 0,
-            cube56,
-            cube39,
-            cube21,
-            cube31,
-            cube41,
-            platonic5,
-            platonic10,
-            globalSpeedBlessing,
-            data.challenge15Exponent ?? 0,
-            challenge15ScoreBonus,
-            campaignScoreBonus,
-            achievementAscensionScoreBonus,
-            this.isEvent ? 1 : 0,
-            eventAscensionScoreBonus,
-        ];
-
-        return this.memoizeCalculation<AscensionScoreResult>('calculateAscensionScore', calculationVars, () => {
-            const challengeScoreArrays1 = [0, 8, 10, 12, 15, 20, 60, 80, 120, 180, 300];
-            const challengeScoreArrays2 = [0, 10, 12, 15, 20, 30, 80, 120, 180, 300, 450];
-            const challengeScoreArrays3 = [0, 20, 30, 50, 100, 200, 250, 300, 400, 500, 750];
-            const challengeScoreArrays4 = [0, 10000, 10000, 10000, 10000, 10000, 2000, 3000, 4000, 5000, 7500];
-
-            challengeScoreArrays1[1] += cube56;
-            challengeScoreArrays1[2] += cube56;
-            challengeScoreArrays1[3] += cube56;
-
-            let baseScore = 0;
-            for (let i = 1; i <= 10; i++) {
-                baseScore += challengeScoreArrays1[i] * data.highestchallengecompletions[i];
-
-                if (i <= 5 && data.highestchallengecompletions[i] >= 75) {
-                    baseScore += challengeScoreArrays2[i] * (data.highestchallengecompletions[i] - 75);
-
-                    if (data.highestchallengecompletions[i] >= 750) {
-                        baseScore += challengeScoreArrays3[i] * (data.highestchallengecompletions[i] - 750);
-                    }
-
-                    if (data.highestchallengecompletions[i] >= 9000) {
-                        baseScore += challengeScoreArrays4[i] * (data.highestchallengecompletions[i] - 9000);
-                    }
-                }
-
-                if (i > 5 && data.highestchallengecompletions[i] >= 25) {
-                    baseScore += challengeScoreArrays2[i] * (data.highestchallengecompletions[i] - 25);
-
-                    if (data.highestchallengecompletions[i] >= 60) {
-                        baseScore += challengeScoreArrays3[i] * (data.highestchallengecompletions[i] - 60);
-                    }
-                }
-            }
-
-            baseScore += this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.AscensionScore, 'ascensionScoreBase');
-            baseScore *= Math.pow(
-                1.03
-                    + 0.005 * cube39
-                    + 0.0025 * (platonic5 + platonic10),
-                data.highestchallengecompletions[10]
-            );
-
-            const bonusMultiplier =
-                challenge15ScoreBonus *
-                this.calculateAscensionScorePlatonicBlessing() *
-                campaignScoreBonus *
-                (1 + 0.05 * cube21) *
-                (1 + 0.05 * cube31) *
-                (1 + 0.05 * cube41) *
-                achievementAscensionScoreBonus *
-                (this.isEvent ? 1 + eventAscensionScoreBonus : 1);
-
-            let effectiveScore = baseScore * bonusMultiplier;
-            if (effectiveScore > 1e23) {
-                effectiveScore = Math.pow(effectiveScore, 0.5) * Math.pow(1e23, 0.5);
-            }
-
-            return { baseScore, bonusMultiplier, effectiveScore };
-        });
-    }
-
-    calculateCubeMultiplier(): number {
-        if (!this.gameData) return 1;
+    // calculateCubeBankSources in SynergismOfficial/src/Calculate.ts, with the line names of cubeBankStats in Statistics.ts
+    calculateCubeBank(reduce_vals = true): number | HSCalculationComponents {
+        if (!this.gameData) return 0;
         const data = this.gameData;
 
-        const cubeBank = Array.from({ length: 10 }, (_, index) => {
-            const challengeIndex = index + 1;
-            return (challengeIndex >= 6 ? 2 : 1) * (data.challengecompletions?.[challengeIndex] ?? 0);
-        }).reduce((sum, value) => sum + value, 0) + this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.AscensionScore, 'cubesBanked');
+        const transcensionPerCompletion = 1 + 0.05 * (data.cubeUpgrades[56] ?? 0);
+        let transcensionAmount = 0;
+        for (const { from, to, weight } of TRANSCENSION_CUBE_BANK_TIERS) {
+            for (let i = 1; i <= 5; i++) {
+                transcensionAmount += Math.max(0, Math.min(data.challengecompletions[i] ?? 0, to) - from + 1) * weight * transcensionPerCompletion;
+            }
+        }
 
-        return (
-            cubeBank *
-            Math.pow(this.calculateAscensionScore().effectiveScore / 3000, 1 / 4.1) *
-            (this.achievement.AchRewards['wowCubeGain']() as number ?? 1) *
-            (this.talisman.getTalismanEffects('wowSquare').oddDimBonus as number ?? 1) *
-            this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.WowCubes, 'wowCubes')
-        );
+        let reincarnationCompletions = 0;
+        for (let i = 6; i <= 9; i++) {
+            reincarnationCompletions += data.challengecompletions[i] ?? 0;
+        }
+
+        const vals: HSCalculationComponents = {
+            'Challenges 1-5': transcensionAmount,
+            'Challenges 6-9': 10 * reincarnationCompletions,
+            'Ants': this.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.AscensionScore, 'cubesBanked'),
+            'Cube Upgrades 3x1, 4x1, 5x1': 15 * (data.cubeUpgrades[21] ?? 0) + 20 * (data.cubeUpgrades[31] ?? 0) + 25 * (data.cubeUpgrades[41] ?? 0),
+            'Finite Descent Rune': Number(this.rune.getRuneEffects('finiteDescent').cubesBanked ?? 0),
+            'Achievements': Number(this.achievement.AchRewards['cubesBanked']()),
+            'Golden Quark Upgrade - Advanced Pack': this.goldenQuark.getGQUpgradeEffect('advancedPack', 'cubesBanked'),
+        };
+        const challengeTen = Math.pow(1.02 + 0.005 * (data.cubeUpgrades[39] ?? 0), data.challengecompletions[10] ?? 0);
+
+        if (!reduce_vals) return { ...vals, 'Challenge 10': challengeTen };
+        return Object.values(vals).reduce((a, b) => a + b, 0) * challengeTen;
     }
 
-    calculateCubeMultiplierWithTau(): number {
-        const cubeMultiplier = this.calculateCubeMultiplier();
-        const tauBonus = this.getGQUpgradeEffect('platonicTau', 'tauPower') || 1;
-        return Math.pow(cubeMultiplier, tauBonus);
-    }
-
-    calculateTesseractMultiplier(): number {
+    /** High-Scoring Statue's multiplier for a cube type (calculateCubePlatonicBlessing in SynergismOfficial/src/PlatonicCubes.ts). */
+    calculateCubePlatonicBlessing(cube: CorruptionCubeType): number {
         if (!this.gameData) return 1;
-
-        return (
-            Math.pow(1 + Math.max(0, this.calculateAscensionScore().effectiveScore - 1e5) / 1e4, 0.35) *
-            Number(this.achievement.AchRewards['wowTesseractGain']() ?? 1) *
-            Number(this.talisman.getTalismanEffects('wowSquare').evenDimBonus ?? 1)
-        );
+        const { power, normalization } = HIGH_SCORING_STATUE_SCALING[cube];
+        const blessings = this.gameData.platonicBlessings.scoreBonus ?? 0;
+        const softcapped = highScoringStatueBase(Math.min(blessings, HIGH_SCORING_STATUE_SOFTCAP));
+        const excess = highScoringStatueBase(Math.max(blessings, HIGH_SCORING_STATUE_SOFTCAP)) / highScoringStatueBase(HIGH_SCORING_STATUE_SOFTCAP);
+        return Math.pow(Math.max(1, softcapped * Math.sqrt(excess) / highScoringStatueBase(normalization)), power);
     }
 
-    calculateHypercubeMultiplier(): number {
-        if (!this.gameData) return 1;
+    /**
+     * The first lines of a cube type's multiplier, the ones the corruption level drives
+     * (corruptionCubeStatLines in SynergismOfficial/src/Statistics.ts). The other multipliers are not modeled.
+     * level: a corruption level before its free levels, or -1 for the current ascension's (0 inside an ascension challenge).
+     */
+    calculateCubeGainBase(reduce_vals = true, cube: CorruptionCubeType = 'cubes', level = -1): number | HSCalculationComponents {
+        if (!this.gameData) return 0;
+        const effectiveLevel = level < 0
+            ? this.corruption.getAscensionEffectiveCorruptionLevel()
+            : this.corruption.getEffectiveCorruptionLevel(level);
 
-        return (
-            Math.pow(1 + Math.max(0, this.calculateAscensionScore().effectiveScore - 1e9) / 1e8, 0.5) *
-            Number(this.achievement.AchRewards['wowHypercubeGain']() ?? 1) *
-            Number(this.talisman.getTalismanEffects('wowSquare').oddDimBonus ?? 1)
-        );
-    }
+        const vals: HSCalculationComponents = {
+            'Cube Bank': this.calculateCubeBank() as number,
+            'Base Multiplier': this.corruption.getCorruptionCubeBase(cube),
+            'Corruption (per Cube Bank point)': this.corruption.isCorruptionCubeUnlocked(effectiveLevel, cube)
+                ? this.corruption.getCorruptionCubeRate(cube, effectiveLevel)
+                : 0,
+            'Challenge 15 Reward': this.calculateChallenge15Reward(CHALLENGE15_CUBE_REWARDS[cube]),
+            'Platonic Blessing - High-Scoring Statue': this.calculateCubePlatonicBlessing(cube),
+        };
 
-    calculatePlatonicMultiplier(): number {
-        if (!this.gameData) return 1;
-
-        return (
-            Math.pow(1 + Math.max(0, this.calculateAscensionScore().effectiveScore - 2.666e12) / 2.666e11, 0.75) *
-            Number(this.achievement.AchRewards['wowPlatonicGain']() ?? 1) *
-            Number(this.talisman.getTalismanEffects('wowSquare').evenDimBonus ?? 1)
-        );
-    }
-
-    calculateHepteractMultiplier(): number {
-        if (!this.gameData) return 1;
-
-        return (
-            Math.pow(1 + Math.max(0, this.calculateAscensionScore().effectiveScore - 1.666e16) / 3.33e16, 0.85) *
-            Number(this.achievement.AchRewards['wowHepteractGain']() ?? 1)
-        );
+        return reduce_vals ? Object.values(vals).reduce((a, b) => a * b, 1) : vals;
     }
 
     calculateRawAscensionSpeedMult(reduce_vals = true, mode: CalculationMode = 'normal') {

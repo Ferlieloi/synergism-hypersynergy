@@ -266,10 +266,35 @@ export const challenge15Rewards = {
     baseValue: 1,
     requirement: 2e9
   },
-  score: {
+  wowCubes: {
     value: 1,
     baseValue: 1,
     requirement: 1e10
+  },
+  wowTesseracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowHypercubes: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowPlatonicCubes: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowHepteracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e15
+  },
+  wowOcteracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e30
   },
   quarks: {
     value: 1,
@@ -1498,6 +1523,19 @@ export const calculateSigmoid = (
 
 
 
+// challenge15ScoreReward and challenge15CubeReward in SynergismOfficial/src/Variables.ts
+const challenge15ScoreReward = (e: number, divisor: number) => {
+  const softcap = Math.max(divisor, 1e20)
+  return 1 + (1 / 4) * Math.pow(Math.max(divisor, Math.min(e, softcap)) / divisor, 1 / 4)
+    * Math.pow(Math.max(e, softcap) / softcap, 1 / 8)
+}
+
+const challenge15CubeReward = (e: number, power: number, divisor = 1e10) => {
+  const softcapped = challenge15ScoreReward(Math.min(e, 1e30), divisor)
+  const excess = challenge15ScoreReward(Math.max(e, 1e30), divisor) / challenge15ScoreReward(1e30, divisor)
+  return Math.pow(softcapped, power) * Math.pow(excess, power / 2)
+}
+
 // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Variables.ts#L454
 export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: number) => number } = {
   cube1: (e: number) => 1 + ((1 / 50) * Math.log2(e / 175)),
@@ -1526,10 +1564,12 @@ export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: numbe
   constantBonus: (e: number) => 1 + (1 / 5) * Math.pow(e / 1e8, 2 / 3),
   cube4: (e: number) => 1 + ((1 / 200) * Math.log(e / 1.25e8)) / Math.log(2),
   spiritBonus: (e: number) => 1 + (1 / 5) * Math.pow(e / 2e9, 1 / 4),
-  score: (e: number) =>
-    (e >= 1e20)
-      ? 1 + (1 / 4) * Math.pow(e / 1e10, 1 / 8) * Math.pow(1e10, 1 / 8)
-      : 1 + (1 / 4) * Math.pow(e / 1e10, 1 / 4),
+  wowCubes: (e: number) => challenge15CubeReward(e, 1 / 4.1),
+  wowTesseracts: (e: number) => challenge15CubeReward(e, 0.35),
+  wowHypercubes: (e: number) => challenge15CubeReward(e, 0.5),
+  wowPlatonicCubes: (e: number) => challenge15CubeReward(e, 0.75),
+  wowHepteracts: (e: number) => challenge15CubeReward(e, 0.85, 1e15),
+  wowOcteracts: (e: number) => Math.sqrt(challenge15ScoreReward(e, 1e30)),
   quarks: (e: number) => 1 + (3 / 400) * Math.log2(e * 32 / 1e11),
   hepteractsUnlocked: (e: number) => e >= 1e15 ? 1 : 0,
   challengeHepteractUnlocked: (e: number) => e >= 2e15 ? 1 : 0,

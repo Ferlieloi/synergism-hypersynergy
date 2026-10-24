@@ -249,7 +249,7 @@ export const ACHIEVEMENT_REWARD_TYPES: AchievementRewards[] = [
     'wowPlatonicGain',
     'quarkGain',
     'wowHepteractGain',
-    'ascensionScore',
+    'cubesBanked',
     'constUpgrade1Buff',
     'constUpgrade2Buff',
     'platonicToHypercubes',
@@ -732,7 +732,7 @@ export type AchievementRewards =
     | 'wowPlatonicGain'
     | 'quarkGain'
     | 'wowHepteractGain'
-    | 'ascensionScore'
+    | 'cubesBanked'
     | 'constUpgrade1Buff'
     | 'constUpgrade2Buff'
     | 'platonicToHypercubes'
@@ -872,7 +872,6 @@ export type AntUpgradeTypeMap = {
     }
     [AntUpgrades.AscensionScore]: {
         cubesBanked: number
-        ascensionScoreBase: number
     }
     [AntUpgrades.WowCubes]: {
         wowCubes: number

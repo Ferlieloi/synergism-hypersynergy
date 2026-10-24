@@ -56,7 +56,7 @@ const getAchievementRewardDynamicDependencies = (rewardType: AchievementRewards,
                 data.ascensionCount ?? 0,
                 parseGameDataNumber(data.ascendShards),
             ];
-        case 'ascensionScore':
+        case 'cubesBanked':
             return [
                 data.ascensionCount ?? 0,
                 parseGameDataNumber(data.ascendShards),
@@ -1432,7 +1432,7 @@ export class AchievementHelper {
                 pointValue: 70,
                 unlockCondition: () => this.#ctx.getActiveCorruptionLevel() >= 45,
                 group: 'ascensionScore',
-                reward: { ascensionScore: () => Math.pow(1.01, this.#ctx.getGameData()?.hepteracts?.abyss?.TIMES_CAP_EXTENDED ?? 0) },
+                reward: { cubesBanked: () => 50 * (this.#ctx.getGameData()?.hepteracts?.abyss?.TIMES_CAP_EXTENDED ?? 0) },
             },
             {
                 pointValue: 40,
@@ -1476,7 +1476,7 @@ export class AchievementHelper {
                 pointValue: 40,
                 unlockCondition: () => parseGameDataDecimal(this.#ctx.getGameData()?.ascendShards).gte('1e1000'),
                 group: 'constant',
-                reward: { ascensionScore: () => 1 + Math.min(Decimal.log(parseGameDataDecimal(this.#ctx.getGameData()?.ascendShards).add(1), 10) / 1e5, 1) }
+                reward: { cubesBanked: () => Math.min(2000, Math.floor(Decimal.log(parseGameDataDecimal(this.#ctx.getGameData()?.ascendShards).add(1), 10) / 50)) }
             },
             { pointValue: 45, unlockCondition: () => parseGameDataDecimal(this.#ctx.getGameData()?.ascendShards).gte('1e5000'), group: 'constant' },
             { pointValue: 50, unlockCondition: () => parseGameDataDecimal(this.#ctx.getGameData()?.ascendShards).gte('1e15000'), group: 'constant' },
@@ -2396,7 +2396,7 @@ export class AchievementHelper {
             wowHypercubeGain: () =>         this.#productAchievementRewards('wowHypercubeGain', (reward) => reward.wowHypercubeGain!()),
             wowPlatonicGain: () =>          this.#productAchievementRewards('wowPlatonicGain', (reward) => reward.wowPlatonicGain!()),
             wowHepteractGain: () =>         this.#productAchievementRewards('wowHepteractGain', (reward) => reward.wowHepteractGain!()),
-            ascensionScore: () =>           this.#productAchievementRewards('ascensionScore', (reward) => reward.ascensionScore!()),
+            cubesBanked: () =>              this.#sumAchievementRewards('cubesBanked', (reward) => reward.cubesBanked!()),
             ascensionRewardScaling: () =>   this.#achievementUnlocked('ascensionRewardScaling'),
             constUpgrade1Buff: () =>        this.#sumAchievementRewards('constUpgrade1Buff', (reward) => reward.constUpgrade1Buff!()),
             constUpgrade2Buff: () =>        this.#sumAchievementRewards('constUpgrade2Buff', (reward) => reward.constUpgrade2Buff!()),

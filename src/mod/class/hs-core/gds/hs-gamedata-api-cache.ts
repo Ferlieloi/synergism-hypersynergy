@@ -199,7 +199,6 @@ export const createCoreCalculationCacheEntries = (): Record<string, CachedValue>
         'AllShopTablets_TRUE_BASE',
         'AllShopTablets_NO_AMB',
         'AllTalismanRuneBonusStatsSum',
-        'calculateAscensionScore',
         'CampaignAmbrosiaSpeedBonus',
         'CampaignRune6Bonus',
         'CampaignLuckBonus',
