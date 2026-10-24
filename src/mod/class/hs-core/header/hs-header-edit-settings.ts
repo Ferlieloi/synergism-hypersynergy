@@ -56,6 +56,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         toggles: [
             { setting: 'enableAutomationQuickBar', label: 'Automation bar', withoutPatch: "It shows in the mod's row under the header." },
             { setting: 'ambrosiaMinibars', label: 'Ambrosia minibars', withoutPatch: "They show in the mod's row under the header, and need GDS (turned on with them)." },
+            { setting: 'ambrosiaMinibarBorders', label: 'Minibars border' },
             { setting: 'ambrosiaRateHeader', label: 'Ambrosia per hour', shown: hasHeaderModules },
             { setting: 'centerQuickbars', label: 'Center quick bars', shown: () => !hasHeaderModules() },
         ],

@@ -1396,6 +1396,21 @@
       "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
     }
   },
+  "ambrosiaMinibarBorders": {
+    "settingName": "ambrosiaMinibarBorders",
+    "settingDescription": "Ambrosia minibars border",
+    "settingHelpText": "A white frame around the ambrosia minibars.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "ambrosiaMinibarBordersAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-ambrosia-minibar-borders-btn"
+    }
+  },
   "ambrosiaRateHeader": {
     "settingName": "ambrosiaRateHeader",
     "settingDescription": "Ambrosia per hour in the header (S25+)",

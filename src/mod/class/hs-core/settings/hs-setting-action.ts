@@ -122,6 +122,10 @@ export class HSSettingActions {
             },
             (mod) => mod.disableBerryMinibars()
         ),
+        // A class on <html>, so it applies to the bars wherever they are (hs-ambrosia-minibars.css)
+        ambrosiaMinibarBordersAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-minibars-framed', params.disable !== true);
+        },
 
         // Needs GDS (usesGameData): the settings keep it off while GDS is off
         ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',

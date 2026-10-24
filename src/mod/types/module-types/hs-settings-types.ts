@@ -65,6 +65,7 @@ export interface HSSettingsDefinition {
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
+    ambrosiaMinibarBorders: HSSettingBase<boolean>;
     ambrosiaRateHeader: AmbrosiaRateHeaderSetting;
 
     // Game Data Settings
