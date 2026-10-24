@@ -47,7 +47,8 @@ export class HSHeaderCellSettings {
         const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Horizontal');
         for (const value of ALIGNMENTS) {
             const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
-                HSHeaderCellSettings.#change({ align: value });
+                // A click on the pressed button clears it: the cell goes back to the game's layout.
+                HSHeaderCellSettings.#change({ align: button.getAttribute('aria-pressed') === 'true' ? undefined : value });
             });
             button.id = `hs-header-align-${value}`;
             alignment.append(button);
@@ -65,7 +66,7 @@ export class HSHeaderCellSettings {
         const vertical = HSHeaderCellSettings.#group('hs-header-cell-vertical-alignment', 'Vertical');
         for (const value of VERTICAL_ALIGNMENTS) {
             const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
-                HSHeaderCellSettings.#change({ vertical: value });
+                HSHeaderCellSettings.#change({ vertical: button.getAttribute('aria-pressed') === 'true' ? undefined : value });
             });
             button.id = `hs-header-vertical-${value}`;
             vertical.append(button);
@@ -143,6 +144,8 @@ export class HSHeaderCellSettings {
         if (!selected || ('half' in change && !HSHeaderCellSettings.#canHalf(selected))) return;
         const cells = HSHeaderCellSettings.#settings.layouts[HSHeaderCellSettings.#layoutKey()];
         const next = { ...cells[selected.key], ...change };
+        if (next.align === undefined) delete next.align;
+        if (next.vertical === undefined) delete next.vertical;
         if (next.half === undefined) delete next.half;
         if (next.align === undefined && next.half === undefined && next.vertical === undefined) delete cells[selected.key];
         else cells[selected.key] = next;
@@ -192,7 +195,7 @@ export class HSHeaderCellSettings {
         const value = selected ? settings[selected.key] : undefined;
         for (const [alignment, button] of HSHeaderCellSettings.#alignButtons) {
             button.disabled = !selected;
-            button.setAttribute('aria-pressed', String(!!selected && (value?.align ?? 'center') === alignment));
+            button.setAttribute('aria-pressed', String(!!selected && value?.align === alignment));
             button.title = selected ? 'Align the selected cell' : 'Select a module in a header cell first';
         }
         for (const [height, button] of HSHeaderCellSettings.#heightButtons) {
@@ -203,7 +206,7 @@ export class HSHeaderCellSettings {
         }
         for (const [vertical, button] of HSHeaderCellSettings.#verticalButtons) {
             button.disabled = !selected;
-            button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : 'center')) === vertical));
+            button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : undefined)) === vertical));
             button.title = selected ? 'Align the selected cell vertically' : 'Select a module in a header cell first';
         }
     }
