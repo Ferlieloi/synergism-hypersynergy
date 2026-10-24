@@ -26,6 +26,13 @@
     text-align: right;
 }
 
+/* The ascension timer's text sits in a box at least 8em wide (the game's, against bouncing). Stacked, it keeps its
+   text at the box's start, as the other modules keep their content at theirs, so it lines up with its partner;
+   alone, a cell alignment centres it like any content. */
+.headerRegion > .headerStack[data-hs-header-align] #ascLen {
+    text-align: left;
+}
+
 /* Single stat modules are flex rows: their icons and text remain vertically centered. */
 .headerRegion > .headerModule[data-hs-header-align] {
     align-items: center;
