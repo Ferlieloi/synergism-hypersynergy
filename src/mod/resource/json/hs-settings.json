@@ -47,14 +47,6 @@
     "enabled": false,
     "hidden": true
   },
-  "headerCorruptionSlotsShown": {
-    "settingName": "headerCorruptionSlotsShown",
-    "settingDescription": "Corruption loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
-    "settingType": "numeric",
-    "enabled": true,
-    "hidden": true,
-    "settingValue": 16
-  },
   "headerAmbrosiaSlotsShown": {
     "settingName": "headerAmbrosiaSlotsShown",
     "settingDescription": "Ambrosia loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
@@ -1435,51 +1427,6 @@
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
     }
   },
-  "corruptionHeaderLevels": {
-    "settingName": "corruptionHeaderLevels",
-    "settingDescription": "Corruption levels in the header",
-    "settingHelpText": "Your corruption levels on a line under the corruption loadout modules: the current ones, then the next ones when they differ. Turned off while Auto-Sing runs.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": true,
-    "settingAction": "corruptionHeaderLevelsAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
-    }
-  },
-  "corruptionHeaderIconCleanse": {
-    "settingName": "corruptionHeaderIconCleanse",
-    "settingDescription": "Cleanse corruptions with the header icon",
-    "settingHelpText": "Puts the Cleanse button in place of the icon on the left of both corruption loadout modules.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": false,
-    "settingAction": "corruptionHeaderIconCleanseAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
-    }
-  },
-  "corruptionHeaderAlwaysShown": {
-    "settingName": "corruptionHeaderAlwaysShown",
-    "settingDescription": "Keep the corruption loadout modules visible",
-    "settingHelpText": "Keeps both corruption loadout modules in the header before Challenge 11 is completed in the singularity.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": true,
-    "settingAction": "corruptionHeaderAlwaysShownAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-always-shown-btn"
-    }
-  },
   "matchOcteractIconSize": {
     "settingName": "matchOcteractIconSize",
     "settingDescription": "Match the octeract header icon size",
@@ -1543,7 +1490,7 @@
   "headerHideLoadoutIcons": {
     "settingName": "headerHideLoadoutIcons",
     "settingDescription": "Hide the header's loadout icons",
-    "settingHelpText": "Hides the icon on the left of the Corruption and Ambrosia loadouts modules.",
+    "settingHelpText": "Hides the icon on the left of the Ambrosia loadouts module.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": false,

@@ -113,7 +113,6 @@ export const HSGlobal: IHSGlobal = class {
             // QoL quickbars
             HSQuickbarManager: 'HSQOLButtons',
             HSQOLAutomationQuickbar: 'HSQOLButtons',
-            HSCorruption: 'HSQOLButtons',
             HSHeaderModules: 'HSQOLButtons',
             HSHeaderKeepOnImport: 'HSQOLButtons',
             HSHeaderEditSettings: 'HSQOLButtons',

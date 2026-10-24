@@ -463,7 +463,6 @@ export class HSAutosingSettingsFixer {
         await HSModuleManager.getModule<HSGameData>('HSGameData')?.pauseGDS(HSAutosingSettingsFixer.GDS_PAUSE_REASON);
 
         const performanceSettingKeys = [
-            'corruptionHeaderLevels',
             'enableAutomationQuickBar',
             'ambrosiaMinibars',
             'ambrosiaRateHeader',

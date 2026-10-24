@@ -6,7 +6,7 @@ import headerLoadoutIconsCSS from "inline:../../../resource/css/module/hs-header
 import { HSLoadoutIconStore } from "./hs-loadout-icon-store";
 import { HSQuickbarIconPickerController } from "./hs-loadout-icon-picker";
 
-type HSHeaderLoadoutKind = 'ambrosia' | 'corruption';
+type HSHeaderLoadoutKind = 'ambrosia';
 
 interface HSHeaderLoadoutSlot {
     kind: HSHeaderLoadoutKind;
@@ -26,11 +26,6 @@ const KINDS: Record<HSHeaderLoadoutKind, HSHeaderLoadoutKindDef> = {
         store: HSLoadoutIconStore.ambrosia,
         storeKey: slot => `blueberryLoadout${slot}`,
     },
-    corruption: {
-        containerIds: ['corruptionLoadoutsHeaderSlots', 'corruptionLoadoutPageHeaderSlots'],
-        store: HSLoadoutIconStore.corruption,
-        storeKey: slot => `${slot}`,
-    },
 };
 
 const SLOT_CLASS = 'hs-header-loadout-custom';
@@ -42,9 +37,9 @@ const PICK_MODE_CLASS = 'hs-quickbar-slot-pickmode';
  * Class: HSHeaderLoadoutIcons
  * IsExplicitHSModule: Yes
  * Description:
- *     Any image of the game as the icon of a slot of the game's Corruption and Ambrosia loadouts header
- *     modules, and of their loadout page modules (8 slots a page, same icons). The game only offers corruption or ambrosia upgrade icons, and saves them in the save
- *     (player.headerLayouts.*.loadoutIcons, zod-checked), so the mod's icons stay in HSLoadoutIconStore
+ *     Any image of the game as the icon of a slot of the game's Ambrosia loadouts header module, and of its
+ *     loadout page module (8 slots a page, same icons). The game only offers ambrosia upgrade icons, and saves them
+ *     in the save (player.headerLayouts.*.loadoutIcons, zod-checked), so the mod's icons stay in HSLoadoutIconStore
  *     (per browser, one per slot for both layouts) and are painted over the game's slots. A mod icon wins
  *     over the game's.
  *     - Painting: an img + the slot number, as the game draws its own icons. The game's data-icon is left
@@ -66,7 +61,6 @@ export class HSHeaderLoadoutIcons extends HSModule {
             HSHeaderLoadoutIcons.#slotButtons(target).forEach(button => button.classList.toggle(PICK_MODE_CLASS, active));
         },
         clearAllSlotPickModeVisuals: () => {
-            // Not a direct child: the corruption slots sit in a display: contents span, next to the cleanse button
             document.querySelectorAll(`.headerLoadoutSlots .${PICK_MODE_CLASS}`)
                 .forEach(button => button.classList.remove(PICK_MODE_CLASS));
         },
@@ -82,6 +76,7 @@ export class HSHeaderLoadoutIcons extends HSModule {
 
     async init() {
         HSLogger.log(`Initializing HSHeaderLoadoutIcons module`, this.context);
+        HSHeaderLoadoutIcons.#removeLegacyCorruptionIcons();
 
         const modalContent = document.getElementById('modalContent');
         if (!modalContent) {
@@ -248,6 +243,18 @@ export class HSHeaderLoadoutIcons extends HSModule {
     // ======================================================
     // ----------------------- Helpers ----------------------
     // ======================================================
+
+    /**
+     * The game's 4.4.0 update removed its corruption loadout header modules: the icons the mod painted on their slots
+     * (data URLs, up to 16, next to the game's save in localStorage) have no use left. An old backup brings them back
+     * and goes through here again.
+     * Temporary (added 2026-10-24): can be removed a few releases later, with its call in init().
+     */
+    static #removeLegacyCorruptionIcons(): void {
+        try {
+            localStorage.removeItem('hs-corruption-loadout-icons');
+        } catch { /* nothing to free */ }
+    }
 
     static #kindOf(button: Element): HSHeaderLoadoutKind | null {
         const containerId = button.parentElement?.id ?? '';

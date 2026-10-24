@@ -10,7 +10,6 @@ import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-auto
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
-import { HSCorruption } from "../../hs-modules/hs-corruption";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
@@ -255,16 +254,6 @@ export class HSSettingActions {
             (mod) => mod.disableAutomationQuickbar()
         ),
 
-        // The game's corruption loadout header modules, which are in the page from the start
-        corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderLevels(params.disable !== true);
-        },
-        corruptionHeaderIconCleanseAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderIconCleanse(params.disable !== true);
-        },
-        corruptionHeaderAlwaysShownAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderAlwaysShown(params.disable !== true);
-        },
         matchOcteractIconSizeAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-match-octeract-icon-size', params.disable !== true);
         },

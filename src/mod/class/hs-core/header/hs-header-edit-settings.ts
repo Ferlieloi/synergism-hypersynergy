@@ -4,15 +4,14 @@ import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
 import { HSHeaderCellSettings } from "./hs-header-cell-settings";
-import { HSCorruption } from "../../hs-modules/hs-corruption";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
-type HSSlotCountKind = 'corruption' | 'ambrosia';
+type HSSlotCountKind = 'ambrosia';
 
 interface HSSlotCountDef {
-    setting: 'headerCorruptionSlotsShown' | 'headerAmbrosiaSlotsShown';
+    setting: 'headerAmbrosiaSlotsShown';
     containerId: string;
-    // The game's icon for the header module (its img in the header can be the mod's cleanse button)
+    // The game's icon for the header module
     icon: string;
     title: string;
     name: string;
@@ -28,13 +27,6 @@ interface HSToggleDef {
 }
 
 const SLOT_COUNTS: Record<HSSlotCountKind, HSSlotCountDef> = {
-    corruption: {
-        setting: 'headerCorruptionSlotsShown',
-        containerId: 'corruptionLoadoutsHeaderSlots',
-        icon: 'Pictures/Tab Icons/Tabs/Corruption.png',
-        title: 'How many corruption loadout slots the header shows. The others still work through hotkeys and the Corruption tab.',
-        name: 'Corruption',
-    },
     ambrosia: {
         setting: 'headerAmbrosiaSlotsShown',
         containerId: 'ambrosiaLoadoutsHeaderSlots',
@@ -75,15 +67,6 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
         ],
     },
     {
-        title: 'Corruption modules',
-        toggles: [
-            { setting: 'corruptionHeaderLevels', label: 'Levels line' },
-            { setting: 'corruptionHeaderIconCleanse', label: 'Icon cleanses corruptions' },
-            // Without Tau, corruptions are locked before Challenge 11 and the setting does nothing
-            { setting: 'corruptionHeaderAlwaysShown', label: 'Keep the bar visible', shown: () => hasHeaderModules() && HSCorruption.hasPlatonicTau() },
-        ],
-    },
-    {
         title: 'Octeracts',
         toggles: [
             { setting: 'matchOcteractIconSize', label: 'Match octeract icon size' },
@@ -92,7 +75,7 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
     },
 ];
 
-// The game's most loadout slots of each kind: the stored value for "all"
+// The game's most ambrosia loadout slots: the stored value for "all"
 const MAX_SLOTS = 16;
 const BLOCK_ID = 'hs-header-edit-settings';
 const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
@@ -104,10 +87,10 @@ const EDIT_BUTTON_ID = 'hs-header-edit-button';
  * Description:
  *     "[HS] Header", a block next to the game's header tray (#headerTray, inside #headerEditPanel, which the game only
  *     shows in the header's edit mode and never rebuilds): the mod's header settings, out of the panel.
- *     - Visible slots: how many slots the game's Corruption and Ambrosia loadouts modules show (the first N; the
- *       others are hidden by CSS, nth-child, so the rule outlives the game's rebuild of the slots, and still work
- *       everywhere else). Hidden settings headerCorruptionSlotsShown and headerAmbrosiaSlotsShown, 16 = all. The
- *       slots owned are read from the slots the game draws (all of them in edit mode).
+ *     - Visible slots: how many slots the game's Ambrosia loadouts module shows (the first N; the others are hidden
+ *       by CSS, nth-child, so the rule outlives the game's rebuild of the slots, and still work everywhere else).
+ *       Hidden setting headerAmbrosiaSlotsShown, 16 = all. The slots owned are read from the slots the game draws
+ *       (all of them in edit mode).
  *     - Checkboxes for the header settings (hidden in the panel), switched through enable()/disable(), with the
  *       panel's GDS check. They follow every change of those settings (HSSettings.onStateChange), wherever it comes
  *       from.

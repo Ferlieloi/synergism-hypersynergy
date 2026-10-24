@@ -29,7 +29,6 @@ export interface HSSettingsDefinition {
     keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
 
     // Header loadout slots shown
-    headerCorruptionSlotsShown: HeaderCorruptionSlotsShownSetting;
     headerAmbrosiaSlotsShown: HeaderAmbrosiaSlotsShownSetting;
 
     // Notification Settings
@@ -98,9 +97,6 @@ export interface HSSettingsDefinition {
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
-    corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
-    corruptionHeaderIconCleanse: HSSettingBase<boolean>;
-    corruptionHeaderAlwaysShown: HSSettingBase<boolean>;
     matchOcteractIconSize: HSSettingBase<boolean>;
     matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
@@ -199,7 +195,6 @@ export interface HepteractDistributorKeepSetting extends HSSettingBase<number> {
 export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
 
 // Header loadout slots shown
-export interface HeaderCorruptionSlotsShownSetting extends HSSettingBase<number> { }
 export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
@@ -259,7 +254,6 @@ export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<bool
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
-export interface QOLButtonsCorruptionHeaderLevelsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHeaderStatsAtBottomSetting extends HSSettingBase<boolean> { }
 
