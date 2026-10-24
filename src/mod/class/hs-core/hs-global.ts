@@ -1,4 +1,8 @@
-import { HSViewProperties, MAIN_VIEW } from "../../types/module-types/hs-gamestate-types";
+import {
+    HSViewProperties, MAIN_VIEW, subtabButtonIds,
+    BUILDING_VIEW_BUTTON_IDS, ACHIEVEMENT_VIEW_BUTTON_IDS, RUNE_VIEW_BUTTON_IDS, CHALLENGE_VIEW_BUTTON_IDS, ANT_VIEW_BUTTON_IDS,
+    CUBE_VIEW_BUTTON_IDS, TRAITS_VIEW_BUTTON_IDS, SINGULARITY_VIEW_BUTTON_IDS, SETTINGS_VIEW_BUTTON_IDS, PSEUDOCOIN_VIEW_BUTTON_IDS,
+} from "../../types/module-types/hs-gamestate-types";
 import { IHSGlobal } from "../../types/module-types/hs-global-types";
 import { ELogLevel } from "../../types/module-types/hs-logger-types";
 
@@ -314,108 +318,43 @@ export const HSGlobal: IHSGlobal = class {
     static HSGameState = {
         viewProperties: new Map<MAIN_VIEW, HSViewProperties>([
             [MAIN_VIEW.BUILDINGS, {
-                subViewIds: [
-                    'switchToCoinBuilding',
-                    'switchToDiamondBuilding',
-                    'switchToMythosBuilding',
-                    'switchToParticleBuilding',
-                    'switchToTesseractBuilding'
-                ],
-                subViewsSelector: ['#switchToCoinBuilding', '#switchToDiamondBuilding', '#switchToMythosBuilding', '#switchToParticleBuilding', '#switchToTesseractBuilding'],
+                subViewIds: subtabButtonIds(BUILDING_VIEW_BUTTON_IDS),
                 viewClassName: 'BuildingView'
             }],
             [MAIN_VIEW.ACHIEVEMENTS, {
-                subViewIds: [
-                    'toggleAchievementSubTab1',
-                    'toggleAchievementSubTab2'
-                ],
-                subViewsSelector: ['#toggleAchievementSubTab1', '#toggleAchievementSubTab2'],
+                subViewIds: subtabButtonIds(ACHIEVEMENT_VIEW_BUTTON_IDS),
                 viewClassName: 'AchievementView'
             }],
             [MAIN_VIEW.RUNES, {
-                subViewIds: [
-                    'toggleRuneSubTab1',
-                    'toggleRuneSubTab2',
-                    'toggleRuneSubTab3'
-                ],
-                subViewsSelector: ['#toggleRuneSubTab1', '#toggleRuneSubTab2', '#toggleRuneSubTab3'],
+                subViewIds: subtabButtonIds(RUNE_VIEW_BUTTON_IDS),
                 viewClassName: 'RuneView'
             }],
             [MAIN_VIEW.CHALLENGES, {
-                subViewIds: [
-                    'toggleChallengesSubTab1',
-                    'toggleChallengesSubTab2'
-                ],
-                subViewsSelector: ['#toggleChallengesSubTab1', '#toggleChallengesSubTab2'],
+                subViewIds: subtabButtonIds(CHALLENGE_VIEW_BUTTON_IDS),
                 viewClassName: 'ChallengeView'
             }],
             [MAIN_VIEW.ANTS, {
-                subViewIds: [
-                    'toggleAntSubtab1',
-                    'toggleAntSubtab2',
-                    'toggleAntSubtab3'
-                ],
-                subViewsSelector: ['#toggleAntSubtab1', '#toggleAntSubtab2', '#toggleAntSubtab3'],
+                subViewIds: subtabButtonIds(ANT_VIEW_BUTTON_IDS),
                 viewClassName: 'AntView'
             }],
             [MAIN_VIEW.CUBES, {
-                subViewIds: [
-                    'switchCubeSubTab1',
-                    'switchCubeSubTab2',
-                    'switchCubeSubTab3',
-                    'switchCubeSubTab4',
-                    'switchCubeSubTab5',
-                    'switchCubeSubTab6',
-                    'switchCubeSubTab7'
-                ],
-                subViewsSelector: ['#switchCubeSubTab1', '#switchCubeSubTab2', '#switchCubeSubTab3', '#switchCubeSubTab4', '#switchCubeSubTab5', '#switchCubeSubTab6', '#switchCubeSubTab7'],
+                subViewIds: subtabButtonIds(CUBE_VIEW_BUTTON_IDS),
                 viewClassName: 'CubeView'
             }],
             [MAIN_VIEW.TRAITS, {
-                subViewIds: [
-                    'corrStatsBtn',
-                    'corrTokensBtn',
-                    'corrAutoAscendBtn'
-                ],
-                subViewsSelector: ['#corrStatsBtn', '#corrTokensBtn', '#corrAutoAscendBtn'],
+                subViewIds: subtabButtonIds(TRAITS_VIEW_BUTTON_IDS),
                 viewClassName: 'TraitsView'
             }],
             [MAIN_VIEW.SINGULARITY, {
-                subViewIds: [
-                    'toggleSingularitySubTab1',
-                    'toggleSingularitySubTab2',
-                    'toggleSingularitySubTab3',
-                    'toggleSingularitySubTab4',
-                    'toggleSingularitySubTab5',
-                    'toggleSingularitySubTab6'
-                ],
-                subViewsSelector: ['#toggleSingularitySubTab1', '#toggleSingularitySubTab2', '#toggleSingularitySubTab3', '#toggleSingularitySubTab4', '#toggleSingularitySubTab5', '#toggleSingularitySubTab6'],
+                subViewIds: subtabButtonIds(SINGULARITY_VIEW_BUTTON_IDS),
                 viewClassName: 'SingularityView'
             }],
             [MAIN_VIEW.SETTINGS, {
-                subViewIds: [
-                    'switchSettingSubTab1',
-                    'switchSettingSubTab2',
-                    'switchSettingSubTab3',
-                    'switchSettingSubTab4',
-                    'switchSettingSubTab5',
-                    'switchSettingSubTab6',
-                    'switchSettingSubTab7',
-                    'switchSettingSubTab8',
-                    'switchSettingSubTab9'
-                ],
-                subViewsSelector: ['#switchSettingSubTab1', '#switchSettingSubTab2', '#switchSettingSubTab3', '#switchSettingSubTab4', '#switchSettingSubTab5', '#switchSettingSubTab6', '#switchSettingSubTab7', '#switchSettingSubTab8', '#switchSettingSubTab9'],
+                subViewIds: subtabButtonIds(SETTINGS_VIEW_BUTTON_IDS),
                 viewClassName: 'SettingsView'
             }],
             [MAIN_VIEW.PSEUDOCOINS, {
-                subViewIds: [
-                    'cartSubTab1',
-                    'cartSubTab2',
-                    'cartSubTab3',
-                    'cartSubTab4',
-                    'cartSubTab5'
-                ],
-                subViewsSelector: ['#cartSubTab1', '#cartSubTab2', '#cartSubTab3', '#cartSubTab4', '#cartSubTab5'],
+                subViewIds: subtabButtonIds(PSEUDOCOIN_VIEW_BUTTON_IDS),
                 viewClassName: 'PseudoCoinView'
             }]
         ])
