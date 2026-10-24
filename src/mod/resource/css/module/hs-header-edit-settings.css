@@ -130,8 +130,25 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
 }
 
 #hs-header-edit-settings .hs-hes-section[hidden],
-#hs-header-edit-settings .hs-hes-toggle[hidden] {
+#hs-header-edit-settings .hs-hes-toggle[hidden],
+#hs-header-edit-settings .hs-hes-choice[hidden],
+#hs-header-edit-settings .hs-hes-choice > button[hidden] {
    display: none;
+}
+
+/* A setting picked among a few values: its label, then a button each, the one in use pressed */
+#hs-header-edit-settings .hs-hes-choice {
+   display: flex;
+   align-items: center;
+   gap: 4px;
+   color: #bbb;
+   font-size: 0.75em;
+   white-space: nowrap;
+}
+
+#hs-header-edit-settings .hs-hes-choice > button[aria-pressed="true"] {
+   border-color: gold;
+   color: gold;
 }
 
 #hs-header-edit-settings .hs-hes-toggle > input {

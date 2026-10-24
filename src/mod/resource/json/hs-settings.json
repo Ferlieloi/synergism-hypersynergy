@@ -146,12 +146,59 @@
   },
   "compactChallengeText": {
     "settingName": "compactChallengeText",
-    "settingDescription": "Compact challenge progress text",
+    "settingDescription": "Compact progress text in the game's challenge modules",
     "settingHelpText": "Show current/required amounts or Challenge 15 scores without the challenge name, at any cell height. Hover for the full description. Inactive modules keep the game's challenge-name preview in the editor.",
     "settingType": "boolean",
     "enabled": false,
     "hidden": true,
-    "settingAction": "compactChallengeTextAction"
+    "settingAction": "compactChallengeTextAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-compact-challenge-text-btn"
+    }
+  },
+  "challengeProgressHeader": {
+    "settingName": "challengeProgressHeader",
+    "settingDescription": "Challenge progress module in the header",
+    "settingHelpText": "One header module for the challenges you are in.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "challengeProgressHeaderAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-challenge-progress-header-btn"
+    }
+  },
+  "challengeProgressLayout": {
+    "settingName": "challengeProgressLayout",
+    "settingDescription": "Challenge progress module: layout",
+    "settingHelpText": "All challenges on one line, or one line each.",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": "line"
+  },
+  "challengeProgressDetails": {
+    "settingName": "challengeProgressDetails",
+    "settingDescription": "Challenge progress module: details",
+    "settingHelpText": "After each challenge: nothing, its completions (the score for C15), or its completions and requirement.",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": "completions"
+  },
+  "challengeProgressShowNone": {
+    "settingName": "challengeProgressShowNone",
+    "settingDescription": "Challenge progress module: CØ outside challenges",
+    "settingHelpText": "A discreet CØ when you are in no challenge, instead of an empty module.",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
   },
   "editGameHeader": {
     "settingName": "editGameHeader",

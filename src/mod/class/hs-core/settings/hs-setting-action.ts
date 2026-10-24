@@ -19,6 +19,7 @@ import { HSOcteractHeader } from "../header/hs-octeract-header";
 import { HSHeaderGap } from "../header/hs-header-gap";
 import { HSHeaderEditSettings } from "../header/hs-header-edit-settings";
 import { HSHeaderChallengeProgress } from "../header/hs-header-challenge-progress";
+import { HSHeaderChallengeModule } from "../header/hs-header-challenge-module";
 
 // Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
 // Does nothing if the module isn't loaded.
@@ -143,6 +144,11 @@ export class HSSettingActions {
 
         compactChallengeTextAction: async (params: HSSettingActionParams) => {
             HSHeaderChallengeProgress.setEnabled(params.disable !== true);
+        },
+
+        challengeProgressHeaderAction: async (params: HSSettingActionParams) => {
+            if (params.disable === true) HSHeaderChallengeModule.disable();
+            else HSHeaderChallengeModule.enable();
         },
 
         // Not awaited: the GDS start and stop run on their own

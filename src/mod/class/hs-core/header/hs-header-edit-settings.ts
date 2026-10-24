@@ -4,6 +4,7 @@ import { HSLogger } from "../hs-logger";
 import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
 import { HSHeaderCellSettings } from "./hs-header-cell-settings";
+import { HSHeaderChallengeModule } from "./hs-header-challenge-module";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'ambrosia';
@@ -36,12 +37,23 @@ const SLOT_COUNTS: Record<HSSlotCountKind, HSSlotCountDef> = {
     },
 };
 
+/** A string setting picked among a few values, as a row of buttons. */
+interface HSChoiceDef {
+    setting: 'challengeProgressLayout' | 'challengeProgressDetails';
+    label: string;
+    options: { value: string; text: string; shown?: () => boolean }[];
+    // The value in use, whose button is pressed (the stored one can be unknown, or not fit the other settings)
+    current: () => string;
+    shown?: () => boolean;
+}
+
 // The mod's modules are header modules only with the patcher's header modules patch; without it, they are in the
 // mod's own row (#quickbarsRow), which "Center quick bars" moves
 const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
+const hasChallengeModule = () => hasHeaderModules() && HSSettings.getSetting('challengeProgressHeader').isEnabled();
 
-// In the block's order, before the visible slots
-const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
+// In the block's order, before the visible slots; a section's choices before its toggles
+const SECTIONS: { title: string; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
     {
         title: 'Layout',
         toggles: [
@@ -58,13 +70,31 @@ const SECTIONS: { title: string; toggles: HSToggleDef[] }[] = [
             { setting: 'ambrosiaMinibars', label: 'Ambrosia minibars', withoutPatch: "They show in the mod's row under the header, and need GDS (turned on with them)." },
             { setting: 'ambrosiaMinibarBorders', label: 'Minibars border' },
             { setting: 'ambrosiaRateHeader', label: 'Ambrosia per hour', shown: hasHeaderModules },
+            { setting: 'challengeProgressHeader', label: 'Challenge progress', shown: hasHeaderModules },
             { setting: 'centerQuickbars', label: 'Center quick bars', shown: () => !hasHeaderModules() },
         ],
     },
     {
         title: 'Challenge progress',
+        choices: [
+            {
+                setting: 'challengeProgressLayout', label: 'Layout', shown: hasChallengeModule,
+                options: [{ value: 'line', text: 'One line' }, { value: 'lines', text: 'Lines' }],
+                current: () => HSHeaderChallengeModule.layout(),
+            },
+            {
+                setting: 'challengeProgressDetails', label: 'Details', shown: hasChallengeModule,
+                options: [
+                    { value: 'none', text: 'None' },
+                    { value: 'completions', text: 'Completions' },
+                    { value: 'requirement', text: 'Requirement', shown: () => HSHeaderChallengeModule.canShowRequirement() },
+                ],
+                current: () => HSHeaderChallengeModule.details(),
+            },
+        ],
         toggles: [
-            { setting: 'compactChallengeText', label: 'Compact challenge text' },
+            { setting: 'challengeProgressShowNone', label: 'CØ outside challenges', shown: hasChallengeModule },
+            { setting: 'compactChallengeText', label: "Game's modules: numbers only" },
         ],
     },
     {
@@ -95,6 +125,8 @@ const EDIT_BUTTON_ID = 'hs-header-edit-button';
  *     - Checkboxes for the header settings (hidden in the panel), switched through enable()/disable(), with the
  *       panel's GDS check. They follow every change of those settings (HSSettings.onStateChange), wherever it comes
  *       from.
+ *     - Rows of buttons for the string settings picked among a few values (the challenge progress module's layout
+ *       and details), the value in use pressed.
  *     The counters refresh when edit mode shows the block (the slots owned may have changed): a 1 ms CSS animation
  *     restarts each time #headerEditPanel goes from display: none to shown, and its animationstart event triggers
  *     the refresh (no observer, no polling).
@@ -109,6 +141,7 @@ export class HSHeaderEditSettings {
     static #plusButtons = new Map<HSSlotCountKind, HTMLButtonElement>();
     static #checkboxes = new Map<keyof HSSettingsDefinition, HTMLInputElement>();
     static #toggleSections: { section: HTMLElement; toggles: { label: HTMLElement; shown?: () => boolean }[] }[] = [];
+    static #choices: { choice: HSChoiceDef; buttons: { button: HTMLButtonElement; value: string; shown?: () => boolean }[] }[] = [];
     static #hideRuleInjected = false;
     static #openingEditor = false;
 
@@ -182,7 +215,7 @@ export class HSHeaderEditSettings {
         const sections = document.createElement('div');
         sections.className = 'hs-hes-sections';
         for (const section of SECTIONS) {
-            sections.append(HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles));
+            sections.append(HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles, section.choices));
         }
         sections.append(HSHeaderEditSettings.#buildSlotSection());
         block.append(title, sections);
@@ -312,9 +345,15 @@ export class HSHeaderEditSettings {
     // ======================================================
 
     // Every line is built; those whose shown() fails are hidden at each refresh, with their section when it has none left
-    static #buildToggleSection(title: string, toggles: HSToggleDef[]): HTMLElement {
+    static #buildToggleSection(title: string, toggles: HSToggleDef[], choices: HSChoiceDef[] = []): HTMLElement {
         const section = HSHeaderEditSettings.#buildSection(title);
         const built: { label: HTMLElement; shown?: () => boolean }[] = [];
+        for (const choice of choices) {
+            const line = HSHeaderEditSettings.#buildChoice(choice);
+            if (!line) continue;
+            built.push({ label: line, shown: choice.shown });
+            section.append(line);
+        }
         for (const toggle of toggles) {
             const definition = HSSettings.getSetting(toggle.setting)?.getDefinition();
             if (!definition) continue;
@@ -335,6 +374,41 @@ export class HSHeaderEditSettings {
         }
         HSHeaderEditSettings.#toggleSections.push({ section, toggles: built });
         return section;
+    }
+
+    // Its label, then a button per value, pressed for the value in use
+    static #buildChoice(choice: HSChoiceDef): HTMLElement | null {
+        const definition = HSSettings.getSetting(choice.setting)?.getDefinition();
+        if (!definition) return null;
+
+        const line = document.createElement('div');
+        line.className = 'hs-hes-choice';
+        line.title = definition.settingHelpText ?? '';
+        const label = document.createElement('span');
+        label.textContent = choice.label;
+        line.append(label);
+
+        const buttons: { button: HTMLButtonElement; value: string; shown?: () => boolean }[] = [];
+        for (const option of choice.options) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = option.text;
+            button.addEventListener('click', () => HSHeaderEditSettings.#choose(choice, option.value));
+            buttons.push({ button, value: option.value, shown: option.shown });
+            line.append(button);
+        }
+        HSHeaderEditSettings.#choices.push({ choice, buttons });
+        return line;
+    }
+
+    static #choose(choice: HSChoiceDef, value: string): void {
+        const setting = HSSettings.getSetting(choice.setting);
+        const previous = setting.getValue();
+        if (value !== previous) {
+            setting.setValue(value);
+            HSLogger.log(`${choice.setting}: ${previous} -> ${value}`, HSHeaderEditSettings.#context);
+        }
+        HSHeaderEditSettings.#refresh();
     }
 
     static #toggle(name: keyof HSSettingsDefinition, enabled: boolean): void {
@@ -372,6 +446,13 @@ export class HSHeaderEditSettings {
         }
         for (const [name, checkbox] of HSHeaderEditSettings.#checkboxes) {
             checkbox.checked = HSSettings.getSetting(name).isEnabled();
+        }
+        for (const { choice, buttons } of HSHeaderEditSettings.#choices) {
+            const current = choice.current();
+            for (const { button, value, shown } of buttons) {
+                button.hidden = shown ? !shown() : false;
+                button.setAttribute('aria-pressed', String(value === current));
+            }
         }
         for (const { section, toggles } of HSHeaderEditSettings.#toggleSections) {
             for (const toggle of toggles) toggle.label.hidden = toggle.shown ? !toggle.shown() : false;

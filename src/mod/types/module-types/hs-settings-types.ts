@@ -41,6 +41,10 @@ export interface HSSettingsDefinition {
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
     editGameHeader: HSSettingBase<string>;
     compactChallengeText: HSSettingBase<boolean>;
+    challengeProgressHeader: HSSettingBase<boolean>;
+    challengeProgressLayout: HSSettingBase<string>;
+    challengeProgressDetails: HSSettingBase<string>;
+    challengeProgressShowNone: HSSettingBase<boolean>;
     autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
     reloadOnLateLoaderStart: ReloadOnLateLoaderStartSetting;
     rememberSubtabs: RememberSubtabsSetting;
