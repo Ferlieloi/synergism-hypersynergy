@@ -1027,15 +1027,17 @@ export class AmbrosiaHelper {
         return reduce_vals ? reduced : vals;
     }
 
+    /** Mirrors campaignTokenBonuses.blueberrySpeed in SynergismOfficial/src/Campaign.ts: 2000 tokens and Exalt 1 completed. */
     calculateCampaignAmbrosiaSpeedBonus() {
         const tokens = this.#ctx.getCampaignTokens();
+        const exalt1Completions = this.#ctx.getGameData()?.singularityChallenges.noSingularityUpgrades.completions ?? 0;
         const cacheName = 'CampaignAmbrosiaSpeedBonus' as keyof CalculationCache;
-        const calculationVars: number[] = [tokens];
+        const calculationVars: number[] = [tokens, exalt1Completions];
         const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
         if (cached !== undefined) return cached;
 
         let campaignBlueberrySpeedBonus;
-        if (tokens < 2000) {
+        if (tokens < 2000 || exalt1Completions <= 0) {
             campaignBlueberrySpeedBonus = 1;
         } else {
             campaignBlueberrySpeedBonus = 1 + 0.02 * 1 / 2000 * Math.min(tokens - 2000, 2000) + 0.03 * (1 - Math.exp(-Math.max(tokens - 4000, 0) / 2000));

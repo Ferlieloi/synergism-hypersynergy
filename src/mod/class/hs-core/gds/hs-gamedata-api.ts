@@ -39,37 +39,10 @@ type AscensionScoreResult = {
 };
 
 /**
- * Campaign definitions copied from SynergismOfficial/src/Campaign.ts
- * (`campaignDatas`). The save stores completion counts, not the transient
- * token total displayed by the game.
+ * Tokens per Challenge 10 completion at a corruption level, copied from SynergismOfficial/src/Campaign.ts
+ * (`corruptionLevelTokenRates`): [last level, tokens per completion].
  */
-const CAMPAIGN_DEFINITIONS: ReadonlyArray<{ key: string; limit: number; isMeta: boolean }> = [
-    { key: 'first', limit: 10, isMeta: false }, { key: 'second', limit: 10, isMeta: true },
-    { key: 'third', limit: 10, isMeta: false }, { key: 'fourth', limit: 10, isMeta: false },
-    { key: 'fifth', limit: 10, isMeta: false }, { key: 'sixth', limit: 15, isMeta: false },
-    { key: 'seventh', limit: 15, isMeta: true }, { key: 'eighth', limit: 15, isMeta: false },
-    { key: 'ninth', limit: 15, isMeta: false }, { key: 'tenth', limit: 15, isMeta: false },
-    { key: 'eleventh', limit: 20, isMeta: false }, { key: 'twelfth', limit: 20, isMeta: true },
-    { key: 'thirteenth', limit: 20, isMeta: false }, { key: 'fourteenth', limit: 20, isMeta: false },
-    { key: 'fifteenth', limit: 20, isMeta: true }, { key: 'sixteenth', limit: 25, isMeta: false },
-    { key: 'seventeenth', limit: 25, isMeta: false }, { key: 'eighteenth', limit: 25, isMeta: true },
-    { key: 'nineteenth', limit: 25, isMeta: false }, { key: 'twentieth', limit: 25, isMeta: false },
-    { key: 'twentyFirst', limit: 30, isMeta: true }, { key: 'twentySecond', limit: 30, isMeta: false },
-    { key: 'twentyThird', limit: 30, isMeta: false }, { key: 'twentyFourth', limit: 30, isMeta: true },
-    { key: 'twentyFifth', limit: 30, isMeta: false }, { key: 'twentySixth', limit: 35, isMeta: false },
-    { key: 'twentySeventh', limit: 35, isMeta: false }, { key: 'twentyEighth', limit: 35, isMeta: true },
-    { key: 'twentyNinth', limit: 35, isMeta: false }, { key: 'thirtieth', limit: 35, isMeta: true },
-    { key: 'thirtyFirst', limit: 40, isMeta: true }, { key: 'thirtySecond', limit: 40, isMeta: false },
-    { key: 'thirtyThird', limit: 45, isMeta: false }, { key: 'thirtyFourth', limit: 45, isMeta: true },
-    { key: 'thirtyFifth', limit: 50, isMeta: true }, { key: 'thirtySixth', limit: 50, isMeta: false },
-    { key: 'thirtySeventh', limit: 55, isMeta: false }, { key: 'thirtyEighth', limit: 55, isMeta: true },
-    { key: 'thirtyNinth', limit: 60, isMeta: false }, { key: 'fortieth', limit: 60, isMeta: true },
-    { key: 'fortyFirst', limit: 65, isMeta: true }, { key: 'fortySecond', limit: 70, isMeta: true },
-    { key: 'fortyThird', limit: 75, isMeta: true }, { key: 'fortyFourth', limit: 80, isMeta: true },
-    { key: 'fortyFifth', limit: 85, isMeta: true }, { key: 'fortySixth', limit: 95, isMeta: true },
-    { key: 'fortySeventh', limit: 105, isMeta: true }, { key: 'fortyEighth', limit: 115, isMeta: true },
-    { key: 'fortyNinth', limit: 125, isMeta: false }, { key: 'fiftieth', limit: 140, isMeta: true },
-];
+const CORRUPTION_LEVEL_TOKEN_RATES: ReadonlyArray<[number, number]> = [[20, 1], [45, 2], [Number.POSITIVE_INFINITY, 3]];
 
 const CAMPAIGN_INHERITANCE_LEVELS = [2, 5, 10, 17, 26, 37, 50, 65, 82, 101, 220, 240, 260, 270, 277];
 const CAMPAIGN_INHERITANCE_TOKEN_VALUES = [1, 10, 25, 40, 75, 100, 150, 200, 250, 300, 350, 400, 500, 600, 750];
@@ -213,8 +186,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
     override _updateGameData(data: GameData) {
         // A save click can be observed before the game's btoa hook has
-        // produced the new payload.  Keep the last derived campaign total if
-        // that transient snapshot does not contain campaign completions;
+        // produced the new payload.  Keep the last derived token total if
+        // that transient snapshot does not contain the token completions;
         // otherwise a refresh incorrectly resets the export to inheritance
         // tokens only (750 at the current singularity count).
         const previousCampaignData = this.campaignData;
@@ -223,7 +196,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         // Campaign tokens are derived by the game and are intentionally not
         // serialized. Recompute them for every save snapshot so the export
-        // always reflects the same campaign state as the game.
+        // always reflects the same token state as the game.
         const campaignData = this.calculateCampaignDataFromSave();
         if (campaignData !== undefined) {
             this.campaignData = campaignData;
@@ -242,11 +215,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         this.clearCache();
     }
 
-    override _updateCampaignData(data: CampaignData) {
-        super._updateCampaignData(data);
-        this.clearCache();
-    }
-
     override _updateEventData(data: ConsumableGameEvents) {
         super._updateEventData(data);
         this.clearCache();
@@ -258,25 +226,22 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         this.clearCache();
     }
 
-    /** Mirrors CampaignManager.updateTokens/updateMaxTokens in
-     * SynergismOfficial/src/Campaign.ts. */
+    /** Mirrors updateTokens and levelTokenTerms in SynergismOfficial/src/Campaign.ts: tokens come from the best
+     * Challenge 10 completions at each corruption level (player.corruptions.tokenCompletions). */
     private calculateCampaignDataFromSave(): CampaignData | undefined {
-        // Current saves use campaigns.campaigns. A few save versions exposed
-        // the completion map directly as campaigns, so accept both shapes.
-        const campaignState = this.gameData?.campaigns as unknown as
-            { campaigns?: Record<string, number> } | Record<string, number> | undefined;
-        const campaigns = ((campaignState && 'campaigns' in campaignState && campaignState.campaigns)
-            ? campaignState.campaigns
-            : (campaignState as Record<string, number> | undefined)) as Record<string, number> | undefined;
-        // Campaign completion counts are not optional in a current save. If
-        // the transient payload lacks the map, do not manufacture a zeroed
-        // campaign state and overwrite a valid previous calculation.
-        if (!campaigns || typeof campaigns !== 'object') return undefined;
+        const completions = this.gameData?.corruptions?.tokenCompletions;
+        // The completions are not optional in a current save. If the
+        // transient payload lacks them, do not manufacture a zeroed token
+        // state and overwrite a valid previous calculation.
+        if (!Array.isArray(completions)) return undefined;
         const highestSingularity = this.gameData?.highestSingularityCount ?? 0;
 
-        const firstCompletionBonus = this.getGQUpgradeEffect('singBonusTokens1', 'firstCompletionBonusTokens')
-            + this.getOcteractUpgradeEffect('octeractBonusTokens3', 'firstCompletionBonusTokens');
-        const lastCompletionBonus = this.getGQUpgradeEffect('singBonusTokens3', 'lastCompletionBonusTokens')
+        // firstCompletionBonusPoints: the last-completion upgrades now count at the first completion too
+        const firstCompletionBonus = (highestSingularity >= 16 ? 5 : 0)
+            + (highestSingularity >= 69 ? 10 : 0)
+            + this.getGQUpgradeEffect('singBonusTokens1', 'firstCompletionBonusTokens')
+            + this.getGQUpgradeEffect('singBonusTokens3', 'lastCompletionBonusTokens')
+            + this.getOcteractUpgradeEffect('octeractBonusTokens3', 'firstCompletionBonusTokens')
             + this.getOcteractUpgradeEffect('octeractBonusTokens1', 'lastCompletionBonusTokens');
         let singularityTokenMultiplier = 1;
         for (let i = CAMPAIGN_BONUS_TOKEN_LEVELS.length; i > 0; i--) {
@@ -289,39 +254,29 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             * this.getGQUpgradeEffect('singBonusTokens2', 'tokenMultiplier')
             * this.getOcteractUpgradeEffect('octeractBonusTokens2', 'tokenMultiplier');
 
-        const inheritedTokens = [...CAMPAIGN_INHERITANCE_LEVELS]
-            .map((level, index) => highestSingularity >= level ? CAMPAIGN_INHERITANCE_TOKEN_VALUES[index] : 0)
-            .reduce((highest, value) => Math.max(highest, value), 0);
-        const initialTokenBonus = inheritedTokens
-            + this.getGQUpgradeEffect('singBonusTokens4', 'initialTokenBonus')
-            + this.getOcteractUpgradeEffect('octeractBonusTokens4', 'initialTokenBonus');
-
-        const calculateTotal = (useMaximum: boolean): number => CAMPAIGN_DEFINITIONS.reduce((total, definition) => {
-            const savedCompletions = Number(campaigns[definition.key] ?? 0);
-            const completed = useMaximum
-                ? definition.limit
-                : Number.isFinite(savedCompletions)
-                    ? Math.min(Math.max(0, savedCompletions), definition.limit)
-                    : 0;
-
-            let additiveTotal = completed;
-            if (completed >= 1) {
-                additiveTotal += highestSingularity >= 16 ? 5 : 0;
-                additiveTotal += firstCompletionBonus;
+        // inheritanceTokens (Calculate.ts) checks the levels from the last one down to the second one: the first
+        // level (singularity 2, 1 token) never counts
+        let inheritedTokens = 0;
+        for (let i = CAMPAIGN_INHERITANCE_LEVELS.length - 1; i > 0; i--) {
+            if (highestSingularity >= CAMPAIGN_INHERITANCE_LEVELS[i]) {
+                inheritedTokens = CAMPAIGN_INHERITANCE_TOKEN_VALUES[i];
+                break;
             }
-            if (completed === definition.limit) {
-                additiveTotal += highestSingularity >= 69 ? 10 : 0;
-                additiveTotal += lastCompletionBonus;
-            }
+        }
 
-            const campaignMultiplier = (definition.isMeta ? 2 : 1) * tokenMultiplier;
-            return total + Math.floor(additiveTotal * campaignMultiplier);
-        }, 0) + initialTokenBonus;
+        let tokens = 0;
+        for (let level = 1; level < completions.length; level++) {
+            const levelCompletions = Number(completions[level] ?? 0);
+            if (!Number.isFinite(levelCompletions) || levelCompletions <= 0) continue;
+            const rate = CORRUPTION_LEVEL_TOKEN_RATES.find(([lastLevel]) => level <= lastLevel)?.[1] ?? 0;
+            tokens += Math.floor(rate * levelCompletions * tokenMultiplier) + Math.floor(rate * firstCompletionBonus);
+        }
 
         return {
-            tokens: calculateTotal(false),
-            maxTokens: calculateTotal(true),
-            isAtMaxTokens: calculateTotal(false) === calculateTotal(true)
+            tokens: tokens
+                + inheritedTokens
+                + this.getGQUpgradeEffect('singBonusTokens4', 'initialTokenBonus')
+                + this.getOcteractUpgradeEffect('octeractBonusTokens4', 'initialTokenBonus')
         };
     }
 
@@ -2315,18 +2270,26 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return this.firstFiveRuneEffectivenessStats.reduce((x, y) => x * y.stat(), 1)
     }
 
+    /** Mirrors campaignTokenBonuses.rune6 in SynergismOfficial/src/Campaign.ts: 500 tokens and Infinite Ascent unlocked. */
     calculateCampaignRune6Bonus() {
         const cacheName = 'CampaignRune6Bonus' as keyof CalculationCache;
 
         const tokens = this.campaignData?.tokens ?? 0;
+        const runeUnlocked = Boolean(this.quarkShop.getShopUpgradeEffects('infiniteAscent', 'runeUnlocked'));
 
         const calculationVars: number[] = [
-            tokens
+            tokens,
+            runeUnlocked ? 1 : 0
         ]
 
         const cached = checkCalculationCache(this.#calculationCache, cacheName, calculationVars);
 
         if (cached !== undefined) return cached;
+
+        if (!runeUnlocked) {
+            updateCalculationCache(this.#calculationCache, cacheName, { value: 0, cachedBy: calculationVars });
+            return 0;
+        }
 
         const thresholdReqs = [500, 750, 1000, 1250, 1500, 1750, 2000, 3000, 4000, 6000, 8000, 10000]
         for (let i = 0; i < thresholdReqs.length; i++) {
@@ -2898,8 +2861,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     totalVouchers:              this.calculateAllShopTablets(),
                     plat4x4:                gameData.platonicUpgrades[19],
                     tokens:                 this.campaignData?.tokens,
-                    maxTokens:              this.campaignData?.maxTokens,
-                    isAtMaxTokens:          this.campaignData?.isAtMaxTokens,
                     isEvent:                this.isEvent,
                     bellStacks:             eventData?.HAPPY_HOUR_BELL.amount ?? 0,
                     blueAmbrosiaBarValue:   gameData.blueberryTime,

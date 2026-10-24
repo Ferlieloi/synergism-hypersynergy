@@ -44,11 +44,6 @@ export enum AutoAscensionResetModes {
 }
 
 
-export interface CampaignManager {
-  currentCampaign?: string
-  campaigns?: Record<string, number>
-}
-
 export type HepteractKeys =
   | 'chronos'
   | 'hyperrealism'
@@ -395,69 +390,6 @@ export interface AscStatToggles {
 }
 
 /**
- * Represents the completion status of various campaigns.
- */
-export interface CampaignProgress {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number;
-    fifth: number;
-    sixth: number;
-    seventh: number;
-    eighth: number;
-    ninth: number;
-    tenth: number;
-    eleventh: number;
-    twelfth: number;
-    thirteenth: number;
-    fourteenth: number;
-    fifteenth: number;
-    sixteenth: number;
-    seventeenth: number;
-    eighteenth: number;
-    nineteenth: number;
-    twentieth: number;
-    twentyFirst: number;
-    twentySecond: number;
-    twentyThird: number;
-    twentyFourth: number;
-    twentyFifth: number;
-    twentySixth: number;
-    twentySeventh: number;
-    twentyEighth: number;
-    twentyNinth: number;
-    thirtieth: number;
-    thirtyFirst: number;
-    thirtySecond: number;
-    thirtyThird: number;
-    thirtyFourth: number;
-    thirtyFifth: number;
-    thirtySixth: number;
-    thirtySeventh: number;
-    thirtyEighth: number;
-    thirtyNinth: number;
-    fortieth: number;
-    fortyFirst: number;
-    fortySecond: number;
-    fortyThird: number;
-    fortyFourth: number;
-    fortyFifth: number;
-    fortySixth: number;
-    fortySeventh: number;
-    fortyEighth: number;
-    fortyNinth: number;
-    fiftieth: number;
-}
-
-/**
- * Contains the campaign progress data.
- */
-export interface Campaigns {
-    campaigns: CampaignProgress;
-}
-
-/**
  * Represents the levels of different corruption types.
  */
 export interface CorruptionLevels {
@@ -491,6 +423,8 @@ export interface Corruptions {
     next: CorruptionLevels;
     saves: CorruptionSaves;
     showStats: boolean;
+    /** Best Challenge 10 completions per corruption level (index 0 unused): the source of the campaign tokens. */
+    tokenCompletions?: number[];
 }
 
 /**
@@ -964,59 +898,6 @@ export interface RedAmbrosiaUpgrades {
     freeSpeedUpgrades: number;
 }
 
-export interface Campaigns {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number;
-    fifth: number;
-    sixth: number;
-    seventh: number;
-    eighth: number;
-    ninth: number;
-    tenth: number;
-    eleventh: number;
-    twelfth: number;
-    thirteenth: number;
-    fourteenth: number;
-    fifteenth: number;
-    sixteenth: number;
-    seventeenth: number;
-    eighteenth: number;
-    nineteenth: number;
-    twentieth: number;
-    twentyFirst: number;
-    twentySecond: number;
-    twentyThird: number;
-    twentyFourth: number;
-    twentyFifth: number;
-    twentySixth: number;
-    twentySeventh: number;
-    twentyEighth: number;
-    twentyNinth: number;
-    thirtieth: number;
-    thirtyFirst: number;
-    thirtySecond: number;
-    thirtyThird: number;
-    thirtyFourth: number;
-    thirtyFifth: number;
-    thirtySixth: number;
-    thirtySeventh: number;
-    thirtyEighth: number;
-    thirtyNinth: number;
-    fortieth: number;
-    fortyFirst: number;
-    fortySecond: number;
-    fortyThird: number;
-    fortyFourth: number;
-    fortyFifth: number;
-    fortySixth: number;
-    fortySeventh: number;
-    fortyEighth: number;
-    fortyNinth: number;
-    fiftieth: number;
-}
-
 export interface progressiveAchievements {
     "runeLevel": number;
     "freeRuneLevel": number;
@@ -1436,13 +1317,12 @@ export interface PlayerData {
   roombaResearchIndex: number
   ascStatToggles: Record<number, boolean>
 
-  campaigns: CampaignManager
-
   corruptions: {
     next: CorruptionLevels
     used: CorruptionLevels
     saves: CorruptionSaves
     showStats: boolean
+    tokenCompletions?: number[]
   }
 
   constantUpgrades: ArrayStartingWithNull<number>
@@ -1850,7 +1730,6 @@ export interface GameData {
     roombaResearchIndex: number;
     ascStatToggles: AscStatToggles;
 
-    campaigns: Campaigns;
     corruptions: Corruptions;
 
     constantUpgrades: (number | null)[]; // Array of constant upgrade levels (starts with null)

@@ -72,10 +72,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         this.pseudoData = data;
     }
 
-    _updateCampaignData(data: CampaignData) {
-        this.campaignData = data;
-    }
-
     // TODO: clean that...
     _updateEventData(data: ConsumableGameEvents) {
         this.eventData = data;

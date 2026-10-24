@@ -16,14 +16,13 @@ import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSHeaderKeepOnImport } from "../header/hs-header-keep-on-import";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
-import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 
 /**
  * Class: HSGameData
  * IsExplicitHSModule: Yes
  * Description: 
  *     Core module responsible for fetching, processing, and providing game data to other modules.
- *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages campaign tokens, pseudo/me data,
+ *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages pseudo/me data,
  *     and subscribes to consumable game events via WebSocket. Provides APIs for other modules to access game data.
  */
 export class HSGameData extends HSModule {
@@ -74,7 +73,6 @@ export class HSGameData extends HSModule {
     // --- DOM Elements ---
     #manualSaveButton?: HTMLButtonElement;
     #saveinfoElement?: HTMLParagraphElement;
-    #campaignTokenElement?: HTMLHeadingElement;
     #importSaveButton?: HTMLLabelElement;
 
     // --- Event Handlers ---
@@ -84,14 +82,9 @@ export class HSGameData extends HSModule {
     #gameDataSubscribers: Map<string, (data: GameData) => void> = new Map();
     #gameDataAPI?: HSGameDataAPI;
 
-    // --- Player/Me/Campaign Data ---
+    // --- Player/Me Data ---
     #playerPseudoUpgrades?: PseudoGameData;
     #meBonuses?: MeData;
-    #campaignData: CampaignData = {
-        tokens: 0,
-        maxTokens: 0,
-        isAtMaxTokens: false
-    };
 
     // --- Game Events ---
     #gameEvents: ConsumableGameEvents = {
@@ -138,7 +131,6 @@ export class HSGameData extends HSModule {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
         this.#manualSaveButton = document.querySelector('#savegame') as HTMLButtonElement;
         this.#saveinfoElement = document.querySelector('#saveinfo') as HTMLParagraphElement;
-        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
     }
 
     /**
@@ -220,7 +212,7 @@ export class HSGameData extends HSModule {
     // --- Core Data Fetch/Update ---
 
     /**
-     * Forces a refresh of all game data, including fetched data, campaign tokens, and save data.
+     * Forces a refresh of all game data: fetched data and save data (campaign tokens are computed from the save).
      * Applies cooldown to prevent excessive refreshes.
      * @returns Promise<void>
      */
@@ -230,35 +222,10 @@ export class HSGameData extends HSModule {
         this.#lastForceFetch = now;
 
         await this.#refreshFetchedData();
-        this.#refreshCampaignTokens();
         await this.forceRefreshGameData();
 
         this.#pseudoDataUpdated();
         this.#meDataUpdated();
-        this.#campaignDataUpdated();
-    }
-
-    /** Reads the exact token total rendered by CampaignManager in the game. */
-    #refreshCampaignTokens() {
-        this.#campaignTokenElement ||= document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
-        const text = this.#campaignTokenElement?.textContent ?? '';
-        // The text is translated ("You have 3 / 4 tokens!", "У вас 3 / 4 жетонов!"...): match only the numbers
-        const match = text.match(/(\d+)\s*\/\s*(\d+)/);
-        if (!match) return;
-
-        const tokens = Number.parseInt(match[1], 10);
-        const maxTokens = Number.parseInt(match[2], 10);
-        this.#campaignData = {
-            tokens,
-            maxTokens,
-            isAtMaxTokens: tokens > 0 && maxTokens > 0 && tokens === maxTokens
-        };
-    }
-
-    #campaignDataUpdated() {
-        if (this.#gameDataAPI) {
-            this.#gameDataAPI._updateCampaignData(this.#campaignData);
-        }
     }
 
     /**
@@ -293,7 +260,7 @@ export class HSGameData extends HSModule {
             saveBtn.dispatchEvent(this.#saveTriggerEvent);
             // The game's save handler calls btoa synchronously, while our
             // capture hook schedules the data update in a microtask.  Yield
-            // once so the freshly serialized save (including campaigns) is
+            // once so the freshly serialized save (including the token completions) is
             // available before parsing it below.
             await new Promise<void>((resolve) => queueMicrotask(resolve));
         } else {
@@ -310,19 +277,15 @@ export class HSGameData extends HSModule {
 
         // In browsers where the save button does not pass through the hooked
         // btoa function, localStorage is still the game's authoritative save
-        // source. Prefer it when it contains the campaign manager so the
+        // source. Prefer it when it contains the token completions so the
         // heater cannot fall back to inheritance tokens alone.
         const storedSave = localStorage.getItem(this.#saveDataLocalStorageKey);
         if (storedSave) {
             try {
                 const atobFn = this.#nativeAtob ?? window.atob;
                 const parsedStoredSave = JSON.parse(atobFn(storedSave)) as GameData;
-                const currentCampaignState = this.#saveData?.campaigns as unknown as
-                    { campaigns?: Record<string, number> } | Record<string, number> | undefined;
-                const currentCampaigns = currentCampaignState && 'campaigns' in currentCampaignState
-                    ? currentCampaignState.campaigns
-                    : currentCampaignState;
-                if ((!currentCampaigns || typeof currentCampaigns !== 'object') && parsedStoredSave?.campaigns) {
+                if (!Array.isArray(this.#saveData?.corruptions?.tokenCompletions)
+                    && Array.isArray(parsedStoredSave?.corruptions?.tokenCompletions)) {
                     this.#saveData = parsedStoredSave;
                 }
             } catch (err) {

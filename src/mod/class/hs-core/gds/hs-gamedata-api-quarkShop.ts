@@ -787,7 +787,7 @@ const SHOP_UPGRADE_EFFECTS: Record<string, Record<string, (level: number, env: S
         ascensionSpeedMult: (level) => 1 + 0.02 * level,
     },
     infiniteAscent: {
-        runeUnlocked: (level) => level > 0,
+        runeUnlocked: (level, env) => level > 0 || env.getPCoinUpgradeLevel('INSTANT_UNLOCK_2') > 0,
     },
     calculator: {
         autoAnswer: (level) => level > 0,
