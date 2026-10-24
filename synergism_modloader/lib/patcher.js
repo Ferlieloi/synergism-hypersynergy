@@ -583,28 +583,6 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
-    // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
-    // Found by what it does, not by minified or parameter names: the function reading the legacy "a/b/c" format
-    // (.includes("/")) or JSON (JSON.parse), then setting the next corruptions (setCorruptionLevelsWithChallengeRequirement).
-    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
-    //   fx=e=>{  becomes  fx=window.__HS_applyCorruptions=e=>{
-    report.applyCorruptions = false;
-    try {
-        const corrResult = findEnclosingFunction(code, /\.includes\(\s*["']\/["']\s*\)/g,
-            ['setCorruptionLevelsWithChallengeRequirement', 'JSON.parse('], 'applyCorruptions');
-        if (corrResult) {
-            const exposed = exposeFunction(code, corrResult, '__HS_applyCorruptions');
-            code = exposed.code;
-            report.applyCorruptions = true;
-            log(`Patched applyCorruptions${exposed.atDefinition ? '' : ' at its first call'} (fn=${corrResult.fnName})`);
-        } else {
-            warn('Could not patch applyCorruptions — corruption import not found in bundle');
-        }
-    } catch (e) {
-        warn('Error while patching applyCorruptions', e);
-    }
-
-    // ==================================================================================
     // ── VALIDATEBLUEBERRYTREE PATCH — expose BlueberryUpgrades.ts validateBlueberryTree as window.__HS_validateBlueberryTree
     // Lets the mod check an ambrosia tree before writing it into a loadout slot itself (no import through the game,
     // which replaces the live tree and shows dialogs). It only reads the player's state.
@@ -1248,7 +1226,6 @@ function startBrowserLoader(options) {
                         `exportData:          typeof window.__HS_exportData,` +
                         `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
-                        `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
                         `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
                         `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
                         `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +

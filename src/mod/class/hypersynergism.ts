@@ -36,6 +36,10 @@ export class Hypersynergism {
     // Class context, mainly for HSLogger
     #context = 'HSMain';
 
+    // Patches the mod no longer uses: an install patched by an older patcher still reports them,
+    // so they are left out of the "patch incomplete" warning (applyCorruptions: gone with the game's 4.4.0)
+    static readonly #RETIRED_PATCHES = new Set(['applyCorruptions']);
+
     #moduleManager: HSModuleManager;
     #isInitialized = false;
 
@@ -135,7 +139,7 @@ export class Hypersynergism {
     #reportPatchProblems(): void {
         const report = this.#getPatchReport();
         if (!report) return;
-        const missing = Object.keys(report).filter(name => !report[name]);
+        const missing = Object.keys(report).filter(name => !report[name] && !Hypersynergism.#RETIRED_PATCHES.has(name));
         const ambiguous: string[] = Array.isArray(window.__HS_PATCH_AMBIGUOUS) ? window.__HS_PATCH_AMBIGUOUS : [];
         if (missing.length === 0 && ambiguous.length === 0) return;
 

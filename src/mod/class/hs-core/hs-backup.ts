@@ -303,7 +303,6 @@ export class HSBackup {
                 i18next: has('__HS_i18next'),
                 exportOutput: has('__HS_EXPORT_OUTPUT_PATCHED'),
                 maxChallenges: has('__HS_getMaxChallenges'),
-                applyCorruptions: has('__HS_applyCorruptions'),
                 validateBlueberryTree: has('__HS_validateBlueberryTree'),
                 saveImportHook: has('__HS_SAVE_IMPORT_HOOK_PATCHED'),
                 tackHooks: has('__HS_tackHooks'),

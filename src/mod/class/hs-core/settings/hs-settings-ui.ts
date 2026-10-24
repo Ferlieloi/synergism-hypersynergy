@@ -974,6 +974,8 @@ export class HSSettingsUI {
 
                 HSSettings.validateStrategy(parsedStrategy);
                 parsedStrategy.strategyName = strategyName;
+                // Migrated by saveStrategyToStorage (levels at 0): told once it's saved
+                const hasLegacyCorruptions = HSStrategyManager.hasLegacyCorruptions(parsedStrategy);
 
                 try {
                     const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
@@ -988,9 +990,14 @@ export class HSSettingsUI {
                     HSSettingsUI.updateStrategyDropdownList();
                     HSSettingsUI.selectAutosingStrategyByName(strategyName);
                     HSLogger.log(`Strategy "${strategyName}" imported and selected.`, "HSSettings");
-                    HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
-                        notificationType: "success"
-                    });
+                    // One notification: the warning, when there is one
+                    if (hasLegacyCorruptions) {
+                        HSStrategyManager.warnLegacyCorruptions([strategyName], "HSSettings");
+                    } else {
+                        HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
+                            notificationType: "success"
+                        });
+                    }
 
                     const modal = document.querySelector(`#${modalId}`) as HTMLDivElement;
                     if (modal) {

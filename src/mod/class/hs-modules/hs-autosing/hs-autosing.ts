@@ -9,12 +9,12 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
-import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
+import { HSAutosingCorruption } from './hs-autosingCorruption';
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
@@ -175,7 +175,6 @@ export class HSAutosing extends HSModule {
     // Game References
     #stageFunc?: ((mode: number) => string) | null;
     #getMaxChallengesFunc?: ((challenge: number) => number) | null;
-    #applyCorruptionsFunc?: ((json: string) => boolean) | null;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
     #gamestate!: HSGameState;
@@ -298,28 +297,17 @@ export class HSAutosing extends HSModule {
     }
 
     #cacheCorruptionElements(): boolean {
-        const corrNextElements: Record<string, HTMLElement | null> = Object.fromEntries(
-            CORRUPTION_NAMES.map(name => [`corrNext${name}`, document.getElementById(`corrNext${name}`) as HTMLElement | null])
-        ) as Record<string, HTMLElement | null>;
-
         const elements = {
             addCodeAllBtn: document.getElementById("addCodeAll") as HTMLButtonElement | null,
             timeCodeBtn: document.getElementById("timeCode") as HTMLButtonElement | null,
-            corrImportBtn: document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement | null,
-            ...corrNextElements,
-        } as Record<string, HTMLElement | null>;
+            corruptionLevelInput: document.getElementById("corruptionLevelInput") as HTMLInputElement | null,
+            corruptionLevelMax: document.getElementById("corruptionLevelMax") as HTMLButtonElement | null,
+        };
         if (!this.#ensureElements(elements)) return false;
 
-        const corrNext = Object.fromEntries(
-            CORRUPTION_NAMES.map(name => [`corrNext${name}`, elements[`corrNext${name}`] as HTMLElement])
-        ) as Record<string, HTMLElement>;
-
-        this.#addCodeAllBtn = elements.addCodeAllBtn as HTMLButtonElement;
-        this.#timeCodeBtn = elements.timeCodeBtn as HTMLButtonElement;
-        this.#corruptionManager = new HSAutosingCorruption(
-            corrNext,
-            elements.corrImportBtn as HTMLButtonElement,
-        );
+        this.#addCodeAllBtn = elements.addCodeAllBtn;
+        this.#timeCodeBtn = elements.timeCodeBtn;
+        this.#corruptionManager = new HSAutosingCorruption(elements.corruptionLevelInput, elements.corruptionLevelMax);
         return true;
     }
 
@@ -454,7 +442,7 @@ export class HSAutosing extends HSModule {
         }
     }
 
-    async #cacheExposedFunctions(): Promise<void> {
+    #cacheExposedFunctions(): void {
         this.#exposedPlayer = HSGlobal.exposedPlayer ?? null;
         this.#stageFunc = window.__HS_synergismStage ?? null;
         this.#getMaxChallengesFunc = window.__HS_getMaxChallenges ?? null;
@@ -464,14 +452,7 @@ export class HSAutosing extends HSModule {
         // auto-confirm (__HS_AUTO_CONFIRM, see HSAutosingSettingsFixer). Without either, HSGameDialogs' watcher clicks them.
         const areDialogsAnswered = HSGameDialogs.isHookPatched() || HSUtils.isAutoConfirmPatched();
 
-        // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
-        await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-
-        // Read again, __HS_applyCorruptions should now be set on window.
-        this.#applyCorruptionsFunc = window.__HS_applyCorruptions ?? null;
-        this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
-
-        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && areDialogsAnswered && isAfterTackHooked && this.#applyCorruptionsFunc);
+        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && areDialogsAnswered && isAfterTackHooked);
 
         // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
@@ -480,7 +461,6 @@ export class HSAutosing extends HSModule {
             exposedPlayer: ${!!this.#exposedPlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
-            applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
             dialogHook: ${HSGameDialogs.isHookPatched()},
             autoConfirmPatched: ${HSUtils.isAutoConfirmPatched()},
             exportOutputPatched: ${isExportOutputPatched})`;
@@ -566,7 +546,6 @@ export class HSAutosing extends HSModule {
 
         this.#strategy = strategy;
         this.#rebuildStrategyPhaseCaches();
-        this.#corruptionManager.buildLoadoutCache(strategy.corruptionLoadouts ?? []);
 
         if (!HSGlobal.General.isModFullyLoaded) {
             HSLogger.debug(() => "Hypersynergism is still loading. Please wait before starting Auto-Sing.", this.context);
@@ -587,8 +566,7 @@ export class HSAutosing extends HSModule {
         this.#hsSettingsToRestore = [...this.#hsSettingsToRestore, ...await HSAutosingSettingsFixer.fixAllSettings()];
         if (this.#isStartCancelled()) return;
         this.#cacheObservers();
-        await this.#cacheExposedFunctions();
-        if (this.#isStartCancelled()) return;
+        this.#cacheExposedFunctions();
 
         this.#autosingEnabled = true;
         this.#stopAtSingularitysEnd = false;
@@ -1011,9 +989,7 @@ export class HSAutosing extends HSModule {
         const phaseLabel = phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
         this.#autosingModal?.setCurrentPhase(phaseLabel);
 
-        const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
-        if (phaseLoadout)
-            await this.#corruptionManager.setCorruptions(phaseLoadout);
+        this.#corruptionManager.applyPhaseLevel(phaseConfig);
 
         this.#clickResetButton(this.#ascendBtn);
 
@@ -1051,13 +1027,11 @@ export class HSAutosing extends HSModule {
         }
 
         switch (challenge.challengeNumber) {
-            case 401: {
-                const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
-                if (phaseLoadout) await this.#corruptionManager.setCorruptions(phaseLoadout, true);
+            case 401:
+                this.#corruptionManager.applyPhaseLevel(phaseConfig);
                 break;
-            }
-            case LOADOUT_ACTION_VALUE:
-                await this.#corruptionManager.applyLoadoutByName(challenge.loadoutName);
+            case SET_CORRUPTION_LEVEL_VALUE:
+                this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge);
@@ -1185,12 +1159,6 @@ export class HSAutosing extends HSModule {
                 break;
             case 306: // Ambrosia loadout
                 await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
-                break;
-            case 400: // Zero Corruptions
-                await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-                break;
-            case 402: // Ant Corruptions
-                await this.#corruptionManager.setCorruptions(ANT_CORRUPTIONS);
                 break;
             case 601:
             case 602:
@@ -1587,9 +1555,6 @@ export class HSAutosing extends HSModule {
 
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
-        // A singularity can reset vanilla's pending corruption state. Always apply
-        // the first requested loadout of the new run, then deduplicate within it.
-        this.#corruptionManager.invalidateAppliedCache();
 
         if (this.#isExposureReady) {
             // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
@@ -1768,16 +1733,14 @@ export class HSAutosing extends HSModule {
     async #pushSingularityBeforeStop(): Promise<void> {
         const steps: Array<() => unknown> = [
             () => this.#ambrosia_late_cube.click(),
-            () => this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS),
+            () => this.#corruptionManager.setLevel(0),
 
             () => this.#maxC11to14WithC10(11),
             () => this.#maxC11to14WithC10(12),
             () => this.#maxC11to14WithC10(13),
             () => this.#maxC11to14WithC10(14),
 
-            () => this.#corruptionManager.setCorruptions(
-                { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 }
-            ),
+            () => this.#corruptionManager.setMaxLevel(),
 
             () => this.#autoChallengeButton.click(),
 

@@ -1,10 +1,8 @@
 import {
     phases,
     AutosingStrategyPhase,
-    PhaseOption,
-    CorruptionLoadoutDefinition
+    PhaseOption
 } from "../../../../types/module-types/hs-autosing-types";
-import { openAutosingCorruptionModal } from "./hs-autosing-corruption-modal";
 import { openAutosingChallengesModal } from "./hs-autosing-challenge-modal";
 import { HSUI } from "../../../hs-core/hs-ui"
 import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
@@ -12,7 +10,6 @@ import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
 export async function openStrategyPhaseModal(
     uiMod: HSUI,
     existingPhases: AutosingStrategyPhase[],
-    corruptionLoadouts: CorruptionLoadoutDefinition[],
     onCreate: (phase: AutosingStrategyPhase) => void,
     onUpdate?: (phase: AutosingStrategyPhase) => void,
     existingPhase?: AutosingStrategyPhase,
@@ -37,22 +34,11 @@ export async function openStrategyPhaseModal(
     const startPhaseValue: PhaseOption =
         options?.forcedStartPhase ?? existingPhase?.startPhase ?? lastPhaseEnd;
 
-    const workingCorruptions: AutosingStrategyPhase["corruptions"] =
-        existingPhase?.corruptions || {
-            viscosity: 0,
-            drought: 0,
-            deflation: 0,
-            extinction: 0,
-            illiteracy: 0,
-            recession: 0,
-            dilation: 0,
-            hyperchallenge: 0
-        };
+    // Empty: the phase leaves the corruption level as it is
+    const initialCorruptionLevel = existingPhase ? existingPhase.corruptionLevel : 0;
 
     const workingStrat: AutosingStrategyPhase["strat"] =
         existingPhase?.strat || [];
-
-    let selectedLoadoutName = existingPhase?.corruptionLoadoutName ?? null;
 
     const lastPhaseIndex = phases.indexOf(startPhaseValue);
     const validEndPhases = isSpecialPhase
@@ -103,16 +89,19 @@ export async function openStrategyPhaseModal(
                 : ""}
 
             <div class="hs-phase-select-group">
-                <label class="hs-phase-label">Corruption Loadout</label>
-                <div class="hs-phase-select" id="hs-phase-corruption-selection">
-                    ${selectedLoadoutName ?? "None"}
-                </div>
+                <label class="hs-phase-label" for="hs-phase-corruption-level">Corruption Level (empty = unchanged)</label>
+                <input
+                    type="number"
+                    id="hs-phase-corruption-level"
+                    class="hs-phase-select"
+                    min="0"
+                    step="1"
+                    placeholder="Unchanged"
+                    value="${initialCorruptionLevel ?? ""}"
+                />
             </div>
 
             <div class="hs-phase-config-group">
-                <div class="hs-phase-config-btn" id="hs-autosing-phase-corruptions">
-                    Select Corruption Loadout
-                </div>
                 <div class="hs-phase-config-btn" id="hs-autosing-phase-challenges">
                     Configure Challenges
                 </div>
@@ -149,12 +138,15 @@ export async function openStrategyPhaseModal(
                     : select?.value) as PhaseOption;
                 if (!endPhase) return;
 
+                // The game lowers a level above what the player can reach: no upper bound here
+                const levelText = (document.getElementById("hs-phase-corruption-level") as HTMLInputElement | null)?.value.trim() ?? "";
+                const corruptionLevel = levelText === "" ? null : Math.max(0, Math.floor(Number(levelText) || 0));
+
                 const updatedPhase: AutosingStrategyPhase = {
                     // Keep the original start phase if editing, otherwise use lastPhaseEnd
                     startPhase: existingPhase ? existingPhase.startPhase : startPhaseValue,
                     endPhase,
-                    corruptions: { ...workingCorruptions },
-                    corruptionLoadoutName: selectedLoadoutName,
+                    corruptionLevel,
                     strat: [...workingStrat]
                 };
 
@@ -168,37 +160,10 @@ export async function openStrategyPhaseModal(
                 uiMod.CloseModal(modalId);
             }
 
-            if (el.id === "hs-autosing-phase-corruptions") {
-                const selectionRef = { value: selectedLoadoutName };
-                void openAutosingCorruptionModal(
-                    uiMod,
-                    corruptionLoadouts,
-                    selectionRef,
-                    {
-                        parentModalId: modalId,
-                        onDone: (newValue) => {
-                            selectedLoadoutName = newValue;
-
-                            // Ensure the draft phase reflects the selection immediately so reopening the selector
-                            // (before hitting Save/Create) shows the updated choice.
-                            if (existingPhase) {
-                                existingPhase.corruptionLoadoutName = selectedLoadoutName;
-                            }
-
-                            const label = selectedLoadoutName ? selectedLoadoutName : "None";
-                            const selectionEl = document.getElementById("hs-phase-corruption-selection") as HTMLDivElement | null;
-                            if (selectionEl) {
-                                selectionEl.textContent = label;
-                            }
-                        }
-                    }
-                );
-            }
-
             if (el.id === "hs-autosing-phase-challenges") {
                 const challengeStart = existingPhase?.startPhase ?? startPhaseValue;
                 const challengeEnd = isSpecialPhase ? (options?.forcedEndPhase ?? existingPhase?.endPhase ?? startPhaseValue) : (existingPhase?.endPhase ?? (document.getElementById("hs-autosing-end-phase") as HTMLSelectElement)?.value ?? "error");
-                await openAutosingChallengesModal(uiMod, workingStrat, challengeStart, challengeEnd, corruptionLoadouts, modalId, isSpecialPhase ? displayName : undefined);
+                await openAutosingChallengesModal(uiMod, workingStrat, challengeStart, challengeEnd, modalId, isSpecialPhase ? displayName : undefined);
             }
         });
     }, 0);

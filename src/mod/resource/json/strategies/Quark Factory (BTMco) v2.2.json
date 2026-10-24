@@ -4,17 +4,7 @@
     {
       "startPhase": "start",
       "endPhase": "challenge14",
-      "corruptions": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": "Loadout start-challenge14",
+      "corruptionLevel": 0,
       "strat": [
         {
           "challengeNumber": 304,
@@ -344,12 +334,13 @@
           }
         },
         {
-          "challengeNumber": 202,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0,
-          "loadoutName": "C14"
+          "corruptionLevel": 20,
+          "comment": "C14"
         },
         {
           "challengeNumber": 14,
@@ -409,12 +400,13 @@
           }
         },
         {
-          "challengeNumber": 202,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0,
-          "loadoutName": "Loadout challenge14-w5x10max"
+          "corruptionLevel": 51,
+          "comment": "Loadout challenge14-w5x10max"
         },
         {
           "challengeNumber": 15,
@@ -522,12 +514,13 @@
           "challengeMaxTime": 2000
         },
         {
-          "challengeNumber": 202,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0,
-          "loadoutName": "C14"
+          "corruptionLevel": 20,
+          "comment": "C14"
         },
         {
           "challengeNumber": 14,
@@ -562,17 +555,7 @@
     {
       "startPhase": "challenge14",
       "endPhase": "singularity",
-      "corruptions": {
-        "viscosity": 1,
-        "drought": 7,
-        "deflation": 4,
-        "extinction": 11,
-        "illiteracy": 0,
-        "recession": 14,
-        "dilation": 3,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": "Loadout omega-singularity",
+      "corruptionLevel": 114,
       "strat": [
         {
           "challengeNumber": 15,
@@ -635,17 +618,7 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptions": {
-        "viscosity": 10,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 16,
-        "dilation": 14,
-        "hyperchallenge": 16
-      },
-      "corruptionLoadoutName": "Loadout omega-singularity",
+      "corruptionLevel": 114,
       "strat": [
         {
           "challengeNumber": 302,
@@ -662,12 +635,13 @@
           "challengeMaxTime": 500
         },
         {
-          "challengeNumber": 202,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0,
-          "loadoutName": "Loadout singularity-end"
+          "corruptionLevel": 131,
+          "comment": "Loadout singularity-end"
         },
         {
           "challengeNumber": 10,
@@ -819,14 +793,6 @@
           "challengeMaxTime": 200
         },
         {
-          "challengeNumber": 402,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "comment": "=>DO YOU WANT ANTS??"
-        },
-        {
           "challengeNumber": 11,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -963,17 +929,7 @@
   "aoagPhase": {
     "startPhase": "ascension",
     "endPhase": "ascension",
-    "corruptions": {
-      "viscosity": 0,
-      "drought": 0,
-      "deflation": 0,
-      "extinction": 0,
-      "illiteracy": 0,
-      "recession": 0,
-      "dilation": 0,
-      "hyperchallenge": 0
-    },
-    "corruptionLoadoutName": "Loadout AOAG Unlocked Phase",
+    "corruptionLevel": 0,
     "strat": [
       {
         "challengeNumber": 103,
@@ -1012,137 +968,5 @@
       }
     ],
     "phaseId": "aoag"
-  },
-  "corruptionLoadouts": [
-    {
-      "name": "Loadout start-challenge14",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      }
-    },
-    {
-      "name": "Loadout challenge14-w5x10max",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 16,
-        "deflation": 4,
-        "extinction": 12,
-        "illiteracy": 0,
-        "recession": 12,
-        "dilation": 4,
-        "hyperchallenge": 2
-      }
-    },
-    {
-      "name": "Loadout w5x10max-p2x1x10",
-      "loadout": {
-        "viscosity": 3,
-        "drought": 16,
-        "deflation": 4,
-        "extinction": 12,
-        "illiteracy": 16,
-        "recession": 14,
-        "dilation": 6,
-        "hyperchallenge": 7
-      }
-    },
-    {
-      "name": "Loadout beta-1e15-expo",
-      "loadout": {
-        "viscosity": 3,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 15,
-        "dilation": 6,
-        "hyperchallenge": 6
-      }
-    },
-    {
-      "name": "Loadout 1e15-expo-omega",
-      "loadout": {
-        "viscosity": 6,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 15,
-        "dilation": 15,
-        "hyperchallenge": 7
-      }
-    },
-    {
-      "name": "Loadout omega-singularity",
-      "loadout": {
-        "viscosity": 10,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 15,
-        "dilation": 15,
-        "hyperchallenge": 7
-      }
-    },
-    {
-      "name": "Loadout beginning post-AOAG",
-      "loadout": {
-        "viscosity": 10,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 15,
-        "dilation": 15,
-        "hyperchallenge": 15
-      }
-    },
-    {
-      "name": "Loadout singularity-end",
-      "loadout": {
-        "viscosity": 16,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 16,
-        "dilation": 16,
-        "hyperchallenge": 16
-      }
-    },
-    {
-      "name": "Loadout AOAG Unlocked Phase",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      }
-    },
-    {
-      "name": "C14",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 16,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      }
-    }
-  ]
+  }
 }

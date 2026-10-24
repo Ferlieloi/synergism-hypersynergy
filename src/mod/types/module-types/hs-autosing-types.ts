@@ -1,5 +1,6 @@
 export const IF_JUMP_VALUE = 200;
-export const LOADOUT_ACTION_VALUE = 202;
+// Sets the corruption level held by the step (Challenge.corruptionLevel)
+export const SET_CORRUPTION_LEVEL_VALUE = 403;
 
 export const ALLOWED = [
     "start",
@@ -40,7 +41,7 @@ export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
 
 // Standard input fields that can be enabled per special action.
 // "waitBefore" and "comment" are always enabled and not listed here.
-export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime";
+export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel";
 
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge",     value: 101, inputs: [] as const },
@@ -69,10 +70,11 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Off loadout",            value: 305, inputs: [] as const },
     { label: "Ambrosia Luck loadout",           value: 306, inputs: [] as const },
 
-    { label: "Corrup 0*",                       value: 400, inputs: [] as const },
-    { label: "Corrup from phase (reapply)",     value: 401, inputs: [] as const },
-    { label: "Corrup Ants",                     value: 402, inputs: [] as const },
-    
+    // 400 ("Corrup 0*") became a "Set corruption level" step at level 0 (HSStrategyManager converts it)
+    { label: "Corruption level from phase (reapply)", value: 401, inputs: [] as const },
+    { label: "Set corruption level",            value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
+    // 402 ("Corrup Ants") was removed with the game's 4.4.0: HSStrategyManager removes its steps from old strategies
+
     { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 601, inputs: ["maxTime", "waitTime"] as const },
     { label: "C2 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 602, inputs: ["maxTime", "waitTime"] as const },
     { label: "C3 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 603, inputs: ["maxTime", "waitTime"] as const },
@@ -103,16 +105,7 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
     phaseId: AOAG_PHASE_ID,
     startPhase: "ascension",
     endPhase: "ascension",
-    corruptions: {
-        viscosity: 0,
-        drought: 0,
-        deflation: 0,
-        extinction: 0,
-        illiteracy: 0,
-        recession: 0,
-        dilation: 0,
-        hyperchallenge: 0
-    },
+    corruptionLevel: 0,
     strat: [
         {
             challengeNumber: 103,
@@ -121,7 +114,8 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
             challengeMaxTime: 0
         },
         {
-            challengeNumber: 400,
+            challengeNumber: SET_CORRUPTION_LEVEL_VALUE,
+            corruptionLevel: 0,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
@@ -167,32 +161,16 @@ export interface HSAutosingStrategy {
     strategyName: string;
     strategy: AutosingStrategyPhase[];
     aoagPhase?: AutosingStrategyPhase;
-    corruptionLoadouts?: CorruptionLoadoutDefinition[];
 }
 
 export interface AutosingStrategyPhase {
     phaseId?: string;
     startPhase: PhaseOption;
     endPhase: PhaseOption;
-    corruptions: CorruptionLoadout;
-    corruptionLoadoutName?: string | null;
+    // The game's corruption level since its 4.4.0 (one level instead of 8 corruptions), set at the phase's start.
+    // null: the phase leaves the level as it is
+    corruptionLevel: number | null;
     strat: Challenge[];
-}
-
-export interface CorruptionLoadoutDefinition {
-    name: string;
-    loadout: CorruptionLoadout;
-}
-
-export interface CorruptionLoadout {
-    viscosity: number;
-    drought: number;
-    deflation: number;
-    extinction: number;
-    illiteracy: number;
-    recession: number;
-    dilation: number;
-    hyperchallenge: number;
 }
 
 export interface IfJumpParams {
@@ -212,7 +190,8 @@ export interface Challenge {
     challengeMaxTime: number;
     challengeWaitBefore?: number;
     comment?: string;
-    loadoutName?: string;
+    // "Set corruption level" step (SET_CORRUPTION_LEVEL_VALUE)
+    corruptionLevel?: number;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

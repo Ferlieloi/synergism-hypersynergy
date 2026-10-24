@@ -3,18 +3,12 @@ import { HSUI } from "../../../hs-core/hs-ui";
 export type HSAutosingEditorWindowKind =
     | 'strategy'
     | 'phase'
-    | 'challenges'
-    | 'corruptionSelect'
-    | 'corruptionLoadouts'
-    | 'corruptionLoadoutEditor';
+    | 'challenges';
 
 const WINDOW_LABELS: Record<HSAutosingEditorWindowKind, string> = {
     strategy: 'A strategy editor',
     phase: 'A phase window',
-    challenges: 'The actions editor',
-    corruptionSelect: 'The corruption loadout selection',
-    corruptionLoadouts: 'The corruption loadouts window',
-    corruptionLoadoutEditor: 'A corruption loadout editor'
+    challenges: 'The actions editor'
 };
 
 interface HSAutosingEditorWindow {

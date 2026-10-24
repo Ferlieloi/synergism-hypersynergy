@@ -1,10 +1,34 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, CorruptionLoadoutDefinition } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE } from "../../../types/module-types/hs-autosing-types";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSStorage } from "../../hs-core/hs-storage";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSLogger } from "../../hs-core/hs-logger";
+import { HSUI } from "../../hs-core/hs-ui";
 import manifest from '../../../resource/json/strategies/manifest.json';
 
+// Fields of older strategy formats: 8 corruption values before the game's 4.4.0 (corruptions, loadout), and named
+// corruption loadouts, that phases (corruptionLoadoutName) and "Load Corruption Loadout" steps (loadoutName) referred to
+type LegacyLoadout = { name: string; level?: number; loadout?: unknown };
+type LegacyStrategy = HSAutosingStrategy & { corruptionLoadouts?: LegacyLoadout[] };
+type LegacyPhase = AutosingStrategyPhase & { corruptions?: unknown; corruptionLoadoutName?: string | null };
+type LegacyStep = Challenge & { loadoutName?: string };
+
+// "Corrup Ants", removed with the game's 4.4.0
+const REMOVED_ANT_CORRUPTIONS_ACTION = 402;
+// "Load Corruption Loadout", replaced by "Set corruption level" (SET_CORRUPTION_LEVEL_VALUE)
+const REMOVED_LOAD_LOADOUT_ACTION = 202;
+// "Corrup 0*", replaced by "Set corruption level" at level 0
+const REMOVED_ZERO_CORRUPTION_ACTION = 400;
+
+const isCorruptionLevel = (level: unknown): level is number => Number.isInteger(level) && (level as number) >= 0;
+
+/**
+ * Class: HSStrategyManager
+ * IsExplicitHSModule: No
+ * Description: Autosing's strategies: the player's, kept in localStorage, and the default ones (resource/json/strategies).
+ *     Validates them, and brings the ones written before the game's 4.4.0 to the current format.
+ * Author: Shewchou
+ */
 export class HSStrategyManager {
     static #strategies: HSAutosingStrategy[] = [];
 
@@ -53,52 +77,83 @@ export class HSStrategyManager {
         return cloned;
     }
 
-    static ensureCorruptionLoadouts(strategy: HSAutosingStrategy): HSAutosingStrategy {
+    static #getPhases(strategy: HSAutosingStrategy): AutosingStrategyPhase[] {
+        return [...(strategy.strategy ?? []), ...(strategy.aoagPhase ? [strategy.aoagPhase] : [])];
+    }
+
+    /** True for a strategy written before the game's 4.4.0: 8 corruption values instead of a level, or "Corrup Ants" steps. */
+    static hasLegacyCorruptions(strategy: HSAutosingStrategy): boolean {
+        return HSStrategyManager.#getPhases(strategy).some(phase => (phase as LegacyPhase).corruptions !== undefined
+                || phase.strat?.some(step => step.challengeNumber === REMOVED_ANT_CORRUPTIONS_ACTION))
+            || ((strategy as LegacyStrategy).corruptionLoadouts ?? []).some(loadout => loadout.loadout !== undefined);
+    }
+
+    /** Removes a phase's steps (in place). The if-jumps past a removed step move up one step. */
+    static #removeSteps(phase: AutosingStrategyPhase, isRemoved: (step: Challenge) => boolean): void {
+        for (let i = phase.strat.length - 1; i >= 0; i--) {
+            if (!isRemoved(phase.strat[i])) continue;
+            phase.strat.splice(i, 1);
+            for (const step of phase.strat) {
+                if (step.ifJump && step.ifJump.ifJumpIndex > i) step.ifJump.ifJumpIndex--;
+            }
+        }
+    }
+
+    /**
+     * Brings a strategy to the current format, in place.
+     * - Before the game's 4.4.0: its levels become 0, to set in the editor (8 corruption values don't make one level).
+     *   Its "Corrup Ants" steps are removed.
+     * - Named corruption loadouts are gone: a phase naming one gets its level ("None", null or "": an empty level,
+     *   unchanged), a "Load Corruption Loadout" step becomes a "Set corruption level" step (removed when its loadout
+     *   doesn't exist: it did nothing).
+     * - "Corrup 0*" steps become "Set corruption level" steps at level 0.
+     */
+    static #migrateCorruptions(strategy: HSAutosingStrategy): void {
+        const legacy = strategy as LegacyStrategy;
+        const levelByName = new Map((legacy.corruptionLoadouts ?? [])
+            .map(l => [l.name, isCorruptionLevel(l.level) ? l.level : 0]));
+        delete legacy.corruptionLoadouts;
+
+        for (const phase of HSStrategyManager.#getPhases(strategy) as LegacyPhase[]) {
+            if ('corruptionLoadoutName' in phase) {
+                const name = phase.corruptionLoadoutName;
+                if (name === null || name === '') phase.corruptionLevel = null;
+                else if (name !== undefined && levelByName.has(name)) phase.corruptionLevel = levelByName.get(name)!;
+                delete phase.corruptionLoadoutName;
+            }
+            if (phase.corruptionLevel !== null && !isCorruptionLevel(phase.corruptionLevel)) phase.corruptionLevel = 0;
+            delete phase.corruptions;
+
+            if (!Array.isArray(phase.strat)) continue;
+            HSStrategyManager.#removeSteps(phase, step => step.challengeNumber === REMOVED_ANT_CORRUPTIONS_ACTION
+                || (step.challengeNumber === REMOVED_LOAD_LOADOUT_ACTION && !levelByName.has((step as LegacyStep).loadoutName ?? '')));
+            for (const step of phase.strat as LegacyStep[]) {
+                if (step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION) {
+                    step.challengeNumber = SET_CORRUPTION_LEVEL_VALUE;
+                    step.corruptionLevel = 0;
+                    continue;
+                }
+                if (step.challengeNumber !== REMOVED_LOAD_LOADOUT_ACTION) continue;
+                step.challengeNumber = SET_CORRUPTION_LEVEL_VALUE;
+                step.corruptionLevel = levelByName.get(step.loadoutName!)!;
+                // The loadout's name says what the level is for: kept in the comment
+                if (!step.comment) step.comment = step.loadoutName;
+                delete step.loadoutName;
+            }
+        }
+    }
+
+    static normalizeCorruptions(strategy: HSAutosingStrategy): HSAutosingStrategy {
         if (!strategy) return strategy;
 
         const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
-        if (!Array.isArray(cloned.corruptionLoadouts)) cloned.corruptionLoadouts = [];
-
-        const loadouts = cloned.corruptionLoadouts as CorruptionLoadoutDefinition[];
-        const usedNames = new Set(loadouts.map(l => l.name));
-
-        const makeUniqueName = (baseName: string): string => {
-            let name = baseName;
-            let counter = 2;
-            while (usedNames.has(name)) {
-                name = `${baseName} (${counter})`;
-                counter++;
-            }
-            usedNames.add(name);
-            return name;
-        };
-
-        const ensureLoadoutForPhase = (phase: AutosingStrategyPhase | undefined) => {
-            if (!phase) return;
-            if (phase.corruptionLoadoutName === undefined) {
-                const isAoag = phase.phaseId === AOAG_PHASE_ID;
-                const baseName = isAoag ? `Loadout ${AOAG_PHASE_NAME}` : `Loadout ${phase.startPhase}-${phase.endPhase}`;
-                const name = makeUniqueName(baseName);
-                loadouts.push({ name, loadout: { ...phase.corruptions } });
-                phase.corruptionLoadoutName = name;
-                return;
-            }
-
-            if (phase.corruptionLoadoutName && !usedNames.has(phase.corruptionLoadoutName)) {
-                usedNames.add(phase.corruptionLoadoutName);
-                loadouts.push({ name: phase.corruptionLoadoutName, loadout: { ...phase.corruptions } });
-            }
-        };
-
-        cloned.strategy?.forEach(phase => ensureLoadoutForPhase(phase));
-        ensureLoadoutForPhase(cloned.aoagPhase);
-
+        HSStrategyManager.#migrateCorruptions(cloned);
         return cloned;
     }
 
     static validateStrategy(strategy: HSAutosingStrategy, context = '') {
         let normalized = HSStrategyManager.ensureAoagPhase(strategy);
-        normalized = HSStrategyManager.ensureCorruptionLoadouts(normalized);
+        normalized = HSStrategyManager.normalizeCorruptions(normalized);
         strategy = normalized;
 
         if (!strategy) throw new Error('Strategy is undefined');
@@ -113,35 +168,30 @@ export class HSStrategyManager {
         if (!aoagPhase) {
             throw new Error(`Strategy is missing "${AOAG_PHASE_NAME}" phase`);
         }
-        if (!aoagPhase.corruptions) {
-            throw new Error(`"${AOAG_PHASE_NAME}" phase has no corruptions defined`);
+        if (aoagPhase.corruptionLevel !== null && !isCorruptionLevel(aoagPhase.corruptionLevel)) {
+            throw new Error(`"${AOAG_PHASE_NAME}" phase has no valid corruption level`);
         }
         if (!Array.isArray(aoagPhase.strat) || aoagPhase.strat.length === 0) {
             throw new Error(`"${AOAG_PHASE_NAME}" phase must have at least one action`);
         }
 
-        const loadouts = strategy.corruptionLoadouts ?? [];
-        const loadoutNames = loadouts.map(l => l.name);
-        const uniqueNames = new Set(loadoutNames);
-        if (uniqueNames.size !== loadoutNames.length) {
-            throw new Error('Corruption loadout names must be unique.');
+        for (const phase of HSStrategyManager.#getPhases(strategy)) {
+            const index = phase.strat?.findIndex(step => step.challengeNumber === SET_CORRUPTION_LEVEL_VALUE
+                && !isCorruptionLevel(step.corruptionLevel)) ?? -1;
+            if (index !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${index + 1} has no valid corruption level`);
+            }
         }
 
         let remainingPhases = [...phases];
 
         for (let i = 0; i < components.length; i++) {
             const component = components[i];
-            const { startPhase, endPhase, corruptions, strat: challenges } = component;
+            const { startPhase, endPhase, corruptionLevel, strat: challenges } = component;
 
-            if (!corruptions) {
+            if (corruptionLevel !== null && !isCorruptionLevel(corruptionLevel)) {
                 throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) has no corruptions defined`,
-                );
-            }
-
-            if (component.corruptionLoadoutName && !loadoutNames.includes(component.corruptionLoadoutName)) {
-                throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) references missing corruption loadout "${component.corruptionLoadoutName}"`,
+                    `Component ${i + 1} (${startPhase} → ${endPhase}) has no valid corruption level`,
                 );
             }
 
@@ -172,12 +222,6 @@ export class HSStrategyManager {
                 `Uncovered phases: ${remainingPhases.join(', ')}`,
             );
         }
-
-        if (aoagPhase?.corruptionLoadoutName && !loadoutNames.includes(aoagPhase.corruptionLoadoutName)) {
-            throw new Error(
-                `"${AOAG_PHASE_NAME}" phase references missing corruption loadout "${aoagPhase.corruptionLoadoutName}"`,
-            );
-        }
     }
 
     static getMergedStrategyOptions() {
@@ -205,7 +249,7 @@ export class HSStrategyManager {
         }
 
         let normalizedStrategy = HSStrategyManager.ensureAoagPhase(strategy);
-        normalizedStrategy = HSStrategyManager.ensureCorruptionLoadouts(normalizedStrategy);
+        normalizedStrategy = HSStrategyManager.normalizeCorruptions(normalizedStrategy);
 
         HSStrategyManager.validateStrategy(normalizedStrategy, context);
         const isUpdate = !!strategyName;
@@ -246,6 +290,19 @@ export class HSStrategyManager {
         return { strategy: normalizedStrategy, isUpdate, saved };
     }
 
+    /** Tells the player their strategies from before the game's 4.4.0 lost their corruption levels (see #migrateLegacyCorruptions). */
+    static warnLegacyCorruptions(strategyNames: string[], context = ''): void {
+        const names = strategyNames.map(name => `"${name}"`).join(', ');
+        HSLogger.warn(`Autosing strategies from before the game's 4.4.0: ${names}. Their corruption levels are now 0 and their `
+            + `"Corrup Ants" steps were removed.`, context);
+        void HSUI.Notify(`Autosing: ${names} now use corruption level 0 everywhere. Set the levels in the strategy editor.`, {
+            notificationType: 'warning',
+            displayDuration: 10000,
+            width: 400,
+            height: 60
+        });
+    }
+
     static deleteStrategyFromStorage(strategyName: string, context = ''): boolean {
         const storageMod = HSModuleManager.getModule<HSStorage>('HSStorage');
         if (!storageMod) {
@@ -279,10 +336,17 @@ export class HSStrategyManager {
         const userStrategies = list.filter(strategy => !defaultStrategyNames.has(strategy.strategyName));
         const didDropDefaults = userStrategies.length !== list.length;
 
-        if (didDropDefaults) {
+        const legacyNames = userStrategies.filter(s => HSStrategyManager.hasLegacyCorruptions(s)).map(s => s.strategyName);
+        const normalized = userStrategies.map(s => HSStrategyManager.normalizeCorruptions(HSStrategyManager.ensureAoagPhase(s)));
+
+        if (legacyNames.length > 0) {
+            // Saved in the current format, so the warning is shown once
+            storageMod.setData(HSGlobal.HSSettings.strategiesKey, normalized);
+            HSStrategyManager.warnLegacyCorruptions(legacyNames, context);
+        } else if (didDropDefaults) {
             storageMod.setData(HSGlobal.HSSettings.strategiesKey, userStrategies);
         }
 
-        return userStrategies.map(s => HSStrategyManager.ensureCorruptionLoadouts(HSStrategyManager.ensureAoagPhase(s)));
+        return normalized;
     }
 }

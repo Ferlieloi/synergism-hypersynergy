@@ -128,7 +128,7 @@ export class HSAutosingSettingsFixer {
      */
     static readonly #UPDATE_ON_BLUR_REQUIREMENTS: Array<{ selector: string, expected: number, tab: string, subTab: string }> = [
         { selector: '#buyRuneBlessingInput', expected: 1000000, tab: 'runestab', subTab: 'toggleRuneSubTab3' },
-        { selector: '#buyRuneSpiritInput', expected: 1000000, tab: 'runestab', subTab: 'toggleRuneSubTab4' },
+        { selector: '#buyRuneSpiritInput', expected: 1000000, tab: 'runestab', subTab: 'toggleRuneSubTab3' },
     ];
 
     /**
@@ -142,7 +142,25 @@ export class HSAutosingSettingsFixer {
         await HSAutosingSettingsFixer.#ensureGreenButtons();
         await HSAutosingSettingsFixer.#ensureChallengeAutoStates();
         await HSAutosingSettingsFixer.#ensureNumberInputFields();
+        HSAutosingSettingsFixer.#ensureCorruptionAutoIncreaseOff();
         return await HSAutosingSettingsFixer.#disableUnwantedSettings();
+    }
+
+    /**
+     * Untick the game's corruption "auto increase": with it, each newly cleared level raises the next level to the
+     * highest reachable, over the strategy's level.
+     */
+    static #ensureCorruptionAutoIncreaseOff(): void {
+        const toggle = document.getElementById('corruptionAutoIncreaseToggle') as HTMLInputElement | null;
+        if (!toggle) {
+            HSLogger.warn(`ensureCorruptionAutoIncreaseOff: #corruptionAutoIncreaseToggle not found`, HSAutosingSettingsFixer.#context);
+            return;
+        }
+        if (!(HSGlobal.exposedPlayer?.corruptions.autoIncrease ?? toggle.checked)) return;
+
+        // A click on a checkbox ticks it and fires its change event (the game's toggleCorruptionAutoIncrease)
+        toggle.click();
+        HSLogger.warn(`ensureCorruptionAutoIncreaseOff: corrected=1 [#corruptionAutoIncreaseToggle]`, HSAutosingSettingsFixer.#context);
     }
 
     /**

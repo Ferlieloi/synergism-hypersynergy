@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, CorruptionLoadoutDefinition, LOADOUT_ACTION_VALUE } from "../../../../types/module-types/hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, SET_CORRUPTION_LEVEL_VALUE } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -22,7 +22,6 @@ export async function openAutosingChallengesModal(
     stratData: AutosingStrategyPhase["strat"],
     startPhase: string,
     endPhase: string,
-    corruptionLoadouts: CorruptionLoadoutDefinition[],
     parentModalId?: string,
     displayName?: string
 ): Promise<void> {
@@ -39,8 +38,8 @@ export async function openAutosingChallengesModal(
 
     // Utility: Get label for special actions (fast via map)
     const getSpecialActionLabel = (entry: Challenge): string | null => {
-        if (entry.challengeNumber === LOADOUT_ACTION_VALUE) {
-            return entry.loadoutName ? `Load Corruption Loadout: ${entry.loadoutName}` : "Load Corruption Loadout";
+        if (entry.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
+            return `Set corruption level: ${entry.corruptionLevel ?? 0}`;
         }
         return SPECIAL_ACTION_LABEL_BY_ID.get(entry.challengeNumber) ?? null;
     };
@@ -224,15 +223,6 @@ export async function openAutosingChallengesModal(
         }
     };
 
-    const loadoutOptions = corruptionLoadouts.length > 0
-        ? `
-            <option value="" disabled>-- Corruption Loadouts --</option>
-            ${corruptionLoadouts
-            .map(loadout => `<option value="loadout:${loadout.name}">Load Corruption Loadout: ${loadout.name}</option>`)
-            .join("")}
-        `
-        : "";
-
     // Modal content definition (HTML and title)
     const modalContent = {
         htmlContent: `
@@ -243,7 +233,6 @@ export async function openAutosingChallengesModal(
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
                     <option value="">None (Standard Challenge)</option>
                     ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
-                    ${loadoutOptions}
                 </select>
             </div>
             <div class="hs-challenges-input-row">
@@ -253,6 +242,10 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Min Completions:</div>
                 <input type="number" id="hs-challenge-completions-input" class="hs-challenges-input" min="1" value="1" />
+            </div>
+            <div class="hs-challenges-input-row hs-corruption-level-row" style="display:none;">
+                <div class="hs-challenges-input-label">Corruption Level:</div>
+                <input type="number" id="hs-challenge-corruption-level-input" class="hs-challenges-input" min="0" step="1" value="0" />
             </div>
             <div class="hs-challenges-input-row">
                 <div class="hs-challenges-input-label">Wait before (ms):</div>
@@ -735,6 +728,10 @@ export async function openAutosingChallengesModal(
             }
         });
 
+        // The corruption level field: shown only for the steps that have one
+        const corruptionLevelRow = document.querySelector(".hs-corruption-level-row") as HTMLElement | null;
+        if (corruptionLevelRow) corruptionLevelRow.style.display = enabledForAction.has("corruptionLevel") ? "" : "none";
+
         // Toggle if-jump inputs
         document
             .querySelectorAll(".hs-if-jump-row")
@@ -834,6 +831,7 @@ export async function openAutosingChallengesModal(
         (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
+        (document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
         (document.getElementById("hs-if-jump-mode") as HTMLSelectElement).value = "challenges";
         (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
@@ -861,7 +859,6 @@ export async function openAutosingChallengesModal(
             if (id === "hs-challenge-add-btn") {
                 const actionValue = actionSelect.value;
                 const isIfJump = actionValue === String(IF_JUMP_VALUE);
-                const isLoadout = actionValue.startsWith("loadout:");
                 const isSpecial = actionValue !== "";
 
                 let newEntry: Challenge;
@@ -896,17 +893,6 @@ export async function openAutosingChallengesModal(
                         }
                     } as Challenge & any;
                     if (commentValue) (newEntry as any).comment = commentValue;
-                } else if (isLoadout) {
-                    const loadoutName = actionValue.replace("loadout:", "");
-                    newEntry = {
-                        challengeNumber: LOADOUT_ACTION_VALUE,
-                        challengeCompletions: 0,
-                        challengeWaitTime: Number((document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value),
-                        challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
-                        challengeMaxTime: 0,
-                        loadoutName
-                    };
-                    if (commentValue) (newEntry as any).comment = commentValue;
                 } else {
                     newEntry = {
                         challengeNumber: isSpecial
@@ -917,6 +903,11 @@ export async function openAutosingChallengesModal(
                         challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
                         challengeMaxTime: Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
                     };
+                    if (newEntry.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
+                        // The game lowers a level above what the player can reach: no upper bound here
+                        const levelValue = Number((document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value);
+                        newEntry.corruptionLevel = Math.max(0, Math.floor(levelValue || 0));
+                    }
                     if (commentValue) (newEntry as any).comment = commentValue;
                 }
 
@@ -980,10 +971,11 @@ export async function openAutosingChallengesModal(
                     return;
                 }
 
-                if (item.challengeNumber === LOADOUT_ACTION_VALUE) {
-                    actionSelect.value = item.loadoutName ? `loadout:${item.loadoutName}` : "";
-                } else if (actionLabel) {
+                if (actionLabel) {
                     actionSelect.value = String(item.challengeNumber);
+                    if (item.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
+                        (document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value = String(item.corruptionLevel ?? 0);
+                    }
                 } else {
                     actionSelect.value = "";
                     (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = String(item.challengeNumber);
