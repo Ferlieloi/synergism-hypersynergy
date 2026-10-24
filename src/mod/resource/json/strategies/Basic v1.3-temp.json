@@ -1,10 +1,10 @@
 {
-  "strategyName": "Basic v1.2",
+  "strategyName": "Basic v1.3-temp",
   "strategy": [
     {
       "startPhase": "start",
       "endPhase": "challenge10",
-      "corruptionLevel": null,
+      "corruptionLevel": 0,
       "strat": [
         {
           "challengeNumber": 305,
@@ -273,13 +273,13 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 403,
+          "challengeNumber": 404,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 0,
-          "corruptionLevel": 63,
-          "comment": "Post-C15"
+          "corruptionLevel": 20,
+          "comment": "Before leaving the 1st C15"
         },
         {
           "challengeNumber": 103,
@@ -294,14 +294,6 @@
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 1000000
-        },
-        {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 100,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 0
         }
       ]
     },
@@ -310,6 +302,14 @@
       "endPhase": "end",
       "corruptionLevel": null,
       "strat": [
+        {
+          "challengeNumber": 404,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "corruptionLevel": 50
+        },
         {
           "challengeNumber": 302,
           "challengeCompletions": 0,
@@ -421,15 +421,6 @@
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 1000000
-        },
-        {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 131,
-          "comment": "Full"
         },
         {
           "challengeNumber": 103,

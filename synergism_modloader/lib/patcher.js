@@ -459,6 +459,41 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── CORRUPTIONFREELEVELS PATCH — expose Corruptions.ts corruptionFreeLevels as window.__HS_corruptionFreeLevels
+    // Autosing's "Set corruption level minus free levels" step reads it (live, while GDS is paused).
+    // The function has no literal of its own: found through the corruption display that shows it, by the element id
+    // "corruptionRewardFreeLevels" and the translation "corruptions.tiers.freeLevels". The variable passed as that
+    // translation's {free} holds its result:
+    //   let r=Ef();u("corruptionRewardFreeLevels").innerHTML=r>0?s.t("corruptions.tiers.freeLevels",{free:c(r,2,!0)}):…
+    // Exposed at the start of that display function, where the name resolves to the right function. The game runs
+    // it at load (corruptionStatsUpdate), and at each level change.
+    report.corruptionFreeLevels = false;
+    try {
+        const displayResult = findEnclosingFunction(code, /["']corruptionRewardFreeLevels["']/g,
+            ['corruptions.tiers.freeLevels'], 'corruptionFreeLevels');
+        const body = displayResult ? code.slice(displayResult.bodyStart, displayResult.bodyEnd) : '';
+        const freeVars = [...body.matchAll(/(?<![\w$.])["']?free["']?\s*:\s*(?:[\w$.]+\(\s*)?([a-zA-Z_$][\w$]*)/g)];
+        const freeVar = freeVars.length === 1 ? freeVars[0][1].replace(/\$/g, '\\$') : null;
+        const calls = freeVar
+            ? [...body.matchAll(new RegExp(String.raw`(?<![\w$.])${freeVar}\s*=\s*([a-zA-Z_$][\w$]*)\(\s*\)`, 'g'))]
+            : [];
+        if (calls.length === 1) {
+            const freeFn = calls[0][1];
+            code = code.slice(0, displayResult.bodyStart) + `\nwindow.__HS_corruptionFreeLevels=${freeFn};\n` +
+                code.slice(displayResult.bodyStart);
+            report.corruptionFreeLevels = true;
+            log(`Patched corruptionFreeLevels (fn=${freeFn}, display=${displayResult.fnName})`);
+        } else {
+            warn(displayResult
+                ? `Could not patch corruptionFreeLevels — expected 1 {free} value and 1 call for it in the display ` +
+                    `(fn=${displayResult.fnName}), found ${freeVars.length} and ${calls.length}`
+                : 'Could not patch corruptionFreeLevels — free levels display ("corruptionRewardFreeLevels") not found');
+        }
+    } catch (e) {
+        warn('Error while patching corruptionFreeLevels', e);
+    }
+
+    // ==================================================================================
     // ── TACK PATCH — fire registered after-tack hooks after each game tick (Synergism.ts tack)
     // Found by what it does: the tick skipping its timers during a time warp (.timeWarp), adding time to every timer
     // (autoPotion and purpleReactor among them), then running the automatic tools (runeSacrifice).

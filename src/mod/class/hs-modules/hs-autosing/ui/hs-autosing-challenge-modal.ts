@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, SET_CORRUPTION_LEVEL_VALUE } from "../../../../types/module-types/hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -38,8 +38,8 @@ export async function openAutosingChallengesModal(
 
     // Utility: Get label for special actions (fast via map)
     const getSpecialActionLabel = (entry: Challenge): string | null => {
-        if (entry.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
-            return `Set corruption level: ${entry.corruptionLevel ?? 0}`;
+        if (isCorruptionLevelStep(entry.challengeNumber)) {
+            return `${SPECIAL_ACTION_LABEL_BY_ID.get(entry.challengeNumber)}: ${entry.corruptionLevel ?? 0}`;
         }
         return SPECIAL_ACTION_LABEL_BY_ID.get(entry.challengeNumber) ?? null;
     };
@@ -903,7 +903,7 @@ export async function openAutosingChallengesModal(
                         challengeWaitBefore: Number((document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value),
                         challengeMaxTime: Number((document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value)
                     };
-                    if (newEntry.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
+                    if (isCorruptionLevelStep(newEntry.challengeNumber)) {
                         // The game lowers a level above what the player can reach: no upper bound here
                         const levelValue = Number((document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value);
                         newEntry.corruptionLevel = Math.max(0, Math.floor(levelValue || 0));
@@ -973,7 +973,7 @@ export async function openAutosingChallengesModal(
 
                 if (actionLabel) {
                     actionSelect.value = String(item.challengeNumber);
-                    if (item.challengeNumber === SET_CORRUPTION_LEVEL_VALUE) {
+                    if (isCorruptionLevelStep(item.challengeNumber)) {
                         (document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value = String(item.corruptionLevel ?? 0);
                     }
                 } else {

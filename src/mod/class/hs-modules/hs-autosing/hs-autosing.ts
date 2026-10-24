@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
@@ -1032,6 +1032,9 @@ export class HSAutosing extends HSModule {
                 break;
             case SET_CORRUPTION_LEVEL_VALUE:
                 this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
+                break;
+            case SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE:
+                await this.#corruptionManager.setLevelMinusFreeLevels(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge);

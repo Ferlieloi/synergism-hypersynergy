@@ -1,5 +1,5 @@
 {
-  "strategyName": "BTMco. Quark Factory v2.2",
+  "strategyName": "BTMco. Quark Factory v2.3-temp",
   "strategy": [
     {
       "startPhase": "start",
@@ -334,15 +334,6 @@
           }
         },
         {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 20,
-          "comment": "C14"
-        },
-        {
           "challengeNumber": 14,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -400,15 +391,6 @@
           }
         },
         {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 51,
-          "comment": "Loadout challenge14-w5x10max"
-        },
-        {
           "challengeNumber": 15,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -421,6 +403,15 @@
           "challengeWaitTime": 10,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 100
+        },
+        {
+          "challengeNumber": 404,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "corruptionLevel": 20,
+          "comment": "Before leaving the 1st C15"
         },
         {
           "challengeNumber": 103,
@@ -514,15 +505,6 @@
           "challengeMaxTime": 2000
         },
         {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 20,
-          "comment": "C14"
-        },
-        {
           "challengeNumber": 14,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
@@ -555,7 +537,7 @@
     {
       "startPhase": "challenge14",
       "endPhase": "singularity",
-      "corruptionLevel": 114,
+      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 15,
@@ -618,8 +600,16 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptionLevel": 114,
+      "corruptionLevel": null,
       "strat": [
+        {
+          "challengeNumber": 404,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "corruptionLevel": 50
+        },
         {
           "challengeNumber": 302,
           "challengeCompletions": 0,
@@ -633,15 +623,6 @@
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
           "challengeMaxTime": 500
-        },
-        {
-          "challengeNumber": 403,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0,
-          "corruptionLevel": 131,
-          "comment": "Loadout singularity-end"
         },
         {
           "challengeNumber": 10,

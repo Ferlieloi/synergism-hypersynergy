@@ -1,4 +1,4 @@
-import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, AutosingStrategyPhase, Challenge, phases, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, SET_CORRUPTION_LEVEL_VALUE, isCorruptionLevelStep } from "../../../types/module-types/hs-autosing-types";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSStorage } from "../../hs-core/hs-storage";
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -176,7 +176,7 @@ export class HSStrategyManager {
         }
 
         for (const phase of HSStrategyManager.#getPhases(strategy)) {
-            const index = phase.strat?.findIndex(step => step.challengeNumber === SET_CORRUPTION_LEVEL_VALUE
+            const index = phase.strat?.findIndex(step => isCorruptionLevelStep(step.challengeNumber)
                 && !isCorruptionLevel(step.corruptionLevel)) ?? -1;
             if (index !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${index + 1} has no valid corruption level`);

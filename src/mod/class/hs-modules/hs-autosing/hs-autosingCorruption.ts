@@ -1,6 +1,8 @@
 import { AutosingStrategyPhase } from "../../../types/module-types/hs-autosing-types";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSGlobal } from "../../hs-core/hs-global";
+import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
+import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 
 /**
  * Class: HSAutosingCorruption
@@ -40,6 +42,38 @@ export class HSAutosingCorruption {
         const kept = this.#getNextLevel();
         if (kept === level) HSLogger.debug(() => `Corruption level set: ${level}`, this.#context);
         else HSLogger.debug(() => `Corruption level ${level} asked, the game kept ${kept} (the highest reachable now)`, this.#context);
+    }
+
+    /**
+     * Sets the lowest level that reaches `target` once the player's free levels are added (the game's effective
+     * level, which decides the cubes an ascension gives). Free levels can be fractions: the game's rounding
+     * (corruptionCubeUnlockLevel).
+     */
+    async setLevelMinusFreeLevels(target: number): Promise<void> {
+        const freeLevels = await this.#getFreeLevels();
+        let level = Math.max(0, Math.floor(target - freeLevels));
+        if (level + freeLevels < target) level++;
+        HSLogger.debug(() => `Corruption level ${target} minus ${freeLevels} free levels: ${level}`, this.#context);
+        this.setLevel(level);
+    }
+
+    /**
+     * The player's free corruption levels: the game's own function (patcher), else GDS's copy of its formula on a
+     * save forced now (GDS is paused while autosing runs: its data is older).
+     */
+    async #getFreeLevels(): Promise<number> {
+        const gameFreeLevels = window.__HS_corruptionFreeLevels;
+        if (gameFreeLevels) return gameFreeLevels();
+
+        // A direct read of the game's "free levels" line (#corruptionRewardFreeLevels) is possible, but the game only
+        // redraws it when the Corruption tab updates: it needs a tab switch first, or it can be stale
+        const gameDataAPI = HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI');
+        const gameData = await gameDataAPI?.getForcedGameData();
+        if (!gameDataAPI || !gameData) {
+            HSLogger.warn('Free corruption levels unknown (no game data): the full level is set', this.#context);
+            return 0;
+        }
+        return gameDataAPI.corruption.calculateFreeCorruptionLevels() as number;
     }
 
     /** The game's Max button: the highest level the player can reach now. */

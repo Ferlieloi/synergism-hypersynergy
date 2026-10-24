@@ -1,10 +1,10 @@
 {
-  "strategyName": "DK_(rus)_v1.3",
+  "strategyName": "DK_(rus)_v1.4-temp",
   "strategy": [
     {
       "startPhase": "start",
       "endPhase": "ascension",
-      "corruptionLevel": null,
+      "corruptionLevel": 0,
       "strat": [
         {
           "challengeNumber": 305,
@@ -216,7 +216,7 @@
     {
       "startPhase": "challenge13",
       "endPhase": "challenge14",
-      "corruptionLevel": 20,
+      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 14,
@@ -262,12 +262,13 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 403,
-          "challengeCompletions": 1,
+          "challengeNumber": 404,
+          "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
-          "challengeMaxTime": 10000,
-          "corruptionLevel": 0
+          "challengeMaxTime": 0,
+          "corruptionLevel": 20,
+          "comment": "Before leaving the 1st C15"
         },
         {
           "challengeNumber": 103,
@@ -372,8 +373,16 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptionLevel": 131,
+      "corruptionLevel": null,
       "strat": [
+        {
+          "challengeNumber": 404,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "corruptionLevel": 50
+        },
         {
           "challengeNumber": 302,
           "challengeCompletions": 1,
@@ -435,7 +444,7 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 1e+110,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 2
+            "ifJumpIndex": 3
           }
         },
         {
