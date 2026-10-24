@@ -200,6 +200,36 @@
     "enabled": false,
     "hidden": true
   },
+  "corruptionHeaderControls": {
+    "settingName": "corruptionHeaderControls",
+    "settingDescription": "Corruption module: next level and controls",
+    "settingHelpText": "Shows the next ascension's corruption level when it differs. Click the module to change it.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "corruptionHeaderControlsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-corruption-header-controls-btn"
+    }
+  },
+  "corruptionHeaderAlwaysShown": {
+    "settingName": "corruptionHeaderAlwaysShown",
+    "settingDescription": "Keep the corruption module visible",
+    "settingHelpText": "Keeps the Corruption level module in the header before Challenge 11 is completed in a singularity.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "corruptionHeaderAlwaysShownAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-corruption-header-always-shown-btn"
+    }
+  },
   "editGameHeader": {
     "settingName": "editGameHeader",
     "settingDescription": "Edit game header",

@@ -20,6 +20,7 @@ import { HSHeaderGap } from "../header/hs-header-gap";
 import { HSHeaderEditSettings } from "../header/hs-header-edit-settings";
 import { HSHeaderChallengeProgress } from "../header/hs-header-challenge-progress";
 import { HSHeaderChallengeModule } from "../header/hs-header-challenge-module";
+import { HSCorruptionHeader } from "../header/hs-corruption-header";
 
 // Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
 // Does nothing if the module isn't loaded.
@@ -149,6 +150,15 @@ export class HSSettingActions {
         challengeProgressHeaderAction: async (params: HSSettingActionParams) => {
             if (params.disable === true) HSHeaderChallengeModule.disable();
             else HSHeaderChallengeModule.enable();
+        },
+
+        // The game's Corruption level header module, which is in the page from the start
+        corruptionHeaderControlsAction: async (params: HSSettingActionParams) => {
+            if (params.disable === true) HSCorruptionHeader.disableControls();
+            else HSCorruptionHeader.enableControls();
+        },
+        corruptionHeaderAlwaysShownAction: async (params: HSSettingActionParams) => {
+            HSCorruptionHeader.setAlwaysShown(params.disable !== true);
         },
 
         // Not awaited: the GDS start and stop run on their own

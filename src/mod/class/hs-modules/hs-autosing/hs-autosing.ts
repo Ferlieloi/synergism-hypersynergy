@@ -307,7 +307,8 @@ export class HSAutosing extends HSModule {
 
         this.#addCodeAllBtn = elements.addCodeAllBtn;
         this.#timeCodeBtn = elements.timeCodeBtn;
-        this.#corruptionManager = new HSAutosingCorruption(elements.corruptionLevelInput, elements.corruptionLevelMax);
+        // The level input and Max button are checked above, then used by id (HSCorruptionLevel)
+        this.#corruptionManager = new HSAutosingCorruption();
         return true;
     }
 

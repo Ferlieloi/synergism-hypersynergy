@@ -98,6 +98,14 @@ const SECTIONS: { title: string; choices?: HSChoiceDef[]; toggles: HSToggleDef[]
         ],
     },
     {
+        title: 'Corruption module',
+        toggles: [
+            { setting: 'corruptionHeaderControls', label: 'Next level and controls' },
+            // The game's unlock checks are reachable only through the header modules patch
+            { setting: 'corruptionHeaderAlwaysShown', label: 'Keep visible', shown: hasHeaderModules },
+        ],
+    },
+    {
         title: 'Octeracts',
         toggles: [
             { setting: 'matchOcteractIconSize', label: 'Match octeract icon size' },
