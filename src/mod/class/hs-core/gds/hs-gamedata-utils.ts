@@ -84,27 +84,6 @@ export const findInsertionIndex = (target: number, array: number[]): number => {
     return index;
 };
 
-// ECC stands for "Effective Challenge Completions"
-export const calcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number): number => {
-    let effective = 0;
-    switch (type) {
-        case 'transcend':
-            effective += Math.min(100, completions);
-            effective += 1 / 20 * (Math.min(1000, Math.max(100, completions)) - 100);
-            effective += 1 / 100 * (Math.max(1000, completions) - 1000);
-            return effective;
-        case 'reincarnation':
-            effective += Math.min(25, completions);
-            effective += 1 / 2 * (Math.min(75, Math.max(25, completions)) - 25);
-            effective += 1 / 10 * (Math.max(75, completions) - 75);
-            return effective;
-        case 'ascension':
-            effective += Math.min(10, completions);
-            effective += 1 / 2 * (Math.max(10, completions) - 10);
-            return effective;
-    }
-};
-
 
 /** Whether the tesseract auto-buyer is in percentage mode (player.resetToggleModes.ascension). */
 export const isTesseractAutoBuyPercentageMode = (resetToggleModes: { ascension?: AutoAscensionModes } | undefined): boolean =>

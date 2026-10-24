@@ -41,7 +41,6 @@ export interface AntUpgradeHelperContext {
   getAchievementReward: (rewardName: string) => number | boolean | undefined
   calculateSigmoidExponential: (constant: number, coefficient: number) => number
   calculateChallenge15Reward: (rewardName: string) => number
-  CalcECC: (refinement: string, value: number) => number
   getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
@@ -61,7 +60,6 @@ export interface TalismanHelperContext {
   checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
   updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
   calculateChallenge15Reward: (rewardName: string) => number | undefined
-  CalcECC: (refinement: string, value: number) => number
   isShopTalismanUnlocked: () => boolean
 }
 
@@ -99,7 +97,6 @@ export interface RuneHelperContext {
   getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
   getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
   getLevelMilestone: (name: SynergismLevelMilestones) => number
-  CalcECC: (refinement: string, value: number) => number
   getRuneEffects: (rune: RuneKeys) => any
   firstFiveFreeLevels: () => number
   firstFiveEffectiveRuneLevelMult: () => number
@@ -297,7 +294,7 @@ export type RuneTypeMap = {
         costDivisorLog10: number
     }
     thrift: {
-        costDelay: number
+        construction: number
         salvage: number
         taxReduction: number
     }

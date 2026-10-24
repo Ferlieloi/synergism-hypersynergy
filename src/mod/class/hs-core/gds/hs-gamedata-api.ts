@@ -29,7 +29,7 @@ import { checkCalculationCache, updateCalculationCache, clearCalculationCache, d
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
 import { CorruptionHelper, type CorruptionCubeType } from "./hs-gamedata-api-corruption";
 import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
-import { parseGameDataDecimal, calcECC, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
+import { parseGameDataDecimal, calculateSigmoidExponential, findInsertionIndex } from "./hs-gamedata-utils";
 import Decimal from "break_infinity.js";
 
 // The Cube Bank's weight per Challenge 1-5 completion, by tier (transcensionCubeBankTiers in SynergismOfficial/src/Challenges.ts)
@@ -339,7 +339,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     firstFiveRuneEffectivenessStats: NumberStatLine[] = [
         {
             i18n: 'Research1x4',
-            stat: () => 1 + (this.gameData?.researches[4] ?? 0) / 10 * (1 + calcECC('ascension', (this.gameData?.challengecompletions?.[14] ?? 0))),
+            stat: () => 1 + (this.gameData?.researches[4] ?? 0) / 10 * (1 + (this.gameData?.challengecompletions?.[14] ?? 0)),
         },
         {
             i18n: 'Research1x21',
@@ -501,8 +501,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             case 'speed': {
                 return (
                     talismanRuneBonuses.speed
-                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 10))
-                        + Math.max(0, Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 50) - 10))))
+                    + ((this.gameData.upgrades[27] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coinsThisPrestige).add(1).log10() / 10))
+                        + Math.max(0, Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coinsThisPrestige).add(1).log10() / 50) - 10))))
                     + ((this.gameData.upgrades[29] ?? 0) * Math.floor(
                         Math.min(
                             100,
@@ -522,8 +522,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                                 + (this.gameData.fifthOwnedCoin ?? 0)) / 400
                         )
                     ))
-                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 30))
-                        + Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coins).add(1).log10() / 300))))
+                    + ((this.gameData.upgrades[30] ?? 0) * (Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coinsThisPrestige).add(1).log10() / 30))
+                        + Math.min(50, Math.floor(parseGameDataDecimal(this.gameData.coinsThisPrestige).add(1).log10() / 300))))
                 )
             }
             case 'prism':
@@ -660,7 +660,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             calculateSigmoidExponential,
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
             getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
-            CalcECC: (refinement, value) => calcECC(refinement as any, value),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
         };
@@ -679,7 +678,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
             getLevelMilestone: (name) => this.getLevelMilestone(name as any),
             getOcteractUpgradeEffect: (upgradeKey) => this.getOcteractUpgradeEffect(upgradeKey as any) as number | undefined,
-            CalcECC: (refinement, value) => calcECC(refinement as any, value),
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
             checkCalculationCache: cacheProvider.checkCalculationCache,
             updateCalculationCache: cacheProvider.updateCalculationCache,
@@ -698,7 +696,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
             getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
             getLevelMilestone: (name) => this.getLevelMilestone(name as any),
-            CalcECC: (refinement, value) => calcECC(refinement as any, value),
             firstFiveFreeLevels: () => this.firstFiveFreeLevels(),
             firstFiveEffectiveRuneLevelMult: () => this.firstFiveEffectiveRuneLevelMult(),
             getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
@@ -1488,7 +1485,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     getPrestigePointGain = (): Decimal => {
         if (!this.gameData) return new Decimal(0)
 
-        let prestigePow = 0.5 + calcECC('transcend', this.gameData.challengecompletions?.[5] ?? 0) / 100
+        let prestigePow = 0.5 + (this.gameData.challengecompletions?.[5] ?? 0) / 100
         if (this.gameData.currentChallenge.transcension === 5) {
             prestigePow = 0.01
         }

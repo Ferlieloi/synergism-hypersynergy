@@ -373,11 +373,11 @@ export const HSGlobal: IHSGlobal = class {
             }],
             [MAIN_VIEW.TRAITS, {
                 subViewIds: [
-                    'corrCampaignsBtn',
                     'corrStatsBtn',
-                    'corrLoadoutsBtn'
+                    'corrTokensBtn',
+                    'corrAutoAscendBtn'
                 ],
-                subViewsSelector: ['#corrCampaignsBtn', '#corrStatsBtn', '#corrLoadoutsBtn'],
+                subViewsSelector: ['#corrStatsBtn', '#corrTokensBtn', '#corrAutoAscendBtn'],
                 viewClassName: 'TraitsView'
             }],
             [MAIN_VIEW.SINGULARITY, {

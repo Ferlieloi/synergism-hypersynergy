@@ -1,7 +1,7 @@
 import Decimal from "break_infinity.js";
 import { AntUpgrades } from "../../../types/data-types/hs-gamedata-api-types";
 import type { AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
-import { calcECC } from "./hs-gamedata-utils";
+import { parseGameDataDecimal } from "./hs-gamedata-utils";
 
 export class AcceleratorHelper {
     readonly #ctx: AcceleratorHelperContext;
@@ -89,7 +89,7 @@ export class AcceleratorHelper {
         boost += Number(this.#ctx.getAchievementReward('accelBoosts'))
         boost += (data.researches?.[93] ?? 0) * Math.floor(this.#ctx.calculateTotalRuneLevels() / 20)
 
-        boost *= 1 + (data.researches?.[3] ?? 0) / 5 * (1 + 0.5 * calcECC('ascension', data.challengecompletions?.[14] ?? 0))
+        boost *= 1 + (data.researches?.[3] ?? 0) / 5 * (1 + (data.challengecompletions?.[14] ?? 0) / 2)
         boost *= 1 + (data.researches?.[16] ?? 0) / 20 + (data.researches?.[17] ?? 0) / 20
         boost *= 1 + (data.researches?.[88] ?? 0) / 20
         boost *= this.#ctx.getAntUpgradeEffectValue(AntUpgrades.AcceleratorBoosts, 'acceleratorBoostMult')
@@ -121,7 +121,7 @@ export class AcceleratorHelper {
 
         let multiplier = 1
 
-        multiplier *= 1 + (data.researches?.[1] ?? 0) / 5 * (1 + 0.5 * calcECC('ascension', data.challengecompletions?.[14] ?? 0))
+        multiplier *= 1 + (data.researches?.[1] ?? 0) / 5 * (1 + (data.challengecompletions?.[14] ?? 0) / 2)
         multiplier *= 1 + (data.researches?.[6] ?? 0) / 20 + (data.researches?.[7] ?? 0) / 25 + (data.researches?.[8] ?? 0) / 40 + (3 / 200) * (data.researches?.[9] ?? 0) + (data.researches?.[10] ?? 0) / 200
         multiplier *= 1 + (data.researches?.[86] ?? 0) / 20
         multiplier *= 1 + (data.researches?.[126] ?? 0) / 100
@@ -154,8 +154,20 @@ export class AcceleratorHelper {
         const data = this.#ctx.getGameData();
         if (!data) return 0
 
-        let accelerator = Number(this.#ctx.getAchievementReward('accelerators'))
-        accelerator += 5 * Number(calcECC('transcend', data.challengecompletions?.[2] ?? 0))
+        // SynergismOfficial/src/Statistics.ts freeAcceleratorAdditiveStats
+        let accelerator = 0
+        if ((data.upgrades?.[8] ?? 0) !== 0) {
+            accelerator += Math.floor((data.multiplierBought ?? 0) / 7)
+        }
+        accelerator += [5, 4, 3, 2, 1].reduce((sum, amount, i) => sum + ((data.upgrades?.[21 + i] ?? 0) !== 0 ? amount : 0), 0)
+        if ((data.upgrades?.[32] ?? 0) !== 0) {
+            accelerator += Math.min(500, Math.floor(parseGameDataDecimal(data.prestigePoints).add(1).log10() / 25))
+        }
+        if ((data.upgrades?.[45] ?? 0) !== 0) {
+            accelerator += Math.min(2500, Math.floor(parseGameDataDecimal(data.transcendShards).add(1).log10()))
+        }
+        accelerator += Number(this.#ctx.getAchievementReward('accelerators'))
+        accelerator += 5 * (data.challengecompletions?.[2] ?? 0)
         accelerator += this.calculateTotalAcceleratorBoost() * (
             5
             + 2 * (data.researches?.[18] ?? 0)
@@ -198,18 +210,18 @@ export class AcceleratorHelper {
         if (!data) return 0
 
         const achievementBonus = Number(this.#ctx.getAchievementReward('acceleratorPower'))
-        const transcendECC = Number(calcECC('transcend', data.challengecompletions?.[2] ?? 0))
+        const challenge2Completions = data.challengecompletions?.[2] ?? 0
         const tuSevenMulti = (data.upgrades?.[46] ?? 0) > 0.5 ? 1.05 : 1
 
         const speedEffects = this.#ctx.getRuneEffects('speed')
         const base = 1.1
             + (speedEffects.acceleratorPower ?? 0)
             + achievementBonus
-            + transcendECC / 400
-            + tuSevenMulti * (this.calculateTotalAcceleratorBoost() / 100) * (1 + transcendECC / 20)
+            + tuSevenMulti * (this.calculateTotalAcceleratorBoost() / 100) * (1 + challenge2Completions / 20)
 
-        const exponent = 1 + 0.04 * calcECC('reincarnation', data.challengecompletions?.[7] ?? 0)
-        return Math.pow(base, exponent)
+        const exponent = 1 + 0.04 * (data.challengecompletions?.[7] ?? 0)
+        // SynergismOfficial/src/Synergism.ts updateAllTick: capped at 1e300 (raw C7 completions overflow it)
+        return Math.min(1e300, Math.pow(base, exponent))
     }
 
     getAcceleratorEffect = (): Decimal => {

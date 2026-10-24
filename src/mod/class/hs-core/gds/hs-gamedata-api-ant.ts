@@ -117,9 +117,9 @@ export const computeFreeAntUpgradeLevels = (env: AntUpgradeHelperContext): numbe
     if (cached !== undefined) return cached;
 
     let bonusLevels = 0;
-    bonusLevels += env.CalcECC('reincarnation', data.challengecompletions[9]);
+    bonusLevels += data.challengecompletions[9];
     bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)));
-    bonusLevels += 12 * env.CalcECC('ascension', data.challengecompletions[11]);
+    bonusLevels += 12 * data.challengecompletions[11];
     bonusLevels += 2 * data.researches[97];
     bonusLevels += 2 * data.researches[98];
     bonusLevels += data.researches[102];

@@ -1,5 +1,5 @@
 import Decimal from "break_infinity.js";
-import { calcECC, parseGameDataDecimal } from "./hs-gamedata-utils";
+import { parseGameDataDecimal } from "./hs-gamedata-utils";
 import { AntUpgrades, RUNE_KEYS } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
@@ -57,11 +57,12 @@ export class RuneHelper {
             levelsPerOOMIncrease: () => {
                 const data = this.#ctx.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    (data?.challengecompletions?.[2] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[78] ?? 0)
                     + (data?.researches[111] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[16] ?? 0)
                     + this.#ctx.getTalismanEffects('chronos').speedOOMBonus
                     + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
@@ -90,12 +91,12 @@ export class RuneHelper {
             levelsPerOOMIncrease: () => {
                 const data = this.#ctx.getGameData();
                 return (
-                    0.75 * calcECC('transcend', (data?.challengecompletions?.[1] ?? 0))
+                    0.8 * (data?.challengecompletions?.[1] ?? 0)
                     + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[90] ?? 0)
                     + (data?.researches[112] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + this.#ctx.getTalismanEffects('exemption').duplicationOOMBonus
                     + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
                     + this.#ctx.getLevelMilestone('duplicationRune')
@@ -123,11 +124,12 @@ export class RuneHelper {
             levelsPerOOMIncrease: () => {
                 const data = this.#ctx.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.6 * (data?.challengecompletions?.[3] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[79] ?? 0)
                     + (data?.researches[113] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[16] ?? 0)
                     + this.#ctx.getTalismanEffects('mortuus').prismOOMBonus
                     + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
@@ -154,11 +156,12 @@ export class RuneHelper {
             levelsPerOOMIncrease: () => {
                 const data = this.#ctx.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.4 * (data?.challengecompletions?.[4] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[77] ?? 0)
                     + (data?.researches[114] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[37] ?? 0)
                     + this.#ctx.getTalismanEffects('midas').thriftOOMBonus
                     + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
@@ -166,11 +169,12 @@ export class RuneHelper {
                 );
             },
             effects: (level: number) => {
-                const costDelay = Math.min(1e15, level / 125)
+                // SynergismOfficial/src/Runes.ts runeConstructionEffect
+                const construction = level > 0 ? 0.03 * Math.pow(1 + Math.log(1 + level), 2) : 0
                 const salvage = 2.5 * Math.log(1 + level / 10)
                 const taxReduction = 0.01 + 0.99 * Math.exp(-Math.cbrt(level) / 10)
                 return {
-                    costDelay,
+                    construction,
                     salvage,
                     taxReduction,
                 }
@@ -187,10 +191,11 @@ export class RuneHelper {
             levelsPerOOMIncrease: () => {
                 const data = this.#ctx.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.2 * (data?.challengecompletions?.[5] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[115] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[37] ?? 0)
                     + this.#ctx.getTalismanEffects('polymath').SIOOMBonus
                     + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
@@ -562,10 +567,10 @@ export class RuneHelper {
             + this.#ctx.getLevelMilestone('salvageChallengeBuff')
             + 7 * (data?.upgrades[61] ?? 0)
             + this.#ctx.getRuneEffects('thrift').salvage
-            + 0.3 * calcECC('reincarnation', completions?.[6] ?? 0)
-            + 0.3 * calcECC('reincarnation', completions?.[7] ?? 0)
-            + 0.4 * calcECC('reincarnation', completions?.[8] ?? 0)
-            + 0.5 * calcECC('reincarnation', completions?.[9] ?? 0)
+            + 0.3 * (completions?.[6] ?? 0)
+            + 0.3 * (completions?.[7] ?? 0)
+            + 0.4 * (completions?.[8] ?? 0)
+            + 0.5 * (completions?.[9] ?? 0)
             + this.#ctx.getAntUpgradeEffectValue(AntUpgrades.Salvage, 'salvage')
             + this.calculateSalvageCubeBlessing()
             + 3 * (data?.cubeUpgrades[2] ?? 0)

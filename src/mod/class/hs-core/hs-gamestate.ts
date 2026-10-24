@@ -53,7 +53,7 @@ export class HSGameState extends HSModule {
         CHALLENGE_VIEW: { currentView: new ChallengeView('toggleChallengesSubTab1'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
         ANT_VIEW: { currentView: new AntView('toggleAntSubtab1'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
         CUBE_VIEW: { currentView: new CubeView('switchCubeSubTab1'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
-        TRAITS_VIEW: { currentView: new TraitsView('corrCampaignsBtn'), previousView: new TraitsView('unknown'), viewChangeSubscribers: new Map() },
+        TRAITS_VIEW: { currentView: new TraitsView('corrStatsBtn'), previousView: new TraitsView('unknown'), viewChangeSubscribers: new Map() },
         SINGULARITY_VIEW: { currentView: new SingularityView('toggleSingularitySubTab1'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
         SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
         PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
@@ -679,9 +679,9 @@ export class TraitsView extends GameView<TRAITS_VIEW> {
 
     getViewEnum(tab: string): TRAITS_VIEW {
         switch (tab) {
-            case 'corrCampaignsBtn': return TRAITS_VIEW.CAMPAIGNS;
-            case 'corrStatsBtn':     return TRAITS_VIEW.CORRUPTION_STATS;
-            case 'corrLoadoutsBtn':  return TRAITS_VIEW.CORRUPTION_LOADOUTS;
+            case 'corrStatsBtn':      return TRAITS_VIEW.CORRUPTION_STATS;
+            case 'corrTokensBtn':     return TRAITS_VIEW.TOKENS;
+            case 'corrAutoAscendBtn': return TRAITS_VIEW.AUTO_ASCENSION;
         }
         return TRAITS_VIEW.UNKNOWN;
     }

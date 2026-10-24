@@ -422,7 +422,7 @@ const universalTalismanMaxLevelIncreasers = (env: TalismanHelperContext): number
 
     const taxmanTalismanFreeLevel = env.getSingularityChallengeEffect('taxmanLastStand', 'talismanFreeLevel');
     return (
-        6 * env.CalcECC('ascension', data.challengecompletions[13])
+        6 * data.challengecompletions[13]
         + Math.floor((data.researches[200] ?? 0) / 400)
         + taxmanTalismanFreeLevel
         + (env.getOcteractUpgradeEffect('octeractTalismanLevelCap1') as number)

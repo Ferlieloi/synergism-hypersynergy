@@ -70,9 +70,9 @@ export enum CUBE_VIEW {
 
 export enum TRAITS_VIEW {
     UNKNOWN = -1,
-    CAMPAIGNS = 1,
-    CORRUPTION_STATS = 2,
-    CORRUPTION_LOADOUTS = 3,
+    CORRUPTION_STATS = 1,
+    TOKENS = 2,
+    AUTO_ASCENSION = 3,
 }
 
 export enum SINGULARITY_VIEW {
@@ -179,9 +179,9 @@ export const CUBE_VIEW_BUTTON_IDS: Record<CUBE_VIEW, string> = {
 };
 
 export const TRAITS_VIEW_BUTTON_IDS: Record<TRAITS_VIEW, string> = {
-    [TRAITS_VIEW.CAMPAIGNS]: 'corrCampaignsBtn',
     [TRAITS_VIEW.CORRUPTION_STATS]: 'corrStatsBtn',
-    [TRAITS_VIEW.CORRUPTION_LOADOUTS]: 'corrLoadoutsBtn',
+    [TRAITS_VIEW.TOKENS]: 'corrTokensBtn',
+    [TRAITS_VIEW.AUTO_ASCENSION]: 'corrAutoAscendBtn',
     [TRAITS_VIEW.UNKNOWN]: '',
 };
 
