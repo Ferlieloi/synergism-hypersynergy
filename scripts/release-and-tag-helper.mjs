@@ -111,7 +111,9 @@ function printHelp() {
     log('    5) builds the release with esbuild, stages it with package.json, package-lock.json and the strategy manifest, commits');
     log('    6) creates an annotated v<version> tag');
     log('    7) prompts to push branch and tag to origin');
-    log('    8) prompts to purge jsDelivr (the mod, plus loader files changed since the previous release), waits 10s, purges');
+    log('    8) prompts to create the GitHub release with the gh CLI (title: the tag; text: the tag message without its');
+    log('       first line; marked Latest, unless the Latest release is a loader-v* one), unless it exists');
+    log('    9) prompts to purge jsDelivr (the mod, plus loader files changed since the previous release), waits 10s, purges');
     log('');
     log('Flags:');
     log('  -h, --help           Show this help and exit');
@@ -127,10 +129,11 @@ function printHelp() {
     log('  node scripts/release-and-tag-helper.mjs --help   # show this help and exit');
     log('');
     log('Notes:');
-    log('  - When the tag already exists: [r]esume (tag on HEAD and the same on origin: push and purge only, e.g. after a');
-    log('    failed push or purge), [d]elete (local-only tag: create it again on this release), or [b]ump to the next free version.');
+    log('  - When the tag already exists: [r]esume (tag on HEAD and the same on origin: push, GitHub release and purge only,');
+    log('    e.g. after a failed push, release or purge), [d]elete (local-only tag: create it again on this release), or [b]ump to the next free version.');
     log('  - The last question before the commit lists the staged files; answering No leaves the build in the working tree.');
     log('  - In detached HEAD mode, the script aborts and asks you to checkout a branch.');
+    log('  - The GitHub release needs the gh CLI, logged in (gh auth login). Without it, the step only warns.');
     log('===============================================================');
 }
 
@@ -177,9 +180,9 @@ const purgeFiles = [
     { file: 'src/loader/tampermonkey-bridge.user.js' },
 ];
 /**
- * The GitHub repository releases are pushed to (from the `origin` remote), e.g. "Ferlieloi/synergism-hypersynergy"
- * for the dev fork, or '' if it can't be identified. No fallback: purging another repository's files is useless,
- * since only the repository just pushed to has new files.
+ * The GitHub repository releases are pushed to (from the `origin` remote), e.g. "maenhiir/synergism-hypersynergy"
+ * for the dev fork, or '' if it can't be identified. No fallback: the GitHub release and the purge are for the
+ * repository just pushed to, the only one with the new tag and files.
  */
 function getOriginRepo() {
     const r = run('git', ['remote', 'get-url', 'origin']);
@@ -188,8 +191,8 @@ function getOriginRepo() {
     const match = url.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
     return match ? `${match[1]}/${match[2]}` : '';
 }
-const purgeRepo = getOriginRepo();
-const purgePathFor = (file) => `/gh/${purgeRepo}@master/${file}`;
+const originRepo = getOriginRepo();
+const purgePathFor = (file) => `/gh/${originRepo}@master/${file}`;
 const purgeUrlFor = (purgePath) => `https://purge.jsdelivr.net${purgePath}`;
 
 // Read the notes now, so a wrong path or an empty file stops the script before any change
@@ -468,7 +471,7 @@ async function chooseTarget(status) {
 
     const choices = [];
     if (localObject && getTagCommit(tag) === status.head && (!remoteObject || remoteObject === localObject)) {
-        choices.push({ key: 'r', label: '[r]esume (push and purge with the existing tag)', mode: 'resume', newVersion: null });
+        choices.push({ key: 'r', label: '[r]esume (push, GitHub release and purge with the existing tag)', mode: 'resume', newVersion: null });
     }
     if (localObject && !remoteObject) {
         choices.push({ key: 'd', label: `[d]elete the local tag and tag this release as ${tag}`, mode: 'replace', newVersion: null });
@@ -720,6 +723,77 @@ async function pushFlow(status) {
 }
 
 /**
+ * The release notes from the tag message: everything after its title line ("Release v<version>"); for a
+ * one-line message, its suffix ("Release v<version> - suffix"), or '' when there is none.
+ */
+function getTagNotes(tag) {
+    const body = runAndCheck('git', ['tag', '--list', tag, '--format=%(contents:body)']).stdout.trim();
+    if (body) return body;
+    const subject = runAndCheck('git', ['tag', '--list', tag, '--format=%(contents:subject)']).stdout.trim();
+    const title = `Release ${tag}`;
+    return subject.startsWith(title) ? subject.slice(title.length).replace(/^\s*-\s*/, '').trim() : subject;
+}
+
+/**
+ * Create the GitHub release of the pushed tag on `origin`'s repository with the gh CLI: titled with the tag,
+ * the tag's notes as its text, marked Latest unless a loader release is. Skipped when the release already exists (e.g. on a resume).
+ * Any failure only warns: the push is done, and the purge still has to run.
+ */
+async function createGithubRelease(status) {
+    const tag = status.targetTag;
+    if (!originRepo) {
+        warn('Skipping the GitHub release: the `origin` remote is not a GitHub repository URL, so the pushed repository is unknown.');
+        return;
+    }
+    const retryHint = `Run the helper again and choose [r]esume, or create it on https://github.com/${originRepo}/releases/new?tag=${encodeURIComponent(tag)}`;
+
+    const view = run('gh', ['release', 'view', tag, '--repo', originRepo, '--json', 'url', '--jq', '.url']);
+    if (view.error) {
+        warn(`Skipping the GitHub release: gh CLI not found (${view.error.code || view.error.message}). Install it`
+            + ` (winget install --id GitHub.cli) and log in (gh auth login). ${retryHint}`);
+        return;
+    }
+    if (view.status === 0) {
+        info(`The GitHub release ${tag} already exists: ${String(view.stdout).trim()}`);
+        return;
+    }
+    if (!/release not found/i.test(String(view.stderr))) {
+        warn(`Could not check the GitHub release ${tag}: ${String(view.stderr).trim()}`);
+        warn(retryHint);
+        return;
+    }
+
+    // A mod release never takes Latest from a loader release: on the repository that hosts the Steam loader,
+    // the repository's page keeps showing the installer
+    const latest = run('gh', ['release', 'view', '--repo', originRepo, '--json', 'tagName', '--jq', '.tagName']);
+    if (latest.status !== 0 && !/release not found/i.test(String(latest.stderr))) {
+        warn(`Could not read the Latest release of ${originRepo}: ${String(latest.stderr).trim()}`);
+        warn(retryHint);
+        return;
+    }
+    const latestTag = latest.status === 0 ? String(latest.stdout).trim() : '';
+    const makeLatest = !latestTag.startsWith('loader-v');
+    const latestLabel = makeLatest ? 'marked Latest' : `not marked Latest: ${latestTag}, a loader release, stays Latest`;
+
+    if (!await askYesNo(`Create the GitHub release ${tag} on ${originRepo} (${latestLabel})?`)) {
+        info(`GitHub release skipped. ${retryHint}`);
+        return;
+    }
+
+    const notes = getTagNotes(tag);
+    // Notes through stdin; --verify-tag: never let gh create a missing tag
+    const notesArgs = notes ? ['--notes-file', '-'] : ['--notes', ''];
+    const create = run('gh', ['release', 'create', tag, '--repo', originRepo, '--verify-tag', '--title', tag,
+        makeLatest ? '--latest' : '--latest=false', ...notesArgs], { input: notes });
+    if (create.error || create.status !== 0) {
+        warn(`GitHub release not created: ${String(create.stderr || create.error?.message || '').trim()}`);
+        warn(retryHint);
+        return;
+    }
+    success(`GitHub release created: ${String(create.stdout).trim()}`);
+}
+
+/**
  * jsDelivr paths to purge: the mod file always, the loader files only if they changed between the
  * previous release tag and this one. Without a previous tag (first release), everything is purged.
  */
@@ -751,14 +825,14 @@ async function purgeModCache(status) {
         return;
     }
 
-    if (!purgeRepo) {
+    if (!originRepo) {
         warn('Skipping jsDelivr purge: the `origin` remote is not a GitHub repository URL, so the pushed repository is unknown.');
         return;
     }
 
     const purgePaths = getPurgePaths(status);
     const fileList = purgePaths.map(purgePath => purgePath.split('@master/')[1]).join(', ');
-    if (!await askYesNo(`Purge the jsDelivr cache of ${purgeRepo}@master for ${purgePaths.length} file(s) (${fileList})?`)) {
+    if (!await askYesNo(`Purge the jsDelivr cache of ${originRepo}@master for ${purgePaths.length} file(s) (${fileList})?`)) {
         info('jsDelivr purge skipped. Purge manually later if needed:');
         purgePaths.forEach(purgePath => info(`  ${purgeUrlFor(purgePath)}`));
         return;
@@ -809,6 +883,7 @@ async function purgeModCache(status) {
     }
 
     await pushFlow(status);
+    await createGithubRelease(status);
     await purgeModCache(status);
 
     success(`Completed: ${status.targetTag}`);
