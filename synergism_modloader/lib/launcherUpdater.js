@@ -1,20 +1,32 @@
-const RELEASES_URL = 'https://api.github.com/repos/Ferlieloi/synergism-hypersynergy/releases?per_page=100'
+const API_URL = 'https://api.github.com/repos/Ferlieloi/synergism-hypersynergy'
 const DOWNLOAD_URL = 'https://github.com/Ferlieloi/synergism-hypersynergy/releases/download'
+const HEADERS = { Accept: 'application/vnd.github+json', 'User-Agent': 'Hypersynergism-Loader' }
+// Newest loader tags tried before giving up: a tag whose release is still building (or failed) is skipped.
+const MAX_RELEASE_LOOKUPS = 3
 
-async function latestLauncherTag(fetchReleases = fetch) {
-    const response = await fetchReleases(RELEASES_URL, {
-        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Hypersynergism-Loader' }
-    })
+// The repo's release list also holds mod releases, which would push loader releases off
+// any page of it. The loader tags are listed on their own instead, then looked up one by one.
+async function latestLauncherTag(fetchImpl = fetch) {
+    const response = await fetchImpl(`${API_URL}/git/matching-refs/tags/loader-v`, { headers: HEADERS })
     if (!response.ok) throw new Error(`GitHub release check failed (${response.status}).`)
-    const releases = await response.json()
-    if (!Array.isArray(releases)) throw new Error('GitHub returned an invalid release list.')
-    const launcherReleases = releases.filter(release =>
-        !release.draft && !release.prerelease
-        && /^loader-v\d+\.\d+\.\d+$/.test(release.tag_name)
-        && release.assets?.some(asset => asset.name === 'latest.yml'))
-    launcherReleases.sort((a, b) => b.tag_name.slice(8).localeCompare(
-        a.tag_name.slice(8), undefined, { numeric: true }))
-    return launcherReleases[0]?.tag_name || null
+    const refs = await response.json()
+    if (!Array.isArray(refs)) throw new Error('GitHub returned an invalid tag list.')
+    const tags = refs.map(ref => String(ref.ref).replace(/^refs\/tags\//, ''))
+        .filter(tag => /^loader-v\d+\.\d+\.\d+$/.test(tag))
+    tags.sort((a, b) => b.slice(8).localeCompare(a.slice(8), undefined, { numeric: true }))
+
+    for (const tag of tags.slice(0, MAX_RELEASE_LOOKUPS)) {
+        const releaseResponse = await fetchImpl(`${API_URL}/releases/tags/${encodeURIComponent(tag)}`, { headers: HEADERS })
+        // 404: no published release for this tag yet (drafts are hidden from anonymous requests).
+        if (releaseResponse.status === 404) continue
+        if (!releaseResponse.ok) throw new Error(`GitHub release check failed (${releaseResponse.status}).`)
+        const release = await releaseResponse.json()
+        if (!release.draft && !release.prerelease
+            && release.assets?.some(asset => asset.name === 'latest.yml')) {
+            return tag
+        }
+    }
+    return null
 }
 
 function createLauncherUpdater({ app, updater, notify, findRelease = latestLauncherTag, platform = process.platform }) {

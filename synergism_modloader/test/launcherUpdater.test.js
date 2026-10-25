@@ -89,16 +89,51 @@ test('does not check for Windows installer updates on other platforms', async ()
     assert.equal(controller.install().ok, false)
 })
 
-test('ignores mod releases and selects the newest published launcher with update metadata', async () => {
-    const releases = [
-        { tag_name: 'v2.14.4a', assets: [{ name: 'latest.yml' }] },
-        { tag_name: 'loader-v0.2.9', assets: [{ name: 'latest.yml' }] },
-        { tag_name: 'loader-v0.2.10', assets: [{ name: 'latest.yml' }] },
-        { tag_name: 'loader-v0.3.0', draft: true, assets: [{ name: 'latest.yml' }] },
-        { tag_name: 'loader-v0.2.11', assets: [] }
-    ]
-    const tag = await latestLauncherTag(async () => ({ ok: true, json: async () => releases }))
-    assert.equal(tag, 'loader-v0.2.10')
+function fakeGitHub(tags, releases) {
+    const requests = []
+    const fetchImpl = async url => {
+        requests.push(url)
+        const json = body => ({ ok: true, status: 200, json: async () => body })
+        if (url.endsWith('/git/matching-refs/tags/loader-v')) {
+            return json(tags.map(tag => ({ ref: `refs/tags/${tag}` })))
+        }
+        const tag = decodeURIComponent(url.split('/releases/tags/')[1] || '')
+        return releases[tag] ? json(releases[tag]) : { ok: false, status: 404, json: async () => ({}) }
+    }
+    return { fetchImpl, requests }
+}
+
+test('selects the newest published launcher with update metadata from the loader tags', async () => {
+    const { fetchImpl, requests } = fakeGitHub(
+        ['loader-v0.2.9', 'loader-v0.2.10', 'loader-v0.2.11', 'loader-v0.2.12', 'loader-v0.2.x'],
+        {
+            'loader-v0.2.9': { assets: [{ name: 'latest.yml' }] },
+            'loader-v0.2.10': { assets: [{ name: 'latest.yml' }] },
+            'loader-v0.2.11': { assets: [] }
+            // loader-v0.2.12: tag pushed, release not published yet (404)
+        })
+    assert.equal(await latestLauncherTag(fetchImpl), 'loader-v0.2.10')
+    assert.equal(requests.length, 4)
+    assert.ok(requests.every(url => !url.includes('/releases?')))
+})
+
+test('skips draft and prerelease launchers, and gives up after a few tags', async () => {
+    const { fetchImpl, requests } = fakeGitHub(
+        ['loader-v0.2.1', 'loader-v0.2.2', 'loader-v0.2.3', 'loader-v0.2.4'],
+        {
+            'loader-v0.2.1': { assets: [{ name: 'latest.yml' }] },
+            'loader-v0.2.3': { prerelease: true, assets: [{ name: 'latest.yml' }] },
+            'loader-v0.2.4': { draft: true, assets: [{ name: 'latest.yml' }] }
+        })
+    assert.equal(await latestLauncherTag(fetchImpl), null)
+    assert.equal(requests.length, 4)
+})
+
+test('reports a failed release lookup instead of skipping it', async () => {
+    const fetchImpl = async url => url.includes('/releases/tags/')
+        ? { ok: false, status: 403, json: async () => ({}) }
+        : { ok: true, status: 200, json: async () => [{ ref: 'refs/tags/loader-v0.2.10' }] }
+    await assert.rejects(latestLauncherTag(fetchImpl), /403/)
 })
 
 test('reports an unpublished launcher without calling the updater', async () => {
