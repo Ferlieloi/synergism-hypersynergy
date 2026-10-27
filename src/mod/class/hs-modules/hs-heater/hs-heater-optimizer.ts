@@ -457,9 +457,12 @@ class Upgrade {
 
         let effSing = effectiveSing()
         if (stat === "mOff") {
-            let result = 1.02 ** sing * (1 + Math.sqrt(effSing) / 4)
-            result *= sing < 150 ? 3 * Math.sqrt(effSing + 1) : effSing ** (2 / 3) / 400
-            result *= 1 + Math.sqrt(effSing) / 4 // Global Speed due to Half Mind
+            // SynergismOfficial/src/singularity.ts calculateSingularityDebuff:
+            // the Offering/Obtainium penalty, times Global Speed's penalty once
+            // (Half Mind, or the reset timer without it)
+            let result = 1.02 ** sing
+            result *= sing < 150 ? 3 * (Math.sqrt(effSing) + 1) : effSing ** (2 / 3) / 400
+            result *= 1 + Math.sqrt(effSing) / 4 // Global Speed
             singDebuffCache.off[sing] = result
             return result
         } else if (stat === "cube") {
