@@ -572,14 +572,46 @@ button:disabled {
 }
 
 /* ── Console log ──────────────────────────────────────────────── */
-.console {
+.console-wrap {
+  position: relative;
   margin-top: 16px;
+}
+
+/* Fixed width: "Copied" replaces "Copy" without resizing the button. */
+.console-copy {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  min-width: 52px;
+  padding: 2px 8px;
+  background: #0d0c12;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.console-copy:hover {
+  opacity: 1;
+  border-color: orange;
+}
+
+.console:empty + .console-copy {
+  display: none;
+}
+
+.console {
   background: #0d0c12;
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 10px 12px;
   height: 190px;
+  min-height: 80px;
   overflow-y: auto;
+  resize: vertical;
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.65;

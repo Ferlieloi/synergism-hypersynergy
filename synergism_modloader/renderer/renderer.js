@@ -41,7 +41,8 @@ const els = {
 
   launchOnlyBtn: document.getElementById('launchOnlyBtn'),
   patchAndLaunchBtn: document.getElementById('patchAndLaunchBtn'),
-  console: document.getElementById('console')
+  console: document.getElementById('console'),
+  copyLogBtn: document.getElementById('copyLogBtn')
 }
 
 const EXE_NAME = 'Synergism-win-x64.exe'
@@ -263,7 +264,7 @@ els.autodetect7zBtn.addEventListener('click', async () => {
     els.sevenZipStatus.textContent = 'Found 7-Zip automatically.'
     els.sevenZipStatus.className = 'status-line ok'
   } else {
-    els.sevenZipStatus.textContent = 'Could not find 7-Zip — install it or browse to 7z.exe manually.'
+    els.sevenZipStatus.textContent = 'Could not find 7-Zip — reinstall the loader, or browse to a 7z.exe.'
     els.sevenZipStatus.className = 'status-line error'
   }
   updateContinueButton()
@@ -467,6 +468,14 @@ function appendConsoleLine(line, kind) {
   els.console.appendChild(div)
   els.console.scrollTop = els.console.scrollHeight
 }
+
+let copyLogTimer = null
+els.copyLogBtn.addEventListener('click', async () => {
+  await window.loader.copyText(Array.from(els.console.children, line => line.textContent).join('\n'))
+  els.copyLogBtn.textContent = 'Copied'
+  clearTimeout(copyLogTimer)
+  copyLogTimer = setTimeout(() => { els.copyLogBtn.textContent = 'Copy' }, 1500)
+})
 
 async function launchSelectedGame(exePath, modUrl, channel, modRef) {
   const result = await window.loader.launchGame(exePath, modUrl, channel, modRef)

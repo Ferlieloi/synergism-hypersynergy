@@ -72,18 +72,17 @@ function findGameDir(steamPath, appName) {
     return null
 }
 
+// ─── The loader's own 7-Zip ───────────────────────────────────────────────
+// 7za.exe from the 7zip-bin package, copied next to the app by extraResources (package.json).
+// It has no NSIS module, but finds the game's app archive inside the exe (lib/patchGame.js).
 function getBundledSevenZipPath(app) {
-    const dir = app?.isPackaged
-        ? path.join(process.resourcesPath, '7zip-bin')
-        : path.join(__dirname, '..', 'vendor', '7zip')
-    const exe = path.join(dir, '7z.exe')
+    const exe = app?.isPackaged
+        ? path.join(process.resourcesPath, '7zip-bin', '7za.exe')
+        : path.join(__dirname, '..', 'node_modules', '7zip-bin', 'win', 'x64', '7za.exe')
     return fs.existsSync(exe) ? exe : null
 }
 
-// ─── Find a full 7-Zip install (needed for NSIS-installer extraction) ─────
-// Note: the lightweight "7za" binaries bundled by npm packages like
-// 7zip-bin do NOT include the NSIS module, so we specifically need a real
-// 7-Zip install (the one with 7z.exe + the Formats/NSIS plugin).
+// ─── Find an installed 7-Zip (when the loader's own is missing) ──────────
 async function detectSevenZip(options) {
     try {
         const installPath = await queryRegistry('HKLM\\SOFTWARE\\7-Zip', 'Path', options)

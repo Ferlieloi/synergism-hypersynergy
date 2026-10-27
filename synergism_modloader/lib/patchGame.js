@@ -10,6 +10,7 @@ const {
     ensureNoRunningWorkGames,
     prepareWorkspace,
     promoteWorkspace,
+    renameWithRetry,
     discardExtractionInputs,
     cleanupOldWorkspaces,
     removeBestEffort
@@ -104,7 +105,7 @@ function runPatcher(patcherCode, original, log) {
  * @param {object} opts
  * @param {string} opts.gameDir        Steam install dir for the game (contains the original exe)
  * @param {string} opts.exeName        Name of the original game exe inside gameDir
- * @param {string} opts.sevenZipPath   Full path to 7z.exe (needs NSIS support)
+ * @param {string} opts.sevenZipPath   Full path to 7z.exe or 7za.exe (the loader's own)
  * @param {string} opts.modUrl         Resolved URL for the mod script to inject
  * @param {string} [opts.patcherUrl]   Optional remote URL for patcher.js; falls back to the bundled copy
  * @param {(line: string) => void} [opts.onLog]
@@ -122,7 +123,7 @@ async function patchGame(opts) {
         throw new Error(`Game exe not found at: ${exePath}`)
     }
     if (!sevenZipPath || !fs.existsSync(sevenZipPath)) {
-        throw new Error('7-Zip (7z.exe, full version) not found. Install it from https://www.7-zip.org/ or point the loader at it manually.')
+        throw new Error('7-Zip not found. Reinstall the loader, or choose a 7z.exe on the first screen.')
     }
 
     const sourceStat = fs.statSync(exePath)
@@ -132,8 +133,8 @@ async function patchGame(opts) {
     await ensureNoRunningWorkGames(gameDir)
     const dirs = prepareWorkspace(gameDir)
     const workDir = dirs.staging
-    const pluginDir = path.join(workDir, '$PLUGINSDIR')
-    const app7zPath = path.join(pluginDir, 'app-64.7z')
+    const exeExtractDir = path.join(workDir, 'exe')
+    const app7zPath = path.join(exeExtractDir, '$PLUGINSDIR', 'app-64.7z')
     const extractedAppDir = path.join(workDir, 'app')
     const asarPath = path.join(extractedAppDir, 'resources', 'app.asar')
     const extractAsarDir = path.join(workDir, 'asar')
@@ -142,16 +143,22 @@ async function patchGame(opts) {
     log('Starting full patch process')
 
     try {
-        // 1. Extract the NSIS-packaged exe
+        // 1. Extract the NSIS-packaged exe. The full 7-Zip opens it as an installer and gives its files,
+        // app-64.7z among them. 7za has no NSIS module: it finds app-64.7z, stored uncompressed in the exe,
+        // and gives the app itself.
         log('Extracting game exe...')
-        await run(sevenZipPath, ['x', exePath, `-o${workDir}`, '-y'], log)
-        if (!fs.existsSync(app7zPath)) {
-            throw new Error('app-64.7z not found after exe extraction — installer layout may have changed')
-        }
+        await run(sevenZipPath, ['x', exePath, `-o${exeExtractDir}`, '-y'], log)
 
-        // 2. Extract the embedded app archive
-        log('Extracting app-64.7z...')
-        await run(sevenZipPath, ['x', app7zPath, `-o${extractedAppDir}`, '-y'], log)
+        // 2. Extract the embedded app archive, when the first step didn't
+        if (fs.existsSync(app7zPath)) {
+            log('Extracting app-64.7z...')
+            await run(sevenZipPath, ['x', app7zPath, `-o${extractedAppDir}`, '-y'], log)
+        } else if (await withRawArchiveAccess(() => fs.existsSync(path.join(exeExtractDir, 'resources', 'app.asar')))) {
+            // Raw access: Electron would open the archive to check it, and keep it open, locking the folder.
+            await renameWithRetry(exeExtractDir, extractedAppDir, log)
+        } else {
+            throw new Error('Neither app-64.7z nor the game app found after exe extraction — installer layout may have changed')
+        }
         // 3. Extract app.asar as a real file, without Electron holding it open.
         log('Extracting app.asar...')
         let unpackedDirs = []

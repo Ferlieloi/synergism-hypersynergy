@@ -11,9 +11,10 @@ patching again so the loader can replace that folder safely.
 
 - Windows (this targets the Windows Steam build of the game).
 - Synergism installed via Steam.
-- **The full 7-Zip install** (not just a bundled `7za` binary) — only the
-  full version can unpack the NSIS installer wrapper the game's exe uses.
-  Free download: https://www.7-zip.org/
+
+7-Zip is not needed: the loader ships its own `7za.exe` (from the `7zip-bin`
+package, copied into `resources/7zip-bin/` by `extraResources`). A player can
+still point it at an installed 7-Zip's `7z.exe` on the first screen.
 
 ## Project layout
 
@@ -58,8 +59,7 @@ npm run dist
 This uses `electron-builder` with the per-user NSIS Windows target, producing
 `HypersynergismLoader-Setup-<version>.exe` under `dist/`. Players run the
 installer once; it does not require administrator rights or a separate
-Node/Electron installation. The full 7-Zip application remains a separate
-requirement for patching the Steam game.
+Node/Electron or 7-Zip installation.
 
 The installer lets players choose the launcher installation folder. This does
 not change where the patched game is stored: it still lives next to the Steam
@@ -98,16 +98,19 @@ dropdown does not change the remembered build.
 If GitHub's build list is unavailable, the loader shows the last successful
 list and keeps the last played build selected. The **Launch last played** button
 on the first screen starts the existing patched copy with that build without
-waiting for GitHub's build list or requiring 7-Zip. The mod script is still
+waiting for GitHub's build list. The mod script is still
 fetched from the selected build's CDN URL when the game starts, so this feature
 does not provide fully offline play. When that build needs a re-patch (see
-below), the button reads **Patch & launch last played** and patches first,
-which does need 7-Zip.
+below), the button reads **Patch & launch last played** and patches first.
 
 ## How the patch pipeline works
 
 1. Extracts the game's NSIS-packaged exe with 7-Zip into a work folder.
-2. Extracts the embedded `app-64.7z`, which contains the real Electron app.
+   The loader's `7za` has no NSIS module: it finds `app-64.7z`, which the
+   installer stores uncompressed, inside the exe, and extracts the real
+   Electron app straight away.
+2. With a full 7-Zip (a player's own `7z.exe`), step 1 gives the installer's
+   files instead, and this step extracts the embedded `app-64.7z`.
 3. Unpacks `app.asar` with `@electron/asar`.
 4. Runs `lib/patcher.js` (or a fresher version fetched from GitHub, if
    reachable) against `out.js` to expose a few internal game functions and
@@ -189,10 +192,10 @@ or installation-specific issue.
   also means a mod feature can stop working until the patcher is updated.
   The loader's console shows these warnings in orange (`[PATCH] WARNING:`),
   and ends the patch with their count.
-- **7-Zip's NSIS support is the one piece this can't route around without
-  asking the player to install something.** Bundling a lightweight 7-Zip
-  binary (e.g. via npm) doesn't help, because those builds drop the NSIS
-  module the first extraction step depends on.
+- **The bundled `7za` relies on `app-64.7z` being stored uncompressed in
+  the game's installer** (electron-builder's NSIS installers do). If the
+  game ever compresses it, `7za` finds nothing to extract, and the patch
+  needs a full 7-Zip again.
 - **The launchable-exe heuristic is a best guess** (first non-uninstaller
   `.exe` at the root of the extracted app folder). If a future build of
   the game ships multiple top-level exes, the loader will need a way to

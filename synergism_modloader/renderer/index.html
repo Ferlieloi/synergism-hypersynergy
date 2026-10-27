@@ -79,16 +79,15 @@
         <p id="legacyCleanupStatus" class="status-line" aria-live="polite"></p>
 
         <div class="field">
-          <span>7-Zip (7z.exe)</span>
+          <span>7-Zip</span>
           <div class="field-row">
             <input id="sevenZipInput" type="text" placeholder="C:\Program Files\7-Zip\7z.exe" />
             <button id="browse7zBtn" class="btn-secondary">Browse…</button>
             <button id="autodetect7zBtn" class="btn-secondary">Auto-detect</button>
           </div>
         </div>
-        <p class="hint small">Needs the full 7-Zip install, not just the lightweight 7za tool — only it can unpack the
-          game's NSIS wrapper. If it isn't installed, get it free at <a
-            href="#" data-external="https://www.7-zip.org/" class="link">7-zip.org</a>.</p>
+        <p class="hint small">The loader has its own 7-Zip. Change this only if the patch fails while extracting the
+          game: an installed <a href="#" data-external="https://www.7-zip.org/" class="link">7-Zip</a>'s 7z.exe works too.</p>
         <p id="sevenZipStatus" class="status-line"></p>
 
         <div class="actions">
@@ -172,7 +171,10 @@
           <button id="patchAndLaunchBtn" class="btn-primary">Patch &amp; launch</button>
         </div>
 
-        <div class="console" id="console" aria-live="polite"></div>
+        <div class="console-wrap">
+          <div class="console" id="console" aria-live="polite"></div>
+          <button id="copyLogBtn" class="console-copy" title="Copy the log">Copy</button>
+        </div>
       </div>
 
     </div><!-- /page-container -->
