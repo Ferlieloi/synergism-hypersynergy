@@ -51,7 +51,6 @@ export class HSHeaterResultModalController {
 
         if (inputsModal) {
             this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
-            this.refreshRequiredBranchHighlights(inputsModal);
         }
 
         if (this.currentResultModalId) {
@@ -137,7 +136,6 @@ export class HSHeaterResultModalController {
         if (syncAvailability) {
             this.syncLoadoutAvailabilityState(inputsModal, normalizedResult);
         }
-        this.refreshRequiredBranchHighlights(inputsModal);
     }
 
     
@@ -173,18 +171,6 @@ export class HSHeaterResultModalController {
             select.classList.toggle('hs-heater-type-select-unavailable', !isAvailable);
             select.classList.toggle('hs-heater-type-select-unaffordable', isUnaffordable);
         }
-    }
-
-    private static refreshRequiredBranchHighlights(modal: HTMLElement): void {
-        const selectedSemanticIds = HSHeaterResultStore.collectSelectedSemanticIds(modal);
-        const unavailableBranchIds = HSHeaterResultStore.getUnavailableRequiredBranchIds(selectedSemanticIds);
-        const branchLabels = Array.from(modal.querySelectorAll('.hs-heater-active-branch')) as HTMLElement[];
-
-        branchLabels.forEach((label) => {
-            const branchId = label.dataset.branchId as string | undefined;
-            const unavailable = branchId ? unavailableBranchIds.has(branchId as any) : false;
-            label.classList.toggle('hs-heater-active-branch-required', unavailable);
-        });
     }
 
     private static repositionResultModal(resultModal: HTMLElement, parentModalId: string): void {

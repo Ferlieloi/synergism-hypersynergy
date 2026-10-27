@@ -401,29 +401,8 @@ export class HSHeaterUIStyles {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                padding: 0px 14px 0px 8px;
+                padding: 0px 8px;
                 border-radius: 4px;
-                transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
-                position: relative;
-            }
-
-            .hs-heater-active-branch-required {
-                background-color: rgba(192, 46, 46, 0.20);
-                color: #ffffff;
-            }
-
-            .hs-heater-active-branch-required::after {
-                content: "🔥";
-                position: absolute;
-                top: 0;
-                right: 0;
-                width: 14px;
-                height: 14px;
-                display: grid;
-                place-items: center;
-                font-size: 10px;
-                opacity: 0.33;
-                pointer-events: none;
             }
 
             .hs-heater-loadout-buttons {

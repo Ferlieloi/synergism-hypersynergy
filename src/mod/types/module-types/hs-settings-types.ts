@@ -100,6 +100,7 @@ export interface HSSettingsDefinition {
 
     // Heater Settings
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;
+    heaterUncheckedBranches: HeaterUncheckedBranchesSetting;
 
     // QOL Buttons Settings
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
@@ -277,3 +278,4 @@ export interface GQDistributorKeepSkippedShareSetting extends HSSettingBase<bool
 
 // Heater Settings
 export interface HeaterTypeLoadoutSelectionsSetting extends HSSettingBase<string[]> { }
+export interface HeaterUncheckedBranchesSetting extends HSSettingBase<string[]> { }

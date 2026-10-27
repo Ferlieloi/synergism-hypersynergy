@@ -17,7 +17,7 @@ import {
     type HeaterInputField,
     type HeaterInputKey,
 } from "../hs-heater-input-config";
-import { HEATER_BRANCH_DEFINITIONS } from "../hs-heater-result-config";
+import { getHeaterTypeBranchId, HEATER_BRANCH_DEFINITIONS } from "../hs-heater-result-config";
 
 type HeaterInputValue = HeaterInputBase[HeaterInputKey];
 
@@ -64,6 +64,9 @@ export class HSHeaterUIInput {
         };
     // The Exalt of the save the inputs came from, null without export data
     static #exportExalt: number | null = null;
+    // Purple Ambrosia unlocks with the first Exalt 9 completion, the same
+    // condition as the "Taxman's Last Stand x1 Done" input
+    static #purpleUnlocked = false;
 
     static #cachedTypeSelects: HTMLSelectElement[] = [];
     static #cachedTypeIcons: HTMLButtonElement[] = [];
@@ -94,13 +97,17 @@ export class HSHeaterUIInput {
             purple: hsData?.heaterPurple,
         };
         this.#exportExalt = Number.isInteger(hsData?.exalt) ? hsData.exalt : null;
+        this.#purpleUnlocked = Boolean(hsData?.exalt9Unlocked);
+        const uncheckedBranches = this.getSavedUncheckedBranches();
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
-                // Purple Ambrosia unlocks with the first Exalt 9 completion,
-                // the same condition as the "Taxman's Last Stand x1 Done" input
-                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, branch.id !== 'purple' || Boolean(hsData?.exalt9Unlocked)])
+                // A branch the player never unticked starts ticked
+                HEATER_BRANCH_DEFINITIONS.map((branch) => [
+                    branch.id,
+                    (branch.id !== 'purple' || this.#purpleUnlocked) && !uncheckedBranches.includes(branch.id),
+                ])
             ) as Record<HeaterBranchId, boolean>,
         };
     }
@@ -141,7 +148,7 @@ export class HSHeaterUIInput {
     // The Purple checkbox is left out while Purple Ambrosia is locked (its
     // branch comes in as off); a missing checkbox reads as off.
     static buildHeaterOptionToggleGrid(active: Record<HeaterBranchId, boolean>): string {
-        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || active.purple).map((branch) => {
+        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || this.#purpleUnlocked).map((branch) => {
             const fieldId = `hs-heater-input-active-${branch.id}`;
             const checked = active[branch.id] ? 'checked' : '';
             return `
@@ -158,6 +165,43 @@ export class HSHeaterUIInput {
                 ${checkboxRows.join('')}
             </div>
         `;
+    }
+
+    static getSavedUncheckedBranches(): string[] {
+        const saved = HSSettings.getSetting('heaterUncheckedBranches').getValue() as string[] | null;
+        return Array.isArray(saved) ? saved : [];
+    }
+
+    static attachBranchCheckboxHandlers(modal: HTMLElement): void {
+        modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox').forEach((checkbox) => {
+            checkbox.addEventListener('change', () => this.saveUncheckedBranches(modal));
+        });
+    }
+
+    // Ticks the branch of the type a slot was just set to. Only that slot's:
+    // the other slots' branches, like a tick at open, could only undo an
+    // untick the player made.
+    static tickBranchOfType(modal: HTMLElement, semanticId: string): void {
+        const branchId = getHeaterTypeBranchId(semanticId);
+        if (!branchId) return;
+        // A missing checkbox is a locked branch (Purple)
+        const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branchId}`);
+        if (!checkbox || checkbox.checked) return;
+        checkbox.checked = true;
+        this.saveUncheckedBranches(modal);
+    }
+
+    // A branch without a checkbox (locked Purple) keeps what was saved for it
+    static saveUncheckedBranches(modal: HTMLElement): void {
+        const saved = this.getSavedUncheckedBranches();
+        const unchecked = HEATER_BRANCH_DEFINITIONS
+            .filter((branch) => {
+                const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branch.id}`);
+                return checkbox ? !checkbox.checked : saved.includes(branch.id);
+            })
+            .map((branch) => branch.id);
+        HSSettings.getSetting('heaterUncheckedBranches').setValue(unchecked);
+        HSSettings.saveSettingsToStorage();
     }
 
     
@@ -273,6 +317,7 @@ export class HSHeaterUIInput {
                 const updatedSelections = typeSelects.map(s => s.value);
                 HSSettings.getSetting('heaterTypeLoadoutSelections').setValue(updatedSelections);
                 HSSettings.saveSettingsToStorage();
+                this.tickBranchOfType(modal, select.value);
                 onTypeSelectionChange?.();
             });
         });
