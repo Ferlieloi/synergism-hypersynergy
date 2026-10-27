@@ -67,6 +67,12 @@ html.hs-header-stats-bottom:not([data-mobile="true"]) #headerGrid {
    margin-top: 5px;
 }
 
+/* "Grid width" (HSHeaderGridWidth): the game's cap moved (none = the header's width); width: 100% and the 1250px
+   floor stay the game's, so the grid still follows a smaller window. Desktop only */
+html.hs-header-grid-width:not([data-mobile="true"]) #headerGrid {
+   max-width: var(--hs-header-grid-width);
+}
+
 html.hs-header-stats-bottom #headerEditPanel {
    order: 4;
 }
@@ -130,6 +136,7 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
 }
 
 #hs-header-edit-settings .hs-hes-section[hidden],
+#hs-header-edit-settings .hs-hes-width[hidden],
 #hs-header-edit-settings .hs-hes-toggle[hidden],
 #hs-header-edit-settings .hs-hes-choice[hidden],
 #hs-header-edit-settings .hs-hes-choice > button[hidden] {
@@ -187,6 +194,43 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
 #hs-header-edit-settings button:disabled {
    opacity: 0.4;
    cursor: default;
+}
+
+/* "Grid width": label, width and Reset on a first line, the slider under them at the section's width (set by its
+   checkboxes), so the line doesn't widen the section */
+#hs-header-edit-settings .hs-hes-width {
+   display: flex;
+   flex-direction: column;
+   gap: 2px;
+   color: #bbb;
+   font-size: 0.75em;
+   white-space: nowrap;
+}
+
+#hs-header-edit-settings .hs-hes-width-top {
+   display: flex;
+   align-items: center;
+   gap: 4px;
+}
+
+#hs-header-edit-settings .hs-hes-width-top > button {
+   margin-left: auto;
+}
+
+#hs-header-edit-settings .hs-hes-width > input {
+   width: 100%;
+   margin: 0;
+   cursor: pointer;
+}
+
+#hs-header-edit-settings .hs-hes-width > input:disabled {
+   cursor: default;
+}
+
+/* Room for the widest value ("1830 px"): Reset doesn't move while dragging */
+#hs-header-edit-settings .hs-hes-width-value {
+   min-width: 6.5ch;
+   font-variant-numeric: tabular-nums;
 }
 
 #hs-header-edit-settings .hs-hes-slots-value {

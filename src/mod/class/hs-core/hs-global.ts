@@ -117,6 +117,7 @@ export const HSGlobal: IHSGlobal = class {
             HSHeaderKeepOnImport: 'HSQOLButtons',
             HSHeaderEditSettings: 'HSQOLButtons',
             HSHeaderCellSettings: 'HSQOLButtons',
+            HSHeaderGridWidth: 'HSQOLButtons',
             HSHeaderChallengeModule: 'HSQOLButtons',
             HSCorruptionHeader: 'HSQOLButtons',
             HSMinibarResize: 'HSAmbrosia',

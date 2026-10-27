@@ -5,6 +5,7 @@ import { HSUI } from "../hs-ui";
 import { HSSettings } from "../settings/hs-settings";
 import { HSHeaderCellSettings } from "./hs-header-cell-settings";
 import { HSHeaderChallengeModule } from "./hs-header-challenge-module";
+import { HSHeaderGridWidth } from "./hs-header-grid-width";
 import headerEditSettingsCSS from "inline:../../../resource/css/module/hs-header-edit-settings.css";
 
 type HSSlotCountKind = 'ambrosia';
@@ -52,10 +53,11 @@ interface HSChoiceDef {
 const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
 const hasChallengeModule = () => hasHeaderModules() && HSSettings.getSetting('challengeProgressHeader').isEnabled();
 
-// In the block's order; a section's slot counters, then its choices, then its toggles
-const SECTIONS: { title: string; slots?: true; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
+// In the block's order; a section's grid width slider, slot counters, then its choices, then its toggles
+const SECTIONS: { title: string; gridWidth?: true; slots?: true; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
     {
         title: 'Layout',
+        gridWidth: true,
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
@@ -144,6 +146,7 @@ const EDIT_BUTTON_ID = 'hs-header-edit-button';
  *       from.
  *     - Rows of buttons for the string settings picked among a few values (the challenge progress module's layout
  *       and details), the value in use pressed.
+ *     - The header grid's width slider (HSHeaderGridWidth), in the Layout section.
  *     The counters refresh when edit mode shows the block (the slots owned may have changed): a 1 ms CSS animation
  *     restarts each time #headerEditPanel goes from display: none to shown, and its animationstart event triggers
  *     the refresh (no observer, no polling).
@@ -204,6 +207,7 @@ export class HSHeaderEditSettings {
     /** Hides the slots above the counts, and adds the block next to the game's header tray. */
     static install(): void {
         HSHeaderCellSettings.install();
+        HSHeaderGridWidth.install();
         if (document.getElementById(BLOCK_ID)) return;
 
         // Vanilla Done only exits the editor. Its handler runs first and finishes the layout redraw;
@@ -234,6 +238,7 @@ export class HSHeaderEditSettings {
         for (const section of SECTIONS) {
             const element = HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles, section.choices);
             if (section.slots) element.firstElementChild!.after(...HSHeaderEditSettings.#buildSlotLines());
+            if (section.gridWidth) element.firstElementChild!.after(HSHeaderGridWidth.buildLine());
             sections.append(element);
         }
         block.append(title, sections);
@@ -468,6 +473,7 @@ export class HSHeaderEditSettings {
     // ======================================================
 
     static #refresh(): void {
+        HSHeaderGridWidth.refresh();
         for (const kind of Object.keys(SLOT_COUNTS) as HSSlotCountKind[]) {
             const owned = HSHeaderEditSettings.#getOwned(kind);
             const count = HSHeaderEditSettings.#getCount(kind);
