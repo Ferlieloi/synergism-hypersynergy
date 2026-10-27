@@ -96,6 +96,8 @@ export interface HeaterOptimizerInput {
         infinity: number;
     };
     panthemaLevel: number;
+    /** Platonic Tau's power on every cube multiplier (1 when not bought). */
+    tauPower: number;
     heaterOptions: Record<HeaterBranchId, boolean>;
 }
 

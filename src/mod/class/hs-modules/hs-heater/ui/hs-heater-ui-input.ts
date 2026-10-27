@@ -38,6 +38,7 @@ export class HSHeaterUIInput {
         | 'shopUpgradeRawLevels'
         | 'shopBonusLevelsNoAmbrosia'
         | 'panthemaLevel'
+        | 'tauPower'
         | 'reactor'
         | 'purple'> = {
             ambrosiaUpgradeBonusLevels: {},
@@ -57,6 +58,7 @@ export class HSHeaterUIInput {
                 infinity: 0,
             },
             panthemaLevel: 0,
+            tauPower: 1,
             reactor: undefined,
             purple: undefined,
         };
@@ -87,6 +89,7 @@ export class HSHeaterUIInput {
                 infinity: 0,
             },
             panthemaLevel: hsData?.panthemaLevel ?? 0,
+            tauPower: hsData?.tauPower ?? 1,
             reactor: hsData?.heaterReactor,
             purple: hsData?.heaterPurple,
         };

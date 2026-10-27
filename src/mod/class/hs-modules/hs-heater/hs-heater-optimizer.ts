@@ -147,6 +147,7 @@ interface Stats {
     shopUpgradeRawLevels: Record<string, number>;
     shopBonusLevels: HeaterOptimizerInput['shopBonusLevelsNoAmbrosia'];
     panthemaLevel: number;
+    tauPower: number;
     shopUpgradesDisabled: boolean;
 }
 
@@ -348,6 +349,7 @@ let stats: Stats = {
       infinity: 0,
     },
     panthemaLevel: 0,
+    tauPower: 1,
     shopUpgradesDisabled: false,
 };
 
@@ -1503,7 +1505,11 @@ class Loadout {
             this.statCache[stat] = luck * (1 + this.getStat("mLuck"))
             break
           case "ambOct":
-            this.statCache[stat] = this.getStat("allAmb") * this.getStat("oct")
+            // SynergismOfficial/src/Calculate.ts applyTauPower: Platonic Tau
+            // raises the whole Octeract multiplier, so a loadout's Octeract
+            // ratio r is really r^tau. The cube and oct objectives don't need
+            // it (same order), this product of two resources does.
+            this.statCache[stat] = this.getStat("allAmb") * this.getStat("oct") ** stats.tauPower
             break
           case "amb":
             const brickLevel = stats.exalt === 6 || stats.exalt === 8
@@ -1764,8 +1770,13 @@ class Loadout {
         if (stat === "singReduction" || stat === "vouchers")
           // A number of levels gained, shown as an integer (3, not 3.00)
           effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat), false)
-        else
-          effectStr = baseLoadout.getStat(stat) === 0 ? "N / A" : formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
+        else if (baseLoadout.getStat(stat) === 0)
+          effectStr = "N / A"
+        else {
+          const ratio = this.getStat(stat) / baseLoadout.getStat(stat)
+          // Platonic Tau (see the "ambOct" stat) raises cube and Octeract ratios
+          effectStr = formatNumber(stat === "cube" || stat === "oct" ? ratio ** stats.tauPower : ratio)
+        }
 
         const isMaxed = this.getStat(stat) >= maxLoadout.getStat(stat)
         const row: HeaterResultAffordableRow = [
@@ -4740,7 +4751,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         fusion, rBar, rSpeed, blueBarMaxWithoutTwoMindAndBrick, blueBarRequirementBeforeRounding, redBarMaxWithoutTwoMind,
         ossifiedTactics, redberries, viscount, ossifiedTactics2,
         ambrosiaUpgradeBonusLevels, ambrosiaUpgradeBlueberryCostReductions,
-        shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel,
+        shopUpgradeRawLevels, shopBonusLevelsNoAmbrosia, panthemaLevel, tauPower,
     } = input;
     // Exalt 4 is No Quark Upgrades. It follows the modal's Exalt select, like
     // every other Exalt rule here, not the save the inputs were exported from.
@@ -4830,6 +4841,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.shopUpgradeRawLevels = shopUpgradeRawLevels;
     stats.shopBonusLevels = shopBonusLevelsNoAmbrosia;
     stats.panthemaLevel = panthemaLevel;
+    stats.tauPower = tauPower;
     stats.shopUpgradesDisabled = shopUpgradesDisabled;
 
     // The no-Ambrosia exports (shopBonusLevels.infinity, chronometer, and

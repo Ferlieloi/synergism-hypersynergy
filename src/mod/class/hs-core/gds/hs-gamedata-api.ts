@@ -2623,6 +2623,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     shopUpgradeRawLevels,
                     shopBonusLevelsNoAmbrosia,
                     panthemaLevel:            this.quarkShop.getShopLevel('shopPanthema', 'non_ambrosia'),
+                    tauPower:                 this.getGQUpgradeEffect('platonicTau', 'tauPower'),
                     // Not read by the heater any more: it follows its Exalt select (4 = No Quark Upgrades)
                     shopUpgradesDisabled:     gameData.singularityChallenges.noQuarkUpgrades.enabled,
                     purpleHoney:                gameData.purpleReactor?.purpleHoney ?? 0,

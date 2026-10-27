@@ -8,6 +8,7 @@ type HeaterInputBase = Omit<HeaterOptimizerInput,
     | 'shopUpgradeRawLevels'
     | 'shopBonusLevelsNoAmbrosia'
     | 'panthemaLevel'
+    | 'tauPower'
     | 'reactor'
     | 'purple'>;
 type HeaterInputKey = keyof HeaterInputBase;
