@@ -702,6 +702,61 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── PSEUDOCOIN LEVELS PATCH — expose PseudoCoinUpgrades.ts PCoinUpgrades as window.__HS_pcoinLevels
+    // The game fetches the player's PseudoCoin upgrade levels once at load (initializePCoinCache) and updates them in
+    // place after an in-game purchase (updatePCoinCache); its formulas read that object. The mod reads it too, instead
+    // of fetching https://synergism.cc/stripe/upgrades again (the game's dev asked for less traffic). At the end of
+    // both functions, window.__HS_pcoinLevelsLoaded says the levels are the server's (until then they are all 0, as
+    // for a player who has none), and window.__HS_onPCoinChange tells the mod they changed.
+    // initializePCoinCache is found by the fetch it awaits and the response it reads; the object by its reset loop
+    // and the levels it writes in it:
+    //   gF=async()=>{let e=await Ad.fetchUpgrades();for(let t of Object.keys(cv))cv[t]=0,TT(t,0);
+    //       for(let t of e.playerUpgrades)cv[t.internalName]=t.level,TT(t.internalName,t.level)}
+    // updatePCoinCache by the only other write of a variable into that object:  hF=async(e,t)=>{cv[e]=t,TT(e,t)}
+    // The game never replaces the object, so the reference stays live. All three insertions or none.
+    report.pcoinLevels = false;
+    try {
+        const initResult = findEnclosingFunction(code, /\.fetchUpgrades\s*\(/g, ['.playerUpgrades', '.internalName'],
+            'pcoinLevels');
+        const initBody = initResult ? code.slice(initResult.bodyStart, initResult.bodyEnd) : '';
+        const levelsVar = /Object\.keys\(\s*([a-zA-Z_$][\w$]*)\s*\)/.exec(initBody)?.[1];
+        const escapedVar = levelsVar?.replace(/\$/g, '\\$');
+        const writesLevels = escapedVar && new RegExp(
+            String.raw`(?<![\w$.])${escapedVar}\s*\[\s*[a-zA-Z_$][\w$]*\.internalName\s*\]\s*=`).test(initBody);
+        const updateResults = [];
+        if (writesLevels) {
+            const write = new RegExp(String.raw`(?<![\w$.])${escapedVar}\s*\[\s*[a-zA-Z_$][\w$]*\s*\]\s*=\s*[a-zA-Z_$][\w$]*(?![\w$.\[(])`, 'g');
+            let match;
+            while ((match = write.exec(code)) !== null) {
+                const result = findFunctionAround(code, match.index, []);
+                if (result && result.bodyStart !== initResult.bodyStart
+                    && !updateResults.some(r => r.bodyStart === result.bodyStart)) updateResults.push(result);
+            }
+        }
+        if (writesLevels && updateResults.length === 1) {
+            const updateResult = updateResults[0];
+            const notify = '\n;window.__HS_pcoinLevelsLoaded=true;try{window.__HS_onPCoinChange?.()}catch(__hsE){}\n';
+            // From the end of the bundle backwards, so the earlier positions stay valid
+            const inserts = [
+                { at: initResult.bodyStart, text: `\nwindow.__HS_pcoinLevels=${levelsVar};\n` },
+                { at: initResult.bodyEnd, text: notify },
+                { at: updateResult.bodyEnd, text: notify }
+            ].sort((a, b) => b.at - a.at);
+            for (const insert of inserts) code = code.slice(0, insert.at) + insert.text + code.slice(insert.at);
+            report.pcoinLevels = true;
+            log(`Patched PseudoCoin levels (variable=${levelsVar}, init=${initResult.fnName}, update=${updateResult.fnName})`);
+        } else {
+            warn(!initResult
+                ? 'Could not patch PseudoCoin levels — initializePCoinCache (".fetchUpgrades(" with ".playerUpgrades") not found'
+                : !writesLevels
+                    ? `Could not patch PseudoCoin levels — the levels object was not found in ${initResult.fnName}`
+                    : `Could not patch PseudoCoin levels — expected 1 updatePCoinCache writing ${levelsVar}, found ${updateResults.length}`);
+        }
+    } catch (e) {
+        warn('Error while patching PseudoCoin levels', e);
+    }
+
+    // ==================================================================================
     // ── GLOBAL EVENT PATCH — hand Event.ts eventCheck's answer to the mod (window.__HS_globalEvent / __HS_onGlobalEvent)
     // The game fetches https://synergism.cc/events/get at load and every 5 minutes; the mod reads that answer
     // instead of fetching it again (the game's dev asked for less traffic). Found by its URL string and the
