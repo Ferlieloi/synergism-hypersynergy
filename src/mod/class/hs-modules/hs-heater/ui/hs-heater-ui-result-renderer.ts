@@ -26,6 +26,7 @@ type NormalizedResultRow = {
     maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
     shortfall:          HeaterResultShortfall | undefined;
     limits:             HeaterResultLimits | undefined;
+    effectTitle:        string | undefined;
 };
 
 function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
@@ -75,7 +76,21 @@ function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
         maxedValue:         row[RESULT_COL_INDEX.maxed],
         shortfall:          row[0] === "Unaffordable" ? (row as HeaterResultUnaffordableRow)[7] : undefined,
         limits:             row[0] === "Unaffordable" ? undefined : (row as HeaterResultAffordableRow)[7],
+        effectTitle:        row[0] === "Unaffordable" ? undefined : (row as HeaterResultAffordableRow)[8],
     };
+}
+
+// "Max SR1" + " (1/2)": the level of the type's labelLevel upgrade in the row's tree
+function buildTypeLabel(entry: NormalizedHeaterResultEntry, loadoutJson: string): string {
+    const labelLevel = getHeaterTypeConfig(entry.key)?.labelLevel;
+    if (!labelLevel || !loadoutJson) return entry.label;
+    let level = 0;
+    try {
+        level = Number(JSON.parse(loadoutJson)[labelLevel.upgrade] ?? 0);
+    } catch {
+        return entry.label;
+    }
+    return `${entry.label} (${level}/${labelLevel.maxLevel})`;
 }
 
 // Next to a row's ✘: the resource(s) that would raise it, either one
@@ -205,10 +220,11 @@ function buildArraySectionDataRow(
     const loadoutCell = isUnaffordable
         ? `<td>${escapeHtml(String(loadoutValue))}</td>`
         : `<td><div class="hs-heater-loadout-buttons">${actionControlsHtml}</div></td>`;
+    const typeLabel = buildTypeLabel(entry, isValidJson ? fullLoadout : "");
     const resultCell = rowSpan === 1
-        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(typeLabel, entry.semanticId, infoTitle)}</td>`
         : entry.rowIndex === 0
-            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(typeLabel, entry.semanticId, infoTitle)}</td>`
             : "";
     const { shortfall } = rowModel;
     const blueberryCostCell = shortfall?.blueberries
@@ -220,11 +236,12 @@ function buildArraySectionDataRow(
     // Effect takes two columns, or shares them with p4x4 eq. With the routing,
     // it stays one cell, split inside (see .hs-heater-split-cell).
     const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectTitle = rowModel.effectTitle ? ` title="${escapeHtml(rowModel.effectTitle)}"` : "";
     const effectCell = showRouting
-        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
+        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span${effectTitle}>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
         : showP4x4
-            ? `<td>${effectHtml}</td>`
-            : `<td colspan="2">${effectHtml}</td>`;
+            ? `<td${effectTitle}>${effectHtml}</td>`
+            : `<td colspan="2"${effectTitle}>${effectHtml}</td>`;
     const bestHMarker = bestH && entry.key === "hyperflux" && entry.rowIndex === bestH.rowIndex
         ? ` <span class="hs-heater-best-h-marker" title="Best H at your current P4x4 (${bestH.p4x4})">★ now</span>`
         : "";

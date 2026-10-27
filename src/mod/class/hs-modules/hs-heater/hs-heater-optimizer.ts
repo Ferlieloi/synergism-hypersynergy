@@ -1751,7 +1751,9 @@ class Loadout {
         return JSON.stringify(upgradeLevels)
     }
 
-    generateOutput(stat: string = "", maxLoadout: Loadout, p4x4: number | null = null): HeaterResultRow {
+    // effectStat: the stat the Effect shows, when it isn't the one "Maxed?"
+    // checks (Max SR rows: cubes, maxed on their SR level).
+    generateOutput(stat: string = "", maxLoadout: Loadout, p4x4: number | null = null, effectStat: string = stat): HeaterResultRow {
 
         this.invalidateCaches()
         if (stat === "")
@@ -1767,15 +1769,15 @@ class Loadout {
 
         let baseLoadout = new Loadout();
         let effectStr: string;
-        if (stat === "singReduction" || stat === "vouchers")
+        if (effectStat === "singReduction" || effectStat === "vouchers")
           // A number of levels gained, shown as an integer (3, not 3.00)
-          effectStr = formatNumber(this.getStat(stat) - baseLoadout.getStat(stat), false)
-        else if (baseLoadout.getStat(stat) === 0)
+          effectStr = formatNumber(this.getStat(effectStat) - baseLoadout.getStat(effectStat), false)
+        else if (baseLoadout.getStat(effectStat) === 0)
           effectStr = "N / A"
         else {
-          const ratio = this.getStat(stat) / baseLoadout.getStat(stat)
+          const ratio = this.getStat(effectStat) / baseLoadout.getStat(effectStat)
           // Platonic Tau (see the "ambOct" stat) raises cube and Octeract ratios
-          effectStr = formatNumber(stat === "cube" || stat === "oct" ? ratio ** stats.tauPower : ratio)
+          effectStr = formatNumber(effectStat === "cube" || effectStat === "oct" ? ratio ** stats.tauPower : ratio)
         }
 
         const isMaxed = this.getStat(stat) >= maxLoadout.getStat(stat)
@@ -2222,6 +2224,19 @@ function unaffordableRow(needed?: Loadout, atLeast = false): HeaterResultUnaffor
     shortfall.blueberries = { need: needed.blueberryCost, have: stats.blueberries }
   if (shortfall.ambrosia || shortfall.blueberries)
     row[7] = shortfall
+  return row
+}
+
+// A Max SR row's Effect title: what its SR levels lift off the singularity
+// penalties (the cube part is already in its Effect).
+function withPenaltyReliefTitle(row: HeaterResultRow, levels: number): HeaterResultRow {
+  if (row[0] === "Unaffordable" || levels <= 0)
+    return row
+  const affordable = row as HeaterResultAffordableRow
+  const relief = (stat: string) => Upgrade.singDebuff(stats.sing, stat) / Upgrade.singDebuff(stats.sing - levels, stat)
+  affordable[8] = `Penalties as if ${levels} ${levels === 1 ? "Singularity" : "Singularities"} lower:\n`
+    + `Obtainium and Offerings ×${formatNumber(relief("mOff"))}\n`
+    + `Cubes ×${formatNumber(relief("cube"))} (in the Effect)`
   return row
 }
 
@@ -5794,9 +5809,10 @@ export class HSHeaterOptimizer {
               .filter(loadout => loadout.upgradeLevels.ambrosiaHyperflux >= 4)
               .map(loadout => new Loadout(loadout))
             tableSR1Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction1 = levelSR1)
-            if (tableSR1Cube.length === 0) {
-                // No cube-optimal loadout reaches ambrosiaHyperflux >= 4 within budget - nothing affordable to report for sr1
-                HSLogger.warn('[HeaterDiag] calculateSR: sr1 - no loadout with ambrosiaHyperflux >= 4 within budget, reporting Unaffordable', 'HSHeaterOptimizer');
+            // No cube-optimal loadout reaches ambrosiaHyperflux >= 4 within budget, or no SR1
+            // level fits: a cube tree without SR1 would read as a Max SR1 row
+            if (tableSR1Cube.length === 0 || !levelSR1) {
+                HSLogger.warn('[HeaterDiag] calculateSR: sr1 - no SR1 level or no loadout with ambrosiaHyperflux >= 4 within budget, reporting Unaffordable', 'HSHeaterOptimizer');
                 // The smallest tree with SR1: a minimum
                 const minimalSR1 = new Loadout()
                 minimalSR1.upgradeLevels.ambrosiaSingReduction1 = 1
@@ -5805,7 +5821,8 @@ export class HSHeaterOptimizer {
             } else {
                 loadoutSR1 = findCubeLuckOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
                 if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
-                output.sr1 = [loadoutSR1.generateOutput("singReduction", maxLoadout)];
+                output.sr1 = [withPenaltyReliefTitle(loadoutSR1.generateOutput("singReduction", maxLoadout, null, "cube"),
+                  loadoutSR1.upgradeLevels.ambrosiaSingReduction1 ?? 0)];
             }
             tableSR1Cube.length = 0
 
@@ -5815,9 +5832,17 @@ export class HSHeaterOptimizer {
             let levelSR2 = loadoutSR2.upgradeLevels.ambrosiaSingReduction2
             let tableSR2Cube = tableCache.tableCubeVoucher.map(loadout => new Loadout(loadout))
             tableSR2Cube.forEach(loadout => loadout.upgradeLevels.ambrosiaSingReduction2 = levelSR2)
-            loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
-            if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
-            output.sr2 = [loadoutSR2.generateOutput("singReduction", maxLoadout)];
+            if (!levelSR2) {
+                // No SR2 level within budget, as for SR1 above
+                const minimalSR2 = new Loadout()
+                minimalSR2.upgradeLevels.ambrosiaSingReduction2 = 1
+                output.sr2 = [unaffordableRow(minimalSR2, true)];
+            } else {
+                loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
+                if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
+                output.sr2 = [withPenaltyReliefTitle(loadoutSR2.generateOutput("singReduction", maxLoadout, null, "cube"),
+                  loadoutSR2.upgradeLevels.ambrosiaSingReduction2 ?? 0)];
+            }
             tableSR2Cube.length = 0
             stats.exalt = exalt
             stats.postAoAG = postAoAG

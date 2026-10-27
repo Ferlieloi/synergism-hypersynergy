@@ -16,6 +16,8 @@ type HeaterResultTypeConfig = {
     icon?: string;
     rowLabels?: readonly string[];
     rowIcons?: readonly string[];
+    // An upgrade whose level the Types cell shows after the label ("Max SR1 (1/2)")
+    labelLevel?: { upgrade: string; maxLevel: number };
 };
 
 function createHeaterResultTypeConfig<T extends Record<string, HeaterResultTypeConfig>>(config: T): { [K in keyof T]: HeaterResultTypeConfig } {
@@ -135,15 +137,17 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
     },
     sr1: {
         label: "Max SR1",
-        description: "(Pre-AOAG only) Max SR1 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout. Check the H loadouts above and the p4x4eq tooltip.",
+        description: "(Pre-AOAG only) Max SR1 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout: compare its Effect with the H loadouts above to see what maxing SR1 costs in cubes.\nCounted as outside an Exalt: SR1 does nothing in Exalts.",
         section: "p4x4",
         icon: "Pictures/Default/BlueberrySingReduction.png",
+        labelLevel: { upgrade: "ambrosiaSingReduction1", maxLevel: 2 },
     },
     sr2: {
         label: "Max SR2",
-        description: "(Pre-AOAG only) Max SR2 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout. Check the H loadouts above and the p4x4eq tooltip.",
+        description: "(Pre-AOAG only) Max SR2 first, then optimize for cubes.\nThis does not make it the best pre-aoag loadout: compare its Effect with the H loadouts above to see what maxing SR2 costs in cubes.\nCounted as inside an Exalt: SR2 only works in Exalts.",
         section: "p4x4",
         icon: "Pictures/Default/BlueberrySingReduction2.png",
+        labelLevel: { upgrade: "ambrosiaSingReduction2", maxLevel: 2 },
     },
     ambOct: {
         label: "Max Amb + Oct",

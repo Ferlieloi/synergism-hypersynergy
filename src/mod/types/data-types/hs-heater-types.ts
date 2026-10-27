@@ -131,6 +131,8 @@ export type HeaterResultAffordableRow = [
     p4x4Eq: number | "Never" | "",
     isMaxed: boolean,
     limits?: HeaterResultLimits,
+    /** The Effect cell's title (Max SR rows: the penalty they lift). */
+    effectTitle?: string,
 ];
 
 /**
