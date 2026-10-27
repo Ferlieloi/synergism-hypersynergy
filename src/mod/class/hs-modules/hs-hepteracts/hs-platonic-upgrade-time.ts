@@ -15,6 +15,13 @@ type PlatonicResourceEstimate = {
     needsAscension: boolean;
 };
 
+type PlatonicRequirement = {
+    // As displayed: cut to 3 digits, up to 1% below the real cost
+    amount: number;
+    // The game's own check (lime cost colour)
+    affordable: boolean;
+};
+
 /**
  * Class: HSPlatonicUpgradeTime
  * IsExplicitHSModule: No
@@ -22,7 +29,9 @@ type PlatonicResourceEstimate = {
  *     Created by HSHepteracts. Adds "[HS] Time until next level" and the longest requirement to the hovered
  *     Platonic upgrade's description: the cube costs (with the Wow! Cubes and Hepteracts the Abyss hepteracts
  *     still to craft cost) against the owned amounts and the ascension income. Offerings and Obtainium are only
- *     reported as short. Warns when Exalt 7 is past its time limit.
+ *     reported as short, and Abyss hepteracts still to craft are reminded once nothing else is waited for.
+ *     The game's cost colours correct the 3-digit displayed costs.
+ *     Warns when Exalt 7 is past its time limit.
  * Author: XxMolkxX, Shewchou
  */
 export class HSPlatonicUpgradeTime {
@@ -75,10 +84,21 @@ export class HSPlatonicUpgradeTime {
         this.#platonicUpgradeDescriptions?.querySelector('#hs-platonic-upgrade-estimate')?.remove();
     }
 
-    #readPlatonicRequirement(elementId: string): number | null {
-        const text = document.querySelector(`#${elementId}`)?.textContent ?? '';
+    #readPlatonicRequirement(elementId: string): PlatonicRequirement | null {
+        const element = document.querySelector<HTMLElement>(`#${elementId}`);
+        const text = element?.textContent ?? '';
         const parsed = HSNumberParser.parse(text.slice(text.lastIndexOf('/') + 1));
-        return Number.isNaN(parsed) ? null : parsed;
+        return Number.isNaN(parsed) ? null : { amount: parsed, affordable: element?.style.color === 'lime' };
+    }
+
+    // The displayed cost is cut to 3 digits: when the game says it isn't
+    // affordable but the displayed amount is owned, the real cost is above it,
+    // at most 1% above the displayed amount.
+    #requiredAmount(requirement: PlatonicRequirement | null, owned: number): number {
+        if (!requirement) return 0;
+        return !requirement.affordable && requirement.amount <= owned
+            ? requirement.amount * 1.01
+            : requirement.amount;
     }
 
     #timeUntilResource(
@@ -155,9 +175,9 @@ export class HSPlatonicUpgradeTime {
             return;
         }
 
-        const requiredAbyssals = requirements.abyssals ?? 0;
         const abyssHepteract = gameData.hepteracts?.abyss;
         const ownedAbyssals = parseGameDataNumber(abyssHepteract?.BAL ?? 0);
+        const requiredAbyssals = this.#requiredAmount(requirements.abyssals, ownedAbyssals);
         const hasDoubleCapacity = Boolean(
             gameDataAPI.getSingularityChallengeEffect('limitedAscensions', 'hepteractCap')
         );
@@ -169,16 +189,20 @@ export class HSPlatonicUpgradeTime {
         const rawHepteractsNeeded = abyssalsToCraft * HEPTERACT_DATA.abyss.conversion * hepteractCostMultiplier;
         const abyssCraftCubeCost = abyssalsToCraft * 69 * hepteractCostMultiplier;
 
+        const ownedCubes = parseGameDataNumber(gameData.wowCubes);
+        const ownedTesseracts = parseGameDataNumber(gameData.wowTesseracts);
+        const ownedHypercubes = parseGameDataNumber(gameData.wowHypercubes);
+        const ownedPlatonics = parseGameDataNumber(gameData.wowPlatonicCubes);
         const estimates: PlatonicResourceEstimate[] = [
             this.#timeUntilResource(
                 'Wow! Cubes',
-                (requirements.cubes ?? 0) + abyssCraftCubeCost,
-                parseGameDataNumber(gameData.wowCubes),
+                this.#requiredAmount(requirements.cubes, ownedCubes) + abyssCraftCubeCost,
+                ownedCubes,
                 income[0]
             ),
-            this.#timeUntilResource('Wow! Tesseracts', requirements.tesseracts ?? 0, parseGameDataNumber(gameData.wowTesseracts), income[1]),
-            this.#timeUntilResource('Wow! Hypercubes', requirements.hypercubes ?? 0, parseGameDataNumber(gameData.wowHypercubes), income[2]),
-            this.#timeUntilResource('Platonic Cubes', requirements.platonics ?? 0, parseGameDataNumber(gameData.wowPlatonicCubes), income[3]),
+            this.#timeUntilResource('Wow! Tesseracts', this.#requiredAmount(requirements.tesseracts, ownedTesseracts), ownedTesseracts, income[1]),
+            this.#timeUntilResource('Wow! Hypercubes', this.#requiredAmount(requirements.hypercubes, ownedHypercubes), ownedHypercubes, income[2]),
+            this.#timeUntilResource('Platonic Cubes', this.#requiredAmount(requirements.platonics, ownedPlatonics), ownedPlatonics, income[3]),
             this.#timeUntilResource(
                 'Hepteracts for Abyss Hepteracts',
                 rawHepteractsNeeded,
@@ -212,15 +236,19 @@ export class HSPlatonicUpgradeTime {
         } else {
             time = 'ready now';
         }
-        // Past Exalt 7's time limit, cube gains shrink every second, so the
-        // estimate (current rates kept) is too short.
+        // Nothing left to wait for on the cubes: the game still shows the Abyss
+        // cost red until the hepteracts counted above are crafted.
+        const craftAbyssFirst = abyssalsToCraft > 0 && bottleneck.seconds === 0;
+        // Past Exalt 7's time limit, cube gains shrink every second, so a
+        // duration (current rates kept) is too short.
         const limitedTime = gameData.singularityChallenges?.limitedTime;
-        const exalt7Overtime = limitedTime?.enabled === true
+        const exalt7Overtime = bottleneck.seconds > 0 && Number.isFinite(bottleneck.seconds)
+            && limitedTime?.enabled === true
             && gameData.singChallengeTimer > this.#exalt7TimeLimit(limitedTime.completions);
 
         this.#showPlatonicUpgradeEstimate(
             `Time until next level: ${time}${exalt7Overtime ? ' (Exalt 7 overtime: will take longer)' : ''}`
-            + `\nLongest requirement: ${longestRequirement}`
+            + `\nLongest requirement: ${longestRequirement}${craftAbyssFirst ? '; craft the Abyss Hepteracts first' : ''}`
         );
     }
 
