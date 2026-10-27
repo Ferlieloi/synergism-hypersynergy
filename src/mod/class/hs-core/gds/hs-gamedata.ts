@@ -150,8 +150,9 @@ export class HSGameData extends HSModule {
         // Set before the fetches: the fetched data only reaches the API through this reference.
         // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
         // afterwards only forceUpdateAllData() fetches again, on a player's action (heater, backup).
-        // A PseudoCoin purchase or a login after the page load is seen at the next reload.
+        // A login after the page load is seen at the next reload, as the game does.
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
+        this.#watchPCoinLevels();
         await this.#refreshFetchedData();
 
         this.#startConsumablesPoll();
@@ -297,18 +298,12 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Fetches pseudo and me data from remote APIs and updates internal state.
+     * Fetches me data from its remote API, and reads the PseudoCoin levels once (#loadPCoinLevels).
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
         // HSLogger.debug(() => `Refreshing fetched data`, this.context);
-        try {
-            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
-            const data = await upgradesQuery.json() as PseudoGameData;
-
-            this.#playerPseudoUpgrades = data;
-            this.#pseudoDataUpdated();
-        } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
+        await this.#loadPCoinLevels();
 
         try {
             const meQuery = await fetch(HSGlobal.Common.meAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
@@ -317,6 +312,89 @@ export class HSGameData extends HSModule {
             this.#meBonuses = data;
             this.#meDataUpdated();
         } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
+    }
+
+    // --- PseudoCoin upgrade levels ---
+    // The game fetches them once at load (https://synergism.cc/stripe/upgrades) and updates its copy after an in-game
+    // purchase; its formulas read that copy, so the mod follows it rather than the server.
+
+    #isPCoinLevelsPatched(): boolean {
+        return window.__HS_PATCH_REPORT?.pcoinLevels === true;
+    }
+
+    /**
+     * Patched game: HSGameDataAPI reads the game's levels live, and the patch says when they change.
+     * Otherwise: an in-game purchase is read from the game's request, whose answer is the upgrade's new level.
+     */
+    #watchPCoinLevels() {
+        if (this.#isPCoinLevelsPatched()) {
+            window.__HS_onPCoinChange = () => this.#gameDataAPI?.clearCache();
+            return;
+        }
+
+        const nativeFetch = window.fetch;
+        window.fetch = (input, init) => {
+            const response = nativeFetch.call(window, input, init);
+            try {
+                const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+                if (url.includes('/stripe/buy-upgrade/')) {
+                    // A copy of the answer: the game reads the original untouched
+                    response.then(r => r.ok ? r.clone().json() : undefined)
+                        .then(reply => this.#onPCoinPurchase(reply))
+                        .catch(() => { /* the game reports its own failures */ });
+                }
+            } catch { /* the game's request goes on */ }
+            return response;
+        };
+    }
+
+    #onPCoinPurchase(reply: unknown) {
+        const { upgradeId, level } = (reply ?? {}) as { upgradeId?: unknown, level?: unknown };
+        // Without the levels read at load, there is no upgrade name to put the new level on
+        if (typeof upgradeId !== 'number' || typeof level !== 'number' || !this.#playerPseudoUpgrades) return;
+
+        const owned = this.#playerPseudoUpgrades.playerUpgrades ??= [];
+        const upgrade = owned.find(u => Number(u.upgradeId) === upgradeId);
+        if (upgrade) upgrade.level = level;
+        else owned.push({ upgradeId, level });
+        this.#pseudoDataUpdated();
+
+        const name = this.#playerPseudoUpgrades.upgrades?.find(u => u.upgradeId === upgradeId && 'name' in u);
+        HSLogger.log(`PseudoCoin upgrade ${name && 'name' in name ? name.name : upgradeId} bought: level ${level}`, this.context);
+    }
+
+    /**
+     * Reads the levels once, without a request when possible: the browser's cached copy of the game's own fetch.
+     * Patched game: that copy only stands in until the game's fetch has answered (the cache may hold the previous
+     * page load's), and it is never fetched. Otherwise: fetched when the browser has no copy; purchases come from
+     * #watchPCoinLevels, so it is never read again.
+     */
+    async #loadPCoinLevels() {
+        if (window.__HS_pcoinLevelsLoaded || this.#playerPseudoUpgrades) return;
+
+        let data = await this.#fetchPseudoData(true);
+        if (!data && !this.#isPCoinLevelsPatched()) data = await this.#fetchPseudoData(false);
+        // The game's own levels arrived meanwhile: they win
+        if (!data || window.__HS_pcoinLevelsLoaded) return;
+
+        this.#playerPseudoUpgrades = data;
+        this.#pseudoDataUpdated();
+    }
+
+    async #fetchPseudoData(cachedOnly: boolean): Promise<PseudoGameData | undefined> {
+        try {
+            const response = await fetch(HSGlobal.Common.pseudoAPIurl, cachedOnly
+                ? { headers: HSGlobal.Common.modRequestHeaders, cache: 'only-if-cached', mode: 'same-origin' }
+                : { headers: HSGlobal.Common.modRequestHeaders });
+            if (!response.ok) throw new Error(`status ${response.status}`);
+            return await response.json() as PseudoGameData;
+        } catch (err) {
+            // Not in the browser's cache (a first visit, a cleared cache, a page not on synergism.cc): fetched instead,
+            // or the patch fills it
+            if (cachedOnly) HSLogger.debug(() => `No cached PseudoCoin levels: ${err}`, this.context);
+            else HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
+            return undefined;
+        }
     }
 
     /**

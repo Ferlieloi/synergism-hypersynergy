@@ -1,5 +1,6 @@
 import type { HSDialogKind } from '../class/hs-core/dialogs/hs-game-dialogs';
 import type { ConsumableGameEvents } from './data-types/hs-event-data';
+import type { PseudoCoinUpgradeNames } from './data-types/hs-gamedata-api-types';
 
 /** Hooks supplied by the shared patcher. Optional for bookmarklets and older loaders. */
 declare global {
@@ -38,6 +39,9 @@ declare global {
         __HS_consumables?: Partial<ConsumableGameEvents>;
         __HS_globalEvent?: unknown;
         __HS_onGlobalEvent?: (event: unknown) => void;
+        __HS_pcoinLevels?: Partial<Record<PseudoCoinUpgradeNames, number>>;
+        __HS_pcoinLevelsLoaded?: boolean;
+        __HS_onPCoinChange?: () => void;
         __HS_i18next?: {
             language: string;
             t: (key: string, vars?: Record<string, string | number>) => unknown;

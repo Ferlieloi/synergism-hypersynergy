@@ -518,7 +518,8 @@ export class Hypersynergism {
         console.log('----- GAME DATA -----');
         console.log(dataModule.getGameData());
         console.log('----- PSEUDO DATA -----');
-        console.log(dataModule.getPseudoData());
+        // Patched game: the game's own levels, which the mod reads instead
+        console.log(window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : dataModule.getPseudoData());
         console.log('----- CAMPAIGN DATA -----');
         console.log(dataModule.getCampaignData());
         console.log('----- ME DATA -----');

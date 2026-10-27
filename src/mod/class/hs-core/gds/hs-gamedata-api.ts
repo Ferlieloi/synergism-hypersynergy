@@ -858,6 +858,13 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
     getPCoinUpgradeLevel(name: keyof typeof PCoinUpgradeEffects): number {
+        // Patched game: its own levels, live, once its fetch has answered (HSGameData clears the cache when they change)
+        const liveLevels = window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : undefined;
+        if (liveLevels) {
+            const liveLevel = Number(liveLevels[name] ?? 0);
+            return Number.isFinite(liveLevel) ? liveLevel : 0;
+        }
+
         const pseudoData = this.getPseudoData?.() ?? this.pseudoData;
         if (!pseudoData) return 0;
 

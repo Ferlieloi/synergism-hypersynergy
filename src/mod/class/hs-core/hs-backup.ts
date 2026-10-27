@@ -308,6 +308,7 @@ export class HSBackup {
                 saveImportHook: has('__HS_SAVE_IMPORT_HOOK_PATCHED'),
                 tackHooks: has('__HS_tackHooks'),
                 consumables: has('__HS_consumables'),
+                pcoinLevels: has('__HS_pcoinLevelsLoaded'),
                 globalEvent: has('__HS_GLOBAL_EVENT_PATCHED'),
             },
             gameLanguage: localStorage.getItem('language') ?? 'en',
