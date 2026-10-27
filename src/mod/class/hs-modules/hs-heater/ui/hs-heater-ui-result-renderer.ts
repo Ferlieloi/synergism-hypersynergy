@@ -88,6 +88,16 @@ function buildLimitIcons(limits: HeaterResultLimits): string {
     return icons.join("");
 }
 
+// Next to an unaffordable row's ✘: its short resource(s), all of them needed
+function buildShortfallIcons(shortfall: HeaterResultShortfall): string {
+    const icons: string[] = [];
+    if (shortfall.ambrosia)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Ambrosia.png" alt="Ambrosia" title="Not enough Ambrosia" />`);
+    if (shortfall.blueberries)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Blueberries.png" alt="Blueberries" title="Not enough Blueberries" />`);
+    return icons.join("");
+}
+
 // An unaffordable row's short resource: what the tree needs, "≥" for a minimum
 function buildShortCostCell(short: HeaterShortResource, atLeast: boolean): string {
     const need = `${atLeast ? "≥ " : ""}${formatCostCellValue(short.need)}`;
@@ -220,7 +230,10 @@ function buildArraySectionDataRow(
         : "";
     const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
     // A row whose ✔ is set after the fact (bar income) can still carry limits: shown only on ✘
-    const limitIcons = rowModel.maxedValue === false && rowModel.limits ? buildLimitIcons(rowModel.limits) : "";
+    const limitIcons = rowModel.maxedValue !== false ? ""
+        : shortfall ? buildShortfallIcons(shortfall)
+        : rowModel.limits ? buildLimitIcons(rowModel.limits)
+        : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? `<span class="hs-heater-status-unmaxed">✘</span>${limitIcons}` : escapeHtml(String(rowModel.maxedValue))}</td>`;
     // A type picked in "Your loadout order" that can't be afforded: the whole
     // row in the orange of that slot's border
