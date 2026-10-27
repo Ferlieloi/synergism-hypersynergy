@@ -45,9 +45,9 @@ const CORRUPTION_LEVEL_EFFECTS: Record<CorruptionEffectKey, [(l: number) => numb
         (l) => 15 * Math.pow(1.05, l - ENDGAME_LEVEL)
     ],
     viscosity: [
-        (l) => Math.pow(2, 2 * l),
-        (l) => Math.pow(2, 40 + 6 * (l - MIDGAME_LEVEL)),
-        (l) => Math.min(1e300, Math.pow(2, 190 + 9 * (l - ENDGAME_LEVEL)))
+        (l) => Math.pow(3, l),
+        (l) => Math.pow(3, 20 + 3 * (l - MIDGAME_LEVEL)),
+        (l) => Math.min(1e300, Math.pow(3, 95) * Math.pow(21, 2 * (l - ENDGAME_LEVEL)))
     ],
     salvage: [
         (l) => -62.5 * l,
@@ -90,8 +90,8 @@ const CORRUPTION_LEVEL_EFFECTS: Record<CorruptionEffectKey, [(l: number) => numb
 const CORRUPTION_CUBE_UNLOCKS: Record<CorruptionCubeType, { level: number; requiresChallenge15: boolean }> = {
     cubes: { level: 0, requiresChallenge15: false },
     tesseracts: { level: 0, requiresChallenge15: false },
-    hypercubes: { level: 8, requiresChallenge15: false },
-    platonics: { level: 14, requiresChallenge15: false },
+    hypercubes: { level: 5, requiresChallenge15: false },
+    platonics: { level: 11, requiresChallenge15: false },
     hepteracts: { level: 20, requiresChallenge15: true },
     octeracts: { level: 35, requiresChallenge15: false }
 };
@@ -101,9 +101,9 @@ const CORRUPTION_CUBE_RATES: Record<CorruptionCubeType, { base: number; growth: 
     cubes: { base: 1, growth: 1.1, endgameGrowth: 1.05 },
     tesseracts: { base: 1e-3, growth: 1.15, endgameGrowth: 1.07 },
     hypercubes: { base: 1e-3, growth: 1.2, endgameGrowth: 1.1 },
-    platonics: { base: 2e-4, growth: 1.3, endgameGrowth: 1.15 },
-    hepteracts: { base: 1e-4, growth: 1.4, lateGrowth: 1.05, endgameGrowth: 1.05 },
-    octeracts: { base: 1 / (5e19 * 3600 * 24 * 365), growth: 1.45, endgameGrowth: 1.1 }
+    platonics: { base: 5e-4, growth: 1.25, endgameGrowth: 1.1 },
+    hepteracts: { base: 1e-4, growth: 1.4, lateGrowth: 1.1, endgameGrowth: 1.1 },
+    octeracts: { base: 1 / (5e19 * 3600 * 24 * 365), growth: 1.45, endgameGrowth: 1.05 }
 };
 
 const CHALLENGE15_CORRUPTION_NEUTRAL: Record<Challenge15CorruptionKey, number> = {
