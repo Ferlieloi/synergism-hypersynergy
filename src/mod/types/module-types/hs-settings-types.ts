@@ -80,6 +80,7 @@ export interface HSSettingsDefinition {
     // Auto Sing Settings
     startAutosing: StartAutosing;
     singularityNumber: SingularityNumber;
+    autosingNoAmbrosiaSwitch: HSSettingBase<boolean>;
     autosingEarlyCubeLoadout: AutosingEarlyCubeLoadout;
     autosingLateCubeLoadout: AutosingLateCubeLoadout;
     autosingQuarkLoadout: AutosingQuarkLoadout;

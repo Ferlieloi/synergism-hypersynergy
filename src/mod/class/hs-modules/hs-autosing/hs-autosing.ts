@@ -114,6 +114,8 @@ export class HSAutosing extends HSModule {
     #ambrosia_obt!: HTMLButtonElement;
     #ambrosia_off!: HTMLButtonElement;
     #ambrosia_luck!: HTMLButtonElement;
+    // Read once per run: the slots above aren't looked up while it's on
+    #ambrosiaSwitchesOff = false;
 
     // DOM Elements - Misc
     #antSacrifice!: HTMLButtonElement;
@@ -313,6 +315,12 @@ export class HSAutosing extends HSModule {
     }
 
     async #cacheAmbrosiaLoadoutButtons(): Promise<boolean> {
+        this.#ambrosiaSwitchesOff = HSSettings.getSetting("autosingNoAmbrosiaSwitch").isEnabled();
+        if (this.#ambrosiaSwitchesOff) {
+            HSLogger.log("Ambrosia loadout switches are off: the ambrosia loadout settings are not used.", this.context);
+            return true;
+        }
+
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
@@ -1736,7 +1744,7 @@ export class HSAutosing extends HSModule {
     /** Runs the push's steps in order, and ends at the first step after a stop. */
     async #pushSingularityBeforeStop(): Promise<void> {
         const steps: Array<() => unknown> = [
-            () => this.#ambrosia_late_cube.click(),
+            () => this.#setAmbrosiaLoadout(this.#ambrosia_late_cube),
             () => this.#corruptionManager.setLevel(0),
 
             () => this.#maxC11to14WithC10(11),
@@ -1884,6 +1892,8 @@ export class HSAutosing extends HSModule {
     }
 
     async #setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
+        // Every load resets the ambrosia bars, even reloading the tree already in place
+        if (this.#ambrosiaSwitchesOff) return;
         loadout.click();
         // The game marks the slot only if the load succeeded. It doesn't when the tree is rejected
         // (its alert is silent under auto-confirm), so don't wait forever (even though that shouldn't happen...)

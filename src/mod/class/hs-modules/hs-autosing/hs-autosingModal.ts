@@ -1070,6 +1070,7 @@ export class HSAutosingModal {
 
     /** Return the order of ambrosia loadouts for the session from settings. */
     #getLoadoutsOrder(): string[] {
+        if (HSSettings.getSetting('autosingNoAmbrosiaSwitch').isEnabled()) return ['no switch'];
         return [
             String(HSSettings.getSetting('autosingEarlyCubeLoadout').getValue()).replace('Loadout ', ''),
             String(HSSettings.getSetting('autosingLateCubeLoadout').getValue()).replace('Loadout ', ''),
