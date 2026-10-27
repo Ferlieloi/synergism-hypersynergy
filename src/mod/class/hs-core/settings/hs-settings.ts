@@ -221,6 +221,12 @@ export class HSSettings extends HSModule {
         return HSSettings.#settings;
     };
 
+    /** A setting's value in hs-settings.json. Its definition's defaultValue is the value it had at load: the player's. */
+    static getJsonSettingValue(settingName: keyof HSSettingsDefinition): unknown {
+        const defaults = JSON.parse(settings) as Record<string, { settingValue?: unknown } | undefined>;
+        return defaults[settingName]?.settingValue;
+    }
+
     /** Run `listener` each time a setting is turned on or off: the panel, enable()/disable(), a boolean setValue(). */
     static onStateChange(listener: (settingName: string) => void): void {
         HSSettings.#stateListeners.add(listener);

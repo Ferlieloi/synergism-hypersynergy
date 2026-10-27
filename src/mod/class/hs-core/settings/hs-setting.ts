@@ -307,8 +307,19 @@ export class HSNumericSetting extends HSSetting<number> {
         disabledString: string) {
         super(settingDefinition, settingAction, enabledString, disabledString);
 
+        // A value saved before its min or max changed (the challenge timers were allowed 0, which the game refuses)
+        this.definition.settingValue = this.#clamp(this.definition.settingValue);
+
         if (this.definition.settingValueMultiplier)
             this.definition.calculatedSettingValue = this.definition.settingValue * this.definition.settingValueMultiplier;
+    }
+
+    // Within the control's min and max: the input's own min/max don't stop a typed value
+    #clamp(value: number): number {
+        const options = this.definition.settingControl?.controlOptions;
+        if (options?.min !== undefined) value = Math.max(value, options.min);
+        if (options?.max !== undefined) value = Math.min(value, options.max);
+        return value;
     }
 
     getValue() {
@@ -323,7 +334,11 @@ export class HSNumericSetting extends HSSetting<number> {
     // Number type settings need to handle the change event differently
     // because they need to take settingValueMultiplier into account
     async handleChange(e: Event) {
-        const newValue = parseFloat((e.target as HTMLInputElement).value);
+        const input = e.target as HTMLInputElement;
+        const typed = parseFloat(input.value);
+        // An empty or unreadable field keeps the current value
+        const newValue = Number.isFinite(typed) ? this.#clamp(typed) : this.definition.settingValue;
+        input.value = String(newValue);
 
         HSLogger.log(`${this.definition.settingName}: ${this.definition.settingValue} -> ${newValue}`, this.context);
 

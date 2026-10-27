@@ -47,6 +47,16 @@ export class HSSettingsUI {
     static #nativeTabPreferenceObserver: MutationObserver | null = null;
     static #nativeTabClickListenerInstalled = false;
 
+    // The numbers the Auto-Sing Advanced "Reset to default" button puts back (advancedDataCollection is a hidden debug switch)
+    static readonly #autosingAdvancedSettings = [
+        'autosing3to6DCubeOpeningPercent',
+        'autosingTessBuildingAutoBuyPercent',
+        'autosingAutoChallTimerStart',
+        'autosingAutoChallTimerExit',
+        'autosingAutoChallTimerEnter',
+    ] as const;
+    static #advancedResetTimer: ReturnType<typeof setTimeout> | undefined;
+
     static async syncSettings(deps: HSSettingsUIDependencies): Promise<void> {
         HSLogger.log(`Syncing mod settings`, this.#context);
 
@@ -800,6 +810,46 @@ export class HSSettingsUI {
         }
 
         return valueRowChildren;
+    }
+
+    // A first click waits 5 s for a second one. The armed text is shorter: the button keeps its size
+    static resetAutosingAdvancedSettings(): void {
+        if (HSSettingsUI.#advancedResetTimer === undefined) {
+            const button = HSSettingsUI.#advancedResetButton();
+            if (!button) return;
+            button.textContent = 'Confirm reset?';
+            HSSettingsUI.#advancedResetTimer = setTimeout(() => HSSettingsUI.#disarmAdvancedReset(), 5000);
+            return;
+        }
+        HSSettingsUI.#disarmAdvancedReset();
+
+        // None of them has a settingAction to run
+        const names = HSSettingsUI.#autosingAdvancedSettings;
+        for (const name of names) {
+            const value = HSSettings.getJsonSettingValue(name);
+            if (typeof value !== 'number') {
+                HSLogger.warn(`No default value for ${name}, left as it is`, this.#context);
+                continue;
+            }
+            const definition = HSSettings.getSetting(name).getDefinition() as HSSettingBase<number>;
+            definition.settingValue = value;
+            definition.calculatedSettingValue = value * (definition.settingValueMultiplier ?? 1);
+        }
+        HSSettings.saveSettingsToStorage();
+        HSSettingsUI.refreshSettingControls([...names]);
+        HSLogger.log('Auto-Sing Advanced settings reset to default', this.#context);
+    }
+
+    static #advancedResetButton(): HTMLElement | null {
+        const id = HSSettings.getSetting('resetAutosingAdvanced').getDefinition().settingControl?.controlId;
+        return id ? document.getElementById(id) : null;
+    }
+
+    static #disarmAdvancedReset(): void {
+        clearTimeout(HSSettingsUI.#advancedResetTimer);
+        HSSettingsUI.#advancedResetTimer = undefined;
+        const button = HSSettingsUI.#advancedResetButton();
+        if (button) button.textContent = HSSettings.getSetting('resetAutosingAdvanced').getDefinition().settingDescription;
     }
 
     static async deleteSelectedStrategy(): Promise<void> {

@@ -96,6 +96,7 @@ export interface HSSettingsDefinition {
     autosingAutoChallTimerStart: AutosingAutoChallTimerStart;
     autosingAutoChallTimerExit: AutosingAutoChallTimerExit;
     autosingAutoChallTimerEnter: AutosingAutoChallTimerEnter;
+    resetAutosingAdvanced: HSSettingBase<string>;
 
     // Heater Settings
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;

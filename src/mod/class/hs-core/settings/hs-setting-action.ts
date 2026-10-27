@@ -216,6 +216,10 @@ export class HSSettingActions {
             await HSSettingsUI.importStrategy();
         },
 
+        resetAutosingAdvancedAction: async () => {
+            HSSettingsUI.resetAutosingAdvancedSettings();
+        },
+
         // A class on <html>, so it applies whenever #quickbarsRow is created (hs-quickbars.css)
         centerQuickbarsAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-quickbars-centered', params.disable !== true);
