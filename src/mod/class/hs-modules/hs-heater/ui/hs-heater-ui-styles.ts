@@ -741,6 +741,13 @@ export class HSHeaterUIStyles {
             /* === Status & Colors === */
             .hs-heater-status-maxed { color: #08ba52; }
             .hs-heater-status-unmaxed { color: #962f2f; }
+            .hs-heater-limit-icon {
+                width: 16px;
+                height: 16px;
+                vertical-align: middle;
+                margin-left: 3px;
+                cursor: help;
+            }
             .hs-heater-best-h-marker { color: #f2c94c; white-space: nowrap; cursor: help; }
 
             /* Same orange as the slot's border in "Your loadout order". The

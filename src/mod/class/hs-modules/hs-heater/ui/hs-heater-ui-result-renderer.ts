@@ -2,7 +2,7 @@ import { escapeHtml, formatNumber } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
 import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
 import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
-import type { HeaterResultArrayKey, HeaterResultRow, HeaterResultShortfall, HeaterShortResource } from "../../../../types/data-types/hs-heater-types";
+import type { HeaterResultAffordableRow, HeaterResultArrayKey, HeaterResultLimits, HeaterResultRow, HeaterResultShortfall, HeaterResultUnaffordableRow, HeaterShortResource } from "../../../../types/data-types/hs-heater-types";
 
 type ResultKey = HeaterResultArrayKey;
 
@@ -25,6 +25,7 @@ type NormalizedResultRow = {
     p4x4Value:          HeaterResultRow[typeof RESULT_COL_INDEX.p4x4];
     maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
     shortfall:          HeaterResultShortfall | undefined;
+    limits:             HeaterResultLimits | undefined;
 };
 
 function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
@@ -72,8 +73,19 @@ function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
         effectValue:        row[RESULT_COL_INDEX.effect],
         p4x4Value:          row[RESULT_COL_INDEX.p4x4],
         maxedValue:         row[RESULT_COL_INDEX.maxed],
-        shortfall:          row[0] === "Unaffordable" ? row[7] : undefined,
+        shortfall:          row[0] === "Unaffordable" ? (row as HeaterResultUnaffordableRow)[7] : undefined,
+        limits:             row[0] === "Unaffordable" ? undefined : (row as HeaterResultAffordableRow)[7],
     };
+}
+
+// Next to a row's ✘: the resource(s) that would raise it, either one
+function buildLimitIcons(limits: HeaterResultLimits): string {
+    const icons: string[] = [];
+    if (limits.ambrosia)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Ambrosia.png" alt="Ambrosia" title="More Ambrosia would raise it" />`);
+    if (limits.blueberries)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Blueberries.png" alt="Blueberries" title="More Blueberries would raise it" />`);
+    return icons.join("");
 }
 
 // An unaffordable row's short resource: what the tree needs, "≥" for a minimum
@@ -207,7 +219,9 @@ function buildArraySectionDataRow(
         ? ` <span class="hs-heater-best-h-marker" title="Best H at your current P4x4 (${bestH.p4x4})">★ now</span>`
         : "";
     const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
-    const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
+    // A row whose ✔ is set after the fact (bar income) can still carry limits: shown only on ✘
+    const limitIcons = rowModel.maxedValue === false && rowModel.limits ? buildLimitIcons(rowModel.limits) : "";
+    const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? `<span class="hs-heater-status-unmaxed">✘</span>${limitIcons}` : escapeHtml(String(rowModel.maxedValue))}</td>`;
     // A type picked in "Your loadout order" that can't be afforded: the whole
     // row in the orange of that slot's border
     const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';

@@ -128,7 +128,17 @@ export type HeaterResultAffordableRow = [
     effect: string,
     p4x4Eq: number | "Never" | "",
     isMaxed: boolean,
+    limits?: HeaterResultLimits,
 ];
+
+/**
+ * A row that isn't maxed: which resource would let one more level of an
+ * upgrade raise its stat. Set only when one of them is true.
+ */
+export interface HeaterResultLimits {
+    ambrosia: boolean;
+    blueberries: boolean;
+}
 
 /** A resource an unaffordable row runs short of: what the tree needs, what the inputs have. */
 export interface HeaterShortResource {

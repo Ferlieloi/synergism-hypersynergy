@@ -1,4 +1,4 @@
-import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, HeaterResultShortfall, HeaterResultUnaffordableRow, } from "../../../types/data-types/hs-heater-types";
+import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, HeaterResultLimits, HeaterResultShortfall, HeaterResultUnaffordableRow, } from "../../../types/data-types/hs-heater-types";
 import { formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
 import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-income';
@@ -1634,6 +1634,28 @@ class Loadout {
         this.invalidateCaches()
     }
 
+    // The other way round: removes every upgrade whose prerequisites aren't
+    // met, e.g. SR1 (needs Hyperflux 4) from an H0-H3 row's maxed tree.
+    dropUnmetPrerequisites(): void {
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const upgradeName of Object.keys(this.upgradeLevels)) {
+          if ((this.upgradeLevels[upgradeName] ?? 0) <= 0)
+            continue
+          const prerequisites = upgrades[upgradeName]?.prerequisites ?? {}
+          for (const prerequisite in prerequisites) {
+            if ((this.upgradeLevels[prerequisite] ?? 0) < (prerequisites[prerequisite] ?? 0)) {
+              this.upgradeLevels[upgradeName] = 0
+              changed = true
+              break
+            }
+          }
+        }
+      }
+      this.invalidateCaches()
+    }
+
     fixBlueberryUpgrades(): void {
 
       if (this.blueberryCost <= stats.blueberries)
@@ -1745,16 +1767,58 @@ class Loadout {
         else
           effectStr = baseLoadout.getStat(stat) === 0 ? "N / A" : formatNumber(this.getStat(stat) / baseLoadout.getStat(stat))
 
-        return [
+        const isMaxed = this.getStat(stat) >= maxLoadout.getStat(stat)
+        const row: HeaterResultAffordableRow = [
             this.format,
             null,
             this.blueberryCost,
             this.cost,
             effectStr,
             (p4x4 === null) ? "" : (p4x4 > 50 ? "Never" : p4x4),
-            this.getStat(stat) >= maxLoadout.getStat(stat),
+            isMaxed,
         ];
+        if (!isMaxed) {
+            const limits = this.limitingResources(stat, maxLoadout)
+            if (limits)
+                row[7] = limits
+        }
+        return row;
 
+    }
+
+    // Tries one more level of each upgrade, prerequisites included, within
+    // maxLoadout's levels (an H row's Hyperflux stays put). A level that raises the stat but needs more
+    // Blueberries than are left: Blueberries limit; one whose Blueberries fit
+    // but not its Ambrosia: Ambrosia limits. Works on a copy, as an H row's
+    // cached Cube stat leaves its Hyperflux out.
+    limitingResources(stat: string, maxLoadout: Loadout): HeaterResultLimits | undefined {
+        const base = new Loadout(this)
+        const baseStat = base.getStat(stat)
+        const spareAmbrosia = stats.amb - base.cost
+        const spareBlueberries = stats.blueberries - base.blueberryCost
+        const limits: HeaterResultLimits = { ambrosia: false, blueberries: false }
+        for (const upgradeName in upgrades) {
+            const level = base.upgradeLevels[upgradeName] ?? 0
+            if (level >= (maxLoadout.upgradeLevels[upgradeName] ?? 0)
+              || (upgrades[upgradeName].requiresExalt9 && !stats.exalt9Unlocked))
+                continue
+            const probe = new Loadout(base)
+            probe.upgradeLevels[upgradeName] = level + 1
+            probe.satisfyPrerequisites()
+            // A prerequisite over maxLoadout's level: SR1 would raise an H0-H3 row's Hyperflux
+            if (Object.keys(probe.upgradeLevels).some(name =>
+              (probe.upgradeLevels[name] ?? 0) > (maxLoadout.upgradeLevels[name] ?? 0)))
+                continue
+            if (probe.getStat(stat) <= baseStat)
+                continue
+            if (probe.blueberryCost - base.blueberryCost > spareBlueberries)
+                limits.blueberries = true
+            else if (probe.cost - base.cost > spareAmbrosia)
+                limits.ambrosia = true
+            if (limits.ambrosia && limits.blueberries)
+                break
+        }
+        return limits.ambrosia || limits.blueberries ? limits : undefined
     }
 
     // Combines upgrades from both loadouts
@@ -5951,6 +6015,7 @@ export class HSHeaterOptimizer {
               for (let i = 0; i <= upgrades.ambrosiaHyperflux.maxLevel; i++) {
                   let maxLoadoutH = new Loadout(maxLoadout);
                   maxLoadoutH.upgradeLevels.ambrosiaHyperflux = i;
+                  maxLoadoutH.dropUnmetPrerequisites();
                   if (loadoutsH[i] === undefined) {
                       // The smallest tree with this Hyperflux level: a minimum
                       const minimalH = new Loadout();
