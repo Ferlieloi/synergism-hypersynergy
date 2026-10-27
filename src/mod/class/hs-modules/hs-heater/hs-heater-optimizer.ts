@@ -5732,16 +5732,41 @@ export class HSHeaterOptimizer {
           if (options.calculateAmbOct) {
               const ambOctStartedAt = experimentNow()
               HSLogger.debug(() => '[HeaterDiag] calculateAmbOct', 'HSHeaterOptimizer');
+              const affordable = (loadout: Loadout): boolean =>
+                  loadout.cost <= stats.amb && loadout.blueberryCost <= stats.blueberries;
+              // The oct table leaves the Luck-Cube hybrid to the luck side
+              // (tableLuckOct, the Oct branch's), which is not searched here:
+              // try it on each row. Every level >= 1 costs the same Blueberry,
+              // so the highest affordable level beats the lower ones; level 0
+              // is still tried, as that Blueberry can lower Purple Leo luck.
+              // A new Octeract module outside tableOctV needs adding here too.
+              const luckCubeRows: Loadout[] = [];
+              for (let level = 1; level <= upgrades.ambrosiaLuckCube1.maxLevel; level++) {
+                  const row = new Loadout();
+                  row.upgradeLevels.ambrosiaLuckCube1 = level;
+                  row.satisfyPrerequisites();
+                  luckCubeRows.push(row);
+              }
               let loadoutAmbOct = maxAmbForOct!;
               let bestValue = loadoutAmbOct.getStat("ambOct");
-              for (const octLoadout of tableCache.tableOctV) {
-                  const candidate = Loadout.union(maxAmbForOct!, octLoadout);
-                  if (candidate.cost > stats.amb || candidate.blueberryCost > stats.blueberries)
-                      continue;
+              const consider = (candidate: Loadout): void => {
                   const value = candidate.getStat("ambOct");
                   if (value > bestValue || (value === bestValue && candidate.cost < loadoutAmbOct.cost)) {
                       loadoutAmbOct = candidate;
                       bestValue = value;
+                  }
+              };
+              for (const octLoadout of [new Loadout(), ...tableCache.tableOctV]) {
+                  const base = Loadout.union(maxAmbForOct!, octLoadout);
+                  if (!affordable(base))
+                      continue;
+                  consider(base);
+                  for (let index = luckCubeRows.length - 1; index >= 0; index--) {
+                      const candidate = Loadout.union(base, luckCubeRows[index]);
+                      if (affordable(candidate)) {
+                          consider(candidate);
+                          break;
+                      }
                   }
               }
               output.ambOct = [loadoutAmbOct.generateOutput("oct", maxLoadout)];
