@@ -147,12 +147,13 @@ export class HSGameData extends HSModule {
         // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
         window.__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
 
-        // Set before the fetches: the fetched data only reaches the API through this reference.
-        // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
-        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater, backup).
-        // A login after the page load is seen at the next reload, as the game does.
+        // Set before the reads: the data only reaches the API through this reference.
+        // PseudoCoin levels and quark bonuses come from the game (patched) or the browser's cache when they can,
+        // and are fetched at most once (asked by the game's dev: too much traffic on these endpoints).
+        // forceUpdateAllData() (heater, backup) only retries what could not be read.
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#watchPCoinLevels();
+        this.#watchQuarkBonus();
         await this.#refreshFetchedData();
 
         this.#startConsumablesPoll();
@@ -298,20 +299,53 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Fetches me data from its remote API, and reads the PseudoCoin levels once (#loadPCoinLevels).
+     * Reads the PseudoCoin levels (#loadPCoinLevels) and the quark bonuses (#loadQuarkBonus) once.
+     * A later call only retries what could not be read.
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
-        // HSLogger.debug(() => `Refreshing fetched data`, this.context);
         await this.#loadPCoinLevels();
+        await this.#loadQuarkBonus();
+    }
 
-        try {
-            const meQuery = await fetch(HSGlobal.Common.meAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
-            const data = await meQuery.json() as MeData;
+    // --- Quark bonuses (personal and global) ---
+    // The game reads them from https://synergism.cc/api/v1/users/me (at load and at a login) and
+    // https://synergism.cc/api/v1/quark-bonus (at load, then every 15 minutes); its formulas use its copy.
 
-            this.#meBonuses = data;
-            this.#meDataUpdated();
-        } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
+    #isQuarkBonusPatched(): boolean {
+        return window.__HS_PATCH_REPORT?.quarkBonus === true;
+    }
+
+    /** Patched game: the game hands both bonuses over at each change, maybe already before the mod loaded. */
+    #watchQuarkBonus() {
+        if (!this.#isQuarkBonusPatched()) return;
+
+        window.__HS_onQuarkBonusChange = () => this.#readGameQuarkBonus();
+        this.#readGameQuarkBonus();
+    }
+
+    #readGameQuarkBonus() {
+        const bonus = window.__HS_quarkBonus;
+        if (!bonus) return;
+
+        this.#meBonuses = { globalBonus: Number(bonus.global) || 0, bonus: { quark: Number(bonus.personal) || 0 } };
+        this.#meDataUpdated();
+    }
+
+    /**
+     * Without the patch: read once, from the browser's cached copy of the game's own /users/me when it has one,
+     * else fetched. A login after the page load is seen at the next reload.
+     */
+    async #loadQuarkBonus() {
+        if (this.#isQuarkBonusPatched() || this.#meBonuses) return;
+
+        // Any status: a logged-out player's answer still holds the global bonus
+        const data = await this.#fetchGameRoute<MeData>(HSGlobal.Common.meAPIurl, 'quark bonus', true, false)
+            ?? await this.#fetchGameRoute<MeData>(HSGlobal.Common.meAPIurl, 'quark bonus', false, false);
+        if (!data) return;
+
+        this.#meBonuses = data;
+        this.#meDataUpdated();
     }
 
     // --- PseudoCoin upgrade levels ---
@@ -372,8 +406,9 @@ export class HSGameData extends HSModule {
     async #loadPCoinLevels() {
         if (window.__HS_pcoinLevelsLoaded || this.#playerPseudoUpgrades) return;
 
-        let data = await this.#fetchPseudoData(true);
-        if (!data && !this.#isPCoinLevelsPatched()) data = await this.#fetchPseudoData(false);
+        const url = HSGlobal.Common.pseudoAPIurl;
+        let data = await this.#fetchGameRoute<PseudoGameData>(url, 'PseudoCoin levels', true);
+        if (!data && !this.#isPCoinLevelsPatched()) data = await this.#fetchGameRoute<PseudoGameData>(url, 'PseudoCoin levels', false);
         // The game's own levels arrived meanwhile: they win
         if (!data || window.__HS_pcoinLevelsLoaded) return;
 
@@ -381,18 +416,22 @@ export class HSGameData extends HSModule {
         this.#pseudoDataUpdated();
     }
 
-    async #fetchPseudoData(cachedOnly: boolean): Promise<PseudoGameData | undefined> {
+    /**
+     * One of the game's own requests: cachedOnly reads the browser's copy of the game's answer and sends nothing.
+     * okOnly: an answer with an error status counts as none.
+     */
+    async #fetchGameRoute<T>(url: string, what: string, cachedOnly: boolean, okOnly = true): Promise<T | undefined> {
         try {
-            const response = await fetch(HSGlobal.Common.pseudoAPIurl, cachedOnly
+            const response = await fetch(url, cachedOnly
                 ? { headers: HSGlobal.Common.modRequestHeaders, cache: 'only-if-cached', mode: 'same-origin' }
                 : { headers: HSGlobal.Common.modRequestHeaders });
-            if (!response.ok) throw new Error(`status ${response.status}`);
-            return await response.json() as PseudoGameData;
+            if (okOnly && !response.ok) throw new Error(`status ${response.status}`);
+            return await response.json() as T;
         } catch (err) {
-            // Not in the browser's cache (a first visit, a cleared cache, a page not on synergism.cc): fetched instead,
-            // or the patch fills it
-            if (cachedOnly) HSLogger.debug(() => `No cached PseudoCoin levels: ${err}`, this.context);
-            else HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context);
+            // Not in the browser's cache (a first visit, a cleared cache, an answer the server says not to keep, a
+            // page not on synergism.cc): fetched instead, or the patch fills it
+            if (cachedOnly) HSLogger.debug(() => `No cached ${what}: ${err}`, this.context);
+            else HSLogger.error(`Could not fetch ${what}: ${err}`, this.context);
             return undefined;
         }
     }

@@ -42,6 +42,8 @@ declare global {
         __HS_pcoinLevels?: Partial<Record<PseudoCoinUpgradeNames, number>>;
         __HS_pcoinLevelsLoaded?: boolean;
         __HS_onPCoinChange?: () => void;
+        __HS_quarkBonus?: { personal: number; global: number };
+        __HS_onQuarkBonusChange?: () => void;
         __HS_i18next?: {
             language: string;
             t: (key: string, vars?: Record<string, string | number>) => unknown;
