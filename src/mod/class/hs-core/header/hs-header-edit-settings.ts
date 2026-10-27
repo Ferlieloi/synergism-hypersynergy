@@ -52,15 +52,22 @@ interface HSChoiceDef {
 const hasHeaderModules = () => !!window.__HS_HEADER_MODULES_PATCHED;
 const hasChallengeModule = () => hasHeaderModules() && HSSettings.getSetting('challengeProgressHeader').isEnabled();
 
-// In the block's order, before the visible slots; a section's choices before its toggles
-const SECTIONS: { title: string; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
+// In the block's order; a section's slot counters, then its choices, then its toggles
+const SECTIONS: { title: string; slots?: true; choices?: HSChoiceDef[]; toggles: HSToggleDef[] }[] = [
     {
         title: 'Layout',
         toggles: [
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
-            { setting: 'headerHideLoadoutIcons', label: 'Hide ambrosia bar icon' },
             { setting: 'headerEditButton', label: '✎ Header edit button' },
+        ],
+    },
+    {
+        title: 'Ambrosia loadouts',
+        slots: true,
+        toggles: [
+            { setting: 'headerFitLoadoutSlots', label: 'Fit slots to the cell' },
+            { setting: 'headerHideLoadoutIcons', label: 'Hide ambrosia bar icon' },
         ],
     },
     {
@@ -116,6 +123,8 @@ const SECTIONS: { title: string; choices?: HSChoiceDef[]; toggles: HSToggleDef[]
 
 // The game's most ambrosia loadout slots: the stored value for "all"
 const MAX_SLOTS = 16;
+// The game's base slot count (the fewest owned): up to this many shown share one line in a grid cell
+const FIT_SLOTS = 8;
 const BLOCK_ID = 'hs-header-edit-settings';
 const HIDE_STYLE_ID = 'hs-header-slot-count-hide-css';
 const EDIT_BUTTON_ID = 'hs-header-edit-button';
@@ -129,7 +138,7 @@ const EDIT_BUTTON_ID = 'hs-header-edit-button';
  *     - Visible slots: how many slots the game's Ambrosia loadouts module shows (the first N; the others are hidden
  *       by CSS, nth-child, so the rule outlives the game's rebuild of the slots, and still work everywhere else).
  *       Hidden setting headerAmbrosiaSlotsShown, 16 = all. The slots owned are read from the slots the game draws
- *       (all of them in edit mode).
+ *       (all of them in edit mode). The same style block sets how many slots a row holds in a grid cell.
  *     - Checkboxes for the header settings (hidden in the panel), switched through enable()/disable(), with the
  *       panel's GDS check. They follow every change of those settings (HSSettings.onStateChange), wherever it comes
  *       from.
@@ -223,9 +232,10 @@ export class HSHeaderEditSettings {
         const sections = document.createElement('div');
         sections.className = 'hs-hes-sections';
         for (const section of SECTIONS) {
-            sections.append(HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles, section.choices));
+            const element = HSHeaderEditSettings.#buildToggleSection(section.title, section.toggles, section.choices);
+            if (section.slots) element.firstElementChild!.after(...HSHeaderEditSettings.#buildSlotLines());
+            sections.append(element);
         }
-        sections.append(HSHeaderEditSettings.#buildSlotSection());
         block.append(title, sections);
 
         block.addEventListener('animationstart', () => HSHeaderEditSettings.#refresh());
@@ -272,8 +282,9 @@ export class HSHeaderEditSettings {
     // -------------------- Visible slots --------------------
     // ======================================================
 
-    static #buildSlotSection(): HTMLElement {
-        const section = HSHeaderEditSettings.#buildSection('Visible slots');
+    // Put after the subtitle of the section that has slots: true
+    static #buildSlotLines(): HTMLElement[] {
+        const lines: HTMLElement[] = [];
         for (const kind of Object.keys(SLOT_COUNTS) as HSSlotCountKind[]) {
             const def = SLOT_COUNTS[kind];
             const line = document.createElement('div');
@@ -301,9 +312,9 @@ export class HSHeaderEditSettings {
             HSHeaderEditSettings.#minusButtons.set(kind, minus);
             HSHeaderEditSettings.#plusButtons.set(kind, plus);
             line.append(icon, minus, value, plus);
-            section.append(line);
+            lines.push(line);
         }
-        return section;
+        return lines;
     }
 
     // The saved count, 1 to 16 (anything else in storage counts as all)
@@ -334,12 +345,25 @@ export class HSHeaderEditSettings {
         HSHeaderEditSettings.#refresh();
     }
 
+    // The slots hidden above the count, and the slots per row in the grid (hs-header-loadout-icons.css): all of them
+    // up to 8, then two even rows. The slots shown are the fewer of the count and the slots owned (8 to 16), the
+    // latter read by :has from the slots the game draws, so a slot bought later needs no new rule.
     static #writeHideRule(): void {
         const rules: string[] = [];
+        const perRow = (shown: number) => shown <= FIT_SLOTS ? shown : Math.ceil(shown / 2);
         for (const kind of Object.keys(SLOT_COUNTS) as HSSlotCountKind[]) {
+            const id = SLOT_COUNTS[kind].containerId;
             const count = HSHeaderEditSettings.#getCount(kind);
             if (count < MAX_SLOTS) {
-                rules.push(`#${SLOT_COUNTS[kind].containerId} > .headerLoadoutSlot:nth-child(n+${count + 1}) { display: none; }`);
+                rules.push(`#${id} > .headerLoadoutSlot:nth-child(n+${count + 1}) { display: none; }`);
+            }
+            if (count <= FIT_SLOTS) {
+                rules.push(`#${id} { --hs-loadout-columns: ${count}; }`);
+            } else {
+                // Same specificity: the last match, the most slots owned, wins
+                for (let owned = FIT_SLOTS; owned <= MAX_SLOTS; owned++) {
+                    rules.push(`#${id}:has(> .headerLoadoutSlot:nth-child(${owned})) { --hs-loadout-columns: ${perRow(Math.min(count, owned))}; }`);
+                }
             }
         }
         // injectStyle keeps an existing block of the same id; removing a missing one logs a warning

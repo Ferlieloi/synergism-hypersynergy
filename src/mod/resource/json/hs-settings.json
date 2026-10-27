@@ -1607,6 +1607,21 @@
       "controlEnabledId": "hs-setting-qol-header-hide-loadout-icons-btn"
     }
   },
+  "headerFitLoadoutSlots": {
+    "settingName": "headerFitLoadoutSlots",
+    "settingDescription": "Fit the ambrosia loadout slots to their cell",
+    "settingHelpText": "In a header grid cell, the Ambrosia loadouts slots fill the cell on one line (two even rows above 8), sized like the automation bar's buttons. Off: the game's own layout.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerFitLoadoutSlotsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-fit-loadout-slots-btn"
+    }
+  },
   "headerEditButton": {
     "settingName": "headerEditButton",
     "settingDescription": "✎ Header edit button",

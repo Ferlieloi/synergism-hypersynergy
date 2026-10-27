@@ -232,6 +232,11 @@ export class HSSettingActions {
         headerHideLoadoutIconsAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-header-no-loadout-icons', params.disable !== true);
         },
+        // A class on <html> while off (hs-header-loadout-icons.css): the default look needs nothing before the
+        // settings load
+        headerFitLoadoutSlotsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-game-loadout-slots', params.disable === true);
+        },
         // A class on <html>: the button itself is created once (HSHeaderEditSettings.install)
         headerEditButtonAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-header-edit-button', params.disable !== true);
