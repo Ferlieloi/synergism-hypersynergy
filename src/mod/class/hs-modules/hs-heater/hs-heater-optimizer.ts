@@ -1,4 +1,4 @@
-import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, } from "../../../types/data-types/hs-heater-types";
+import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, HeaterResultShortfall, HeaterResultUnaffordableRow, } from "../../../types/data-types/hs-heater-types";
 import { formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
 import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-income';
@@ -1726,13 +1726,15 @@ class Loadout {
     generateOutput(stat: string = "", maxLoadout: Loadout, p4x4: number | null = null): HeaterResultRow {
 
         this.invalidateCaches()
-        if (this.cost > stats.amb || stat === "")
-            return ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false];
+        if (stat === "")
+            return unaffordableRow();
+        if (this.cost > stats.amb)
+            return unaffordableRow(this);
         // Safety net: the game refuses to load a tree that needs more
         // Blueberries than owned, so never hand one out.
         if (this.blueberryCost > stats.blueberries) {
             HSLogger.warn(`[HeaterDiag] ${stat} loadout needs ${this.blueberryCost} Blueberries, ${stats.blueberries} owned: reported Unaffordable`, 'HSHeaterOptimizer');
-            return ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false];
+            return unaffordableRow(this);
         }
 
         let baseLoadout = new Loadout();
@@ -2129,6 +2131,23 @@ function trimTableWithDependency(table: Loadout[], stat: string, dependency: str
 // every state that can improve a later tier.
 function experimentNow(): number {
   return typeof performance !== "undefined" ? performance.now() : Date.now()
+}
+
+// An "Unaffordable" row. needed: the tree the row needs, or with atLeast the
+// smallest one that could fill it; what it costs over the inputs names the
+// short resource(s), shown in the row's cost columns.
+function unaffordableRow(needed?: Loadout, atLeast = false): HeaterResultUnaffordableRow {
+  const row: HeaterResultUnaffordableRow = ["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]
+  if (needed === undefined)
+    return row
+  const shortfall: HeaterResultShortfall = { atLeast }
+  if (needed.cost > stats.amb)
+    shortfall.ambrosia = { need: needed.cost, have: stats.amb }
+  if (needed.blueberryCost > stats.blueberries)
+    shortfall.blueberries = { need: needed.blueberryCost, have: stats.blueberries }
+  if (shortfall.ambrosia || shortfall.blueberries)
+    row[7] = shortfall
+  return row
 }
 
 function effectiveBlueberryCost(upgradeName: string): number {
@@ -4912,7 +4931,7 @@ export class HSHeaterOptimizer {
             options.calculateAmbOct = false;
             // Needs the full All Ambrosia base: out of reach, there is no
             // loadout to hand out (an empty one would wipe the player's slot).
-            output.ambOct = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
+            output.ambOct = [unaffordableRow(maxAmbForOct)];
         }
 
         try {
@@ -5702,7 +5721,11 @@ export class HSHeaterOptimizer {
             if (tableSR1Cube.length === 0) {
                 // No cube-optimal loadout reaches ambrosiaHyperflux >= 4 within budget - nothing affordable to report for sr1
                 HSLogger.warn('[HeaterDiag] calculateSR: sr1 - no loadout with ambrosiaHyperflux >= 4 within budget, reporting Unaffordable', 'HSHeaterOptimizer');
-                output.sr1 = [["Unaffordable", null, "N / A", "N / A", "N / A", "N / A", false]];
+                // The smallest tree with SR1: a minimum
+                const minimalSR1 = new Loadout()
+                minimalSR1.upgradeLevels.ambrosiaSingReduction1 = 1
+                minimalSR1.satisfyPrerequisites()
+                output.sr1 = [unaffordableRow(minimalSR1, true)];
             } else {
                 loadoutSR1 = findCubeLuckOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
                 if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
@@ -5929,7 +5952,10 @@ export class HSHeaterOptimizer {
                   let maxLoadoutH = new Loadout(maxLoadout);
                   maxLoadoutH.upgradeLevels.ambrosiaHyperflux = i;
                   if (loadoutsH[i] === undefined) {
-                      hyperOutput.push(maxLoadout.generateOutput("", maxLoadout));
+                      // The smallest tree with this Hyperflux level: a minimum
+                      const minimalH = new Loadout();
+                      minimalH.upgradeLevels.ambrosiaHyperflux = i;
+                      hyperOutput.push(unaffordableRow(minimalH, true));
                   } else {
                       // Calculating effect without hyperflux
                       loadoutsH[i]!.upgradeLevels.ambrosiaHyperflux = 0; // Resetting hyperflux level to compute effect without it

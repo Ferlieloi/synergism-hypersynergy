@@ -2,7 +2,7 @@ import { escapeHtml, formatNumber } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
 import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
 import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
-import type { HeaterResultArrayKey, HeaterResultRow } from "../../../../types/data-types/hs-heater-types";
+import type { HeaterResultArrayKey, HeaterResultRow, HeaterResultShortfall, HeaterShortResource } from "../../../../types/data-types/hs-heater-types";
 
 type ResultKey = HeaterResultArrayKey;
 
@@ -24,6 +24,7 @@ type NormalizedResultRow = {
     effectValue:        HeaterResultRow[typeof RESULT_COL_INDEX.effect];
     p4x4Value:          HeaterResultRow[typeof RESULT_COL_INDEX.p4x4];
     maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
+    shortfall:          HeaterResultShortfall | undefined;
 };
 
 function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
@@ -71,7 +72,14 @@ function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
         effectValue:        row[RESULT_COL_INDEX.effect],
         p4x4Value:          row[RESULT_COL_INDEX.p4x4],
         maxedValue:         row[RESULT_COL_INDEX.maxed],
+        shortfall:          row[0] === "Unaffordable" ? row[7] : undefined,
     };
+}
+
+// An unaffordable row's short resource: what the tree needs, "≥" for a minimum
+function buildShortCostCell(short: HeaterShortResource, atLeast: boolean): string {
+    const need = `${atLeast ? "≥ " : ""}${formatCostCellValue(short.need)}`;
+    return `<td class="hs-heater-short-cost" title="You have ${formatCostCellValue(short.have)}">${need}</td>`;
 }
 
 function buildHeaderTooltipLabel(label: string, tooltip: string): string {
@@ -180,8 +188,13 @@ function buildArraySectionDataRow(
         : entry.rowIndex === 0
             ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
             : "";
-    const blueberryCostCell = `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
-    const costCell = `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
+    const { shortfall } = rowModel;
+    const blueberryCostCell = shortfall?.blueberries
+        ? buildShortCostCell(shortfall.blueberries, shortfall.atLeast)
+        : `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
+    const costCell = shortfall?.ambrosia
+        ? buildShortCostCell(shortfall.ambrosia, shortfall.atLeast)
+        : `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
     // Effect takes two columns, or shares them with p4x4 eq. With the routing,
     // it stays one cell, split inside (see .hs-heater-split-cell).
     const effectHtml = escapeHtml(String(rowModel.effectValue));
@@ -195,7 +208,8 @@ function buildArraySectionDataRow(
         : "";
     const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
     const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
-    // A type picked in "Your loadout order" that can't be afforded: the whole row in red
+    // A type picked in "Your loadout order" that can't be afforded: the whole
+    // row in the orange of that slot's border
     const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
     return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }

@@ -743,11 +743,19 @@ export class HSHeaterUIStyles {
             .hs-heater-status-unmaxed { color: #962f2f; }
             .hs-heater-best-h-marker { color: #f2c94c; white-space: nowrap; cursor: help; }
 
-            /* Same red as the ✘. The type's label is in a button when it has
-               an icon, and a button doesn't inherit the row's colour. */
+            /* Same orange as the slot's border in "Your loadout order". The
+               type's label is in a button when it has an icon, and a button
+               doesn't inherit the row's colour. */
             .hs-heater-selected-unaffordable-row td,
             .hs-heater-selected-unaffordable-row .hs-heater-type-icon-button {
+                color: #c96a00;
+            }
+
+            /* An unaffordable row's short resource, same red as the ✘. After
+               the rule above, which has the same specificity. */
+            td.hs-heater-short-cost {
                 color: #962f2f;
+                cursor: help;
             }
 
             .hs-heater-inputs-header { background-color: #472323; }

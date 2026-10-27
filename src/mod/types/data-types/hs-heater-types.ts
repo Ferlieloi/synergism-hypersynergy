@@ -130,6 +130,22 @@ export type HeaterResultAffordableRow = [
     isMaxed: boolean,
 ];
 
+/** A resource an unaffordable row runs short of: what the tree needs, what the inputs have. */
+export interface HeaterShortResource {
+    need: number;
+    have: number;
+}
+
+/**
+ * Why a row is unaffordable: only the short resource(s) are set. atLeast: the
+ * needs are those of the smallest tree that could fill the row (a minimum).
+ */
+export interface HeaterResultShortfall {
+    ambrosia?: HeaterShortResource;
+    blueberries?: HeaterShortResource;
+    atLeast: boolean;
+}
+
 export type HeaterResultUnaffordableRow = [
     loadoutLabel: "Unaffordable",
     sheetSpacerA: null,
@@ -138,6 +154,7 @@ export type HeaterResultUnaffordableRow = [
     effect: "N / A",
     p4x4Eq: "N / A",
     isMaxed: false,
+    shortfall?: HeaterResultShortfall,
 ];
 
 export type HeaterResultRow = HeaterResultAffordableRow | HeaterResultUnaffordableRow;
