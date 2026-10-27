@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { patchBundle } = require('../lib/patcher.js')
 
 const BROWSER_PATCHES = ['export', 'exportOutput', 'stage', 'player', 'getMaxChallenges', 'corruptionFreeLevels', 'tack', 'dialogHook',
-    'validateBlueberryTree', 'saveImportHook', 'consumables', 'pcoinLevels', 'globalEvent', 'headerModules']
+    'validateBlueberryTree', 'saveImportHook', 'consumables', 'pcoinLevels', 'quarkBonus', 'globalEvent', 'headerModules']
 
 const patch = (code, options = {}) => {
     const logs = []
@@ -18,7 +18,7 @@ test('report: every patch listed, written into the bundle and summed up in the l
     assert.deepEqual(Object.keys(window.__HS_PATCH_REPORT), BROWSER_PATCHES)
     assert.ok(Object.values(window.__HS_PATCH_REPORT).every(applied => applied === false))
     assert.deepEqual(window.__HS_PATCH_AMBIGUOUS, [])
-    assert.equal(logs.at(-1), `Bundle patching complete: 0/14 applied — missing: ${BROWSER_PATCHES.join(', ')}`)
+    assert.equal(logs.at(-1), `Bundle patching complete: 0/15 applied — missing: ${BROWSER_PATCHES.join(', ')}`)
 
     const steam = {}
     new Function('window', patch('return 1', { steam: true }).patched)(steam)

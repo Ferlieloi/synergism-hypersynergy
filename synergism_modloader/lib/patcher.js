@@ -757,6 +757,42 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── QUARK BONUS PATCH — hand Quark.ts's personal and global quark bonuses to the mod (window.__HS_quarkBonus)
+    // The game gets the personal bonus from https://synergism.cc/api/v1/users/me (at load and at a login) and the
+    // global one from https://synergism.cc/api/v1/quark-bonus (at load, then every 15 minutes); the mod reads them
+    // instead of fetching /users/me again (the game's dev asked for less traffic). Both setters call updateQuarkUI
+    // with both current values. It is found by its two translation keys, and its global bonus is the parameter its
+    // texts get as globalBonus:
+    //   a$=(e,t)=>{let r=u("currentBonus");e>0?r.innerHTML=s.t("settings.quarkBonusExtended",{globalBonus:t,...
+    //   becomes  a$=(e,t)=>{try{window.__HS_quarkBonus={personal:e,global:t};window.__HS_onQuarkBonusChange?.()}catch(__hsE){}...
+    report.quarkBonus = false;
+    try {
+        const uiResult = findEnclosingFunction(code, /["']settings\.quarkBonusExtended["']/g,
+            ['settings.quarkBonusSimple', 'currentBonus'], 'quark bonus');
+        const header = uiResult ? code.slice(Math.max(0, uiResult.bodyStart - 300), uiResult.bodyStart) : '';
+        const paramList = new RegExp(String.raw`(${PARAMS})\s*(?:=>\s*)?\{$`).exec(header)?.[1];
+        const params = paramList ? splitParams(paramList.slice(1, -1)).map(p => p.split('=')[0].trim()) : [];
+        const body = uiResult ? code.slice(uiResult.bodyStart, uiResult.bodyEnd) : '';
+        const globalParam = params.find(p => new RegExp(
+            String.raw`globalBonus\s*:\s*${p.replace(/\$/g, '\\$')}(?![\w$.\[(])`).test(body));
+        const personalParam = params.find(p => p !== globalParam);
+        if (uiResult && params.length === 2 && params.every(p => /^[\w$]+$/.test(p)) && globalParam && personalParam) {
+            code = code.slice(0, uiResult.bodyStart) +
+                `\ntry{window.__HS_quarkBonus={personal:${personalParam},global:${globalParam}};` +
+                'window.__HS_onQuarkBonusChange?.()}catch(__hsE){}\n' +
+                code.slice(uiResult.bodyStart);
+            report.quarkBonus = true;
+            log(`Patched quark bonus (fn=${uiResult.fnName}, personal=${personalParam}, global=${globalParam})`);
+        } else {
+            warn(!uiResult
+                ? 'Could not patch the quark bonus — updateQuarkUI ("settings.quarkBonusExtended") not found'
+                : `Could not patch the quark bonus — the personal and global bonus parameters of ${uiResult.fnName} were not found`);
+        }
+    } catch (e) {
+        warn('Error while patching the quark bonus', e);
+    }
+
+    // ==================================================================================
     // ── GLOBAL EVENT PATCH — hand Event.ts eventCheck's answer to the mod (window.__HS_globalEvent / __HS_onGlobalEvent)
     // The game fetches https://synergism.cc/events/get at load and every 5 minutes; the mod reads that answer
     // instead of fetching it again (the game's dev asked for less traffic). Found by its URL string and the
