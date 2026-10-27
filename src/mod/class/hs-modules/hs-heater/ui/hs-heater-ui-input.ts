@@ -160,7 +160,14 @@ export class HSHeaterUIInput {
         });
 
         return `
-           <span class="hs-heater-inputs-title">Active Branches:</span>
+           <div class="hs-heater-active-header">
+                <span class="hs-heater-inputs-title">Active Branches:</span>
+                <span class="hs-heater-active-bulk">
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="slots" title="Only the branches Your Loadout Order uses">☰</button>
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="all" title="Tick all">☑</button>
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="none" title="Untick all">☐</button>
+                </span>
+           </div>
            <div class="hs-heater-active-grid">
                 ${checkboxRows.join('')}
             </div>
@@ -173,8 +180,28 @@ export class HSHeaterUIInput {
     }
 
     static attachBranchCheckboxHandlers(modal: HTMLElement): void {
-        modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox').forEach((checkbox) => {
+        const checkboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
+        checkboxes.forEach((checkbox) => {
             checkbox.addEventListener('change', () => this.saveUncheckedBranches(modal));
+        });
+
+        // Only the checkboxes shown: a locked Purple is left alone
+        modal.querySelectorAll<HTMLButtonElement>('.hs-heater-active-bulk-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                const mode = button.dataset.branchBulk;
+                const slotBranches = new Set<string>();
+                if (mode === 'slots') {
+                    for (const semanticId of HSHeaterResultStore.collectSelectedSemanticIds(modal)) {
+                        const branchId = getHeaterTypeBranchId(semanticId);
+                        if (branchId) slotBranches.add(branchId);
+                    }
+                }
+                for (const checkbox of checkboxes) {
+                    const branchId = checkbox.id.replace('hs-heater-input-active-', '');
+                    checkbox.checked = mode === 'all' || (mode === 'slots' && slotBranches.has(branchId));
+                }
+                this.saveUncheckedBranches(modal);
+            });
         });
     }
 

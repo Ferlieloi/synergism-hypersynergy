@@ -418,6 +418,35 @@ export class HSHeaterUIStyles {
                 text-align: left;
             }
 
+            .hs-heater-active-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+
+            .hs-heater-active-bulk {
+                display: flex;
+                gap: 2px;
+            }
+
+            .hs-heater-active-bulk-btn {
+                background: none;
+                border: none;
+                margin: 0;
+                padding: 0 2px;
+                min-width: 0;
+                height: auto;
+                font-size: 14px;
+                line-height: 1;
+                color: #999;
+                cursor: pointer;
+            }
+
+            .hs-heater-active-bulk-btn:hover {
+                color: #ddd;
+            }
+
             .hs-heater-type-selects-grid {
                 display: grid;
                 grid-template-columns: 1fr;
