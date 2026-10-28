@@ -203,6 +203,90 @@ export interface Challenge {
     ifJump?: IfJumpParams;
 };
 
+// Dev builds only (HSAutosingRecorder): autosing's timings, read by the headless harness.
+// `sing` is the recorded singularity a timing belongs to (1 = the first one after the start). Times in ms.
+export interface HSAutosingTimingStep {
+    sing: number;
+    phase: string;
+    pass: number;
+    index: number;
+    action: string;
+    comment?: string;
+    // The step's challengeWaitBefore, and the time actually slept for it
+    waitBefore: number;
+    waitMs: number;
+    ms: number;
+    // An if-jump taken: the step jumped to
+    jump?: number;
+}
+
+export interface HSAutosingTimingPass {
+    sing: number;
+    phase: string;
+    // 1 = the phase's first pass in this singularity
+    pass: number;
+    ms: number;
+    steps: number;
+    end: 'done' | 'aoag' | 'stopped';
+}
+
+// One #performSingularity: Exalt 2 in and out, teleport, then (after the singularity is recorded)
+// the Obt loadout and the wait for an allowed stage
+export interface HSAutosingTimingTransition {
+    // The singularity it starts
+    sing: number;
+    ms: number;
+    // The part before the singularity is recorded: counted in the previous singularity's time
+    msBeforeRecord: number;
+}
+
+export interface HSAutosingTimingSingularity {
+    sing: number;
+    // From the previous record to this one, as the run panel times it
+    ms: number;
+    goldenQuarks: number;
+    quarks: number;
+    // C15 score before singing
+    c15: number;
+    // Time of each phase's passes, summed
+    phases: Record<string, number>;
+}
+
+// A phase pass being run
+export interface HSAutosingPassRecord {
+    sing: number;
+    phase: string;
+    pass: number;
+    startedAt: number;
+    steps: number;
+    // Time slept for the current step's challengeWaitBefore
+    waitMs: number;
+}
+
+export interface HSAutosingTimings {
+    strategy: string;
+    target: number;
+    steps: HSAutosingTimingStep[];
+    passes: HSAutosingTimingPass[];
+    transitions: HSAutosingTimingTransition[];
+    singularities: HSAutosingTimingSingularity[];
+    // Oldest entries dropped by each list's cap
+    dropped: { steps: number; passes: number; transitions: number; singularities: number };
+    // The singularity in progress
+    current: {
+        sing: number;
+        startedAt: number;
+        passCount: Record<string, number>;
+        phaseMs: Record<string, number>;
+    };
+}
+
+declare global {
+    interface Window {
+        __HS_autosingTimings?: HSAutosingTimings;
+    }
+}
+
 export type IsJumpChallenge = Challenge & {
     ifJump: {
         id: string;

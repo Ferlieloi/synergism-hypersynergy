@@ -9,8 +9,9 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
+import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
@@ -19,6 +20,8 @@ import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
 import { MAIN_VIEW_BUTTON_IDS } from "../../../types/module-types/hs-gamestate-types";
+
+declare const HS_DEV_BUILD: boolean;
 
 const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
@@ -879,6 +882,9 @@ export class HSAutosing extends HSModule {
             await this.#useAddAndTimeCodes();
             if (!this.#autosingEnabled) return;
 
+            // Dev builds only: the timings read by the headless harness
+            if (HS_DEV_BUILD) HSAutosingRecorder.start(this.#strategy!.strategyName, this.#targetSingularity);
+
             if (this.#autosingModal) {
                 let quarks: number;
                 let goldenQuarks: number;
@@ -997,6 +1003,7 @@ export class HSAutosing extends HSModule {
         const ignoreObserverActivated = options?.ignoreObserverActivated;
         const phaseLabel = phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
         this.#autosingModal?.setCurrentPhase(phaseLabel);
+        const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
         this.#corruptionManager.applyPhaseLevel(phaseConfig);
 
@@ -1009,10 +1016,13 @@ export class HSAutosing extends HSModule {
             // Autosing disabled or AOAG observer activated
             if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !isEndPhase && !ignoreObserverActivated)) {
                 this.#autosingModal?.recordPhase(phaseLabel);
+                if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.endPass(passRecord, this.#autosingEnabled ? 'aoag' : 'stopped');
                 return;
             }
 
-            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i);
+            const stepStartedAt = HS_DEV_BUILD ? performance.now() : 0;
+            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, passRecord);
+            if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.step(passRecord, phaseConfig.strat[i], i, stepStartedAt, jumpIndex);
             if (typeof jumpIndex === 'number') {
                 // set loop index to jumpIndex-1 because the for-loop will increment it
                 i = jumpIndex - 1;
@@ -1023,14 +1033,18 @@ export class HSAutosing extends HSModule {
         if (phaseConfig.endPhase === "end") this.#endStageDone = true;
 
         this.#autosingModal?.recordPhase(phaseLabel);
+        if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.endPass(passRecord, 'done');
     }
 
-    async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number): Promise<number | null> {
+    /** @param passRecord Dev builds only: the recorder's pass, which gets the time slept before the step */
+    async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number, passRecord?: HSAutosingPassRecord): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
 
         const wb = challenge.challengeWaitBefore ?? 0;
         if (wb > 0) {
+            const waitStartedAt = HS_DEV_BUILD ? performance.now() : 0;
             await HSUtils.sleepUntilElapsed(this.#prevActionTime, wb, this.context);
+            if (HS_DEV_BUILD && passRecord) passRecord.waitMs = performance.now() - waitStartedAt;
             // Stopped during the wait: don't act on the game (or restart/stop autosing again with 902/903)
             if (!this.#autosingEnabled) return null;
         }
@@ -1528,6 +1542,7 @@ export class HSAutosing extends HSModule {
 
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
+        const startedAt = HS_DEV_BUILD ? performance.now() : 0;
 
         let q = 0;
         let gq = 0;
@@ -1593,6 +1608,8 @@ export class HSAutosing extends HSModule {
         } else {
             this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
+        const recordedAt = HS_DEV_BUILD ? performance.now() : 0;
+        if (HS_DEV_BUILD) HSAutosingRecorder.singularity(!skipRecord, gqGain, qGain, c15ScoreBeforeSinging.toNumber());
 
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
 
@@ -1615,6 +1632,7 @@ export class HSAutosing extends HSModule {
 
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
+        if (HS_DEV_BUILD) HSAutosingRecorder.transition(startedAt, recordedAt);
     }
 
     async #enterAndLeaveExalt(): Promise<boolean> {
