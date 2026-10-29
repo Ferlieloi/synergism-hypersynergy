@@ -113,7 +113,6 @@ export class HSSettingActions {
             document.documentElement.classList.toggle('hs-minibars-framed', params.disable !== true);
         },
 
-        // Needs GDS (usesGameData): the settings keep it off while GDS is off
         ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
             (mod) => mod.enableRateHeader(),
             (mod) => mod.disableRateHeader()
@@ -145,10 +144,11 @@ export class HSSettingActions {
             HSCorruptionHeader.setAlwaysShown(params.disable !== true);
         },
 
-        // Not awaited: the GDS start and stop run on their own
+        // Not awaited: the GDS start and stop run on their own.
+        // Only bookmarklet players have the setting: elsewhere GDS always runs, even with an OFF saved before.
         useGameData: moduleToggle<HSGameData>('HSGameData',
             (mod) => { void mod.enableGDS(); },
-            (mod) => { void mod.disableGDS(); }
+            (mod) => { void (mod.isGDSWanted() ? mod.enableGDS() : mod.disableGDS()); }
         ),
 
         persistentAmbrosiaLevelsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',

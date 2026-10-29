@@ -430,9 +430,10 @@
     "settingBlockId": "hs-setting-block-gamedata",
     "settingName": "useGameData",
     "settingDescription": "Game Data Sniffing (GDS)",
-    "settingHelpText": "Enables game data sniffing by continuously scanning localStorage save data in the background. Enabling this gives the mod vastly enhanced functionality, but may cause performance issues on some systems.",
+    "settingHelpText": "The mod saves the game twice a second and reads that save, for the features that show values computed from your game data.",
     "settingType": "boolean",
     "enabled": true,
+    "platforms": ["bookmarklet"],
     "settingAction": "useGameData",
     "settingControl": {
       "controlType": "switch",
@@ -1490,11 +1491,10 @@
   "ambrosiaRateHeader": {
     "settingName": "ambrosiaRateHeader",
     "settingDescription": "Ambrosia per hour in the header (S25+)",
-    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout, as in the Ambrosia tab. Needs GDS.",
+    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout, as in the Ambrosia tab.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": true,
-    "usesGameData": true,
     "settingAction": "ambrosiaRateHeaderAction",
     "settingControl": {
       "controlType": "switch",

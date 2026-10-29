@@ -8,12 +8,12 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
-import { HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSHeaderKeepOnImport } from "../header/hs-header-keep-on-import";
+import { HSPlatform } from "../hs-platform";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
 
@@ -560,6 +560,15 @@ export class HSGameData extends HSModule {
     }
 
     /**
+     * Whether the engine should run when no pause is held. The GDS setting only exists for bookmarklet players
+     * (its platforms): everyone else reads the live player at almost no cost, so it always runs, whatever was saved.
+     */
+    isGDSWanted(): boolean {
+        if (HSPlatform.get() !== 'bookmarklet') return true;
+        return HSSettings.getSetting('useGameData')?.isEnabled() ?? false;
+    }
+
+    /**
      * Pauses the GDS engine without touching the GDS setting, so the setting can't be left OFF
      * if the pause is never released (reload, crash...). The engine stays stopped until every
      * pause is released.
@@ -573,7 +582,7 @@ export class HSGameData extends HSModule {
 
     /**
      * Releases a pause taken by pauseGDS(). Restarts the engine when no pause is left
-     * and the GDS setting is ON.
+     * and it is wanted (isGDSWanted()).
      * @param reason The value given to pauseGDS().
      * @returns true when the engine was restarted.
      */
@@ -581,7 +590,7 @@ export class HSGameData extends HSModule {
         if (!this.#enginePauses.delete(reason)) return false;
         HSLogger.debug(() => `GDS pause released (${reason})`, this.context);
         if (this.#enginePauses.size > 0) return false;
-        if (!(HSSettings.getSetting('useGameData')?.isEnabled() ?? false)) return false;
+        if (!this.isGDSWanted()) return false;
 
         await this.enableGDS();
         return this.#gdsEnabled;
@@ -802,10 +811,10 @@ export class HSGameData extends HSModule {
      */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
-        const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
-        const isGdsSettingEnabled = () => gameDataSetting?.isEnabled() ?? false;
-        // Shown as paused when the setting is ON, even if autosing had already paused the engine
-        const announcePause = isGdsSettingEnabled();
+        const isGdsWanted = () => this.isGDSWanted();
+        // Shown as paused when the setting is ON, even if autosing had already paused the engine.
+        // Only to bookmarklet players: nobody else has a GDS setting
+        const announcePause = HSPlatform.get() === 'bookmarklet' && isGdsWanted();
         // Ends the "GDS paused" notification shown below, only when one was shown
         const notifyResumed = (reason: string) => {
             if (!announcePause) return;
@@ -881,11 +890,11 @@ export class HSGameData extends HSModule {
                         HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
                     }
 
-                    if (!isGdsSettingEnabled()) {
+                    if (!isGdsWanted()) {
                         // Wait for game state to settle and cleanup to take effect, then restore OFF state
                         setTimeout(() => {
                             // The player may have turned GDS on in the meantime
-                            if (isGdsSettingEnabled()) return;
+                            if (isGdsWanted()) return;
                             self.disableGDS();
                             HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
                         }, 2000);
