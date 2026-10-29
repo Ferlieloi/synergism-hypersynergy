@@ -244,6 +244,12 @@ export interface HSAutosingTimingSingularity {
     phases: Record<string, number>;
 }
 
+// The game internals autosing found at its start ({ label: found }): all required ones = fast mode
+export interface HSAutosingExposureParts {
+    required: Record<string, boolean>;
+    optional: Record<string, boolean>;
+}
+
 // A phase pass being run
 export interface HSAutosingPassRecord {
     sing: number;

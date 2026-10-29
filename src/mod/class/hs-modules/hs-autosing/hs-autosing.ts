@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -186,6 +186,8 @@ export class HSAutosing extends HSModule {
     #getMaxChallengesFunc?: ((challenge: number) => number) | null;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
     #isExposureReady: boolean = false;
+    // What the fast mode needs, found or not at the last start (shown in the timer's footer)
+    #exposureParts: HSAutosingExposureParts = { required: {}, optional: {} };
     #gamestate!: HSGameState;
     #subtabMemory?: HSSubtabMemory;
     // The tab the player was on, brought back after each Exalt (the game opens Buildings) and each DOM stage read
@@ -472,6 +474,16 @@ export class HSAutosing extends HSModule {
 
         // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
+        this.#exposureParts = {
+            required: {
+                'Stage function': !!this.#stageFunc,
+                'Live player': !!this.#exposedPlayer,
+                'Max challenges': !!this.#getMaxChallengesFunc,
+                'After-tack hook': isAfterTackHooked,
+                'Dialog hook': isDialogHookPatched,
+            },
+            optional: { 'Export output': isExportOutputPatched },
+        };
         const exposureMsg = `Exposure status: ${this.#isExposureReady}
             (stageFunc: ${!!this.#stageFunc},
             exposedPlayer: ${!!this.#exposedPlayer},
@@ -904,7 +916,7 @@ export class HSAutosing extends HSModule {
                 }
                 // Stopped meanwhile: don't reset the review window, and don't enter Exalt 2 below
                 if (!this.#autosingEnabled) return;
-                this.#autosingModal.start(this.#strategy!, quarks, goldenQuarks);
+                this.#autosingModal.start(this.#strategy!, quarks, goldenQuarks, this.#exposureParts);
                 this.#autosingModal.show();
             }
 

@@ -2,7 +2,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSGlobal } from "../../hs-core/hs-global";
-import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, type HSAutosingExposureParts } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosing } from "./hs-autosing";
 // DB Disabled... See for advanced data collection re-implementation
 // import { HSAutosingDB } from './hs-autosingDB';
@@ -154,6 +154,7 @@ export class HSAutosingModal {
     #footerVersionSpan: HTMLElement | null = null;
     #footerStrategySpan: HTMLElement | null = null;
     #footerLoadoutsSpan: HTMLElement | null = null;
+    #footerPatchSpan: HTMLElement | null = null;
 
     // --- Mouse Event Handlers (for drag/resize) ---
     #onMouseMoveHandler = (e: MouseEvent) => this.#onMouseMove(e);
@@ -424,7 +425,7 @@ export class HSAutosingModal {
             </div>
 
             <div id="hs-footer-section" class="hs-footer-info hs-timer-section hs-detailed-data">
-                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version: </span> <span id="hs-footer-version"></span></div>
+                <div class="hs-info-line-detailed"><span class="hs-timer-label">Module Version: </span> <span id="hs-footer-version"></span><span id="hs-footer-patch"></span></div>
                 <div class="hs-info-line-detailed"><span class="hs-timer-label">Active Strategy: </span> <span id="hs-footer-strategy"></span></div>
                 <div class="hs-info-line-detailed hs-footer-loadouts"><span class="hs-timer-label">Amb Loadouts Order: </span> <span id="hs-footer-loadouts"></span></div>
             </div>
@@ -490,6 +491,7 @@ export class HSAutosingModal {
         this.#footerVersionSpan  = document.getElementById('hs-footer-version');
         this.#footerStrategySpan = document.getElementById('hs-footer-strategy');
         this.#footerLoadoutsSpan = document.getElementById('hs-footer-loadouts');
+        this.#footerPatchSpan    = document.getElementById('hs-footer-patch');
 
         /*
         // Persistent export button
@@ -795,7 +797,8 @@ export class HSAutosingModal {
 
     /** Start autosing session with given strategy and initial (g)quark values.
      *  Reset phase history and metrics. */
-    public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0): void {
+    public start(strategy: HSAutosingStrategy, initialQuarks: number = 0, initialGoldenQuarks: number = 0,
+        exposureParts?: HSAutosingExposureParts): void {
         this.reset();
         this.enterRunningMode();
 
@@ -820,6 +823,7 @@ export class HSAutosingModal {
         this.#setTextEl(this.#footerVersionSpan, `v${this.#modVersion}`);
         this.#setTextEl(this.#footerStrategySpan, this.#strategyName);
         this.#setTextEl(this.#footerLoadoutsSpan, this.#loadoutsOrder.join(', '));
+        if (exposureParts) this.#showPatchState(exposureParts);
 
         // Ensure AOAG appears before the final 'end' phase in the timer ordering.
         // Some phases are recorded using the human-friendly AOAG_PHASE_NAME (override),
@@ -1176,6 +1180,24 @@ export class HSAutosingModal {
             this.#exportManager?.updateExportButton();
             this.#renderExportPending = false;
         */
+    }
+
+    /**
+     * The footer's patch state: fast mode when every required game internal was found, slow (DOM) mode otherwise,
+     * "not patched" when none was (bookmarklet). The list is the span's tooltip, set once per start.
+     */
+    #showPatchState(parts: HSAutosingExposureParts): void {
+        const el = this.#footerPatchSpan;
+        if (!el) return;
+        const required = Object.values(parts.required);
+        const isFast = required.every(Boolean);
+        const text = isFast ? 'Patched' : required.some(Boolean) ? 'Patch incomplete · slow' : 'Not patched · slow';
+        this.#setTextEl(el, text);
+        el.classList.toggle('hs-footer-patch-slow', !isFast);
+        el.title = [
+            ...Object.entries(parts.required).map(([label, found]) => `${label}: ${found}`),
+            ...Object.entries(parts.optional).map(([label, found]) => `${label} (optional): ${found}`),
+        ].join('\n');
     }
 
     /** Set the text content of an element if it differs from the current value. */
