@@ -56,6 +56,17 @@ export class HSStrategyManager {
         return manifestArr.map((filename: string) => filename.replace(/\.json$/, ""));
     }
 
+    static async loadDefaultStrategyByName(name: string, context = ''): Promise<HSAutosingStrategy | null> {
+        try {
+            // Dynamic import using the name
+            const data = await import(`../../../resource/json/strategies/${name}.json`);
+            return data.default || data;
+        } catch (e) {
+            HSLogger.error(`Failed to load strategy '${name}': ${e}`, context);
+            return null;
+        }
+    }
+
     static ensureAoagPhase(strategy: HSAutosingStrategy): HSAutosingStrategy {
         if (!strategy) return strategy;
 

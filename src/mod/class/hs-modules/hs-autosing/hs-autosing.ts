@@ -6,6 +6,7 @@ import { HSModule } from "../../hs-core/module/hs-module";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
@@ -837,11 +838,11 @@ export class HSAutosing extends HSModule {
             return null;
         }
 
-        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const selectedRawName = selectedOption.value.toString();
         const strategy = defaultNames.includes(selectedRawName)
-            ? await HSSettings.loadDefaultStrategyByName(selectedRawName)
-            : (HSSettings.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
+            ? await HSStrategyManager.loadDefaultStrategyByName(selectedRawName, this.context)
+            : (HSStrategyManager.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
 
         if (!strategy) {
             HSUI.Notify(`Could not find or load strategy "${selectedRawName}" - Autosing stopped.`, { notificationType: "warning" });

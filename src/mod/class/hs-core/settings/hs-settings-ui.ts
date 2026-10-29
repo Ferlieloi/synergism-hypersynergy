@@ -9,6 +9,7 @@ import { HSLogger } from "../hs-logger";
 import { HSPlatform } from "../hs-platform";
 import { HSSetting } from "./hs-setting";
 import { HSSettings } from "./hs-settings";
+import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 
@@ -700,7 +701,7 @@ export class HSSettingsUI {
             }));
         } else if (convertedType === HSInputType.SELECT) {
             if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
-                const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
+                const { defaultStrategiesOptions, userStrategiesOptions } = HSStrategyManager.getMergedStrategyOptions();
                 controls.selectOptions.length = 0;
                 controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
                 HSLogger.log(`Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`, this.#context);

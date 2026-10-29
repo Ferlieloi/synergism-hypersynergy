@@ -1,5 +1,4 @@
 import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
-import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
@@ -252,39 +251,6 @@ export class HSSettings extends HSModule {
         if (!Array.isArray(usesGameData)) return usesGameData === true;
         return usesGameData.includes(HSPlatform.get());
     }
-
-    static getStrategies(): HSAutosingStrategy[] {
-        return HSStrategyManager.getStrategies();
-    }
-
-    static getMergedStrategyOptions() {
-        return HSStrategyManager.getMergedStrategyOptions();
-    }
-
-    static getDefaultStrategyNames(): string[] {
-        return HSStrategyManager.getDefaultStrategyNames();
-    }
-
-    static async loadDefaultStrategyByName(name: string): Promise<HSAutosingStrategy | null> {
-        try {
-            // Dynamic import using the name
-            const data = await import(`../../../resource/json/strategies/${name}.json`);
-            return data.default || data;
-        } catch (e) {
-            HSLogger.error(`Failed to load strategy '${name}': ${e}`, this.#staticContext);
-            return null;
-        }
-    }
-
-
-    // ===============================
-    // ------ Strategy helpers -------
-    // ===============================
-
-    static validateStrategy(strategy: HSAutosingStrategy) {
-        return HSStrategyManager.validateStrategy(strategy, HSSettings.#staticContext);
-    }
-
 
     // ===============================
     // --------- Persistence ---------

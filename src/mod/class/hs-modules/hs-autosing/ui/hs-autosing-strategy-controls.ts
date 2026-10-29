@@ -25,7 +25,7 @@ export class HSAutosingStrategyControls {
         const control = setting.getDefinition().settingControl;
         if (!control?.selectOptions) return;
 
-        const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
+        const { defaultStrategiesOptions, userStrategiesOptions } = HSStrategyManager.getMergedStrategyOptions();
         control.selectOptions.length = 0;
         control.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
 
@@ -119,7 +119,7 @@ export class HSAutosingStrategyControls {
         }
 
         const strategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         if (defaultNames.includes(strategyName)) {
             HSUI.Notify("You cannot delete default strategies.", { notificationType: "warning" });
             return;
@@ -135,7 +135,7 @@ export class HSAutosingStrategyControls {
             return;
         }
 
-        const saved = HSStrategyManager.deleteStrategyFromStorage(strategyName, "HSSettings");
+        const saved = HSStrategyManager.deleteStrategyFromStorage(strategyName, HSAutosingStrategyControls.#context);
         if (!saved) {
             HSUI.Notify("Failed to delete strategy from localStorage", { notificationType: "error" });
             return;
@@ -172,9 +172,9 @@ export class HSAutosingStrategyControls {
         }
 
         const strategyName = selectedOption.value.toString();
-        let strategy = HSSettings.getStrategies().find(s => s.strategyName === strategyName);
-        if (!strategy && HSSettings.getDefaultStrategyNames().includes(strategyName)) {
-            strategy = await HSSettings.loadDefaultStrategyByName(strategyName) || undefined;
+        let strategy = HSStrategyManager.getStrategies().find(s => s.strategyName === strategyName);
+        if (!strategy && HSStrategyManager.getDefaultStrategyNames().includes(strategyName)) {
+            strategy = await HSStrategyManager.loadDefaultStrategyByName(strategyName, this.#context) || undefined;
         }
 
         if (!strategy) {
@@ -256,7 +256,7 @@ export class HSAutosingStrategyControls {
                     return;
                 }
 
-                const existingStrategies = HSSettings.getStrategies();
+                const existingStrategies = HSStrategyManager.getStrategies();
                 if (existingStrategies.some(s => s.strategyName === strategyName)) {
                     HSUI.Notify(`Strategy "${strategyName}" already exists`, {
                         notificationType: "warning"
@@ -275,7 +275,7 @@ export class HSAutosingStrategyControls {
                 }
 
                 try {
-                    HSSettings.validateStrategy(parsedStrategy);
+                    HSStrategyManager.validateStrategy(parsedStrategy, HSAutosingStrategyControls.#context);
                 } catch (error) {
                     HSUI.Notify(`Invalid strategy: ${(error as Error).message}`, {
                         notificationType: "error"
@@ -287,7 +287,7 @@ export class HSAutosingStrategyControls {
                 const hasLegacyCorruptions = HSStrategyManager.hasLegacyCorruptions(parsedStrategy);
 
                 try {
-                    const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
+                    const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, HSAutosingStrategyControls.#context);
                     if (!saved) {
                         HSUI.Notify("Failed to save strategy", {
                             notificationType: "error"
@@ -298,10 +298,10 @@ export class HSAutosingStrategyControls {
                     // Refresh the dropdown list after import
                     HSAutosingStrategyControls.updateStrategyDropdownList();
                     HSAutosingStrategyControls.selectAutosingStrategyByName(strategyName);
-                    HSLogger.log(`Strategy "${strategyName}" imported and selected.`, "HSSettings");
+                    HSLogger.log(`Strategy "${strategyName}" imported and selected.`, HSAutosingStrategyControls.#context);
                     // One notification: the warning, when there is one
                     if (hasLegacyCorruptions) {
-                        HSStrategyManager.warnLegacyCorruptions([strategyName], "HSSettings");
+                        HSStrategyManager.warnLegacyCorruptions([strategyName], HSAutosingStrategyControls.#context);
                     } else {
                         HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
                             notificationType: "success"
@@ -317,7 +317,7 @@ export class HSAutosingStrategyControls {
                     HSUI.Notify("Failed to save strategy", {
                         notificationType: "error"
                     });
-                    HSLogger.log(`Strategy import failed: ${error}`, "HSSettings");
+                    HSLogger.log(`Strategy import failed: ${error}`, HSAutosingStrategyControls.#context);
                 }
             });
         } else {
@@ -345,14 +345,14 @@ export class HSAutosingStrategyControls {
         if (!selectedOption) return;
 
         const selectedStrategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const isDefaultStrategy = defaultNames.includes(selectedStrategyName);
 
-        const strategies = HSSettings.getStrategies();
+        const strategies = HSStrategyManager.getStrategies();
         let strategy = strategies.find(s => s.strategyName === selectedStrategyName);
 
         if (!strategy && isDefaultStrategy) {
-            strategy = await HSSettings.loadDefaultStrategyByName(selectedStrategyName) || undefined;
+            strategy = await HSStrategyManager.loadDefaultStrategyByName(selectedStrategyName, this.#context) || undefined;
         }
 
         if (!strategy) {
