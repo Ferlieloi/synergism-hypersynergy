@@ -2424,6 +2424,21 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const redLuck =                 this.luck.calculateRedAmbrosiaLuck(true) as number;
             const redLuckNoAmb =            this.luck.calculateRedAmbrosiaLuck(true, 'true_base') as number;
             const activeBells = this.isEvent ? (eventData?.HAPPY_HOUR_BELL.amount ?? 0) : 0;
+            // The heater applies the bells from its Active Bells field
+            // (applyHeaterBells), so its luck and blue bar speed come without
+            // them: the same terms GDS added, taken out. The global event's
+            // blue bar part shares the bells' factor (Statistics.ts 'Event').
+            const globalEventBlueBarBonus = this.isEvent ? this.getVanillaGlobalEventBuff(EventBuffType.BlueberryTime) : 0;
+            const bellBlueBarBonus = this.isEvent ? this.calculateConsumableEventBuff(EventBuffType.BlueberryTime) : 0;
+            const ambSpeedNoAmbBerriesNoBells = ambSpeedNoAmbBerries
+                * (1 + globalEventBlueBarBonus) / (1 + globalEventBlueBarBonus + bellBlueBarBonus);
+            const luckMultNoAmbNoBells = noAmbLuck.luckMult - this.calculateConsumableEventBuff(EventBuffType.AmbrosiaLuck);
+            // Red luck holds floor((Ambrosia luck - 100) / conversion): that
+            // term too is taken at the luck without bells
+            // (calculateRedAmbrosiaLuck, luckTotal = luckBase * luckMult)
+            const redLuckNoAmbNoBells = redLuckNoAmb
+                - Math.floor((noAmbLuck.luckTotal - 100) / luckConversion)
+                + Math.floor((noAmbLuck.luckBase * luckMultNoAmbNoBells - 100) / luckConversion);
             const ambrosiaUpgradeNames = Object.keys(this.ambrosia.ambrosiaUpgradeCalculationCollection) as AmbrosiaUpgradeNames[];
             const ambrosiaUpgradeBonusLevels = Object.fromEntries(
                 ambrosiaUpgradeNames.map((name) => [name, this.ambrosia.getPurpleAmbrosiaEnchantmentFreeLevels(name)])
@@ -2499,15 +2514,18 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     ambrosiaBarPointsSNoAmb: ambSpeedNoAmb,
                     blueberries:            blueberries,
                     finalAmbrosiaBarPointsSNoAmb: ambSpeedNoAmbBerries,
+                    finalAmbrosiaBarPointsSNoAmbNoBells: ambSpeedNoAmbBerriesNoBells,
                     purpleLeoLevel:         purpleLeoLevel,
                     ambrosiaLuck:           luck.luckBase,
                     totalAdditiveLuckMultiplier: luck.luckMult,
                     totalAmbrosiaLuck:      luck.luckTotal,
                     ambrosiaLuckNoAmb:      noAmbLuck.luckBase,
                     totalAdditiveLuckMultiplierNoAmb: noAmbLuck.luckMult,
+                    totalAdditiveLuckMultiplierNoAmbNoBells: luckMultNoAmbNoBells,
                     totalAmbrosiaLuckNoAmb: noAmbLuck.luckTotal,
                     totalRedLuck:           redLuck,
                     totalRedLuckNoAmb:      redLuckNoAmb,
+                    totalRedLuckNoAmbNoBells: redLuckNoAmbNoBells,
                     ambrosiaLuckPer1RedLuckNoAmb: luckConversion,
                     quarksOwned:            Number(gameData.worlds.valueOf() || 0),
                     qHept:                  gameData.hepteracts.quark.BAL,
@@ -2551,6 +2569,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     totalTalismanPowerMultiplierNoAmb: new Decimal(noAmbTalismanPower),
                     patreonBonus:               this.getPatreonBonus(),
                     activeBells:                activeBells,
+                    globalEventBlueBarBonus:    globalEventBlueBarBonus,
                     jack:                       this.quarkShop.getShopLevel('shopPanthema') > 0,
                     freeShopLevelsInfinityNoAmb: this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),

@@ -1,5 +1,5 @@
 import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, HeaterResultLimits, HeaterResultShortfall, HeaterResultUnaffordableRow, } from "../../../types/data-types/hs-heater-types";
-import { formatNumber } from "./hs-heater-utils";
+import { applyHeaterBells, formatNumber } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
 import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-income';
 import type { AmbrosiaBarIncome, AmbrosiaBarIncomeReactor } from '../../../types/data-types/hs-ambrosia-income-types';
@@ -4718,8 +4718,8 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
 
 function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     const {
-        amb, ramb, bonusAmbrosiaPerFill, ambSpeedNoAmbBerries, blueberries, purpleLeoLevel,
-        luckBaseNoAmb, luckMultNoAmb, redLuckBase, luckConversion,
+        amb, ramb, bonusAmbrosiaPerFill, blueberries, purpleLeoLevel,
+        luckBaseNoAmb, redLuckBase, luckConversion,
         quarksOwned, qHept, cubesExpTotal,
         currentSingularity, singularityReducers,
         exalt, exalt5Unlocked, exalt9Unlocked, postAoag, oneMindUnlocked, aquariusUnlocked, transcription,
@@ -4753,18 +4753,16 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     // separate, rounded-up digit counts of lifetime blue and red Ambrosia.
     stats.lifetimeAmbExp = Math.ceil(Math.log10(amb + 1)) + Math.ceil(Math.log10(ramb + 1));
 
-    stats.ambSpeed    = ambSpeedNoAmbBerries;
+    // The three fields come without bells (the global event is in them): the
+    // Active Bells field's are added here, so a heat can be for any bell count
+    const withBells = applyHeaterBells(input);
+    stats.ambSpeed    = withBells.ambSpeed;
     stats.blueberries = blueberries;
     stats.purpleLeoLevel = purpleLeoLevel;
     stats.tutorialBonus = bonusTutorial;
     stats.baseLuck       = luckBaseNoAmb;
-    // SynergismOfficial/src/Statistics.ts and Event.ts:
-    // luckMultNoAmb already comes from calculateLuck(..., 'true_base'),
-    // whose event source includes both the vanilla event and consumable bell
-    // contribution. Do not add activeBells again here, or event luck is
-    // counted twice in every candidate loadout.
-    stats.baseMLuck      = luckMultNoAmb;
-    let rLuck            = redLuckBase;
+    stats.baseMLuck      = withBells.luckMult;
+    let rLuck            = withBells.redLuck;
     stats.luckConversion = luckConversion;
 
     stats.quarks  = quarksOwned;
@@ -4951,7 +4949,7 @@ export class HSHeaterOptimizer {
 
         if (cubeExperimentDiagnostics) {
             const empty = new Loadout();
-            const noLeoLuck = input.luckBaseNoAmb * (1 + input.luckMultNoAmb);
+            const noLeoLuck = input.luckBaseNoAmb * (1 + applyHeaterBells(input).luckMult);
             const purpleLeoLuck = stats.blueberries >= 5
                 ? stats.blueberries * stats.purpleLeoLevel * (1 + empty.getStat('mLuck')) : 0;
             cubeExperimentDiagnostics.emptyLoadoutCheck = {
@@ -5115,7 +5113,7 @@ export class HSHeaterOptimizer {
                   luck: loadoutRLuck.luck,
                   mLuck: loadoutRLuck.getStat("mLuck"),
                   luckConversion: Upgrade.luckConversion(loadoutRLuck.effectiveLevel("ambrosiaFreeRedLuckUpgrades")),
-                  totalRedLuck: input.redLuckBase * rLuckEffectRatio,
+                  totalRedLuck: applyHeaterBells(input).redLuck * rLuckEffectRatio,
                   rLuckEffectRatio,
               };
           }

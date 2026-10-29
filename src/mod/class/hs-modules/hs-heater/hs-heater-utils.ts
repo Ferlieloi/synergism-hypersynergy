@@ -63,3 +63,35 @@ export function computeHeaterRedAmbrosiaSheetValue(
 ): number {
     return computeHeaterRedAmbrosiaBaseMultiplier(currentLevel, coefficient) * computeHeaterFusionGain(fusionValue, rowMultiplier);
 }
+
+// SynergismOfficial/src/Event.ts consumableEventBuff: Happy Hour bells give
+// the same bonus to Ambrosia luck (additive luck mult) and blue bar speed.
+export function heaterBellBonus(bells: number): number {
+    const active = Math.max(0, Math.floor(bells));
+    return active > 0 ? 0.1 + 0.01 * (active - 1) : 0;
+}
+
+// The luck mult, red luck and blue bar speed fields hold their values without
+// bells. This adds the Active Bells field's bells back. On the bar speed they
+// share one factor with the global event's blue bar part (Statistics.ts
+// 'Event'); red luck holds floor((Ambrosia luck - 100) / conversion), so its
+// share of the bells' luck is added the same way (calculateRedAmbrosiaLuck).
+export function applyHeaterBells(input: {
+    ambSpeedNoAmbBerries: number;
+    luckBaseNoAmb: number;
+    luckMultNoAmb: number;
+    redLuckBase: number;
+    luckConversion: number;
+    activeBells: number;
+    globalEventBlueBarBonus: number;
+}): { ambSpeed: number; luckMult: number; redLuck: number } {
+    const bells = heaterBellBonus(input.activeBells);
+    const globalEvent = input.globalEventBlueBarBonus;
+    const luckMult = input.luckMultNoAmb + bells;
+    const redLuckShare = (mult: number) => Math.floor((input.luckBaseNoAmb * (1 + mult) - 100) / input.luckConversion);
+    return {
+        ambSpeed: input.ambSpeedNoAmbBerries * (1 + globalEvent + bells) / (1 + globalEvent),
+        luckMult,
+        redLuck: input.redLuckBase - redLuckShare(input.luckMultNoAmb) + redLuckShare(luckMult),
+    };
+}

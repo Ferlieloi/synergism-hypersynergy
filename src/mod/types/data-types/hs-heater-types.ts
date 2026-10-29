@@ -46,6 +46,7 @@ export interface HeaterOptimizerInput {
     baseTalismanPower: Decimal;
     patreonBonus: number;
     activeBells: number;
+    globalEventBlueBarBonus: number;
     jack: boolean;
     freeShopLevelsInfinity: number;
     freeShopLevelsQuark: number;

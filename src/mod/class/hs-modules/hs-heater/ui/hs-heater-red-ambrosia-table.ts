@@ -5,7 +5,7 @@ import { redAmbrosiaUpgradeCalculationCollection } from "../../../hs-core/gds/hs
 import { HSHeaterResultStore } from "../hs-heater-result-store";
 import type { HeaterOptimizerInput, HeaterRedAmbCommonValues, HeaterRedAmbUpgradeEffects } from "../../../../types/data-types/hs-heater-types";
 import type { RedAmbrosiaUpgradeCalculationConfig, RedAmbrosiaUpgradeKey } from "../../../../types/data-types/hs-gamedata-api-types";
-import { escapeHtml, normalizeHeaterFusion, computeHeaterFusionValue, computeHeaterFusionGain, computeHeaterRedAmbrosiaSheetValue } from "../hs-heater-utils";
+import { applyHeaterBells, escapeHtml, normalizeHeaterFusion, computeHeaterFusionValue, computeHeaterFusionGain, computeHeaterRedAmbrosiaSheetValue } from "../hs-heater-utils";
 
 export type RedAmbrosiaUpgradeCategoryEffectValue = number | "N / A" | "-";
 export type RedAmbrosiaUpgradeCefLogValue = number | "-" | "N / A" | "Never";
@@ -151,7 +151,7 @@ function computeRedAmbrosiaEffectValue(
         case 'blueberryGenerationSpeed':
         case 'blueberryGenerationSpeed2': {
             if (!input) { return undefined; }
-            const fusion = input.ambSpeedNoAmbBerries * (1 + input.patreonBonus);
+            const fusion = applyHeaterBells(input).ambSpeed * (1 + input.patreonBonus);
             const coefficient = upgradeKey === 'blueberryGenerationSpeed' ? 0.002 : 0.001;
             const speed = fusion * (1 + coefficient * level);
             if (!(speed > 0)) { return 1; }
@@ -262,7 +262,7 @@ function computeRedAmbrosiaRawToDisplay(
     }
 
     const { input } = context;
-    const speed = (input?.ambSpeedNoAmbBerries ?? 0) * (1 + (input?.patreonBonus ?? 0));
+    const speed = (input ? applyHeaterBells(input).ambSpeed : 0) * (1 + (input?.patreonBonus ?? 0));
     const blueberries = input?.blueberries ?? 0;
     if (!(speed > 0 && blueberries > 0)) {
         return value;
