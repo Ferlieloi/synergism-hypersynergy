@@ -1,6 +1,7 @@
 /*
-    NOTE: THIS WHOLE THING IS GENERATE BY GOOGLE GEMINI PRO 2.5 (... And by the free Raptor mini 'preview'... x)
-    The main interface for the save data is: export interface PlayerData
+    The game's player data, two views of it:
+    - GameData: what getGameData() returns, the live player or the parsed save. Every read of game data goes through it.
+    - PlayerData: HSGlobal.exposedPlayer, the live player as the patcher exposes it (see its own comment).
 */
 
 import type {
@@ -38,11 +39,6 @@ export type GameDecimal = { readonly [gameDecimalBrand]: true }
  */
 export type GameCount = { readonly [gameCountBrand]: true }
 
-export type WowCubes = number
-export type WowTesseracts = number
-export type WowHypercubes = number
-export type WowPlatonicCubes = number
-
 
 export type ArrayStartingWithNull<T> = [null, ...T[]]
 // The game stores these modes as numbers (enums in its Toggles.ts); old string saves are converted on load.
@@ -79,16 +75,16 @@ export interface HepteractValues {
 export interface PlayerAnts {
   producers: Record<string, {
     purchased: number
-    generated: Decimal
+    generated: GameDecimal
   }>
   masteries: Record<string, {
     mastery: number
     highestMastery: number
   }>
   upgrades: Record<string, number>
-  crumbs: Decimal
-  crumbsThisSacrifice: Decimal
-  crumbsEverMade: Decimal
+  crumbs: GameDecimal
+  crumbsThisSacrifice: GameDecimal
+  crumbsEverMade: GameDecimal
   immortalELO: number
   rebornELO: number
   highestRebornELODaily: Array<{ elo: number; sacrificeId: number }>
@@ -126,10 +122,6 @@ export interface AscendBuilding {
  */
 export interface Toggles {
     [key: string]: boolean;
-    // Example explicit keys (add all if known and fixed):
-    // '1': boolean;
-    // '2': boolean;
-    // ...
 }
 
 /**
@@ -166,14 +158,9 @@ export interface Unlocks {
     hypercubes: boolean
     platonics: boolean
     hepteracts: boolean
-    // Add others if they exist
 }
 /**
- * Represents the raw rune experience values for each rune.
- *
- * In vanilla save/runtime handling, rune EXP is the source data used
- * to derive effective rune levels and heater export values.
- * Raw values are normalized to Decimal for internal runtime consistency.
+ * The raw rune experience of each rune, from which the game derives rune levels (and the mod the heater export's).
  */
 export interface Runes {
     speed: GameDecimal;
@@ -337,7 +324,6 @@ export interface ShopToggles {
     transcend: boolean;
     generators: boolean;
     reincarnate: boolean;
-    // Add others if they exist
 }
 
 /**
@@ -399,10 +385,6 @@ export interface hepteracts {
  */
 export interface AscStatToggles {
     [key: string]: boolean;
-    // Example explicit keys:
-    // '1': boolean;
-    // '2': boolean;
-    // ...
 }
 
 /**
@@ -505,7 +487,7 @@ export interface History {
 export interface UpgradeData {
     /** Present only in legacy saves. Current saves reconstruct this from the invested resource. */
     level?: number;
-    toggleBuy: number; // Often 1, could potentially be boolean
+    toggleBuy: number;
     freeLevel: number;
 }
 
@@ -838,10 +820,6 @@ export interface AmbrosiaUpgrades {
  */
 export interface BlueberryLoadout {
     [upgradeName: string]: number;
-    // Example explicit keys for Loadout 1:
-    // ambrosiaTutorial: number;
-    // ambrosiaQuarks1: number;
-    // ... (many more)
 }
 
 /**
@@ -850,11 +828,6 @@ export interface BlueberryLoadout {
  */
 export interface BlueberryLoadouts {
     [loadoutNumber: string]: BlueberryLoadout | {}; // Can be an empty object if not set
-    // Example explicit keys:
-    // '1': BlueberryLoadout;
-    // '2': BlueberryLoadout;
-    // ...
-    // '9': {}; // Example of an empty loadout
 }
 
 /**
@@ -912,115 +885,117 @@ export interface progressiveAchievements {
 }
 
 /**
- * The 'true' Player interface (with the same types as vanilla)
+ * The live player as the patcher exposes it (HSGlobal.exposedPlayer), roughly vanilla's Player type. Hand-written:
+ * nothing compares it with the live player yet. Its big numbers and counts are GameDecimal / GameCount, as in GameData.
+ * Code that reads game data uses GameData (getGameData()); this type is for direct reads and writes of the live player.
  */
 export interface PlayerData {
   firstPlayed: string
-  worlds: number
-  coins: Decimal
-  coinsThisPrestige: Decimal
-  coinsThisTranscension: Decimal
-  coinsThisReincarnation: Decimal
-  coinsTotal: Decimal
+  worlds: GameCount
+  coins: GameDecimal
+  coinsThisPrestige: GameDecimal
+  coinsThisTranscension: GameDecimal
+  coinsThisReincarnation: GameDecimal
+  coinsTotal: GameDecimal
 
   firstOwnedCoin: number
-  firstGeneratedCoin: Decimal
-  firstCostCoin: Decimal
+  firstGeneratedCoin: GameDecimal
+  firstCostCoin: GameDecimal
   firstProduceCoin: number
 
   secondOwnedCoin: number
-  secondGeneratedCoin: Decimal
-  secondCostCoin: Decimal
+  secondGeneratedCoin: GameDecimal
+  secondCostCoin: GameDecimal
   secondProduceCoin: number
 
   thirdOwnedCoin: number
-  thirdGeneratedCoin: Decimal
-  thirdCostCoin: Decimal
+  thirdGeneratedCoin: GameDecimal
+  thirdCostCoin: GameDecimal
   thirdProduceCoin: number
 
   fourthOwnedCoin: number
-  fourthGeneratedCoin: Decimal
-  fourthCostCoin: Decimal
+  fourthGeneratedCoin: GameDecimal
+  fourthCostCoin: GameDecimal
   fourthProduceCoin: number
 
   fifthOwnedCoin: number
-  fifthGeneratedCoin: Decimal
-  fifthCostCoin: Decimal
+  fifthGeneratedCoin: GameDecimal
+  fifthCostCoin: GameDecimal
   fifthProduceCoin: number
 
   firstOwnedDiamonds: number
-  firstGeneratedDiamonds: Decimal
-  firstCostDiamonds: Decimal
+  firstGeneratedDiamonds: GameDecimal
+  firstCostDiamonds: GameDecimal
   firstProduceDiamonds: number
 
   secondOwnedDiamonds: number
-  secondGeneratedDiamonds: Decimal
-  secondCostDiamonds: Decimal
+  secondGeneratedDiamonds: GameDecimal
+  secondCostDiamonds: GameDecimal
   secondProduceDiamonds: number
 
   thirdOwnedDiamonds: number
-  thirdGeneratedDiamonds: Decimal
-  thirdCostDiamonds: Decimal
+  thirdGeneratedDiamonds: GameDecimal
+  thirdCostDiamonds: GameDecimal
   thirdProduceDiamonds: number
 
   fourthOwnedDiamonds: number
-  fourthGeneratedDiamonds: Decimal
-  fourthCostDiamonds: Decimal
+  fourthGeneratedDiamonds: GameDecimal
+  fourthCostDiamonds: GameDecimal
   fourthProduceDiamonds: number
 
   fifthOwnedDiamonds: number
-  fifthGeneratedDiamonds: Decimal
-  fifthCostDiamonds: Decimal
+  fifthGeneratedDiamonds: GameDecimal
+  fifthCostDiamonds: GameDecimal
   fifthProduceDiamonds: number
 
   firstOwnedMythos: number
-  firstGeneratedMythos: Decimal
-  firstCostMythos: Decimal
+  firstGeneratedMythos: GameDecimal
+  firstCostMythos: GameDecimal
   firstProduceMythos: number
 
   secondOwnedMythos: number
-  secondGeneratedMythos: Decimal
-  secondCostMythos: Decimal
+  secondGeneratedMythos: GameDecimal
+  secondCostMythos: GameDecimal
   secondProduceMythos: number
 
   thirdOwnedMythos: number
-  thirdGeneratedMythos: Decimal
-  thirdCostMythos: Decimal
+  thirdGeneratedMythos: GameDecimal
+  thirdCostMythos: GameDecimal
   thirdProduceMythos: number
 
   fourthOwnedMythos: number
-  fourthGeneratedMythos: Decimal
-  fourthCostMythos: Decimal
+  fourthGeneratedMythos: GameDecimal
+  fourthCostMythos: GameDecimal
   fourthProduceMythos: number
 
   fifthOwnedMythos: number
-  fifthGeneratedMythos: Decimal
-  fifthCostMythos: Decimal
+  fifthGeneratedMythos: GameDecimal
+  fifthCostMythos: GameDecimal
   fifthProduceMythos: number
 
   firstOwnedParticles: number
-  firstGeneratedParticles: Decimal
-  firstCostParticles: Decimal
+  firstGeneratedParticles: GameDecimal
+  firstCostParticles: GameDecimal
   firstProduceParticles: number
 
   secondOwnedParticles: number
-  secondGeneratedParticles: Decimal
-  secondCostParticles: Decimal
+  secondGeneratedParticles: GameDecimal
+  secondCostParticles: GameDecimal
   secondProduceParticles: number
 
   thirdOwnedParticles: number
-  thirdGeneratedParticles: Decimal
-  thirdCostParticles: Decimal
+  thirdGeneratedParticles: GameDecimal
+  thirdCostParticles: GameDecimal
   thirdProduceParticles: number
 
   fourthOwnedParticles: number
-  fourthGeneratedParticles: Decimal
-  fourthCostParticles: Decimal
+  fourthGeneratedParticles: GameDecimal
+  fourthCostParticles: GameDecimal
   fourthProduceParticles: number
 
   fifthOwnedParticles: number
-  fifthGeneratedParticles: Decimal
-  fifthCostParticles: Decimal
+  fifthGeneratedParticles: GameDecimal
+  fifthCostParticles: GameDecimal
   fifthProduceParticles: number
 
   ants: PlayerAnts
@@ -1028,42 +1003,42 @@ export interface PlayerData {
   ascendBuilding1: {
     cost: number
     owned: number
-    generated: Decimal
+    generated: GameDecimal
     multiplier: number
   }
   ascendBuilding2: {
     cost: number
     owned: number
-    generated: Decimal
+    generated: GameDecimal
     multiplier: number
   }
   ascendBuilding3: {
     cost: number
     owned: number
-    generated: Decimal
+    generated: GameDecimal
     multiplier: number
   }
   ascendBuilding4: {
     cost: number
     owned: number
-    generated: Decimal
+    generated: GameDecimal
     multiplier: number
   }
   ascendBuilding5: {
     cost: number
     owned: number
-    generated: Decimal
+    generated: GameDecimal
     multiplier: number
   }
 
-  multiplierCost: Decimal
+  multiplierCost: GameDecimal
   multiplierBought: number
 
-  acceleratorCost: Decimal
+  acceleratorCost: GameDecimal
   acceleratorBought: number
 
   acceleratorBoostBought: number
-  acceleratorBoostCost: Decimal
+  acceleratorBoostCost: GameDecimal
 
   upgrades: number[]
 
@@ -1071,13 +1046,13 @@ export interface PlayerData {
   transcendCount: number
   reincarnationCount: number
 
-  prestigePoints: Decimal
-  transcendPoints: Decimal
-  reincarnationPoints: Decimal
+  prestigePoints: GameDecimal
+  transcendPoints: GameDecimal
+  reincarnationPoints: GameDecimal
 
-  prestigeShards: Decimal
-  transcendShards: Decimal
-  reincarnationShards: Decimal
+  prestigeShards: GameDecimal
+  transcendShards: GameDecimal
+  reincarnationShards: GameDecimal
 
   toggles: Record<number, boolean>
 
@@ -1093,8 +1068,8 @@ export interface PlayerData {
     ascension: number
   }
 
-  obtainium: Decimal
-  maxObtainium: Decimal
+  obtainium: GameDecimal
+  maxObtainium: GameDecimal
   obtainiumtimer: number
 
   // Ignore the first index. The other 25 are shaped in a 5x5 grid similar to the production appearance
@@ -1145,12 +1120,12 @@ export interface PlayerData {
   crystalUpgrades: number[]
   crystalUpgradesCost: number[]
 
-  runes: Record<RuneKeys, Decimal>
-  runeBlessings: Record<RuneBlessingKeys, Decimal>
-  runeSpirits: Record<RuneSpiritKeys, Decimal>
+  runes: Record<RuneKeys, GameDecimal>
+  runeBlessings: Record<RuneBlessingKeys, GameDecimal>
+  runeSpirits: Record<RuneSpiritKeys, GameDecimal>
 
-  offerings: Decimal
-  maxOfferings: Decimal
+  offerings: GameDecimal
+  maxOfferings: GameDecimal
 
   prestigecounter: number
   transcendcounter: number
@@ -1222,15 +1197,15 @@ export interface PlayerData {
   antSacrificeTimer: number
   antSacrificeTimerReal: number
 
-  talismans: Record<TalismanKeys, Record<TalismanCraftItems, Decimal>>
+  talismans: Record<TalismanKeys, Record<TalismanCraftItems, GameDecimal>>
 
-  talismanShards: Decimal
-  commonFragments: Decimal
-  uncommonFragments: Decimal
-  rareFragments: Decimal
-  epicFragments: Decimal
-  legendaryFragments: Decimal
-  mythicalFragments: Decimal
+  talismanShards: GameDecimal
+  commonFragments: GameDecimal
+  uncommonFragments: GameDecimal
+  rareFragments: GameDecimal
+  epicFragments: GameDecimal
+  legendaryFragments: GameDecimal
+  mythicalFragments: GameDecimal
 
   buyTalismanShardPercent: number
 
@@ -1252,10 +1227,10 @@ export interface PlayerData {
   autoPlatonicUpgradesToggle: boolean
   platonicUpgrades: number[]
   maxPlatToggle: boolean
-  wowCubes: WowCubes
-  wowTesseracts: WowTesseracts
-  wowHypercubes: WowHypercubes
-  wowPlatonicCubes: WowPlatonicCubes
+  wowCubes: GameCount
+  wowTesseracts: GameCount
+  wowHypercubes: GameCount
+  wowPlatonicCubes: GameCount
   wowAbyssals: number
   wowOcteracts: number
   totalWowOcteracts: number
@@ -1305,7 +1280,7 @@ export interface PlayerData {
     scoreBonus: number
     globalSpeed: number
   }
-  ascendShards: Decimal
+  ascendShards: GameDecimal
   autoAscend: boolean
   autoAscendMode: AutoAscensionResetModes
   autoAscendThreshold: number
@@ -1442,7 +1417,7 @@ export interface PlayerData {
 }
 
 /**
- * What getGameData() returns: the parsed save today, the live player too once GDS reads it.
+ * What getGameData() returns: the live player when the patcher exposes it, else the parsed save.
  * Fields whose shape differs between the two (checked with local/design/gds-live-player/bench/drive2.mjs)
  * are typed GameDecimal / GameCount, so every read goes through a helper that accepts both.
  * Deeply read-only: the mod never writes into the game's data through it.
@@ -1628,7 +1603,7 @@ interface GameDataFields {
     prestigecounter: number;
     transcendcounter: number;
     reincarnationcounter: number;
-    offlinetick: number; // Timestamp? Large number
+    offlinetick: number; // Timestamp (ms) of the last save, only refreshed at a save
     prestigeamount: number;
     transcendamount: number;
     reincarnationamount: number;
@@ -1641,7 +1616,7 @@ interface GameDataFields {
       reincarnation: AutoResetModes;
       ascension: AutoAscensionModes;
     };
-    tesseractAutoBuyerToggle: number; // Likely boolean represented as number
+    tesseractAutoBuyerToggle: boolean;
     tesseractAutoBuyerAmount: number;
 
     // Buy Amounts
@@ -1753,7 +1728,7 @@ interface GameDataFields {
     autoTesseracts: boolean[]; // Toggles for auto-opening Tesseract types
 
     saveString: string; // Format string for save file names
-    exporttest: boolean; // Internal/debug flag?
+    exporttest: string | boolean; // The game refuses to import a save without 'YES!' or true (outside its test builds)
 
     dayCheck: unknown; // ISO date string in a save, a Date on the live player; not read by the mod
     dayTimer: number;
@@ -1846,6 +1821,4 @@ interface GameDataFields {
     stats: {
         totalAddCodesUsed: number;
     }
-
-    // Add any missing top-level keys if necessary
 }
