@@ -36,6 +36,33 @@ interface GQDistributionInput {
     setStatus: (text: string, clearAfterMs?: number) => void;
 }
 
+const GQ_DISTRIBUTOR_CSS = `
+    #hs-gq-distributor {
+        display: flex; flex-direction: column; align-items: center;
+        margin-top: 10px; padding: 10px;
+        border: 1px solid #ccc; border-radius: 5px; background-color: rgba(0, 0, 0, 0.5);
+    }
+    #hs-gq-distributor h3 { margin: 0 0 10px 0; }
+    #hs-gq-distributor .hs-gq-upgrades { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    #hs-gq-distributor .hs-gq-upgrade { display: flex; flex-direction: column; align-items: center; }
+    #hs-gq-distributor .hs-gq-upgrade img { width: 32px; height: 32px; margin-bottom: 5px; }
+    /* The game gives every input a left padding, which shifts centred text to the right */
+    #hs-gq-distributor .hs-gq-upgrade input { width: 60px; text-align: center; padding: 0; }
+    /* No spin buttons: they take room on the right, which pushes the number off the icon's axis */
+    #hs-gq-distributor input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+    #hs-gq-distributor input[type="number"]::-webkit-outer-spin-button,
+    #hs-gq-distributor input[type="number"]::-webkit-inner-spin-button { appearance: none; -webkit-appearance: none; margin: 0; }
+    #hs-gq-distributor .hs-gq-option { margin-top: 4px; }
+    #hs-gq-distributor .hs-gq-upgrades + .hs-gq-option { margin-top: 10px; }
+    #hs-gq-distributor .hs-gq-actions { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+    #hs-gq-distributor .hs-gq-actions button { padding: 5px 15px; cursor: pointer; }
+    /* The skip summary takes one line per reason, and can be selected and copied (the game blocks it on mobile) */
+    #hs-gq-distributor .hs-gq-status {
+        margin-top: 6px; font-size: 12px; color: #aaa; min-height: 16px; text-align: center;
+        white-space: pre-line; user-select: text;
+    }
+`;
+
 /**
  * One line per skip reason. `share` says what became of the share of the upgrades skipped before the allocation;
  * a share too small for a level is never spent, whatever the checkbox.
@@ -125,28 +152,19 @@ export class HSGQDistributor {
         }
         if (!gameData || renderVersion !== this.#gqDistributorRenderVersion) return;
         document.getElementById('hs-gq-distributor')?.remove();
+        // Written now, not in the next task: the distributor is drawn right below
+        HSUI.injectStyle(GQ_DISTRIBUTOR_CSS, 'hs-gq-distributor-css');
+        HSUI.flushInjectedStyles();
 
         const distributor = document.createElement('div');
         distributor.id = 'hs-gq-distributor';
-        distributor.style.display = 'flex';
-        distributor.style.flexDirection = 'column';
-        distributor.style.alignItems = 'center';
-        distributor.style.marginTop = '10px';
-        distributor.style.padding = '10px';
-        distributor.style.border = '1px solid #ccc';
-        distributor.style.borderRadius = '5px';
-        distributor.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
 
         const title = document.createElement('h3');
         title.textContent = 'GQ Distributor';
-        title.style.margin = '0 0 10px 0';
         distributor.appendChild(title);
 
         const inputsContainer = document.createElement('div');
-        inputsContainer.style.display = 'flex';
-        inputsContainer.style.flexWrap = 'wrap';
-        inputsContainer.style.justifyContent = 'center';
-        inputsContainer.style.gap = '10px';
+        inputsContainer.className = 'hs-gq-upgrades';
         distributor.appendChild(inputsContainer);
 
         const unmaxedUpgrades = this.#getUnmaxedGQUpgrades(gameData.highestSingularityCount);
@@ -155,27 +173,16 @@ export class HSGQDistributor {
         const inputs: { [key: string]: HTMLInputElement } = {};
         // The inputs show 2 decimals at most; savedRatios keeps the exact values, and Distribute reads those
         const shownRatio = (ratio: number): string => (Math.round(ratio * 100) / 100).toString();
-        // No spin buttons: they take room on the right, which pushes the number off the icon's axis
-        HSUI.injectStyle(`
-            #hs-gq-distributor input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
-            #hs-gq-distributor input[type="number"]::-webkit-outer-spin-button,
-            #hs-gq-distributor input[type="number"]::-webkit-inner-spin-button { appearance: none; -webkit-appearance: none; margin: 0; }
-        `, 'hs-gq-distributor-css');
         // The game's name of each upgrade, for the skip summary (the id until resolved)
         const upgradeNames = new Map<string, string>();
 
         unmaxedUpgrades.forEach((upgrade) => {
             const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
-            wrapper.style.flexDirection = 'column';
-            wrapper.style.alignItems = 'center';
+            wrapper.className = 'hs-gq-upgrade';
 
             const img = document.createElement('img');
             img.src = upgrade.src;
             img.alt = upgrade.id;
-            img.style.width = '32px';
-            img.style.height = '32px';
-            img.style.marginBottom = '5px';
             wrapper.appendChild(img);
             void HSUtils.getGameTranslation(`singularity.data.${upgrade.id}.name`).then((name) => {
                 if (!name) return;
@@ -189,10 +196,6 @@ export class HSGQDistributor {
             input.step = 'any';
             input.setAttribute('aria-label', `${upgrade.id} distribution ratio`);
             input.value = shownRatio(savedRatios[upgrade.id] ?? 0);
-            input.style.width = '60px';
-            input.style.textAlign = 'center';
-            // The game gives every input a left padding, which shifts centred text to the right
-            input.style.padding = '0';
             inputs[upgrade.id] = input;
             wrapper.appendChild(input);
 
@@ -214,14 +217,7 @@ export class HSGQDistributor {
         distributeBtn.textContent = 'Distribute';
 
         const statusLabel = document.createElement('div');
-        statusLabel.style.marginTop = '6px';
-        statusLabel.style.fontSize = '12px';
-        statusLabel.style.color = '#aaa';
-        statusLabel.style.minHeight = '16px';
-        statusLabel.style.textAlign = 'center';
-        // The skip summary takes one line per reason, and can be selected and copied (the game blocks it on mobile)
-        statusLabel.style.whiteSpace = 'pre-line';
-        statusLabel.style.userSelect = 'text';
+        statusLabel.className = 'hs-gq-status';
 
         // Any new status cancels a pending auto-clear, so an older timer can't wipe a newer message
         let statusClearTimer: ReturnType<typeof setTimeout> | undefined;
@@ -253,19 +249,11 @@ export class HSGQDistributor {
         });
 
         const actions = document.createElement('div');
-        actions.style.display = 'flex';
-        actions.style.justifyContent = 'center';
-        actions.style.alignItems = 'center';
-        actions.style.gap = '8px';
-        actions.style.marginTop = '10px';
-        for (const button of [distributeBtn, matchRatios, resetRatios]) {
-            button.style.padding = '5px 15px';
-            button.style.cursor = 'pointer';
-            actions.appendChild(button);
-        }
+        actions.className = 'hs-gq-actions';
+        actions.append(distributeBtn, matchRatios, resetRatios);
 
         const balanceLabel = document.createElement('label');
-        balanceLabel.style.marginTop = '10px';
+        balanceLabel.className = 'hs-gq-option';
         balanceLabel.title = 'On: bring total GQ investments as close as possible to the entered ratios using your available GQ. Off: split only your unspent GQ using those ratios.';
         const balanceInvestments = document.createElement('input');
         balanceInvestments.id = 'hs-gq-balance-investments';
@@ -281,7 +269,7 @@ export class HSGQDistributor {
         distributor.appendChild(balanceLabel);
 
         const keepSkippedLabel = document.createElement('label');
-        keepSkippedLabel.style.marginTop = '4px';
+        keepSkippedLabel.className = 'hs-gq-option';
         keepSkippedLabel.title = 'On: the GQ share of skipped upgrades (maxed, or next level too expensive) stays unspent. Off: it is shared between the other upgrades.';
         const keepSkippedShare = document.createElement('input');
         keepSkippedShare.id = 'hs-gq-keep-skipped-share';
@@ -349,7 +337,7 @@ export class HSGQDistributor {
             } finally {
                 setControlsDisabled(false);
                 distributeBtn.style.opacity = '';
-                distributeBtn.style.cursor = 'pointer';
+                distributeBtn.style.cursor = '';
             }
         });
         distributor.appendChild(actions);
