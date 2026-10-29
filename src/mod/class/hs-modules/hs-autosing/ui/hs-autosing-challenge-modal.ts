@@ -247,11 +247,11 @@ interface Snapshot {
     separatorIndex: number;
 }
 
-// Steps as JSON with each object's keys sorted: two lists with the same values give the same text
-const canonicalSteps = (steps: readonly Challenge[]) => JSON.stringify(steps, (_key, value: unknown) =>
-    value !== null && typeof value === 'object' && !Array.isArray(value)
-        ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
-        : value);
+// JSON with each object's keys sorted: two values with the same contents give the same text
+export const canonicalJson = (value: unknown) => JSON.stringify(value, (_key, item: unknown) =>
+    item !== null && typeof item === 'object' && !Array.isArray(item)
+        ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
+        : item);
 
 // Auto-scroll while dragging: the zone along the list's top and bottom edges, and the speed at its edge (and past it)
 const AUTO_SCROLL_ZONE_PX = 40;
@@ -276,13 +276,19 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *     - Each change of the steps can be undone and redone (the "Add Here" separator's moves alone are not changes).
  *       Cancel and the window's × ask before dropping a copy that differs from the saved steps.
  *     - The footer shows the phase's fixed waits, the list run once (IF jumps not followed), and a help box.
+ *     - The strategy window that opened it can ask whether it has unsaved changes, close it (changes dropped) and
+ *       change its title; Save tells it.
  * Author: XxMolkxX, Shewchou
  */
-class HSAutosingChallengeModal {
+export class HSAutosingChallengeModal {
     #uiMod: HSUI;
     #stratData: Challenge[];
+    #title: string;
+    #onSaved: () => void;
     #modalId = "";
     #root!: HTMLElement;
+    // Closed, or asked to close while it opens
+    #closed = false;
     // A deep copy: the IF jump targets are changed in place, which Cancel must undo too
     #steps: Challenge[];
     // Where new steps are added (the separator's index)
@@ -312,19 +318,27 @@ class HSAutosingChallengeModal {
     // The page's last mouse press was in this window: Ctrl+Z / Ctrl+Y are for it
     #lastPressInside = true;
 
-    constructor(uiMod: HSUI, stratData: Challenge[]) {
+    constructor(uiMod: HSUI, stratData: Challenge[], title: string, onSaved: () => void) {
         this.#uiMod = uiMod;
         this.#stratData = stratData;
+        this.#title = title;
+        this.#onSaved = onSaved;
         this.#steps = structuredClone(stratData);
         this.#separatorIndex = this.#steps.length;
     }
 
-    async open(title: string, parentModalId?: string): Promise<void> {
-        this.#modalId = await this.#uiMod.Modal({ htmlContent: this.#renderWindow(), title, parentModalId });
+    async open(parentModalId?: string): Promise<void> {
+        this.#modalId = await this.#uiMod.Modal({ htmlContent: this.#renderWindow(), title: this.#title, parentModalId });
         HSAutosingEditorWindows.opened('challenges', this.#modalId);
+        if (this.#closed) {
+            void this.#uiMod.CloseModal(this.#modalId);
+            return;
+        }
 
         const root = document.getElementById(this.#modalId);
         if (!root) return;
+        // Changed while the window was opening
+        this.setTitle(this.#title);
         this.#root = root;
         this.#list = root.querySelector<HTMLElement>(".hs-challenge-list")!;
         this.#listContainer = root.querySelector<HTMLElement>(".hs-challenges-list-container")!;
@@ -333,7 +347,7 @@ class HSAutosingChallengeModal {
         this.#undoButton = root.querySelector<HTMLElement>('[data-action="undo"]')!;
         this.#redoButton = root.querySelector<HTMLElement>('[data-action="redo"]')!;
         this.#fixedTime = root.querySelector<HTMLElement>(".hs-challenges-fixed-time")!;
-        this.#discardOverlay = root.querySelector<HTMLElement>(".hs-challenges-discard-overlay")!;
+        this.#discardOverlay = root.querySelector<HTMLElement>(".hs-editor-overlay")!;
         for (const element of root.querySelectorAll<HTMLElement>("[data-row]")) {
             this.#rows.push({ row: FIELD_ROWS[Number(element.dataset.row)], element });
         }
@@ -401,14 +415,14 @@ class HSAutosingChallengeModal {
                 <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</div>
                 <div class="hs-challenges-fixed-time" title="Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed."></div>
                 <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="cancel">Cancel</div>
-                <div class="hs-challenges-footer-btn hs-challenges-save-btn" data-action="save">Save Strategy</div>
+                <div class="hs-challenges-footer-btn hs-challenges-save-btn" data-action="save">Save</div>
             </div>
-            <div class="hs-challenges-discard-overlay" hidden>
-                <div class="hs-challenges-discard-box">
+            <div class="hs-editor-overlay" hidden>
+                <div class="hs-editor-overlay-box">
                     <div>Discard unsaved changes?</div>
-                    <div class="hs-challenges-discard-buttons">
+                    <div class="hs-editor-overlay-buttons">
                         <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="keep-editing">Keep editing</div>
-                        <div class="hs-challenges-footer-btn hs-challenges-discard-btn" data-action="discard">Discard</div>
+                        <div class="hs-challenges-footer-btn hs-editor-overlay-confirm" data-action="discard">Discard</div>
                     </div>
                 </div>
             </div>
@@ -740,7 +754,7 @@ class HSAutosingChallengeModal {
 
     // The copy differs from the saved steps (an Update that left a step as it was isn't a change)
     #isChanged(): boolean {
-        return canonicalSteps(this.#steps) !== canonicalSteps(this.#stratData);
+        return canonicalJson(this.#steps) !== canonicalJson(this.#stratData);
     }
 
     #addOrUpdate(): void {
@@ -748,7 +762,7 @@ class HSAutosingChallengeModal {
         if (this.#badReason !== null) return;
         if (this.#editingIndex !== null) {
             const step = this.#buildStep(this.#steps[this.#editingIndex]);
-            if (canonicalSteps([step]) !== canonicalSteps([this.#steps[this.#editingIndex]])) {
+            if (canonicalJson([step]) !== canonicalJson([this.#steps[this.#editingIndex]])) {
                 this.#saveForUndo();
                 this.#steps[this.#editingIndex] = step;
             }
@@ -840,24 +854,45 @@ class HSAutosingChallengeModal {
             case "save":
                 this.#stratData.length = 0;
                 this.#stratData.push(...this.#steps);
-                this.#close();
+                this.#onSaved();
+                this.close();
                 break;
             case "cancel":
                 if (this.#isChanged()) this.#discardOverlay.hidden = false;
-                else this.#close();
+                else this.close();
                 break;
             case "keep-editing":
                 this.#discardOverlay.hidden = true;
                 break;
             case "discard":
-                this.#close();
+                this.close();
                 break;
         }
     }
 
-    #close(): void {
+    // ----- For the strategy window -----
+
+    /** Open, or opening. */
+    isOpen(): boolean {
+        return !this.#closed && (this.#modalId === "" || document.getElementById(this.#modalId) !== null);
+    }
+
+    hasUnsavedChanges(): boolean {
+        return this.isOpen() && this.#isChanged();
+    }
+
+    /** Closes the window without saving (while it opens: as soon as it is open). */
+    close(): void {
+        if (this.#closed) return;
+        this.#closed = true;
         this.#removePageListeners();
-        void this.#uiMod.CloseModal(this.#modalId);
+        if (this.#modalId !== "") void this.#uiMod.CloseModal(this.#modalId);
+    }
+
+    setTitle(title: string): void {
+        this.#title = title;
+        const titleElement = this.#modalId === "" ? null : document.getElementById(this.#modalId)?.querySelector(".hs-modal-title");
+        if (titleElement) titleElement.textContent = title;
     }
 
     // ----- Ctrl+Z, Ctrl+Y -----
@@ -1044,20 +1079,24 @@ class HSAutosingChallengeModal {
         if (drag) cancelAnimationFrame(drag.scrollFrame);
         this.#drag = null;
         // One change per drag, if the steps differ at the end (a step dropped back in its place: none)
-        if (drag && canonicalSteps(drag.before.steps) !== canonicalSteps(this.#steps)) this.#saveForUndo(drag.before);
+        if (drag && canonicalJson(drag.before.steps) !== canonicalJson(this.#steps)) this.#saveForUndo(drag.before);
         this.#redrawList();
     };
 }
 
-export async function openAutosingChallengesModal(
+/**
+ * Opens the actions window on a phase's steps, which Save replaces (then calls onSaved). Returns the window at once,
+ * while it opens; null when an actions window is already open (it is brought to the front instead).
+ */
+export function openAutosingChallengesModal(
     uiMod: HSUI,
     stratData: AutosingStrategyPhase["strat"],
-    startPhase: string,
-    endPhase: string,
-    parentModalId?: string,
-    displayName?: string
-): Promise<void> {
-    if (!HSAutosingEditorWindows.claim(uiMod, 'challenges', parentModalId)) return;
-    const title = displayName ? `Configure ${displayName}` : `Configure Strategy Actions (${startPhase}-${endPhase})`;
-    await new HSAutosingChallengeModal(uiMod, stratData).open(title, parentModalId);
+    title: string,
+    parentModalId: string,
+    onSaved: () => void
+): HSAutosingChallengeModal | null {
+    if (!HSAutosingEditorWindows.claim(uiMod, 'challenges', parentModalId)) return null;
+    const actionsWindow = new HSAutosingChallengeModal(uiMod, stratData, title, onSaved);
+    void actionsWindow.open(parentModalId);
+    return actionsWindow;
 }

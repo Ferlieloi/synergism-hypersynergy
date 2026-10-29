@@ -879,6 +879,12 @@ export class HSSettingsUI {
             return;
         }
 
+        // Its Update would save it again
+        if (HSAutosingStrategyModal.showEditorOf(strategyName)) {
+            HSUI.Notify(`"${strategyName}" is open in the strategy editor: close it first`, { notificationType: "warning" });
+            return;
+        }
+
         if (!confirm(`Are you sure you want to delete strategy "${strategyName}"?`)) {
             return;
         }

@@ -2,12 +2,10 @@ import { HSUI } from "../../../hs-core/hs-ui";
 
 export type HSAutosingEditorWindowKind =
     | 'strategy'
-    | 'phase'
     | 'challenges';
 
 const WINDOW_LABELS: Record<HSAutosingEditorWindowKind, string> = {
     strategy: 'A strategy editor',
-    phase: 'A phase window',
     challenges: 'The actions editor'
 };
 
@@ -21,10 +19,10 @@ interface HSAutosingEditorWindow {
  * Class: HSAutosingEditorWindows
  * IsExplicitHSModule: No
  * Description:
- *     Keeps at most one window of each kind open in the strategy editor (strategy, phase, actions editor,
- *     corruption windows). Each window finds its elements by fixed ids anywhere in the page, so a second copy
- *     would wire itself to the first one: the newer window did nothing, and the older one ran both windows'
- *     handlers, the second one saving its own stale copy of the data over the first one's changes.
+ *     Keeps at most one window of each kind open in the strategy editor (strategy window, actions editor).
+ *     The strategy window keeps one actions window, and the panel finds the one strategy window to refuse
+ *     deleting the strategy it edits. (The windows once found their elements by fixed ids anywhere in the page:
+ *     a second copy wired itself to the first one and saved stale data over its changes.)
  *     Opening a kind that is already open brings the open window to the front instead. A window whose parent
  *     was closed is removed at once and the new one opens, so no two windows of a kind are ever in the page.
  * Author: Shewchou
