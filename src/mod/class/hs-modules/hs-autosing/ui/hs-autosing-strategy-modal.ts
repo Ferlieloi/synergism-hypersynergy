@@ -63,7 +63,6 @@ export class HSAutosingStrategyModal {
     #root!: HTMLElement;
     #list!: HTMLElement;
     #nameInput!: HTMLInputElement;
-    #addSelect!: HTMLSelectElement;
     #errorBox!: HTMLElement;
     #overlay!: HTMLElement;
     #overlayText!: HTMLElement;
@@ -158,7 +157,6 @@ export class HSAutosingStrategyModal {
                     </div>
                     <div class="hs-strategy-error" hidden></div>
                     <div class="hs-strategy-btn-group">
-                        <select class="hs-strategy-add-select" title="Add a phase after the last one"></select>
                         <div class="hs-strategy-btn hs-strategy-btn-secondary" data-action="cancel">Cancel</div>
                         <div class="hs-strategy-btn hs-strategy-btn-primary" data-action="save">
                             ${isEdit ? 'Update Strategy' : (this.#mode === 'copy' ? 'Save as a new Strategy' : 'Create Strategy')}
@@ -186,7 +184,6 @@ export class HSAutosingStrategyModal {
         this.#root = root;
         this.#list = root.querySelector<HTMLElement>(".hs-strategy-phase-list")!;
         this.#nameInput = root.querySelector<HTMLInputElement>(".hs-strategy-name-input")!;
-        this.#addSelect = root.querySelector<HTMLSelectElement>(".hs-strategy-add-select")!;
         this.#errorBox = root.querySelector<HTMLElement>(".hs-strategy-error")!;
         this.#overlay = root.querySelector<HTMLElement>(".hs-editor-overlay")!;
         this.#overlayText = root.querySelector<HTMLElement>(".hs-strategy-overlay-text")!;
@@ -332,12 +329,11 @@ export class HSAutosingStrategyModal {
                     ${stepsButton(phase)}
                     <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete" title="Delete this phase">×</div>
                 </div>`).join("");
-        this.#list.innerHTML = aoagRow + phaseRows;
-
+        // Below the last phase (none once a phase ends at "end")
         const lastEnd = this.#lastEnd();
-        this.#addSelect.innerHTML = `<option value="" selected hidden>Add phase until…</option>`
-            + renderEndOptions(phases.slice(phases.indexOf(lastEnd) + 1));
-        this.#addSelect.hidden = lastEnd === "end";
+        const addSelect = lastEnd === "end" ? "" : `<select class="hs-strategy-add-select" title="Add a phase after the last one">`
+            + `<option value="" selected hidden>Add phase until…</option>${renderEndOptions(phases.slice(phases.indexOf(lastEnd) + 1))}</select>`;
+        this.#list.innerHTML = aoagRow + phaseRows + addSelect;
 
         for (const [phase, actionsWindow] of this.#openActions()) actionsWindow.setTitle(this.#actionsTitle(phase));
         // The last refused save's reason may no longer hold
@@ -380,8 +376,8 @@ export class HSAutosingStrategyModal {
     #onChange(e: Event): void {
         const target = e.target as HTMLSelectElement;
         const index = Number(target.closest<HTMLElement>(".hs-strategy-phase-item")?.dataset.index);
-        if (target === this.#addSelect) {
-            if (this.#addSelect.value) this.#addPhase(this.#addSelect.value as PhaseOption);
+        if (target.classList.contains("hs-strategy-add-select")) {
+            if (target.value) this.#addPhase(target.value as PhaseOption);
         } else if (target.classList.contains("hs-strategy-end-select")) {
             this.#setEnd(index, target.value as PhaseOption);
         } else if (target.classList.contains("hs-strategy-insert-select")) {

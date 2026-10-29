@@ -190,21 +190,30 @@
     outline: none;
 }
 
-/* "Add phase until…", left of Cancel */
+/* "Add phase until…", below the last phase */
 .hs-strategy-add-select {
-    margin-right: auto;
-    padding: 0 14px;
+    display: block;
+    padding: 4px 10px;
     background-color: #101828;
-    border: 2px solid white;
+    border: 1px dashed #888;
     border-radius: 3px;
-    color: white;
+    color: #c8c8c8;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
 }
 
-.hs-strategy-add-select:hover {
+.hs-strategy-add-select:hover,
+.hs-strategy-add-select:focus {
     background-color: #005;
+    border-color: cyan;
+    color: white;
+    outline: none;
+}
+
+.hs-strategy-add-select option {
+    background-color: #101828;
+    color: white;
 }
 
 
