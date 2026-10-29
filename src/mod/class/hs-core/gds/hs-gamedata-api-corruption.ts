@@ -1,17 +1,7 @@
 import Decimal from "break_infinity.js";
-import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { HSCalculationComponents, RuneKeys, TalismanKeys, TalismanTypeMap } from "../../../types/data-types/hs-gamedata-api-types";
+import type { HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
-
-export interface CorruptionHelperContext {
-    getGameData: () => GameData | undefined;
-    getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number;
-    getGQUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
-    getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
-    getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K];
-    getRuneEffects: (rune: RuneKeys) => any;
-    getChallenge15Reward: (rewardName: 'hepteractsUnlocked') => number;
-}
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 // The 9 effects of the corruption level (CorruptionEffectValues in SynergismOfficial/src/Corruptions.ts)
 export const CORRUPTION_EFFECT_KEYS = [
@@ -125,14 +115,14 @@ const CORRUPTION_SCALING_PER_MAXED_UPGRADE = 0.025;
  * Author: Shewchou
  */
 export class CorruptionHelper {
-    readonly #ctx: CorruptionHelperContext;
+    readonly #api: HSGameDataAPI;
 
-    constructor(ctx: CorruptionHelperContext) {
-        this.#ctx = ctx;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     getPlatonicCorruptionScaling(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 1;
         const maxed = Object.entries(CORRUPTION_SCALING_PLATONIC_MAX_LEVELS)
             .filter(([index, maxLevel]) => (data.platonicUpgrades[Number(index)] ?? 0) >= maxLevel).length;
@@ -159,7 +149,7 @@ export class CorruptionHelper {
 
     /** The value Challenge 15 gives an effect, or its neutral value outside it (challenge15CorruptionEffect). */
     getChallenge15CorruptionEffect(corruption: Challenge15CorruptionKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data || data.currentChallenge.ascension !== 15) return CHALLENGE15_CORRUPTION_NEUTRAL[corruption];
 
         switch (corruption) {
@@ -208,26 +198,26 @@ export class CorruptionHelper {
     isCorruptionCubeUnlocked(effectiveLevel: number, cube: CorruptionCubeType): boolean {
         const unlock = CORRUPTION_CUBE_UNLOCKS[cube];
         return effectiveLevel >= unlock.level
-            && (!unlock.requiresChallenge15 || this.#ctx.getChallenge15Reward('hepteractsUnlocked') > 0);
+            && (!unlock.requiresChallenge15 || this.#api.calculateChallenge15Reward('hepteractsUnlocked') > 0);
     }
 
     /** The level in use: 0 inside an ascension challenge (activeCorruptionLevel). */
     getActiveCorruptionLevel(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data || data.currentChallenge.ascension !== 0) return 0;
         return data.corruptions.used;
     }
 
     /** The level the current ascension started at, if lower (ascensionCorruptionLevel). */
     getAscensionCorruptionLevel(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
         return Math.min(data.corruptions.ascensionLevel ?? data.corruptions.used, this.getActiveCorruptionLevel());
     }
 
     // SynergismOfficial/src/Statistics.ts freeCorruptionLevelStats
     calculateFreeCorruptionLevels(reduce_vals = true): number | HSCalculationComponents {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const vals: HSCalculationComponents = {
@@ -235,15 +225,15 @@ export class CorruptionHelper {
             'Platonic BETA': data.platonicUpgrades[10] > 0 ? 1 : 0,
             'Platonic OMEGA': data.platonicUpgrades[15] > 0 ? 1 : 0,
             'Platonic Upgrade 4x2': 0.2 * (data.platonicUpgrades[17] ?? 0),
-            'Golden Quark Upgrade - Corruption Fourteen': this.#ctx.getGQUpgradeEffect('corruptionFourteen') ? 1 : 0,
-            'Golden Quark Upgrade - Corruption Fifteen': this.#ctx.getGQUpgradeEffect('corruptionFifteen'),
-            'Golden Quark Upgrade - Expert Pack': this.#ctx.getGQUpgradeEffect('expertPack', 'freeCorruptionLevels'),
-            'Golden Quark Upgrade - Master Pack': this.#ctx.getGQUpgradeEffect('masterPack', 'freeCorruptionLevels'),
-            'Octeracts - Octeract Corruption': 0.5 * this.#ctx.getOcteractUpgradeEffect('octeractCorruption'),
-            'EXALT - One Challenge Caps': Number(this.#ctx.getSingularityChallengeEffect('oneChallengeCap', 'freeCorruptionLevel') ?? 0),
+            'Golden Quark Upgrade - Corruption Fourteen': this.#api.goldenQuark.getGQUpgradeEffect('corruptionFourteen') ? 1 : 0,
+            'Golden Quark Upgrade - Corruption Fifteen': this.#api.goldenQuark.getGQUpgradeEffect('corruptionFifteen'),
+            'Golden Quark Upgrade - Expert Pack': this.#api.goldenQuark.getGQUpgradeEffect('expertPack', 'freeCorruptionLevels'),
+            'Golden Quark Upgrade - Master Pack': this.#api.goldenQuark.getGQUpgradeEffect('masterPack', 'freeCorruptionLevels'),
+            'Octeracts - Octeract Corruption': 0.5 * this.#api.octeract.getOcteractUpgradeEffect('octeractCorruption'),
+            'EXALT - One Challenge Caps': Number(this.#api.getSingularityChallengeEffect('oneChallengeCap', 'freeCorruptionLevel') ?? 0),
             'Cube Upgrade 8x4 (Cx24)': data.cubeUpgrades[74] ?? 0,
-            'Cookie Grandma Talisman': Number(this.#ctx.getTalismanEffects('cookieGrandma').freeCorruptionLevel ?? 0),
-            'Finite Descent Rune': Number(this.#ctx.getRuneEffects('finiteDescent').corruptionFreeLevels ?? 0),
+            'Cookie Grandma Talisman': Number(this.#api.talisman.getTalismanEffects('cookieGrandma').freeCorruptionLevel ?? 0),
+            'Finite Descent Rune': Number(this.#api.rune.getRuneEffects('finiteDescent').corruptionFreeLevels ?? 0),
         };
 
         return reduce_vals ? Object.values(vals).reduce((a, b) => a + b, 0) : vals;
@@ -256,14 +246,14 @@ export class CorruptionHelper {
 
     /** The active level plus the free levels, 0 inside an ascension challenge (activeEffectiveCorruptionLevel). */
     getActiveEffectiveCorruptionLevel(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data || data.currentChallenge.ascension !== 0) return 0;
         return this.getEffectiveCorruptionLevel(this.getActiveCorruptionLevel());
     }
 
     /** The ascension's level plus the free levels, 0 inside an ascension challenge (ascensionEffectiveCorruptionLevel). */
     getAscensionEffectiveCorruptionLevel(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data || data.currentChallenge.ascension !== 0) return 0;
         return this.getEffectiveCorruptionLevel(this.getAscensionCorruptionLevel());
     }

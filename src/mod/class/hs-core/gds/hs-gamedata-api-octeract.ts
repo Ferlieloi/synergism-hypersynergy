@@ -1,18 +1,12 @@
 import { octeractUpgradeMaxLevels } from "./hs-gamedata-tables";
-import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { OcteractUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 export const dailyOcteractFreeLevelCaps: Partial<Record<OcteractUpgradeKey, number>> = {
     octeractGain: 20_000_000_000,
     octeractGain2: 5_000_000,
     octeractAscensionsOcteractGain: 2,
 };
-
-export interface OcteractHelperContext {
-    getGameData: () => GameData | undefined;
-    getSavedUpgradeFreeLevel: (upgrade?: { freeLevel?: number; freeLevels?: number }) => number;
-    getRedAmbrosiaFreeAccumulatorCapIncrease: () => number;
-}
 
 /**
  * Class: OcteractHelper
@@ -22,18 +16,18 @@ export interface OcteractHelperContext {
  * Author: XxMolkxX, Shewchou
  */
 export class OcteractHelper {
-    readonly #ctx: OcteractHelperContext;
+    readonly #api: HSGameDataAPI;
 
-    constructor(ctx: OcteractHelperContext) {
-        this.#ctx = ctx;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     computeFreeLevelMultiplierOCT(): number {
-        return 1 + 0.3 / 100 * (this.#ctx.getGameData()?.cubeUpgrades[78] ?? 0);
+        return 1 + 0.3 / 100 * (this.#api.getGameData()?.cubeUpgrades[78] ?? 0);
     }
 
     getOcteractUpgradeLevel(upgradeKey: OcteractUpgradeKey): number {
-        const saved = this.#ctx.getGameData()?.octUpgrades[upgradeKey];
+        const saved = this.#api.getGameData()?.octUpgrades[upgradeKey];
         if (!saved) return 0;
 
         const definition = octeractUpgradeMaxLevels[upgradeKey];
@@ -54,7 +48,7 @@ export class OcteractHelper {
     }
 
     computeOcteractFreeLevelSoftcap(upgradeKey: OcteractUpgradeKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = data.octUpgrades[upgradeKey];
@@ -62,14 +56,14 @@ export class OcteractHelper {
 
         const freeLevelMult = this.computeFreeLevelMultiplierOCT();
         const cap = upgradeKey === 'octeractAscensionsOcteractGain'
-            ? 1 + this.#ctx.getRedAmbrosiaFreeAccumulatorCapIncrease()
+            ? 1 + this.#api.ambrosia.getRedAmbrosiaUpgradeEffects('redAmbrosiaFreeAccumulator').freeAccumulatorLevelCapIncrease
             : dailyOcteractFreeLevelCaps[upgradeKey] ?? Number.POSITIVE_INFINITY;
-        const freeLevel = Math.min(cap, Math.max(0, this.#ctx.getSavedUpgradeFreeLevel(upgrade)));
+        const freeLevel = Math.min(cap, Math.max(0, this.#api.getSavedUpgradeFreeLevel(upgrade)));
         return freeLevel * freeLevelMult;
     }
 
     actualOcteractUpgradeTotalLevels(upgradeKey: OcteractUpgradeKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = data.octUpgrades[upgradeKey];
@@ -90,7 +84,7 @@ export class OcteractHelper {
     }
 
     getOcteractUpgradeEffect(upgradeKey: OcteractUpgradeKey, effectKey?: string): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = octeractUpgradeMaxLevels[upgradeKey];

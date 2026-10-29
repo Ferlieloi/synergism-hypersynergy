@@ -1,5 +1,5 @@
 import Decimal from "break_infinity.js";
-import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups, AchievementRewards, PseudoCoinUpgradeEffects } from "../../../types/data-types/hs-gamedata-api-types"
+import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups, AchievementRewards } from "../../../types/data-types/hs-gamedata-api-types"
 import type { GameData, SingularityChallengeRewards } from "../../../types/data-types/hs-player-savedata"
 
 export const SHOP_UPGRADE_TYPE_KEYS: Record<ShopUpgradeGroups, string[]> = {
@@ -1770,28 +1770,6 @@ export const ACHIEVEMENT_REWARD_TYPES: AchievementRewards[] = [
     'antSpeed2UpgradeImprover',
     'antSacrificeToReincarnation'
 ] as const;
-
-export const PCoinUpgradeEffects: PseudoCoinUpgradeEffects = {
-    INSTANT_UNLOCK_1: 0,
-    INSTANT_UNLOCK_2: 0,
-    CUBE_BUFF: 1,
-    AMBROSIA_LUCK_BUFF: 0,
-    AMBROSIA_GENERATION_BUFF: 1,
-    GOLDEN_QUARK_BUFF: 1,
-    FREE_UPGRADE_PROMOCODE_BUFF: 1,
-    CORRUPTION_LOADOUT_SLOT_QOL: 0,
-    AMBROSIA_LOADOUT_SLOT_QOL: 0,
-    AUTO_POTION_FREE_POTIONS_QOL: 0,
-    OFFLINE_TIMER_CAP_BUFF: 1,
-    ADD_CODE_CAP_BUFF: 1,
-    BASE_OFFERING_BUFF: 0,
-    BASE_OBTAINIUM_BUFF: 0,
-    RED_GENERATION_BUFF: 1,
-    RED_LUCK_BUFF: 0,
-    PURPLE_LUCK_BUFF: 0,
-    PURPLE_HONEY_BUFF: 0,
-    PURPLE_REACTOR_CAPACITY_BUFF: 0
-}
 
 export const FAVORITE_UPGRADE_GQ_DEPENDENCIES = ['goldenQuarks1', 'platonicDelta', 'oneMind'] as const;
 export const FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES = ['octeractImprovedFree', 'octeractCorruption', 'octeractBlueberries'] as const;

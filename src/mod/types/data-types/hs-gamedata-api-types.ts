@@ -1,6 +1,4 @@
-import { EventBuffType } from "./hs-event-data";
 import { goldenQuarkUpgrades, octUpgrades, RedAmbrosiaUpgrades, GameData } from "./hs-player-savedata";
-import type { Challenge15CorruptionKey, CorruptionEffectKey } from "../../class/hs-core/gds/hs-gamedata-api-corruption";
 
 export type CalculationMode = 'normal' | 'true_base' | 'non_ambrosia';
 
@@ -15,145 +13,6 @@ export enum ShopUpgradeGroups {
   AmbrosiaGeneration,
   InfinityUpgrades,
   Utility
-}
-
-export interface ShopUpgradeEffectEnvironment {
-  getGameData: () => GameData | undefined
-  getPCoinUpgradeLevel: (upgradeKey: string) => number
-  getShopUpgradeTypeBonusLevels: (type: ShopUpgradeGroups) => number
-  getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean
-  calculateSumOfExaltCompletions: () => number
-  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
-  getRuneEffectiveLevel: (rune: RuneKeys) => number
-}
-
-export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
-  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
-  getCacheGeneration: () => number
-  getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
-  getRuneEffects: (rune: RuneKeys) => any
-  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  calculateFreeShopInfinityUpgrades: (mode?: CalculationMode) => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
-}
-
-export interface AntUpgradeHelperContext {
-  getGameData: () => GameData | undefined
-  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
-  getCacheGeneration: () => number
-  getAchievementReward: (rewardName: string) => number | boolean | undefined
-  calculateSigmoidExponential: (constant: number, coefficient: number) => number
-  calculateChallenge15Reward: (rewardName: string) => number
-  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
-}
-
-export interface TalismanHelperContext {
-  getGameData: () => GameData | undefined
-  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
-  getCacheGeneration: () => number
-  getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
-  getAchievementReward: (rewardName: string) => number | boolean | undefined
-  getGQUpgradeEffect: (upgradeKey: string) => number | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
-  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
-  getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
-  getLevelMilestone: (name: SynergismLevelMilestones) => number
-  getOcteractUpgradeEffect: (upgradeKey: string) => number | undefined
-  getPCoinUpgradeLevel: (upgradeName: string) => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
-  calculateChallenge15Reward: (rewardName: string) => number | undefined
-  isShopTalismanUnlocked: () => boolean
-}
-
-export interface AmbrosiaHelperContext {
-  getGameData: () => GameData | undefined
-  getMeData: () => any
-  calculateLuck: (reduce_vals?: boolean, true_base?: boolean) => { luckBase: number; luckMult: number; luckTotal: number } | any
-  calculateRedAmbrosiaLuck: () => number
-  getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean
-  getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
-  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
-  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  getGQUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
-  getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number
-  getPurpleReactorUpgradeEffects: (upgradeKey: string, effectKey: string) => number
-  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
-  getPurpleHoneyLuck: () => number
-  getPurpleHoneyPerExtraction: () => number
-  getPCoinUpgradeLevel: (upgradeName: string) => number
-  getCampaignTokens: () => number
-  getEventBellAmount: () => number
-  calculateSynergismLevel: () => number
-  isEvent: () => boolean
-  calculateEventSourceBuff: (buffType: EventBuffType) => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
-}
-
-export interface RuneHelperContext {
-  getGameData: () => GameData | undefined
-  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
-  getCacheGeneration: () => number
-  getPCoinUpgradeLevel: (upgradeKey: string) => number
-  getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
-  getAchievementReward: (rewardName: string) => number | boolean | undefined
-  getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => any
-  getPurpleAmbrosiaUpgradeEffects: (upgradeKey: string, effectKey: string) => number
-  getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
-  getLevelMilestone: (name: SynergismLevelMilestones) => number
-  getRuneEffects: (rune: RuneKeys) => any
-  firstFiveFreeLevels: () => number
-  firstFiveEffectiveRuneLevelMult: () => number
-  getRuneBonusLevels: (rune: RuneKeys) => number
-  getTalismanEffects: <K extends TalismanKeys>(t: K, rarity?: number) => TalismanTypeMap[K]
-  calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
-  calculateChallenge15Reward: (rewardName: string) => number
-  getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
-  calculateHepteractEffective: (type: HepteractType) => number
-  getCorruptionEffect: (level: number, corruption: CorruptionEffectKey) => number | Decimal
-  getActiveCorruptionLevel: () => number
-  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
-  calculateSingularityDebuff: (debuff: SingularityDebuffs) => number
-  calculateSynergismLevel: () => number
-  getShopLevel: (upgradeKey: string) => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
-}
-
-export interface AcceleratorHelperContext {
-  getGameData: () => GameData | undefined
-  getAchievementReward: (rewardName: string) => number | boolean | undefined
-  getAntUpgradeEffectValue: <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(upgradeKey: K, property: P) => AntUpgradeTypeMap[K][P]
-  calculateTotalRuneLevels: () => number
-  getRuneEffects: (rune: RuneKeys) => any
-  calculateHypercubeBlessingMultiplierPlatonicBlessing: () => number
-  calculateHepteractEffective: (type: HepteractType) => number
-  getCorruptionEffect: (level: number, corruption: CorruptionEffectKey) => number | Decimal
-  getActiveCorruptionLevel: () => number
-  getChallenge15CorruptionEffect: (corruption: Challenge15CorruptionKey) => number
-  calculateChallenge15Reward: (rewardName: string) => number
-}
-
-export interface AchievementHelperContext {
-  getGameData: () => GameData | undefined
-  getCampaignData: () => any
-  getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
-  getPrestigePointGain: () => Decimal
-  getTranscendPointGain: () => Decimal
-  getReincarnationPointGain: () => Decimal
-  getActiveCorruptionLevel: () => number
-  calculateChallenge15Reward: (rewardName: string) => number
-  getRuneEffectiveLevel: (rune: RuneKeys) => number
-  getRuneFreeLevels: (rune: RuneKeys) => number
-  runes: () => Record<RuneKeys, any>
-  calculateSynergismLevel: () => number
-  getAscensionEffectiveCorruptionLevel: () => number
-  checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) => number | undefined
-  updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) => void
 }
 
 export interface CalculationCache {
@@ -400,28 +259,30 @@ export interface AmbrosiaUpgradeCalculationCollection {
     twoMind: AmbrosiaUpgradeCalculationConfig<'twoMind'>
 }
 
-export type PseudoCoinUpgradeNames =
-    | 'INSTANT_UNLOCK_1'
-    | 'INSTANT_UNLOCK_2'
-    | 'CUBE_BUFF'
-    | 'AMBROSIA_LUCK_BUFF'
-    | 'AMBROSIA_GENERATION_BUFF'
-    | 'GOLDEN_QUARK_BUFF'
-    | 'FREE_UPGRADE_PROMOCODE_BUFF'
-    | 'CORRUPTION_LOADOUT_SLOT_QOL'
-    | 'AMBROSIA_LOADOUT_SLOT_QOL'
-    | 'AUTO_POTION_FREE_POTIONS_QOL'
-    | 'OFFLINE_TIMER_CAP_BUFF'
-    | 'ADD_CODE_CAP_BUFF'
-    | 'BASE_OFFERING_BUFF'
-    | 'BASE_OBTAINIUM_BUFF'
-    | 'RED_GENERATION_BUFF'
-    | 'RED_LUCK_BUFF'
-    | 'PURPLE_LUCK_BUFF'
-    | 'PURPLE_HONEY_BUFF'
-    | 'PURPLE_REACTOR_CAPACITY_BUFF'
+// The PseudoCoin upgrades the mod reads (getPCoinUpgradeLevel), in the heater export's order
+export const pseudoCoinUpgradeNames = [
+    'INSTANT_UNLOCK_1',
+    'INSTANT_UNLOCK_2',
+    'CUBE_BUFF',
+    'AMBROSIA_LUCK_BUFF',
+    'AMBROSIA_GENERATION_BUFF',
+    'GOLDEN_QUARK_BUFF',
+    'FREE_UPGRADE_PROMOCODE_BUFF',
+    'CORRUPTION_LOADOUT_SLOT_QOL',
+    'AMBROSIA_LOADOUT_SLOT_QOL',
+    'AUTO_POTION_FREE_POTIONS_QOL',
+    'OFFLINE_TIMER_CAP_BUFF',
+    'ADD_CODE_CAP_BUFF',
+    'BASE_OFFERING_BUFF',
+    'BASE_OBTAINIUM_BUFF',
+    'RED_GENERATION_BUFF',
+    'RED_LUCK_BUFF',
+    'PURPLE_LUCK_BUFF',
+    'PURPLE_HONEY_BUFF',
+    'PURPLE_REACTOR_CAPACITY_BUFF',
+] as const;
 
-export type PseudoCoinUpgradeEffects = Record<PseudoCoinUpgradeNames, number>
+export type PseudoCoinUpgradeNames = typeof pseudoCoinUpgradeNames[number];
 
 export type AmbrosiaUpgradeRewards = {
     ambrosiaTutorial: { quarks: number; cubes: number }

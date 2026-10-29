@@ -116,6 +116,15 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         return this.eventData;
     }
 
+    getVanillaGlobalEvent(): VanillaGlobalEvent | null {
+        return this.vanillaGlobalEvent;
+    }
+
+    // A Happy Hour Bell or a global event is active
+    isEventActive(): boolean {
+        return this.isEvent;
+    }
+
     /**
      * Takes the game's own answer from https://synergism.cc/events/get (Event.ts eventCheck, handed over by the patcher;
      * the mod doesn't fetch it), and keeps it when the game would: a name, and now between start and end.

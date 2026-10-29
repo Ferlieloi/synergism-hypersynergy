@@ -1,15 +1,4 @@
-import type { GameData } from "../../../types/data-types/hs-player-savedata";
-
-export interface PurpleHelperContext {
-    getGameData: () => GameData | undefined;
-    calculateBlueberryInventory: () => number;
-    calculateSynergismLevel: () => number;
-    getPCoinUpgradeLevel: (upgradeKey: string) => number;
-    getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number;
-    getRuneEffects: (runeKey: string) => any;
-    getTalismanEffects: (talismanKey: string) => any;
-    getOcteractUpgradeEffect: (upgradeKey: string, effectKey?: string) => number;
-}
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 export type PurpleReactorUpgradeKey =
     | 'tutorial'
@@ -134,10 +123,10 @@ export const SYNTHESIS_UPGRADE_KEYS = Object.keys(synthesisUpgradeData) as Synth
  * Author: XxMolkxX, Shewchou
  */
 export class PurpleHelper {
-    readonly #ctx: PurpleHelperContext;
+    readonly #api: HSGameDataAPI;
 
-    constructor(ctx: PurpleHelperContext) {
-        this.#ctx = ctx;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     // The highest level up to maxLevel that isAffordable accepts (the cumulative costs grow with the level)
@@ -157,7 +146,7 @@ export class PurpleHelper {
     }
 
     getPurpleReactorUpgradeLevel(upgradeKey: PurpleReactorUpgradeKey): number {
-        const invested = Number(this.#ctx.getGameData()?.purpleReactorUpgrades?.[upgradeKey] ?? 0);
+        const invested = Number(this.#api.getGameData()?.purpleReactorUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
         return this.#reconstructPurpleLevel(invested, purpleReactorUpgradeData[upgradeKey], 0.001);
     }
@@ -167,7 +156,7 @@ export class PurpleHelper {
     }
 
     getPurpleReactorUpgradeEffects(upgradeKey: PurpleReactorUpgradeKey, effectKey: string): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
         const level = this.getPurpleReactorUpgradeLevel(upgradeKey);
         const lifetimePurpleHoney = Number(data.purpleReactor?.lifetimePurpleHoney ?? 0);
@@ -205,7 +194,7 @@ export class PurpleHelper {
     }
 
     calculatePurpleHoneyLuckBreakdown(): Record<string, number> | null {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return null;
 
         const highestSingularity = Number(data.highestSingularityCount ?? 0);
@@ -217,14 +206,14 @@ export class PurpleHelper {
 
         const components = {
             base: 100,
-            pseudoCoin: this.#ctx.getPCoinUpgradeLevel('PURPLE_LUCK_BUFF') * 5,
-            synergismLevel: Math.max(0, this.#ctx.calculateSynergismLevel() - 299),
-            purpleGemTalisman: Number(this.#ctx.getTalismanEffects('purpleGem').purpleHoneyLuck ?? 0),
+            pseudoCoin: this.#api.getPCoinUpgradeLevel('PURPLE_LUCK_BUFF') * 5,
+            synergismLevel: Math.max(0, this.#api.calculateSynergismLevel() - 299),
+            purpleGemTalisman: Number(this.#api.talisman.getTalismanEffects('purpleGem').purpleHoneyLuck ?? 0),
             irishAnt3: irishAntLuck,
             purpleReactorUpgrades: reactorLuckUpgrades,
-            taxmanLastStand: this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'purpleHoneyLuck'),
-            barDependence: this.#ctx.getSingularityChallengeEffect('barDependence', 'purpleHoneyLuck'),
-            horseShoeRune: Number(this.#ctx.getRuneEffects('horseShoe').purpleHoneyLuck ?? 0),
+            taxmanLastStand: this.#api.getSingularityChallengeEffect('taxmanLastStand', 'purpleHoneyLuck'),
+            barDependence: this.#api.getSingularityChallengeEffect('barDependence', 'purpleHoneyLuck'),
+            horseShoeRune: Number(this.#api.rune.getRuneEffects('horseShoe').purpleHoneyLuck ?? 0),
         };
         return {
             ...components,
@@ -237,25 +226,25 @@ export class PurpleHelper {
     }
 
     calculatePurpleHoneyPerExtraction(): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const highestSingularity = Number(data.highestSingularityCount ?? 0);
         const blueberryEfficiency = highestSingularity < 283
             ? 0
-            : Math.floor(this.#ctx.calculateBlueberryInventory() / 2)
+            : Math.floor((this.#api.ambrosia.calculateBlueberryInventory(true) as number) / 2)
                 * (highestSingularity >= 289 ? 0.03 : 0.02);
         const reactorEfficiencyUpgrades = (['purpleEfficiency1', 'purpleEfficiency2', 'purpleEfficiency3', 'purpleEfficiency4'] as const)
             .reduce((total, key) => total + this.getPurpleReactorUpgradeEffects(key, 'purpleEfficiency'), 0);
 
         return 1
-            + this.#ctx.getPCoinUpgradeLevel('PURPLE_HONEY_BUFF') * 0.04
+            + this.#api.getPCoinUpgradeLevel('PURPLE_HONEY_BUFF') * 0.04
             + blueberryEfficiency
             + reactorEfficiencyUpgrades;
     }
 
     getPurpleAmbrosiaUpgradeLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
-        const invested = Number(this.#ctx.getGameData()?.purpleAmbrosiaUpgrades?.[upgradeKey] ?? 0);
+        const invested = Number(this.#api.getGameData()?.purpleAmbrosiaUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
         return this.#reconstructPurpleLevel(invested, purpleAmbrosiaUpgradeData[upgradeKey]);
     }
@@ -266,7 +255,7 @@ export class PurpleHelper {
 
     /** Mirrors getSynthesisUpgradeLevel in SynergismOfficial/src/Synthesis.ts. */
     getSynthesisUpgradeLevel(upgradeKey: SynthesisUpgradeKey): number {
-        const synthesis = (this.#ctx.getGameData() as unknown as { synthesisUpgrades?: Record<string, Record<string, number>> } | undefined)?.synthesisUpgrades;
+        const synthesis = (this.#api.getGameData() as unknown as { synthesisUpgrades?: Record<string, Record<string, number>> } | undefined)?.synthesisUpgrades;
         const invested = synthesis?.[upgradeKey] ?? {};
         const upgrade = synthesisUpgradeData[upgradeKey];
         return this.#reconstructLevel(upgrade.maxLevel, (level) =>
@@ -274,7 +263,7 @@ export class PurpleHelper {
     }
 
     getPurpleAmbrosiaUpgradeEffects(upgradeKey: PurpleAmbrosiaUpgradeKey, effectKey: string): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
         const level = this.getPurpleAmbrosiaUpgradeLevel(upgradeKey);
         if (upgradeKey === 'aries' && effectKey === 'universalBarPointMult') {
@@ -283,7 +272,7 @@ export class PurpleHelper {
             return 1 + 0.0002 * level * digits;
         }
         if (upgradeKey === 'leo' && effectKey === 'unassignedBlueberyLuck') {
-            const unassignedBlueberries = this.#ctx.calculateBlueberryInventory() - data.spentBlueberries;
+            const unassignedBlueberries = (this.#api.ambrosia.calculateBlueberryInventory(true) as number) - data.spentBlueberries;
             return unassignedBlueberries >= 5 ? unassignedBlueberries * level : 0;
         }
         if (upgradeKey === 'taurus' && effectKey === 'taxDivisor') return 1 + level / 10;
@@ -307,7 +296,7 @@ export class PurpleHelper {
             return +(level > 0);
         }
         if (upgradeKey === 'aquarius' && effectKey === 'infiniteTranscriptionExponent') {
-            return level / 100 * this.#ctx.getOcteractUpgradeEffect('octeractOneMindImprover', 'ascendSpeedExponent');
+            return level / 100 * this.#api.octeract.getOcteractUpgradeEffect('octeractOneMindImprover', 'ascendSpeedExponent');
         }
         if (upgradeKey === 'pisces' && effectKey === 'platonicBetaAtStart') return +(level > 0);
         return 0;

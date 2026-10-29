@@ -1,6 +1,6 @@
 import { goldenQuarkUpgradeMaxLevels } from "./hs-gamedata-tables";
-import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { CalculationMode, GoldenQuarkUpgradeKey, OcteractUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
+import type { GoldenQuarkUpgradeKey } from "../../../types/data-types/hs-gamedata-api-types";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 // SynergismOfficial/src/singularity.ts dailyFreeUpgradeTable (v4.3.1).
 // These are caps on the saved free levels, before any free-level multiplier.
@@ -31,14 +31,6 @@ const freeLevelMultiplierExemptUpgrades = new Set<GoldenQuarkUpgradeKey>([
     'singAmbrosiaGeneration4',
 ]);
 
-export interface GoldenQuarkHelperContext {
-    getGameData: () => GameData | undefined;
-    getShopUpgradeEffects: (upgradeKey: string, effectKey: string, mode?: CalculationMode) => number | boolean;
-    getSavedUpgradeFreeLevel: (upgrade?: { freeLevel?: number; freeLevels?: number }) => number;
-    getOcteractUpgradeEffect: (upgradeKey: OcteractUpgradeKey, effectKey?: string) => number;
-    getFavoriteUpgradeMaxedDependencyCount: () => number;
-}
-
 /**
  * Class: GoldenQuarkHelper
  * IsExplicitHSModule: No
@@ -47,14 +39,14 @@ export interface GoldenQuarkHelperContext {
  * Author: XxMolkxX, Shewchou
  */
 export class GoldenQuarkHelper {
-    readonly #ctx: GoldenQuarkHelperContext;
+    readonly #api: HSGameDataAPI;
 
-    constructor(ctx: GoldenQuarkHelperContext) {
-        this.#ctx = ctx;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     computeFreeLevelMultiplierGQ(): number {
-        return Number(this.#ctx.getShopUpgradeEffects('shopSingularityPotency', 'freeUpgradeMult')) + 0.3 / 100 * (this.#ctx.getGameData()?.cubeUpgrades[75] ?? 0);
+        return Number(this.#api.quarkShop.getShopUpgradeEffects('shopSingularityPotency', 'freeUpgradeMult')) + 0.3 / 100 * (this.#api.getGameData()?.cubeUpgrades[75] ?? 0);
     }
 
     // Mirrors the cumulative-cost helpers in SynergismOfficial/src/singularity.ts.
@@ -124,7 +116,7 @@ export class GoldenQuarkHelper {
     }
 
     getGQUpgradeLevel(upgradeKey: GoldenQuarkUpgradeKey): number {
-        const saved = this.#ctx.getGameData()?.goldenQuarkUpgrades[upgradeKey];
+        const saved = this.#api.getGameData()?.goldenQuarkUpgrades[upgradeKey];
         if (!saved) return 0;
 
         const investment = Number(saved.goldenQuarksInvested);
@@ -144,13 +136,13 @@ export class GoldenQuarkHelper {
     }
 
     computeGQUpgradeFreeLevelSoftcap(upgradeKey: GoldenQuarkUpgradeKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = data.goldenQuarkUpgrades[upgradeKey];
         const freeLevelMult = freeLevelMultiplierExemptUpgrades.has(upgradeKey)
             ? 1 : this.computeFreeLevelMultiplierGQ();
-        const savedFreeLevel = this.#ctx.getSavedUpgradeFreeLevel(upgrade);
+        const savedFreeLevel = this.#api.getSavedUpgradeFreeLevel(upgrade);
         const cap = dailyFreeLevelCaps[upgradeKey] ?? Number.POSITIVE_INFINITY;
         const freeLevel = Math.min(cap, Math.max(0, savedFreeLevel));
 
@@ -160,7 +152,7 @@ export class GoldenQuarkHelper {
     }
 
     computeGQUpgradeMaxLevel(upgradeKey: GoldenQuarkUpgradeKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey];
@@ -178,12 +170,12 @@ export class GoldenQuarkHelper {
             }
         }
 
-        cap += this.#ctx.getOcteractUpgradeEffect('octeractSingUpgradeCap', 'goldenQuarkUpgradeCapIncrease');
+        cap += this.#api.octeract.getOcteractUpgradeEffect('octeractSingUpgradeCap', 'goldenQuarkUpgradeCapIncrease');
         return cap;
     }
 
     actualGQUpgradeTotalLevels(upgradeKey: GoldenQuarkUpgradeKey): number {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgrade = goldenQuarkUpgradeMaxLevels[upgradeKey];
@@ -201,11 +193,11 @@ export class GoldenQuarkHelper {
         const linearLevels = level + actualFreeLevels;
         let polynomialLevels = 0;
 
-        if (this.#ctx.getOcteractUpgradeEffect('octeractImprovedFree')) {
+        if (this.#api.octeract.getOcteractUpgradeEffect('octeractImprovedFree')) {
             let exponent = 0.6;
-            exponent += this.#ctx.getOcteractUpgradeEffect('octeractImprovedFree2');
-            exponent += this.#ctx.getOcteractUpgradeEffect('octeractImprovedFree3');
-            exponent += this.#ctx.getOcteractUpgradeEffect('octeractImprovedFree4');
+            exponent += this.#api.octeract.getOcteractUpgradeEffect('octeractImprovedFree2');
+            exponent += this.#api.octeract.getOcteractUpgradeEffect('octeractImprovedFree3');
+            exponent += this.#api.octeract.getOcteractUpgradeEffect('octeractImprovedFree4');
             polynomialLevels = Math.pow(level * actualFreeLevels, exponent);
         }
 
@@ -224,7 +216,7 @@ export class GoldenQuarkHelper {
     }
 
     calculateFavoriteUpgradeEffect(totalLevels: number): number {
-        const maxedCount = this.#ctx.getFavoriteUpgradeMaxedDependencyCount();
+        const maxedCount = this.#api.getFavoriteUpgradeMaxedDependencyCount();
         return 1 + totalLevels / 5000 * (maxedCount + 6);
     }
 }

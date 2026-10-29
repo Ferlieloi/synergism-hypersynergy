@@ -6,12 +6,11 @@
 
 import Decimal from "break_infinity.js";
 import { EventBuffType, type ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
-import { ShopUpgradeGroups, type AmbrosiaUpgradeNames } from "../../../types/data-types/hs-gamedata-api-types";
+import { ShopUpgradeGroups, pseudoCoinUpgradeNames, type AmbrosiaUpgradeNames } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
-import { PCoinUpgradeEffects } from "./hs-gamedata-tables";
 import { floorLog10OfOnePlus, parseGameDataDecimal } from "./hs-gamedata-utils";
 
 /** The API's protected data the export reads, taken after the refresh. */
@@ -183,7 +182,7 @@ export function buildHeaterExport(api: HSGameDataAPI, { gameData, meData, eventD
             exalt5Unlocked:         gameData.singularityChallenges.noAmbrosiaUpgrades.completions > 0,
             exalt9Unlocked:         gameData.singularityChallenges.taxmanLastStand.completions > 0,
             postAoag:               api.rune.getRuneLevelFromEXP('antiquities', parseGameDataDecimal(gameData.runes.antiquities)) > 0,
-            oneMindUnlocked:        Boolean(api.getGQUpgradeEffect('oneMind', 'unlocked')),
+            oneMindUnlocked:        Boolean(api.goldenQuark.getGQUpgradeEffect('oneMind', 'unlocked')),
             aquariusUnlocked:       Boolean(api.purple.getPurpleAmbrosiaUpgradeLevel('aquarius')),
             transcription:          api.octeract.getOcteractUpgradeLevel('octeractOneMindImprover'),
             // Export both stages of the game's calculation: the raw
@@ -284,7 +283,7 @@ export function buildHeaterExport(api: HSGameDataAPI, { gameData, meData, eventD
             shopUpgradeRawLevels,
             shopBonusLevelsNoAmbrosia,
             panthemaLevel:            api.quarkShop.getShopLevel('shopPanthema', 'non_ambrosia'),
-            tauPower:                 api.getGQUpgradeEffect('platonicTau', 'tauPower'),
+            tauPower:                 api.goldenQuark.getGQUpgradeEffect('platonicTau', 'tauPower'),
             // Not read by the heater any more: it follows its Exalt select (4 = No Quark Upgrades)
             shopUpgradesDisabled:     gameData.singularityChallenges.noQuarkUpgrades.enabled,
             purpleHoney:                gameData.purpleReactor?.purpleHoney ?? 0,
@@ -329,8 +328,7 @@ export function buildHeaterExport(api: HSGameDataAPI, { gameData, meData, eventD
                 purpleHoneyBuffLevel:           api.getPCoinUpgradeLevel('PURPLE_HONEY_BUFF'),
                 purpleReactorCapacityBuffLevel:api.getPCoinUpgradeLevel('PURPLE_REACTOR_CAPACITY_BUFF'),
                 pseudoCoinUpgradeLevels:       Object.fromEntries(
-                    (Object.keys(PCoinUpgradeEffects) as Array<keyof typeof PCoinUpgradeEffects>)
-                        .map((name) => [name, api.getPCoinUpgradeLevel(name)])
+                    pseudoCoinUpgradeNames.map((name) => [name, api.getPCoinUpgradeLevel(name)])
                 ),
             },
             redAmbrosiaUpgrades: {

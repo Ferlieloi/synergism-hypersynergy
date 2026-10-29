@@ -1,5 +1,5 @@
 import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
-import { AchievementRewards, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, OcteractUpgradeKey, SingularityChallengeDataKeys, SingularityDebuffs, NumberStatLine, RuneKeys, SynergismLevelMilestones } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades, CalculationCache, CalculationMode, CachedValue, HepteractType, SingularityChallengeDataKeys, SingularityDebuffs, NumberStatLine, PseudoCoinUpgradeNames, RuneKeys, SynergismLevelMilestones } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
@@ -22,15 +22,12 @@ import { OcteractHelper } from "./hs-gamedata-api-octeract";
 import { LuckHelper } from "./hs-gamedata-api-luck";
 import { PurpleHelper } from "./hs-gamedata-api-purple";
 import { SynergismLevelHelper } from "./hs-gamedata-api-synergismLevel";
-import type { HSCalculationComponents, ShopUpgradeHelperContext, AntUpgradeHelperContext, TalismanHelperContext, RuneHelperContext, AchievementHelperContext, AmbrosiaHelperContext, AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
-import type { GoldenQuarkHelperContext } from "./hs-gamedata-api-goldenQuark";
-import type { OcteractHelperContext } from "./hs-gamedata-api-octeract";
-import type { LuckHelperContext } from "./hs-gamedata-api-luck";
+import type { HSCalculationComponents } from "../../../types/data-types/hs-gamedata-api-types";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
 import { CorruptionHelper, type CorruptionCubeType } from "./hs-gamedata-api-corruption";
-import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA, PCoinUpgradeEffects, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds } from "./hs-gamedata-tables";
-import { parseGameDataDecimal, calculateSigmoidExponential, findInsertionIndex, floorLog10OfOnePlus } from "./hs-gamedata-utils";
+import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds } from "./hs-gamedata-tables";
+import { parseGameDataDecimal, findInsertionIndex, floorLog10OfOnePlus } from "./hs-gamedata-utils";
 import { buildHeaterExport } from "./hs-heater-export";
 import Decimal from "break_infinity.js";
 
@@ -217,10 +214,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         // firstCompletionBonusPoints: the last-completion upgrades now count at the first completion too
         const firstCompletionBonus = (highestSingularity >= 16 ? 5 : 0)
             + (highestSingularity >= 69 ? 10 : 0)
-            + this.getGQUpgradeEffect('singBonusTokens1', 'firstCompletionBonusTokens')
-            + this.getGQUpgradeEffect('singBonusTokens3', 'lastCompletionBonusTokens')
-            + this.getOcteractUpgradeEffect('octeractBonusTokens3', 'firstCompletionBonusTokens')
-            + this.getOcteractUpgradeEffect('octeractBonusTokens1', 'lastCompletionBonusTokens');
+            + this.goldenQuark.getGQUpgradeEffect('singBonusTokens1', 'firstCompletionBonusTokens')
+            + this.goldenQuark.getGQUpgradeEffect('singBonusTokens3', 'lastCompletionBonusTokens')
+            + this.octeract.getOcteractUpgradeEffect('octeractBonusTokens3', 'firstCompletionBonusTokens')
+            + this.octeract.getOcteractUpgradeEffect('octeractBonusTokens1', 'lastCompletionBonusTokens');
         let singularityTokenMultiplier = 1;
         for (let i = CAMPAIGN_BONUS_TOKEN_LEVELS.length; i > 0; i--) {
             if (highestSingularity >= CAMPAIGN_BONUS_TOKEN_LEVELS[i - 1]) {
@@ -229,8 +226,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             }
         }
         const tokenMultiplier = singularityTokenMultiplier
-            * this.getGQUpgradeEffect('singBonusTokens2', 'tokenMultiplier')
-            * this.getOcteractUpgradeEffect('octeractBonusTokens2', 'tokenMultiplier');
+            * this.goldenQuark.getGQUpgradeEffect('singBonusTokens2', 'tokenMultiplier')
+            * this.octeract.getOcteractUpgradeEffect('octeractBonusTokens2', 'tokenMultiplier');
 
         // inheritanceTokens (Calculate.ts) checks the levels from the last one down to the second one: the first
         // level (singularity 2, 1 token) never counts
@@ -253,8 +250,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return {
             tokens: tokens
                 + inheritedTokens
-                + this.getGQUpgradeEffect('singBonusTokens4', 'initialTokenBonus')
-                + this.getOcteractUpgradeEffect('octeractBonusTokens4', 'initialTokenBonus')
+                + this.goldenQuark.getGQUpgradeEffect('singBonusTokens4', 'initialTokenBonus')
+                + this.octeract.getOcteractUpgradeEffect('octeractBonusTokens4', 'initialTokenBonus')
         };
     }
 
@@ -488,241 +485,20 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
 
-        let ambrosia!: AmbrosiaHelper;
-        let quarkShop!: ShopUpgradeHelper;
-        let antUpgrade!: AntUpgradeHelper;
-        let talisman!: TalismanHelper;
-        let rune!: RuneHelper;
-        let achievement!: AchievementHelper;
-        let goldenQuark!: GoldenQuarkHelper;
-        let octeract!: OcteractHelper;
-        let luck!: LuckHelper;
-        let purple!: PurpleHelper;
-        let corruption!: CorruptionHelper;
-
-        const cacheProvider = {
-            checkCalculationCache: (cacheName: keyof CalculationCache, calculationVars: number[]) =>
-                checkCalculationCache(this.#calculationCache, cacheName, calculationVars),
-            updateCalculationCache: (cacheName: keyof CalculationCache, item: CachedValue) =>
-                updateCalculationCache(this.#calculationCache, cacheName, item),
-        };
-
-        const ambrosiaContext: AmbrosiaHelperContext = {
-            getGameData: () => this.gameData,
-            getMeData: () => this.meData,
-            calculateLuck: (reduce_vals = true, true_base = false) => this.luck.calculateLuck(reduce_vals, true_base),
-            calculateRedAmbrosiaLuck: () => this.luck.calculateRedAmbrosiaLuck() as number,
-            getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getAmbrosiaUpgradeEffects: (upgradeKey: string, mode?: CalculationMode) => this.ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
-            getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => this.ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
-            getGQUpgradeEffect: (upgradeKey, effectKey) => goldenQuark.getGQUpgradeEffect(upgradeKey as any, effectKey),
-            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
-            getPurpleReactorUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleReactorUpgradeEffects(upgradeKey as any, effectKey),
-            getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
-            getPurpleHoneyLuck: () => purple.calculatePurpleHoneyLuck(),
-            getPurpleHoneyPerExtraction: () => purple.calculatePurpleHoneyPerExtraction(),
-            getPCoinUpgradeLevel: (upgradeName: string) => this.getPCoinUpgradeLevel(upgradeName as any),
-            getCampaignTokens: () => this.campaignData?.tokens ?? 0,
-            getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
-            calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            isEvent: () => this.isEvent,
-            calculateEventSourceBuff: (buffType: EventBuffType) => this.calculateEventSourceBuff(buffType),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        ambrosia = this.registerCalculationHelper(new AmbrosiaHelper(ambrosiaContext));
-        this.ambrosia = ambrosia;
-        purple = this.registerCalculationHelper(new PurpleHelper({
-            getGameData: () => this.gameData,
-            calculateBlueberryInventory: () => ambrosia.calculateBlueberryInventory(true) as number,
-            calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            getPCoinUpgradeLevel: (upgradeKey) => this.getPCoinUpgradeLevel(upgradeKey as any),
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getRuneEffects: (runeKey) => rune.getRuneEffects(runeKey as any),
-            getTalismanEffects: (talismanKey) => talisman.getTalismanEffects(talismanKey as any),
-            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
-        }));
-        this.purple = purple;
+        // The helpers read each other through this API, only once it is built: the order here doesn't matter
+        this.ambrosia = this.registerCalculationHelper(new AmbrosiaHelper(this));
+        this.purple = this.registerCalculationHelper(new PurpleHelper(this));
         this.#calculationCache = createCalculationCache(this.ambrosia);
-
-        const quarkShopContext: ShopUpgradeHelperContext = {
-            getGameData: () => this.gameData,
-            getCacheGeneration: () => this.#cacheGeneration,
-            getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
-            getShopUpgradeTypeBonusLevels: (type) => quarkShop.getShopUpgradeTypeBonusLevels(type),
-            getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getAmbrosiaUpgradeEffects: (upgradeName, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeName as any, mode),
-            getRuneEffectiveLevel: (runeName) => rune.getRuneEffectiveLevel(runeName),
-            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
-            getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
-            calculateSumOfExaltCompletions: () => this.calculateSumOfExaltCompletions(),
-            calculateFreeShopInfinityUpgrades: (mode: CalculationMode = 'normal') => this.calculateAllShopTablets(true, mode),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        quarkShop = this.registerCalculationHelper(new ShopUpgradeHelper(quarkShopContext));
-        this.quarkShop = quarkShop;
-
-        const octeractContext: OcteractHelperContext = {
-            getGameData: () => this.gameData,
-            getSavedUpgradeFreeLevel: (upgrade) => this.getSavedUpgradeFreeLevel(upgrade),
-            getRedAmbrosiaFreeAccumulatorCapIncrease: () =>
-                ambrosia.getRedAmbrosiaUpgradeEffects('redAmbrosiaFreeAccumulator').freeAccumulatorLevelCapIncrease,
-        };
-        octeract = this.registerCalculationHelper(new OcteractHelper(octeractContext));
-        this.octeract = octeract;
-
-        const goldenQuarkContext: GoldenQuarkHelperContext = {
-            getGameData: () => this.gameData,
-            getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
-            getSavedUpgradeFreeLevel: (upgrade) => this.getSavedUpgradeFreeLevel(upgrade),
-            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey, effectKey),
-            getFavoriteUpgradeMaxedDependencyCount: () => this.getFavoriteUpgradeMaxedDependencyCount(),
-        };
-        goldenQuark = this.registerCalculationHelper(new GoldenQuarkHelper(goldenQuarkContext));
-        this.goldenQuark = goldenQuark;
-
-        const antUpgradeContext: AntUpgradeHelperContext = {
-            getGameData: () => this.gameData,
-            getCacheGeneration: () => this.#cacheGeneration,
-            getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
-            calculateSigmoidExponential,
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        antUpgrade = this.registerCalculationHelper(new AntUpgradeHelper(antUpgradeContext));
-        this.antUpgrade = antUpgrade;
-
-        const talismanContext: TalismanHelperContext = {
-            getGameData: () => this.gameData,
-            getCacheGeneration: () => this.#cacheGeneration,
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
-            isShopTalismanUnlocked: () => quarkShop.getShopUpgradeEffects('shopTalisman', 'unlocked') as boolean,
-            getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
-            getGQUpgradeEffect: (upgradeKey) => this.getGQUpgradeEffect(upgradeKey as any) as number | undefined,
-            getAmbrosiaUpgradeEffects: (upgradeKey, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
-            getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
-            getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
-            getLevelMilestone: (name) => this.getLevelMilestone(name as any),
-            getOcteractUpgradeEffect: (upgradeKey) => this.getOcteractUpgradeEffect(upgradeKey as any) as number | undefined,
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        talisman = this.registerCalculationHelper(new TalismanHelper(talismanContext));
-        this.talisman = talisman;
-
-        const runeContext: RuneHelperContext = {
-            getGameData: () => this.gameData,
-            getCacheGeneration: () => this.#cacheGeneration,
-            getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getRuneBonusLevels: (runeName) => this.getRuneBonusLevels(runeName),
-            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
-            getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
-            getAmbrosiaUpgradeEffects: (upgradeKey, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
-            getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
-            getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
-            getLevelMilestone: (name) => this.getLevelMilestone(name as any),
-            firstFiveFreeLevels: () => this.firstFiveFreeLevels(),
-            firstFiveEffectiveRuneLevelMult: () => this.firstFiveEffectiveRuneLevelMult(),
-            getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
-            calculateHypercubeBlessingMultiplierPlatonicBlessing: () => this.calculateHypercubeBlessingMultiplierPlatonicBlessing(),
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
-            calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
-            getCorruptionEffect: (level, key) => corruption.getCorruptionEffect(level, key),
-            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
-            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
-            calculateSingularityDebuff: (debuff) => this.calculateSingularityDebuff(debuff),
-            calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            getShopLevel: (upgradeKey) => quarkShop.getShopLevel(upgradeKey),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        rune = this.registerCalculationHelper(new RuneHelper(runeContext));
-        this.rune = rune;
-
-        const achievementContext: AchievementHelperContext = {
-            getGameData: () => this.gameData,
-            getCampaignData: () => this.campaignData,
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getPrestigePointGain: () => this.getPrestigePointGain(),
-            getTranscendPointGain: () => this.getTranscendPointGain(),
-            getReincarnationPointGain: () => this.getReincarnationPointGain(),
-            getRuneEffectiveLevel: (runeName) => rune.getRuneEffectiveLevel(runeName),
-            getRuneFreeLevels: (runeName) => rune.getRuneFreeLevels(runeName),
-            runes: () => rune.runes,
-            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            getAscensionEffectiveCorruptionLevel: () => corruption.getAscensionEffectiveCorruptionLevel(),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-        };
-        achievement = this.registerCalculationHelper(new AchievementHelper(achievementContext));
-        this.achievement = achievement;
-
-        const luckContext: LuckHelperContext = {
-            getGameData: () => this.gameData,
-            isEvent: () => this.isEvent,
-            getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
-            getShopLevel: (upgradeKey, mode) => quarkShop.getShopLevel(upgradeKey as any, mode),
-            getShopLevelDependencies: (upgradeKey) => quarkShop.getShopLevelDependencies(upgradeKey as any),
-            getAmbrosiaUpgradeEffects: (upgradeKey, mode) => ambrosia.getAmbrosiaUpgradeEffects(upgradeKey as any, mode),
-            getRedAmbrosiaUpgradeEffects: (upgradeKey) => ambrosia.getRedAmbrosiaUpgradeEffects(upgradeKey as any),
-            getRuneEffectiveLevel: (runeName) => rune.getRuneEffectiveLevel(runeName),
-            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
-            getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
-            calculateEventSourceBuff: (buffType) => this.calculateEventSourceBuff(buffType),
-            calculateSingularityDebuff: (debuff, singularityCount) => this.calculateSingularityDebuff(debuff as any, singularityCount),
-            calculateSynergismLevel: () => this.calculateSynergismLevel(),
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-            getSavedUpgradeFreeLevel: (upgrade) => this.getSavedUpgradeFreeLevel(upgrade),
-            getGQUpgradeEffect: (upgradeKey, effectKey) => goldenQuark.getGQUpgradeEffect(upgradeKey as any, effectKey),
-            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
-            getPurpleAmbrosiaUpgradeEffects: (upgradeKey, effectKey) => purple.getPurpleAmbrosiaUpgradeEffects(upgradeKey as any, effectKey),
-            checkCalculationCache: cacheProvider.checkCalculationCache,
-            updateCalculationCache: cacheProvider.updateCalculationCache,
-            getCampaignTokens: () => this.campaignData?.tokens ?? 0,
-            getVanillaGlobalEventAmbrosiaLuck: () => this.vanillaGlobalEvent?.ambrosiaLuck ?? 0,
-            getEventBellAmount: () => this.eventData?.HAPPY_HOUR_BELL.amount ?? 0,
-        };
-        luck = this.registerCalculationHelper(new LuckHelper(luckContext));
-        this.luck = luck;
-
-        corruption = this.registerCalculationHelper(new CorruptionHelper({
-            getGameData: () => this.gameData,
-            getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
-            getGQUpgradeEffect: (upgradeKey, effectKey) => goldenQuark.getGQUpgradeEffect(upgradeKey as any, effectKey),
-            getOcteractUpgradeEffect: (upgradeKey, effectKey) => octeract.getOcteractUpgradeEffect(upgradeKey as any, effectKey),
-            getTalismanEffects: (t, rarity) => talisman.getTalismanEffects(t as any, rarity),
-            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
-            getChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName),
-        }));
-        this.corruption = corruption;
-
-        const acceleratorContext: AcceleratorHelperContext = {
-            getGameData: () => this.gameData,
-            getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
-            getAntUpgradeEffectValue: (upgradeKey, property) => antUpgrade.getAntUpgradeEffectValue(upgradeKey as any, property as any),
-            calculateTotalRuneLevels: () => rune.calculateTotalRuneLevels(),
-            getRuneEffects: (runeName) => rune.getRuneEffects(runeName),
-            calculateHypercubeBlessingMultiplierPlatonicBlessing: () => this.calculateHypercubeBlessingMultiplierPlatonicBlessing(),
-            calculateHepteractEffective: (type) => this.calculateHepteractEffective(type),
-            getCorruptionEffect: (level, key) => corruption.getCorruptionEffect(level, key),
-            getActiveCorruptionLevel: () => corruption.getActiveCorruptionLevel(),
-            getChallenge15CorruptionEffect: (key) => corruption.getChallenge15CorruptionEffect(key),
-            calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
-        };
-        this.accelerator = new AcceleratorHelper(acceleratorContext);
+        this.quarkShop = this.registerCalculationHelper(new ShopUpgradeHelper(this));
+        this.octeract = this.registerCalculationHelper(new OcteractHelper(this));
+        this.goldenQuark = this.registerCalculationHelper(new GoldenQuarkHelper(this));
+        this.antUpgrade = this.registerCalculationHelper(new AntUpgradeHelper(this));
+        this.talisman = this.registerCalculationHelper(new TalismanHelper(this));
+        this.rune = this.registerCalculationHelper(new RuneHelper(this));
+        this.achievement = this.registerCalculationHelper(new AchievementHelper(this));
+        this.luck = this.registerCalculationHelper(new LuckHelper(this));
+        this.corruption = this.registerCalculationHelper(new CorruptionHelper(this));
+        this.accelerator = new AcceleratorHelper(this);
 
         this.#calculationCacheTemplate = { ...this.#calculationCache };
         this.synergismLevel = this.registerCalculationHelper(new SynergismLevelHelper(this));
@@ -770,6 +546,15 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return undefined;
     }
 
+    // The helpers' check-then-update caching (memoizeCalculation does both)
+    checkCalculationCache<T = number>(cacheName: keyof CalculationCache, calculationVars: number[]): T | undefined {
+        return checkCalculationCache<T>(this.#calculationCache, cacheName, calculationVars);
+    }
+
+    updateCalculationCache(cacheName: keyof CalculationCache, item: CachedValue): void {
+        updateCalculationCache(this.#calculationCache, cacheName, item);
+    }
+
     clearCache() {
         this.#calculationCache = clearCalculationCache(this.#calculationCacheTemplate);
         this.#cacheGeneration++;
@@ -790,7 +575,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return level >= milestone.levelReq ? milestone.effect.call(this) : milestone.defaultValue;
     }
 
-    getPCoinUpgradeLevel(name: keyof typeof PCoinUpgradeEffects): number {
+    getPCoinUpgradeLevel(name: PseudoCoinUpgradeNames): number {
         // Patched game: its own levels, live, once its fetch has answered (HSGameData clears the cache when they change)
         const liveLevels = window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : undefined;
         if (liveLevels) {
@@ -850,7 +635,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const event = this.vanillaGlobalEvent;
         if (!event) return 0;
 
-        const hasOneMindUpgrade = this.getGQUpgradeEffect('oneMind', 'unlocked') > 0;
+        const hasOneMindUpgrade = this.goldenQuark.getGQUpgradeEffect('oneMind', 'unlocked') > 0;
 
         switch (buffType) {
             case EventBuffType.Quark:
@@ -1640,19 +1425,6 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
             const limitMult = Math.pow(limit, 1 - DR)
             return 1 + effectPerBlessing * limitMult * Math.pow((this.gameData?.platonicBlessings.hypercubeBonus ?? 0), DR)
         }
-    }
-
-
-    // =============================
-    // =========== Quark ===========
-    // =============================
-
-    getOcteractUpgradeEffect = (upgradeKey: OcteractUpgradeKey, effectKey?: string): number => {
-        return this.octeract.getOcteractUpgradeEffect(upgradeKey, effectKey)
-    }
-
-    getGQUpgradeEffect(upgradeKey: GoldenQuarkUpgradeKey, effectKey?: string): number {
-        return this.goldenQuark.getGQUpgradeEffect(upgradeKey, effectKey)
     }
 
     firstFiveFreeLevels = () => {

@@ -1,10 +1,11 @@
 import Decimal from "break_infinity.js";
 import { HSGlobal } from "../hs-global";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
-import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys, TalismanTypeMap, TalismanHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys, TalismanTypeMap, } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES, TALISMAN_CHRONOS_INSCRIPT_VALUES, TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES, TALISMAN_EXEMPTION_INSCRIPT_VALUES, TALISMAN_METAPHYSICS_INSCRIPT_VALUES, TALISMAN_MIDAS_INSCRIPT_VALUES, TALISMAN_MORTUUS_INSCRIPT_VALUES, TALISMAN_PLASTIC_INSCRIPT_VALUES, TALISMAN_POLYMATH_INSCRIPT_VALUES, TALISMAN_WOWSQUARE_INSCRIPT_VALUES, TALISMAN_HORSESHOE_INSCRIPT_VALUES, TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./hs-gamedata-tables";
 import { HSLogger } from "../hs-logger";
 import type { GameData, TalismanShards } from "../../../types/data-types/hs-player-savedata";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 /**
  * The fragments invested in a talisman. The live player's talismans are only a copy the game makes at each save (every
@@ -37,14 +38,14 @@ export class TalismanHelper {
     readonly #talismanEffectsCache = new Map<TalismanKeys, Map<number, unknown>>()
     #allRuneBonusesCache?: Record<RuneKeys, number>
     #statsComputed = false
-    #ctx: TalismanHelperContext
+    readonly #api: HSGameDataAPI;
 
-    constructor(ctx: TalismanHelperContext) {
-        this.#ctx = ctx;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     #clearCachesIfGameDataChanged(): void {
-        const generation = this.#ctx.getCacheGeneration();
+        const generation = this.#api.getCacheGeneration();
         if (generation !== this.#lastCacheGeneration) {
             this.#lastCacheGeneration = generation;
             this.#talismanLevelCache.clear();
@@ -57,7 +58,7 @@ export class TalismanHelper {
     }
 
     #getTalismanKeys(): TalismanKeys[] {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return [];
         return Object.keys(data.talismans) as TalismanKeys[];
     }
@@ -84,12 +85,12 @@ export class TalismanHelper {
 
         const keys = this.#getTalismanKeys();
         for (const key of keys) {
-            const unlocked = isTalismanUnlocked(key, this.#ctx);
+            const unlocked = isTalismanUnlocked(key, this.#api);
             this.#talismanUnlockedCache.set(key, unlocked);
         }
 
         for (const key of keys) {
-            const level = getTalismanLevel(key, this.#ctx);
+            const level = getTalismanLevel(key, this.#api);
             this.#talismanLevelCache.set(key, level);
         }
 
@@ -124,7 +125,7 @@ export class TalismanHelper {
                 bonusMult *= effects.extraTalismanEffect;
             }
             if (talisman === 'mortuus') {
-                bonusMult *= this.#ctx.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'talismanEffectBuff');
+                bonusMult *= this.#api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'talismanEffectBuff');
             }
 
             const rarityValue = TALISMAN_RARITY_VALUES[rarity] ?? 0;
@@ -147,7 +148,7 @@ export class TalismanHelper {
 
     allTalismanRuneBonusStatsSum = (mode: CalculationMode = 'normal'): number => {
         this.#clearCachesIfGameDataChanged();
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         const cacheName = 'AllTalismanRuneBonusStatsSum' as keyof CalculationCache;
         const calculationVars = [
             data?.researches?.[106] ?? 0,
@@ -155,24 +156,24 @@ export class TalismanHelper {
             data?.researches?.[118] ?? 0,
             data?.researches?.[200] ?? 0,
             data?.cubeUpgrades?.[50] ?? 0,
-            Number(this.#ctx.getAchievementReward('talismanPower') ?? 0),
-            this.#ctx.calculateChallenge15Reward('talismanBonus') ?? 0,
-            this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes1') ?? 0,
-            this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0,
-            this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0,
-            this.#ctx.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0,
-            this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0,
-            this.#ctx.getSingularityChallengeEffect('taxmanLastStand', 'talismanRuneEffect') ?? 0,
+            Number(this.#api.achievement.AchRewards.talismanPower() ?? 0),
+            this.#api.calculateChallenge15Reward('talismanBonus') ?? 0,
+            this.#api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes1') ?? 0,
+            this.#api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0,
+            this.#api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0,
+            this.#api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0,
+            this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0,
+            this.#api.getSingularityChallengeEffect('taxmanLastStand', 'talismanRuneEffect') ?? 0,
         ];
 
         if (mode === 'normal') {
-            const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars);
+            const cached = this.#api.checkCalculationCache(cacheName, calculationVars);
             if (cached !== undefined) return cached;
         }
 
-        const result = allTalismanRuneBonusStatsSum(this.#ctx, mode);
+        const result = allTalismanRuneBonusStatsSum(this.#api, mode);
         if (mode === 'normal') {
-            this.#ctx.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
+            this.#api.updateCalculationCache(cacheName, { value: result, cachedBy: calculationVars });
         }
         return result;
     }
@@ -190,7 +191,7 @@ export class TalismanHelper {
             return rarityCache.get(actualRarity) as TalismanTypeMap[K];
         }
 
-        const result = getTalismanEffects(t, actualRarity, this.#ctx);
+        const result = getTalismanEffects(t, actualRarity, this.#api);
         rarityCache.set(actualRarity, result);
         return result;
     }
@@ -217,23 +218,23 @@ export class TalismanHelper {
     }
 }
 
-const allTalismanRuneBonusStatsSum = (env: TalismanHelperContext, mode: CalculationMode = 'normal'): number => {
-    const data = env.getGameData();
+const allTalismanRuneBonusStatsSum = (api: HSGameDataAPI, mode: CalculationMode = 'normal'): number => {
+    const data = api.getGameData();
     if (!data) return 0;
 
-    const taxmanTalismanRuneEffect = env.getSingularityChallengeEffect('taxmanLastStand', 'talismanRuneEffect');
-    const talismanPowerAchievement = Number(env.getAchievementReward('talismanPower') ?? 0);
+    const taxmanTalismanRuneEffect = api.getSingularityChallengeEffect('taxmanLastStand', 'talismanRuneEffect');
+    const talismanPowerAchievement = Number(api.achievement.AchRewards.talismanPower() ?? 0);
     const research5x6 = Number(data.researches[106] ?? 0) / 1000;
     const research5x7 = Number(data.researches[107] ?? 0) / 1000;
     const research5x18 = 2 * Number(data.researches[118] ?? 0) / 1000;
     const research8x25 = 0.004 * Math.floor(Number(data.researches[200] ?? 0) / 10000);
     const cube5x10 = 0.006 * Math.floor(Number(data.cubeUpgrades[50] ?? 0) / 10000);
-    const challenge15TalismanBonus = (env.calculateChallenge15Reward('talismanBonus') ?? 0) - 1;
-    const gqTalismanBonus1 = env.getGQUpgradeEffect('singTalismanBonusRunes1') ?? 0;
-    const gqTalismanBonus2 = env.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0;
-    const gqTalismanBonus3 = env.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0;
-    const gqTalismanBonus4 = env.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0;
-    const ambrosiaTalismanBonus = env.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0;
+    const challenge15TalismanBonus = (api.calculateChallenge15Reward('talismanBonus') ?? 0) - 1;
+    const gqTalismanBonus1 = api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes1') ?? 0;
+    const gqTalismanBonus2 = api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes2') ?? 0;
+    const gqTalismanBonus3 = api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes3') ?? 0;
+    const gqTalismanBonus4 = api.goldenQuark.getGQUpgradeEffect('singTalismanBonusRunes4') ?? 0;
+    const ambrosiaTalismanBonus = api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaTalismanBonusRuneLevel', mode).talismanBonusRuneLevel ?? 0;
     const taxmanTalismanEffect = taxmanTalismanRuneEffect ?? 0;
 
     const total = (
@@ -262,9 +263,9 @@ const allTalismanRuneBonusStatsSum = (env: TalismanHelperContext, mode: Calculat
 const getTalismanEffects = <K extends TalismanKeys>(
     t: K,
     rarity: number | undefined,
-    env: TalismanHelperContext,
+    api: HSGameDataAPI,
 ): TalismanTypeMap[K] => {
-    if (rarity === undefined) rarity = getTalismanRarity(t, env);
+    if (rarity === undefined) rarity = getTalismanRarity(t, api);
     const rarityIndex = Math.max(0, Math.min(10, rarity));
 
     switch (t) {
@@ -332,8 +333,8 @@ const getTalismanEffects = <K extends TalismanKeys>(
     }
 };
 
-const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext, loadingTalismans = true): number => {
-    const data = env.getGameData();
+const getTalismanLevel = (t: TalismanKeys, api: HSGameDataAPI, loadingTalismans = true): number => {
+    const data = api.getGameData();
     if (!data) return 0;
 
     const shards = getTalismanFragments(data, t);
@@ -350,7 +351,7 @@ const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext, loadingTa
     let level = 0;
     const baseMult = getTalismanBaseMult(t);
     const costType = getTalismanCostType(t);
-    const cap = getTalismanLevelCap(t, env);
+    const cap = getTalismanLevelCap(t, api);
     const smallBufferMult = loadingTalismans ? new Decimal(1.0001) : new Decimal(1);
 
     while (level < cap) {
@@ -380,9 +381,9 @@ const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext, loadingTa
     return level;
 };
 
-const getTalismanRarity = (t: TalismanKeys, env: TalismanHelperContext): number => {
-    const level = getTalismanLevel(t, env);
-    const unlocked = isTalismanUnlocked(t, env);
+const getTalismanRarity = (t: TalismanKeys, api: HSGameDataAPI): number => {
+    const level = getTalismanLevel(t, api);
+    const unlocked = isTalismanUnlocked(t, api);
     if (!unlocked) return 0;
 
     const maxLevel = getTalismanMaxLevel(t);
@@ -399,26 +400,26 @@ const getTalismanRarity = (t: TalismanKeys, env: TalismanHelperContext): number 
 };
 
 
-const getTalismanLevelCap = (t: TalismanKeys, env: TalismanHelperContext): number => {
+const getTalismanLevelCap = (t: TalismanKeys, api: HSGameDataAPI): number => {
     const baseMax = getTalismanMaxLevel(t);
     let increase = 0;
 
     if (t !== 'achievement') {
-        increase += universalTalismanMaxLevelIncreasers(env);
+        increase += universalTalismanMaxLevelIncreasers(api);
     }
 
     switch (t) {
         case 'metaphysics':
-            increase += (env.getGameData()?.cubeUpgrades[67] ?? 0) > 0 ? 1337 : 0;
+            increase += (api.getGameData()?.cubeUpgrades[67] ?? 0) > 0 ? 1337 : 0;
             break;
         case 'mortuus':
-            increase += env.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'talismanLevelIncreaser');
+            increase += api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus2, 'talismanLevelIncreaser');
             break;
         case 'plastic':
-            increase += env.getPCoinUpgradeLevel('INSTANT_UNLOCK_1') ? 10 : 0;
+            increase += api.getPCoinUpgradeLevel('INSTANT_UNLOCK_1') ? 10 : 0;
             break;
         case 'achievement':
-            increase += env.getLevelMilestone('achievementTalismanEnhancement');
+            increase += api.getLevelMilestone('achievementTalismanEnhancement');
             break;
         case 'purpleGem':
             increase += 54;
@@ -434,24 +435,24 @@ const getTalismanLevelCap = (t: TalismanKeys, env: TalismanHelperContext): numbe
     return baseMax + increase;
 };
 
-const universalTalismanMaxLevelIncreasers = (env: TalismanHelperContext): number => {
-    const data = env.getGameData();
+const universalTalismanMaxLevelIncreasers = (api: HSGameDataAPI): number => {
+    const data = api.getGameData();
     if (!data) return 0;
 
-    const taxmanTalismanFreeLevel = env.getSingularityChallengeEffect('taxmanLastStand', 'talismanFreeLevel');
+    const taxmanTalismanFreeLevel = api.getSingularityChallengeEffect('taxmanLastStand', 'talismanFreeLevel');
     return (
         6 * data.challengecompletions[13]
         + Math.floor((data.researches[200] ?? 0) / 400)
         + taxmanTalismanFreeLevel
-        + (env.getOcteractUpgradeEffect('octeractTalismanLevelCap1') as number)
-        + (env.getOcteractUpgradeEffect('octeractTalismanLevelCap2') as number)
-        + (env.getOcteractUpgradeEffect('octeractTalismanLevelCap3') as number)
-        + (env.getOcteractUpgradeEffect('octeractTalismanLevelCap4') as number)
+        + (api.octeract.getOcteractUpgradeEffect('octeractTalismanLevelCap1') as number)
+        + (api.octeract.getOcteractUpgradeEffect('octeractTalismanLevelCap2') as number)
+        + (api.octeract.getOcteractUpgradeEffect('octeractTalismanLevelCap3') as number)
+        + (api.octeract.getOcteractUpgradeEffect('octeractTalismanLevelCap4') as number)
     );
 };
 
-const isTalismanUnlocked = (t: TalismanKeys, env: TalismanHelperContext): boolean => {
-    const data = env.getGameData();
+const isTalismanUnlocked = (t: TalismanKeys, api: HSGameDataAPI): boolean => {
+    const data = api.getGameData();
     if (!data) return false;
 
     switch (t) {
@@ -462,17 +463,17 @@ const isTalismanUnlocked = (t: TalismanKeys, env: TalismanHelperContext): boolea
                 : data.unlocks.rrow1;
         }
         case 'chronos':
-            return Boolean(env.getAchievementReward('chronosTalisman'));
+            return Boolean(api.achievement.AchRewards.chronosTalisman());
         case 'midas':
-            return Boolean(env.getAchievementReward('midasTalisman'));
+            return Boolean(api.achievement.AchRewards.midasTalisman());
         case 'metaphysics':
-            return Boolean(env.getAchievementReward('metaphysicsTalisman'));
+            return Boolean(api.achievement.AchRewards.metaphysicsTalisman());
         case 'polymath':
-            return Boolean(env.getAchievementReward('polymathTalisman'));
+            return Boolean(api.achievement.AchRewards.polymathTalisman());
         case 'mortuus':
-            return env.getAntUpgradeEffectValue(AntUpgrades.Mortuus, 'talismanUnlock');
+            return api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Mortuus, 'talismanUnlock');
         case 'plastic':
-            return env.isShopTalismanUnlocked();
+            return api.quarkShop.getShopUpgradeEffects('shopTalisman', 'unlocked') as boolean;
         case 'wowSquare': {
             const exposedPlayer = HSGlobal.exposedPlayer ?? null;
             return exposedPlayer
@@ -480,13 +481,13 @@ const isTalismanUnlocked = (t: TalismanKeys, env: TalismanHelperContext): boolea
                 : data.challengecompletions[11] >= 1;
         }
         case 'achievement':
-            return env.getLevelMilestone('achievementTalismanUnlock') === 1;
+            return api.getLevelMilestone('achievementTalismanUnlock') === 1;
         case 'purpleGem':
-            return Boolean(env.getSingularityChallengeEffect('taxmanLastStand', 'talismanUnlock'));
+            return Boolean(api.getSingularityChallengeEffect('taxmanLastStand', 'talismanUnlock'));
         case 'cookieGrandma':
             return (data.cubeUpgrades[80] ?? 0) > 0;
         case 'horseShoe':
-            return Boolean(env.getPurpleAmbrosiaUpgradeEffects('capricorn', 'horseshoeTalismanUnlocked'));
+            return Boolean(api.purple.getPurpleAmbrosiaUpgradeEffects('capricorn', 'horseshoeTalismanUnlocked'));
         default:
             return false;
     }
