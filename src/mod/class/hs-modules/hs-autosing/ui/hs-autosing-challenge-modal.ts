@@ -8,12 +8,14 @@ type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
 
 // What the selected action is, for the fields to show
 interface FieldContext {
+    // The Special Action dropdown's value ("": a standard challenge)
+    action: string;
     inputs: ReadonlySet<ModalInput>;
     isIfJump: boolean;
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'completions' | 'corruptionLevel' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue';
 
 interface FieldRowBase {
@@ -33,6 +35,14 @@ interface InputRow extends FieldRowBase {
     initial: string;
     // The step's value for this field (undefined: the initial value)
     load?: (step: Challenge) => string | number | undefined;
+    // A number input's other rule, checked while the field is shown (any number when absent)
+    check?: (context: FieldContext) => NumberCheck;
+}
+
+interface NumberCheck {
+    isValid: (value: number) => boolean;
+    // Shown after the field's label on the Add/Update button
+    message: string;
 }
 
 interface NoteRow extends FieldRowBase {
@@ -54,37 +64,110 @@ const fromIfJump = (read: (jump: IfJumpParams) => string | number | undefined) =
     (step: Challenge) => isIfJumpStep(step) ? read(step.ifJump) : undefined;
 const inIfJumpMode = (mode: IfJumpMode) => (c: FieldContext) => c.isIfJump && c.ifJumpMode === mode;
 
+type SpecialAction = (typeof SPECIAL_ACTIONS)[number];
+
+// Actions picked as one dropdown entry plus a field. A step still holds its action's own id: nothing changes for
+// autosing, the logs or the step list
+interface ActionFamily {
+    // The dropdown's value (not a number: never an action id)
+    value: string;
+    label: string;
+    first: number;
+    last: number;
+}
+
+// "C1-C10 until no more completions" (601-610): Wait inside, then until no completion within Max Time; Challenge # picks C1-C10
+const C1_TO_C10_FAMILY: ActionFamily = { value: "c1to10", label: "601-610 - C1-C10 until no more completions", first: 601, last: 610 };
+// "Forge Auto-Buy Toggle - X" (701-709): the Forge item field picks X
+const FORGE_FAMILY: ActionFamily = { value: "forge", label: "701-709 - Forge Auto-Buy Toggle", first: 701, last: 709 };
+const ACTION_FAMILIES: readonly ActionFamily[] = [C1_TO_C10_FAMILY, FORGE_FAMILY];
+const inFamily = (family: ActionFamily, id: number) => id >= family.first && id <= family.last;
+const familyOf = (id: number) => ACTION_FAMILIES.find(family => inFamily(family, id));
+
+// A standard challenge's or a 601-610 step's Wait inside is a fixed wait (the other actions don't use it)
+const hasFixedWaitInside = (step: Challenge) => step.challengeNumber < 100 || inFamily(C1_TO_C10_FAMILY, step.challengeNumber);
+
+const fixedCheck = (check: NumberCheck) => () => check;
+const CHALLENGE_NUMBER: NumberCheck = { isValid: v => Number.isInteger(v) && v >= 1 && v <= 15, message: "1 to 15" };
+const C1_TO_C10_NUMBER: NumberCheck = { isValid: v => Number.isInteger(v) && v >= 1 && v <= 10, message: "1 to 10" };
+const NOT_NEGATIVE: NumberCheck = { isValid: v => v >= 0, message: "0 or more" };
+const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v >= 0, message: "a whole number, 0 or more" };
+
+// The Special Action dropdown's groups, by action id ranges (an action in none of them goes in "Other", at the end)
+const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][] }[] = [
+    { label: "Exit and Ascend", ranges: [[101, 104]] },
+    { label: "Game actions", ranges: [[151, 155], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
+    { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
+    { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
+    { label: "Ambrosia loadouts", ranges: [[301, 306]] },
+    { label: "Corruption level", ranges: [[403, 404]] },
+    { label: "AOAG and Autosing", ranges: [[901, 903]] },
+];
+
+// A family's actions show as its one entry, at its first action's place
+function renderActionOptions(): string {
+    const group = (label: string, actions: readonly SpecialAction[]) => {
+        const options = new Set(actions.map(a => {
+            const family = familyOf(a.value);
+            return family ? `<option value="${family.value}">${family.label}</option>` : `<option value="${a.value}">${a.value} - ${a.label}</option>`;
+        }));
+        return options.size === 0 ? "" : `<optgroup label="${label}">${[...options].join("")}</optgroup>`;
+    };
+    const inRanges = (ranges: readonly [number, number][]) => (a: SpecialAction) => ranges.some(([first, last]) => a.value >= first && a.value <= last);
+    const inAnyGroup = inRanges(ACTION_GROUPS.flatMap(g => g.ranges));
+    return `<option value="">None (Standard Challenge)</option>`
+        + ACTION_GROUPS.map(g => group(g.label, g.ranges.flatMap(range => SPECIAL_ACTIONS.filter(inRanges([range]))))).join("")
+        + group("Other", SPECIAL_ACTIONS.filter(a => !inAnyGroup(a)));
+}
+
+// The Forge item field: each 701-709 action, named by what its label says after "Forge Auto-Buy Toggle - "
+const FORGE_ITEM_OPTIONS = SPECIAL_ACTIONS.filter(a => inFamily(FORGE_FAMILY, a.value))
+    .map(a => `<option value="${a.value}">${a.label.replace(/^Forge Auto-Buy Toggle - /, "")}</option>`).join("");
+
 // The fields above the list, in their order on the page (two columns)
 const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'action', label: "Special Action:", wide: true, initial: "",
-        options: `<option value="">None (Standard Challenge)</option>`
-            + SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.value} - ${a.label}</option>`).join(""),
-        load: step => isIfJumpStep(step) || isSpecialStep(step) ? step.challengeNumber : "",
+        options: renderActionOptions(),
+        load: step => isIfJumpStep(step) || isSpecialStep(step) ? familyOf(step.challengeNumber)?.value ?? step.challengeNumber : "",
     },
     {
+        label: "", note: "Until no more completions within Max Time, after first waiting Wait inside", wide: true,
+        shown: c => c.action === C1_TO_C10_FAMILY.value,
+    },
+    {
+        // A standard challenge's number, or C1-C10 for 601-610
         key: 'challengeNum', label: "Challenge #:", attributes: `min="1" max="15"`, initial: "1",
+        check: c => c.action === C1_TO_C10_FAMILY.value ? C1_TO_C10_NUMBER : CHALLENGE_NUMBER,
         shown: c => c.inputs.has("challengeNum"),
-        load: step => isIfJumpStep(step) || isSpecialStep(step) ? undefined : step.challengeNumber,
+        load: step => inFamily(C1_TO_C10_FAMILY, step.challengeNumber) ? step.challengeNumber - 600
+            : isIfJumpStep(step) || isSpecialStep(step) ? undefined : step.challengeNumber,
     },
     {
-        key: 'completions', label: "Min Completions:", attributes: `min="1"`, initial: "1",
+        key: 'forgeItem', label: "Forge item:", initial: String(FORGE_FAMILY.first), options: FORGE_ITEM_OPTIONS,
+        shown: c => c.action === FORGE_FAMILY.value,
+        load: step => inFamily(FORGE_FAMILY, step.challengeNumber) ? step.challengeNumber : undefined,
+    },
+    {
+        // 0: enters the challenge, then waits inside
+        key: 'completions', label: "Min Completions:", attributes: `min="0"`, initial: "1", check: fixedCheck(NOT_NEGATIVE),
         shown: c => c.inputs.has("completions"), load: fromAction(step => step.challengeCompletions),
     },
     {
-        key: 'corruptionLevel', label: "Corruption Level:", attributes: `min="0" step="1"`, initial: "0",
+        // The game lowers a level above what the player can reach: no upper bound here
+        key: 'corruptionLevel', label: "Corruption Level:", attributes: `min="0" step="1"`, initial: "0", check: fixedCheck(WHOLE_NOT_NEGATIVE),
         shown: c => c.inputs.has("corruptionLevel"), load: fromAction(step => step.corruptionLevel),
     },
     {
-        key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0",
+        key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
         load: step => step.challengeWaitBefore,
     },
     {
-        key: 'waitInside', label: "Wait inside (ms):", attributes: `min="0"`, initial: "0",
+        key: 'waitInside', label: "Wait inside (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
         shown: c => c.inputs.has("waitTime"), load: fromAction(step => step.challengeWaitTime),
     },
     {
-        key: 'maxTime', label: "Max Time (ms):", attributes: `min="0"`, initial: "10000",
+        key: 'maxTime', label: "Max Time (ms):", attributes: `min="0"`, initial: "10000", check: fixedCheck(NOT_NEGATIVE),
         shown: c => c.inputs.has("maxTime"), load: fromAction(step => step.challengeMaxTime),
     },
     {
@@ -97,7 +180,7 @@ const FIELD_ROWS: readonly FieldRow[] = [
         shown: c => c.isIfJump, load: fromIfJump(jump => jump.ifJumpMode),
     },
     {
-        key: 'ifJumpChallenge', label: "If Challenge:", attributes: `min="1" max="15"`, initial: "1",
+        key: 'ifJumpChallenge', label: "If Challenge:", attributes: `min="1" max="15"`, initial: "1", check: fixedCheck(CHALLENGE_NUMBER),
         shown: inIfJumpMode("challenges"), load: fromIfJump(jump => jump.ifJumpChallenge),
     },
     {
@@ -121,6 +204,21 @@ const FIELD_ROWS: readonly FieldRow[] = [
 
 const INPUT_ROWS = FIELD_ROWS.filter((row): row is InputRow => 'key' in row);
 
+// The footer's "?" box: a term, then what it does
+const HELP_LINES: readonly [string, string][] = [
+    ["Enter", "In a field: Add / Update the step"],
+    ["Ctrl+Z", "Undo"],
+    ["Ctrl+Y, Ctrl+Shift+Z", "Redo"],
+    ["", "Shortcuts work after a click in this window, not while typing in a field"],
+    ["⋮⋮", "Drag a step, a \"Jump here\" row, or \"Add Here\" (where new steps go)"],
+    ["IF targets", "Follow an added, duplicated or deleted step, not a moved one"],
+    ["→ step N", "Click: shows the other row of the IF"],
+    ["↺", "A loop: the IF jumps back"],
+    ["Fixed time", "Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed"],
+];
+const HELP_HTML = HELP_LINES.map(([term, text]) =>
+    `<div class="hs-challenges-help-term">${escapeHtml(term)}</div><div>${escapeHtml(text)}</div>`).join("");
+
 // What is being dragged: a step, an IF jump's "Jump here" row, or the "Add Here" separator
 type DragTarget = { kind: 'step'; index: number } | { kind: 'jumpTarget'; ifId: string } | { kind: 'separator' };
 
@@ -134,14 +232,26 @@ interface DragState {
     offsetY: number;
     width: number;
     height: number;
-    // A step changed places (the step being edited may have moved)
-    stepMoved: boolean;
     // The last mouse position, for the auto-scroll (no mousemove while the mouse stays still)
     mouseX: number;
     mouseY: number;
     // The auto-scroll's next frame (0: none)
     scrollFrame: number;
+    // The list before the drag, for Undo
+    before: Snapshot;
 }
+
+// What Undo puts back
+interface Snapshot {
+    steps: Challenge[];
+    separatorIndex: number;
+}
+
+// Steps as JSON with each object's keys sorted: two lists with the same values give the same text
+const canonicalSteps = (steps: readonly Challenge[]) => JSON.stringify(steps, (_key, value: unknown) =>
+    value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
+        : value);
 
 // Auto-scroll while dragging: the zone along the list's top and bottom edges, and the speed at its edge (and past it)
 const AUTO_SCROLL_ZONE_PX = 40;
@@ -159,12 +269,20 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *       with the mouse. The list is drawn again whenever the drop place changes, and the dragged row found again.
  *     - An IF jump's target is a step index (the step it jumps before): adding, duplicating or deleting a step
  *       shifts the targets after it, moving a step doesn't. An IF and its "Jump here" row link to each other.
+ *     - The fields the action shows are checked as they are typed: a bad value turns red and Add/Update says why
+ *       and refuses. Never corrected. Enter in a field = Add/Update.
+ *     - Edit mode follows the edited step through drags, duplicates and deletes (renumbered); Undo/Redo leave it.
+ *     - Families of actions (601-610, 701-709) are one dropdown entry plus a field that picks the action.
+ *     - Each change of the steps can be undone and redone (the "Add Here" separator's moves alone are not changes).
+ *       Cancel and the window's × ask before dropping a copy that differs from the saved steps.
+ *     - The footer shows the phase's fixed waits, the list run once (IF jumps not followed), and a help box.
  * Author: XxMolkxX, Shewchou
  */
 class HSAutosingChallengeModal {
     #uiMod: HSUI;
     #stratData: Challenge[];
     #modalId = "";
+    #root!: HTMLElement;
     // A deep copy: the IF jump targets are changed in place, which Cancel must undo too
     #steps: Challenge[];
     // Where new steps are added (the separator's index)
@@ -179,7 +297,20 @@ class HSAutosingChallengeModal {
     #addButton!: HTMLElement;
     // Shown in edit mode, next to "Update step N"
     #cancelEditButton!: HTMLElement;
+    #undoButton!: HTMLElement;
+    #redoButton!: HTMLElement;
+    #fixedTime!: HTMLElement;
+    // "Discard unsaved changes?", over the window
+    #discardOverlay!: HTMLElement;
     #drag: DragState | null = null;
+    // The list before each change, the last one at the end
+    #undoStack: Snapshot[] = [];
+    // The lists undone, the last one undone at the end (emptied by a new change)
+    #redoStack: Snapshot[] = [];
+    // Why Add/Update is refused: the first shown field with a bad value (null: none)
+    #badReason: string | null = null;
+    // The page's last mouse press was in this window: Ctrl+Z / Ctrl+Y are for it
+    #lastPressInside = true;
 
     constructor(uiMod: HSUI, stratData: Challenge[]) {
         this.#uiMod = uiMod;
@@ -194,10 +325,15 @@ class HSAutosingChallengeModal {
 
         const root = document.getElementById(this.#modalId);
         if (!root) return;
+        this.#root = root;
         this.#list = root.querySelector<HTMLElement>(".hs-challenge-list")!;
         this.#listContainer = root.querySelector<HTMLElement>(".hs-challenges-list-container")!;
         this.#addButton = root.querySelector<HTMLElement>('[data-action="add"]')!;
         this.#cancelEditButton = root.querySelector<HTMLElement>('[data-action="cancel-edit"]')!;
+        this.#undoButton = root.querySelector<HTMLElement>('[data-action="undo"]')!;
+        this.#redoButton = root.querySelector<HTMLElement>('[data-action="redo"]')!;
+        this.#fixedTime = root.querySelector<HTMLElement>(".hs-challenges-fixed-time")!;
+        this.#discardOverlay = root.querySelector<HTMLElement>(".hs-challenges-discard-overlay")!;
         for (const element of root.querySelectorAll<HTMLElement>("[data-row]")) {
             this.#rows.push({ row: FIELD_ROWS[Number(element.dataset.row)], element });
         }
@@ -207,13 +343,32 @@ class HSAutosingChallengeModal {
 
         this.#field('action').addEventListener("change", () => this.#showFields());
         this.#field('ifJumpMode').addEventListener("change", () => this.#showFields());
+        // The values are checked as they are typed
+        const inputSection = root.querySelector<HTMLElement>(".hs-challenges-input-section")!;
+        inputSection.addEventListener("input", () => this.#checkFields());
+        inputSection.addEventListener("change", () => this.#checkFields());
+        // Enter in a typed field = Add/Update (a dropdown keeps its own Enter)
+        inputSection.addEventListener("keydown", e => {
+            if (e.key !== "Enter" || e.isComposing || !(e.target instanceof HTMLInputElement)) return;
+            e.preventDefault();
+            this.#addOrUpdate();
+        });
         root.addEventListener("click", e => this.#onClick(e));
+        // The window's ×: on its own button, so that HSUI's handler on the window never sees a click held back
+        root.querySelector<HTMLElement>(".hs-modal-close-btn")?.addEventListener("click", e => {
+            if (!this.#isChanged()) return;
+            e.stopPropagation();
+            this.#discardOverlay.hidden = false;
+        });
         this.#list.addEventListener("mousedown", e => this.#onListMouseDown(e));
         // An IF jump and its target are highlighted together
         this.#list.addEventListener("mouseover", e => this.#highlightJump((e.target as HTMLElement).closest<HTMLElement>("[data-if-id]")?.dataset.ifId));
         this.#list.addEventListener("mouseleave", () => this.#highlightJump(undefined));
+        document.addEventListener("mousedown", this.#onPageMouseDown, true);
+        document.addEventListener("keydown", this.#onPageKeyDown);
 
         this.#fillFields(null);
+        this.#showFooter();
     }
 
     // ----- Window and list HTML -----
@@ -238,8 +393,24 @@ class HSAutosingChallengeModal {
                 <div class="hs-challenge-list">${this.#renderList()}</div>
             </div>
             <div class="hs-challenges-footer">
+                <div class="hs-challenges-help">
+                    <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-help-btn">?</div>
+                    <div class="hs-challenges-help-box">${HELP_HTML}</div>
+                </div>
+                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="undo" title="Undo (Ctrl+Z)">↶ Undo</div>
+                <div class="hs-challenges-footer-btn hs-challenges-small-btn hs-challenges-undo-btn" data-action="redo" title="Redo (Ctrl+Y)">↷ Redo</div>
+                <div class="hs-challenges-fixed-time" title="Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed."></div>
                 <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="cancel">Cancel</div>
                 <div class="hs-challenges-footer-btn hs-challenges-save-btn" data-action="save">Save Strategy</div>
+            </div>
+            <div class="hs-challenges-discard-overlay" hidden>
+                <div class="hs-challenges-discard-box">
+                    <div>Discard unsaved changes?</div>
+                    <div class="hs-challenges-discard-buttons">
+                        <div class="hs-challenges-footer-btn hs-challenges-cancel-btn" data-action="keep-editing">Keep editing</div>
+                        <div class="hs-challenges-footer-btn hs-challenges-discard-btn" data-action="discard">Discard</div>
+                    </div>
+                </div>
             </div>
         </div>`;
     }
@@ -275,8 +446,22 @@ class HSAutosingChallengeModal {
         return html.join("");
     }
 
+    // After any change of the steps or of the separator
     #redrawList(): void {
         this.#list.innerHTML = this.#renderList();
+        this.#showFooter();
+    }
+
+    #showFooter(): void {
+        this.#undoButton.classList.toggle("hs-challenges-undo-btn-off", this.#undoStack.length === 0);
+        this.#redoButton.classList.toggle("hs-challenges-undo-btn-off", this.#redoStack.length === 0);
+        // Fixed waits only: what a challenge or an action waits for in the game isn't known here
+        let ms = 0;
+        for (const step of this.#steps) {
+            ms += step.challengeWaitBefore ?? 0;
+            if (hasFixedWaitInside(step)) ms += step.challengeWaitTime ?? 0;
+        }
+        this.#fixedTime.textContent = `Fixed time: ${(ms / 1000).toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })} s`;
     }
 
     #renderStep(step: Challenge, index: number): string {
@@ -387,22 +572,39 @@ class HSAutosingChallengeModal {
         return Number(this.#field(key).value);
     }
 
-    // The inputs an action uses ("": a standard challenge)
+    // The inputs an action uses ("": a standard challenge; a family: its actions', plus Challenge # for C1-C10)
     #inputsOf(action: string): ReadonlySet<ModalInput> {
         if (action === "") return STANDARD_CHALLENGE_INPUTS;
-        return new Set<ModalInput>(SPECIAL_ACTION_BY_ID.get(Number(action))?.inputs ?? []);
+        const family = ACTION_FAMILIES.find(f => f.value === action);
+        const inputs = new Set<ModalInput>(SPECIAL_ACTION_BY_ID.get(family ? family.first : Number(action))?.inputs ?? []);
+        if (family === C1_TO_C10_FAMILY) inputs.add("challengeNum");
+        return inputs;
     }
 
-    #showFields(): void {
+    // The action id the dropdown and the fields pick
+    #actionId(action: string): number {
+        if (action === "") return this.#number('challengeNum');
+        if (action === C1_TO_C10_FAMILY.value) return C1_TO_C10_FAMILY.first - 1 + this.#number('challengeNum');
+        if (action === FORGE_FAMILY.value) return this.#number('forgeItem');
+        return Number(action);
+    }
+
+    #context(): FieldContext {
         const action = this.#field('action').value;
-        const context: FieldContext = {
+        return {
+            action,
             inputs: this.#inputsOf(action),
             isIfJump: action === String(IF_JUMP_VALUE),
             ifJumpMode: this.#field('ifJumpMode').value as IfJumpMode,
         };
+    }
+
+    #showFields(): void {
+        const context = this.#context();
         for (const { row, element } of this.#rows) {
             element.hidden = row.shown !== undefined && !row.shown(context);
         }
+        this.#checkFields();
     }
 
     // Puts a step's values in the fields (null: the initial values). keepComment: a comment being typed for the next step
@@ -413,6 +615,27 @@ class HSAutosingChallengeModal {
             this.#field(row.key).value = value === undefined ? row.initial : String(value);
         }
         this.#showFields();
+    }
+
+    // Turns the shown number fields with a bad value red; Add/Update says why (the first one) and refuses.
+    // The fields an action hides aren't checked
+    #checkFields(): void {
+        const context = this.#context();
+        this.#badReason = null;
+        for (const { row, element } of this.#rows) {
+            if (!('key' in row) || row.options !== undefined || row.type === 'text') continue;
+            let reason: string | null = null;
+            if (!element.hidden) {
+                const text = this.#field(row.key).value.trim();
+                const value = Number(text);
+                const check = row.check?.(context);
+                if (text === "" || !Number.isFinite(value)) reason = "a number";
+                else if (check && !check.isValid(value)) reason = check.message;
+            }
+            this.#field(row.key).classList.toggle("hs-challenges-input-invalid", reason !== null);
+            if (reason !== null && this.#badReason === null) this.#badReason = `${row.label.replace(/:$/, "")}: ${reason}`;
+        }
+        this.#showAddButtonText();
     }
 
     // The step the fields describe. previous: the step being updated
@@ -443,16 +666,13 @@ class HSAutosingChallengeModal {
             };
         } else {
             step = {
-                challengeNumber: action === "" ? this.#number('challengeNum') : Number(action),
+                challengeNumber: this.#actionId(action),
                 challengeCompletions: this.#number('completions'),
                 challengeWaitTime: this.#number('waitInside'),
                 challengeWaitBefore: this.#number('waitBefore'),
                 challengeMaxTime: this.#number('maxTime'),
             };
-            if (isCorruptionLevelStep(step.challengeNumber)) {
-                // The game lowers a level above what the player can reach: no upper bound here
-                step.corruptionLevel = Math.max(0, Math.floor(this.#number('corruptionLevel') || 0));
-            }
+            if (isCorruptionLevelStep(step.challengeNumber)) step.corruptionLevel = this.#number('corruptionLevel');
         }
         const comment = this.#field('comment').value.trim();
         if (comment) step.comment = comment;
@@ -468,8 +688,11 @@ class HSAutosingChallengeModal {
         this.#redrawList();
     }
 
+    // A bad value: the reason, in the button's own box (red)
     #showAddButtonText(): void {
-        this.#addButton.textContent = this.#editingIndex === null ? "Add Action/Challenge" : `Update step ${this.#editingIndex + 1}`;
+        this.#addButton.classList.toggle("hs-challenges-add-btn-refused", this.#badReason !== null);
+        this.#addButton.textContent = this.#badReason
+            ?? (this.#editingIndex === null ? "Add Action/Challenge" : `Update step ${this.#editingIndex + 1}`);
     }
 
     // ----- Steps -----
@@ -485,13 +708,55 @@ class HSAutosingChallengeModal {
         }
     }
 
+    #snapshot(): Snapshot {
+        return { steps: structuredClone(this.#steps), separatorIndex: this.#separatorIndex };
+    }
+
+    // To call before each change of the steps (before: the list before a drag). A new change can't be redone over
+    #saveForUndo(before: Snapshot = this.#snapshot()): void {
+        this.#undoStack.push(before);
+        this.#redoStack.length = 0;
+    }
+
+    // Puts the list back as it was before the last change; the list left goes to the other stack
+    #undo(): void {
+        this.#travel(this.#undoStack, this.#redoStack);
+    }
+
+    #redo(): void {
+        this.#travel(this.#redoStack, this.#undoStack);
+    }
+
+    // Leaves edit mode (the edited step may be gone); in add mode the typed fields stay
+    #travel(from: Snapshot[], to: Snapshot[]): void {
+        const snapshot = from.pop();
+        if (!snapshot) return;
+        to.push(this.#snapshot());
+        this.#steps = snapshot.steps;
+        this.#separatorIndex = snapshot.separatorIndex;
+        if (this.#editingIndex !== null) this.#setEditing(null);
+        else this.#redrawList();
+    }
+
+    // The copy differs from the saved steps (an Update that left a step as it was isn't a change)
+    #isChanged(): boolean {
+        return canonicalSteps(this.#steps) !== canonicalSteps(this.#stratData);
+    }
+
     #addOrUpdate(): void {
+        // The button already says why
+        if (this.#badReason !== null) return;
         if (this.#editingIndex !== null) {
-            this.#steps[this.#editingIndex] = this.#buildStep(this.#steps[this.#editingIndex]);
+            const step = this.#buildStep(this.#steps[this.#editingIndex]);
+            if (canonicalSteps([step]) !== canonicalSteps([this.#steps[this.#editingIndex]])) {
+                this.#saveForUndo();
+                this.#steps[this.#editingIndex] = step;
+            }
             this.#setEditing(null);
             return;
         }
         const step = this.#buildStep(null);
+        this.#saveForUndo();
         this.#shiftJumpTargets(this.#separatorIndex, 1);
         this.#steps.splice(this.#separatorIndex, 0, step);
         this.#separatorIndex++;
@@ -501,26 +766,41 @@ class HSAutosingChallengeModal {
 
     // A copy of a step right after it, added as a new step there. Edit mode stays on the edited step
     #duplicate(index: number): void {
-        this.#shiftJumpTargets(index + 1, 1);
-        // A copied IF jumps where its original does (after the shift)
-        const copy = structuredClone(this.#steps[index]);
-        if (isIfJumpStep(copy)) copy.ifJump.id = HSUtils.uuidv4();
-        this.#steps.splice(index + 1, 0, copy);
-        if (this.#separatorIndex > index) this.#separatorIndex++;
-        if (this.#editingIndex !== null && this.#editingIndex > index) {
-            this.#editingIndex++;
-            this.#showAddButtonText();
-        }
+        this.#saveForUndo();
+        this.#keepEditing(() => {
+            this.#shiftJumpTargets(index + 1, 1);
+            // A copied IF jumps where its original does (after the shift)
+            const copy = structuredClone(this.#steps[index]);
+            if (isIfJumpStep(copy)) copy.ifJump.id = HSUtils.uuidv4();
+            this.#steps.splice(index + 1, 0, copy);
+            if (this.#separatorIndex > index) this.#separatorIndex++;
+        });
         this.#redrawList();
     }
 
     #delete(index: number): void {
-        this.#steps.splice(index, 1);
-        this.#shiftJumpTargets(index, -1);
-        if (index < this.#separatorIndex) this.#separatorIndex--;
-        // The edited step's index may have changed
-        if (this.#editingIndex !== null) this.#setEditing(null);
-        else this.#redrawList();
+        this.#saveForUndo();
+        this.#keepEditing(() => {
+            this.#steps.splice(index, 1);
+            this.#shiftJumpTargets(index, -1);
+            if (index < this.#separatorIndex) this.#separatorIndex--;
+        });
+        this.#redrawList();
+    }
+
+    // Runs a change of the list that keeps the step objects (not Undo/Redo, which leave edit mode): edit mode follows
+    // the edited step wherever it lands, renumbered, with the fields as typed. Its step deleted: edit mode ends
+    #keepEditing(change: () => void): void {
+        const edited = this.#editingIndex === null ? null : this.#steps[this.#editingIndex];
+        change();
+        if (edited === null) return;
+        const index = this.#steps.indexOf(edited);
+        if (index === -1) {
+            this.#setEditing(null);
+            return;
+        }
+        this.#editingIndex = index;
+        this.#showAddButtonText();
     }
 
     #onClick(e: MouseEvent): void {
@@ -551,16 +831,70 @@ class HSAutosingChallengeModal {
             case "show-if":
                 this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-block[data-if-id="${ifId}"]`));
                 break;
+            case "undo":
+                this.#undo();
+                break;
+            case "redo":
+                this.#redo();
+                break;
             case "save":
                 this.#stratData.length = 0;
                 this.#stratData.push(...this.#steps);
-                void this.#uiMod.CloseModal(this.#modalId);
+                this.#close();
                 break;
             case "cancel":
-                void this.#uiMod.CloseModal(this.#modalId);
+                if (this.#isChanged()) this.#discardOverlay.hidden = false;
+                else this.#close();
+                break;
+            case "keep-editing":
+                this.#discardOverlay.hidden = true;
+                break;
+            case "discard":
+                this.#close();
                 break;
         }
     }
+
+    #close(): void {
+        this.#removePageListeners();
+        void this.#uiMod.CloseModal(this.#modalId);
+    }
+
+    // ----- Ctrl+Z, Ctrl+Y -----
+
+    #removePageListeners(): void {
+        document.removeEventListener("mousedown", this.#onPageMouseDown, true);
+        document.removeEventListener("keydown", this.#onPageKeyDown);
+    }
+
+    // The window can also go without #close (HSUI's ×, a window of the same kind opened over an orphan)
+    #isGone(): boolean {
+        if (this.#root.isConnected) return false;
+        this.#removePageListeners();
+        return true;
+    }
+
+    #onPageMouseDown = (e: MouseEvent): void => {
+        if (this.#isGone()) return;
+        this.#lastPressInside = this.#root.contains(e.target as Node);
+    };
+
+    // Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, when this window was the last one clicked; a field keeps its own
+    #onPageKeyDown = (e: KeyboardEvent): void => {
+        if (this.#isGone()) return;
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        const key = e.key.toLowerCase();
+        const isUndo = key === "z" && !e.shiftKey;
+        const isRedo = (key === "y" && !e.shiftKey) || (key === "z" && e.shiftKey);
+        if (!isUndo && !isRedo) return;
+        if (!this.#lastPressInside || this.#drag || !this.#discardOverlay.hidden) return;
+        const focused = document.activeElement;
+        if (focused instanceof HTMLInputElement || focused instanceof HTMLSelectElement || focused instanceof HTMLTextAreaElement
+            || (focused instanceof HTMLElement && focused.isContentEditable)) return;
+        e.preventDefault();
+        if (isUndo) this.#undo();
+        else this.#redo();
+    };
 
     // ----- Drag and drop -----
 
@@ -585,10 +919,10 @@ class HSAutosingChallengeModal {
             offsetY: e.clientY - rect.top,
             width: rect.width,
             height: rect.height,
-            stepMoved: false,
             mouseX: e.clientX,
             mouseY: e.clientY,
             scrollFrame: 0,
+            before: this.#snapshot(),
         };
         this.#lift(element);
         document.addEventListener("mousemove", this.#onDragMove);
@@ -633,10 +967,11 @@ class HSAutosingChallengeModal {
         switch (target.kind) {
             case 'step': {
                 if (place === target.index) return false;
-                const [step] = this.#steps.splice(target.index, 1);
-                this.#steps.splice(place, 0, step);
+                this.#keepEditing(() => {
+                    const [step] = this.#steps.splice(target.index, 1);
+                    this.#steps.splice(place, 0, step);
+                });
                 target.index = place;
-                this.#drag!.stepMoved = true;
                 return true;
             }
             case 'jumpTarget': {
@@ -708,9 +1043,9 @@ class HSAutosingChallengeModal {
         document.removeEventListener("mouseup", this.#onDragEnd);
         if (drag) cancelAnimationFrame(drag.scrollFrame);
         this.#drag = null;
-        // The edited step's index may have changed
-        if (drag?.stepMoved && this.#editingIndex !== null) this.#setEditing(null);
-        else this.#redrawList();
+        // One change per drag, if the steps differ at the end (a step dropped back in its place: none)
+        if (drag && canonicalSteps(drag.before.steps) !== canonicalSteps(this.#steps)) this.#saveForUndo(drag.before);
+        this.#redrawList();
     };
 }
 

@@ -260,6 +260,8 @@
     background-color: #18171c;
     border-radius: 3px;
     box-sizing: border-box;
+    /* Holds the "Discard unsaved changes?" overlay */
+    position: relative;
 }
 
 .hs-challenges-input-section {
@@ -362,6 +364,21 @@
 
 .hs-challenges-add-btn:hover {
     background-color: #060;
+}
+
+/* A refused Add/Update: the reason in the button's own box (one line, the button keeps its size) */
+.hs-challenges-add-btn.hs-challenges-add-btn-refused,
+.hs-challenges-add-btn.hs-challenges-add-btn-refused:hover {
+    border-color: #c33;
+    background-color: #3a1010;
+    color: #ff8a8a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hs-challenges-input.hs-challenges-input-invalid {
+    border-color: #c33;
 }
 
 .hs-challenges-list-container {
@@ -594,6 +611,112 @@
 
 .hs-challenges-save-btn:hover {
     background-color: #060;
+}
+
+/* "?", Undo and Redo: narrower than Cancel and Save */
+.hs-challenges-footer-btn.hs-challenges-small-btn {
+    padding: 10px 12px;
+}
+
+.hs-challenges-undo-btn,
+.hs-challenges-help-btn {
+    border-color: #888;
+}
+
+.hs-challenges-help {
+    position: relative;
+}
+
+.hs-challenges-help-btn {
+    cursor: help;
+}
+
+/* Shown over the window while "?" is hovered */
+.hs-challenges-help-box {
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    width: 420px;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    padding: 10px 12px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #c8c8c8;
+    z-index: 2;
+}
+
+.hs-challenges-help:hover .hs-challenges-help-box {
+    display: grid;
+}
+
+.hs-challenges-help-term {
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.hs-challenges-undo-btn:hover {
+    background-color: #005;
+}
+
+/* Nothing to undo */
+.hs-challenges-undo-btn.hs-challenges-undo-btn-off {
+    opacity: 0.4;
+    cursor: default;
+    background-color: #101828;
+}
+
+/* Pushes Cancel and Save to the right */
+.hs-challenges-fixed-time {
+    margin-right: auto;
+    align-self: center;
+    font-size: 12px;
+    color: #c8c8c8;
+    cursor: help;
+}
+
+.hs-challenges-discard-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 3px;
+    z-index: 1;
+}
+
+.hs-challenges-discard-overlay[hidden] {
+    display: none;
+}
+
+.hs-challenges-discard-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+    background-color: #353439;
+    border: 1px solid white;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.hs-challenges-discard-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.hs-challenges-discard-btn {
+    border-color: #c33;
+}
+
+.hs-challenges-discard-btn:hover {
+    background-color: maroon;
 }
 
 /* Mark visually the default strategies in dropdown list */
