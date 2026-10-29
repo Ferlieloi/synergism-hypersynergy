@@ -700,6 +700,8 @@ export class HSSettingsUI {
                 type: convertedType
             }));
         } else if (convertedType === HSInputType.SELECT) {
+            // HSAutosingStrategyControls.updateStrategyDropdownList fills these options again after syncSettings.
+            // This first fill stays: without it the sync finds an empty dropdown and warns at each load
             if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
                 const { defaultStrategiesOptions, userStrategiesOptions } = HSStrategyManager.getMergedStrategyOptions();
                 controls.selectOptions.length = 0;

@@ -13,6 +13,7 @@ import utilitiesCSS from "inline:../../resource/css/hs-utilities.css";
 import panelHTML from "inline:../../resource/html/hs-panel.html";
 import modPanelIconB64 from "inline:../../resource/txt/mod_panel_icon.txt";
 import { HSModuleOptions } from "../../types/hs-types";
+import { escapeLogText } from "../hs-modules/hs-heater/hs-heater-utils";
 
 /**
  * Class: HSUI
@@ -1035,7 +1036,8 @@ export class HSUI extends HSModule {
     }
 
     static async Notify(text: string, notifyOptions?: Partial<HSNotifyOptions>) {
-        HSLogger.log(`${text}`, 'Notify');
+        // The Log tab renders HTML, the notification shows plain text
+        HSLogger.log(escapeLogText(text), 'Notify');
         const options: HSNotifyOptions = {
             position: notifyOptions?.position ?? "bottomRight",
             popDuration: notifyOptions?.popDuration ?? 400,
