@@ -1183,21 +1183,23 @@ export class HSAutosingModal {
     }
 
     /**
-     * The footer's patch state: fast mode when every required game internal was found, slow (DOM) mode otherwise,
-     * "not patched" when none was (bookmarklet). The list is the span's tooltip, set once per start.
+     * The footer's patch state: "slow" when a fast path lacks what it reads and falls back to the DOM, "not patched"
+     * when nothing was found (bookmarklet). The list is the span's tooltip, set once per start.
      */
     #showPatchState(parts: HSAutosingExposureParts): void {
         const el = this.#footerPatchSpan;
         if (!el) return;
-        const required = Object.values(parts.required);
-        const isFast = required.every(Boolean);
-        const text = isFast ? 'Patched' : required.some(Boolean) ? 'Patch incomplete · slow' : 'Not patched · slow';
+        const fastPaths = Object.values(parts.fastPaths);
+        const all = [...fastPaths, ...Object.values(parts.other)];
+        const isSlow = !fastPaths.every(Boolean);
+        const text = !all.some(Boolean) ? 'Not patched · slow'
+            : all.every(Boolean) ? 'Patched'
+            : isSlow ? 'Patch incomplete · slow' : 'Patch incomplete';
         this.#setTextEl(el, text);
-        el.classList.toggle('hs-footer-patch-slow', !isFast);
-        el.title = [
-            ...Object.entries(parts.required).map(([label, found]) => `${label}: ${found}`),
-            ...Object.entries(parts.optional).map(([label, found]) => `${label} (optional): ${found}`),
-        ].join('\n');
+        el.classList.toggle('hs-footer-patch-slow', isSlow);
+        el.title = Object.entries({ ...parts.fastPaths, ...parts.other })
+            .map(([label, found]) => `${label}: ${found}`)
+            .join('\n');
     }
 
     /** Set the text content of an element if it differs from the current value. */

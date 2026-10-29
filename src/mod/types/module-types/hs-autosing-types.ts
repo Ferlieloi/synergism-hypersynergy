@@ -244,10 +244,10 @@ export interface HSAutosingTimingSingularity {
     phases: Record<string, number>;
 }
 
-// The game internals autosing found at its start ({ label: found }): all required ones = fast mode
+// The game internals autosing found at its start ({ label: found }): those its fast paths read, and the others
 export interface HSAutosingExposureParts {
-    required: Record<string, boolean>;
-    optional: Record<string, boolean>;
+    fastPaths: Record<string, boolean>;
+    other: Record<string, boolean>;
 }
 
 // A phase pass being run

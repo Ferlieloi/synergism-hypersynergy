@@ -185,9 +185,12 @@ export class HSAutosing extends HSModule {
     #stageFunc?: ((mode: number) => string) | null;
     #getMaxChallengesFunc?: ((challenge: number) => number) | null;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
-    #isExposureReady: boolean = false;
-    // What the fast mode needs, found or not at the last start (shown in the timer's footer)
-    #exposureParts: HSAutosingExposureParts = { required: {}, optional: {} };
+    // Each fast path runs on what it reads; the others fall back to the DOM. Set at each start.
+    #hasStageFunc: boolean = false;
+    #hasLivePlayer: boolean = false;
+    #hasMaxChallenges: boolean = false;
+    // The game internals found or not at the last start (shown in the timer's footer)
+    #exposureParts: HSAutosingExposureParts = { fastPaths: {}, other: {} };
     #gamestate!: HSGameState;
     #subtabMemory?: HSSubtabMemory;
     // The tab the player was on, brought back after each Exalt (the game opens Buildings) and each DOM stage read
@@ -464,34 +467,38 @@ export class HSAutosing extends HSModule {
         this.#exposedPlayer = HSGlobal.exposedPlayer ?? null;
         this.#stageFunc = window.__HS_synergismStage ?? null;
         this.#getMaxChallengesFunc = window.__HS_getMaxChallenges ?? null;
+        this.#hasStageFunc = !!this.#stageFunc;
+        this.#hasLivePlayer = !!this.#exposedPlayer;
+        this.#hasMaxChallenges = this.#hasLivePlayer && !!this.#getMaxChallengesFunc;
+
+        // Not needed by the fast paths. Without the after-tack hook, waiting for a tack sleeps 5 ms instead.
+        // Without the dialog hook, HSGameDialogs' watcher clicks the dialogs as they show, before autosing's
+        // next step runs. Without the export output, only the quark export at each singularity's end is skipped.
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
-
-        // The fast mode needs the dialog hook (HSGameDialogs answers dialogs before they show). Without it (older
-        // patcher), HSGameDialogs' watcher clicks them once shown, and autosing runs in the DOM mode.
         const isDialogHookPatched = HSGameDialogs.isHookPatched();
-
-        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isDialogHookPatched && isAfterTackHooked);
-
-        // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
+
         this.#exposureParts = {
-            required: {
-                'Stage function': !!this.#stageFunc,
-                'Live player': !!this.#exposedPlayer,
+            fastPaths: {
+                'Stage function': this.#hasStageFunc,
+                'Live player': this.#hasLivePlayer,
                 'Max challenges': !!this.#getMaxChallengesFunc,
+            },
+            other: {
                 'After-tack hook': isAfterTackHooked,
                 'Dialog hook': isDialogHookPatched,
+                'Export output': isExportOutputPatched,
             },
-            optional: { 'Export output': isExportOutputPatched },
         };
-        const exposureMsg = `Exposure status: ${this.#isExposureReady}
-            (stageFunc: ${!!this.#stageFunc},
-            exposedPlayer: ${!!this.#exposedPlayer},
+        const isComplete = [...Object.values(this.#exposureParts.fastPaths), ...Object.values(this.#exposureParts.other)].every(Boolean);
+        const exposureMsg = `Exposure status: ${isComplete}
+            (stageFunc: ${this.#hasStageFunc},
+            exposedPlayer: ${this.#hasLivePlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
             dialogHook: ${isDialogHookPatched},
             exportOutputPatched: ${isExportOutputPatched})`;
-        if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
+        if (isComplete) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
 
@@ -906,7 +913,7 @@ export class HSAutosing extends HSModule {
             if (this.#autosingModal) {
                 let quarks: number;
                 let goldenQuarks: number;
-                if (this.#isExposureReady) {
+                if (this.#hasLivePlayer) {
                     quarks = Number(this.#exposedPlayer!.worlds);
                     goldenQuarks = Number(this.#exposedPlayer!.goldenQuarks);
                 } else {
@@ -943,7 +950,7 @@ export class HSAutosing extends HSModule {
                     const stage = await this.#getStage();
                     if (!this.#autosingEnabled) return;
                     // Only the DOM stage fallback navigates to Settings on every phase.
-                    if (!this.#isExposureReady) this.#showPlayerTab();
+                    if (!this.#hasStageFunc) this.#showPlayerTab();
 
                     try {
                         await this.#matchStageToStrategy(stage);
@@ -1121,7 +1128,7 @@ export class HSAutosing extends HSModule {
             case "challenges": {
                 const ifIdx = jump!.ifJumpChallenge ?? -1;
                 const value = jump!.ifJumpValue ?? 0;
-                const completions = this.#isExposureReady && ifIdx >= 1 && ifIdx <= 15
+                const completions = this.#hasLivePlayer && ifIdx >= 1 && ifIdx <= 15
                     ? (ifIdx === 15
                         ? this.#exposedPlayer!.challenge15Exponent
                         : this.#exposedPlayer!.challengecompletions[ifIdx])
@@ -1139,7 +1146,7 @@ export class HSAutosing extends HSModule {
             }
             case "stored_c15": {
                 const exponent = jump!.ifJumpMultiplier ?? 0;
-                const c15Score = this.#isExposureReady
+                const c15Score = this.#hasLivePlayer
                     ? this.#exposedPlayer!.challenge15Exponent
                     : this.#getChallengeAccessor(15).getCompletions().toNumber();
                 const threshold = this.#storedC15 * 10 ** exponent;
@@ -1170,7 +1177,7 @@ export class HSAutosing extends HSModule {
                 this.#clickResetButton(this.#exitReincBtn);
                 break;
             case 103: // Exit Ascension challenge
-                if (!this.#isExposureReady) this.#getChallengeAccessor(15).getCompletions();
+                if (!this.#hasLivePlayer) this.#getChallengeAccessor(15).getCompletions();
                 this.#clickResetButton(this.#exitAscBtn);
                 break;
             case 104: // Ascend
@@ -1199,7 +1206,7 @@ export class HSAutosing extends HSModule {
                 await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime);
                 break;
             case 215: // store C15
-                this.#storedC15 = this.#isExposureReady
+                this.#storedC15 = this.#hasLivePlayer
                     ? this.#exposedPlayer!.challenge15Exponent
                     : this.#getChallengeAccessor(15).getCompletions().toNumber();
                 break;
@@ -1281,7 +1288,7 @@ export class HSAutosing extends HSModule {
         // Fast path: use exposedPlayer.currentChallenge instead of MutationObserver/class polling.
         // player.currentChallenge stores the absolute button index (1-15) per tier, 0 = not active.
         // Multiple tiers can be active simultaneously, but each challenge maps to exactly one field.
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             const p = this.#exposedPlayer!;
             const isChallengeActive = challengeIndex <= 5
                 ? () => p.currentChallenge.transcension === challengeIndex
@@ -1310,7 +1317,7 @@ export class HSAutosing extends HSModule {
         // Fast path: C1-C15 with exposed player: no DOM reads, no Decimal.
         // C1-C14: challengecompletions[i] capped by getMaxChallenges(i).
         // C15: challenge15Exponent (raw score, unbounded maxPossible = Infinity never fires).
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const p2 = this.#exposedPlayer!;
             const isC15 = challengeIndex === 15;
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
@@ -1381,7 +1388,7 @@ export class HSAutosing extends HSModule {
         const levelElement = accessor.levelElement;
 
         // Fast path: no DOM text parsing, no Decimal
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             const deadline = performance.now() + maxTime;
 
@@ -1435,7 +1442,7 @@ export class HSAutosing extends HSModule {
         await HSUtils.sleep(initialWaitTime);
 
         // Fast path: use exposedPlayer.challengecompletions instead of MutationObserver/class polling.
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const p = this.#exposedPlayer!;
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             let currentCompletions = p.challengecompletions[challengeIndex];
@@ -1507,7 +1514,7 @@ export class HSAutosing extends HSModule {
 
     async #getStage(): Promise<string> {
         if (!this.#autosingEnabled) return '';
-        if (this.#isExposureReady) {
+        if (this.#hasStageFunc) {
             // Fast path with the exposed function: never fall through to DOM navigation.
             // A transient throw during a sing transition returns '' so the wait
             // loop retries on the next tick rather than navigating to Settings.
@@ -1584,7 +1591,7 @@ export class HSAutosing extends HSModule {
         let q = 0;
         let gq = 0;
         let c15ScoreBeforeSinging: Decimal;
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             c15ScoreBeforeSinging = new Decimal(this.#exposedPlayer!.challenge15Exponent);
         } else {
             // A GDS fetch right after a singularity lags, so the amounts are read before it for bookmarklet:
@@ -1620,7 +1627,7 @@ export class HSAutosing extends HSModule {
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
 
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
             // 2) updates singularityCount, 3) calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
@@ -1629,7 +1636,7 @@ export class HSAutosing extends HSModule {
             this.#elevatorTeleportButton.click();
         }
 
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             // Entering the Exalt pays this singularity's golden quarks: read them after it
             q = Number(this.#exposedPlayer!.worlds);
             gq = Number(this.#exposedPlayer!.goldenQuarks);
@@ -1664,7 +1671,7 @@ export class HSAutosing extends HSModule {
         } while (this.#autosingEnabled && !this.#isAllowedStage(stage));
         if (!this.#autosingEnabled) return;
         // The DOM stage fallback left the player on Settings
-        if (!this.#isExposureReady) this.#showPlayerTab();
+        if (!this.#hasStageFunc) this.#showPlayerTab();
         HSLogger.debug(() => `Reached allowed starting stage: ${stage} (performSingularity)`, this.context);
 
         this.#observeAntiquitiesRune();
@@ -1975,7 +1982,7 @@ export class HSAutosing extends HSModule {
     }
 
     #isInExalt(): boolean {
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             return this.#exposedPlayer!.insideSingularityChallenge;
         }
         return document.documentElement.getAttribute(EXALT_STATE_ATTRIBUTE) === 'true';
@@ -2225,7 +2232,7 @@ export class HSAutosing extends HSModule {
         if (this.#isInExalt() === targetState) return true;
 
         const observed = this.#observeExaltState(targetState);
-        if (!this.#isExposureReady) return await observed;
+        if (!this.#hasLivePlayer) return await observed;
 
         let done = false;
         const polled = (async (): Promise<void> => {
