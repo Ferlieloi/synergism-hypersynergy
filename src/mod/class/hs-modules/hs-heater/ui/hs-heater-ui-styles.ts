@@ -341,6 +341,19 @@ export class HSHeaterUIStyles {
                 align-items: center;
             }
 
+            /* Sized like the table's text, not like the panel's 150x30 buttons */
+            #hs-heater-red-ambrosia-action-btn {
+                width: auto;
+                height: 22px;
+                min-height: 0;
+                line-height: 20px;
+                padding: 0 8px;
+                border-width: 1px;
+                box-sizing: border-box;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
             #hs-heater-red-ambrosia-footer-note {
                 width: auto;
                 display: inline-block;
