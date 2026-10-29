@@ -14,24 +14,6 @@
     box-sizing: border-box;
 }
 
-.hs-challenges-input-section {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px 20px;
-}
-
-.hs-challenges-input-label {
-    white-space: nowrap;
-    text-align: left;
-    font-weight: 500;
-}
-
-/* Make inputs fill the remaining space */
-.hs-challenges-input {
-    width: 100%;
-    box-sizing: border-box;
-}
-
 .hs-strategy-input-label {
     font-weight: 600;
     color: white;
@@ -141,9 +123,10 @@
     border: 1px solid white;
 }
 
+/* An IF jump and its target, while one of them is hovered (not orange: the step being edited is) */
 .hs-jump-highlight {
-    background: rgba(255, 200, 0, 0.25);
-    outline: 4px solid rgba(255, 170, 0, 0.8);
+    background: rgba(170, 90, 255, 0.25);
+    outline: 4px solid rgba(170, 90, 255, 0.8);
 }
 
 .hs-strategy-btn-edit {
@@ -295,8 +278,30 @@
     gap: 8px;
 }
 
+/* A field the selected action doesn't use */
+.hs-challenges-input-row[hidden] {
+    display: none;
+}
+
+.hs-challenges-input-row-wide {
+    grid-column: 1 / -1;
+}
+
+.hs-challenges-input-label {
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 500;
+}
+
+/* A line of text in place of a field */
+.hs-challenges-input-note {
+    font-size: 12px;
+    color: #c8c8c8;
+}
+
 .hs-challenges-input {
     flex: 1;
+    width: 100%;
     padding: 5px 8px;
     background-color: #101828;
     border: 2px solid white;
@@ -313,8 +318,36 @@
     outline: none;
 }
 
+/* The Add/Update button, and in edit mode a Cancel button on its right */
+.hs-challenges-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.hs-challenges-edit-cancel-btn {
+    padding: 6px 12px;
+    background-color: #101828;
+    border: 2px solid white;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-size: 12px;
+}
+
+.hs-challenges-edit-cancel-btn:hover {
+    background-color: #005;
+}
+
+.hs-challenges-edit-cancel-btn[hidden] {
+    display: none;
+}
+
 .hs-challenges-add-btn {
-    grid-column: 1 / -1;
+    flex: 1;
     padding: 6px 16px;
     background-color: #101828;
     border: 2px solid green;
@@ -324,34 +357,7 @@
     cursor: pointer;
     text-align: center;
     transition: all 0.15s;
-    margin-top: 2px;
     font-size: 12px;
-}
-
-.hs-challenges-action-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.hs-challenges-action-label {
-    width: 80px;
-    font-weight: 600;
-    color: white;
-    font-size: 13px;
-}
-
-.hs-challenges-action-select {
-    flex: 1;
-    padding: 6px 10px;
-    background-color: #101828;
-    border: 2px solid white;
-    border-radius: 3px;
-    color: white;
-    font-size: 13px;
-    transition: all 0.15s;
-    box-sizing: border-box;
 }
 
 .hs-challenges-add-btn:hover {
@@ -408,8 +414,66 @@
     color: #c8c8c8;
 }
 
+/* An IF jump's text (the font of the window, not the smaller one of the other steps) */
+.hs-if-content {
+    flex: 1;
+}
+
 .hs-challenge-drag-handle {
     align-self: center;
+    cursor: grab;
+}
+
+/* Where new steps are added */
+.hs-challenge-separator {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    cursor: grab;
+}
+
+.hs-challenge-separator-line {
+    flex: 1 1 auto;
+    height: 2px;
+    background: #1f4889;
+}
+
+.hs-challenge-separator-label {
+    display: flex;
+    align-items: center;
+    height: 18px;
+    margin: 0 8px;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #e2e2e2;
+    background: #030331;
+    pointer-events: none;
+}
+
+/* The row or separator being dragged (its size and place are set inline), and its faded copy in the list */
+.hs-challenge-lifted,
+.hs-challenge-item.hs-challenge-lifted {
+    position: fixed;
+    z-index: 10000;
+    box-sizing: border-box;
+    cursor: grabbing;
+    pointer-events: none;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: scale(1.03);
+    transition: transform 0.15s ease;
+}
+
+.hs-challenge-placeholder {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* A step's comment: apart from the step's own text */
+.hs-challenge-comment {
+    color: #b4b4b4;
+    font-weight: normal;
+    font-style: italic;
 }
 
 /* An action's id, after its label */
@@ -423,13 +487,6 @@
 .hs-challenge-item.hs-challenge-item-editing {
     border-color: orange;
     box-shadow: inset 3px 0 0 orange;
-}
-
-.hs-challenge-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 3px;
 }
 
 .hs-challenge-btn {
@@ -502,13 +559,6 @@
 
 .hs-challenges-save-btn:hover {
     background-color: #060;
-}
-
-.hs-challenges-empty-state {
-    text-align: center;
-    color: #888;
-    padding: 40px 20px;
-    font-style: italic;
 }
 
 /* Mark visually the default strategies in dropdown list */
