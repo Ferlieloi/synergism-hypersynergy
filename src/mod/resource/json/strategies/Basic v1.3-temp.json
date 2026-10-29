@@ -4,7 +4,6 @@
     {
       "startPhase": "start",
       "endPhase": "challenge10",
-      "corruptionLevel": 0,
       "strat": [
         {
           "challengeNumber": 305,
@@ -123,7 +122,6 @@
     {
       "startPhase": "challenge10",
       "endPhase": "singularity",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 11,
@@ -300,7 +298,6 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 404,
@@ -694,7 +691,6 @@
   "aoagPhase": {
     "startPhase": "ascension",
     "endPhase": "ascension",
-    "corruptionLevel": 0,
     "strat": [
       {
         "challengeNumber": 103,

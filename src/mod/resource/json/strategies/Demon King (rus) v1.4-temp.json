@@ -4,7 +4,6 @@
     {
       "startPhase": "start",
       "endPhase": "ascension",
-      "corruptionLevel": 0,
       "strat": [
         {
           "challengeNumber": 305,
@@ -116,7 +115,6 @@
     {
       "startPhase": "ascension",
       "endPhase": "challenge13",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 10,
@@ -216,7 +214,6 @@
     {
       "startPhase": "challenge13",
       "endPhase": "challenge14",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 14,
@@ -338,7 +335,6 @@
     {
       "startPhase": "challenge14",
       "endPhase": "singularity",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 10,
@@ -373,7 +369,6 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptionLevel": null,
       "strat": [
         {
           "challengeNumber": 404,
@@ -509,7 +504,6 @@
   "aoagPhase": {
     "startPhase": "ascension",
     "endPhase": "ascension",
-    "corruptionLevel": 0,
     "strat": [
       {
         "challengeNumber": 103,

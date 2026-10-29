@@ -1,4 +1,3 @@
-import { AutosingStrategyPhase } from "../../../types/module-types/hs-autosing-types";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSCorruptionLevel } from "../../hs-core/hs-corruption-level";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
@@ -7,7 +6,7 @@ import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 /**
  * Class: HSAutosingCorruption
  * IsExplicitHSModule: No
- * Description: Sets the game's corruption level for autosing's phases and actions. Since the game's 4.4.0, one level
+ * Description: Sets the game's corruption level for autosing's steps and its AOAG phase. Since the game's 4.4.0, one level
  *     (player.corruptions.next, used from the next ascension), set through the game's own controls (HSCorruptionLevel),
  *     so the game checks it: a level above what the player can reach now is lowered to it, without any message.
  * Author: Shewchou
@@ -63,10 +62,5 @@ export class HSAutosingCorruption {
     setMaxLevel(): void {
         const kept = HSCorruptionLevel.press('max');
         HSLogger.debug(() => `Corruption level set to the max: ${kept}`, this.#context);
-    }
-
-    /** Sets the phase's level, when it has one (empty: the phase leaves the level as it is). */
-    applyPhaseLevel(phaseConfig: AutosingStrategyPhase): void {
-        if (phaseConfig.corruptionLevel !== null) this.setLevel(phaseConfig.corruptionLevel);
     }
 }

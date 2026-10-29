@@ -95,11 +95,6 @@
     font-weight: bold;
 }
 
-.hs-strategy-phase-level {
-    margin-left: 6px;
-    color: plum;
-}
-
 .hs-strategy-btn-group {
     display: flex;
     gap: 8px;
@@ -212,10 +207,6 @@
     cursor: pointer;
     transition: all 0.15s;
     box-sizing: border-box;
-}
-
-input.hs-phase-select {
-    cursor: text;
 }
 
 .hs-phase-select:focus {

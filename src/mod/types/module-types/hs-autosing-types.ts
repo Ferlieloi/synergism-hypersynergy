@@ -75,9 +75,9 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Off loadout",            value: 305, inputs: [] as const },
     { label: "Ambrosia Luck loadout",           value: 306, inputs: [] as const },
 
-    // 400 ("Corrup 0*") became a "Set corruption level" step at level 0 (HSStrategyManager converts it)
-    { label: "Corruption level from phase (reapply)", value: 401, inputs: [] as const },
-    { label: "Set corruption level",            value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
+    // 400 ("Corrup 0*") became a "Set corruption level" step at level 0, 401 ("Corruption level from phase (reapply)")
+    // one at its phase's level (HSStrategyManager converts them)
+    { label: "Set corruption level",           value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
     { label: "Set corruption level minus free levels", value: SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, inputs: ["corruptionLevel"] as const },
     // 402 ("Corrup Ants") was removed with the game's 4.4.0: HSStrategyManager removes its steps from old strategies
 
@@ -111,17 +111,9 @@ export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
     phaseId: AOAG_PHASE_ID,
     startPhase: "ascension",
     endPhase: "ascension",
-    corruptionLevel: 0,
     strat: [
         {
             challengeNumber: 103,
-            challengeCompletions: 0,
-            challengeWaitTime: 0,
-            challengeMaxTime: 0
-        },
-        {
-            challengeNumber: SET_CORRUPTION_LEVEL_VALUE,
-            corruptionLevel: 0,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
@@ -173,9 +165,6 @@ export interface AutosingStrategyPhase {
     phaseId?: string;
     startPhase: PhaseOption;
     endPhase: PhaseOption;
-    // The game's corruption level since its 4.4.0 (one level instead of 8 corruptions), set at the phase's start.
-    // null: the phase leaves the level as it is
-    corruptionLevel: number | null;
     strat: Challenge[];
 }
 

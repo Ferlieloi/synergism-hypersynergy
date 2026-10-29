@@ -72,10 +72,6 @@ export class HSAutosingStrategyModal {
             }
         };
 
-        // The level the phase sets at its start (empty in the phase window: unchanged)
-        const phaseLevelHtml = (phase: AutosingStrategyPhase) =>
-            `<span class="hs-strategy-phase-level">(${phase.corruptionLevel ?? "unchanged"})</span>`;
-
         const updatePhaseListUI = () => {
             const listDiv = document.getElementById("hs-autosing-phase-list");
             if (!listDiv) return;
@@ -84,7 +80,7 @@ export class HSAutosingStrategyModal {
                 ? `
                     <div class="hs-strategy-phase-item">
                         <div class="hs-strategy-phase-text">
-                            <strong>${AOAG_PHASE_NAME}</strong> ${phaseLevelHtml(strategyDraft.aoagPhase)}
+                            <strong>${AOAG_PHASE_NAME}</strong>
                         </div>
                         <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-action="edit-aoag">
                             ✎
@@ -99,7 +95,7 @@ export class HSAutosingStrategyModal {
                     .map((p, i) => `
                         <div class="hs-strategy-phase-item">
                             <div class="hs-strategy-phase-text">
-                                Phase ${i + 1}: ${p.startPhase} <span class="hs-strategy-phase-arrow">→</span> <strong>${p.endPhase}</strong> ${phaseLevelHtml(p)}
+                                Phase ${i + 1}: ${p.startPhase} <span class="hs-strategy-phase-arrow">→</span> <strong>${p.endPhase}</strong>
                             </div>
                             <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-edit" data-phase-index="${i}" data-action="edit">
                                 ✎
@@ -133,7 +129,7 @@ export class HSAutosingStrategyModal {
                     </div>
 
                     <div class="hs-strategy-input-section">
-                        <div class="hs-strategy-input-label">Strategy Phases <span class="hs-strategy-phase-level">(corruption levels)</span></div>
+                        <div class="hs-strategy-input-label">Strategy Phases</div>
                         <div id="hs-autosing-phase-list" class="hs-strategy-phase-list">
                             <div class="hs-strategy-empty-state">No strategy phases added yet.</div>
                         </div>

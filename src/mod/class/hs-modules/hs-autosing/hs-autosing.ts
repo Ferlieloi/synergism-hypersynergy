@@ -1005,8 +1005,6 @@ export class HSAutosing extends HSModule {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
-        this.#corruptionManager.applyPhaseLevel(phaseConfig);
-
         this.#clickResetButton(this.#ascendBtn);
 
         const isEndPhase = phaseConfig.endPhase === "end";
@@ -1050,9 +1048,6 @@ export class HSAutosing extends HSModule {
         }
 
         switch (challenge.challengeNumber) {
-            case 401:
-                this.#corruptionManager.applyPhaseLevel(phaseConfig);
-                break;
             case SET_CORRUPTION_LEVEL_VALUE:
                 this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
                 break;
@@ -1710,6 +1705,10 @@ export class HSAutosing extends HSModule {
 
         const aoagPhase = this.#strategy?.aoagPhase ?? createDefaultAoagPhase();
         aoagPhase.phaseId = AOAG_PHASE_ID;
+
+        // Before the phase's first Ascend, which applies it. The singularity's other phases need no such set: autosing
+        // starts each singularity with one, and the game sets the level to 0 there
+        this.#corruptionManager.setLevel(0);
 
         await this.#executePhase(aoagPhase, {
             phaseLabelOverride: AOAG_PHASE_NAME,

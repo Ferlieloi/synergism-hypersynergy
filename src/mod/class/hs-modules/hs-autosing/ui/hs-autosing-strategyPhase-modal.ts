@@ -34,9 +34,6 @@ export async function openStrategyPhaseModal(
     const startPhaseValue: PhaseOption =
         options?.forcedStartPhase ?? existingPhase?.startPhase ?? lastPhaseEnd;
 
-    // Empty: the phase leaves the corruption level as it is
-    const initialCorruptionLevel = existingPhase ? existingPhase.corruptionLevel : 0;
-
     const workingStrat: AutosingStrategyPhase["strat"] =
         existingPhase?.strat || [];
 
@@ -88,19 +85,6 @@ export async function openStrategyPhaseModal(
                     </div>`
                 : ""}
 
-            <div class="hs-phase-select-group">
-                <label class="hs-phase-label" for="hs-phase-corruption-level">Corruption Level (empty = unchanged)</label>
-                <input
-                    type="number"
-                    id="hs-phase-corruption-level"
-                    class="hs-phase-select"
-                    min="0"
-                    step="1"
-                    placeholder="Unchanged"
-                    value="${initialCorruptionLevel ?? ""}"
-                />
-            </div>
-
             <div class="hs-phase-config-group">
                 <div class="hs-phase-config-btn" id="hs-autosing-phase-challenges">
                     Configure Challenges
@@ -138,15 +122,10 @@ export async function openStrategyPhaseModal(
                     : select?.value) as PhaseOption;
                 if (!endPhase) return;
 
-                // The game lowers a level above what the player can reach: no upper bound here
-                const levelText = (document.getElementById("hs-phase-corruption-level") as HTMLInputElement | null)?.value.trim() ?? "";
-                const corruptionLevel = levelText === "" ? null : Math.max(0, Math.floor(Number(levelText) || 0));
-
                 const updatedPhase: AutosingStrategyPhase = {
                     // Keep the original start phase if editing, otherwise use lastPhaseEnd
                     startPhase: existingPhase ? existingPhase.startPhase : startPhaseValue,
                     endPhase,
-                    corruptionLevel,
                     strat: [...workingStrat]
                 };
 

@@ -6,11 +6,12 @@ import { HSLogger } from "../../hs-core/hs-logger";
 import { HSUI } from "../../hs-core/hs-ui";
 import manifest from '../../../resource/json/strategies/manifest.json';
 
-// Fields of older strategy formats: 8 corruption values before the game's 4.4.0 (corruptions, loadout), and named
-// corruption loadouts, that phases (corruptionLoadoutName) and "Load Corruption Loadout" steps (loadoutName) referred to
+// Fields of older strategy formats: 8 corruption values before the game's 4.4.0 (corruptions, loadout), named
+// corruption loadouts, that phases (corruptionLoadoutName) and "Load Corruption Loadout" steps (loadoutName) referred to,
+// and the level a phase set at its start (corruptionLevel, null: unchanged)
 type LegacyLoadout = { name: string; level?: number; loadout?: unknown };
 type LegacyStrategy = HSAutosingStrategy & { corruptionLoadouts?: LegacyLoadout[] };
-type LegacyPhase = AutosingStrategyPhase & { corruptions?: unknown; corruptionLoadoutName?: string | null };
+type LegacyPhase = AutosingStrategyPhase & { corruptions?: unknown; corruptionLoadoutName?: string | null; corruptionLevel?: unknown };
 type LegacyStep = Challenge & { loadoutName?: string };
 
 // "Corrup Ants", removed with the game's 4.4.0
@@ -19,6 +20,8 @@ const REMOVED_ANT_CORRUPTIONS_ACTION = 402;
 const REMOVED_LOAD_LOADOUT_ACTION = 202;
 // "Corrup 0*", replaced by "Set corruption level" at level 0
 const REMOVED_ZERO_CORRUPTION_ACTION = 400;
+// "Corruption level from phase (reapply)", replaced by "Set corruption level" at its phase's level
+const REMOVED_PHASE_LEVEL_ACTION = 401;
 
 const isCorruptionLevel = (level: unknown): level is number => Number.isInteger(level) && (level as number) >= 0;
 
@@ -107,6 +110,10 @@ export class HSStrategyManager {
      *   unchanged), a "Load Corruption Loadout" step becomes a "Set corruption level" step (removed when its loadout
      *   doesn't exist: it did nothing).
      * - "Corrup 0*" steps become "Set corruption level" steps at level 0.
+     * - A phase's own level is gone: it becomes a "Set corruption level" step at the phase's start, and its
+     *   "Corruption level from phase (reapply)" steps "Set corruption level" steps (removed when the phase had no
+     *   level: they did nothing). Not in the first phase (autosing starts each singularity with one, which sets the
+     *   level to 0) nor the AOAG phase (autosing sets 0 before it).
      */
     static #migrateCorruptions(strategy: HSAutosingStrategy): void {
         const legacy = strategy as LegacyStrategy;
@@ -114,23 +121,29 @@ export class HSStrategyManager {
             .map(l => [l.name, isCorruptionLevel(l.level) ? l.level : 0]));
         delete legacy.corruptionLoadouts;
 
+        const firstPhase = strategy.strategy?.[0];
         for (const phase of HSStrategyManager.#getPhases(strategy) as LegacyPhase[]) {
+            // No level in the current format; in the older ones a phase always had one (0 when it wasn't valid)
+            const isOlderFormat = 'corruptionLevel' in phase || 'corruptionLoadoutName' in phase || 'corruptions' in phase;
+            let level = phase.corruptionLevel;
             if ('corruptionLoadoutName' in phase) {
                 const name = phase.corruptionLoadoutName;
-                if (name === null || name === '') phase.corruptionLevel = null;
-                else if (name !== undefined && levelByName.has(name)) phase.corruptionLevel = levelByName.get(name)!;
-                delete phase.corruptionLoadoutName;
+                if (name === null || name === '') level = null;
+                else if (name !== undefined && levelByName.has(name)) level = levelByName.get(name)!;
             }
-            if (phase.corruptionLevel !== null && !isCorruptionLevel(phase.corruptionLevel)) phase.corruptionLevel = 0;
+            const phaseLevel = !isOlderFormat || level === null ? null : isCorruptionLevel(level) ? level : 0;
+            delete phase.corruptionLoadoutName;
+            delete phase.corruptionLevel;
             delete phase.corruptions;
 
             if (!Array.isArray(phase.strat)) continue;
             HSStrategyManager.#removeSteps(phase, step => step.challengeNumber === REMOVED_ANT_CORRUPTIONS_ACTION
-                || (step.challengeNumber === REMOVED_LOAD_LOADOUT_ACTION && !levelByName.has((step as LegacyStep).loadoutName ?? '')));
+                || (step.challengeNumber === REMOVED_LOAD_LOADOUT_ACTION && !levelByName.has((step as LegacyStep).loadoutName ?? ''))
+                || (step.challengeNumber === REMOVED_PHASE_LEVEL_ACTION && phaseLevel === null));
             for (const step of phase.strat as LegacyStep[]) {
-                if (step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION) {
+                if (step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION || step.challengeNumber === REMOVED_PHASE_LEVEL_ACTION) {
+                    step.corruptionLevel = step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION ? 0 : phaseLevel!;
                     step.challengeNumber = SET_CORRUPTION_LEVEL_VALUE;
-                    step.corruptionLevel = 0;
                     continue;
                 }
                 if (step.challengeNumber !== REMOVED_LOAD_LOADOUT_ACTION) continue;
@@ -139,6 +152,18 @@ export class HSStrategyManager {
                 // The loadout's name says what the level is for: kept in the comment
                 if (!step.comment) step.comment = step.loadoutName;
                 delete step.loadoutName;
+            }
+
+            if (phaseLevel === null || phase === firstPhase || phase === strategy.aoagPhase) continue;
+            phase.strat.unshift({
+                challengeNumber: SET_CORRUPTION_LEVEL_VALUE,
+                corruptionLevel: phaseLevel,
+                challengeCompletions: 0,
+                challengeWaitTime: 0,
+                challengeMaxTime: 0,
+            });
+            for (const step of phase.strat) {
+                if (step.ifJump) step.ifJump.ifJumpIndex++;
             }
         }
     }
@@ -168,9 +193,6 @@ export class HSStrategyManager {
         if (!aoagPhase) {
             throw new Error(`Strategy is missing "${AOAG_PHASE_NAME}" phase`);
         }
-        if (aoagPhase.corruptionLevel !== null && !isCorruptionLevel(aoagPhase.corruptionLevel)) {
-            throw new Error(`"${AOAG_PHASE_NAME}" phase has no valid corruption level`);
-        }
         if (!Array.isArray(aoagPhase.strat) || aoagPhase.strat.length === 0) {
             throw new Error(`"${AOAG_PHASE_NAME}" phase must have at least one action`);
         }
@@ -187,13 +209,7 @@ export class HSStrategyManager {
 
         for (let i = 0; i < components.length; i++) {
             const component = components[i];
-            const { startPhase, endPhase, corruptionLevel, strat: challenges } = component;
-
-            if (corruptionLevel !== null && !isCorruptionLevel(corruptionLevel)) {
-                throw new Error(
-                    `Component ${i + 1} (${startPhase} → ${endPhase}) has no valid corruption level`,
-                );
-            }
+            const { startPhase, endPhase, strat: challenges } = component;
 
             if (!Array.isArray(challenges) || challenges.length === 0) {
                 throw new Error(
