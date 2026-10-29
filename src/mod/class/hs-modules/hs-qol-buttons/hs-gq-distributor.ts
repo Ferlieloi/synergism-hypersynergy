@@ -8,6 +8,7 @@ import { GoldenQuarkUpgradeKey } from "../../../types/data-types/hs-gamedata-api
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSUI } from "../../hs-core/hs-ui";
+import { GQPlanUpgrade, planGQDistribution } from "./hs-gq-distributor-plan";
 
 /**
  * Class: HSGQDistributor
@@ -252,6 +253,11 @@ export class HSGQDistributor {
         keepSkippedLabel.appendChild(keepSkippedText);
         distributor.appendChild(keepSkippedLabel);
 
+        // While a match or a distribution runs
+        const setControlsDisabled = (disabled: boolean) => {
+            for (const control of [distributeBtn, matchRatios, resetRatios, balanceInvestments, keepSkippedShare]) control.disabled = disabled;
+        };
+
         const syncInvestedRatios = (data: GameData): boolean => {
             const investments = Object.keys(inputs).map(id => ({
                 id, invested: Math.max(0, data.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0)
@@ -268,7 +274,7 @@ export class HSGQDistributor {
         };
 
         matchRatios.addEventListener('click', async () => {
-            distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = true;
+            setControlsDisabled(true);
             try {
                 const data = await HSModuleManager.getModule<HSGameDataAPI>('HSGameDataAPI')?.getForcedGameData();
                 if (!data) throw new Error('Player save unavailable.');
@@ -277,7 +283,7 @@ export class HSGQDistributor {
                 HSLogger.warn(`Could not match invested GQ ratios: ${error}`, this.#context);
                 setStatus('Could not read your current save. Try again.');
             } finally {
-                distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = false;
+                setControlsDisabled(false);
             }
         });
 
@@ -314,7 +320,7 @@ export class HSGQDistributor {
                 return;
             }
 
-            distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = true;
+            setControlsDisabled(true);
             distributeBtn.style.opacity = '0.6';
             distributeBtn.style.cursor = 'not-allowed';
             if (!HSGameDialogs.isQueueIdle()) setStatus('Waiting for the open game dialog to close…');
@@ -383,93 +389,25 @@ export class HSGQDistributor {
                     // Keeping their share: skipped upgrades still take part in the allocation (so the others
                     // get the same share as if they were buyable), then their own share is not spent.
                     const keepSkipped = keepSkippedShare.checked;
+                    const balance = balanceInvestments.checked;
                     const buyable = new Set(buyableIds);
-                    const ids = keepSkipped ? Object.keys(ratios) : buyableIds;
-                    const gqBudget = Math.max(0, Math.floor(totalGQ));
-                    const weightEntries = ids.map((id) => {
-                        const weight = ratios[id] ?? 0;
-                        const upgradeData = gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey];
-                        const invested = Math.max(0, upgradeData?.goldenQuarksInvested ?? 0);
-                        return { id, weight, invested };
-                    }).filter(entry => entry.weight > 0);
-
-                    if (weightEntries.length === 0 || gqBudget <= 0) {
+                    const planUpgrades: GQPlanUpgrade[] = (keepSkipped ? Object.keys(ratios) : buyableIds).map(id => ({
+                        id,
+                        weight: ratios[id] ?? 0,
+                        invested: Math.max(0, gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0),
+                        buyable: buyable.has(id)
+                    }));
+                    const plan = planGQDistribution(planUpgrades, totalGQ, balance);
+                    if (!plan) {
                         setStatus('No Golden Quarks to spend.');
                         return;
                     }
+                    const plannedSpendById = plan.spendById;
 
-                    let additionalAmounts: number[];
-                    if (!balanceInvestments.checked) {
-                        // Allocate only the new budget; past investments can dwarf it.
-                        const largestWeight = Math.max(...weightEntries.map(entry => entry.weight));
-                        const weightSum = weightEntries.reduce((sum, entry) => sum + entry.weight / largestWeight, 0);
-                        additionalAmounts = weightEntries.map(entry => gqBudget * (entry.weight / largestWeight / weightSum));
-                    } else {
-                        // Cumulative target allocation:
-                        // choose final invested totals so that each upgrade tracks its weight ratio,
-                        // while never reducing upgrades that are already over target.
-                        const targetTotalInvested = weightEntries.reduce((sum, entry) => sum + entry.invested, 0) + gqBudget;
-                        let activeIndices = weightEntries.map((_, idx) => idx);
-                        let activeWeightSum = weightEntries.reduce((sum, entry) => sum + entry.weight, 0);
-                        let inactiveInvestedSum = 0;
-
-                        while (activeIndices.length > 0 && activeWeightSum > 0) {
-
-                            const lambda = (targetTotalInvested - inactiveInvestedSum) / activeWeightSum;
-                            const newlyInactive = activeIndices.filter(idx => weightEntries[idx].invested > lambda * weightEntries[idx].weight);
-
-                            if (newlyInactive.length === 0) break;
-                            const newlyInactiveSet = new Set<number>(newlyInactive);
-                            for (const idx of newlyInactive) {
-                                inactiveInvestedSum += weightEntries[idx].invested;
-                                activeWeightSum -= weightEntries[idx].weight;
-                            }
-                            activeIndices = activeIndices.filter(idx => !newlyInactiveSet.has(idx));
-                        }
-
-                        const activeSet = new Set<number>(activeIndices);
-                        const lambda = activeWeightSum > 0
-                            ? (targetTotalInvested - inactiveInvestedSum) / activeWeightSum
-                            : 0;
-
-                        additionalAmounts = weightEntries.map((entry, idx) => {
-                            const targetFinalInvested = activeSet.has(idx)
-                                ? Math.max(entry.invested, lambda * entry.weight)
-                                : entry.invested;
-                            return Math.max(0, targetFinalInvested - entry.invested);
-                        });
-                    }
-
-                    const exactAdditional = weightEntries.map((entry, idx) => {
-                        const additional = additionalAmounts[idx];
-                        return {
-                            id: entry.id,
-                            floorAdditional: Math.floor(additional),
-                            fraction: additional - Math.floor(additional)
-                        };
-                    });
-
-                    const floorTotal = exactAdditional.reduce((sum, entry) => sum + entry.floorAdditional, 0);
-                    let remaining = Math.max(0, gqBudget - floorTotal);
-                    const byFractionDesc = [...exactAdditional].sort((a, b) => b.fraction - a.fraction);
-                    for (let i = 0; i < byFractionDesc.length && remaining > 0; i++) {
-                        byFractionDesc[i].floorAdditional += 1;
-                        remaining -= 1;
-                    }
-
-                    const plannedSpendById = new Map<string, number>(
-                        exactAdditional.map(entry => [entry.id, buyable.has(entry.id) ? entry.floorAdditional : 0])
-                    );
-                    const plannedTotal = ids.reduce((sum, id) => sum + (plannedSpendById.get(id) ?? 0), 0);
-
-                    HSLogger.debug(() =>
-                        `GQ Distributor: budget=${gqBudget} plannedTotal=${plannedTotal} unallocated=${Math.max(0, gqBudget - plannedTotal)} planned=${JSON.stringify(
-                            ids.map(id => ({
-                                id,
-                                weight: ratios[id] ?? 0,
-                                invested: Math.max(0, gameData.goldenQuarkUpgrades[id as GoldenQuarkUpgradeKey]?.goldenQuarksInvested ?? 0),
-                                spend: plannedSpendById.get(id) ?? 0
-                            }))
+                    // Only numbers and the game's upgrade ids: nothing to escape
+                    HSLogger.log(
+                        `GQ Distributor: budget=${plan.budget} plannedTotal=${plan.total} unallocated=${Math.max(0, plan.budget - plan.total)} planned=${JSON.stringify(
+                            planUpgrades.map(({ id, weight, invested }) => ({ id, weight, invested, spend: plannedSpendById.get(id) ?? 0 }))
                         )}`,
                         this.#context
                     );
@@ -482,7 +420,7 @@ export class HSGQDistributor {
 
                         if (amountToSpend <= 0) {
                             // Balancing gives nothing to an upgrade already at its target; otherwise the share rounds to 0
-                            skipped[balanceInvestments.checked ? 'aboveRatio' : 'shareTooSmall'].push(id);
+                            skipped[balance ? 'aboveRatio' : 'shareTooSmall'].push(id);
                             setStatus(`Skipped ${current}/${buyableIds.length} (0 GQ)`);
                             continue;
                         }
@@ -547,7 +485,7 @@ export class HSGQDistributor {
                 HSLogger.warn(`GQ distribution failed: ${error}`, this.#context);
                 setStatus(`Distribution stopped: ${error instanceof Error ? error.message : 'purchase failed.'}`);
             } finally {
-                distributeBtn.disabled = matchRatios.disabled = resetRatios.disabled = balanceInvestments.disabled = keepSkippedShare.disabled = false;
+                setControlsDisabled(false);
                 distributeBtn.style.opacity = '';
                 distributeBtn.style.cursor = 'pointer';
             }
