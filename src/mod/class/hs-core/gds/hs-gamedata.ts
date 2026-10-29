@@ -44,10 +44,9 @@ export class HSGameData extends HSModule {
 
     // --- Engine & Intervals ---
     #gdsEnabled = false;
-    // Reasons the engine is paused (autosing, save import...) while the GDS setting may stay ON.
+    // Reasons the engine is paused (autosing) while the GDS setting may stay ON.
     // The engine only runs when no pause is left and the setting is ON.
     #enginePauses = new Set<string>();
-    #importPauseSequence = 0;
     // Ends the "Load from file" import still waiting for its save, if any
     #abortPendingImport?: () => void;
     // Bumped by disableGDS(): a start begun under an older generation is cancelled
@@ -545,18 +544,10 @@ export class HSGameData extends HSModule {
 
     /**
      * Whether the GDS engine is currently running, i.e. the cached game data is kept up to date.
-     * Can be false while the GDS setting is ON (engine paused by autosing or a save import).
+     * Can be false while the GDS setting is ON (engine paused by autosing).
      */
     isGDSRunning(): boolean {
         return this.#gdsEnabled;
-    }
-
-    /**
-     * Whether a pause is held (pauseGDS()): autosing, a save file import, a backup restore. Code that forces a save
-     * (getForcedGameData) on its own schedule waits for the end of it.
-     */
-    isGDSPaused(): boolean {
-        return this.#enginePauses.size > 0;
     }
 
     /**
@@ -801,51 +792,28 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Handles save file import: pauses the GDS engine and stops autosing if active,
-     * watches for offline container visibility, restores active ambrosia loadout,
-     * then brings the GDS engine back in line with the GDS setting.
-     * The GDS setting itself is never changed here, so a cancelled or failed import
-     * can't leave GDS turned off.
+     * Handles save file import: stops autosing if active, watches for offline container visibility,
+     * then restores the active ambrosia loadout.
+     * The GDS engine keeps running: the game loads the save without letting a timer in, and refuses
+     * to save while the offline popup is up (G.timeWarp), so a save from the engine can't write over it.
      * @param e MouseEvent from the import button click.
      * @returns Promise<void>
      */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
-        const isGdsWanted = () => this.isGDSWanted();
-        // Shown as paused when the setting is ON, even if autosing had already paused the engine.
-        // Only to bookmarklet players: nobody else has a GDS setting
-        const announcePause = HSPlatform.get() === 'bookmarklet' && isGdsWanted();
-        // Ends the "GDS paused" notification shown below, only when one was shown
-        const notifyResumed = (reason: string) => {
-            if (!announcePause) return;
-            HSUI.Notify(`GDS resumed (${reason})`, { position: 'top', notificationType: 'success' });
-        };
 
-        // An older click still waiting (e.g. no event came back from its dialog) is ended here.
-        // Each click gets its own pause, so an older click can't release a newer one.
+        // An older click still waiting (e.g. no event came back from its dialog) is ended here
         this.#abortPendingImport?.();
-        const pauseReason = `import-${++this.#importPauseSequence}`;
-        // Taken before stopping autosing, so autosing releasing its own pause doesn't restart the engine
-        await this.pauseGDS(pauseReason);
 
-        // Autosing can't go on with another save, whatever the GDS state
+        // Autosing can't go on with another save
         const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
         // Also a start in progress or a pending restart, which would run on the imported save
-        const stopsAutosing = autosing?.isAutosingActive() ?? false;
-        if (stopsAutosing) {
+        if (autosing?.isAutosingActive()) {
             HSLogger.log("Load from file clicked - Stopping Auto-Sing", this.context);
-            autosing!.stopAutosing();
-        }
-
-        if (stopsAutosing && announcePause) {
-            HSUI.Notify("Auto-Sing stopped and GDS paused for save file import", { position: 'top', notificationType: 'warning' });
-        } else if (stopsAutosing) {
+            autosing.stopAutosing();
             HSUI.Notify("Auto-Sing stopped for save file import", { position: 'top', notificationType: 'warning' });
-        } else if (announcePause) {
-            HSUI.Notify('GDS paused for save file import', { position: 'top', notificationType: 'warning' });
         }
 
-        // Always run the detection/cleanup logic, regardless of previous GDS state
         // We start watching the offline container to detect when the save is actually loaded
         const offlineContainer = await HSElementHooker.HookElement('#offlineContainer') as HTMLDivElement;
         const self = this;
@@ -861,14 +829,6 @@ export class HSGameData extends HSModule {
 
                 try {
                     HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
-
-                    // Ensure GDS is enabled for UI sync - AWAIT it because it triggers CPU heavy refreshes
-                    if (await self.resumeGDS(pauseReason)) {
-                        notifyResumed('save loaded');
-                    } else {
-                        // Setting OFF: run the engine briefly for the cleanup, stopped again below
-                        await self.enableGDS();
-                    }
 
                     const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
                     if (ambrosiaModule) {
@@ -888,18 +848,6 @@ export class HSGameData extends HSModule {
                         }
                     } else {
                         HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
-                    }
-
-                    if (!isGdsWanted()) {
-                        // Wait for game state to settle and cleanup to take effect, then restore OFF state
-                        setTimeout(() => {
-                            // The player may have turned GDS on in the meantime
-                            if (isGdsWanted()) return;
-                            self.disableGDS();
-                            HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
-                        }, 2000);
-                    } else {
-                        HSLogger.debug(() => "GDS remained enabled (Restored state)", self.context);
                     }
                 } catch (e) {
                     HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
@@ -943,9 +891,6 @@ export class HSGameData extends HSModule {
             if (watcherStopped) return;
             stopWaiting();
             HSLogger.log(`Save file import ended without a save loaded (${reason})`, self.context);
-            void self.resumeGDS(pauseReason).then((resumed) => {
-                if (resumed) notifyResumed('no save loaded');
-            });
         };
 
         // Fired when the dialog is closed without choosing a file
@@ -967,11 +912,10 @@ export class HSGameData extends HSModule {
         fileInput?.addEventListener('change', onChange);
         window.addEventListener('focus', onFocus);
 
-        // A new click ends this import without resuming: the new click takes its own pause right after
+        // A new click ends this import: it watches for its own save
         const abortThisImport = () => {
             if (watcherStopped) return;
             stopWaiting();
-            this.#enginePauses.delete(pauseReason);
         };
         this.#abortPendingImport = abortThisImport;
     }

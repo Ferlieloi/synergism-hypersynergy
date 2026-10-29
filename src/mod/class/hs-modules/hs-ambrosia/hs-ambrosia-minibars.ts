@@ -1,5 +1,4 @@
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { HSGameData } from "../../hs-core/gds/hs-gamedata";
 import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSLogger } from "../../hs-core/hs-logger";
@@ -220,13 +219,12 @@ export class HSAmbrosiaMinibars {
      * The bar sizes change at every fill (lifetime ambrosia), but by about a millionth: the lifetimes count only to
      * 3 significant digits (0.1%). They also change with the loadout (Two Minds, Brick of Lead), the Exalts, the shop's
      * accelerator and the purple reactor's requirement upgrades. On a change, one forced save (a few ms) and the
-     * sizes are computed again; never while GDS is paused (a save import or a backup restore must not get a save).
+     * sizes are computed again.
      */
     #refreshMinibarSizesOnChange(player: HSMinibarsPlayer): void {
         if (this.#minibarSizesRefreshing || performance.now() < this.#minibarSizesRetryAt) return;
         const signature = HSAmbrosiaMinibars.#minibarSizeInputs(player);
         if (signature === this.#minibarSizesSignature) return;
-        if (HSModuleManager.getModule<HSGameData>('HSGameData')?.isGDSPaused()) return;
 
         this.#minibarSizesRefreshing = true;
         void this.#refreshMinibarSizes(signature)
