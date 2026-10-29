@@ -99,6 +99,7 @@ export class HSHeaterInputModalController {
                 <div>${HSUIC.Button({ id: 'hs-heater-update-inputs-btn', class: 'redButton',  text: 'Update 🔓 Inputs' })}</div>
                 <div>${HSHeaterUIInput.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
                 <div class="hs-heater-start-row">${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}${HSUIC.Button({ id: 'hs-heater-cancel-btn', class: 'redButton', text: '✖', props: { title: 'Cancel this heat', hidden: '' } })}</div>
+                ${this.#buildTwoWorkersCheckbox()}
                 <div id="hs-heater-type-selects" class="hs-heater-type-selects-grid">${heaterTypeDropdowns}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-import-all-btn',    class: 'blueButton', text: 'Import All <span style="color: #338eef;">☑</span> Loadouts' })}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-sync-icons-btn',    class: 'blueButton', text:   'Sync All Icons' })}</div>
@@ -121,6 +122,21 @@ export class HSHeaterInputModalController {
         this.currentInputsModalId = modalId;
         this.attachModalHandlers(modalId);
         HSHeaterResultModalController.reconnectToInputsModal(modalId);
+    }
+
+
+    // Without a worker the heat runs on the page, one group at a time: no checkbox
+    static #buildTwoWorkersCheckbox(): string {
+        const checked = HSSettings.getSetting('heaterTwoWorkers').getValue() === true ? ' checked' : '';
+        const help = 'Heats in two workers at once, on two CPU cores: about 40% faster on late saves. '
+            + 'The tab\'s memory can peak around 1.3 GB instead of 0.9 GB: untick it if the game crashes or freezes during a heat. '
+            + 'A computer that reports under 8 GB of memory or fewer than 4 CPU threads heats in one worker anyway.';
+        return `
+            <label class="hs-heater-two-workers" title="${help}"${HSHeaterOptimizerRunner.canCancel ? '' : ' hidden'}>
+                <input type="checkbox" id="hs-heater-two-workers"${checked} />
+                Faster heat (2 workers) <span class="hs-heater-two-workers-help">?</span>
+            </label>
+        `;
     }
 
 
@@ -210,6 +226,12 @@ export class HSHeaterInputModalController {
         const cancelButton = modal.querySelector('#hs-heater-cancel-btn') as HTMLElement | null;
         cancelButton?.addEventListener('click', () => HSHeaterOptimizerRunner.cancel());
 
+        const twoWorkersCheckbox = modal.querySelector<HTMLInputElement>('#hs-heater-two-workers');
+        twoWorkersCheckbox?.addEventListener('change', () => {
+            HSSettings.getSetting('heaterTwoWorkers').setValue(twoWorkersCheckbox.checked);
+            HSSettings.saveSettingsToStorage();
+        });
+
         recalcButton?.addEventListener('click', async () => {
             const branchCheckboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
             const hasActiveBranch = branchCheckboxes.some((checkbox) => checkbox.checked);
@@ -248,7 +270,7 @@ export class HSHeaterInputModalController {
                     updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput, (group, groupCount) => {
                         progress = groupCount > 1 ? ` ${group}/${groupCount}` : '';
                         showElapsed();
-                    });
+                    }, twoWorkersCheckbox?.checked ?? false);
                 } finally {
                     if (cancelButton) cancelButton.hidden = true;
                 }

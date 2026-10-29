@@ -101,6 +101,7 @@ export interface HSSettingsDefinition {
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;
     heaterUncheckedBranches: HeaterUncheckedBranchesSetting;
     heaterTickedBranches: HeaterTickedBranchesSetting;
+    heaterTwoWorkers: HeaterTwoWorkersSetting;
 
     // QOL Buttons Settings
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
@@ -279,3 +280,4 @@ export interface GQDistributorKeepSkippedShareSetting extends HSSettingBase<bool
 export interface HeaterTypeLoadoutSelectionsSetting extends HSSettingBase<string[]> { }
 export interface HeaterUncheckedBranchesSetting extends HSSettingBase<string[]> { }
 export interface HeaterTickedBranchesSetting extends HSSettingBase<string[]> { }
+export interface HeaterTwoWorkersSetting extends HSSettingBase<boolean> { }

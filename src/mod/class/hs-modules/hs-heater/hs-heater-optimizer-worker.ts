@@ -19,8 +19,9 @@ workerScope.onmessage = (event): void => {
       runeIaBonusLevelsTalisman: new Decimal(serializedInput.runeIaBonusLevelsTalisman),
       baseTalismanPower: new Decimal(serializedInput.baseTalismanPower),
     }
-    const result = HSHeaterOptimizer.createHeaterOptimizerResultFromInput(input)
-    workerScope.postMessage({ id, ok: true, result, logs: takeHeaterOptimizerLogs() })
+    // runExperiment times each stage; only the stage times go back
+    const { result, diagnostics } = HSHeaterOptimizer.runExperiment(input)
+    workerScope.postMessage({ id, ok: true, result, logs: takeHeaterOptimizerLogs(), stages: diagnostics.stages })
   } catch (error) {
     workerScope.postMessage({
       id,

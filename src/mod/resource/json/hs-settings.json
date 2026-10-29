@@ -1879,5 +1879,12 @@
     "settingType": "selectstrings",
     "enabled": true,
     "settingValue": []
+  },
+  "heaterTwoWorkers": {
+    "hidden": true,
+    "settingName": "heaterTwoWorkers",
+    "settingDescription": "Heater: heat in two workers at once (checkbox under the heat button)",
+    "settingType": "boolean",
+    "enabled": true
   }
 }

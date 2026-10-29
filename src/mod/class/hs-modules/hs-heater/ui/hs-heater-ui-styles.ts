@@ -58,6 +58,52 @@ export class HSHeaterUIStyles {
                 display: none;
             }
 
+            .hs-heater-two-workers {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 0px 8px;
+                /* Close to the heat button: the column's 12px gap less 8 */
+                margin-top: -8px;
+                color: #bbb;
+                cursor: help;
+            }
+
+            /* Shows there is a tooltip: a circle like the results' type info trigger */
+            .hs-heater-two-workers-help {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 16px;
+                width: 16px;
+                height: 16px;
+                box-sizing: border-box;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                border-radius: 50%;
+                color: #9a9a9a;
+                font-size: 11px;
+                font-weight: bold;
+                line-height: 1;
+                user-select: none;
+            }
+
+            .hs-heater-two-workers[hidden] {
+                display: none;
+            }
+
+            /* Same as the Active Branches checkboxes */
+            .hs-heater-two-workers input {
+                width: 16px;
+                height: 16px;
+                margin: 0;
+                cursor: pointer;
+                accent-color: #a22a2a;
+                box-sizing: border-box;
+                padding: 0;
+                border: 0;
+                flex-shrink: 0;
+            }
+
             /* === Shared Table Base Styles === */
             .hs-heater-input-table,
             .hs-heater-results-table,

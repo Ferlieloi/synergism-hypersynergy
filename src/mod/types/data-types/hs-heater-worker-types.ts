@@ -1,5 +1,8 @@
 import type { HeaterOptimizationResult, HeaterOptimizerInput } from './hs-heater-types'
-import type { HeaterOptimizerLog } from '../../class/hs-modules/hs-heater/hs-heater-optimizer'
+import type { HeaterCubeExperimentDiagnostics, HeaterOptimizerLog } from '../../class/hs-modules/hs-heater/hs-heater-optimizer'
+
+/** One timed step of a heat (the optimizer's stage records) */
+export type HeaterOptimizerStage = HeaterCubeExperimentDiagnostics['stages'][number]
 
 /** Decimal values cross the worker boundary as strings. Both sides use this protocol. */
 export type SerializedHeaterOptimizerInput = Omit<
@@ -19,5 +22,5 @@ export type HeaterWorkerRequest = {
 }
 
 export type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[] }
+  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[]; stages: HeaterOptimizerStage[] }
   | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }

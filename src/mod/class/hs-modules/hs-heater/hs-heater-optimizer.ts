@@ -5602,8 +5602,14 @@ export class HSHeaterOptimizer {
               })
             }
             if (options.calculateOct) {
+              const luckOctStartedAt = experimentNow()
               let tableBrick = generateTable(["ambrosiaLuckCube1", "ambrosiaBrickOfLead"], "oct")
               tableCache.tableLuckOct = mergeLuckCubeTable(tableLuck, tableBrick, "oct")
+              recordCubeExperimentStage("luck-oct", luckOctStartedAt, {
+                luck: tableLuck.length,
+                brick: tableBrick.length,
+                luckOct: tableCache.tableLuckOct.length,
+              })
             }
           }
 
