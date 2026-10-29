@@ -10,7 +10,7 @@ import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -1031,7 +1031,11 @@ export class HSAutosing extends HSModule {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
-        this.#clickResetButton(this.#ascendBtn);
+        // A leading corruption action supplies the opening ascension itself, after setting its level.
+        // In particular, migrated phase levels must be selected before that reset, without a second reset.
+        if (phaseConfig.strat[0]?.challengeNumber !== SET_CORRUPTION_LEVEL_VALUE) {
+            this.#clickResetButton(this.#ascendBtn);
+        }
 
         const isEndPhase = phaseConfig.endPhase === "end";
         for (let i = 0; i < phaseConfig.strat.length; i++) {
@@ -1086,11 +1090,7 @@ export class HSAutosing extends HSModule {
         switch (challenge.challengeNumber) {
             case SET_CORRUPTION_LEVEL_VALUE:
                 HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);
-                this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
-                break;
-            case SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE:
-                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);
-                await this.#corruptionManager.setLevelMinusFreeLevels(challenge.corruptionLevel ?? 0);
+                await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge, phaseConfig, tag);
@@ -1110,6 +1110,25 @@ export class HSAutosing extends HSModule {
                 }
         }
         return null;
+    }
+
+    /** The level is only a selection until the reset; never skip it just because `next` already matches. */
+    async #setCorruptionLevelAndAscend(level: number): Promise<void> {
+        this.#corruptionManager.setLevel(level);
+        const insideAscensionChallenge = this.#hasLivePlayer
+            ? this.#exposedPlayer!.currentChallenge.ascension !== 0
+            : (this.#challengeProgressElements[2]?.textContent ?? '').trim() !== '';
+        if (insideAscensionChallenge) {
+            // Exiting supplies the ascension reset and records C15's score before its coins are cleared.
+            // A plain Ascend here would reset the coins while leaving the challenge active, losing that score.
+            if (!this.#hasLivePlayer) this.#getChallengeAccessor(15).getCompletions();
+            this.#clickResetButton(this.#exitAscBtn);
+        } else {
+            this.#clickResetButton(this.#ascendBtn);
+        }
+        // Normally synchronous (or the patched dialog resolves in a microtask): no polling or tick delay.
+        // Without the dialog hook, let a displayed confirmation finish before another strategy action runs.
+        if (!HSGameDialogs.isQueueIdle()) await HSGameDialogs.whenQueueIdle();
     }
 
     #handleIfJumpAction(challenge: Challenge, phaseConfig: AutosingStrategyPhase, tag: () => string): number | null {

@@ -22,7 +22,6 @@ declare global {
         __HS_GLOBAL_EVENT_PATCHED?: boolean;
         __HS_synergismStage?: (mode: number) => string;
         __HS_getMaxChallenges?: (challenge: number) => number;
-        __HS_corruptionFreeLevels?: () => number;
         __HS_validateBlueberryTree?: (tree: unknown) => boolean;
         __HS_exportSynergism?: () => Promise<void>;
         __HS_tackHooks?: Array<() => void>;

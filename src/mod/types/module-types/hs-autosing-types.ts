@@ -1,11 +1,9 @@
 export const IF_JUMP_VALUE = 200;
-// Sets the corruption level held by the step (Challenge.corruptionLevel)
+// Sets the corruption level held by the step (Challenge.corruptionLevel), then ascends to apply it
 export const SET_CORRUPTION_LEVEL_VALUE = 403;
-// Sets the step's level minus the player's free levels: the lowest level that reaches it once they're added
-export const SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE = 404;
 // The steps holding a level in Challenge.corruptionLevel
 export const isCorruptionLevelStep = (challengeNumber: number): boolean =>
-    challengeNumber === SET_CORRUPTION_LEVEL_VALUE || challengeNumber === SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE;
+    challengeNumber === SET_CORRUPTION_LEVEL_VALUE;
 
 export const ALLOWED = [
     "start",
@@ -77,8 +75,7 @@ export const SPECIAL_ACTIONS = [
 
     // 400 ("Corrup 0*") became a "Set corruption level" step at level 0, 401 ("Corruption level from phase (reapply)")
     // one at its phase's level (HSStrategyManager converts them)
-    { label: "Set corruption level",           value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
-    { label: "Set corruption level minus free levels", value: SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, inputs: ["corruptionLevel"] as const },
+    { label: "Set corruption level and ascend", value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
     // 402 ("Corrup Ants") was removed with the game's 4.4.0: HSStrategyManager removes its steps from old strategies
 
     { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 601, inputs: ["maxTime", "waitTime"] as const },
