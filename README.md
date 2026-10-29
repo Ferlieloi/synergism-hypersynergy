@@ -19,7 +19,7 @@ Here are some of Hypersynergism’s standout features:
 - **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set.
 - **Golden Quark tools:** Split your Golden Quarks between upgrades with the GQ Distributor, using ratios you set.
 - **Game information:** Compute game values from your save in the Tools tab (luck, cube multipliers, Ambrosia speed, ascension score…, with their components), and see the time until a platonic upgrade's next level in its tooltip.
-- **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the "Since you were away" box at load.
+- **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the game's offline popup at load.
 - **Interface options:** Each tab reopens on the subtab you last used, unused game tabs can be hidden, and notifications can be made more transparent.
 - **Saves:** Export the save every X minutes, and back up the save, the mod's settings and the logs in one file, to load later or on another device.
 
@@ -54,7 +54,7 @@ The mod can also be loaded with a bookmark, once the game has started. Loaded th
 
 Create a new bookmark in your browser, with any name. As its URL, paste the whole content of [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js) (it starts with `javascript:`).
 
-Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
+Load/refresh the game in your browser, close the game's "offline" popup, then click the bookmark. It always loads the latest version of the mod.
 
 ## Help and bug reports
 
