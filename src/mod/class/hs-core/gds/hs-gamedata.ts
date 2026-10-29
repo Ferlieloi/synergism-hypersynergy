@@ -160,6 +160,9 @@ export class HSGameData extends HSModule {
 
         this.isSteam = this.#isSteamElectron();
 
+        // "Load from file" matches the ambrosia loadout from the save the game decodes, whatever the GDS state
+        this.#hackJSNativeAtob();
+
         // Always hook the import button regardless of GDS setting
         // We do this asynchronously to not block init if the element takes time to appear
         (async () => {
