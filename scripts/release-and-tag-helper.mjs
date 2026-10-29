@@ -107,7 +107,7 @@ function printHelp() {
     log('    1) checks git state: no merge/rebase, not detached, branch not behind its upstream');
     log('    2) chooses the tag: the package.json version, a bump when that tag exists, or resuming a release whose tag is on HEAD');
     log('    3) dirty working tree: asks to stage all of it into the release commit (No stops the script)');
-    log('    4) checks loader versions (offers a bridge @version bump, reminds about the patcher loaderVersion)');
+    log('    4) checks loader versions (offers to bump the bridge @version and the patcher loaderVersion when the file changed)');
     log('    5) builds the release with esbuild, stages it with package.json, package-lock.json and the strategy manifest, commits');
     log('    6) creates an annotated v<version> tag');
     log('    7) prompts to push branch and tag to origin');
@@ -538,7 +538,8 @@ async function askTagMessageSuffix() {
 
 const bridgeFile = 'src/loader/tampermonkey-bridge.user.js';
 const patcherFile = 'synergism_modloader/lib/patcher.js';
-const userscriptVersionRe = /^(\/\/\s*@version\s+)(\S+)/m;
+// Both: (before)(version)(after), as writeFileVersion() puts them back
+const userscriptVersionRe = /^(\/\/\s*@version\s+)(\S+)()/m;
 const patcherVersionRe = /(const loaderVersion\s*=\s*')([^']+)(')/;
 
 /** Read a version from file content (current working tree, or `ref` when given). */
@@ -554,10 +555,18 @@ function bumpLastNumber(version) {
     return version.replace(/(\d+)(?!.*\d)/, (n) => String(Number(n) + 1));
 }
 
+/** Write `version` into `file` through `re` and stage the file for the release commit. */
+function writeFileVersion(file, re, version) {
+    const path = join(root, file);
+    writeFileSync(path, readFileSync(path, 'utf8').replace(re, `$1${version}$3`), 'utf8');
+    runAndCheck('git', ['add', file]);
+}
+
 /**
- * Before the release commit, compare the web loader files with the previous release:
- * - the Tampermonkey bridge: players only receive an update if its @version increases, so offer a bump;
- * - the patcher: its loaderVersion only labels the console logs, so just a reminder.
+ * Before the release commit, compare the web loader files with the previous release, and offer to bump
+ * the version of a changed file whose version is unchanged:
+ * - the Tampermonkey bridge: players only receive an update if its @version increases;
+ * - the patcher: its loaderVersion labels the console logs ([HS-LOADER vX]), telling which patcher a player runs.
  * (hypersynergism.user.js is downloaded fresh by the bridge on every load: its @version is never used.)
  */
 async function checkLoaderVersions(status) {
@@ -584,9 +593,7 @@ async function checkLoaderVersions(status) {
             const bumped = bumpLastNumber(now);
             warn(`${bridgeFile} changed since ${previousTag} but its @version is still ${now}: Tampermonkey won't update it for players.`);
             if (await askYesNo(`Bump the bridge @version from ${now} to ${bumped}?`)) {
-                const path = join(root, bridgeFile);
-                writeFileSync(path, readFileSync(path, 'utf8').replace(userscriptVersionRe, `$1${bumped}`), 'utf8');
-                runAndCheck('git', ['add', bridgeFile]);
+                writeFileVersion(bridgeFile, userscriptVersionRe, bumped);
                 success(`Bridge @version bumped to ${bumped} (staged for the release commit).`);
             } else {
                 warn('Bridge @version not bumped: players with the bridge installed will keep the old one.');
@@ -594,13 +601,20 @@ async function checkLoaderVersions(status) {
         }
     }
 
-    // 2) Patcher: its loaderVersion is shown in the loader's console logs ([HS-LOADER vX]). Reminder only.
+    // 2) Patcher: a changed patcher gets a new loaderVersion, so the console logs tell the two apart
+    //    (last number only: a major bump is made by hand)
     if (changed.has(patcherFile)) {
         const before = readFileVersion(patcherFile, patcherVersionRe, previousTag);
         const now = readFileVersion(patcherFile, patcherVersionRe);
         if (now && before === now) {
-            info(`Reminder: ${patcherFile} changed since ${previousTag}, but its loaderVersion is still ${now}.`
-                + ' Bump it if you want the console logs to show this loader change.');
+            const bumped = bumpLastNumber(now);
+            warn(`${patcherFile} changed since ${previousTag} but its loaderVersion is still ${now}.`);
+            if (await askYesNo(`Bump the patcher loaderVersion from ${now} to ${bumped}?`)) {
+                writeFileVersion(patcherFile, patcherVersionRe, bumped);
+                success(`Patcher loaderVersion bumped to ${bumped} (staged for the release commit).`);
+            } else {
+                warn('Patcher loaderVersion not bumped: its console logs will show the same version as the previous release.');
+            }
         }
     }
 }
