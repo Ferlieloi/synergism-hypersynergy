@@ -12,19 +12,16 @@ Hypersynergism adds quality-of-life tools, game information, interface options, 
 
 Here are some of Hypersynergism’s standout features:
 
-- **AutoSing:** (S216+) Run configurable strategies to farm singularities (this can be considered as "not strictly QoL". You do you.)
-- **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
-- **Ambrosia tools:** Manage and quick-switch loadouts, automatically switch loadouts when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
-- **Quickbars:** View and interact with Ambrosia, Corruption and Automation controls from the game header.
-- **Header cell controls:** Open the game's header editor with Edit game header in HS Settings → UI, or by holding down on the header. Select a module and choose Left, Center, or Right horizontally and Top, Center, or Bottom vertically for its cell. Use Full or Half height for a single module in the grid; Half matches the compact modules in a two-module stack, with the same vertical alignment controls. Enable Compact challenge text in [HS] Header to show only progress numbers at any cell height, with the full description on hover. Choices are remembered separately for desktop and mobile. Done saves the game layout and any pending HS settings immediately.
-- **Compact header spacing:** Enable Remove header gap in [HS] Header to bring the game tabs up to the last visible header module, while keeping corruption levels visible.
-- **Resizable minibars:** In header edit mode, drag the minibars’ right edge, bottom edge, or corner to adjust their width and bar height. The bars are borderless, fit inside half-height cells, and follow the cell's alignment. Sizes stay within the header cell, are saved per desktop/mobile layout, and can be restored with Reset size.
-- **Header options:** In the [HS] Header settings, use the corruption loadout icon to cleanse corruptions instead of a separate button, match the octeract icon to the other cube icons in the top row, and add a white Oct/Oct/s unit label.
-- **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set. (Soon to be: Hept Optimizer)
+- **AutoSing:** (S216+) Run singularities with strategies you can edit in the strategy editor (this can be considered as "not strictly QoL". You do you.)
+- **Ambrosia Heater:** Find the best Ambrosia loadouts for your save with the built-in optimizer.
+- **Ambrosia tools:** Quick-switch loadouts, switch them automatically when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
+- **Header:** Place an Automation quickbar, use any game image as a loadout slot icon, align modules in their cells, resize the minibars, remove the gap under the header, and more, all from the game's header editor.
+- **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set.
 - **Golden Quark tools:** Split your Golden Quarks between upgrades with the GQ Distributor, using ratios you set.
+- **Game information:** Compute game values from your save in the Tools tab (luck, cube multipliers, Ambrosia speed, ascension score…, with their components), and see the time until a platonic upgrade's next level in its tooltip.
 - **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the "Since you were away" box at load.
 - **Interface options:** Each tab reopens on the subtab you last used, unused game tabs can be hidden, and notifications can be made more transparent.
-- **Backup & Restore:** Save the game save, the mod's settings and the logs in one file, and load it back later or on another device.
+- **Saves:** Export the save every X minutes, and back up the save, the mod's settings and the logs in one file, to load later or on another device.
 
 ## Using the mod
 
