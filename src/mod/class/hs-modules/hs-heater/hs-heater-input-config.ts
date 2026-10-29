@@ -71,11 +71,6 @@ export const inputDefinitions = [
     { key: "globalEventBlueBarBonus",   label: "Event Blue Bar Bonus",      type: "percent", url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
     { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",       type: "boolean", url: "Pictures/Runes/Antiquities.png" },
 
-    { heading: "Unlocks", key: "exalt5Unlocked", label: "No Amb Upgrades x1 Done", type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 0, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
-    { key: "exalt9Unlocked",            label: "Taxman's Last Stand x1 Done",  type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 192, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
-    { key: "oneMindUnlocked",           label: "One Mind Unlocked",         type: "boolean", url: "Pictures/Default/SingularityOneMind.png" },
-    { key: "aquariusUnlocked",          label: "Aquarius Unlocked",         type: "boolean", url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Aquarius.png" },
-
     { heading: "Blue Ambrosia", key: "amb", label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "blueberries",               label: "Blueberries Owned",         type: "number",  url: "Pictures/Default/Blueberries.png" },
     { key: "purpleLeoLevel",            label: "Purple Leo Level",          type: "number",  url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Leo.png" },
@@ -122,6 +117,11 @@ export const inputDefinitions = [
     { key: "runeIaBonusLevelsTotal",    label: "IA Bonus Levels (total)",   type: "text",    url: "Pictures/Runes/InfiniteAscent.png" },
     { key: "runeIaBonusLevelsTalisman", label: "IA Bonus Levels (talisman)",type: "text",    url: "Pictures/Runes/InfiniteAscent.png" },
     { key: "baseTalismanPower",         label: "Talisman Power Mult.",      type: "text",    url: "Pictures/Default/BlueberryTalismanBonusRuneLevel.png" },
+
+    { heading: "Unlocks", key: "exalt5Unlocked", label: "No Amb Upgrades x1 Done", type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 0, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
+    { key: "exalt9Unlocked",            label: "Taxman's Last Stand x1 Done",  type: "boolean", icon: { url: "Pictures/Default/Sprite Sheets/Challenges.png", sprite: { x: 192, y: 256, width: 64, height: 64, sheetWidth: 320, sheetHeight: 320 }, } },
+    { key: "oneMindUnlocked",           label: "One Mind Unlocked",         type: "boolean", url: "Pictures/Default/SingularityOneMind.png" },
+    { key: "aquariusUnlocked",          label: "Aquarius Unlocked",         type: "boolean", url: "Pictures/PurpleAmbrosia/Purple Ambrosia Upgrades/Aquarius.png" },
 
     { heading: "Shop", key: "panthemaLevel", label: "Jack of All Trades Level",  type: "number",  url: "Pictures/Default/ShopPanthema.png" },
     { key: "freeShopLevelsInfinity",    label: "Free Infinity Upgrades",    type: "number",  url: "Pictures/Default/ShopInfiniteShopUpgrades.png" },
