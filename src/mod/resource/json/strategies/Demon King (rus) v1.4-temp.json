@@ -117,6 +117,13 @@
       "endPhase": "challenge13",
       "strat": [
         {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
+        {
           "challengeNumber": 10,
           "challengeCompletions": 6,
           "challengeWaitTime": 0,
@@ -156,7 +163,7 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 10,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 3
+            "ifJumpIndex": 4
           }
         },
         {
@@ -192,7 +199,7 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 10,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 7
+            "ifJumpIndex": 8
           }
         },
         {
