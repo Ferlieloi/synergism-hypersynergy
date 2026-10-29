@@ -3,7 +3,7 @@ import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
 import { dailyFreeLevelCaps } from "./hs-gamedata-api-goldenQuark";
 import { dailyOcteractFreeLevelCaps } from "./hs-gamedata-api-octeract";
-import { PURPLE_AMBROSIA_UPGRADE_KEYS, type PurpleReactorUpgradeKey } from "./hs-gamedata-api-purple";
+import { PURPLE_AMBROSIA_UPGRADE_KEYS, SYNTHESIS_UPGRADE_KEYS, type PurpleReactorUpgradeKey, type SynthesisUpgradeKey } from "./hs-gamedata-api-purple";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 
 /** Achievement-point inputs copied from SynergismOfficial/src/Shop.ts. */
@@ -33,6 +33,14 @@ const QUARK_UPGRADE_MAX_LEVELS: Record<string, number> = {
     shopChronometerS: 1, shopAmbrosiaUltra: 5, shopSingularitySpeedup: 1,
     shopSingularityPotency: 1, shopSadisticRune: 1, shopInfiniteShopUpgrades: 100,
     shopHorseShoe: 1, shopPurpleBarRebate: 10, shopPanthema: 1,
+};
+
+/** The achievement points of each synthesis upgrade: apPerInterval every levelsPerAP levels (apValue in SynergismOfficial/src/Synthesis.ts). */
+const SYNTHESIS_AP: Record<SynthesisUpgradeKey, { levelsPerAP: number; apPerInterval: number }> = {
+    redAmbrosiaReduction: { levelsPerAP: 50, apPerInterval: 5 },
+    purpleHoneyReduction: { levelsPerAP: 10, apPerInterval: 5 },
+    subatomicShavings: { levelsPerAP: 10, apPerInterval: 5 },
+    exceptionalLieGroup: { levelsPerAP: 3, apPerInterval: 5 },
 };
 
 /** The achievement points of each Purple Reactor upgrade, from calculatePurpleReactorAP() in SynergismOfficial/src/Purple.ts. */
@@ -259,33 +267,16 @@ export class SynergismLevelHelper {
 
     /** Mirrors the purpleAmbrosiaUpgrades achievement in SynergismOfficial/src/Achievements.ts. */
     calculatePurpleAmbrosiaAchievementAP(): number {
-        const data = this.#gameData;
-        if (!data) return 0;
-
-        let totalAP = 0;
-
-        // Synthesis upgrades use a linear Purple Ambrosia investment for their
-        // level; AP is awarded in the same intervals as Synthesis.ts.
-        const synthesisAP = [
-            ['redAmbrosiaReduction', 500, 50, 5],
-            ['purpleHoneyReduction', 100, 10, 5],
-            ['subatomicShavings', 100, 10, 5],
-            ['exceptionalLieGroup', 30, 3, 5],
-        ] as const;
-        const synthesis = (data as unknown as { synthesisUpgrades?: Record<string, Record<string, number>> }).synthesisUpgrades;
-        const purpleAmbrosiaCostPerLevel: Record<string, number> = {
-            redAmbrosiaReduction: 1,
-            purpleHoneyReduction: 5,
-            subatomicShavings: 20,
-            exceptionalLieGroup: 100,
-        };
-        for (const [key, maxLevel, levelsPerAP, apPerInterval] of synthesisAP) {
-            const invested = Number(synthesis?.[key]?.purpleAmbrosia ?? 0);
-            const level = Math.min(maxLevel, Math.max(0, Math.floor(invested / purpleAmbrosiaCostPerLevel[key])));
-            totalAP += Math.floor(level / levelsPerAP) * apPerInterval;
-        }
+        if (!this.#gameData) return 0;
 
         const purple = this.#api.purple;
+        let totalAP = 0;
+
+        for (const key of SYNTHESIS_UPGRADE_KEYS) {
+            const { levelsPerAP, apPerInterval } = SYNTHESIS_AP[key];
+            totalAP += Math.floor(purple.getSynthesisUpgradeLevel(key) / levelsPerAP) * apPerInterval;
+        }
+
         for (const key of PURPLE_AMBROSIA_UPGRADE_KEYS) {
             if (purple.getPurpleAmbrosiaUpgradeLevel(key) >= purple.getPurpleAmbrosiaUpgradeMaxLevel(key)) {
                 totalAP += 12;

@@ -110,6 +110,21 @@ const purpleAmbrosiaUpgradeData = {
 export type PurpleAmbrosiaUpgradeKey = keyof typeof purpleAmbrosiaUpgradeData;
 export const PURPLE_AMBROSIA_UPGRADE_KEYS = Object.keys(purpleAmbrosiaUpgradeData) as PurpleAmbrosiaUpgradeKey[];
 
+// Mirrors synthesisUpgradeData in SynergismOfficial/src/Synthesis.ts. Each upgrade saves what was invested
+// in each resource; a level counts once every resource covers its cumulative cost.
+const synthesisUpgradeData = {
+    redAmbrosiaReduction: { maxLevel: 500, cumulativeCost: (level: number) => ({ purpleAmbrosia: level, redAmbrosia: 1_250 * level }) },
+    purpleHoneyReduction: { maxLevel: 100, cumulativeCost: (level: number) => ({ purpleAmbrosia: 5 * level, purpleHoney: 2_500 * level }) },
+    subatomicShavings: { maxLevel: 100, cumulativeCost: (level: number) => ({ purpleAmbrosia: 20 * level, quarks: 1e26 * level }) },
+    exceptionalLieGroup: {
+        maxLevel: 30,
+        cumulativeCost: (level: number) => ({ purpleAmbrosia: 100 * level, octeracts: level === 0 ? 0 : 1e130 * (10 ** level - 1) / 9 }),
+    },
+} as const;
+
+export type SynthesisUpgradeKey = keyof typeof synthesisUpgradeData;
+export const SYNTHESIS_UPGRADE_KEYS = Object.keys(synthesisUpgradeData) as SynthesisUpgradeKey[];
+
 /**
  * Class: PurpleHelper
  * IsExplicitHSModule: No
@@ -125,21 +140,26 @@ export class PurpleHelper {
         this.#ctx = ctx;
     }
 
-    #reconstructLevel(invested: number, definition: PurpleUpgradeDefinition, tolerance = 0): number {
+    // The highest level up to maxLevel that isAffordable accepts (the cumulative costs grow with the level)
+    #reconstructLevel(maxLevel: number, isAffordable: (level: number) => boolean): number {
         let low = 0;
-        let high = definition.maxLevel;
+        let high = maxLevel;
         while (low < high) {
             const middle = low + Math.ceil((high - low) / 2);
-            if (definition.costFormula(middle) <= invested + tolerance) low = middle;
+            if (isAffordable(middle)) low = middle;
             else high = middle - 1;
         }
         return low;
     }
 
+    #reconstructPurpleLevel(invested: number, definition: PurpleUpgradeDefinition, tolerance = 0): number {
+        return this.#reconstructLevel(definition.maxLevel, (level) => definition.costFormula(level) <= invested + tolerance);
+    }
+
     getPurpleReactorUpgradeLevel(upgradeKey: PurpleReactorUpgradeKey): number {
         const invested = Number(this.#ctx.getGameData()?.purpleReactorUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
-        return this.#reconstructLevel(invested, purpleReactorUpgradeData[upgradeKey], 0.001);
+        return this.#reconstructPurpleLevel(invested, purpleReactorUpgradeData[upgradeKey], 0.001);
     }
 
     getPurpleReactorUpgradeMaxLevel(upgradeKey: PurpleReactorUpgradeKey): number {
@@ -237,11 +257,20 @@ export class PurpleHelper {
     getPurpleAmbrosiaUpgradeLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
         const invested = Number(this.#ctx.getGameData()?.purpleAmbrosiaUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
-        return this.#reconstructLevel(invested, purpleAmbrosiaUpgradeData[upgradeKey]);
+        return this.#reconstructPurpleLevel(invested, purpleAmbrosiaUpgradeData[upgradeKey]);
     }
 
     getPurpleAmbrosiaUpgradeMaxLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
         return purpleAmbrosiaUpgradeData[upgradeKey].maxLevel;
+    }
+
+    /** Mirrors getSynthesisUpgradeLevel in SynergismOfficial/src/Synthesis.ts. */
+    getSynthesisUpgradeLevel(upgradeKey: SynthesisUpgradeKey): number {
+        const synthesis = (this.#ctx.getGameData() as unknown as { synthesisUpgrades?: Record<string, Record<string, number>> } | undefined)?.synthesisUpgrades;
+        const invested = synthesis?.[upgradeKey] ?? {};
+        const upgrade = synthesisUpgradeData[upgradeKey];
+        return this.#reconstructLevel(upgrade.maxLevel, (level) =>
+            Object.entries(upgrade.cumulativeCost(level)).every(([resource, cost]) => cost <= Number(invested[resource] ?? 0)));
     }
 
     getPurpleAmbrosiaUpgradeEffects(upgradeKey: PurpleAmbrosiaUpgradeKey, effectKey: string): number {
