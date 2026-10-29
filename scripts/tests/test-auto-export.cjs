@@ -5,7 +5,7 @@ const esbuild = require('esbuild');
 
 // Test the export workflow without opening file pickers or writing real save files.
 async function main() {
-    const root = path.resolve(__dirname, '..');
+    const root = path.resolve(__dirname, '../..');
     const stubs = {
         'hs-logger': 'export const HSLogger = Object.fromEntries(["log", "warn", "error"].map(level => [level, text => globalThis.__exportTest.logs.push(text)]));',
         'hs-ui': 'export const HSUI = { Notify(text) { globalThis.__exportTest.notices.push(text); } };',

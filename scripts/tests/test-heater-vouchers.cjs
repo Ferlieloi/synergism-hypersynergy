@@ -6,7 +6,7 @@ const esbuild = require('esbuild');
 
 // Expose internal calculations only in this in-memory test bundle.
 async function main() {
-  const root = path.resolve(__dirname, '..');
+  const root = path.resolve(__dirname, '../..');
   const optimizer = path.join(root, 'src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts');
   const bundled = await esbuild.build({
     stdin: { contents: `export * from ${JSON.stringify(optimizer)};

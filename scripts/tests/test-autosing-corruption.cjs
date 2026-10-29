@@ -7,7 +7,7 @@ const esbuild = require('esbuild');
 // Run the real phase/action executor, migration and corruption controls against a small game boundary.
 // The test-only methods expose private entry points in memory; the shipped class has none of them.
 async function main() {
-    const root = path.resolve(__dirname, '..');
+    const root = path.resolve(__dirname, '../..');
     const autosing = path.join(root, 'src/mod/class/hs-modules/hs-autosing/hs-autosing.ts');
     const stubs = {
         'hs-module': 'export class HSModule { constructor() { this.context = "Test"; } }',
