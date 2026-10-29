@@ -1026,7 +1026,14 @@ export class HSSettingsUI {
                     return;
                 }
 
-                HSSettings.validateStrategy(parsedStrategy);
+                try {
+                    HSSettings.validateStrategy(parsedStrategy);
+                } catch (error) {
+                    HSUI.Notify(`Invalid strategy: ${(error as Error).message}`, {
+                        notificationType: "error"
+                    });
+                    return;
+                }
                 parsedStrategy.strategyName = strategyName;
                 // Migrated by saveStrategyToStorage (levels at 0): told once it's saved
                 const hasLegacyCorruptions = HSStrategyManager.hasLegacyCorruptions(parsedStrategy);
