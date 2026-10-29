@@ -245,13 +245,12 @@ export class HSSettings extends HSModule {
 
     /**
      * Whether a setting needs GDS on the platform the mod was loaded on (its usesGameData: true, or a list of
-     * platforms). A list counts as no while the platform isn't known yet (before HSGameData is initialised).
+     * platforms).
      */
     static usesGameData(definition: Pick<HSSettingBase<HSSettingType>, 'usesGameData'>): boolean {
         const usesGameData = definition.usesGameData;
         if (!Array.isArray(usesGameData)) return usesGameData === true;
-        const platform = HSPlatform.get();
-        return platform !== null && usesGameData.includes(platform);
+        return usesGameData.includes(HSPlatform.get());
     }
 
     static getStrategies(): HSAutosingStrategy[] {

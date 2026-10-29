@@ -4,6 +4,7 @@ import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
 import { HSModuleManager } from "./module/hs-module-manager";
 import { HSGameData } from "./gds/hs-gamedata";
+import { HSPlatform } from "./hs-platform";
 import type { HSGameDataAPI } from "./gds/hs-gamedata-api";
 import { HSGameDialogs } from "./dialogs/hs-game-dialogs";
 import { HSAutosing } from "../hs-modules/hs-autosing/hs-autosing";
@@ -291,7 +292,7 @@ export class HSBackup {
         const info: HSBackupInfo = {
             modVersion: HSGlobal.General.currentModVersion,
             date: new Date().toISOString(),
-            platform: HSModuleManager.getModule<HSGameData>('HSGameData')?.isSteam ? 'steam' : 'browser',
+            platform: HSPlatform.get() === 'steam' ? 'steam' : 'browser',
             ...(summary ?? {}),
             patcher: {
                 exposedPlayer: !!HSGlobal.exposedPlayer,

@@ -9,6 +9,7 @@ import { HSGlobal } from "./hs-core/hs-global";
 import { HSBackup } from "./hs-core/hs-backup";
 import { HSCalculationTools } from "./hs-core/hs-calculation-tools";
 import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
+import { HSPlatform } from "./hs-core/hs-platform";
 import { HSHeaderEditSettings } from "./hs-core/header/hs-header-edit-settings";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
@@ -67,6 +68,7 @@ export class Hypersynergism {
 
         // Now that game is ready, we can process modules (which might init immediate modules like HSUI)
         await this.preprocessModules();
+        HSLogger.log(`Platform: ${HSPlatform.get()}`, this.#context);
         // After preprocessModules(), which attaches HSLogger to the panel (it drops panel logs written before that),
         // and before the feature modules, which may click game buttons that open dialogs
         HSGameDialogs.init();

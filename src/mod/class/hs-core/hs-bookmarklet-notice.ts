@@ -38,7 +38,6 @@ export class HSBookmarkletNotice {
     /**
      * True when the mod was loaded with the bookmark: in a browser, and by no userscript loader (they all set
      * HS_LOADER_INITIALIZED before the game runs). A userscript whose patch failed is not a bookmark load.
-     * To call once the modules are initialised (HSGameData tells Steam from a browser).
      */
     static isBookmarkletLoad(): boolean {
         return HSPlatform.get() === 'bookmarklet';

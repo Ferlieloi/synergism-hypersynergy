@@ -31,8 +31,6 @@ export class HSGameData extends HSModule {
     // The live player (exposedPlayer), or the last parsed save without it
     #gameData?: GameData;
 
-    isSteam = false;
-
     // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
     #last_mitm_gamedata?: string;
@@ -101,28 +99,6 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Returns true when the current renderer environment appears to be Steam/Electron.
-     * Uses the exposed Steam bridge plus Electron-specific runtime hints.
-     */
-    #isSteamElectron(): boolean {
-        const steam = (window as unknown as { steam?: unknown }).steam as any;
-        const hasSteamBridge = typeof steam === 'object' && steam !== null
-            && typeof steam.cloudWriteFile === 'function'
-            && typeof steam.getSteamId === 'function';
-
-        const hasElectronUserAgent = typeof navigator === 'object'
-            && typeof navigator.userAgent === 'string'
-            && /\bElectron\b/.test(navigator.userAgent);
-
-        const hasElectronProcess = typeof (window as any).process === 'object'
-            && typeof (window as any).process?.versions?.electron === 'string';
-
-        const isSteamElectron = hasSteamBridge || hasElectronUserAgent || hasElectronProcess;
-        HSLogger.debug(() => `Steam/Electron env detection: ${isSteamElectron}.`, this.context);
-        return isSteamElectron;
-    }
-
-    /**
      * Caches DOM elements used during initialization and later operations.
      * @returns void
      */
@@ -157,8 +133,6 @@ export class HSGameData extends HSModule {
         this.#startConsumablesPoll();
         this.#startGlobalEventCapture();
         this.isInitialized = true;
-
-        this.isSteam = this.#isSteamElectron();
 
         // "Load from file" matches the ambrosia loadout from the save the game decodes, whatever the GDS state
         this.#hackJSNativeAtob();

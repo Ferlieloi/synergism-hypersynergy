@@ -586,12 +586,10 @@ export class HSSettingsUI {
         });
     }
 
-    // Not hidden, and meant for the platform the mod was loaded on (shown when it isn't known yet)
+    // Not hidden, and meant for the platform the mod was loaded on
     static #isShownInPanel(setting: HSSettingBaseWithHidden<HSSettingType>): boolean {
         if (setting.hidden === true) return false;
-        if (!setting.platforms) return true;
-        const platform = HSPlatform.get();
-        return platform === null || setting.platforms.includes(platform);
+        return !setting.platforms || setting.platforms.includes(HSPlatform.get());
     }
 
     static #buildPagesHTML(
