@@ -2,8 +2,8 @@
 
 /* Title bar height of the mod panel and of every mod window (its buttons are squares of that size), and the panel's tab row height */
 :root {
-    --hs-head-height: 32px;
-    --hs-panel-tabs-height: 26px;
+    --hs-head-height: 35px;
+    --hs-panel-tabs-height: 30px;
 }
 
 /* ===== SCROLLBAR STYLES ===== */
