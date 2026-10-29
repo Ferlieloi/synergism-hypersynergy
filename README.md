@@ -55,11 +55,7 @@ The mod comes from one of two GitHub repos: `Ferlieloi` (Live, the default) or `
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
-Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the code in [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js).
-
-**Example:**
-
-![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/bookmark_v2.png?raw=true)  
+Create a new bookmark in your browser, with any name. As its URL, paste the whole content of [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js) (it starts with `javascript:`).
 
 Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
 
