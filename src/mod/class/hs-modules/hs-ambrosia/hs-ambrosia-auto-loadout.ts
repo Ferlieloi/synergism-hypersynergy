@@ -145,7 +145,7 @@ export class HSAmbrosiaAutoLoadout {
             // Cx11 goes back to 0 at every singularity: checked at each click, the dialogs are shown meanwhile.
             // Without the save (bookmarklet): always answered at once.
             const cx11Level = HSGlobal.exposedPlayer?.cubeUpgrades?.[61];
-            if (cx11Level === undefined || cx11Level >= 100) {
+            if (cx11Level === undefined || (cx11Level ?? 0) >= 100) {
                 HSGameDialogs.act('autoLoadoutTime', { confirm: 'ok', alert: 'dismiss' }, () => this.#switchLoadoutForCode(timeLoadoutBtn, timeLoadout));
             } else {
                 HSUI.Notify('Auto-Loadout Time: Cx11 is not maxed, so the time code is shown for you to time it (an instant answer would always lose)', { notificationType: 'default' });

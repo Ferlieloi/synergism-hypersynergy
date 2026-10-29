@@ -493,7 +493,7 @@ export class HSAmbrosia extends HSModule
      * the live player (the same fields as a save). Without the live player, no slot is shown.
      */
     public async matchActiveLoadoutToLoadedSave(): Promise<void> {
-        const player = HSGlobal.exposedPlayer as unknown as GameData | undefined;
+        const player = HSGlobal.exposedPlayer;
         if (!player) { await this.resetActiveLoadout(); return; }
         await this.performInitialActiveLoadoutMatch(player);
     }

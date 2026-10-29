@@ -1,27 +1,11 @@
 /*
     The game's player data, two views of it:
     - GameData: what getGameData() returns, the live player or the parsed save. Every read of game data goes through it.
-    - PlayerData: HSGlobal.exposedPlayer, the live player as the patcher exposes it (see its own comment).
+    - PlayerData: HSGlobal.exposedPlayer, the live player as the patcher exposes it: the same fields, writable.
 */
 
-import type {
-    AmbrosiaUpgradeNames,
-    ProgressiveAchievements,
-    RedAmbrosiaNames,
-    RuneKeys,
-    SingularityChallengeDataKeys,
-    TalismanCraftItems,
-    TalismanKeys
-} from './hs-gamedata-api-types'
-
-export type BuyAmount = 1 | 10 | 100 | 1000 | 10000 | 100000
-export type OcteractUpgrades = string
 export type RuneBlessingKeys = string
 export type RuneSpiritKeys = string
-export type ShopUpgradeNames = string
-export type SingularityChallenge = SingularityChallengeStatus
-
-export type SingularityDataKeys = keyof goldenQuarkUpgrades
 
 declare const gameDecimalBrand: unique symbol
 declare const gameCountBrand: unique symbol
@@ -39,8 +23,6 @@ export type GameDecimal = { readonly [gameDecimalBrand]: true }
  */
 export type GameCount = { readonly [gameCountBrand]: true }
 
-
-export type ArrayStartingWithNull<T> = [null, ...T[]]
 // The game stores these modes as numbers (enums in its Toggles.ts); old string saves are converted on load.
 export enum AutoResetModes {
   amount = 0,
@@ -49,10 +31,6 @@ export enum AutoResetModes {
 export enum AutoAscensionModes {
   amount = 0,
   percentage = 1
-}
-export enum AutoAscensionResetModes {
-  c10Completions = 0,
-  realAscensionTime = 1
 }
 
 
@@ -65,46 +43,6 @@ export type HepteractKeys =
   | 'accelerator'
   | 'acceleratorBoost'
   | 'multiplier'
-
-export interface HepteractValues {
-  BAL: number
-  TIMES_CAP_EXTENDED: number
-  AUTO: boolean
-}
-
-export interface PlayerAnts {
-  producers: Record<string, {
-    purchased: number
-    generated: GameDecimal
-  }>
-  masteries: Record<string, {
-    mastery: number
-    highestMastery: number
-  }>
-  upgrades: Record<string, number>
-  crumbs: GameDecimal
-  crumbsThisSacrifice: GameDecimal
-  crumbsEverMade: GameDecimal
-  immortalELO: number
-  rebornELO: number
-  highestRebornELODaily: Array<{ elo: number; sacrificeId: number }>
-  highestRebornELOEver: Array<{ elo: number; sacrificeId: number }>
-  quarksGainedFromAnts: number
-  antSacrificeCount: number
-  currentSacrificeId: number
-  toggles: {
-    autobuyProducers: boolean
-    autobuyMasteries: boolean
-    autobuyUpgrades: boolean
-    maxBuyProducers: boolean
-    maxBuyUpgrades: boolean
-    autoSacrificeEnabled: boolean
-    autoSacrificeThreshold: number
-    autoSacrificeMode: number | string
-    alwaysSacrificeMaxRebornELO: boolean
-    onlySacrificeMaxRebornELO: boolean
-  }
-}
 
 /**
  * Represents the state of an ascension building.
@@ -884,510 +822,18 @@ export interface progressiveAchievements {
 }
 
 /**
- * The live player as the patcher exposes it (HSGlobal.exposedPlayer), roughly vanilla's Player type. Hand-written:
- * nothing compares it with the live player yet. Its big numbers and counts are GameDecimal / GameCount, as in GameData.
- * Code that reads game data uses GameData (getGameData()); this type is for direct reads and writes of the live player.
- */
-export interface PlayerData {
-  firstPlayed: string
-  worlds: GameCount
-  coins: GameDecimal
-  coinsThisPrestige: GameDecimal
-  coinsThisTranscension: GameDecimal
-  coinsThisReincarnation: GameDecimal
-  coinsTotal: GameDecimal
-
-  firstOwnedCoin: number
-  firstGeneratedCoin: GameDecimal
-  firstProduceCoin: number
-
-  secondOwnedCoin: number
-  secondGeneratedCoin: GameDecimal
-  secondProduceCoin: number
-
-  thirdOwnedCoin: number
-  thirdGeneratedCoin: GameDecimal
-  thirdProduceCoin: number
-
-  fourthOwnedCoin: number
-  fourthGeneratedCoin: GameDecimal
-  fourthProduceCoin: number
-
-  fifthOwnedCoin: number
-  fifthGeneratedCoin: GameDecimal
-  fifthProduceCoin: number
-
-  firstOwnedDiamonds: number
-  firstGeneratedDiamonds: GameDecimal
-  firstProduceDiamonds: number
-
-  secondOwnedDiamonds: number
-  secondGeneratedDiamonds: GameDecimal
-  secondProduceDiamonds: number
-
-  thirdOwnedDiamonds: number
-  thirdGeneratedDiamonds: GameDecimal
-  thirdProduceDiamonds: number
-
-  fourthOwnedDiamonds: number
-  fourthGeneratedDiamonds: GameDecimal
-  fourthProduceDiamonds: number
-
-  fifthOwnedDiamonds: number
-  fifthGeneratedDiamonds: GameDecimal
-  fifthProduceDiamonds: number
-
-  firstOwnedMythos: number
-  firstGeneratedMythos: GameDecimal
-  firstProduceMythos: number
-
-  secondOwnedMythos: number
-  secondGeneratedMythos: GameDecimal
-  secondProduceMythos: number
-
-  thirdOwnedMythos: number
-  thirdGeneratedMythos: GameDecimal
-  thirdProduceMythos: number
-
-  fourthOwnedMythos: number
-  fourthGeneratedMythos: GameDecimal
-  fourthProduceMythos: number
-
-  fifthOwnedMythos: number
-  fifthGeneratedMythos: GameDecimal
-  fifthProduceMythos: number
-
-  firstOwnedParticles: number
-  firstGeneratedParticles: GameDecimal
-  firstProduceParticles: number
-
-  secondOwnedParticles: number
-  secondGeneratedParticles: GameDecimal
-  secondProduceParticles: number
-
-  thirdOwnedParticles: number
-  thirdGeneratedParticles: GameDecimal
-  thirdProduceParticles: number
-
-  fourthOwnedParticles: number
-  fourthGeneratedParticles: GameDecimal
-  fourthProduceParticles: number
-
-  fifthOwnedParticles: number
-  fifthGeneratedParticles: GameDecimal
-  fifthProduceParticles: number
-
-  ants: PlayerAnts
-
-  ascendBuilding1: {
-    cost: number
-    owned: number
-    generated: GameDecimal
-    multiplier: number
-  }
-  ascendBuilding2: {
-    cost: number
-    owned: number
-    generated: GameDecimal
-    multiplier: number
-  }
-  ascendBuilding3: {
-    cost: number
-    owned: number
-    generated: GameDecimal
-    multiplier: number
-  }
-  ascendBuilding4: {
-    cost: number
-    owned: number
-    generated: GameDecimal
-    multiplier: number
-  }
-  ascendBuilding5: {
-    cost: number
-    owned: number
-    generated: GameDecimal
-    multiplier: number
-  }
-
-  multiplierBought: number
-
-  acceleratorBought: number
-
-  acceleratorBoostBought: number
-
-  upgrades: number[]
-
-  prestigeCount: number
-  transcendCount: number
-  reincarnationCount: number
-
-  prestigePoints: GameDecimal
-  transcendPoints: GameDecimal
-  reincarnationPoints: GameDecimal
-
-  prestigeShards: GameDecimal
-  transcendShards: GameDecimal
-  reincarnationShards: GameDecimal
-
-  toggles: Record<number, boolean>
-
-  challengecompletions: number[]
-  highestchallengecompletions: number[]
-  challenge15Exponent: number
-
-  retrychallenges: boolean
-  currentChallenge: {
-    transcension: number
-    reincarnation: number
-    ascension: number
-  }
-
-  obtainium: GameDecimal
-  maxObtainium: GameDecimal
-
-  // Ignore the first index. The other 25 are shaped in a 5x5 grid similar to the production appearance
-  researches: number[]
-
-  unlocks: {
-    coinone: boolean
-    cointwo: boolean
-    cointhree: boolean
-    coinfour: boolean
-    prestige: boolean
-    generation: boolean
-    transcend: boolean
-    reincarnate: boolean
-    rrow1: boolean
-    rrow2: boolean
-    rrow3: boolean
-    rrow4: boolean
-    anthill: boolean
-    blessings: boolean
-    spirits: boolean
-    talismans: boolean
-    ascensions: boolean
-    tesseracts: boolean
-    hypercubes: boolean
-    platonics: boolean
-    hepteracts: boolean
-  }
-  achievements: number[]
-  progressiveAchievements: Record<ProgressiveAchievements, number>
-
-  prestigenomultiplier: boolean
-  prestigenoaccelerator: boolean
-  transcendnomultiplier: boolean
-  transcendnoaccelerator: boolean
-  reincarnatenomultiplier: boolean
-  reincarnatenoaccelerator: boolean
-  prestigenocoinupgrades: boolean
-  transcendnocoinupgrades: boolean
-  transcendnocoinorprestigeupgrades: boolean
-  reincarnatenocoinupgrades: boolean
-  reincarnatenocoinorprestigeupgrades: boolean
-  reincarnatenocoinprestigeortranscendupgrades: boolean
-  reincarnatenocoinprestigetranscendorgeneratorupgrades: boolean
-
-  crystalUpgrades: number[]
-  crystalUpgradesCost: number[]
-
-  runes: Record<RuneKeys, GameDecimal>
-  runeBlessings: Record<RuneBlessingKeys, GameDecimal>
-  runeSpirits: Record<RuneSpiritKeys, GameDecimal>
-
-  offerings: GameDecimal
-  maxOfferings: GameDecimal
-
-  prestigecounter: number
-  transcendcounter: number
-  reincarnationcounter: number
-  offlinetick: number
-
-  prestigeamount: number
-  transcendamount: number
-  reincarnationamount: number
-
-  fastestprestige: number
-  fastesttranscend: number
-  fastestreincarnate: number
-
-  resetToggleModes: {
-    prestige: AutoResetModes
-    transcend: AutoResetModes
-    reincarnation: AutoResetModes
-    ascension: AutoAscensionModes
-  }
-
-  tesseractAutoBuyerToggle: boolean
-  tesseractAutoBuyerAmount: number
-
-  coinbuyamount: BuyAmount
-  crystalbuyamount: BuyAmount
-  mythosbuyamount: BuyAmount
-  particlebuyamount: BuyAmount
-  offeringbuyamount: BuyAmount
-  tesseractbuyamount: BuyAmount
-
-  shoptoggles: {
-    coin: boolean
-    prestige: boolean
-    transcend: boolean
-    generators: boolean
-    reincarnate: boolean
-  }
-
-  // create a Map with keys defaulting to boolean
-  codes: Map<number, boolean>
-
-  shopUpgrades: Record<ShopUpgradeNames, number>
-
-  shopPotionsConsumed: {
-    offering: number
-    obtainium: number
-  }
-
-  shopConfirmationToggle: boolean
-  shopBuyMaxToggle: boolean | 'TEN' | 'ANY'
-  shopHideToggle: boolean
-  autoPotionTimer: number
-  autoPotionTimerObtainium: number
-
-  autoSacrificeToggle: boolean
-  autoBuyFragment: boolean
-  autoFortifyToggle: boolean
-  autoResearchToggle: boolean
-  researchBuyMaxToggle: boolean
-  autoResearchMode: 'cheapest' | 'manual'
-  autoResearch: number
-  autoSacrifice: number
-  sacrificeTimer: number
-  quarkstimer: number
-  goldenQuarksTimer: number
-
-  antSacrificeTimer: number
-  antSacrificeTimerReal: number
-
-  talismans: Record<TalismanKeys, Record<TalismanCraftItems, GameDecimal>>
-
-  talismanShards: GameDecimal
-  commonFragments: GameDecimal
-  uncommonFragments: GameDecimal
-  rareFragments: GameDecimal
-  epicFragments: GameDecimal
-  legendaryFragments: GameDecimal
-  mythicalFragments: GameDecimal
-
-  buyTalismanShardPercent: number
-
-  ascensionCount: number
-  ascensionCounter: number
-  ascensionCounterReal: number
-  ascensionCounterRealReal: number
-  autoOpenCubes: boolean
-  openCubes: number
-  autoOpenTesseracts: boolean
-  openTesseracts: number
-  autoOpenHypercubes: boolean
-  openHypercubes: number
-  autoOpenPlatonicsCubes: boolean
-  openPlatonicsCubes: number
-  cubeUpgrades: ArrayStartingWithNull<number>
-  cubeUpgradesBuyMaxToggle: boolean
-  autoCubeUpgradesToggle: boolean
-  autoPlatonicUpgradesToggle: boolean
-  platonicUpgrades: number[]
-  maxPlatToggle: boolean
-  wowCubes: GameCount
-  wowTesseracts: GameCount
-  wowHypercubes: GameCount
-  wowPlatonicCubes: GameCount
-  wowAbyssals: number
-  wowOcteracts: number
-  totalWowOcteracts: number
-  cubeBlessings: {
-    accelerator: number
-    multiplier: number
-    offering: number
-    runeExp: number
-    obtainium: number
-    antSpeed: number
-    antSacrifice: number
-    antELO: number
-    talismanBonus: number
-    globalSpeed: number
-  }
-  tesseractBlessings: {
-    accelerator: number
-    multiplier: number
-    offering: number
-    runeExp: number
-    obtainium: number
-    antSpeed: number
-    antSacrifice: number
-    antELO: number
-    talismanBonus: number
-    globalSpeed: number
-  }
-  hypercubeBlessings: {
-    accelerator: number
-    multiplier: number
-    offering: number
-    runeExp: number
-    obtainium: number
-    antSpeed: number
-    antSacrifice: number
-    antELO: number
-    talismanBonus: number
-    globalSpeed: number
-  }
-  platonicBlessings: {
-    cubes: number
-    tesseracts: number
-    hypercubes: number
-    platonics: number
-    hypercubeBonus: number
-    taxes: number
-    scoreBonus: number
-    globalSpeed: number
-  }
-  ascendShards: GameDecimal
-  autoAscend: boolean
-  roombaResearchIndex: number
-  ascStatToggles: Record<number, boolean>
-
-  corruptions: Corruptions
-
-  constantUpgrades: ArrayStartingWithNull<number>
-  history: Record<string, unknown[]>
-  historyShowPerSecond: boolean
-
-  autoChallengeRunning: boolean
-  autoChallengeIndex: number
-  autoChallengeToggles: boolean[]
-  autoChallengeTimer: {
-    start: number
-    exit: number
-    enter: number
-  }
-
-  runeBlessingBuyAmount: number
-  runeSpiritBuyAmount: number
-
-  autoTesseracts: boolean[]
-
-  saveString: string
-  exporttest: string | boolean
-
-  dayCheck: Date | null
-  dayTimer: number
-  cubeOpenedDaily: number
-  cubeQuarkDaily: number
-  tesseractOpenedDaily: number
-  tesseractQuarkDaily: number
-  hypercubeOpenedDaily: number
-  hypercubeQuarkDaily: number
-  platonicCubeOpenedDaily: number
-  platonicCubeQuarkDaily: number
-
-  version: string
-
-  rngCode: number
-  skillCode?: number
-  promoCodeTiming: {
-    time: number
-  }
-
-  hepteracts: Record<HepteractKeys, HepteractValues>
-
-  /*hepteractCrafts: {
-    chronos: HepteractCraft
-    hyperrealism: HepteractCraft
-    quark: HepteractCraft
-    challenge: HepteractCraft
-    abyss: HepteractCraft
-    accelerator: HepteractCraft
-    acceleratorBoost: HepteractCraft
-    multiplier: HepteractCraft
-  }*/
-  overfluxOrbs: number
-  overfluxOrbsAutoBuy: boolean
-  overfluxPowder: number
-  dailyPowderResetUses: number
-  autoWarpCheck: boolean
-
-  singularityCount: number
-  highestSingularityCount: number
-  singularityCounter: number
-  singularityElevatorTarget: number
-  singularityElevatorSlowClimb: boolean
-  singularityElevatorLocked: boolean
-  goldenQuarks: number
-  quarksThisSingularity: number
-  totalQuarksEver: number
-  hotkeys: Record<number, string[]>
-  iconSet: number
-  notation: 'Pure Scientific' | 'Pure Engineering' | 'Default'
-
-  goldenQuarkUpgrades: Record<SingularityDataKeys, {
-    level?: number
-    freeLevel: number
-    goldenQuarksInvested: number
-  }>
-
-  octUpgrades: Record<OcteractUpgrades, {
-    level?: number
-    freeLevel: number
-    octeractsInvested: number
-  }>
-
-  ambrosiaUpgrades: Record<AmbrosiaUpgradeNames, {
-    ambrosiaInvested: number
-    blueberriesInvested: number
-  }>
-
-  dailyCodeUsed: boolean
-  hepteractAutoCraftPercentage: number
-  octeractTimer: number
-
-  insideSingularityChallenge: boolean
-  singularityChallenges: Record<
-    SingularityChallengeDataKeys,
-    SingularityChallenge
-  >
-
-  ambrosia: number
-  lifetimeAmbrosia: number
-
-  blueberryTime: number
-  spentBlueberries: number
-
-  blueberryLoadouts: BlueberryLoadouts
-  blueberryLoadoutMode: 'saveTree' | 'loadTree'
-
-  redAmbrosia: number
-  lifetimeRedAmbrosia: number
-  redAmbrosiaTime: number
-  redAmbrosiaUpgrades: Record<RedAmbrosiaNames, number>
-
-  singChallengeTimer: number
-
-  lastExportedSave: number
-
-  seed: number[]
-
-  stats: {
-    totalAddCodesUsed: number
-  }
-}
-
-/**
  * What getGameData() returns: the live player when the patcher exposes it, else the parsed save.
- * Fields whose shape differs between the two (checked with local/design/gds-live-player/bench/drive2.mjs)
+ * Fields whose shape differs between the two (found by comparing a live player with its own save in the browser)
  * are typed GameDecimal / GameCount, so every read goes through a helper that accepts both.
  * Deeply read-only: the mod never writes into the game's data through it.
  */
 export type GameData = DeepReadonly<GameDataFields>
+
+/**
+ * The live player as the patcher exposes it (HSGlobal.exposedPlayer): GameData's fields, writable, for direct reads
+ * and writes of the live player. Code that reads game data uses GameData (getGameData()).
+ */
+export type PlayerData = GameDataFields
 
 /** Every field readonly, down to array items; functions and branded values kept as they are. */
 export type DeepReadonly<T> =
@@ -1396,6 +842,17 @@ export type DeepReadonly<T> =
     : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T
 
+/**
+ * The fields of vanilla's Player (src/types/Synergism.ts) the mod reads. Compared on 2026-10-29 with vanilla's master
+ * (commit d1d7d4ab, 2026-10-27): no field here is missing from vanilla, and these vanilla fields aren't declared, as no
+ * feature reads them through this type (add one when a feature needs it):
+ * - firstPaidCoin … fifthPaidCoin, and the same for Diamonds, Mythos and Particles (Decimals)
+ * - multiplierPaid, acceleratorPaid, acceleratorBoostPaid (Decimals)
+ * - autoAscendRules
+ * - headerLayouts (the header files read it through their own casts)
+ * - spentPurpleHoney, purpleUpdateQuarkRefundAwarded
+ * - synthesisUpgrades, synthesisAutomationUnlocked, synthesisAutomationEnabled
+ */
 interface GameDataFields {
     firstPlayed: string; // ISO Date string
 

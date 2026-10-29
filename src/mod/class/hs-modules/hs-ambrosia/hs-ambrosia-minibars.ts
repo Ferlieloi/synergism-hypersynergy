@@ -11,13 +11,6 @@ import type { HSAmbrosiaGameDataLink } from "./hs-ambrosia-parts";
 import minibarCSS from "inline:../../../resource/css/module/hs-ambrosia-minibars.css";
 import { HSMinibarResize } from "../../hs-core/header/hs-minibar-resize";
 
-/** What the minibars read, from the live player or a GDS save: fields GameData doesn't declare added. */
-type HSMinibarsPlayer = GameData & {
-    purpleHoneyProgress?: number;
-    purpleReactor?: { lifetimePurpleHoney?: number };
-    purpleReactorUpgrades?: Record<string, number>;
-};
-
 /**
  * Class: HSAmbrosiaMinibars
  * IsExplicitHSModule: No
@@ -192,7 +185,7 @@ export class HSAmbrosiaMinibars {
      */
     #updateLiveMinibars(): void {
         if (!this.#berryMinibarsEnabled || document.hidden) return;
-        const player = HSGlobal.exposedPlayer as unknown as HSMinibarsPlayer | null;
+        const player = HSGlobal.exposedPlayer;
         if (!player) return;
 
         this.#refreshMinibarSizesOnChange(player);
@@ -221,7 +214,7 @@ export class HSAmbrosiaMinibars {
      * accelerator and the purple reactor's requirement upgrades. On a change, one forced save (a few ms) and the
      * sizes are computed again.
      */
-    #refreshMinibarSizesOnChange(player: HSMinibarsPlayer): void {
+    #refreshMinibarSizesOnChange(player: GameData): void {
         if (this.#minibarSizesRefreshing || performance.now() < this.#minibarSizesRetryAt) return;
         const signature = HSAmbrosiaMinibars.#minibarSizeInputs(player);
         if (signature === this.#minibarSizesSignature) return;
@@ -250,7 +243,7 @@ export class HSAmbrosiaMinibars {
     }
 
     /** The live player's inputs of the three bar-size formulas (calculateRequiredBlueberryTime and the others). */
-    static #minibarSizeInputs(player: HSMinibarsPlayer): string {
+    static #minibarSizeInputs(player: GameData): string {
         const rounded = (value: unknown) => Number(value ?? 0).toPrecision(3);
         const parts: unknown[] = [
             rounded(player.lifetimeAmbrosia),
@@ -310,7 +303,7 @@ export class HSAmbrosiaMinibars {
         // The subscription will render the bars as soon as data arrives.
         if (!gameDataAPI || !gameData) return;
 
-        const data = gameData as HSMinibarsPlayer;
+        const data = gameData;
         const redUnlocked = (data.singularityChallenges?.noAmbrosiaUpgrades?.completions ?? 0) > 0;
         const purpleUnlocked = (data.singularityChallenges?.taxmanLastStand?.completions ?? 0) > 0;
         this.#drawMinibars({
