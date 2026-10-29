@@ -4318,12 +4318,19 @@ function findCubeLuckOptSingleFixed(
   stat: "cube" | "oct",
   budget: number,
   useOverlapBreak: boolean,
+  sampledUpperBound: boolean,
 ): Loadout {
     const evaluator = createCubeLuckEvaluator(table2, stat, useOverlapBreak)
+    // The sampled upper bound is not exact: it assumes a Luck-Cube row scores
+    // at least as much as every cheaper row, but that frontier is
+    // two-dimensional (Ambrosia, Blueberries), so a dearer row can score less
+    // and the bound can skip the best left row. Only the Max SR rows use it:
+    // their SR level is fixed before this search, their cubes are a bonus, and
+    // without it their Blueberry repairs make the search several times slower.
     let power = 0
     let j = 0
     const upperBounds: Array<{ budget: number; table2Index: number }> = []
-    if (table1.length > 100 && table2.length > 100) {
+    if (sampledUpperBound && table1.length > 100 && table2.length > 100) {
       for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
         for (let next = j; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
           const table2Index = Math.round(next)
@@ -4397,6 +4404,7 @@ function findCubeLuckOpt(
   stat: "cube" | "oct",
   budget = stats.amb,
   sharedLevelsFixed = false,
+  sampledUpperBound = false,
 ): Loadout {
     if (!sharedLevelsFixed) {
       // Frontier-building helpers cache factorised stats for their own merge.
@@ -4410,9 +4418,9 @@ function findCubeLuckOpt(
     if (!sharedLevelsFixed && shouldGroupSharedLevelSearch(table1, table2)) {
       const groups = groupBySharedLevels(table1, table2)
       if (groups !== undefined) {
-        let best = findCubeLuckOpt(table1, groups[0], stat, budget, true)
+        let best = findCubeLuckOpt(table1, groups[0], stat, budget, true, sampledUpperBound)
         for (let index = 1; index < groups.length; index++) {
-          const candidate = findCubeLuckOpt(table1, groups[index], stat, budget, true)
+          const candidate = findCubeLuckOpt(table1, groups[index], stat, budget, true, sampledUpperBound)
           const statDiff = candidate.getStat(stat) - best.getStat(stat)
           if (statDiff > 0 || (statDiff === 0 && candidate.cost < best.cost))
             best = candidate
@@ -4426,15 +4434,13 @@ function findCubeLuckOpt(
       stat,
       budget,
       sharedLevelsFixed || fixedSharedLevels(table1, table2),
+      sampledUpperBound,
     )
 }
 
 type CubeLuckFindOptState = {
     budget: number;
-    power: number;
     j: number;
-    upperBounds: Array<{ budget: number; table2Index: number }>;
-    upperBoundIndex: number;
     opt: CubeLuckEvaluation;
     // Blueberries this budget's row still has to pay after the search.
     reserve: number;
@@ -4484,14 +4490,12 @@ function findCubeLuckOptsForBudgets(
 
     const useOverlapBreak = sharedLevelsFixed || fixedSharedLevels(table1, table2)
     if (budgets.length === 1 && !strict)
-      return [findCubeLuckOptSingleFixed(table1, table2, stat, budgets[0], useOverlapBreak)]
+      return [findCubeLuckOptSingleFixed(table1, table2, stat, budgets[0], useOverlapBreak, false)]
     const evaluator = createCubeLuckEvaluator(table2, stat, useOverlapBreak)
+    // No sampled upper bound: not exact (findCubeLuckOptSingleFixed)
     const states: CubeLuckFindOptState[] = budgets.map((budget, budgetIndex) => ({
       budget,
-      power: 0,
       j: 0,
-      upperBounds: [],
-      upperBoundIndex: 0,
       opt: {
         left: table1[0],
         cost: table1[0].cost,
@@ -4501,30 +4505,6 @@ function findCubeLuckOptsForBudgets(
       },
       reserve: blueberryReserves?.[budgetIndex] ?? 0,
     }))
-
-    if (table1.length > 100 && table2.length > 100) {
-      for (const state of states) {
-        let sampledJ = 0
-        for (let i = 1; Math.round(i) <= table1.length; i += (table1.length - 1) / 100) {
-          for (let next = sampledJ; Math.round(next) < table2.length; next += (table2.length - 1) / 100) {
-            const table2Index = Math.round(next)
-            const loadout1 = table1.at(-Math.round(i))!
-            const loadout2 = table2[table2Index]
-            if (loadout2.cost > state.budget)
-              break
-            const union = evaluator.evaluate(loadout1, table2Index, !strict)
-            if (2 * union.cost - loadout1.cost - loadout2.cost > state.budget) {
-              state.upperBounds.push({ budget: loadout1.cost, table2Index })
-              break
-            }
-            if (union.cost > state.budget || union.blueberryCost + state.reserve > stats.blueberries)
-              continue
-            state.power = Math.max(state.power, union.value)
-            sampledJ = next
-          }
-        }
-      }
-    }
 
     const rawUnionCache: Array<CubeLuckEvaluation | undefined> = new Array(table2.length)
     const fixedUnionCache: Array<CubeLuckEvaluation | undefined> = new Array(table2.length)
@@ -4545,15 +4525,6 @@ function findCubeLuckOptsForBudgets(
       const ref = table1.at(-i)!
       currentRef = ref
       for (const state of states) {
-        while (state.upperBoundIndex < state.upperBounds.length
-          && state.upperBounds[state.upperBoundIndex].budget > ref.cost)
-          state.upperBoundIndex++
-        const upperBound = state.upperBounds[state.upperBoundIndex]
-        if (upperBound !== undefined) {
-          const boundUnion = unionAt(upperBound.table2Index, false)
-          if (boundUnion.value < state.power)
-            continue
-        }
         if (table2[state.j].cost > state.budget)
           continue
         // In strict mode the unions are never repaired, and one over this
@@ -5822,7 +5793,8 @@ export class HSHeaterOptimizer {
                 minimalSR1.satisfyPrerequisites()
                 output.sr1 = [unaffordableRow(minimalSR1, true)];
             } else {
-                loadoutSR1 = findCubeLuckOpt(tableSR1Cube, tableCache.tableLuckCube, "cube")
+                // Inexact but fast search: SR1's level is set, its cubes are a bonus
+                loadoutSR1 = findCubeLuckOpt(tableSR1Cube, tableCache.tableLuckCube, "cube", stats.amb, false, true)
                 if (!loadoutSR1) HSLogger.error('[HeaterDiag] calculateSR: sr1 - findOpt returned undefined', 'HSHeaterOptimizer');
                 output.sr1 = [withPenaltyReliefTitle(loadoutSR1.generateOutput("singReduction", maxLoadout, null, "cube"),
                   loadoutSR1.upgradeLevels.ambrosiaSingReduction1 ?? 0)];
@@ -5841,7 +5813,8 @@ export class HSHeaterOptimizer {
                 minimalSR2.upgradeLevels.ambrosiaSingReduction2 = 1
                 output.sr2 = [unaffordableRow(minimalSR2, true)];
             } else {
-                loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube")
+                // Inexact but fast search, as for SR1
+                loadoutSR2 = findCubeLuckOpt(tableSR2Cube, tableCache.tableLuckCube, "cube", stats.amb, false, true)
                 if (!loadoutSR2) HSLogger.error('[HeaterDiag] calculateSR: sr2 - findOpt returned undefined', 'HSHeaterOptimizer');
                 output.sr2 = [withPenaltyReliefTitle(loadoutSR2.generateOutput("singReduction", maxLoadout, null, "cube"),
                   loadoutSR2.upgradeLevels.ambrosiaSingReduction2 ?? 0)];
