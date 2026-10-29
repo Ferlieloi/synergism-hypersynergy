@@ -32,6 +32,8 @@ export async function openAutosingChallengesModal(
     const workingChallenges: Challenge[] = [...stratData];
     // Separator index: where new actions are inserted
     let separatorIndex: number = workingChallenges.length;
+    // Index of the step loaded in the fields by ✎ (null: the button adds a new step)
+    let editingIndex: number | null = null;
 
     // Precompute map for fast special-action label lookup
     const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map(a => [a.value, a.label] as const));
@@ -47,6 +49,10 @@ export async function openAutosingChallengesModal(
     const isIfJumpEntry = (entry: Challenge): entry is IsJumpChallenge => { return entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump !== undefined; };
     // Format milliseconds for display
     const formatMs = (ms: number) => `${ms.toLocaleString()}ms`;
+    // A step's number, from 1 (the logs' "Step N"), and the class of the step being edited
+    const renderStepNumber = (index: number) => `<div class="hs-challenge-step-no">${index + 1}</div>`;
+    const editingClass = (index: number) => index === editingIndex ? " hs-challenge-item-editing" : "";
+    const renderActionId = (id: number) => `<span class="hs-challenge-action-id">(${id})</span>`;
 
     // Render an IF jump block (conditional logic)
     const renderIfBlock = (entry: IsJumpChallenge, index: number) => {
@@ -60,6 +66,7 @@ export async function openAutosingChallengesModal(
                 challenge ${entry.ifJump.ifJumpChallenge}
                 ${entry.ifJump.ifJumpOperator}
                 ${entry.ifJump.ifJumpValue}
+                ${renderActionId(IF_JUMP_VALUE)}
             `;
         } else {
             // Stored C15 mode
@@ -70,14 +77,16 @@ export async function openAutosingChallengesModal(
                 Stored C15${multiplierDisplay}
                 ${entry.ifJump.ifJumpOperator}
                 Current C15
+                ${renderActionId(IF_JUMP_VALUE)}
             `;
         }
 
         return `
-        <div class="hs-challenge-item hs-if-block"
+        <div class="hs-challenge-item hs-if-block${editingClass(index)}"
             data-index="${index}"
             data-if-index="${index}"
             data-if-id="${entry.ifJump.id}">
+            ${renderStepNumber(index)}
             <div class="hs-challenge-drag-handle">⋮⋮</div>
             
             <div class="hs-if-content">
@@ -100,6 +109,7 @@ export async function openAutosingChallengesModal(
         <div class="hs-challenge-item hs-if-target"
             data-jump-for="${ifIndex}"
             data-if-id="${ifId}">
+            <div class="hs-challenge-step-no"></div>
             <div class="hs-challenge-drag-handle">⋮⋮</div>
             ↳ Jump here (IF)
         </div>
@@ -115,12 +125,13 @@ export async function openAutosingChallengesModal(
         const showMax = !isSpecial || specialActionInputs.includes("maxTime");
 
         const displayText = isSpecial
-            ? `<strong>${actionLabel}</strong>`
+            ? `<strong>${actionLabel}</strong> ${renderActionId(entry.challengeNumber)}`
             : `Challenge ${entry.challengeNumber}
      (${entry.challengeCompletions} completions)`;
 
         return `
-        <div class="hs-challenge-item" data-index="${index}">
+        <div class="hs-challenge-item${editingClass(index)}" data-index="${index}">
+            ${renderStepNumber(index)}
             <div class="hs-challenge-drag-handle">⋮⋮</div>
             <div class="hs-challenge-item-text">
                 ${displayText}
@@ -232,7 +243,7 @@ export async function openAutosingChallengesModal(
             <div class="hs-challenges-input-label">Special Action:</div>
                 <select id="hs-challenge-action-select" class="hs-challenges-input">
                     <option value="">None (Standard Challenge)</option>
-                    ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.label}</option>`).join("")}
+                    ${SPECIAL_ACTIONS.map(a => `<option value="${a.value}">${a.value} - ${a.label}</option>`).join("")}
                 </select>
             </div>
             <div class="hs-challenges-input-row">
@@ -318,8 +329,7 @@ export async function openAutosingChallengesModal(
         parentModalId
     });
     HSAutosingEditorWindows.opened('challenges', modalInstance);
-    // State variables for editing, drag-and-drop, and jump target management
-    let editingIndex: number | null = null;
+    // State variables for drag-and-drop and jump target management
     let draggedElement: HTMLElement | null = null;
     let draggedIndex: number | null = null;
     let placeholder: HTMLElement | null = null;
@@ -824,8 +834,18 @@ export async function openAutosingChallengesModal(
         }
     };
 
+    // Marks the row of the step being edited (none when editingIndex is null)
+    const showEditingRow = () => {
+        document.querySelectorAll(`#${modalId} .hs-challenge-item-editing`).forEach(e => e.classList.remove("hs-challenge-item-editing"));
+        if (editingIndex !== null) {
+            document.querySelector(`#${modalId} .hs-challenge-item[data-index="${editingIndex}"]`)?.classList.add("hs-challenge-item-editing");
+        }
+    };
+
     // Reset all input fields to default values and update input state
     const resetInputs = () => {
+        // The comment field held the edited step's comment: don't carry it over to the next added step
+        if (editingIndex !== null) (document.getElementById("hs-challenge-comment-input") as HTMLInputElement).value = "";
         (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
         (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = "0";
@@ -836,6 +856,7 @@ export async function openAutosingChallengesModal(
         (document.getElementById("hs-if-jump-mode") as HTMLSelectElement).value = "challenges";
         (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Add Action/Challenge";
         editingIndex = null;
+        showEditingRow();
         updateInputState();
     };
 
@@ -933,9 +954,16 @@ export async function openAutosingChallengesModal(
 
             // EDIT
             if (id.startsWith("hs-challenge-edit-")) {
+                // ✎ on the step being edited: leave edit mode
+                if (editingIndex === Number(el.dataset.index)) {
+                    resetInputs();
+                    return;
+                }
                 editingIndex = Number(el.dataset.index);
+                showEditingRow();
                 const item = workingChallenges[editingIndex];
                 const actionLabel = getSpecialActionLabel(item);
+                const updateLabel = `Update step ${editingIndex + 1}`;
 
                 // Set comment field for editing
                 (document.getElementById("hs-challenge-comment-input") as HTMLInputElement).value = item.comment ?? "";
@@ -965,7 +993,7 @@ export async function openAutosingChallengesModal(
                     (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
                     (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
 
-                    (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+                    (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = updateLabel;
 
                     updateInputState();
                     return;
@@ -985,7 +1013,7 @@ export async function openAutosingChallengesModal(
 
                 (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = String(item.challengeWaitTime);
                 (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = String(item.challengeWaitBefore ?? 0);
-                (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = "Update Action";
+                (document.getElementById("hs-challenge-add-btn") as HTMLElement).textContent = updateLabel;
                 updateInputState();
             }
 

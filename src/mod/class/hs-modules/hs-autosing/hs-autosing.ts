@@ -20,6 +20,7 @@ import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
 import { MAIN_VIEW_BUTTON_IDS } from "../../../types/module-types/hs-gamestate-types";
+import { escapeLogText } from "../hs-heater/hs-heater-utils";
 
 declare const HS_DEV_BUILD: boolean;
 
@@ -73,6 +74,10 @@ export class HSAutosing extends HSModule {
     #restartTimer?: number;
     #targetSingularity = 0;
     #prevActionTime: number = 0;
+    // Steps added to (and removed from) the first phase at load: the logs number steps as the strategy editor does
+    #insertedStepsPhase: AutosingStrategyPhase | null = null;
+    #insertedStepCount: number = 0;
+    #removedStepCount: number = 0;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
     #storedC15: number = 0;
@@ -850,19 +855,24 @@ export class HSAutosing extends HSModule {
             }
         ];
 
+        this.#insertedStepsPhase = null;
         if (!strategy || !Array.isArray(strategy.strategy) || strategy.strategy.length === 0) return;
         const firstPhase = strategy.strategy[0];
         if (!firstPhase || !Array.isArray(firstPhase.strat)) return;
         let nbSteps = stepsToInsert.length;
+        this.#removedStepCount = 0;
 
         // Remove probable pre-existing Obt switch as first step
         if (firstPhase.strat[0]?.challengeNumber === 304) {
             firstPhase.strat.splice(0, 1);
             nbSteps--;
+            this.#removedStepCount = 1;
         }
 
         // Insert at the start
         firstPhase.strat.unshift(...stepsToInsert);
+        this.#insertedStepsPhase = firstPhase;
+        this.#insertedStepCount = stepsToInsert.length;
 
         // Adjust ifJump.ifJumpIndex for all steps in the first phase
         for (const step of firstPhase.strat) {
@@ -982,8 +992,6 @@ export class HSAutosing extends HSModule {
         const phaseConfig = this.#strategyPhaseRanges!.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
         if (!phaseConfig) { HSLogger.warn(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context); this.stopAutosing(); return; }
         this.#phaseConfigByStage.set(stage, phaseConfig);
-
-        HSLogger.debug(() => `Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         await this.#executePhase(phaseConfig);
     }
 
@@ -1002,6 +1010,8 @@ export class HSAutosing extends HSModule {
         const phaseLabelOverride = options?.phaseLabelOverride;
         const ignoreObserverActivated = options?.ignoreObserverActivated;
         const phaseLabel = phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
+        // At every phase run: the step lines below don't name their phase
+        HSLogger.debug(() => `===== Executing phase: ${phaseLabel} =====`, this.context);
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
@@ -1034,6 +1044,13 @@ export class HSAutosing extends HSModule {
         if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.endPass(passRecord, 'done');
     }
 
+    /** A step's number in the strategy editor (from 1), 0 for a step inserted at load. */
+    #stepNumber(phaseConfig: AutosingStrategyPhase, index: number): number {
+        if (phaseConfig !== this.#insertedStepsPhase) return index + 1;
+        if (index < this.#insertedStepCount) return 0;
+        return index + 1 - this.#insertedStepCount + this.#removedStepCount;
+    }
+
     /** @param passRecord Dev builds only: the recorder's pass, which gets the time slept before the step */
     async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number, passRecord?: HSAutosingPassRecord): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
@@ -1047,37 +1064,50 @@ export class HSAutosing extends HSModule {
             if (!this.#autosingEnabled) return null;
         }
 
+        // "Step N", as the strategy editor numbers the steps
+        const tag = () => `Step ${this.#stepNumber(phaseConfig, actionIndex)}`;
+        const actionText = () => `${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber} (${challenge.challengeNumber})`;
         switch (challenge.challengeNumber) {
             case SET_CORRUPTION_LEVEL_VALUE:
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);
                 this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
                 break;
             case SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE:
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);
                 await this.#corruptionManager.setLevelMinusFreeLevels(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
-                return this.#handleIfJumpAction(challenge);
+                return this.#handleIfJumpAction(challenge, phaseConfig, tag);
             default:
                 if (challenge.challengeNumber >= 100) {
-                    HSLogger.debug(() => `Step#${actionIndex} - SA: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
+                    HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);
                     await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
                 } else {
-                    HSLogger.debug(() => `Step#${actionIndex} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
+                    HSLogger.debug(() => `${tag()} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
                     await this.#waitForCompletion(
                         challenge.challengeNumber,
                         challenge.challengeCompletions ?? 0,
                         challenge.challengeMaxTime,
                         challenge.challengeWaitTime,
+                        tag,
                     );
                 }
         }
         return null;
     }
 
-    #handleIfJumpAction(challenge: Challenge): number | null {
+    #handleIfJumpAction(challenge: Challenge, phaseConfig: AutosingStrategyPhase, tag: () => string): number | null {
         const jump = challenge.ifJump;
         const mode = jump?.ifJumpMode;
         const operator = jump?.ifJumpOperator;
         const jumpIndex = jump?.ifJumpIndex;
+        // condition: "C9 (12) > 5", with the values read
+        const logIfJump = (condition: string, jumped: boolean) => HSLogger.debug(() => {
+            const outcome = !jumped ? "no jump"
+                : jumpIndex! >= phaseConfig.strat.length ? "jump to the end of the phase"
+                : `jump to step ${this.#stepNumber(phaseConfig, jumpIndex!)}`;
+            return `${tag()} - IF ${escapeLogText(condition)} (${IF_JUMP_VALUE}): ${outcome}`;
+        }, this.context);
 
         switch (mode) {
             case "challenges": {
@@ -1093,6 +1123,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && completions > value) ||
                         (operator === "<" && completions < value));
+                logIfJump(`C${ifIdx} (${completions}) ${operator} ${value}`, shouldJump);
                 if (shouldJump) {
                     return jumpIndex;
                 }
@@ -1107,6 +1138,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && threshold > c15Score) ||
                         (operator === "<" && threshold < c15Score));
+                logIfJump(`stored C15 × 10^${exponent} (${threshold}) ${operator} current C15 (${c15Score})`, shouldJump);
                 if (shouldJump) {
                     return jumpIndex;
                 }
@@ -1226,11 +1258,13 @@ export class HSAutosing extends HSModule {
     // CHALLENGE RESOLUTION
     // ============================================================================
 
+    /** @param stepTag The strategy step's "Step N", for the timeout warning (none outside a step) */
     async #waitForCompletion(
         challengeIndex: number,
         minCompletions: number,
         maxTime: number = 99999999,
-        waitTime: number = 0
+        waitTime: number = 0,
+        stepTag?: () => string
     ): Promise<void> {
         const sleepInterval = 5;
         const accessor = this.#getChallengeAccessor(challengeIndex);
@@ -1278,7 +1312,7 @@ export class HSAutosing extends HSModule {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
-                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
                     }
                     return;
                 }
@@ -1306,7 +1340,7 @@ export class HSAutosing extends HSModule {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
-                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
                     }
                     return;
                 }
