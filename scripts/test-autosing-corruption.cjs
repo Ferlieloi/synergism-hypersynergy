@@ -54,6 +54,13 @@ async function main() {
                         this.#challengeProgressElements[2] = progress;
                     }
                     runPhaseForTest(phase: AutosingStrategyPhase) { return this.#executePhase(phase); }
+                    runFinalStageForTest(aoagPhase: AutosingStrategyPhase) {
+                        this.#strategy = { strategyName: 'Test', strategy: [], aoagPhase };
+                        this.#strategyPhaseRanges = [];
+                        this.#finalPhaseConfig = { startPhase: 'singularity', endPhase: 'end', strat: [] };
+                        this.#ambrosiaSwitchesOff = true;
+                        return this.#performFinalStage();
+                    }
                     cancelForTest() { this.#autosingEnabled = false; }
                     init(): Promise<void> {`),
                 loader: 'ts',
@@ -70,9 +77,11 @@ async function main() {
     });
     const phase = steps => ({ startPhase: 'challenge10', endPhase: 'end', strat: steps });
     const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
     const originalState = globalThis.__corruptionTest;
     let scenarios = 0;
     try {
+        globalThis.window = {};
         const setup = ({ next = 5, used = 5, cap = 100, live = true, confirm = false, challenge = 0 } = {}) => {
             const state = globalThis.__corruptionTest = {
                 player: { corruptions: { next, used }, currentChallenge: { ascension: challenge } },
@@ -129,6 +138,41 @@ async function main() {
         assert.equal(state.dialogWaits, 0);
         scenarios++;
 
+        // Ordinary phase passes preserve the current run, including C15's coins, with no implicit reset.
+        ({ runner, state } = setup({ challenge: 15 }));
+        await runner.runPhaseForTest(phase([step(152)]));
+        await runner.runPhaseForTest(phase([step(152)]));
+        assert.deepEqual(state.events, [['action', 5], ['action', 5]]);
+        assert.equal(state.c15Coins, 42);
+        assert.equal(state.player.currentChallenge.ascension, 15);
+        scenarios++;
+
+        // An explicit Ascend still resets once before the following action.
+        ({ runner, state } = setup());
+        await runner.runPhaseForTest(phase([step(104), step(152)]));
+        assert.deepEqual(state.events, [['ascend', 5], ['action', 5]]);
+        scenarios++;
+
+        // AOAG's hard-coded level 0 is applied before its actions, even outside a challenge.
+        for (const challenge of [0, 15]) {
+            ({ runner, state } = setup({ challenge }));
+            await runner.runFinalStageForTest(phase([step(152)]));
+            assert.deepEqual(state.events, [
+                ['select', 0], ['ascend', 0], ['action', 0], ['ascend', 0],
+            ], 'only the corruption reset and the explicit end-of-singularity reset should run');
+            if (challenge) assert.equal(state.savedC15Score, 42);
+            scenarios++;
+        }
+
+        // A stop while the AOAG reset is confirming must not run the AOAG or final phase afterwards.
+        ({ runner, state } = setup({ confirm: true }));
+        const stoppedFinal = runner.runFinalStageForTest(phase([step(152)]));
+        runner.cancelForTest();
+        state.confirm();
+        await stoppedFinal;
+        assert.deepEqual(state.events, [['select', 0], ['ascend', 0]]);
+        scenarios++;
+
         // A corruption change inside C15 exits it before resetting, preserving the score; the old Exit step is a no-op.
         for (const live of [true, false]) {
             ({ runner, state } = setup({ challenge: 15, live }));
@@ -150,7 +194,7 @@ async function main() {
         // A set-level action in the middle of a phase resets before the following action.
         ({ runner, state } = setup());
         await runner.runPhaseForTest(phase([step(152), step(403, { corruptionLevel: 20 }), step(152)]));
-        assert.deepEqual(state.events, [['ascend', 5], ['action', 5], ['select', 20], ['ascend', 20], ['action', 20]]);
+        assert.deepEqual(state.events, [['action', 5], ['select', 20], ['ascend', 20], ['action', 20]]);
         scenarios++;
 
         // The game's cap wins, on both the live-player and bookmarklet paths, including repeated phase passes.
@@ -214,6 +258,8 @@ async function main() {
     } finally {
         if (originalDocument === undefined) delete globalThis.document;
         else globalThis.document = originalDocument;
+        if (originalWindow === undefined) delete globalThis.window;
+        else globalThis.window = originalWindow;
         if (originalState === undefined) delete globalThis.__corruptionTest;
         else globalThis.__corruptionTest = originalState;
     }
