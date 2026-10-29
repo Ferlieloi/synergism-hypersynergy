@@ -40,6 +40,21 @@ export const parseGameDataDecimal = (value: unknown, fallback?: Decimal): Decima
         }
     }
 
+    if (typeof value === 'object') {
+        // The live player's Decimals come from the game's own bundle, so they aren't `instanceof` ours
+        // and our constructor throws on them: read their fields instead
+        const { mantissa, exponent } = value as { mantissa?: unknown; exponent?: unknown };
+        if (typeof mantissa === 'number' && typeof exponent === 'number') {
+            return Decimal.fromMantissaExponent_noNormalize(mantissa, exponent);
+        }
+
+        // The live player's counters (worlds, cubes) are classes whose valueOf() gives the number
+        const primitive = value.valueOf();
+        if (primitive !== value) {
+            return parseGameDataDecimal(primitive, fallback);
+        }
+    }
+
     try {
         return new Decimal(value as any);
     } catch {

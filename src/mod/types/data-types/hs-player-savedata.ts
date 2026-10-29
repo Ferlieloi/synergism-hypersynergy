@@ -22,6 +22,22 @@ export type SingularityChallenge = SingularityChallengeStatus
 
 export type SingularityDataKeys = keyof goldenQuarkUpgrades
 
+declare const gameDecimalBrand: unique symbol
+declare const gameCountBrand: unique symbol
+
+/**
+ * A big number read from getGameData(): a string in a save, the game's own Decimal on the live player
+ * (not `instanceof` the mod's Decimal, and `<` on it compares strings). Opaque on purpose:
+ * read it with parseGameDataDecimal / parseGameDataNumber (hs-gamedata-utils.ts).
+ */
+export type GameDecimal = { readonly [gameDecimalBrand]: true }
+
+/**
+ * A count read from getGameData() (worlds, cubes): a number in a save, a game class whose valueOf()
+ * gives the number on the live player. Opaque on purpose: read it with Number() or parseGameDataNumber.
+ */
+export type GameCount = { readonly [gameCountBrand]: true }
+
 export type WowCubes = number
 export type WowTesseracts = number
 export type WowHypercubes = number
@@ -100,7 +116,7 @@ export interface PlayerAnts {
 export interface AscendBuilding {
     cost: number;
     owned: number;
-    generated: string; // Often large numbers stored as strings
+    generated: GameDecimal;
     multiplier: number;
 }
 
@@ -160,31 +176,31 @@ export interface Unlocks {
  * Raw values are normalized to Decimal for internal runtime consistency.
  */
 export interface Runes {
-    speed: string; // scientific notation string
-    duplication: string;
-    prism: string;
-    thrift: string;
-    superiorIntellect: string;
-    infiniteAscent: string;
-    antiquities: string;
-    horseShoe: string;
-    topHat: string;
-    finiteDescent: string;
+    speed: GameDecimal;
+    duplication: GameDecimal;
+    prism: GameDecimal;
+    thrift: GameDecimal;
+    superiorIntellect: GameDecimal;
+    infiniteAscent: GameDecimal;
+    antiquities: GameDecimal;
+    horseShoe: GameDecimal;
+    topHat: GameDecimal;
+    finiteDescent: GameDecimal;
 }
 
 interface Ants {
     producers: Record<string, {
         purchased: number;
-        generated: string; // scientific notation string
+        generated: GameDecimal;
     }>;
     masteries: Record<string, {
         mastery: number;
         highestMastery: number;
     }>;
     upgrades: Record<string, number>;
-    crumbs: string;
-    crumbsThisSacrifice: string;
-    crumbsEverMade: string;
+    crumbs: GameDecimal;
+    crumbsThisSacrifice: GameDecimal;
+    crumbsEverMade: GameDecimal;
     immortalELO: number;
     rebornELO: number;
     highestRebornELODaily: Array<{
@@ -425,13 +441,13 @@ export interface AntSacrificeHistoryEntry {
 }
 
 export interface TalismanShards {
-    shard: string; // Very large number stored as string
-    commonFragment: string;
-    uncommonFragment: string;
-    rareFragment: string;
-    epicFragment: string;
-    legendaryFragment: string;
-    mythicalFragment: string;
+    shard: GameDecimal;
+    commonFragment: GameDecimal;
+    uncommonFragment: GameDecimal;
+    rareFragment: GameDecimal;
+    epicFragment: GameDecimal;
+    legendaryFragment: GameDecimal;
+    mythicalFragment: GameDecimal;
 }
 
 export interface Talismans {
@@ -1426,99 +1442,101 @@ export interface PlayerData {
 }
 
 /**
- * The Player save data structure, using JSON-friendly primitives for raw save input.
+ * What getGameData() returns: the parsed save today, the live player too once GDS reads it.
+ * Fields whose shape differs between the two (checked with local/design/gds-live-player/bench/drive2.mjs)
+ * are typed GameDecimal / GameCount, so every read goes through a helper that accepts both.
  */
 export interface GameData {
     firstPlayed: string; // ISO Date string
 
-    worlds: number;
-    coins: Decimal;
-    coinsThisPrestige: string;
-    coinsThisTranscension: string;
-    coinsThisReincarnation: string;
-    coinsTotal: string;
+    worlds: GameCount;
+    coins: GameDecimal;
+    coinsThisPrestige: GameDecimal;
+    coinsThisTranscension: GameDecimal;
+    coinsThisReincarnation: GameDecimal;
+    coinsTotal: GameDecimal;
 
     firstOwnedCoin: number;
-    firstGeneratedCoin: string;
+    firstGeneratedCoin: GameDecimal;
     firstCostCoin: string;
     firstProduceCoin: number;
     secondOwnedCoin: number;
-    secondGeneratedCoin: string;
+    secondGeneratedCoin: GameDecimal;
     secondCostCoin: string;
     secondProduceCoin: number;
     thirdOwnedCoin: number;
-    thirdGeneratedCoin: string;
+    thirdGeneratedCoin: GameDecimal;
     thirdCostCoin: string;
     thirdProduceCoin: number;
     fourthOwnedCoin: number;
-    fourthGeneratedCoin: string;
+    fourthGeneratedCoin: GameDecimal;
     fourthCostCoin: string;
     fourthProduceCoin: number;
     fifthOwnedCoin: number;
-    fifthGeneratedCoin: string;
+    fifthGeneratedCoin: GameDecimal;
     fifthCostCoin: string;
     fifthProduceCoin: number;
 
     firstOwnedDiamonds: number;
-    firstGeneratedDiamonds: string;
+    firstGeneratedDiamonds: GameDecimal;
     firstCostDiamonds: string;
     firstProduceDiamonds: number;
     secondOwnedDiamonds: number;
-    secondGeneratedDiamonds: string;
+    secondGeneratedDiamonds: GameDecimal;
     secondCostDiamonds: string;
     secondProduceDiamonds: number;
     thirdOwnedDiamonds: number;
-    thirdGeneratedDiamonds: string;
+    thirdGeneratedDiamonds: GameDecimal;
     thirdCostDiamonds: string;
     thirdProduceDiamonds: number;
     fourthOwnedDiamonds: number;
-    fourthGeneratedDiamonds: string;
+    fourthGeneratedDiamonds: GameDecimal;
     fourthCostDiamonds: string;
     fourthProduceDiamonds: number;
     fifthOwnedDiamonds: number;
-    fifthGeneratedDiamonds: string;
+    fifthGeneratedDiamonds: GameDecimal;
     fifthCostDiamonds: string;
     fifthProduceDiamonds: number;
 
     firstOwnedMythos: number;
-    firstGeneratedMythos: string;
+    firstGeneratedMythos: GameDecimal;
     firstCostMythos: string;
     firstProduceMythos: number;
     secondOwnedMythos: number;
-    secondGeneratedMythos: string;
+    secondGeneratedMythos: GameDecimal;
     secondCostMythos: string;
     secondProduceMythos: number;
     thirdOwnedMythos: number;
-    thirdGeneratedMythos: string;
+    thirdGeneratedMythos: GameDecimal;
     thirdCostMythos: string;
     thirdProduceMythos: number;
     fourthOwnedMythos: number;
-    fourthGeneratedMythos: string;
+    fourthGeneratedMythos: GameDecimal;
     fourthCostMythos: string;
     fourthProduceMythos: number;
     fifthOwnedMythos: number;
-    fifthGeneratedMythos: string;
+    fifthGeneratedMythos: GameDecimal;
     fifthCostMythos: string;
     fifthProduceMythos: number;
 
     firstOwnedParticles: number;
-    firstGeneratedParticles: string;
+    firstGeneratedParticles: GameDecimal;
     firstCostParticles: string;
     firstProduceParticles: number;
     secondOwnedParticles: number;
-    secondGeneratedParticles: string;
+    secondGeneratedParticles: GameDecimal;
     secondCostParticles: string;
     secondProduceParticles: number;
     thirdOwnedParticles: number;
-    thirdGeneratedParticles: string;
+    thirdGeneratedParticles: GameDecimal;
     thirdCostParticles: string;
     thirdProduceParticles: number;
     fourthOwnedParticles: number;
-    fourthGeneratedParticles: string;
+    fourthGeneratedParticles: GameDecimal;
     fourthCostParticles: string;
     fourthProduceParticles: number;
     fifthOwnedParticles: number;
-    fifthGeneratedParticles: string;
+    fifthGeneratedParticles: GameDecimal;
     fifthCostParticles: string;
     fifthProduceParticles: number;
 
@@ -1545,12 +1563,12 @@ export interface GameData {
     transcendCount: number;
     reincarnationCount: number;
 
-    prestigePoints: string; // Can be large/decimal stored as string
-    transcendPoints: string;
-    reincarnationPoints: string;
-    prestigeShards: string;
-    transcendShards: string;
-    reincarnationShards: string;
+    prestigePoints: GameDecimal;
+    transcendPoints: GameDecimal;
+    reincarnationPoints: GameDecimal;
+    prestigeShards: GameDecimal;
+    transcendShards: GameDecimal;
+    reincarnationShards: GameDecimal;
 
     // Automation & Toggles
     toggles: Toggles;
@@ -1562,8 +1580,8 @@ export interface GameData {
     highestChallenge15Exponent: number;
     retrychallenges: boolean;
     currentChallenge: CurrentChallenge;
-    obtainium: string;
-    maxObtainium: string;
+    obtainium: GameDecimal;
+    maxObtainium: GameDecimal;
 
     obtainiumtimer: number;
     researches: number[]; // Array of research levels
@@ -1591,10 +1609,10 @@ export interface GameData {
 
     // Runes & Talismans
     runes: Runes;
-    runeBlessings: Record<RuneBlessingKeys, string>;
-    runeSpirits: Record<RuneSpiritKeys, string>;
-    offerings: string;
-    maxOfferings: string;
+    runeBlessings: Record<RuneBlessingKeys, GameDecimal>;
+    runeSpirits: Record<RuneSpiritKeys, GameDecimal>;
+    offerings: GameDecimal;
+    maxOfferings: GameDecimal;
 
     // Timers & Counters
     prestigecounter: number;
@@ -1625,7 +1643,7 @@ export interface GameData {
     tesseractbuyamount: number;
     shoptoggles: ShopToggles;
 
-    codes: [number, boolean][]; // Array of [codeId, redeemedStatus] tuples
+    codes: unknown; // [codeId, redeemed] tuples in a save, a Map on the live player; not read by the mod
 
     shopUpgrades: ShopUpgrades;
 
@@ -1655,13 +1673,13 @@ export interface GameData {
 
     talismans: Talismans;
 
-    talismanShards: string; // Large values stored as string
-    commonFragments: string;
-    uncommonFragments: string;
-    rareFragments: string;
-    epicFragments: string;
-    legendaryFragments: string;
-    mythicalFragments: string;
+    talismanShards: GameDecimal;
+    commonFragments: GameDecimal;
+    uncommonFragments: GameDecimal;
+    rareFragments: GameDecimal;
+    epicFragments: GameDecimal;
+    legendaryFragments: GameDecimal;
+    mythicalFragments: GameDecimal;
 
     buyTalismanShardPercent: number;
     ascensionCount: number;
@@ -1683,10 +1701,10 @@ export interface GameData {
     autoPlatonicUpgradesToggle: boolean;
     platonicUpgrades: number[];
     maxPlatToggle: boolean;
-    wowCubes: number;
-    wowTesseracts: number;
-    wowHypercubes: number;
-    wowPlatonicCubes: number;
+    wowCubes: GameCount;
+    wowTesseracts: GameCount;
+    wowHypercubes: GameCount;
+    wowPlatonicCubes: GameCount;
     wowAbyssals: number;
     wowOcteracts: number;
     totalWowOcteracts: number;
@@ -1696,7 +1714,7 @@ export interface GameData {
     hypercubeBlessings: CubeTesseractHypercubeBlessings;
     platonicBlessings: PlatonicBlessings;
 
-    ascendShards: string; // Large values stored as string
+    ascendShards: GameDecimal;
     autoAscend: boolean;
     autoAscendMode: AutoAscensionResetModes;
     autoAscendThreshold: number;
@@ -1727,7 +1745,7 @@ export interface GameData {
     saveString: string; // Format string for save file names
     exporttest: boolean; // Internal/debug flag?
 
-    dayCheck: string; // ISO Date string
+    dayCheck: unknown; // ISO date string in a save, a Date on the live player; not read by the mod
     dayTimer: number;
     cubeOpenedDaily: number;
     cubeQuarkDaily: number;

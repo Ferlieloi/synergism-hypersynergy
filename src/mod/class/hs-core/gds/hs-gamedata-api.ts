@@ -1,6 +1,6 @@
 import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { AchievementRewards, AmbrosiaUpgradeNames, AntProducers, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, LAST_ANT_PRODUCER, OcteractUpgradeKey, RedAmbrosiaUpgradeKey, ProgressiveAchievement, ProgressiveAchievements, SingularityChallengeDataKeys, SingularityDebuffs, PCoinUpgradeEffects, NumberStatLine, RuneKeys, TalismanKeys, SynergismLevelMilestones, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types";
-import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
+import type { GameCount, GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
 import type { PseudoGameData } from "../../../types/data-types/hs-pseudo-data";
@@ -807,7 +807,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     // ======= General Utils =======
     // =============================
 
-    private log10PlusOne(value: number | Decimal): number {
+    private log10PlusOne(value: number | Decimal | GameCount): number {
         return Math.floor(Math.log10(Number(value ?? 0) + 1));
     }
 
@@ -970,10 +970,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const cacheName = 'CubesExpTotal' as keyof CalculationCache;
 
         const calculationVars: number[] = [
-            data.wowCubes,
-            data.wowTesseracts,
-            data.wowHypercubes,
-            data.wowPlatonicCubes,
+            Number(data.wowCubes),
+            Number(data.wowTesseracts),
+            Number(data.wowHypercubes),
+            Number(data.wowPlatonicCubes),
             data.wowAbyssals,
             data.wowOcteracts
         ]
@@ -2528,7 +2528,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     totalRedLuckNoAmb:      redLuckNoAmb,
                     totalRedLuckNoAmbNoBells: redLuckNoAmbNoBells,
                     ambrosiaLuckPer1RedLuckNoAmb: luckConversion,
-                    quarksOwned:            Number(gameData.worlds.valueOf() || 0),
+                    quarksOwned:            Number(gameData.worlds) || 0,
                     qHept:                  gameData.hepteracts.quark.BAL,
                     cubesExp3D:             this.log10PlusOne(gameData.wowCubes),
                     cubesExp4D:             this.log10PlusOne(gameData.wowTesseracts),

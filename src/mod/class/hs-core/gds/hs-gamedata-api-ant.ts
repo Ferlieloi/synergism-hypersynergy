@@ -1,6 +1,7 @@
 import Decimal from "break_infinity.js";
 import { AntUpgrades, CalculationCache, } from "../../../types/data-types/hs-gamedata-api-types";
 import type { AntUpgradeTypeMap, AntUpgradeHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
+import { parseGameDataDecimal } from "./hs-gamedata-utils";
 
 export class AntUpgradeHelper {
     readonly #ctx: AntUpgradeHelperContext;
@@ -165,7 +166,7 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
             const baseExponent = 999999 + env.calculateSigmoidExponential(49000001, n / 3000);
             const bonusExponent = 250 * n;
             const exponent = (baseExponent + bonusExponent) / divisor;
-            const coinMult = Decimal.max(1, Decimal.pow(data?.ants.crumbs ?? 0, exponent));
+            const coinMult = Decimal.max(1, Decimal.pow(parseGameDataDecimal(data?.ants.crumbs), exponent));
             return {
                 crumbToCoinExp: exponent,
                 coinMultiplier: coinMult,

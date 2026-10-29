@@ -356,7 +356,7 @@ export class AchievementHelper {
                 pointValue: 10,
                 unlockCondition: () => this.#ctx.getPrestigePointGain().gte(1e6),
                 group: 'prestigePointGain',
-                reward: { crystalMultiplier: () => Math.max(1, Decimal.log((this.#ctx.getGameData()?.prestigePoints ?? 0), Math.E)) },
+                reward: { crystalMultiplier: () => Math.max(1, Decimal.log(parseGameDataDecimal(this.#ctx.getGameData()?.prestigePoints), Math.E)) },
                 checkReset: () => (this.#ctx.getGameData()?.highestSingularityCount ?? 0) >= 3
             },
             {
