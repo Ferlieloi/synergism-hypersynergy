@@ -23,7 +23,7 @@ const BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
   ['cubes', 'sr'],
   ['oct'],
   ['luck', 'ambOct', 'purple'],
-  ['quarks', 'obtOff'],
+  ['quarks', 'obtOff', 'obtAndOff'],
 ]
 
 const ALL_BRANCHES = BRANCH_GROUPS.flat()

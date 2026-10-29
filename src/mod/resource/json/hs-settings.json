@@ -1870,5 +1870,14 @@
     "settingType": "selectstrings",
     "enabled": true,
     "settingValue": []
+  },
+  "heaterTickedBranches": {
+    "hidden": true,
+    "settingName": "heaterTickedBranches",
+    "settingDescription": "Heater ticked branches",
+    "settingHelpText": "Stores the branches that start unticked and the player ticked in the heater modal.",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": []
   }
 }

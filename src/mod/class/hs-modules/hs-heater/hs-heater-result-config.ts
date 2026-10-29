@@ -120,13 +120,19 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         label: "Obtainium",
         description: "Pre-AOAG OR Post-AOAG, based on the 'Post-AoAG (Obt/Off)' field. You should have pre-AOAG inputs if you want to use it pre-AOAG, and vice versa.",
         section: "obtOff",
-        icon: "Pictures/Default/BlueberryObtainium.png",
+        icon: "Pictures/Default/BlueberryBaseObtainium1.png",
     },
     off: {
         label: "Offering",
         description: "Pre-AOAG OR Post-AOAG, based on the 'Post-AoAG (Obt/Off)' field. You should have pre-AOAG inputs if you want to use it pre-AOAG, and vice versa.",
         section: "obtOff",
-        icon: "Pictures/Default/BlueberryOffering.png",
+        icon: "Pictures/Default/BlueberryBaseOffering1.png",
+    },
+    obtAndOff: {
+        label: "Obt + Off",
+        description: "Raises Obtainium and Offerings together: +10% of either counts the same. The Effect shows both multipliers.\nPre-AOAG OR Post-AOAG, based on the 'Post-AoAG (Obt/Off)' field, like the two loadouts above.",
+        section: "obtOff",
+        icon: "Pictures/Default/BlueberryObtainium.png",
     },
     hyperflux: {
         label: "Hyperflux (H0–H7)",
@@ -227,7 +233,9 @@ export const HEATER_BRANCH_DEFINITIONS = [
     { id: "quarks",    label: "Quarks",                      resultKeys: ["quarks"],                  optionKey: "calculateQuarks" },
     { id: "cubes",     label: "3-7D Cubes",                  resultKeys: ["cubes"],                   optionKey: "calculateCubes" },
     { id: "oct",       label: "Octeracts",                   resultKeys: ["oct"],                     optionKey: "calculateOct" },
-    { id: "obtOff",    label: "Obtainium + Offering",        resultKeys: ["obt", "off"],              optionKey: "calculateOff" },
+    { id: "obtOff",    label: "Obt, Off",                    resultKeys: ["obt", "off"],              optionKey: "calculateOff" },
+    // Starts unticked: it adds 10 to 40 s to a late-game heat. labelNote: greyed after the label
+    { id: "obtAndOff", label: "Obt + Off",                   resultKeys: ["obtAndOff"],               optionKey: "calculateObtAndOff", startsUnticked: true, labelNote: "(slower)" },
     { id: "hyperflux", label: "Hyperflux (p4x4, pre-AoAG)",  resultKeys: ["hyperflux"],               optionKey: "calculateHyperflux" },
     { id: "sr",        label: "Max SR",                      resultKeys: ["sr1", "sr2"],              optionKey: "calculateSR" },
     { id: "ambOct",    label: "Max Amb + Oct",               resultKeys: ["ambOct"],                  optionKey: "calculateAmbOct" },

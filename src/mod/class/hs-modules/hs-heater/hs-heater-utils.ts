@@ -38,6 +38,10 @@ export const formatNumber = (number: number, fixedDecimals = true): string => {
     });
 };
 
+// Between the two numbers of a two-value Effect (Obt + Off: Obtainium, then
+// Offerings), which the results renderer draws after their game icons
+export const HEATER_EFFECT_PAIR_SEPARATOR = ' | ';
+
 export function normalizeHeaterFusion(fusion: number, rBar: number, rSpeed: number): number {
     const normalizedFusion = (fusion > 0 ? 1 : 0) + 0.02 * fusion;
     return rBar > 0 ? normalizedFusion * (rSpeed / rBar) : 0;

@@ -416,6 +416,10 @@ export class HSHeaterUIStyles {
                 border-radius: 4px;
             }
 
+            .hs-heater-active-branch-note {
+                color: #9a9a9a;
+            }
+
             .hs-heater-loadout-buttons {
                 display: flex;
                 align-items: center;
@@ -749,6 +753,23 @@ export class HSHeaterUIStyles {
                 height: 16px;
                 margin: 0 -2px;
                 object-fit: contain;
+            }
+
+            .hs-heater-effect-pair {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+            }
+
+            .hs-heater-effect-icon {
+                width: 16px;
+                height: 16px;
+                object-fit: contain;
+            }
+
+            /* The Offerings pair, apart from the Obtainium one */
+            .hs-heater-effect-icon + .hs-heater-effect-icon {
+                margin-left: 8px;
             }
 
             .hs-heater-json-tooltip-trigger {

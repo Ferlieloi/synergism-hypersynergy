@@ -1,4 +1,4 @@
-import { escapeHtml, formatNumber } from "../hs-heater-utils";
+import { escapeHtml, formatNumber, HEATER_EFFECT_PAIR_SEPARATOR } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
 import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
 import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
@@ -166,6 +166,17 @@ function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLa
     return `${copyButton}${importButton}`;
 }
 
+// Obt + Off's Effect is two numbers, each after its resource's game icon
+function buildEffectHtml(entry: NormalizedHeaterResultEntry, effectValue: unknown): string {
+    const parts = String(effectValue).split(HEATER_EFFECT_PAIR_SEPARATOR);
+    if (entry.key !== "obtAndOff" || parts.length !== 2)
+        return escapeHtml(String(effectValue));
+    return `<span class="hs-heater-effect-pair">`
+        + `<img class="hs-heater-effect-icon" src="Pictures/Default/Obtainium.png" alt="Obtainium" />${escapeHtml(parts[0])}`
+        + `<img class="hs-heater-effect-icon" src="Pictures/Default/Offering.png" alt="Offerings" />${escapeHtml(parts[1])}`
+        + `</span>`;
+}
+
 // Purple rows show the Purple Reactor routing they assume, next to the effect
 // (the other rows of their section have none).
 // Best-routing rows also compare with the current routing and offer to apply
@@ -235,7 +246,7 @@ function buildArraySectionDataRow(
         : `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
     // Effect takes two columns, or shares them with p4x4 eq. With the routing,
     // it stays one cell, split inside (see .hs-heater-split-cell).
-    const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectHtml = buildEffectHtml(entry, rowModel.effectValue);
     const effectTitle = rowModel.effectTitle ? ` title="${escapeHtml(rowModel.effectTitle)}"` : "";
     const effectCell = showRouting
         ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span${effectTitle}>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`

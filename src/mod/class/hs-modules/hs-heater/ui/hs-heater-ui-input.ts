@@ -7,7 +7,7 @@ import { escapeHtml } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "../hs-heater-icon-store";
 import { HSHeaterResultStore } from "../hs-heater-result-store";
 import type { HeaterOptimizerInput } from "../../../../types/data-types/hs-heater-types";
-import type { HeaterBranchId } from "../hs-heater-result-config";
+import type { HeaterBranchDefinition, HeaterBranchId } from "../hs-heater-result-config";
 import { HSInputType } from "../../../../types/module-types/hs-ui-types";
 import {
     exportFieldExtractors,
@@ -95,15 +95,13 @@ export class HSHeaterUIInput {
         };
         this.#exportExalt = Number.isInteger(hsData?.exalt) ? hsData.exalt : null;
         this.#purpleUnlocked = Boolean(hsData?.exalt9Unlocked);
-        const uncheckedBranches = this.getSavedUncheckedBranches();
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
-                // A branch the player never unticked starts ticked
                 HEATER_BRANCH_DEFINITIONS.map((branch) => [
                     branch.id,
-                    (branch.id !== 'purple' || this.#purpleUnlocked) && !uncheckedBranches.includes(branch.id),
+                    (branch.id !== 'purple' || this.#purpleUnlocked) && this.isBranchSavedTicked(branch),
                 ])
             ) as Record<HeaterBranchId, boolean>,
         };
@@ -151,7 +149,7 @@ export class HSHeaterUIInput {
             return `
                 <label class="hs-heater-active-branch" data-branch-id="${branch.id}">
                     <input type="checkbox" id="${fieldId}" class="hs-heater-active-checkbox" ${checked} />
-                    ${branch.label}
+                    ${branch.label}${'labelNote' in branch ? ` <span class="hs-heater-active-branch-note">${branch.labelNote}</span>` : ''}
                 </label>
             `;
         });
@@ -171,15 +169,27 @@ export class HSHeaterUIInput {
         `;
     }
 
-    static getSavedUncheckedBranches(): string[] {
-        const saved = HSSettings.getSetting('heaterUncheckedBranches').getValue() as string[] | null;
+    // Two lists, as most branches start ticked and a slow one (Obt + Off) starts unticked
+    static getSavedBranchList(setting: 'heaterUncheckedBranches' | 'heaterTickedBranches'): string[] {
+        const saved = HSSettings.getSetting(setting).getValue() as string[] | null;
         return Array.isArray(saved) ? saved : [];
+    }
+
+    static #startsUnticked(branch: HeaterBranchDefinition): boolean {
+        return 'startsUnticked' in branch && branch.startsUnticked;
+    }
+
+    // Until the player changes it, a branch is ticked, or unticked if startsUnticked
+    static isBranchSavedTicked(branch: HeaterBranchDefinition): boolean {
+        return this.#startsUnticked(branch)
+            ? this.getSavedBranchList('heaterTickedBranches').includes(branch.id)
+            : !this.getSavedBranchList('heaterUncheckedBranches').includes(branch.id);
     }
 
     static attachBranchCheckboxHandlers(modal: HTMLElement): void {
         const checkboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
         checkboxes.forEach((checkbox) => {
-            checkbox.addEventListener('change', () => this.saveUncheckedBranches(modal));
+            checkbox.addEventListener('change', () => this.saveBranchTicks(modal));
         });
 
         // Only the checkboxes shown: a locked Purple is left alone
@@ -197,7 +207,7 @@ export class HSHeaterUIInput {
                     const branchId = checkbox.id.replace('hs-heater-input-active-', '');
                     checkbox.checked = mode === 'all' || (mode === 'slots' && slotBranches.has(branchId));
                 }
-                this.saveUncheckedBranches(modal);
+                this.saveBranchTicks(modal);
             });
         });
     }
@@ -212,19 +222,22 @@ export class HSHeaterUIInput {
         const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branchId}`);
         if (!checkbox || checkbox.checked) return;
         checkbox.checked = true;
-        this.saveUncheckedBranches(modal);
+        this.saveBranchTicks(modal);
     }
 
     // A branch without a checkbox (locked Purple) keeps what was saved for it
-    static saveUncheckedBranches(modal: HTMLElement): void {
-        const saved = this.getSavedUncheckedBranches();
-        const unchecked = HEATER_BRANCH_DEFINITIONS
+    static saveBranchTicks(modal: HTMLElement): void {
+        const ticked = new Set(HEATER_BRANCH_DEFINITIONS
             .filter((branch) => {
                 const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branch.id}`);
-                return checkbox ? !checkbox.checked : saved.includes(branch.id);
+                return checkbox ? checkbox.checked : this.isBranchSavedTicked(branch);
             })
+            .map((branch) => branch.id));
+        const ids = (startsUnticked: boolean, isTicked: boolean) => HEATER_BRANCH_DEFINITIONS
+            .filter((branch) => this.#startsUnticked(branch) === startsUnticked && ticked.has(branch.id) === isTicked)
             .map((branch) => branch.id);
-        HSSettings.getSetting('heaterUncheckedBranches').setValue(unchecked);
+        HSSettings.getSetting('heaterUncheckedBranches').setValue(ids(false, false));
+        HSSettings.getSetting('heaterTickedBranches').setValue(ids(true, true));
         HSSettings.saveSettingsToStorage();
     }
 
