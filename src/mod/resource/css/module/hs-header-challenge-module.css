@@ -70,10 +70,13 @@
 #hsChallengeProgress .hs-cp-sep,
 #hsChallengeProgress .hs-cp-res { color: #777; }
 
-/* As the game's empty progress modules in edit mode */
-#mainHeader.headerEditMode #hsChallengeProgress > .hs-cp-text:empty::before {
-    content: "Challenge progress";
+/* As the game's empty progress modules in edit mode, also in place of "CØ" */
+#mainHeader.headerEditMode #hsChallengeProgress > .hs-cp-text:is(:empty, :has(> .hs-cp-none))::before {
+    content: "[HS] Challenge progress";
     opacity: 0.6;
+}
+#mainHeader.headerEditMode #hsChallengeProgress .hs-cp-none {
+    display: none;
 }
 
 /* The cell settings (HSHeaderCellSettings) move the text, not the module, which keeps the cell's size */
