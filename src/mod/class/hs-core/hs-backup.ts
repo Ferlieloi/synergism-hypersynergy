@@ -7,7 +7,6 @@ import { HSGameData } from "./gds/hs-gamedata";
 import type { HSGameDataAPI } from "./gds/hs-gamedata-api";
 import { HSGameDialogs } from "./dialogs/hs-game-dialogs";
 import { HSAutosing } from "../hs-modules/hs-autosing/hs-autosing";
-import { HSUtils } from "../hs-utils/hs-utils";
 import backupCSS from "inline:../../resource/css/module/hs-backup.css";
 
 // The game's own localStorage key for its save: the same base64 string as its export file
@@ -298,7 +297,6 @@ export class HSBackup {
             patcher: {
                 exposedPlayer: !!HSGlobal.exposedPlayer,
                 dialogHook: HSGameDialogs.isHookPatched(),
-                autoConfirm: HSUtils.isAutoConfirmPatched(),
                 stage: has('__HS_synergismStage'),
                 i18next: has('__HS_i18next'),
                 exportOutput: has('__HS_EXPORT_OUTPUT_PATCHED'),

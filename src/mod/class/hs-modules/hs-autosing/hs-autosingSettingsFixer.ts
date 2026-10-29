@@ -9,7 +9,6 @@ import { HSUtils } from '../../hs-utils/hs-utils';
 import { HSGlobal } from '../../hs-core/hs-global';
 import { isTesseractAutoBuyPercentageMode } from '../../hs-core/gds/hs-gamedata-utils';
 import { PlayerData } from '../../../types/data-types/hs-player-savedata';
-import { HSGameDialogs } from '../../hs-core/dialogs/hs-game-dialogs';
 
 /**
  * Class: HSAutosingSettingsFixer
@@ -501,22 +500,6 @@ export class HSAutosingSettingsFixer {
                 HSLogger.debug(() => `disableUnwantedSettings: disabled "${settingKey}"`, HSAutosingSettingsFixer.#context);
             }
         }
-        // Older patcher only (auto-confirm without the dialog hook): enable autoConfirmPopups for autosing. With the
-        // hook, or without any patch (bookmarklet), HSGameDialogs answers autosing's dialogs (same test as
-        // setAutosingActive). Tracked with '+' prefix so restore knows to disable it.
-        if (!HSGameDialogs.isHookPatched() && HSUtils.isAutoConfirmPatched()) {
-            const autoConfirmSetting = HSSettings.getSetting('autoConfirmPopups');
-            if (autoConfirmSetting) {
-                if (!autoConfirmSetting.isEnabled()) {
-                    autoConfirmSetting.enable();
-                    disabledSettings.push('+autoConfirmPopups');
-                    HSLogger.debug(() => `disableUnwantedSettings: enabled "autoConfirmPopups" for autosing`, HSAutosingSettingsFixer.#context);
-                }
-            } else {
-                HSLogger.warn(`disableUnwantedSettings: setting "autoConfirmPopups" not found`, HSAutosingSettingsFixer.#context);
-            }
-        }
-
         if (disabledSettings.length > 0) {
             HSLogger.log(`disableUnwantedSettings: disabled ${disabledSettings.length} performance-impacting setting(s) (${disabledSettings.join(', ')})`, HSAutosingSettingsFixer.#context);
         } else {
@@ -527,18 +510,11 @@ export class HSAutosingSettingsFixer {
 
     public static restoreUnwantedSettings(settingsToRestore: string[]): void {
         // Reverse order of disabling. GDS is not in the list: stopAutosing() resumes it before this.
-        // Keys prefixed with '+' were enabled by autosing and must be disabled on restore.
         for (let i = settingsToRestore.length - 1; i >= 0; i--) {
-            const raw = settingsToRestore[i];
-            const inverted = raw.startsWith('+');
-            const settingKey = inverted ? raw.slice(1) : raw;
+            const settingKey = settingsToRestore[i];
             const setting = HSSettings.getSetting(settingKey as keyof HSSettingsDefinition);
             if (setting) {
-                if (inverted) {
-                    setting.disable();
-                } else {
-                    setting.enable();
-                }
+                setting.enable();
                 HSLogger.log(`restoreUnwantedSettings: restored "${settingKey}"`, HSAutosingSettingsFixer.#context);
             } else {
                 HSLogger.warn(`restoreUnwantedSettings: setting "${settingKey}" not found or cannot be restored`, HSAutosingSettingsFixer.#context);

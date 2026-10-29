@@ -533,7 +533,6 @@ function patchBundle(code, options = {}) {
     //    e=>  becomes  (e,__hsO=window.__HS_dialogOrigin?.("confirm",e))=>
     // 2. At the start of the queued action (when the dialog reaches the front of the queue), the mod may answer it:
     //    window.__HS_onDialog(kind, origin) returns { value } to resolve the dialog without showing it, or undefined to show it.
-    // Without the mod's hook (older mod), window.__HS_AUTO_CONFIRM still auto-answers Confirm and Alert, as the old patch did.
     // All 5 or none: with a partial match, the mod falls back to clicking dialogs through the DOM.
     report.dialogHook = false;
     try {
@@ -544,8 +543,6 @@ function patchBundle(code, options = {}) {
             promptWrapper: 'prompt',
             purchasePromptWrapper: 'purchasePrompt'
         };
-        // Old mod versions only know __HS_AUTO_CONFIRM, for these two kinds
-        const legacyAnswers = { confirm: '!0', alert: 'void 0' };
         const wrapperRe = /["'](confirmWrapper|alertWrapper|infoAlertWrapper|promptWrapper|purchasePromptWrapper)["']/g;
         const actionRe = /[\w$.]+\.enqueue\(\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g;
         const dialogHeaderRe = new RegExp(String.raw`(?<![\w$.])[\w$]+\s*=\s*(?:async\s*)?(${PARAMS}|[\w$]+)\s*=>\s*$`, 'd');
@@ -596,20 +593,16 @@ function patchBundle(code, options = {}) {
                     start: site.paramsStart, end: site.paramsEnd,
                     text: `(${list ? `${list},` : ''}${originParam})`
                 });
-                const legacy = legacyAnswers[site.kind];
                 edits.push({
                     start: site.bodyStart, end: site.bodyStart,
-                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);` +
-                        (legacy ? `if(!window.__HS_onDialog&&window.__HS_AUTO_CONFIRM)return Promise.resolve(${legacy});` : '') +
-                        `\n`
+                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);\n`
                 });
             }
             edits.sort((a, b) => b.start - a.start);
             for (const edit of edits) {
                 code = code.slice(0, edit.start) + edit.text + code.slice(edit.end);
             }
-            // __HS_AUTO_CONFIRM_PATCHED: older mod versions check it before relying on __HS_AUTO_CONFIRM
-            topLines.push('window.__HS_DIALOG_HOOK_PATCHED = true;window.__HS_AUTO_CONFIRM_PATCHED = true;');
+            topLines.push('window.__HS_DIALOG_HOOK_PATCHED = true;');
             report.dialogHook = true;
             log('Patched the 5 game dialogs (dialog hook)');
         }

@@ -464,11 +464,11 @@ export class HSAutosing extends HSModule {
         this.#getMaxChallengesFunc = window.__HS_getMaxChallenges ?? null;
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
 
-        // Autosing's dialogs are answered by the dialog hook (HSGameDialogs), or by an older patcher's
-        // auto-confirm (__HS_AUTO_CONFIRM, see HSAutosingSettingsFixer). Without either, HSGameDialogs' watcher clicks them.
-        const areDialogsAnswered = HSGameDialogs.isHookPatched() || HSUtils.isAutoConfirmPatched();
+        // The fast mode needs the dialog hook (HSGameDialogs answers dialogs before they show). Without it (older
+        // patcher), HSGameDialogs' watcher clicks them once shown, and autosing runs in the DOM mode.
+        const isDialogHookPatched = HSGameDialogs.isHookPatched();
 
-        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && areDialogsAnswered && isAfterTackHooked);
+        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && isDialogHookPatched && isAfterTackHooked);
 
         // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
@@ -477,8 +477,7 @@ export class HSAutosing extends HSModule {
             exposedPlayer: ${!!this.#exposedPlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
-            dialogHook: ${HSGameDialogs.isHookPatched()},
-            autoConfirmPatched: ${HSUtils.isAutoConfirmPatched()},
+            dialogHook: ${isDialogHookPatched},
             exportOutputPatched: ${isExportOutputPatched})`;
         if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
@@ -577,7 +576,6 @@ export class HSAutosing extends HSModule {
         // From here, the game's Confirms and Alerts are answered (by the dialog hook, or by the dialog watcher
         // without any patch). Cleared by #restoreHsSettings().
         HSGameDialogs.setAutosingActive(true);
-        // This needs to be done before cacheExposedFunctions since it enables __HS_AUTO_CONFIRM (without the hook).
         // Appended: after a restart, the list still holds what the previous run changed (kept changed meanwhile)
         this.#hsSettingsToRestore = [...this.#hsSettingsToRestore, ...await HSAutosingSettingsFixer.fixAllSettings()];
         if (this.#isStartCancelled()) return;
@@ -783,8 +781,7 @@ export class HSAutosing extends HSModule {
             return false;
         }
         if (gameData.highestSingularityCount < 216) {
-            // window.confirm is the native browser dialog, not the same as the game's
-            // patched confirm/alert hooks, so __HS_AUTO_CONFIRM_PATCHED does NOT intercept this.
+            // window.confirm is the native browser dialog, not one of the game's: the dialog hook doesn't answer it.
             if (!window.confirm(`AutoSing is not fully functional until you completed EXALT6 at least once.`)) {
                 return false;
             }

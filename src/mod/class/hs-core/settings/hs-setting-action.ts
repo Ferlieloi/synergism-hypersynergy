@@ -13,7 +13,6 @@ import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
-import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
 import { HSOcteractHeader } from "../header/hs-octeract-header";
 import { HSHeaderGap } from "../header/hs-header-gap";
@@ -63,21 +62,6 @@ export class HSSettingActions {
 
                 if (notifElement && value && value >= 0 && value <= 1) {
                     notifElement.style.opacity = value.toString();
-                }
-            }
-        },
-
-        // Auto validate Confirm & Alert (not Prompt). Only has an effect without the dialog hook (old patcher):
-        // with the hook, the patcher leaves the answers to HSGameDialogs.
-        autoConfirmPopups: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            if (params.disable && params.disable === true) {
-                HSUtils.setAutoConfirm(false);
-            } else {
-                if (HSUtils.isAutoConfirmPatched()) {
-                    HSUtils.setAutoConfirm(true);
-                } else {
-                    HSLogger.warn("autoConfirmPopups enabled, but __HS_AUTO_CONFIRM not patched", context);
                 }
             }
         },

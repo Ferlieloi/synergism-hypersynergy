@@ -15,8 +15,6 @@ declare global {
         __HS_EXPORT_OUTPUT_PATCHED?: boolean;
         __HS_SILENT_EXPORT?: boolean;
         __HS_SUPPRESS_EXPORT_ONCE?: boolean;
-        __HS_AUTO_CONFIRM_PATCHED?: boolean;
-        __HS_AUTO_CONFIRM?: boolean;
         __HS_DIALOG_HOOK_PATCHED?: boolean;
         __HS_SAVE_IMPORT_HOOK_PATCHED?: boolean;
         __HS_HEADER_MODULES_PATCHED?: boolean;

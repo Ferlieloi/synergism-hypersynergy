@@ -33,7 +33,6 @@ export interface HSSettingsDefinition {
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
-    autoConfirmPopups: AutoConfirmPopupsSetting;
 
     // UI Settings
     hideGameDialogs: HideGameDialogsSetting;
@@ -210,7 +209,6 @@ export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> {
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
-export interface AutoConfirmPopupsSetting extends HSSettingBase<boolean> { }
 
 // Log Settings
 export interface LogTimestampSetting extends HSSettingBase<boolean> { }

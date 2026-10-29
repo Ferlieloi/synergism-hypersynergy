@@ -24,15 +24,6 @@ export class HSUtils {
 
     static #_onAfterTack: ((fn: () => void) => void) | null = null;
 
-    /** The patcher honours __HS_AUTO_CONFIRM (Confirm and Alert). Set before the mod loads, by any patcher version. */
-    static isAutoConfirmPatched(): boolean {
-        return !!window.__HS_AUTO_CONFIRM_PATCHED;
-    }
-
-    static setAutoConfirm(value: boolean): void {
-        window.__HS_AUTO_CONFIRM = value;
-    }
-
     // Reusable MessageChannel for sub-millisecond event-loop yielding.
     // Queue-based so concurrent yields (if ever) work correctly.
     static readonly #_yieldChannel = (() => {
