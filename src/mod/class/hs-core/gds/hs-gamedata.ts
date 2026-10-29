@@ -22,12 +22,14 @@ import { HSModuleOptions } from "../../../types/hs-types";
  * IsExplicitHSModule: Yes
  * Description: 
  *     Core module responsible for fetching, processing, and providing game data to other modules.
- *     Handles Game Data Sniffing (GDS) by capturing the game's saves (btoa/atob hooks), manages pseudo/me data,
- *     and reads the game's consumables and global event. Provides APIs for other modules to access game data.
+ *     Handles Game Data Sniffing (GDS): reads the live player when the patcher exposes it, else captures the game's
+ *     saves (btoa/atob hooks). Manages pseudo/me data, and reads the game's consumables and global event.
+ *     Provides APIs for other modules to access game data.
  */
 export class HSGameData extends HSModule {
-    // --- Save Data & State ---
-    #saveData?: GameData;
+    // --- Game Data & State ---
+    // The live player (exposedPlayer), or the last parsed save without it
+    #gameData?: GameData;
 
     isSteam = false;
 
@@ -51,6 +53,10 @@ export class HSGameData extends HSModule {
     // Bumped by disableGDS(): a start begun under an older generation is cancelled
     #engineGeneration = 0;
     #engineStart?: { generation: number, promise: Promise<void> };
+    // The source the running engine reads (#useLiveSource() at its start), undefined while it is stopped
+    #engineSource?: 'live' | 'save';
+    // Dev tools: read the save even when the live player is exposed. Not kept across a reload
+    #forceSaveSource = false;
     #gdsCSS = `
         #savegame {
             font-size: 0;
@@ -225,13 +231,19 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Forces a save and reads it, whether the GDS engine runs or not (GDS off, paused by autosing).
-     * The game's save handler calls btoa synchronously, so the capture is processed here at once: the hook's microtask
-     * then finds nothing new. Only a changed save is parsed and notified, as on the periodic tick
-     * (a refused save, e.g. during a time warp, leaves the data as it was).
+     * Reads the current data, whether the GDS engine runs or not (GDS off, paused by autosing).
+     * Live source: the live player, at once (it clears the calculation cache).
+     * Save source: forces a save. The game's save handler calls btoa synchronously, so the capture is processed here at
+     * once: the hook's microtask then finds nothing new. Only a changed save is parsed and notified, as on the periodic
+     * tick (a refused save, e.g. during a time warp, leaves the data as it was).
      * @returns Promise<void>
      */
     async forceRefreshGameData(): Promise<void> {
+        if (this.#useLiveSource()) {
+            this.#readLivePlayer();
+            return;
+        }
+
         const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
         // Both have an early return if already patched...
         this.#hackJSNativebtoa();
@@ -388,14 +400,14 @@ export class HSGameData extends HSModule {
      * Also triggers initial loadout match if needed.
      * @returns void
      */
-    #saveDataUpdated() {
-        if (this.#gameDataAPI && this.#saveData) {
-            this.#gameDataAPI._updateGameData(this.#saveData);
+    #gameDataUpdated() {
+        if (this.#gameDataAPI && this.#gameData) {
+            this.#gameDataAPI._updateGameData(this.#gameData);
         }
 
         this.#gameDataSubscribers.forEach((callback) => {
-            if (this.#saveData) {
-                callback(this.#saveData);
+            if (this.#gameData) {
+                callback(this.#gameData);
             } else {
                 HSLogger.debug(() => `Could not call game data change callback. No save data found`, this.context);
             }
@@ -493,6 +505,44 @@ export class HSGameData extends HSModule {
 
     // --- GDS (Game Data Sniffing) Control ---
 
+    /** The live player when the patcher exposes it, unless the dev tools force the save. */
+    #useLiveSource(): boolean {
+        return !!HSGlobal.exposedPlayer && !this.#forceSaveSource;
+    }
+
+    /** Dev tools: whether the save is read even when the live player is exposed. */
+    isSaveSourceForced(): boolean {
+        return this.#forceSaveSource;
+    }
+
+    /**
+     * Dev tools: read the save even when the live player is exposed, to test that path on a patched game.
+     * A running engine restarts on the new source.
+     */
+    async setForceSaveSource(force: boolean): Promise<void> {
+        if (this.#forceSaveSource === force) return;
+        this.#forceSaveSource = force;
+        // The next capture is parsed even if it is the last one seen
+        this.#last_mitm_gamedata = undefined;
+        HSLogger.log(`GDS source: ${force ? 'the save (forced)' : 'the live player when exposed'}`, this.context);
+
+        if (!this.#gdsEnabled) return;
+        await this.disableGDS();
+        await this.enableGDS();
+    }
+
+    /**
+     * The live player as the game data: the same object at every read, so it only clears the calculation cache and
+     * notifies the subscribers.
+     */
+    #readLivePlayer() {
+        const player = HSGlobal.exposedPlayer;
+        if (!player) return;
+
+        this.#gameData = player as unknown as GameData;
+        this.#gameDataUpdated();
+    }
+
     /**
      * Whether the GDS engine is currently running, i.e. the cached game data is kept up to date.
      * Can be false while the GDS setting is ON (engine paused by autosing or a save import).
@@ -565,12 +615,14 @@ export class HSGameData extends HSModule {
     }
 
     async #startEngine(generation: number) {
+        const live = this.#useLiveSource();
+
         // Every wait happens before anything is installed: the start can be cancelled meanwhile
-        if (!this.#manualSaveButton) {
+        if (!live && !this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
         }
 
-        if (!this.#saveinfoElement) {
+        if (!live && !this.#saveinfoElement) {
             this.#saveinfoElement = await HSElementHooker.HookElement('#saveinfo') as HTMLParagraphElement;
         }
 
@@ -580,36 +632,45 @@ export class HSGameData extends HSModule {
             return;
         }
 
-        HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
         if (this.#saveInterval) clearInterval(this.#saveInterval);
 
-        this.#saveInterval = setInterval(() => {
-            if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
-                this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
-            }
-        }, HSGlobal.HSGameData.gdsSpeedMs)
+        if (live) {
+            // No save: the live player is read as it is
+            this.#saveInterval = setInterval(() => this.#readLivePlayer(), HSGlobal.HSGameData.gdsSpeedMs);
+        } else {
+            HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
+            this.#saveInterval = setInterval(() => {
+                if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
+                    this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
+                }
+            }, HSGlobal.HSGameData.gdsSpeedMs)
+        }
 
-        HSLogger.info(`GDS = ON`, this.context);
+        this.#engineSource = live ? 'live' : 'save';
+        HSLogger.info(`GDS = ON (${live ? 'live player' : 'save capture'})`, this.context);
         this.#gdsEnabled = true;
 
+        // Hooked on both sources: "Load from file" reads the save the game decodes
         this.#hackJSNativebtoa();
         this.#hackJSNativeAtob();
-        this.#processCapturedSave();
+        if (live) this.#readLivePlayer();
+        else this.#processCapturedSave();
     }
 
     /**
      * Processes save data from MITM when new encoded save JSON has been captured.
-     * @param forced Also when the GDS engine isn't running (forceRefreshGameData)
+     * Not while the engine reads the live player: the game's own saves (every 5 s) would replace it.
+     * @param forced Also when the GDS engine isn't running (forceRefreshGameData on the save source)
      */
     #processCapturedSave = (forced = false) => {
-        if (!this.#gdsEnabled && !forced) return;
+        if (!forced && (!this.#gdsEnabled || this.#engineSource !== 'save')) return;
 
         if (this.#mitm_gamedata && this.#mitm_gamedata !== this.#last_mitm_gamedata) {
             this.#last_mitm_gamedata = this.#mitm_gamedata;
 
             try {
-                this.#saveData = JSON.parse(this.#mitm_gamedata) as GameData;
-                this.#saveDataUpdated();
+                this.#gameData = JSON.parse(this.#mitm_gamedata) as GameData;
+                this.#gameDataUpdated();
             } catch (error) {
                 HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
             }
@@ -637,6 +698,7 @@ export class HSGameData extends HSModule {
 
         HSLogger.info(`GDS = OFF`, this.context);
         this.#gdsEnabled = false;
+        this.#engineSource = undefined;
     }
 
     /**

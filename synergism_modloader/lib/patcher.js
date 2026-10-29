@@ -434,6 +434,28 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── TALISMANS PATCH — capture Talismans.ts talismans as window.__HS_talismans
+    // The fragments invested in each talisman live in talismans[k].fragmentsInvested; player.talismans only gets a copy
+    // at each save. Found by what it is: the object literal assigned to a variable with exemption as one of its own keys,
+    // holding fragmentsInvested and horseShoe. Wrapped in a call that keeps a reference:
+    //   Te={exemption:{…},…}  becomes  Te=(function(o){window.__HS_talismans=o;return o})({exemption:{…},…})
+    report.talismans = false;
+    try {
+        const talismans = findAssignedObjectLiteral(code, /(?<![\w$.])["']?exemption["']?\s*:/g,
+            ['fragmentsInvested', 'horseShoe'], 'talismans');
+        if (talismans) {
+            const capture = '(function(o){window.__HS_talismans=o;return o})(';
+            code = code.slice(0, talismans.start) + capture + code.slice(talismans.start, talismans.end + 1) + ')' + code.slice(talismans.end + 1);
+            report.talismans = true;
+            log(`Patched talismans (variable=${talismans.name})`);
+        } else {
+            warn('Could not find the talismans object in game bundle');
+        }
+    } catch (e) {
+        warn('Error while patching talismans', e);
+    }
+
+    // ==================================================================================
     // ── GETMAXCHALLENGES PATCH — expose Challenges.ts getMaxChallenges as window.__HS_getMaxChallenges
     // Match challenge-cap behavior without assuming minified variable names.
     report.getMaxChallenges = false;

@@ -8,7 +8,7 @@ export class AntUpgradeHelper {
     readonly #antUpgradeEffectCache = new Map<string, AntUpgradeTypeMap[keyof AntUpgradeTypeMap]>();
     readonly #antUpgradeValueCache = new Map<string, unknown>();
     readonly #antUpgradeActualLevelCache = new Map<AntUpgrades, number>();
-    #lastAntUpgradeGameData?: object;
+    #lastCacheGeneration?: number;
     public readonly antUpgradeData: ReturnType<typeof buildAntUpgradeData>;
 
     constructor(ctx: AntUpgradeHelperContext) {
@@ -33,8 +33,9 @@ export class AntUpgradeHelper {
     #getCachedAntUpgradeActualLevel<K extends AntUpgrades>(antUpgrade: K, data: ReturnType<AntUpgradeHelperContext['getGameData']>): number {
         if (!data) return 0;
 
-        if (this.#lastAntUpgradeGameData !== data) {
-            this.#lastAntUpgradeGameData = data;
+        const generation = this.#ctx.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#antUpgradeActualLevelCache.clear();
             this.#antUpgradeEffectCache.clear();
             this.#antUpgradeValueCache.clear();

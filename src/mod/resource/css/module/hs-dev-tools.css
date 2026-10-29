@@ -146,3 +146,11 @@
     flex-wrap: wrap;
     gap: 6px;
 }
+
+.hs-dev-tools-radio {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 10px;
+    cursor: pointer;
+}

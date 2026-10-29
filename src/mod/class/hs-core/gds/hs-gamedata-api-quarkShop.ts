@@ -12,7 +12,7 @@ const getShopUpgradeTypeBonusLevelsCacheName = (type: ShopUpgradeGroups): string
 
 export class ShopUpgradeHelper {
     readonly #ctx: ShopUpgradeHelperContext;
-    #lastGameData?: object;
+    #lastCacheGeneration?: number;
     readonly #shopUpgradeGroupsCache = new Map<string, ShopUpgradeGroups[]>();
     readonly #isUtilityShopUpgradeCache = new Map<string, boolean>();
     readonly #shopUpgradeTypeBonusLevelCalculationVarsCache = new Map<ShopUpgradeGroups, number[]>();
@@ -28,9 +28,9 @@ export class ShopUpgradeHelper {
     }
     
     #clearCachesIfGameDataChanged(): void {
-        const gameData = this.#ctx.getGameData();
-        if (gameData !== this.#lastGameData) {
-            this.#lastGameData = gameData;
+        const generation = this.#ctx.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#shopUpgradeGroupsCache.clear();
             this.#isUtilityShopUpgradeCache.clear();
             this.#shopUpgradeTypeBonusLevelCalculationVarsCache.clear();

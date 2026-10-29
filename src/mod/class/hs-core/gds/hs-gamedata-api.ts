@@ -196,6 +196,10 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     // calculateSynergismLevel's result for the current data, cleared with the calculation cache
     #synergismLevel: number | undefined;
 
+    // Bumped by clearCache(): the helpers with caches of their own (quark shop, ants, talismans, runes) clear them when it
+    // changes, not when the data object does: the live player stays the same object
+    #cacheGeneration = 0;
+
     // These are imported from hs-gamedata-tables.ts
     #hepteractEffectiveValues = hepteractEffectiveValues;
     readonly #calculationHelperProviders: Array<object> = [];
@@ -619,6 +623,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const quarkShopContext: ShopUpgradeHelperContext = {
             getGameData: () => this.gameData,
+            getCacheGeneration: () => this.#cacheGeneration,
             getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
             getShopUpgradeTypeBonusLevels: (type) => quarkShop.getShopUpgradeTypeBonusLevels(type),
             getShopUpgradeEffects: (upgradeKey, effectKey, mode) => quarkShop.getShopUpgradeEffects(upgradeKey as any, effectKey as any, mode),
@@ -656,6 +661,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const antUpgradeContext: AntUpgradeHelperContext = {
             getGameData: () => this.gameData,
+            getCacheGeneration: () => this.#cacheGeneration,
             getAchievementReward: (rewardName) => achievement.AchRewards[rewardName as AchievementRewards](),
             calculateSigmoidExponential,
             calculateChallenge15Reward: (rewardName) => this.calculateChallenge15Reward(rewardName as any),
@@ -668,6 +674,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const talismanContext: TalismanHelperContext = {
             getGameData: () => this.gameData,
+            getCacheGeneration: () => this.#cacheGeneration,
             getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
             getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
             isShopTalismanUnlocked: () => quarkShop.getShopUpgradeEffects('shopTalisman', 'unlocked') as boolean,
@@ -687,6 +694,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
 
         const runeContext: RuneHelperContext = {
             getGameData: () => this.gameData,
+            getCacheGeneration: () => this.#cacheGeneration,
             getPCoinUpgradeLevel: (upgradeName) => this.getPCoinUpgradeLevel(upgradeName as any),
             getSingularityChallengeEffect: (challengeKey, effectKey) => this.getSingularityChallengeEffect(challengeKey as any, effectKey as any),
             getRuneBonusLevels: (runeName) => this.getRuneBonusLevels(runeName),
@@ -844,6 +852,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     clearCache() {
         this.#calculationCache = clearCalculationCache(this.#calculationCacheTemplate);
         this.#synergismLevel = undefined;
+        this.#cacheGeneration++;
     }
 
     dumpCache() {

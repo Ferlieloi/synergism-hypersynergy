@@ -8,7 +8,7 @@ const RUNE_KEY_INDEX = new Map<RuneKeys, number>(RUNE_KEYS.map((rune, index) => 
 
 export class RuneHelper {
     readonly #ctx: RuneHelperContext;
-    #lastGameData?: GameData;
+    #lastCacheGeneration?: number;
     readonly #runeEffectsCache = new Map<RuneKeys, Map<number, unknown>>();
     readonly #runeEffectiveLevelCache = new Map<RuneKeys, number>();
     readonly #runeFreeLevelsCache = new Map<RuneKeys, number>();
@@ -26,9 +26,9 @@ export class RuneHelper {
     }
 
     #clearCachesIfGameDataChanged(): void {
-        const gameData = this.#ctx.getGameData();
-        if (gameData !== this.#lastGameData) {
-            this.#lastGameData = gameData;
+        const generation = this.#ctx.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#runeEffectsCache.clear();
             this.#runeEffectiveLevelCache.clear();
             this.#runeFreeLevelsCache.clear();

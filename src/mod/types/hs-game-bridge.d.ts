@@ -1,6 +1,7 @@
 import type { HSDialogKind } from '../class/hs-core/dialogs/hs-game-dialogs';
 import type { ConsumableGameEvents } from './data-types/hs-event-data';
-import type { PseudoCoinUpgradeNames } from './data-types/hs-gamedata-api-types';
+import type { PseudoCoinUpgradeNames, TalismanKeys } from './data-types/hs-gamedata-api-types';
+import type { TalismanShards } from './data-types/hs-player-savedata';
 
 /** Hooks supplied by the shared patcher. Optional for bookmarklets and older loaders. */
 declare global {
@@ -35,6 +36,8 @@ declare global {
         __HS_parseSave?: (text: string) => Record<string, unknown> | null;
         __HS_stripHeaderModules?: <T>(player: T) => T;
         __HS_consumables?: Partial<ConsumableGameEvents>;
+        // The game's own Decimals, read through parseGameDataDecimal
+        __HS_talismans?: Readonly<Record<TalismanKeys, { readonly fragmentsInvested: Readonly<TalismanShards> }>>;
         __HS_globalEvent?: unknown;
         __HS_onGlobalEvent?: (event: unknown) => void;
         __HS_pcoinLevels?: Partial<Record<PseudoCoinUpgradeNames, number>>;

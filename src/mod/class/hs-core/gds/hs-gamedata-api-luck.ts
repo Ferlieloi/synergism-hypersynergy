@@ -1,5 +1,6 @@
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { parseGameDataDecimal, parseGameDataNumber } from "./hs-gamedata-utils";
+import { getTalismanFragments } from "./hs-gamedata-api-talisman";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CalculationCache, CalculationMode, CachedValue, HSCalculationComponents, RuneKeys, SingularityDebuffs, TalismanKeys, TalismanTypeMap } from "../../../types/data-types/hs-gamedata-api-types";
 
@@ -113,6 +114,7 @@ export class LuckHelper {
         const pseudoLvl = this.#ctx.getPCoinUpgradeLevel('RED_LUCK_BUFF');
         const pseudoLuck = pseudoLvl ? pseudoLvl * 20 : 0;
         const cube77 = data.cubeUpgrades[77] ?? 0;
+        const horseShoe = getTalismanFragments(data, 'horseShoe');
 
         const calculationVars: number[] = [
             pseudoLuck,
@@ -132,13 +134,13 @@ export class LuckHelper {
             data.ambrosiaUpgrades.ambrosiaBrickOfLead.ambrosiaInvested,
             data.ambrosiaUpgrades.ambrosiaBrickOfLead.purpleAmbrosiaInvested ?? 0,
             data.singularityChallenges.taxmanLastStand.completions,
-            parseGameDataNumber(data.talismans.horseShoe.shard),
-            parseGameDataNumber(data.talismans.horseShoe.commonFragment),
-            parseGameDataNumber(data.talismans.horseShoe.uncommonFragment),
-            parseGameDataNumber(data.talismans.horseShoe.rareFragment),
-            parseGameDataNumber(data.talismans.horseShoe.epicFragment),
-            parseGameDataNumber(data.talismans.horseShoe.legendaryFragment),
-            parseGameDataNumber(data.talismans.horseShoe.mythicalFragment),
+            parseGameDataNumber(horseShoe.shard),
+            parseGameDataNumber(horseShoe.commonFragment),
+            parseGameDataNumber(horseShoe.uncommonFragment),
+            parseGameDataNumber(horseShoe.rareFragment),
+            parseGameDataNumber(horseShoe.epicFragment),
+            parseGameDataNumber(horseShoe.legendaryFragment),
+            parseGameDataNumber(horseShoe.mythicalFragment),
             this.#ctx.getPCoinUpgradeLevel('AMBROSIA_LUCK_BUFF'),
             this.#ctx.getCampaignTokens(),
             data.goldenQuarkUpgrades.singAmbrosiaLuck.goldenQuarksInvested,

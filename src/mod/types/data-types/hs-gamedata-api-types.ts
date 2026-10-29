@@ -28,6 +28,8 @@ export interface ShopUpgradeEffectEnvironment {
 }
 
 export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
+  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
+  getCacheGeneration: () => number
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getRuneEffects: (rune: RuneKeys) => any
   getRedAmbrosiaUpgradeEffects: (upgradeKey: string) => any
@@ -38,6 +40,8 @@ export interface ShopUpgradeHelperContext extends ShopUpgradeEffectEnvironment {
 
 export interface AntUpgradeHelperContext {
   getGameData: () => GameData | undefined
+  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
+  getCacheGeneration: () => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
   calculateSigmoidExponential: (constant: number, coefficient: number) => number
   calculateChallenge15Reward: (rewardName: string) => number
@@ -48,6 +52,8 @@ export interface AntUpgradeHelperContext {
 
 export interface TalismanHelperContext {
   getGameData: () => GameData | undefined
+  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
+  getCacheGeneration: () => number
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined
   getGQUpgradeEffect: (upgradeKey: string) => number | undefined
@@ -90,6 +96,8 @@ export interface AmbrosiaHelperContext {
 
 export interface RuneHelperContext {
   getGameData: () => GameData | undefined
+  // Changes at each HSGameDataAPI.clearCache(): the helper's own caches are cleared with it
+  getCacheGeneration: () => number
   getPCoinUpgradeLevel: (upgradeKey: string) => number
   getSingularityChallengeEffect: (challengeKey: string, effectKey: string) => number
   getAchievementReward: (rewardName: string) => number | boolean | undefined

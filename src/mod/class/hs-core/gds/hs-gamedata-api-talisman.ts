@@ -5,6 +5,18 @@ import { AntUpgrades, CalculationCache, CalculationMode, RuneKeys, TalismanKeys,
 import { TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES, TALISMAN_CHRONOS_INSCRIPT_VALUES, TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES, TALISMAN_EXEMPTION_INSCRIPT_VALUES, TALISMAN_METAPHYSICS_INSCRIPT_VALUES, TALISMAN_MIDAS_INSCRIPT_VALUES, TALISMAN_MORTUUS_INSCRIPT_VALUES, TALISMAN_PLASTIC_INSCRIPT_VALUES, TALISMAN_POLYMATH_INSCRIPT_VALUES, TALISMAN_WOWSQUARE_INSCRIPT_VALUES, TALISMAN_HORSESHOE_INSCRIPT_VALUES } from "../../../types/data-types/hs-gamedata-api-types";
 import { TALISMAN_BASE_COEFFICIENTS, TALISMAN_RARITY_VALUES, getTalismanBaseMult, getTalismanCostType, getTalismanExponentialRatio, getTalismanMaxLevel, talismanCostKeys, TalismanCostKey, regularCostProgressionDecimal, exponentialCostProgressionDecimal, } from "./hs-gamedata-tables";
 import { HSLogger } from "../hs-logger";
+import type { GameData, TalismanShards } from "../../../types/data-types/hs-player-savedata";
+
+/**
+ * The fragments invested in a talisman. The live player's talismans are only a copy the game makes at each save (every
+ * 5 s): on the live player, they are read from the game's talismans object (patcher: window.__HS_talismans) when it is
+ * exposed. A save's own are what that save holds.
+ */
+export const getTalismanFragments = (data: GameData, t: TalismanKeys): Readonly<TalismanShards> => {
+    const live = window.__HS_talismans;
+    if (live && data === (HSGlobal.exposedPlayer as unknown)) return live[t].fragmentsInvested;
+    return data.talismans[t];
+};
 
 const TALISMAN_KEYS = Object.keys(TALISMAN_BASE_COEFFICIENTS) as TalismanKeys[];
 const TALISMAN_RUNE_KEYS = TALISMAN_KEYS.length > 0
@@ -12,7 +24,7 @@ const TALISMAN_RUNE_KEYS = TALISMAN_KEYS.length > 0
     : [] as RuneKeys[];
 
 export class TalismanHelper {
-    #lastGameData?: ReturnType<TalismanHelperContext['getGameData']>
+    #lastCacheGeneration?: number
     readonly #talismanLevelCache = new Map<TalismanKeys, number>()
     readonly #talismanRarityCache = new Map<TalismanKeys, number>()
     readonly #talismanUnlockedCache = new Map<TalismanKeys, boolean>()
@@ -26,9 +38,9 @@ export class TalismanHelper {
     }
 
     #clearCachesIfGameDataChanged(): void {
-        const gameData = this.#ctx.getGameData();
-        if (gameData !== this.#lastGameData) {
-            this.#lastGameData = gameData;
+        const generation = this.#ctx.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#talismanLevelCache.clear();
             this.#talismanRarityCache.clear();
             this.#talismanUnlockedCache.clear();
@@ -318,7 +330,7 @@ const getTalismanLevel = (t: TalismanKeys, env: TalismanHelperContext, loadingTa
     const data = env.getGameData();
     if (!data) return 0;
 
-    const shards = data.talismans[t];
+    const shards = getTalismanFragments(data, t);
     const budget: Record<TalismanCostKey, Decimal> = {
         shard: parseGameDataDecimal(shards.shard),
         commonFragment: parseGameDataDecimal(shards.commonFragment),
