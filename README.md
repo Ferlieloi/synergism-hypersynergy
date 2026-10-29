@@ -25,13 +25,13 @@ Here are some of Hypersynergism’s standout features:
 
 ## Using the mod
 
-### On Steam (Windows only)
+### 🎮 On Steam (Windows only)
 
 Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
 
 The mod is downloaded at each launch, always in its latest version. The loader updates itself, and tells you when the game has to be patched again.
 
-### In a browser: Tampermonkey (recommended)
+### 🌐 In a browser: Tampermonkey (recommended)
 
 The mod is loaded by a userscript, which starts it together with the game.
 
@@ -48,7 +48,7 @@ While the game is running, a rainbow border around the mod's icon means a newer 
 
 The mod comes from one of two GitHub repos: `Ferlieloi` (Live, the default) or `maenhiir` (Dev). To switch to Dev, open the loader script in Tampermonkey's dashboard, change `const repo = 'Ferlieloi'` to `const repo = 'maenhiir'`, save, and reload the game. To go back to Live, change it back. Tampermonkey's auto-update of the loader script can switch you back to Live.
 
-### With a bookmark (NOT RECOMMENDED)
+### 🔖 With a bookmark (NOT RECOMMENDED)
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
