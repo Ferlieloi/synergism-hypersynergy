@@ -129,7 +129,7 @@ export class HSHeaterInputModalController {
     static #buildTwoWorkersCheckbox(): string {
         const checked = HSSettings.getSetting('heaterTwoWorkers').getValue() === true ? ' checked' : '';
         const help = 'Heats in two workers at once, on two CPU cores: about 40% faster on late saves. '
-            + 'The tab\'s memory can peak around 1.3 GB instead of 0.9 GB: untick it if the game crashes or freezes during a heat. '
+            + 'The tab uses more memory during a heat: untick it if the game crashes or freezes while heating. '
             + 'A computer that reports under 8 GB of memory or fewer than 4 CPU threads heats in one worker anyway.';
         return `
             <label class="hs-heater-two-workers" title="${help}"${HSHeaterOptimizerRunner.canCancel ? '' : ' hidden'}>
