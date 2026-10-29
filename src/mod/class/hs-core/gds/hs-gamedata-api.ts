@@ -2570,6 +2570,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
                     patreonBonus:               this.getPatreonBonus(),
                     activeBells:                activeBells,
                     globalEventBlueBarBonus:    globalEventBlueBarBonus,
+                    // Not read by the heater any more: it uses panthemaLevel
                     jack:                       this.quarkShop.getShopLevel('shopPanthema') > 0,
                     freeShopLevelsInfinityNoAmb: this.freeInfinityLevels('true_base'),
                     freeShopLevelsCube:         this.quarkShop.getShopFreeLevelsCube(),

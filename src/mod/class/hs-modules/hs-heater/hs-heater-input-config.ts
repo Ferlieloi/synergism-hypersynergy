@@ -1,16 +1,20 @@
 import type { HeaterOptimizerInput } from "../../../types/data-types/hs-heater-types";
 import type { HSIcon } from "../../hs-utils/hs-icons";
 
+// Optimizer inputs the modal doesn't show, on purpose (they come straight from
+// the export). A new input that copies a modal field must read the field
+// instead (fillStatsAndOptionsFromInput), or editing that field does nothing.
 type HeaterInputBase = Omit<HeaterOptimizerInput,
-    | 'heaterOptions'
-    | 'ambrosiaUpgradeBonusLevels'
-    | 'ambrosiaUpgradeBlueberryCostReductions'
-    | 'shopUpgradeRawLevels'
-    | 'shopBonusLevelsNoAmbrosia'
-    | 'panthemaLevel'
-    | 'tauPower'
-    | 'reactor'
-    | 'purple'>;
+    | 'heaterOptions'                           // the Active Branches checkboxes
+    | 'ambrosiaUpgradeBonusLevels'              // per upgrade, from Purple enchantments
+    | 'ambrosiaUpgradeBlueberryCostReductions'  // per upgrade
+    | 'runeSiBonusLevelsTalismanNoAmbrosia'     // the talisman part of SI Bonus Levels
+    | 'runeSiEffectiveLevelMultiplier'          // a derived multiplier
+    | 'shopUpgradeRawLevels'                    // the modal's shop fields override their keys; the others only matter through vouchers and free levels
+    | 'shopBonusLevelsNoAmbrosia'               // the modal's Free Quark/Infinity override theirs; the other groups are built from many sources
+    | 'tauPower'                                // 1 or 1.01: only the Cube/Oct Effect text and the Amb+Oct score
+    | 'reactor'                                 // the Opt rows already search the routing
+    | 'purple'>;                                // fixed values the loadout doesn't change
 type HeaterInputKey = keyof HeaterInputBase;
 
 type HeaterFieldType = 'number' | 'percent' | 'boolean' | 'text' | 'select';
@@ -100,7 +104,7 @@ export const inputDefinitions = [
     { key: "patreonBonus",              label: "Patreon Bonus",             type: "percent", url: "Pictures/PseudoShop/GOLDEN_QUARK_BUFF.png" },
     { key: "activeBells",               label: "Active Bells",              type: "number",  url: "Pictures/PseudoShop/HAPPY_HOUR_BELL.png" },
     { key: "globalEventBlueBarBonus",   label: "Event Blue Bar Bonus",      type: "percent", url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
-    { key: "jack",                      label: "Jack of All Trades",        type: "boolean", url: "Pictures/Default/ShopPanthema.png" },
+    { key: "panthemaLevel",             label: "Jack of All Trades Level",  type: "number",  url: "Pictures/Default/ShopPanthema.png" },
     { key: "freeShopLevelsInfinity",    label: "Free Infinity Upgrades",    type: "number",  url: "Pictures/Default/ShopInfiniteShopUpgrades.png" },
     { key: "freeShopLevelsQuark",       label: "Free Shop Q. Levels",       type: "number",  url: "Pictures/Default/Quark.png" },
     { key: "chronometerLevel",          label: "Chronometer Level",         type: "number",  url: "Pictures/Default/ShopChronometerInfinity.png" },
@@ -152,8 +156,7 @@ export const exportFieldExtractors: Readonly<Partial<{ [K in HeaterInputKey]: (h
     baseOff:            (hsData) => hsData.totalBaseOfferingsNoAmb,
     runeSiRC:           (hsData) => hsData.runeSiRCNoAmb,
     runeSiBonusLevelsTotal:         (hsData) => hsData.runeSiBonusLevelsTotalNoAmb,
-    runeSiEffectiveLevelMultiplier: (hsData) => hsData.totalSIRunePowerMultiplier,
-    runeIaBonusLevelsTotal:         (hsData) => hsData.runeIaBonusLevelsTotalNoAmb,
+    runeIaBonusLevelsTotal:        (hsData) => hsData.runeIaBonusLevelsTotalNoAmb,
     runeIaBonusLevelsTalisman:      (hsData) => hsData.runeIaBonusLevelsTalismanNoAmb,
     baseTalismanPower:      (hsData) => hsData.totalTalismanPowerMultiplierNoAmb,
     freeShopLevelsInfinity: (hsData) => hsData.freeShopLevelsInfinityNoAmb,

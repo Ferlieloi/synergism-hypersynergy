@@ -121,15 +121,10 @@ interface Stats {
     baseIACube:      number;
     baseIAQuark:     number;
     patreon:         number;
-    jack:            boolean;
     voucher:         number;
     voucherRedLevelBaseline: number;
-    shopQuark:       number;
     chronometer:     number;
     shopLuck:        number;
-    shopRLuck:       number[];
-    shopAmb:         number[];
-    qHeptExp:        number;
     ossifiedTactics: number;
     ossifiedTactics2:number;
     redberries:      number;
@@ -313,15 +308,10 @@ let stats: Stats = {
     baseIACube: 1,
     baseIAQuark: 1,
     patreon: 0,
-    jack: false,
     voucher: 0,
     voucherRedLevelBaseline: 0,
-    shopQuark: 0,
     chronometer: 0,
     shopLuck: 0,
-    shopRLuck: [0, 0, 0, 0],
-    shopAmb: [0, 0, 0, 0],
-    qHeptExp: 0,
     ossifiedTactics: 0,
     redberries: 0,
     fusion: 0,
@@ -4731,7 +4721,7 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         runeIaExp, runeIaBonusLevelsTotal, runeIaBonusLevelsTalisman,
         baseTalismanPower,
         patreonBonus,
-        jack, freeShopLevelsQuark,
+        freeShopLevelsInfinity, freeShopLevelsQuark,
         chronometerLevel,
         shopAmbrosiaLuck1, shopAmbrosiaLuck2, shopAmbrosiaLuck3, shopAmbrosiaLuck4,
         shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4,
@@ -4807,7 +4797,6 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     const baseIARuneLevel = Upgrade.runeLevelIA();
     stats.baseIAQuark = 1 + 0.002 * baseIARuneLevel + (baseIARuneLevel > 0 ? 0.1 : 0);
     stats.patreon   = patreonBonus;
-    stats.jack      = jack;
     stats.ambrosiaUpgradeBonusLevels = ambrosiaUpgradeBonusLevels;
     stats.ambrosiaUpgradeBlueberryCostReductions = ambrosiaUpgradeBlueberryCostReductions;
     blueberryRemovalOrder = Object.keys(upgrades)
@@ -4825,31 +4814,42 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
         )
         return rightCost - leftCost || left.localeCompare(right)
       });
-    stats.shopUpgradeRawLevels = shopUpgradeRawLevels;
-    stats.shopBonusLevels = shopBonusLevelsNoAmbrosia;
+    // The modal's shop fields override the export's copies of the same
+    // levels, so editing one of them changes the heat
+    stats.shopUpgradeRawLevels = {
+        ...shopUpgradeRawLevels,
+        shopAmbrosiaLuck1, shopAmbrosiaLuck2, shopAmbrosiaLuck3, shopAmbrosiaLuck4,
+        shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4,
+        shopAmbrosiaGeneration1, shopAmbrosiaGeneration2, shopAmbrosiaGeneration3, shopAmbrosiaGeneration4,
+        improveQuarkHept:  shopImproveQuarkHept1,
+        improveQuarkHept2: shopImproveQuarkHept2,
+        improveQuarkHept3: shopImproveQuarkHept3,
+        improveQuarkHept4: shopImproveQuarkHept4,
+        improveQuarkHept5: shopImproveQuarkHept5,
+    };
+    stats.shopBonusLevels = {
+        ...shopBonusLevelsNoAmbrosia,
+        quark: freeShopLevelsQuark,
+        infinity: freeShopLevelsInfinity,
+    };
     stats.panthemaLevel = panthemaLevel;
     stats.tauPower = tauPower;
     stats.shopUpgradesDisabled = shopUpgradesDisabled;
 
     // The no-Ambrosia exports (shopBonusLevels.infinity, chronometer, and
-    // dependent game stats) already contain freeShopLevelsInfinity. Candidate
+    // dependent game stats) already contain the free Infinity levels. Candidate
     // loadouts contribute only the *additional* voucher levels they purchase.
     stats.voucher = 0;
     // The exported baseline includes Red row-3 levels for every voucher
     // module; subtract those in getEffect so only purchased/Purple levels
     // contribute to this delta.
     stats.voucherRedLevelBaseline = bonusRow3;
-    stats.shopQuark = freeShopLevelsQuark - 0.1 * bonusRow5; // removing 1981 Cut from base (bonus[4])
     stats.chronometer = chronometerLevel;
 
     stats.shopLuck  = shopUpgradesDisabled ? 0 : (shopAmbrosiaLuck1 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck2 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck3 > 0 ? 2 : 0)
                       + (shopAmbrosiaLuck4 > 0 ? 0.6 : 0);
-    stats.shopRLuck = shopUpgradesDisabled ? [0, 0, 0, 0] : [shopRedLuck1, shopRedLuck2, shopRedLuck3, shopRedLuck4];
-    stats.shopAmb   = [shopAmbrosiaGeneration1, shopAmbrosiaGeneration2, shopAmbrosiaGeneration3, shopAmbrosiaGeneration4];
-    stats.qHeptExp  = [shopImproveQuarkHept1, shopImproveQuarkHept2, shopImproveQuarkHept3, shopImproveQuarkHept4].filter(Boolean).length * 0.01;
-    stats.qHeptExp += shopImproveQuarkHept5 > 0 ? 0.0001 : 0;
 
     // The exported values contain no Ambrosia upgrade levels. Rebase the
     // persistent Red Ambrosia row levels before the Loadout model reapplies

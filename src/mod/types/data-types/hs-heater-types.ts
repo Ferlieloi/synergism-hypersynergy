@@ -47,7 +47,6 @@ export interface HeaterOptimizerInput {
     patreonBonus: number;
     activeBells: number;
     globalEventBlueBarBonus: number;
-    jack: boolean;
     freeShopLevelsInfinity: number;
     freeShopLevelsQuark: number;
     chronometerLevel: number;
