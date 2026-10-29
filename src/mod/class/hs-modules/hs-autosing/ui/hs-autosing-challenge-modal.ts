@@ -136,7 +136,16 @@ interface DragState {
     height: number;
     // A step changed places (the step being edited may have moved)
     stepMoved: boolean;
+    // The last mouse position, for the auto-scroll (no mousemove while the mouse stays still)
+    mouseX: number;
+    mouseY: number;
+    // The auto-scroll's next frame (0: none)
+    scrollFrame: number;
 }
+
+// Auto-scroll while dragging: the zone along the list's top and bottom edges, and the speed at its edge (and past it)
+const AUTO_SCROLL_ZONE_PX = 40;
+const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
 
 /**
  * Class: HSAutosingChallengeModal
@@ -148,8 +157,8 @@ interface DragState {
  *       they hold. ✎ loads every value of a step, so an Update keeps the values its action doesn't show.
  *     - Steps, IF jump targets ("Jump here" rows) and the "Add Here" separator (where new steps go) are dragged
  *       with the mouse. The list is drawn again whenever the drop place changes, and the dragged row found again.
- *     - An IF jump's target is a step index (the step it jumps before): adding or deleting a step shifts the
- *       targets after it, moving a step doesn't.
+ *     - An IF jump's target is a step index (the step it jumps before): adding, duplicating or deleting a step
+ *       shifts the targets after it, moving a step doesn't. An IF and its "Jump here" row link to each other.
  * Author: XxMolkxX, Shewchou
  */
 class HSAutosingChallengeModal {
@@ -165,6 +174,8 @@ class HSAutosingChallengeModal {
     #fields = new Map<FieldKey, HTMLInputElement | HTMLSelectElement>();
     #rows: { row: FieldRow; element: HTMLElement }[] = [];
     #list!: HTMLElement;
+    // The list's scrolling box
+    #listContainer!: HTMLElement;
     #addButton!: HTMLElement;
     // Shown in edit mode, next to "Update step N"
     #cancelEditButton!: HTMLElement;
@@ -184,6 +195,7 @@ class HSAutosingChallengeModal {
         const root = document.getElementById(this.#modalId);
         if (!root) return;
         this.#list = root.querySelector<HTMLElement>(".hs-challenge-list")!;
+        this.#listContainer = root.querySelector<HTMLElement>(".hs-challenges-list-container")!;
         this.#addButton = root.querySelector<HTMLElement>('[data-action="add"]')!;
         this.#cancelEditButton = root.querySelector<HTMLElement>('[data-action="cancel-edit"]')!;
         for (const element of root.querySelectorAll<HTMLElement>("[data-row]")) {
@@ -276,25 +288,37 @@ class HSAutosingChallengeModal {
             <div class="hs-challenge-step-no">${index + 1}</div>
             <div class="hs-challenge-drag-handle">⋮⋮</div>
             <div class="${isIfJump ? "hs-if-content" : "hs-challenge-item-text"}">
-                ${this.#renderStepText(step)}
+                ${this.#renderStepText(step, index)}
                 <div class="hs-challenge-meta">${this.#renderStepMeta(step)}</div>
                 ${step.comment ? `<div class="hs-challenge-comment">🗨️ ${escapeHtml(step.comment)}</div>` : ""}
             </div>
             <div class="hs-challenge-btn hs-challenge-btn-edit" data-action="edit">✎</div>
+            <div class="hs-challenge-btn hs-challenge-btn-duplicate" data-action="duplicate" title="Duplicate">⧉</div>
             <div class="hs-challenge-btn hs-challenge-btn-delete" data-action="delete">×</div>
         </div>`;
     }
 
-    #renderStepText(step: Challenge): string {
+    // An IF jump that jumps back, to its own step or one before it
+    #isLoop(step: IsJumpChallenge, ifIndex: number): boolean {
+        return step.ifJump.ifJumpIndex <= ifIndex;
+    }
+
+    #renderLoopMark(step: IsJumpChallenge, ifIndex: number): string {
+        return this.#isLoop(step, ifIndex) ? ` <span class="hs-challenge-loop" title="Loop: jumps back">↺</span>` : "";
+    }
+
+    #renderStepText(step: Challenge, index: number): string {
         const actionId = (id: number) => `<span class="hs-challenge-action-id">(${id})</span>`;
         if (isIfJumpStep(step)) {
             const jump = step.ifJump;
             const condition = (jump.ifJumpMode ?? "challenges") === "challenges"
                 ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${jump.ifJumpValue}`
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
-            // The step that runs next when the condition holds (the logs' "jump to step N")
+            // The step that runs next when the condition holds (the logs' "jump to step N"); a click shows its "Jump here" row
             const jumpTo = jump.ifJumpIndex >= this.#steps.length ? "end of phase" : `step ${jump.ifJumpIndex + 1}`;
-            return `<strong>IF</strong> ${escapeHtml(condition)} <span class="hs-challenge-jump-to">→ ${jumpTo}</span> ${actionId(IF_JUMP_VALUE)}`;
+            return `<strong>IF</strong> ${escapeHtml(condition)} `
+                + `<span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-target">→ ${jumpTo}${this.#renderLoopMark(step, index)}</span> `
+                + actionId(IF_JUMP_VALUE);
         }
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
         if (!action) return `Challenge ${step.challengeNumber} (${step.challengeCompletions} completions)`;
@@ -311,13 +335,13 @@ class HSAutosingChallengeModal {
         return parts.join(" | ");
     }
 
-    // ifIndex: the IF jump's index, shown as its step number
+    // ifIndex: the IF jump's index, shown as its step number (a click shows the IF)
     #renderJumpTarget(step: IsJumpChallenge, ifIndex: number): string {
         return `
         <div class="hs-challenge-item hs-if-target" data-if-id="${step.ifJump.id}">
             <div class="hs-challenge-step-no"></div>
             <div class="hs-challenge-drag-handle">⋮⋮</div>
-            ↳ Jump here <span class="hs-challenge-jump-to">(IF step ${ifIndex + 1})</span>
+            ↳ Jump here <span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-if">(IF step ${ifIndex + 1}${this.#renderLoopMark(step, ifIndex)})</span>
         </div>`;
     }
 
@@ -334,6 +358,23 @@ class HSAutosingChallengeModal {
         for (const element of this.#list.querySelectorAll(".hs-jump-highlight")) element.classList.remove("hs-jump-highlight");
         if (ifId === undefined) return;
         for (const element of this.#list.querySelectorAll(`[data-if-id="${ifId}"]`)) element.classList.add("hs-jump-highlight");
+    }
+
+    // Flashes a row, after scrolling the list just enough to show it and the row past it (a row already in view: no scroll)
+    #showRow(element: HTMLElement | null): void {
+        if (!element) return;
+        const container = this.#listContainer;
+        const viewTop = container.getBoundingClientRect().top + container.clientTop;
+        const viewBottom = viewTop + container.clientHeight;
+        const rect = element.getBoundingClientRect();
+        let offset = 0;
+        if (rect.top < viewTop) offset = (element.previousElementSibling?.getBoundingClientRect().top ?? rect.top) - viewTop;
+        else if (rect.bottom > viewBottom) offset = (element.nextElementSibling?.getBoundingClientRect().bottom ?? rect.bottom) - viewBottom;
+        if (offset !== 0) container.scrollTo({ top: container.scrollTop + offset, behavior: "smooth" });
+        element.classList.remove("hs-jump-flash");
+        // Restarts the flash when the row is still flashing
+        void element.offsetWidth;
+        element.classList.add("hs-jump-flash");
     }
 
     // ----- Fields -----
@@ -422,9 +463,13 @@ class HSAutosingChallengeModal {
     #setEditing(index: number | null): void {
         this.#editingIndex = index;
         this.#fillFields(index === null ? null : this.#steps[index]);
-        this.#addButton.textContent = index === null ? "Add Action/Challenge" : `Update step ${index + 1}`;
+        this.#showAddButtonText();
         this.#cancelEditButton.hidden = index === null;
         this.#redrawList();
+    }
+
+    #showAddButtonText(): void {
+        this.#addButton.textContent = this.#editingIndex === null ? "Add Action/Challenge" : `Update step ${this.#editingIndex + 1}`;
     }
 
     // ----- Steps -----
@@ -454,6 +499,21 @@ class HSAutosingChallengeModal {
         this.#redrawList();
     }
 
+    // A copy of a step right after it, added as a new step there. Edit mode stays on the edited step
+    #duplicate(index: number): void {
+        this.#shiftJumpTargets(index + 1, 1);
+        // A copied IF jumps where its original does (after the shift)
+        const copy = structuredClone(this.#steps[index]);
+        if (isIfJumpStep(copy)) copy.ifJump.id = HSUtils.uuidv4();
+        this.#steps.splice(index + 1, 0, copy);
+        if (this.#separatorIndex > index) this.#separatorIndex++;
+        if (this.#editingIndex !== null && this.#editingIndex > index) {
+            this.#editingIndex++;
+            this.#showAddButtonText();
+        }
+        this.#redrawList();
+    }
+
     #delete(index: number): void {
         this.#steps.splice(index, 1);
         this.#shiftJumpTargets(index, -1);
@@ -467,6 +527,7 @@ class HSAutosingChallengeModal {
         const target = e.target as HTMLElement;
         const action = target.closest<HTMLElement>("[data-action]")?.dataset.action;
         const index = Number(target.closest<HTMLElement>(".hs-challenge-item")?.dataset.index);
+        const ifId = target.closest<HTMLElement>("[data-if-id]")?.dataset.ifId;
         switch (action) {
             case "add":
                 this.#addOrUpdate();
@@ -478,8 +539,17 @@ class HSAutosingChallengeModal {
             case "cancel-edit":
                 this.#setEditing(null);
                 break;
+            case "duplicate":
+                this.#duplicate(index);
+                break;
             case "delete":
                 this.#delete(index);
+                break;
+            case "show-target":
+                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-target[data-if-id="${ifId}"]`));
+                break;
+            case "show-if":
+                this.#showRow(this.#list.querySelector<HTMLElement>(`.hs-if-block[data-if-id="${ifId}"]`));
                 break;
             case "save":
                 this.#stratData.length = 0;
@@ -516,14 +586,17 @@ class HSAutosingChallengeModal {
             width: rect.width,
             height: rect.height,
             stepMoved: false,
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            scrollFrame: 0,
         };
-        this.#lift(element, e);
+        this.#lift(element);
         document.addEventListener("mousemove", this.#onDragMove);
         document.addEventListener("mouseup", this.#onDragEnd);
     }
 
     // Takes the element out of the list, under the mouse, and leaves a faded copy in its place
-    #lift(element: HTMLElement, e: MouseEvent): void {
+    #lift(element: HTMLElement): void {
         const drag = this.#drag!;
         const placeholder = element.cloneNode(true) as HTMLElement;
         placeholder.classList.add("hs-challenge-placeholder");
@@ -533,13 +606,13 @@ class HSAutosingChallengeModal {
         element.style.height = `${drag.height}px`;
         drag.element = element;
         drag.placeholder = placeholder;
-        this.#moveLifted(e);
+        this.#moveLifted();
     }
 
-    #moveLifted(e: MouseEvent): void {
+    #moveLifted(): void {
         const drag = this.#drag!;
-        drag.element.style.left = `${e.clientX - drag.offsetX}px`;
-        drag.element.style.top = `${e.clientY - drag.offsetY}px`;
+        drag.element.style.left = `${drag.mouseX - drag.offsetX}px`;
+        drag.element.style.top = `${drag.mouseY - drag.offsetY}px`;
     }
 
     // The number of steps in the list above the mouse (the dragged step left out)
@@ -587,21 +660,53 @@ class HSAutosingChallengeModal {
         }
     }
 
+    // Moves the dragged item to the place under the mouse, and the lifted element with the mouse
+    #followMouse(): void {
+        const drag = this.#drag!;
+        if (this.#dropAt(this.#stepsAbove(drag.mouseY))) {
+            this.#redrawList();
+            const element = this.#findDragged(drag.target);
+            if (element) this.#lift(element);
+        }
+        this.#moveLifted();
+    }
+
     #onDragMove = (e: MouseEvent): void => {
         const drag = this.#drag;
         if (!drag) return;
-        if (this.#dropAt(this.#stepsAbove(e.clientY))) {
-            this.#redrawList();
-            const element = this.#findDragged(drag.target);
-            if (element) this.#lift(element, e);
-        }
-        this.#moveLifted(e);
+        drag.mouseX = e.clientX;
+        drag.mouseY = e.clientY;
+        this.#followMouse();
+        if (drag.scrollFrame === 0 && this.#autoScrollSpeed() !== 0) drag.scrollFrame = requestAnimationFrame(this.#autoScroll);
+    };
+
+    // Pixels per frame to scroll the list by (negative: up): faster as the mouse nears the list's edge, or goes past it
+    #autoScrollSpeed(): number {
+        const box = this.#listContainer.getBoundingClientRect();
+        const y = this.#drag!.mouseY;
+        const depth = Math.max(box.top + AUTO_SCROLL_ZONE_PX - y, y - (box.bottom - AUTO_SCROLL_ZONE_PX));
+        if (depth <= 0) return 0;
+        const speed = Math.ceil(Math.min(1, depth / AUTO_SCROLL_ZONE_PX) * AUTO_SCROLL_MAX_PX_PER_FRAME);
+        return y < box.top + box.height / 2 ? -speed : speed;
+    }
+
+    // Runs each frame while the mouse is in the auto-scroll zone (a mousemove starts it again)
+    #autoScroll = (): void => {
+        const drag = this.#drag;
+        if (!drag) return;
+        drag.scrollFrame = 0;
+        const speed = this.#autoScrollSpeed();
+        if (speed === 0) return;
+        this.#listContainer.scrollTop += speed;
+        this.#followMouse();
+        drag.scrollFrame = requestAnimationFrame(this.#autoScroll);
     };
 
     #onDragEnd = (): void => {
         const drag = this.#drag;
         document.removeEventListener("mousemove", this.#onDragMove);
         document.removeEventListener("mouseup", this.#onDragEnd);
+        if (drag) cancelAnimationFrame(drag.scrollFrame);
         this.#drag = null;
         // The edited step's index may have changed
         if (drag?.stepMoved && this.#editingIndex !== null) this.#setEditing(null);

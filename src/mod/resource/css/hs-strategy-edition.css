@@ -481,6 +481,32 @@
     color: #b4b4b4;
 }
 
+/* A click shows the other row of the IF pair */
+.hs-challenge-jump-link {
+    cursor: pointer;
+}
+
+.hs-challenge-jump-link:hover {
+    text-decoration: underline;
+}
+
+/* An IF that jumps back */
+.hs-challenge-loop {
+    font-weight: bold;
+}
+
+/* The row a jump link shows (above the hover highlight, which the mouse may still give it) */
+.hs-challenge-item.hs-jump-flash {
+    animation: hs-jump-flash 0.5s ease-in-out 2;
+}
+
+@keyframes hs-jump-flash {
+    50% {
+        background-color: rgba(170, 90, 255, 0.6);
+        outline: 4px solid rgb(190, 120, 255);
+    }
+}
+
 /* An action's id, after its label */
 .hs-challenge-action-id {
     font-size: 10px;
@@ -520,6 +546,10 @@
 
 .hs-challenge-btn-edit:hover {
     background-color: #660;
+}
+
+.hs-challenge-btn-duplicate {
+    font-size: 13px;
 }
 
 .hs-challenge-btn-delete {
