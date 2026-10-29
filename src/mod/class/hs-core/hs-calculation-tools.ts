@@ -199,13 +199,10 @@ export class HSCalculationTools {
             return;
         }
 
-        const { fnName, calculationName } = definition;
-        const isComponentMode = mode === 'components';
-
-        if (isComponentMode && !definition.supportsReduce) {
-            HSCalculationTools.#showError(`${calculationName} cannot be calculated by components`);
-            return;
-        }
+        const { fnName } = definition;
+        // Components asked of a calculation without them: its reduced result, with a note
+        const noComponents = mode === 'components' && !definition.supportsReduce;
+        const isComponentMode = mode === 'components' && !noComponents;
 
         const calcFn = dataModule.getCalculationFunction(fnName);
         if (typeof calcFn !== 'function') {
@@ -249,7 +246,7 @@ export class HSCalculationTools {
         const text = isComponentMode
             ? HSCalculationTools.#formatComponents(result as Record<string, unknown>, total)
             : HSCalculationTools.#formatResult(result);
-        HSCalculationTools.#showResult(`Last calc result: ${text}`, false);
+        HSCalculationTools.#showResult(`Last calc result: ${text}${noComponents ? ' (no components)' : ''}`, false);
     }
 
     static #showError(message: string): void {
