@@ -113,15 +113,16 @@
     height: 8px;
 }
 
+/* Not :focus-within: the select keeps the focus once its list is closed without a pick, and the "+" stayed lit */
 .hs-strategy-insert:hover,
-.hs-strategy-insert:focus-within {
+.hs-strategy-insert:has(.hs-strategy-insert-select:focus-visible) {
     border-color: cyan;
 }
 
 .hs-strategy-insert:hover::before,
 .hs-strategy-insert:hover::after,
-.hs-strategy-insert:focus-within::before,
-.hs-strategy-insert:focus-within::after {
+.hs-strategy-insert:has(.hs-strategy-insert-select:focus-visible)::before,
+.hs-strategy-insert:has(.hs-strategy-insert-select:focus-visible)::after {
     background-color: cyan;
 }
 
