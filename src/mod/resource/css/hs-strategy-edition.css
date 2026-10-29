@@ -453,8 +453,8 @@
     transition: all 0.15s;
 }
 
+/* Border only: the step labels' colours stay readable on the row's background */
 .hs-challenge-item:hover {
-    background-color: #005;
     border-color: royalblue;
 }
 
@@ -573,6 +573,15 @@
         outline: 4px solid rgb(190, 120, 255);
     }
 }
+
+/* A step label's colour: its challenge's tier (the game's colours), else its action group's (game actions and IF jumps stay white) */
+.hs-step-transcension { color: var(--orchid-text-color); }
+.hs-step-reincarnation { color: limegreen; }
+.hs-step-ascension { color: orange; }
+/* Mid-way along the game's ambrosia bar (navy to darkturquoise); darkturquoise itself is too close to the step's meta line */
+.hs-step-ambrosia { color: #3c8fd8; }
+.hs-step-corruption { color: #e07a7a; }
+.hs-step-autosing { color: #e8d27a; }
 
 /* An action's id, after its label */
 .hs-challenge-action-id {

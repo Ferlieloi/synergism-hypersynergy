@@ -93,16 +93,39 @@ const C1_TO_C10_NUMBER: NumberCheck = { isValid: v => Number.isInteger(v) && v >
 const NOT_NEGATIVE: NumberCheck = { isValid: v => v >= 0, message: "0 or more" };
 const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v >= 0, message: "a whole number, 0 or more" };
 
-// The Special Action dropdown's groups, by action id ranges (an action in none of them goes in "Other", at the end)
-const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][] }[] = [
+// The Special Action dropdown's groups, by action id ranges (an action in none of them goes in "Other", at the end).
+// labelClass: the colour of the group's step labels in the list (none: white)
+const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][]; labelClass?: string }[] = [
     { label: "Exit and Ascend", ranges: [[101, 104]] },
     { label: "Game actions", ranges: [[151, 155], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
-    { label: "Ambrosia loadouts", ranges: [[301, 306]] },
-    { label: "Corruption level", ranges: [[403, 404]] },
-    { label: "AOAG and Autosing", ranges: [[901, 903]] },
+    { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
+    { label: "Corruption level", ranges: [[403, 404]], labelClass: "hs-step-corruption" },
+    { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
 ];
+
+const inRanges = (ranges: readonly [number, number][]) => (a: SpecialAction) => ranges.some(([first, last]) => a.value >= first && a.value <= last);
+
+// A challenge's tier colour (the game's): C1-5 Transcension, C6-10 Reincarnation, C11-15 Ascension
+const challengeTierClass = (challenge: number) =>
+    challenge <= 5 ? "hs-step-transcension" : challenge <= 10 ? "hs-step-reincarnation" : "hs-step-ascension";
+
+// Exit Transcension, Reincarnation and Ascension challenge, Ascend: a challenge of their tier
+const TIER_CHALLENGE_OF_EXIT = new Map<number, number>([[101, 1], [102, 6], [103, 11], [104, 11]]);
+
+// The colour class of a step's label: its challenge tier's (standard challenges, exits and Ascend, Max C11-14, Store C15,
+// C1-C10 until no more completions), else its action group's
+function stepLabelClass(step: Challenge): string {
+    const id = step.challengeNumber;
+    if (id < 100) return challengeTierClass(id);
+    const exitTier = TIER_CHALLENGE_OF_EXIT.get(id);
+    if (exitTier !== undefined) return challengeTierClass(exitTier);
+    if (id >= 211 && id <= 215) return challengeTierClass(id - 200);
+    if (inFamily(C1_TO_C10_FAMILY, id)) return challengeTierClass(id - 600);
+    const action = SPECIAL_ACTION_BY_ID.get(id);
+    return (action && ACTION_GROUPS.find(g => inRanges(g.ranges)(action))?.labelClass) ?? "";
+}
 
 // A family's actions show as its one entry, at its first action's place
 function renderActionOptions(): string {
@@ -113,7 +136,6 @@ function renderActionOptions(): string {
         }));
         return options.size === 0 ? "" : `<optgroup label="${label}">${[...options].join("")}</optgroup>`;
     };
-    const inRanges = (ranges: readonly [number, number][]) => (a: SpecialAction) => ranges.some(([first, last]) => a.value >= first && a.value <= last);
     const inAnyGroup = inRanges(ACTION_GROUPS.flatMap(g => g.ranges));
     return `<option value="">None (Standard Challenge)</option>`
         + ACTION_GROUPS.map(g => group(g.label, g.ranges.flatMap(range => SPECIAL_ACTIONS.filter(inRanges([range]))))).join("")
@@ -519,10 +541,11 @@ export class HSAutosingChallengeModal {
                 + `<span class="hs-challenge-jump-to hs-challenge-jump-link" data-action="show-target">→ ${jumpTo}${this.#renderLoopMark(step, index)}</span> `
                 + actionId(IF_JUMP_VALUE);
         }
+        const labelClass = stepLabelClass(step);
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
-        if (!action) return `Challenge ${step.challengeNumber} (${step.challengeCompletions} completions)`;
+        if (!action) return `<span class="${labelClass}">Challenge ${step.challengeNumber}</span> (${step.challengeCompletions} completions)`;
         const label = isCorruptionLevelStep(step.challengeNumber) ? `${action.label}: ${step.corruptionLevel ?? 0}` : action.label;
-        return `<strong>${label}</strong> ${actionId(step.challengeNumber)}`;
+        return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
     #renderStepMeta(step: Challenge): string {
