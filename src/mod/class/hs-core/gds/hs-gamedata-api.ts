@@ -1,5 +1,5 @@
 import { EventBuffType, ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
-import { AchievementRewards, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, OcteractUpgradeKey, SingularityChallengeDataKeys, SingularityDebuffs, PCoinUpgradeEffects, NumberStatLine, RuneKeys, SynergismLevelMilestones, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds } from "../../../types/data-types/hs-gamedata-api-types";
+import { AchievementRewards, AntUpgrades, CalculationCache, CalculationMode, CachedValue, GoldenQuarkUpgradeKey, HepteractType, OcteractUpgradeKey, SingularityChallengeDataKeys, SingularityDebuffs, NumberStatLine, RuneKeys, SynergismLevelMilestones } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData, SingularityChallengeRewards, SingularityChallengeStatus } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
@@ -29,7 +29,7 @@ import type { LuckHelperContext } from "./hs-gamedata-api-luck";
 import { checkCalculationCache, updateCalculationCache, clearCalculationCache, dumpCalculationCache, createCalculationCache } from "./hs-gamedata-api-cache";
 import { AcceleratorHelper } from "./hs-gamedata-api-accelerator";
 import { CorruptionHelper, type CorruptionCubeType } from "./hs-gamedata-api-corruption";
-import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
+import { octeractUpgradeMaxLevels, goldenQuarkUpgradeMaxLevels, c15Functions, challenge15Rewards, hepteractEffectiveValues, synergismLevelMilestones, SINGULARITY_CHALLENGE_DATA, PCoinUpgradeEffects, FAVORITE_UPGRADE_GQ_DEPENDENCIES, FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES, FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES, offeringPotionThresholds, obtainiumPotionThresholds } from "./hs-gamedata-tables";
 import { parseGameDataDecimal, calculateSigmoidExponential, findInsertionIndex, floorLog10OfOnePlus } from "./hs-gamedata-utils";
 import { buildHeaterExport } from "./hs-heater-export";
 import Decimal from "break_infinity.js";

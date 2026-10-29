@@ -1,10 +1,9 @@
 import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { CalculationCache, CachedValue, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types";
-import { ACHIEVEMENT_REWARD_TYPES } from "../../../types/data-types/hs-gamedata-api-types";
 import { EventBuffType } from "../../../types/data-types/hs-event-data";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { SHOP_UPGRADE_GROUPS_BY_KEY, SHOP_UPGRADE_TYPE_KEYS } from "./hs-gamedata-tables";
+import { ACHIEVEMENT_REWARD_TYPES, SHOP_UPGRADE_GROUPS_BY_KEY, SHOP_UPGRADE_TYPE_KEYS } from "./hs-gamedata-tables";
 import type { AmbrosiaHelper } from "./hs-gamedata-api-ambrosia";
 
 export const checkCalculationCache = <T = number>(

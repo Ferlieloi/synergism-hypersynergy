@@ -39,6 +39,13 @@ export interface GoldenQuarkHelperContext {
     getFavoriteUpgradeMaxedDependencyCount: () => number;
 }
 
+/**
+ * Class: GoldenQuarkHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Golden quark (singularity) upgrades: levels, free levels and their softcap, max levels and effects.
+ * Author: XxMolkxX, Shewchou
+ */
 export class GoldenQuarkHelper {
     readonly #ctx: GoldenQuarkHelperContext;
 

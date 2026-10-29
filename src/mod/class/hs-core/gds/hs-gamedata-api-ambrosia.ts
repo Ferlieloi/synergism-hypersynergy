@@ -13,6 +13,13 @@ type PurpleAmbrosiaEnchantmentConfig = {
     freeLevels?: (level: number) => number;
 };
 
+/**
+ * Class: AmbrosiaHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Ambrosia and red ambrosia: upgrade levels and effects, purple ambrosia enchantments, generation speed and bar income.
+ * Author: XxMolkxX, Shewchou
+ */
 export class AmbrosiaHelper {
     readonly #ctx: AmbrosiaHelperContext;
 

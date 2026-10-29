@@ -29,13 +29,21 @@ export type PurpleReactorUpgradeKey =
     | 'purpleHalfLife2'
     | 'purpleHalfLife3'
     | 'purpleHalfLife4'
+    | 'paperweight'
     | 'purpleCapacityExpander1'
     | 'purpleCapacityExpander2'
     | 'purpleCapacityExpander3'
     | 'purpleCapacityExpander4'
+    | 'obtainium'
+    | 'offerings'
+    | 'lifetimeHoneyQuarks'
+    | 'lifetimeHoneyGlobalSpeed'
     | 'lifetimeHoneyAscensionSpeed'
     | 'lifetimeHoneyAmbrosia'
-    | 'lifetimeHoneyRedAmbrosia';
+    | 'lifetimeHoneyRedAmbrosia'
+    | 'lifetimeHoneyAntELO'
+    | 'lifetimeHoneyRebornELOSpeed'
+    | 'purpleQuarkGain';
 
 interface PurpleUpgradeDefinition {
     maxLevel: number;
@@ -58,6 +66,7 @@ const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDef
     purpleHalfLife2: { maxLevel: 50, costFormula: (level) => 240 * level },
     purpleHalfLife3: { maxLevel: 50, costFormula: (level) => 4_800 * level },
     purpleHalfLife4: { maxLevel: 50, costFormula: (level) => 96_000 * level },
+    paperweight: { maxLevel: 100, costFormula: (level) => Math.pow(level, 3) },
     purpleCapacityExpander1: { maxLevel: 10_000, costFormula: (level) => Math.pow(level, 1.1) },
     purpleCapacityExpander2: { maxLevel: 10_000, costFormula: (level) => 10 * Math.pow(level, 1.2) },
     purpleCapacityExpander3: { maxLevel: 10_000, costFormula: (level) => 100 * Math.pow(level, 1.25) },
@@ -66,9 +75,16 @@ const purpleReactorUpgradeData: Record<PurpleReactorUpgradeKey, PurpleUpgradeDef
     purpleHoneyRequirementReduction2: { maxLevel: 25, costFormula: (level) => 400 * level },
     purpleHoneyRequirementReduction3: { maxLevel: 25, costFormula: (level) => 8_000 * level },
     purpleHoneyRequirementReduction4: { maxLevel: 25, costFormula: (level) => 160_000 * level },
+    obtainium: { maxLevel: 100_000, costFormula: (level) => 10 * Math.pow(level, 1.2) },
+    offerings: { maxLevel: 100_000, costFormula: (level) => 10 * Math.pow(level, 1.2) },
+    lifetimeHoneyQuarks: { maxLevel: 10, costFormula: (level) => 500 * level },
+    lifetimeHoneyGlobalSpeed: { maxLevel: 10, costFormula: (level) => 2_000 * level },
     lifetimeHoneyAscensionSpeed: { maxLevel: 10, costFormula: (level) => 2_000 * level },
     lifetimeHoneyAmbrosia: { maxLevel: 10, costFormula: (level) => 10_000 * level },
     lifetimeHoneyRedAmbrosia: { maxLevel: 15, costFormula: (level) => 10_000 * level },
+    lifetimeHoneyAntELO: { maxLevel: 50, costFormula: (level) => 15_000 * level },
+    lifetimeHoneyRebornELOSpeed: { maxLevel: 50, costFormula: (level) => 15_000 * level },
+    purpleQuarkGain: { maxLevel: 5, costFormula: (level) => 2_000 * (Math.pow(4, level) - 1) / 3 },
 };
 
 const purpleAmbrosiaUpgradeData = {
@@ -91,6 +107,17 @@ const purpleAmbrosiaUpgradeData = {
     pisces: { maxLevel: 1, costFormula: (level: number) => 5_000 * level },
 } as const;
 
+export type PurpleAmbrosiaUpgradeKey = keyof typeof purpleAmbrosiaUpgradeData;
+export const PURPLE_AMBROSIA_UPGRADE_KEYS = Object.keys(purpleAmbrosiaUpgradeData) as PurpleAmbrosiaUpgradeKey[];
+
+/**
+ * Class: PurpleHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Purple Reactor upgrades and purple ambrosia (zodiac) upgrades: levels rebuilt from the saved investments, max levels and effects;
+ *     purple honey luck and purple honey per extraction.
+ * Author: XxMolkxX, Shewchou
+ */
 export class PurpleHelper {
     readonly #ctx: PurpleHelperContext;
 
@@ -113,6 +140,10 @@ export class PurpleHelper {
         const invested = Number(this.#ctx.getGameData()?.purpleReactorUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
         return this.#reconstructLevel(invested, purpleReactorUpgradeData[upgradeKey], 0.001);
+    }
+
+    getPurpleReactorUpgradeMaxLevel(upgradeKey: PurpleReactorUpgradeKey): number {
+        return purpleReactorUpgradeData[upgradeKey].maxLevel;
     }
 
     getPurpleReactorUpgradeEffects(upgradeKey: PurpleReactorUpgradeKey, effectKey: string): number {
@@ -203,13 +234,17 @@ export class PurpleHelper {
             + reactorEfficiencyUpgrades;
     }
 
-    getPurpleAmbrosiaUpgradeLevel(upgradeKey: keyof typeof purpleAmbrosiaUpgradeData): number {
+    getPurpleAmbrosiaUpgradeLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
         const invested = Number(this.#ctx.getGameData()?.purpleAmbrosiaUpgrades?.[upgradeKey] ?? 0);
         if (!Number.isFinite(invested) || invested < 0) return 0;
         return this.#reconstructLevel(invested, purpleAmbrosiaUpgradeData[upgradeKey]);
     }
 
-    getPurpleAmbrosiaUpgradeEffects(upgradeKey: keyof typeof purpleAmbrosiaUpgradeData, effectKey: string): number {
+    getPurpleAmbrosiaUpgradeMaxLevel(upgradeKey: PurpleAmbrosiaUpgradeKey): number {
+        return purpleAmbrosiaUpgradeData[upgradeKey].maxLevel;
+    }
+
+    getPurpleAmbrosiaUpgradeEffects(upgradeKey: PurpleAmbrosiaUpgradeKey, effectKey: string): number {
         const data = this.#ctx.getGameData();
         if (!data) return 0;
         const level = this.getPurpleAmbrosiaUpgradeLevel(upgradeKey);

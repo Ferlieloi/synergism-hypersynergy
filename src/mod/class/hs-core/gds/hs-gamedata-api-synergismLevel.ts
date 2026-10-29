@@ -3,6 +3,7 @@ import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
 import { dailyFreeLevelCaps } from "./hs-gamedata-api-goldenQuark";
 import { dailyOcteractFreeLevelCaps } from "./hs-gamedata-api-octeract";
+import { PURPLE_AMBROSIA_UPGRADE_KEYS, type PurpleReactorUpgradeKey } from "./hs-gamedata-api-purple";
 import { goldenQuarkUpgradeMaxLevels, octeractUpgradeMaxLevels, SINGULARITY_CHALLENGE_DATA } from "./hs-gamedata-tables";
 
 /** Achievement-point inputs copied from SynergismOfficial/src/Shop.ts. */
@@ -34,47 +35,41 @@ const QUARK_UPGRADE_MAX_LEVELS: Record<string, number> = {
     shopHorseShoe: 1, shopPurpleBarRebate: 10, shopPanthema: 1,
 };
 
-/** Purple Reactor AP data copied from SynergismOfficial/src/Purple.ts. */
-const PURPLE_REACTOR_AP_DATA: Array<{
-    key: string;
-    maxLevel: number;
-    perLevelAP: number;
-    maxLevelAP: number;
-    costFormula: (level: number) => number;
-}> = [
-    { key: 'tutorial', maxLevel: 15, perLevelAP: 1, maxLevelAP: 0, costFormula: (level) => level * (level + 1) / 2 },
-    { key: 'purpleEfficiency1', maxLevel: 20, perLevelAP: 0.5, maxLevelAP: 5, costFormula: (level) => 3 * level },
-    { key: 'purpleEfficiency2', maxLevel: 20, perLevelAP: 0.5, maxLevelAP: 10, costFormula: (level) => 60 * level },
-    { key: 'purpleEfficiency3', maxLevel: 30, perLevelAP: 0.5, maxLevelAP: 10, costFormula: (level) => 1_200 * level },
-    { key: 'purpleEfficiency4', maxLevel: 30, perLevelAP: 0.5, maxLevelAP: 15, costFormula: (level) => 24_000 * level },
-    { key: 'purpleHoneyLuck1', maxLevel: 10, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 7 * level },
-    { key: 'purpleHoneyLuck2', maxLevel: 15, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 140 * level },
-    { key: 'purpleHoneyLuck3', maxLevel: 20, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 2_800 * level },
-    { key: 'purpleHoneyLuck4', maxLevel: 25, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 56_000 * level },
-    { key: 'purpleHalfLife1', maxLevel: 50, perLevelAP: 0.2, maxLevelAP: 10, costFormula: (level) => 12 * level },
-    { key: 'purpleHalfLife2', maxLevel: 50, perLevelAP: 0.3, maxLevelAP: 10, costFormula: (level) => 240 * level },
-    { key: 'purpleHalfLife3', maxLevel: 50, perLevelAP: 0.4, maxLevelAP: 10, costFormula: (level) => 4_800 * level },
-    { key: 'purpleHalfLife4', maxLevel: 50, perLevelAP: 0.5, maxLevelAP: 10, costFormula: (level) => 96_000 * level },
-    { key: 'paperweight', maxLevel: 100, perLevelAP: 0.3, maxLevelAP: 20, costFormula: (level) => Math.pow(level, 3) },
-    { key: 'purpleCapacityExpander1', maxLevel: 10_000, perLevelAP: 0, maxLevelAP: 30, costFormula: (level) => Math.pow(level, 1.1) },
-    { key: 'purpleCapacityExpander2', maxLevel: 10_000, perLevelAP: 0, maxLevelAP: 40, costFormula: (level) => 10 * Math.pow(level, 1.2) },
-    { key: 'purpleCapacityExpander3', maxLevel: 10_000, perLevelAP: 0, maxLevelAP: 50, costFormula: (level) => 100 * Math.pow(level, 1.25) },
-    { key: 'purpleCapacityExpander4', maxLevel: 10_000, perLevelAP: 0, maxLevelAP: 60, costFormula: (level) => 1_000 * Math.pow(level, 1.3) },
-    { key: 'purpleHoneyRequirementReduction1', maxLevel: 25, perLevelAP: 0.4, maxLevelAP: 5, costFormula: (level) => 20 * level },
-    { key: 'purpleHoneyRequirementReduction2', maxLevel: 25, perLevelAP: 0.4, maxLevelAP: 5, costFormula: (level) => 400 * level },
-    { key: 'purpleHoneyRequirementReduction3', maxLevel: 25, perLevelAP: 0.4, maxLevelAP: 5, costFormula: (level) => 8_000 * level },
-    { key: 'purpleHoneyRequirementReduction4', maxLevel: 25, perLevelAP: 0.4, maxLevelAP: 5, costFormula: (level) => 160_000 * level },
-    { key: 'obtainium', maxLevel: 100_000, perLevelAP: 0, maxLevelAP: 40, costFormula: (level) => 10 * Math.pow(level, 1.2) },
-    { key: 'offerings', maxLevel: 100_000, perLevelAP: 0, maxLevelAP: 40, costFormula: (level) => 10 * Math.pow(level, 1.2) },
-    { key: 'lifetimeHoneyQuarks', maxLevel: 10, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 500 * level },
-    { key: 'lifetimeHoneyGlobalSpeed', maxLevel: 10, perLevelAP: 1, maxLevelAP: 0, costFormula: (level) => 2_000 * level },
-    { key: 'lifetimeHoneyAscensionSpeed', maxLevel: 10, perLevelAP: 1, maxLevelAP: 0, costFormula: (level) => 2_000 * level },
-    { key: 'lifetimeHoneyAmbrosia', maxLevel: 10, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 10_000 * level },
-    { key: 'lifetimeHoneyRedAmbrosia', maxLevel: 15, perLevelAP: 1, maxLevelAP: 0, costFormula: (level) => 10_000 * level },
-    { key: 'lifetimeHoneyAntELO', maxLevel: 50, perLevelAP: 1, maxLevelAP: 5, costFormula: (level) => 15_000 * level },
-    { key: 'lifetimeHoneyRebornELOSpeed', maxLevel: 50, perLevelAP: 1, maxLevelAP: 0, costFormula: (level) => 15_000 * level },
-    { key: 'purpleQuarkGain', maxLevel: 5, perLevelAP: 2, maxLevelAP: 10, costFormula: (level) => 2_000 * (Math.pow(4, level) - 1) / 3 },
-];
+/** The achievement points of each Purple Reactor upgrade, from calculatePurpleReactorAP() in SynergismOfficial/src/Purple.ts. */
+const PURPLE_REACTOR_AP: Record<PurpleReactorUpgradeKey, { perLevelAP: number; maxLevelAP: number }> = {
+    tutorial: { perLevelAP: 1, maxLevelAP: 0 },
+    purpleEfficiency1: { perLevelAP: 0.5, maxLevelAP: 5 },
+    purpleEfficiency2: { perLevelAP: 0.5, maxLevelAP: 10 },
+    purpleEfficiency3: { perLevelAP: 0.5, maxLevelAP: 10 },
+    purpleEfficiency4: { perLevelAP: 0.5, maxLevelAP: 15 },
+    purpleHoneyLuck1: { perLevelAP: 1, maxLevelAP: 5 },
+    purpleHoneyLuck2: { perLevelAP: 1, maxLevelAP: 5 },
+    purpleHoneyLuck3: { perLevelAP: 1, maxLevelAP: 5 },
+    purpleHoneyLuck4: { perLevelAP: 1, maxLevelAP: 5 },
+    purpleHalfLife1: { perLevelAP: 0.2, maxLevelAP: 10 },
+    purpleHalfLife2: { perLevelAP: 0.3, maxLevelAP: 10 },
+    purpleHalfLife3: { perLevelAP: 0.4, maxLevelAP: 10 },
+    purpleHalfLife4: { perLevelAP: 0.5, maxLevelAP: 10 },
+    paperweight: { perLevelAP: 0.3, maxLevelAP: 20 },
+    purpleCapacityExpander1: { perLevelAP: 0, maxLevelAP: 30 },
+    purpleCapacityExpander2: { perLevelAP: 0, maxLevelAP: 40 },
+    purpleCapacityExpander3: { perLevelAP: 0, maxLevelAP: 50 },
+    purpleCapacityExpander4: { perLevelAP: 0, maxLevelAP: 60 },
+    purpleHoneyRequirementReduction1: { perLevelAP: 0.4, maxLevelAP: 5 },
+    purpleHoneyRequirementReduction2: { perLevelAP: 0.4, maxLevelAP: 5 },
+    purpleHoneyRequirementReduction3: { perLevelAP: 0.4, maxLevelAP: 5 },
+    purpleHoneyRequirementReduction4: { perLevelAP: 0.4, maxLevelAP: 5 },
+    obtainium: { perLevelAP: 0, maxLevelAP: 40 },
+    offerings: { perLevelAP: 0, maxLevelAP: 40 },
+    lifetimeHoneyQuarks: { perLevelAP: 1, maxLevelAP: 5 },
+    lifetimeHoneyGlobalSpeed: { perLevelAP: 1, maxLevelAP: 0 },
+    lifetimeHoneyAscensionSpeed: { perLevelAP: 1, maxLevelAP: 0 },
+    lifetimeHoneyAmbrosia: { perLevelAP: 1, maxLevelAP: 5 },
+    lifetimeHoneyRedAmbrosia: { perLevelAP: 1, maxLevelAP: 0 },
+    lifetimeHoneyAntELO: { perLevelAP: 1, maxLevelAP: 5 },
+    lifetimeHoneyRebornELOSpeed: { perLevelAP: 1, maxLevelAP: 0 },
+    purpleQuarkGain: { perLevelAP: 2, maxLevelAP: 10 },
+};
 
 export type ProgressiveAchievements =
     | 'runeLevel'
@@ -251,23 +246,13 @@ export class SynergismLevelHelper {
         const data = this.#gameData;
         if (!data) return 0;
 
+        const purple = this.#api.purple;
         let totalAP = 0;
-        for (const upgrade of PURPLE_REACTOR_AP_DATA) {
-            const invested = Number((data.purpleReactorUpgrades as Record<string, unknown> | undefined)?.[upgrade.key] ?? 0);
-            if (!Number.isFinite(invested) || invested <= 0) continue;
-
-            // Savedata stores cumulative investment, while the game stores the
-            // current level. Reconstruct the level using the same cost formula.
-            let low = 0;
-            let high = upgrade.maxLevel;
-            while (low < high) {
-                const middle = low + Math.ceil((high - low) / 2);
-                if (upgrade.costFormula(middle) <= invested + 0.001) low = middle;
-                else high = middle - 1;
-            }
-
-            totalAP += low * upgrade.perLevelAP;
-            if (low >= upgrade.maxLevel) totalAP += upgrade.maxLevelAP;
+        for (const key of Object.keys(PURPLE_REACTOR_AP) as PurpleReactorUpgradeKey[]) {
+            const { perLevelAP, maxLevelAP } = PURPLE_REACTOR_AP[key];
+            const level = purple.getPurpleReactorUpgradeLevel(key);
+            totalAP += level * perLevelAP;
+            if (level >= purple.getPurpleReactorUpgradeMaxLevel(key)) totalAP += maxLevelAP;
         }
         return Math.floor(totalAP);
     }
@@ -300,12 +285,9 @@ export class SynergismLevelHelper {
             totalAP += Math.floor(level / levelsPerAP) * apPerInterval;
         }
 
-        const purpleZodiacMaxLevels = {
-            aries: 25, taurus: 10, gemini: 10, cancer: 10, leo: 25, virgo: 15,
-            libra: 1, scorpio: 10, sagittarius: 11, capricorn: 11, aquarius: 1, pisces: 1,
-        } as const;
-        for (const [key, maxLevel] of Object.entries(purpleZodiacMaxLevels)) {
-            if (this.#api.purple.getPurpleAmbrosiaUpgradeLevel(key as keyof typeof purpleZodiacMaxLevels) >= maxLevel) {
+        const purple = this.#api.purple;
+        for (const key of PURPLE_AMBROSIA_UPGRADE_KEYS) {
+            if (purple.getPurpleAmbrosiaUpgradeLevel(key) >= purple.getPurpleAmbrosiaUpgradeMaxLevel(key)) {
                 totalAP += 12;
             }
         }

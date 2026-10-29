@@ -6,11 +6,12 @@
 
 import Decimal from "break_infinity.js";
 import { EventBuffType, type ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
-import { PCoinUpgradeEffects, ShopUpgradeGroups, type AmbrosiaUpgradeNames } from "../../../types/data-types/hs-gamedata-api-types";
+import { ShopUpgradeGroups, type AmbrosiaUpgradeNames } from "../../../types/data-types/hs-gamedata-api-types";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
+import { PCoinUpgradeEffects } from "./hs-gamedata-tables";
 import { floorLog10OfOnePlus, parseGameDataDecimal } from "./hs-gamedata-utils";
 
 /** The API's protected data the export reads, taken after the refresh. */

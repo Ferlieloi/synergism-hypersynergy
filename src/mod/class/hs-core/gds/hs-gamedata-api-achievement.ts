@@ -2,7 +2,7 @@ import Decimal from "break_infinity.js";
 import { parseGameDataDecimal, parseGameDataNumber, floorLog10PlusOne } from "./hs-gamedata-utils";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { AntProducers } from "../../../types/data-types/hs-gamedata-api-types";
-import { ACHIEVEMENT_REWARD_TYPES } from "../../../types/data-types/hs-gamedata-api-types";
+import { ACHIEVEMENT_REWARD_TYPES } from "./hs-gamedata-tables";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { Achievement, AchievementRewards, AchievementHelperContext, CalculationCache } from "../../../types/data-types/hs-gamedata-api-types";
 
@@ -83,6 +83,13 @@ const getAchievementRewardDynamicDependencies = (rewardType: AchievementRewards,
     }
 };
 
+/**
+ * Class: AchievementHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     The achievements and their rewards: which achievements give each reward type, and the summed or multiplied reward the player has.
+ * Author: Shewchou
+ */
 export class AchievementHelper {
     readonly #ctx: AchievementHelperContext;
 

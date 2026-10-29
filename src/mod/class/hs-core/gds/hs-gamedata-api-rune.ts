@@ -1,11 +1,19 @@
 import Decimal from "break_infinity.js";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
-import { AntUpgrades, RUNE_KEYS } from "../../../types/data-types/hs-gamedata-api-types";
+import { AntUpgrades } from "../../../types/data-types/hs-gamedata-api-types";
+import { RUNE_KEYS } from "./hs-gamedata-tables";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
 import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
 
 const RUNE_KEY_INDEX = new Map<RuneKeys, number>(RUNE_KEYS.map((rune, index) => [rune, index]))
 
+/**
+ * Class: RuneHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Runes: levels from EXP, free and effective levels, levels per order of magnitude, effects and effectiveness.
+ * Author: Shewchou
+ */
 export class RuneHelper {
     readonly #ctx: RuneHelperContext;
     #lastCacheGeneration?: number;

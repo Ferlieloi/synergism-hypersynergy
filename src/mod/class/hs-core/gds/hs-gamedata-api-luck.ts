@@ -32,6 +32,13 @@ export interface LuckHelperContext {
     getEventBellAmount: () => number;
 }
 
+/**
+ * Class: LuckHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Ambrosia luck and red ambrosia luck, with each of their sources, and the luck conversion.
+ * Author: XxMolkxX, Shewchou
+ */
 export class LuckHelper {
     readonly #ctx: LuckHelperContext;
 

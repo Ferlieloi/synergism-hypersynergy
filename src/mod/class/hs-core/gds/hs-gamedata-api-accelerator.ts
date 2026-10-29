@@ -3,6 +3,13 @@ import { AntUpgrades } from "../../../types/data-types/hs-gamedata-api-types";
 import type { AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
 
+/**
+ * Class: AcceleratorHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Accelerators and accelerator boosts: free and total counts, power and effect, and the cube blessings that raise them.
+ * Author: Shewchou
+ */
 export class AcceleratorHelper {
     readonly #ctx: AcceleratorHelperContext;
 

@@ -14,6 +14,13 @@ export interface OcteractHelperContext {
     getRedAmbrosiaFreeAccumulatorCapIncrease: () => number;
 }
 
+/**
+ * Class: OcteractHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Octeract upgrades: levels, free levels and their softcap, and effects.
+ * Author: XxMolkxX, Shewchou
+ */
 export class OcteractHelper {
     readonly #ctx: OcteractHelperContext;
 

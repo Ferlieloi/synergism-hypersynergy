@@ -3,6 +3,13 @@ import { AntUpgrades, CalculationCache, } from "../../../types/data-types/hs-gam
 import type { AntUpgradeTypeMap, AntUpgradeHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
 import { parseGameDataDecimal } from "./hs-gamedata-utils";
 
+/**
+ * Class: AntUpgradeHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Ant upgrades: free levels, effective levels and effects.
+ * Author: Shewchou
+ */
 export class AntUpgradeHelper {
     readonly #ctx: AntUpgradeHelperContext;
     readonly #antUpgradeEffectCache = new Map<string, AntUpgradeTypeMap[keyof AntUpgradeTypeMap]>();

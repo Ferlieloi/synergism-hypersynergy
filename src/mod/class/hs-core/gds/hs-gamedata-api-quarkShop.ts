@@ -10,6 +10,13 @@ const getShopLevelCacheName                       = (upgradeKey: string): string
 const getShopBonusLevelsCacheName                 = (upgradeKey: string): string => `${QUARKSHOP_CACHE_PREFIX}BONUS_LEVELS_${upgradeKey}`;
 const getShopUpgradeTypeBonusLevelsCacheName = (type: ShopUpgradeGroups): string => `${QUARKSHOP_CACHE_PREFIX}TYPE_BONUS_${type}`;
 
+/**
+ * Class: ShopUpgradeHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Quark shop upgrades: levels, the bonus levels of each upgrade group, and free levels.
+ * Author: Shewchou
+ */
 export class ShopUpgradeHelper {
     readonly #ctx: ShopUpgradeHelperContext;
     #lastCacheGeneration?: number;
