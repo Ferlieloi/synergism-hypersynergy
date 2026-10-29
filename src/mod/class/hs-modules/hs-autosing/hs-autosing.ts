@@ -1031,12 +1031,6 @@ export class HSAutosing extends HSModule {
         this.#autosingModal?.setCurrentPhase(phaseLabel);
         const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
-        // A leading corruption action supplies the opening ascension itself, after setting its level.
-        // In particular, migrated phase levels must be selected before that reset, without a second reset.
-        if (phaseConfig.strat[0]?.challengeNumber !== SET_CORRUPTION_LEVEL_VALUE) {
-            this.#clickResetButton(this.#ascendBtn);
-        }
-
         const isEndPhase = phaseConfig.endPhase === "end";
         for (let i = 0; i < phaseConfig.strat.length; i++) {
             if (this.#autosingModal?.getIsPaused()) await this.#waitIfAutosingPaused();
@@ -1775,9 +1769,9 @@ export class HSAutosing extends HSModule {
         const aoagPhase = this.#strategy?.aoagPhase ?? createDefaultAoagPhase();
         aoagPhase.phaseId = AOAG_PHASE_ID;
 
-        // Before the phase's first Ascend, which applies it. The singularity's other phases need no such set: autosing
-        // starts each singularity with one, and the game sets the level to 0 there
-        this.#corruptionManager.setLevel(0);
+        // AOAG needs level 0 applied before its steps; ordinary phase entry performs no reset.
+        await this.#setCorruptionLevelAndAscend(0);
+        if (!this.#autosingEnabled) return;
 
         await this.#executePhase(aoagPhase, {
             phaseLabelOverride: AOAG_PHASE_NAME,
