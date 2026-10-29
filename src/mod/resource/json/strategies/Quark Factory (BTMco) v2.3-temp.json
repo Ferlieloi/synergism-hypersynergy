@@ -404,7 +404,7 @@
           "challengeMaxTime": 100
         },
         {
-          "challengeNumber": 404,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -600,7 +600,7 @@
       "endPhase": "end",
       "strat": [
         {
-          "challengeNumber": 404,
+          "challengeNumber": 403,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,

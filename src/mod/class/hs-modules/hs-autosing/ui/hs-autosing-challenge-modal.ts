@@ -98,7 +98,7 @@ const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number]
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
-    { label: "Corruption level", ranges: [[403, 404]], labelClass: "hs-step-corruption" },
+    { label: "Corruption level", ranges: [[403, 403]], labelClass: "hs-step-corruption" },
     { label: "AOAG and Autosing", ranges: [[901, 903]], labelClass: "hs-step-autosing" },
 ];
 
@@ -234,6 +234,7 @@ const HELP_LINES: readonly [string, string][] = [
     ["→ step N", "Click: shows the other row of the IF"],
     ["↺", "A loop: the IF jumps back"],
     ["Fixed time", "Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed"],
+    ["Corruption level", "Sets the actual level and ascends to apply it (exits an active Ascension challenge). Free reward levels are added by the game"],
 ];
 const HELP_HTML = HELP_LINES.map(([term, text]) =>
     `<div class="hs-challenges-help-term">${escapeHtml(term)}</div><div>${escapeHtml(text)}</div>`).join("");

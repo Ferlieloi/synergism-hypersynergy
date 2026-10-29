@@ -17,6 +17,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "test:autosing": "node scripts/test-autosing-corruption.cjs",
     "test:auto-export": "node scripts/test-auto-export.cjs",
     "test:heater": "node scripts/test-heater-vouchers.cjs",
     "build": "node esbuild.config.js build",

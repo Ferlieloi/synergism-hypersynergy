@@ -22,6 +22,8 @@ const REMOVED_LOAD_LOADOUT_ACTION = 202;
 const REMOVED_ZERO_CORRUPTION_ACTION = 400;
 // "Corruption level from phase (reapply)", replaced by "Set corruption level" at its phase's level
 const REMOVED_PHASE_LEVEL_ACTION = 401;
+// Retired effective-level action: retain its numeric target as an actual corruption level.
+const REMOVED_MINUS_FREE_LEVELS_ACTION = 404;
 
 const isCorruptionLevel = (level: unknown): level is number => Number.isInteger(level) && (level as number) >= 0;
 
@@ -121,6 +123,7 @@ export class HSStrategyManager {
      *   unchanged), a "Load Corruption Loadout" step becomes a "Set corruption level" step (removed when its loadout
      *   doesn't exist: it did nothing).
      * - "Corrup 0*" steps become "Set corruption level" steps at level 0.
+     * - "Set corruption level minus free levels" steps become ordinary set-and-ascend steps with the same target.
      * - A phase's own level is gone: it becomes a "Set corruption level" step at the phase's start, and its
      *   "Corruption level from phase (reapply)" steps "Set corruption level" steps (removed when the phase had no
      *   level: they did nothing). Not in the first phase (autosing starts each singularity with one, which sets the
@@ -152,6 +155,10 @@ export class HSStrategyManager {
                 || (step.challengeNumber === REMOVED_LOAD_LOADOUT_ACTION && !levelByName.has((step as LegacyStep).loadoutName ?? ''))
                 || (step.challengeNumber === REMOVED_PHASE_LEVEL_ACTION && phaseLevel === null));
             for (const step of phase.strat as LegacyStep[]) {
+                if (step.challengeNumber === REMOVED_MINUS_FREE_LEVELS_ACTION) {
+                    step.challengeNumber = SET_CORRUPTION_LEVEL_VALUE;
+                    continue;
+                }
                 if (step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION || step.challengeNumber === REMOVED_PHASE_LEVEL_ACTION) {
                     step.corruptionLevel = step.challengeNumber === REMOVED_ZERO_CORRUPTION_ACTION ? 0 : phaseLevel!;
                     step.challengeNumber = SET_CORRUPTION_LEVEL_VALUE;
