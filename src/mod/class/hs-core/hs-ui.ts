@@ -197,60 +197,12 @@ export class HSUI extends HSModule {
 
         // Close button handler
         if (this.#uiPanelCloseBtn) {
-            this.#uiPanelCloseBtn.addEventListener('click', async () => {
-                if (HSUI.#modPanelOpen) {
-                    await this.#uiPanel!.transition({ opacity: 0 });
-                    HSUI.#modPanelOpen = false;
-                    HSUI.#logTabActive = false;
-                    this.#uiPanel!.classList.add('hs-panel-closed');
-                }
-            });
+            this.#uiPanelCloseBtn.addEventListener('click', () => this.#closePanel());
         }
 
         // Minimize button handler
         if (this.#uiPanelMinimizeBtn) {
-            this.#uiPanelMinimizeBtn.addEventListener('click', () => {
-                const panelBodies = this.#uiPanel!.querySelectorAll('.hs-panel-body') as NodeListOf<HTMLElement>;
-                const panelTabs = this.#uiPanel!.querySelector('.hs-panel-tabs') as HTMLElement | null;
-                const panelResizer = this.#uiPanel!.querySelector('.hs-resizer') as HTMLElement | null;
-                const isMinimized = Array.from(panelBodies).some(body => body.style.display === 'none');
-                
-                if (isMinimized) {
-                    // Restore: show all panel bodies, tabs, and resizer
-                    panelBodies.forEach(body => body.style.display = '');
-                    if (panelTabs) panelTabs.style.display = '';
-                    if (panelResizer) panelResizer.style.display = '';
-
-                    const savedWidth = this.#uiPanel!.getAttribute('data-saved-width');
-                    const savedHeight = this.#uiPanel!.getAttribute('data-saved-height');
-                    if (savedWidth) this.#uiPanel!.style.width = savedWidth;
-                    if (savedHeight) this.#uiPanel!.style.height = savedHeight;
-                    this.#uiPanel!.removeAttribute('data-saved-width');
-                    this.#uiPanel!.removeAttribute('data-saved-height');
-
-                    this.#uiPanel!.classList.remove('hs-minimized');
-                    this.#uiPanelMinimizeBtn!.textContent = '_';
-                } else {
-                    // Clamp left border to page before minimizing
-                    const panelRect = this.#uiPanel!.getBoundingClientRect();
-                    if (panelRect.left < 0) {
-                        this.#uiPanel!.style.left = '0px';
-                    }
-                    // Minimize: hide all panel bodies, tabs, and resizer
-                    panelBodies.forEach(body => body.style.display = 'none');
-                    if (panelTabs) panelTabs.style.display = 'none';
-                    if (panelResizer) panelResizer.style.display = 'none';
-
-                    const computedPanelStyle = window.getComputedStyle(this.#uiPanel!);
-                    this.#uiPanel!.setAttribute('data-saved-width', computedPanelStyle.width);
-                    this.#uiPanel!.setAttribute('data-saved-height', computedPanelStyle.height);
-                    this.#uiPanel!.style.width = 'auto';
-                    this.#uiPanel!.style.height = 'auto';
-
-                    this.#uiPanel!.classList.add('hs-minimized');
-                    this.#uiPanelMinimizeBtn!.textContent = '+';
-                }
-            });
+            this.#uiPanelMinimizeBtn.addEventListener('click', () => this.#togglePanelMinimized());
         }
 
         if (this.#logClearBtn) {
@@ -277,6 +229,79 @@ export class HSUI extends HSModule {
             tab.addEventListener('click', (e) => {
                 this.#handlePanelTabClick(e.currentTarget as HTMLDivElement, tabs);
             });
+        });
+    }
+
+    async #closePanel(): Promise<void> {
+        if (!HSUI.#modPanelOpen || !this.#uiPanel) return;
+        await this.#uiPanel.transition({ opacity: 0 });
+        HSUI.#modPanelOpen = false;
+        HSUI.#logTabActive = false;
+        this.#uiPanel.classList.add('hs-panel-closed');
+    }
+
+    #isPanelMinimized(): boolean {
+        return this.#uiPanel?.classList.contains('hs-minimized') ?? false;
+    }
+
+    #togglePanelMinimized(): void {
+        const panel = this.#uiPanel;
+        if (!panel) return;
+        const panelBodies = panel.querySelectorAll('.hs-panel-body') as NodeListOf<HTMLElement>;
+        const panelTabs = panel.querySelector('.hs-panel-tabs') as HTMLElement | null;
+        const panelResizer = panel.querySelector('.hs-resizer') as HTMLElement | null;
+
+        if (this.#isPanelMinimized()) {
+            // Restore: show all panel bodies, tabs, and resizer
+            panelBodies.forEach(body => body.style.display = '');
+            if (panelTabs) panelTabs.style.display = '';
+            if (panelResizer) panelResizer.style.display = '';
+
+            const savedWidth = panel.getAttribute('data-saved-width');
+            const savedHeight = panel.getAttribute('data-saved-height');
+            if (savedWidth) panel.style.width = savedWidth;
+            if (savedHeight) panel.style.height = savedHeight;
+            panel.removeAttribute('data-saved-width');
+            panel.removeAttribute('data-saved-height');
+
+            panel.classList.remove('hs-minimized');
+            if (this.#uiPanelMinimizeBtn) this.#uiPanelMinimizeBtn.textContent = '_';
+        } else {
+            // Clamp left border to page before minimizing
+            const panelRect = panel.getBoundingClientRect();
+            if (panelRect.left < 0) {
+                panel.style.left = '0px';
+            }
+            // Minimize: hide all panel bodies, tabs, and resizer
+            panelBodies.forEach(body => body.style.display = 'none');
+            if (panelTabs) panelTabs.style.display = 'none';
+            if (panelResizer) panelResizer.style.display = 'none';
+
+            const computedPanelStyle = window.getComputedStyle(panel);
+            panel.setAttribute('data-saved-width', computedPanelStyle.width);
+            panel.setAttribute('data-saved-height', computedPanelStyle.height);
+            panel.style.width = 'auto';
+            panel.style.height = 'auto';
+
+            panel.classList.add('hs-minimized');
+            if (this.#uiPanelMinimizeBtn) this.#uiPanelMinimizeBtn.textContent = '+';
+        }
+    }
+
+    // True when a mod window drawn above the panel overlaps it
+    #isPanelCovered(): boolean {
+        const panel = this.#uiPanel;
+        if (!panel) return false;
+        const panelZ = Number.parseInt(window.getComputedStyle(panel).zIndex, 10) || 0;
+        const panelRect = panel.getBoundingClientRect();
+
+        return Array.from(document.querySelectorAll<HTMLElement>('.hs-modal')).some(modal => {
+            const style = window.getComputedStyle(modal);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            if ((Number.parseInt(style.zIndex, 10) || 0) <= panelZ) return false;
+            const rect = modal.getBoundingClientRect();
+            return rect.left < panelRect.right && rect.right > panelRect.left
+                && rect.top < panelRect.bottom && rect.bottom > panelRect.top;
         });
     }
 
@@ -328,15 +353,20 @@ export class HSUI extends HSModule {
                 this.#uiQuickAccessMenu.style.display = 'none';
             }
             if (HSUI.#modPanelOpen && this.#uiPanel) {
-                await this.#uiPanel.transition({ opacity: 0 });
-                HSUI.#modPanelOpen = false;
-                HSUI.#logTabActive = false;
-                this.#uiPanel.classList.add('hs-panel-closed');
+                // Open: a minimized or covered panel comes back first; only a visible one closes
+                const isMinimized = this.#isPanelMinimized();
+                if (!isMinimized && !this.#isPanelCovered()) {
+                    await this.#closePanel();
+                    return;
+                }
+                if (isMinimized) this.#togglePanelMinimized();
+                this.#bringElementToFront(this.#uiPanel);
             } else if (this.#uiPanel) {
                 HSUI.#modPanelOpen = true;
                 const selectedTab = document.querySelector<HTMLDivElement>('.hs-panel-tab.hs-tab-selected');
                 HSUI.#logTabActive = selectedTab?.dataset.tab === '1';
 
+                if (this.#isPanelMinimized()) this.#togglePanelMinimized();
                 this.#bringElementToFront(this.#uiPanel);
                 this.#uiPanel.style.opacity = '0';
                 this.#uiPanel.classList.remove('hs-panel-closed');
