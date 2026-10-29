@@ -2303,7 +2303,7 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         return baseBuff + consumableBuff;
     }
 
-    calculateLeaderboardValue = (leaderboard: Array<{ elo: number; sacrificeId: number }>): number => {
+    calculateLeaderboardValue = (leaderboard: ReadonlyArray<{ readonly elo: number; readonly sacrificeId: number }>): number => {
         let total = 0
         const LEADERBOARD_WEIGHTS = [1, 0.8, 0.6, 0.4, 0.2]
         for (let i = 0; i < Math.min(leaderboard.length, LEADERBOARD_WEIGHTS.length); i++) {

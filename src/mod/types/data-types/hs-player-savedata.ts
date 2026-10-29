@@ -1445,8 +1445,18 @@ export interface PlayerData {
  * What getGameData() returns: the parsed save today, the live player too once GDS reads it.
  * Fields whose shape differs between the two (checked with local/design/gds-live-player/bench/drive2.mjs)
  * are typed GameDecimal / GameCount, so every read goes through a helper that accepts both.
+ * Deeply read-only: the mod never writes into the game's data through it.
  */
-export interface GameData {
+export type GameData = DeepReadonly<GameDataFields>
+
+/** Every field readonly, down to array items; functions and branded values kept as they are. */
+export type DeepReadonly<T> =
+    T extends (...args: never[]) => unknown ? T
+    : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepReadonly<U>>
+    : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T
+
+interface GameDataFields {
     firstPlayed: string; // ISO Date string
 
     worlds: GameCount;

@@ -394,7 +394,7 @@ export class HSUtils {
         return parts.join("\r\n");
     }
 
-    static sumContents(arr: (number | null)[]): number {
+    static sumContents(arr: readonly (number | null)[]): number {
         return arr.reduce<number>((acc, val) => acc + (val ?? 0), 0);
     }
 }
