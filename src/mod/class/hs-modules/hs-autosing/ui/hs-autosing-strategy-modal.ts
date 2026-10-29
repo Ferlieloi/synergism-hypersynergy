@@ -273,7 +273,7 @@ export class HSAutosingStrategyModal {
             : this.#draft.strategy.map((phase, i) => `
                 <div class="hs-strategy-phase-item" data-index="${i}">
                     ${this.#insertSelect(i)}
-                    <div class="hs-strategy-phase-text hs-strategy-phase-start">Phase ${i + 1}: ${phase.startPhase} <span class="hs-strategy-phase-arrow">→</span></div>
+                    <div class="hs-strategy-phase-text hs-strategy-phase-start"><span>Phase ${i + 1}:</span> <span>${phase.startPhase} <span class="hs-strategy-phase-arrow">→</span></span></div>
                     <select class="hs-strategy-end-select">${renderEndOptions(this.#endsOf(i), phase.endPhase)}</select>
                     ${stepsButton(phase)}
                     <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete">×</div>

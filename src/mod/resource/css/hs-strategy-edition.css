@@ -166,9 +166,12 @@
     font-weight: bold;
 }
 
-/* "Phase N: start →", a fixed width so that the end dropdowns line up */
+/* "Phase N:" on the left, "start →" on the right next to the end dropdown; a fixed width so that the dropdowns line up */
 .hs-strategy-phase-text.hs-strategy-phase-start {
     flex: 0 0 170px;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
 }
 
 .hs-strategy-end-select {
