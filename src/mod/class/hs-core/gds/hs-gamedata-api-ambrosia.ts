@@ -958,15 +958,6 @@ export class AmbrosiaHelper {
         return upgradeConfig.effects(effectiveLevels) as AmbrosiaUpgradeRewards[T];
     };
 
-    get maxRedAmbrosiaUpgradeAP(): number {
-        return Object.values(this.redAmbrosiaUpgradeCalculationCollection).reduce((acc: number, upgrade) => {
-            if (upgrade.maxLevel === -1) {
-                return acc;
-            }
-            return acc + 10;
-        }, 0);
-    }
-
     calculateAmbrosiaGenerationShopUpgrade(reduce_vals = true, trueBaseOrMode: boolean | CalculationMode = false) {
         const data = this.#ctx.getGameData();
         if (!data) return 0;

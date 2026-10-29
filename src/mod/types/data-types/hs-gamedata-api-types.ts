@@ -817,33 +817,6 @@ export interface ISingularityChallengeData<T = Record<string, number | boolean>>
     effect: (n: number) => T
 }
 
-export type ProgressiveAchievements =
-    | 'runeLevel'
-    | 'freeRuneLevel'
-    | 'quarkUpgrades'
-    | 'antMasteries'
-    | 'rebornELO'
-    | 'talismanRarities'
-    | 'singularityCount'
-    | 'ambrosiaCount'
-    | 'redAmbrosiaCount'
-    | 'singularityUpgrades'
-    | 'octeractUpgrades'
-    | 'redAmbrosiaUpgrades'
-    | 'exalts'
-    | 'purpleHoneyUpgrades'
-    | 'purpleAmbrosiaUpgrades'
-
-export interface ProgressiveAchievement {
-    maxPointValue: number
-    pointsAwarded: (cached: number) => number
-    updateValue: () => number // Number to compare to existing caches
-    useCachedValue: boolean
-    rewardedAP: number // Updating achievementPoints: pointsAwarded() - rewardedAP
-    displayOrder: number
-    displayCondition: () => boolean
-}
-
 export type AntUpgradeTypeMap = {
     [AntUpgrades.AntSpeed]: { antSpeed: Decimal }
     [AntUpgrades.Coins]: {
