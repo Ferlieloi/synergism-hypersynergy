@@ -240,12 +240,14 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
 }
 
 /* "✎ Header edit button": a faint pencil right of the mod icon (#hs-panel-control, 35px at 10px, 10px) that
-   toggles edit mode, kept in edit mode so its checkbox shows its effect. */
+   toggles edit mode, kept in edit mode so its checkbox shows its effect. On the page only: above the page's layers (up
+   to 1000) and well under the game's overlays (tooltips #modal, notifications, dialogs, announcements: 6967 and up)
+   and the mod's panel and windows (7000), with room on both sides if the game moves them. */
 #hs-header-edit-button {
    all: unset;
    display: none;
    position: fixed;
-   z-index: 12000;
+   z-index: 2000;
    top: 10px;
    left: 48px;
    width: 18px;

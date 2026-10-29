@@ -165,12 +165,15 @@ export class HSHeaderEditSettings {
     static #hideRuleInjected = false;
     static #openingEditor = false;
 
-    /** Use the game's own long-press handler on the region, without starting a module drag. */
-    static async openEditor(): Promise<void> {
+    /**
+     * Use the game's own long-press handler on the region, without starting a module drag.
+     * closeModPanel: from the panel's button, the panel would cover the header; the pencil leaves it as it is.
+     */
+    static async openEditor(closeModPanel = true): Promise<void> {
         const header = document.getElementById('mainHeader');
         const region = document.getElementById('headerGrid');
         if (!header || !region || HSHeaderEditSettings.#openingEditor) return;
-        if (HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
+        if (closeModPanel && HSUI.isModPanelOpen()) document.getElementById('hs-panel-close-btn')?.click();
         if (!header.classList.contains('headerEditMode')) {
             HSHeaderEditSettings.#openingEditor = true;
             // The game's hold timer (650 ms, started by its pointerdown handler through window.setTimeout) is run
@@ -267,7 +270,7 @@ export class HSHeaderEditSettings {
             if (document.getElementById('mainHeader')?.classList.contains('headerEditMode')) {
                 document.getElementById('headerEditDone')?.click();
             } else {
-                void HSHeaderEditSettings.openEditor();
+                void HSHeaderEditSettings.openEditor(false);
             }
         });
         document.body.append(button);
