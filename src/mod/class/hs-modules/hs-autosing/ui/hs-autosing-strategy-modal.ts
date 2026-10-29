@@ -4,7 +4,7 @@ import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
 import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
 import { HSStrategyManager } from "../hs-strategy-manager";
 import { HSLogger } from '../../../hs-core/hs-logger';
-import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
+import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { canonicalJson, HSAutosingChallengeModal, openAutosingChallengesModal } from "./hs-autosing-challenge-modal";
 import { escapeHtml } from "../../hs-heater/hs-heater-utils";
 
@@ -15,6 +15,15 @@ function renderEndOptions(ends: readonly PhaseOption[], selected?: PhaseOption):
     return ends.map(end => `<option value="${end}"${end === selected ? " selected" : ""}>${end}</option>`).join("");
 }
 
+// 30 px right of and 10 px below the last of these windows still in the page (none: HSUI's place)
+function cascadePosition(modalIds: string[]): HSUIXY | undefined {
+    for (let i = modalIds.length - 1; i >= 0; i--) {
+        const modal = modalIds[i] === "" ? null : document.getElementById(modalIds[i]);
+        if (modal) return { x: modal.offsetLeft + 30, y: modal.offsetTop + 10 };
+    }
+    return undefined;
+}
+
 /**
  * Class: HSAutosingStrategyModal
  * IsExplicitHSModule: No
@@ -22,22 +31,29 @@ function renderEndOptions(ends: readonly PhaseOption[], selected?: PhaseOption):
  *     The strategy window of the strategy editor (create, edit, or view and copy a default strategy): its phases,
  *     each from the previous one's end to the end picked in its row, plus the AOAG phase. Works on a copy that
  *     Create/Update saves.
- *     - A phase's ✎ opens its actions window, which writes its steps into this window's copy on Save.
+ *     - Several windows can be open, one per strategy (viewing a default strategy and editing a player's one are
+ *       two) and one new strategy window. Opening one already open brings it to the front instead. Each works on
+ *       its own copy: they once found their elements by fixed ids anywhere in the page, and a second copy wired
+ *       itself to the first one and saved stale data over its changes.
+ *     - A phase's ✎ opens its actions window (one per phase, several phases at once), which writes its steps into
+ *       this window's copy on Save. A new window opens a little right of and below the last one of its kind.
  *     - The first phase starts at "start", each other one at the previous one's end. A phase's end dropdown only
  *       offers ends before the next phase's end, so a change never breaks the phases after it. The "+" above a
  *       phase inserts one before it, up to the point picked, where that phase then starts.
- *     - Cancel and the window's × ask before dropping changes, this window's or its actions window's, and close
- *       both. Deleting the phase of the open actions window asks first and closes it. Update is refused while the
- *       actions window has unsaved changes.
+ *     - Cancel and the window's × ask before dropping changes, this window's or its actions windows', and close
+ *       them all. Deleting a phase whose actions window is open asks first and closes it. Update is refused while
+ *       an actions window has unsaved changes.
  * Author: XxMolkxX, Shewchou
  */
 export class HSAutosingStrategyModal {
     static readonly #context = 'HSAutosingStrategyModal';
-    // The open window (one at a time, see HSAutosingEditorWindows)
-    static #current: HSAutosingStrategyModal | null = null;
+    // The windows open or opening, in opening order (some may have been closed since: see #openWindows)
+    static #windows: HSAutosingStrategyModal[] = [];
 
     #uiMod: HSUI;
     #mode: StrategyWindowMode;
+    // What the window opened on: "create", or the mode and the strategy's name
+    #key: string;
     // The saved name of the strategy edited (edit mode)
     #editedName: string | undefined;
     #draft: HSAutosingStrategy & { aoagPhase: AutosingStrategyPhase };
@@ -54,8 +70,8 @@ export class HSAutosingStrategyModal {
     #overlayConfirm!: HTMLElement;
     // What the overlay's confirm button does
     #onOverlayConfirm: (() => void) | null = null;
-    // The actions window opened from this one, and the phase it edits
-    #actions: { phase: AutosingStrategyPhase; window: HSAutosingChallengeModal } | null = null;
+    // The actions windows opened from this one, by the phase they edit (some may have been closed since: see #openActions)
+    #actions = new Map<AutosingStrategyPhase, HSAutosingChallengeModal>();
 
     static async open(
         existingStrategy?: HSAutosingStrategy,
@@ -67,24 +83,44 @@ export class HSAutosingStrategyModal {
     ): Promise<void> {
         const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
         if (!uiMod || !uiMod.uiReady) return;
-        if (!HSAutosingEditorWindows.claim(uiMod, 'strategy', options?.parentModalId)) return;
 
-        const editor = new HSAutosingStrategyModal(uiMod, existingStrategy, options);
-        HSAutosingStrategyModal.#current = editor;
-        await editor.#open(options?.parentModalId);
+        const mode: StrategyWindowMode = !existingStrategy ? 'create' : options?.duplicateFromDefault ? 'copy' : 'edit';
+        const key = mode === 'create' ? 'create' : `${mode}:${existingStrategy!.strategyName}`;
+        const open = HSAutosingStrategyModal.#openWindows();
+        const twin = open.find(editor => editor.#key === key);
+        if (twin) {
+            // Still opening (a double click): nothing to show
+            if (twin.#modalId === "") return;
+            void uiMod.BringModalToFront(twin.#modalId);
+            HSUI.Notify(mode === 'create' ? "A new strategy window is already open" : `"${existingStrategy!.strategyName}" is already open in a strategy window`, { notificationType: 'warning' });
+            return;
+        }
+
+        // Listed before the first await, so that a double click opens one window
+        const position = cascadePosition(open.map(editor => editor.#modalId));
+        const editor = new HSAutosingStrategyModal(uiMod, mode, key, existingStrategy, options?.suggestedName);
+        HSAutosingStrategyModal.#windows.push(editor);
+        await editor.#open(options?.parentModalId, position);
     }
 
-    /** True when a window edits this strategy: it is brought to the front. */
+    /** True when a window (open or opening) edits this strategy: it is brought to the front. */
     static showEditorOf(strategyName: string): boolean {
-        const editor = HSAutosingStrategyModal.#current;
-        if (!editor || editor.#editedName !== strategyName || !editor.#isOpen()) return false;
-        void editor.#uiMod.BringModalToFront(editor.#modalId);
+        const editor = HSAutosingStrategyModal.#openWindows().find(w => w.#editedName === strategyName);
+        if (!editor) return false;
+        if (editor.#modalId !== "") void editor.#uiMod.BringModalToFront(editor.#modalId);
         return true;
     }
 
-    private constructor(uiMod: HSUI, existingStrategy: HSAutosingStrategy | undefined, options?: { duplicateFromDefault?: boolean; suggestedName?: string }) {
+    // The windows closed (by any way) are dropped from the list
+    static #openWindows(): HSAutosingStrategyModal[] {
+        HSAutosingStrategyModal.#windows = HSAutosingStrategyModal.#windows.filter(editor => editor.#modalId === "" || editor.#isOpen());
+        return HSAutosingStrategyModal.#windows;
+    }
+
+    private constructor(uiMod: HSUI, mode: StrategyWindowMode, key: string, existingStrategy: HSAutosingStrategy | undefined, suggestedName?: string) {
         this.#uiMod = uiMod;
-        this.#mode = !existingStrategy ? 'create' : options?.duplicateFromDefault ? 'copy' : 'edit';
+        this.#mode = mode;
+        this.#key = key;
         this.#editedName = this.#mode === 'edit' ? existingStrategy!.strategyName : undefined;
 
         const strategy: AutosingStrategyPhase[] = existingStrategy ? structuredClone(existingStrategy.strategy) : [];
@@ -96,7 +132,7 @@ export class HSAutosingStrategyModal {
 
         this.#draft = {
             strategyName: this.#mode === 'copy'
-                ? (options?.suggestedName ?? `${existingStrategy!.strategyName}_copy`)
+                ? (suggestedName ?? `${existingStrategy!.strategyName}_copy`)
                 : existingStrategy?.strategyName ?? "",
             strategy,
             aoagPhase
@@ -105,7 +141,7 @@ export class HSAutosingStrategyModal {
         this.#initial = this.#canonical(this.#draft.strategyName);
     }
 
-    async #open(parentModalId?: string): Promise<void> {
+    async #open(parentModalId: string | undefined, position: HSUIXY | undefined): Promise<void> {
         const isEdit = this.#mode === 'edit';
         this.#modalId = await this.#uiMod.Modal({
             htmlContent: `
@@ -122,7 +158,7 @@ export class HSAutosingStrategyModal {
                     </div>
                     <div class="hs-strategy-error" hidden></div>
                     <div class="hs-strategy-btn-group">
-                        <select class="hs-strategy-add-select"></select>
+                        <select class="hs-strategy-add-select" title="Add a phase after the last one"></select>
                         <div class="hs-strategy-btn hs-strategy-btn-secondary" data-action="cancel">Cancel</div>
                         <div class="hs-strategy-btn hs-strategy-btn-primary" data-action="save">
                             ${isEdit ? 'Update Strategy' : (this.#mode === 'copy' ? 'Save as a new Strategy' : 'Create Strategy')}
@@ -140,9 +176,9 @@ export class HSAutosingStrategyModal {
                 </div>
             `,
             title: isEdit ? "Edit Autosing Strategy" : (this.#mode === 'copy' ? "View / Copy Default Strategy" : "Create Autosing Strategy"),
-            parentModalId
+            parentModalId,
+            position
         });
-        HSAutosingEditorWindows.opened('strategy', this.#modalId);
 
         const modal = document.getElementById(this.#modalId);
         const root = modal?.querySelector<HTMLElement>(".hs-strategy-modal-container");
@@ -164,7 +200,7 @@ export class HSAutosingStrategyModal {
                 e.stopPropagation();
                 this.#ask("Discard unsaved changes?", "Discard", () => this.#close());
             } else {
-                this.#actions?.window.close();
+                this.#closeActions();
             }
         });
 
@@ -236,7 +272,7 @@ export class HSAutosingStrategyModal {
         return row.dataset.aoag !== undefined ? this.#draft.aoagPhase : this.#draft.strategy[Number(row.dataset.index)];
     }
 
-    // ----- Actions window -----
+    // ----- Actions windows -----
 
     #actionsTitle(phase: AutosingStrategyPhase): string {
         return phase === this.#draft.aoagPhase
@@ -244,16 +280,34 @@ export class HSAutosingStrategyModal {
             : `Configure Strategy Actions (${phase.startPhase}-${phase.endPhase})`;
     }
 
-    // The open actions window (null: none, or closed meanwhile)
-    #openActions(): { phase: AutosingStrategyPhase; window: HSAutosingChallengeModal } | null {
-        if (this.#actions && !this.#actions.window.isOpen()) this.#actions = null;
+    #phaseLabel(phase: AutosingStrategyPhase): string {
+        return phase === this.#draft.aoagPhase ? AOAG_PHASE_NAME : `Phase ${this.#draft.strategy.indexOf(phase) + 1}`;
+    }
+
+    // The actions windows open or opening (the ones closed meanwhile are dropped)
+    #openActions(): Map<AutosingStrategyPhase, HSAutosingChallengeModal> {
+        for (const [phase, actionsWindow] of this.#actions) {
+            if (!actionsWindow.isOpen()) this.#actions.delete(phase);
+        }
         return this.#actions;
     }
 
+    #closeActions(): void {
+        for (const actionsWindow of this.#openActions().values()) actionsWindow.close();
+    }
+
     #editActions(phase: AutosingStrategyPhase): void {
-        // Another phase's window already open: it is brought to the front instead
-        const actionsWindow = openAutosingChallengesModal(this.#uiMod, phase.strat, this.#actionsTitle(phase), this.#modalId, () => this.#redraw());
-        if (actionsWindow) this.#actions = { phase, window: actionsWindow };
+        const open = this.#openActions();
+        const twin = open.get(phase);
+        if (twin) {
+            // Still opening (a double click): nothing to show
+            if (twin.modalId === "") return;
+            twin.bringToFront();
+            HSUI.Notify(`${this.#phaseLabel(phase)}'s actions window is already open`, { notificationType: 'warning' });
+            return;
+        }
+        const position = cascadePosition([...open.values()].map(actionsWindow => actionsWindow.modalId));
+        open.set(phase, openAutosingChallengesModal(this.#uiMod, phase.strat, this.#actionsTitle(phase), this.#modalId, () => this.#redraw(), position));
     }
 
     // ----- Window -----
@@ -261,7 +315,7 @@ export class HSAutosingStrategyModal {
     #redraw(): void {
         const stepsButton = (phase: AutosingStrategyPhase) => {
             const count = phase.strat.length;
-            return `<div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-steps${count === 0 ? " hs-strategy-btn-steps-empty" : ""}" data-action="edit">✎ ${count} step${count === 1 ? "" : "s"}</div>`;
+            return `<div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-steps${count === 0 ? " hs-strategy-btn-steps-empty" : ""}" data-action="edit" title="Edit this phase's steps">✎ ${count} step${count === 1 ? "" : "s"}</div>`;
         };
         const aoagRow = `
             <div class="hs-strategy-phase-item" data-aoag>
@@ -274,9 +328,9 @@ export class HSAutosingStrategyModal {
                 <div class="hs-strategy-phase-item" data-index="${i}">
                     ${this.#insertSelect(i)}
                     <div class="hs-strategy-phase-text hs-strategy-phase-start"><span>Phase ${i + 1}:</span> <span>${phase.startPhase} <span class="hs-strategy-phase-arrow">→</span></span></div>
-                    <select class="hs-strategy-end-select">${renderEndOptions(this.#endsOf(i), phase.endPhase)}</select>
+                    <select class="hs-strategy-end-select" title="Where this phase ends">${renderEndOptions(this.#endsOf(i), phase.endPhase)}</select>
                     ${stepsButton(phase)}
-                    <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete">×</div>
+                    <div class="hs-strategy-btn hs-strategy-btn-icon hs-strategy-btn-delete" data-action="delete" title="Delete this phase">×</div>
                 </div>`).join("");
         this.#list.innerHTML = aoagRow + phaseRows;
 
@@ -285,8 +339,7 @@ export class HSAutosingStrategyModal {
             + renderEndOptions(phases.slice(phases.indexOf(lastEnd) + 1));
         this.#addSelect.hidden = lastEnd === "end";
 
-        const actions = this.#openActions();
-        actions?.window.setTitle(this.#actionsTitle(actions.phase));
+        for (const [phase, actionsWindow] of this.#openActions()) actionsWindow.setTitle(this.#actionsTitle(phase));
         // The last refused save's reason may no longer hold
         this.#errorBox.hidden = true;
     }
@@ -296,7 +349,11 @@ export class HSAutosingStrategyModal {
     }
 
     #hasChanges(): boolean {
-        return this.#canonical(this.#nameInput.value) !== this.#initial || !!this.#openActions()?.window.hasUnsavedChanges();
+        return this.#canonical(this.#nameInput.value) !== this.#initial || this.#actionsHaveChanges();
+    }
+
+    #actionsHaveChanges(): boolean {
+        return [...this.#openActions().values()].some(actionsWindow => actionsWindow.hasUnsavedChanges());
     }
 
     #isOpen(): boolean {
@@ -316,7 +373,7 @@ export class HSAutosingStrategyModal {
     }
 
     #close(): void {
-        this.#openActions()?.window.close();
+        this.#closeActions();
         void this.#uiMod.CloseModal(this.#modalId);
     }
 
@@ -344,9 +401,9 @@ export class HSAutosingStrategyModal {
             case "delete": {
                 const phase = this.#phaseAt(target);
                 if (!phase) break;
-                if (this.#openActions()?.phase === phase) {
-                    this.#ask(`Phase ${this.#draft.strategy.indexOf(phase) + 1}'s actions window is open. Delete the phase and close it?`, "Delete", () => {
-                        this.#openActions()?.window.close();
+                if (this.#openActions().has(phase)) {
+                    this.#ask(`${this.#phaseLabel(phase)}'s actions window is open. Delete the phase and close it?`, "Delete", () => {
+                        this.#openActions().get(phase)?.close();
                         this.#deletePhase(phase);
                     });
                 } else {
@@ -373,8 +430,8 @@ export class HSAutosingStrategyModal {
 
     #save(): void {
         const context = HSAutosingStrategyModal.#context;
-        if (this.#openActions()?.window.hasUnsavedChanges()) {
-            this.#showError("Save or close the actions window first");
+        if (this.#actionsHaveChanges()) {
+            this.#showError("Save or close the actions windows first");
             return;
         }
         this.#draft.strategyName = this.#nameInput.value || "Unnamed Strategy";

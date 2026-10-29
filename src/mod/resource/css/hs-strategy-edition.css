@@ -24,12 +24,12 @@
 }
 
 .hs-strategy-name-input {
-    padding: 10px 14px;
+    padding: 5px 8px;
     background-color: #101828;
     border: 2px solid white;
     border-radius: 3px;
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.2s;
     box-sizing: border-box;
 }
@@ -215,17 +215,16 @@
 }
 
 .hs-strategy-btn {
-    padding: 10px 20px;
+    padding: 6px 16px;
     border-radius: 3px;
     border: 2px solid white;
     font-weight: 600;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.15s;
     text-align: center;
     background-color: #101828;
     color: white;
-    min-height: 30px;
-    line-height: 30px;
 }
 
 .hs-strategy-btn:hover {
@@ -244,16 +243,17 @@
     border-color: white;
 }
 
+/* A phase row's ✎ and × */
 .hs-strategy-btn-icon {
-    /* The text centred in the button (its min-height beats its height) */
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 8px;
+    box-sizing: border-box;
+    padding: 0 8px;
     font-size: 13px;
-    min-width: 26px;
-    width: 26px;
-    height: 26px;
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
     line-height: 16px;
     border: 1px solid white;
 }
@@ -588,6 +588,10 @@
 }
 
 .hs-challenge-btn {
+    /* The glyph centred in the button (its line is shorter than the button) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 3px 6px;
     min-width: 24px;
     width: 24px;
@@ -636,7 +640,7 @@
 }
 
 .hs-challenges-footer-btn {
-    padding: 10px 24px;
+    padding: 6px 16px;
     border-radius: 3px;
     border: 2px solid white;
     font-weight: 600;
@@ -665,7 +669,7 @@
 
 /* "?", Undo and Redo: narrower than Cancel and Save */
 .hs-challenges-footer-btn.hs-challenges-small-btn {
-    padding: 10px 12px;
+    padding: 6px 10px;
 }
 
 .hs-challenges-undo-btn,

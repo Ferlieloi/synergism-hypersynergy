@@ -1,7 +1,7 @@
 import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
-import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
+import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
 import { escapeHtml } from "../../hs-heater/hs-heater-utils";
 
 type IfJumpMode = NonNullable<IfJumpParams["ifJumpMode"]>;
@@ -276,8 +276,8 @@ const AUTO_SCROLL_MAX_PX_PER_FRAME = 12;
  *     - Each change of the steps can be undone and redone (the "Add Here" separator's moves alone are not changes).
  *       Cancel and the window's × ask before dropping a copy that differs from the saved steps.
  *     - The footer shows the phase's fixed waits, the list run once (IF jumps not followed), and a help box.
- *     - The strategy window that opened it can ask whether it has unsaved changes, close it (changes dropped) and
- *       change its title; Save tells it.
+ *     - The strategy window that opened it (one such window per phase) can ask whether it has unsaved changes,
+ *       close it (changes dropped), change its title and bring it to the front; Save tells it.
  * Author: XxMolkxX, Shewchou
  */
 export class HSAutosingChallengeModal {
@@ -327,9 +327,9 @@ export class HSAutosingChallengeModal {
         this.#separatorIndex = this.#steps.length;
     }
 
-    async open(parentModalId?: string): Promise<void> {
-        this.#modalId = await this.#uiMod.Modal({ htmlContent: this.#renderWindow(), title: this.#title, parentModalId });
-        HSAutosingEditorWindows.opened('challenges', this.#modalId);
+    // position: none = HSUI's place next to the parent window
+    async open(parentModalId?: string, position?: HSUIXY): Promise<void> {
+        this.#modalId = await this.#uiMod.Modal({ htmlContent: this.#renderWindow(), title: this.#title, parentModalId, position });
         if (this.#closed) {
             void this.#uiMod.CloseModal(this.#modalId);
             return;
@@ -491,9 +491,9 @@ export class HSAutosingChallengeModal {
                 <div class="hs-challenge-meta">${this.#renderStepMeta(step)}</div>
                 ${step.comment ? `<div class="hs-challenge-comment">🗨️ ${escapeHtml(step.comment)}</div>` : ""}
             </div>
-            <div class="hs-challenge-btn hs-challenge-btn-edit" data-action="edit">✎</div>
+            <div class="hs-challenge-btn hs-challenge-btn-edit" data-action="edit" title="Edit">✎</div>
             <div class="hs-challenge-btn hs-challenge-btn-duplicate" data-action="duplicate" title="Duplicate">⧉</div>
-            <div class="hs-challenge-btn hs-challenge-btn-delete" data-action="delete">×</div>
+            <div class="hs-challenge-btn hs-challenge-btn-delete" data-action="delete" title="Delete">×</div>
         </div>`;
     }
 
@@ -895,6 +895,15 @@ export class HSAutosingChallengeModal {
         if (titleElement) titleElement.textContent = title;
     }
 
+    /** Its id ("" while it opens), to place the next window from it. */
+    get modalId(): string {
+        return this.#modalId;
+    }
+
+    bringToFront(): void {
+        if (this.#modalId !== "") void this.#uiMod.BringModalToFront(this.#modalId);
+    }
+
     // ----- Ctrl+Z, Ctrl+Y -----
 
     #removePageListeners(): void {
@@ -902,7 +911,7 @@ export class HSAutosingChallengeModal {
         document.removeEventListener("keydown", this.#onPageKeyDown);
     }
 
-    // The window can also go without #close (HSUI's ×, a window of the same kind opened over an orphan)
+    // The window can also go without #close (HSUI's ×)
     #isGone(): boolean {
         if (this.#root.isConnected) return false;
         this.#removePageListeners();
@@ -1086,17 +1095,17 @@ export class HSAutosingChallengeModal {
 
 /**
  * Opens the actions window on a phase's steps, which Save replaces (then calls onSaved). Returns the window at once,
- * while it opens; null when an actions window is already open (it is brought to the front instead).
+ * while it opens.
  */
 export function openAutosingChallengesModal(
     uiMod: HSUI,
     stratData: AutosingStrategyPhase["strat"],
     title: string,
     parentModalId: string,
-    onSaved: () => void
-): HSAutosingChallengeModal | null {
-    if (!HSAutosingEditorWindows.claim(uiMod, 'challenges', parentModalId)) return null;
+    onSaved: () => void,
+    position?: HSUIXY
+): HSAutosingChallengeModal {
     const actionsWindow = new HSAutosingChallengeModal(uiMod, stratData, title, onSaved);
-    void actionsWindow.open(parentModalId);
+    void actionsWindow.open(parentModalId, position);
     return actionsWindow;
 }
