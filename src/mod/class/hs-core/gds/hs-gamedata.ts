@@ -27,7 +27,6 @@ import { HSModuleOptions } from "../../../types/hs-types";
  */
 export class HSGameData extends HSModule {
     // --- Save Data & State ---
-    #saveDataLocalStorageKey = 'Synergysave2';
     #saveData?: GameData;
 
     isSteam = false;
@@ -40,8 +39,6 @@ export class HSGameData extends HSModule {
     #mitmCaptureCount = 0;
     #btoaHacked = false;
     #atobHacked = false;
-    #nativeBtoa?: typeof window.btoa;
-    #nativeAtob?: typeof window.atob;
 
     // --- Engine & Intervals ---
     #gdsEnabled = false;
@@ -92,8 +89,6 @@ export class HSGameData extends HSModule {
 
     // --- Miscellaneous ---
     #saveTriggerEvent: Event;
-    #lastForceFetch = 0;
-    #ForceFetchCooldown = 1000;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
@@ -148,8 +143,7 @@ export class HSGameData extends HSModule {
 
         // Set before the reads: the data only reaches the API through this reference.
         // PseudoCoin levels and quark bonuses come from the game (patched) or the browser's cache when they can,
-        // and are fetched at most once (asked by the game's dev: too much traffic on these endpoints).
-        // forceUpdateAllData() (heater, backup) only retries what could not be read.
+        // and are fetched at most once, at load (asked by the game's dev: too much traffic on these endpoints).
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
         this.#watchPCoinLevels();
         this.#watchQuarkBonus();
@@ -213,23 +207,6 @@ export class HSGameData extends HSModule {
     // --- Core Data Fetch/Update ---
 
     /**
-     * Forces a refresh of all game data: fetched data and save data (campaign tokens are computed from the save).
-     * Applies cooldown to prevent excessive refreshes.
-     * @returns Promise<void>
-     */
-    async forceUpdateAllData() {
-        const now = Date.now();
-        if (now - this.#lastForceFetch < this.#ForceFetchCooldown) { HSLogger.warn("Forced data refresh on cooldown", this.context); return; }
-        this.#lastForceFetch = now;
-
-        await this.#refreshFetchedData();
-        await this.forceRefreshGameData();
-
-        this.#pseudoDataUpdated();
-        this.#meDataUpdated();
-    }
-
-    /**
      * SYNCHRONOUSLY triggers a game save and returns the raw save JSON captured by the btoa hook.
      * For callers that cannot await (e.g. right before a click whose ordering matters).
      * @returns The fresh save JSON, or undefined if no save was captured (e.g. during a time warp)
@@ -248,7 +225,10 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Forces a refresh of save-derived game data only, without updating fetched pseudo/me/campaign data.
+     * Forces a save and reads it, whether the GDS engine runs or not (GDS off, paused by autosing).
+     * The game's save handler calls btoa synchronously, so the capture is processed here at once: the hook's microtask
+     * then finds nothing new. Only a changed save is parsed and notified, as on the periodic tick
+     * (a refused save, e.g. during a time warp, leaves the data as it was).
      * @returns Promise<void>
      */
     async forceRefreshGameData(): Promise<void> {
@@ -259,47 +239,15 @@ export class HSGameData extends HSModule {
 
         if (saveBtn) {
             saveBtn.dispatchEvent(this.#saveTriggerEvent);
-            // The game's save handler calls btoa synchronously, while our
-            // capture hook schedules the data update in a microtask.  Yield
-            // once so the freshly serialized save (including the token completions) is
-            // available before parsing it below.
-            await new Promise<void>((resolve) => queueMicrotask(resolve));
         } else {
             HSLogger.warn('Could not find #savegame to force refresh game data', this.context);
         }
 
-        if (this.#mitm_gamedata) {
-            try {
-                this.#saveData = JSON.parse(this.#mitm_gamedata) as GameData;
-            } catch (err) {
-                HSLogger.error(`Failed to parse save data during forceRefreshGameData: ${err}`, this.context);
-            }
-        }
-
-        // In browsers where the save button does not pass through the hooked
-        // btoa function, localStorage is still the game's authoritative save
-        // source. Prefer it when it contains the token completions so the
-        // heater cannot fall back to inheritance tokens alone.
-        const storedSave = localStorage.getItem(this.#saveDataLocalStorageKey);
-        if (storedSave) {
-            try {
-                const atobFn = this.#nativeAtob ?? window.atob;
-                const parsedStoredSave = JSON.parse(atobFn(storedSave)) as GameData;
-                if (!Array.isArray(this.#saveData?.corruptions?.tokenCompletions)
-                    && Array.isArray(parsedStoredSave?.corruptions?.tokenCompletions)) {
-                    this.#saveData = parsedStoredSave;
-                }
-            } catch (err) {
-                HSLogger.debug(() => `Could not parse localStorage save during force refresh: ${err}`, this.context);
-            }
-        }
-
-        this.#saveDataUpdated();
+        this.#processCapturedSave(true);
     }
 
     /**
-     * Reads the PseudoCoin levels (#loadPCoinLevels) and the quark bonuses (#loadQuarkBonus) once.
-     * A later call only retries what could not be read.
+     * Reads the PseudoCoin levels (#loadPCoinLevels) and the quark bonuses (#loadQuarkBonus) once, at load.
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
@@ -651,9 +599,10 @@ export class HSGameData extends HSModule {
 
     /**
      * Processes save data from MITM when new encoded save JSON has been captured.
+     * @param forced Also when the GDS engine isn't running (forceRefreshGameData)
      */
-    #processCapturedSave = () => {
-        if (!this.#gdsEnabled) return;
+    #processCapturedSave = (forced = false) => {
+        if (!this.#gdsEnabled && !forced) return;
 
         if (this.#mitm_gamedata && this.#mitm_gamedata !== this.#last_mitm_gamedata) {
             this.#last_mitm_gamedata = this.#mitm_gamedata;
@@ -733,8 +682,6 @@ export class HSGameData extends HSModule {
         const self = this;
         const _atob = window.atob;
 
-        if (!this.#nativeAtob) this.#nativeAtob = _atob;
-
         window.atob = function (s) {
             const decoded = _atob(s);
             // Quick check for JSON-like structure to capture save data
@@ -759,8 +706,6 @@ export class HSGameData extends HSModule {
 
         // Store ref to native btoa
         const _btoa = window.btoa;
-
-        if (!this.#nativeBtoa) this.#nativeBtoa = _btoa;
 
         // Overwrite btoa
         window.btoa = function (s) {

@@ -228,7 +228,7 @@ export class HSBackup {
         if (!api) return { heaterError: 'HSGameDataAPI not loaded' };
 
         try {
-            // Refreshes the save, the PseudoCoin levels, the quark bonus and the events first
+            // Forces a fresh save first
             const heaterData = await api.dumpDataForHeater();
             // The rest of it is the save, already in the file when ticked
             if (heaterData?.hs_data) return { heater: heaterData.hs_data };

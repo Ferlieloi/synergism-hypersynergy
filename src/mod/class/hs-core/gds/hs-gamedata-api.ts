@@ -2367,7 +2367,8 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
         const gameDataModule = HSModuleManager.getModule("HSGameData") as HSGameData;
 
         if (gameDataModule) {
-            await gameDataModule.forceUpdateAllData();
+            // PseudoCoin levels, quark bonus and consumables are pushed by HSGameData at each change: only the save is forced
+            await gameDataModule.forceRefreshGameData();
         } else {
             HSLogger.error('Failed to acquire game data for heater export', this.context);
             HSUI.Notify('Failed to acquire game data for heater export', { position: 'top', notificationType: "error" });
