@@ -359,6 +359,17 @@ export class HSHeaterUIStyles {
                 text-align: center;
             }
 
+            .hs-heater-input-table td.hs-heater-input-heading {
+                height: auto;
+                padding: 6px 4px 1px;
+                border-left: none;
+                border-right: none;
+                color: #9a9a9a;
+                font-size: 0.85em;
+                font-weight: bold;
+                text-align: left;
+            }
+
             .hs-heater-select-input {
                 width: 100%;
                 height: 20px;

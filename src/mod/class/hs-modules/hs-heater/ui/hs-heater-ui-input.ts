@@ -530,8 +530,11 @@ export class HSHeaterUIInput {
         const exaltWarningRow = field.key === 'exalt'
             ? `<tr id="hs-heater-exalt-warning-row" hidden><td colspan="4" class="hs-heater-input-warning"></td></tr>`
             : '';
+        const headingRow = field.heading
+            ? `<tr><td colspan="4" class="hs-heater-input-heading">${escapeHtml(field.heading)}</td></tr>`
+            : '';
 
-        return `
+        return `${headingRow}
                 <tr>
                     <td>${iconHtml}</td>
                     <td>${escapeHtml(field.label)}</td>
