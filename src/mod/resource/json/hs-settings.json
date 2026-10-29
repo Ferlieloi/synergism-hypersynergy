@@ -337,7 +337,7 @@
   "reloadOnLateLoaderStart": {
     "settingName": "reloadOnLateLoaderStart",
     "settingDescription": "Reload when the loader starts late",
-    "settingHelpText": "Browser (Tampermonkey) only. Sometimes Tampermonkey starts the mod's loader after the game has already started (Tampermonkey was idle, or the computer is slow), and the mod can't load. On: the page reloads automatically (at most 2 times in a row). Off: a message asks you to refresh.",
+    "settingHelpText": "Browser (Tampermonkey) only. Sometimes Tampermonkey starts the mod's loader after the game has already started (Tampermonkey was idle, or the computer is slow), and the mod can't load. On: the page reloads automatically (at most 3 times in a row). Off: a message asks you to refresh.",
     "settingType": "boolean",
     "enabled": true,
     "platforms": ["userscript"],

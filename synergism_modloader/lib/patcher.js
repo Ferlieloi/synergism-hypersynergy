@@ -1025,7 +1025,7 @@ function startBrowserLoader(options) {
     // At most LATE_START_MAX_RELOADS in a row, counted in sessionStorage so it can't loop.
     // The mod's reloadOnLateLoaderStart setting (read from localStorage) can turn the reload off.
     const LATE_START_KEY = 'hs-loader-late-start-reloads';
-    const LATE_START_MAX_RELOADS = 2;
+    const LATE_START_MAX_RELOADS = 3;
     const LATE_START_WINDOW_MS = 60000;
     const LATE_START_RELOAD_DELAY_MS = 1500;
 
