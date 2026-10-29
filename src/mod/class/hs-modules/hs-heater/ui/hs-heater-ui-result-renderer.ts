@@ -119,19 +119,23 @@ function buildShortCostCell(short: HeaterShortResource, atLeast: boolean): strin
     return `<td class="hs-heater-short-cost" title="You have ${formatCostCellValue(short.have)}">${need}</td>`;
 }
 
-function buildHeaderTooltipLabel(label: string, tooltip: string): string {
-    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
+function buildHeaderTooltipLabel(label: string, tooltip: string, iconHtml = ""): string {
+    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${iconHtml}${escapeHtml(label)}</th>`;
 }
 
 function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string {
     const { showP4x4, showRouting, effectHeader } = sectionDef;
     const blueberryHeader = `<img src="Pictures/Default/Blueberries.png" class="hs-heater-header-icon" />`;
+    // Ambrosia.png fills its frame, Blueberries.png doesn't: drawn smaller to match
+    const ambrosiaHeader = `<img src="Pictures/Default/Ambrosia.png" class="hs-heater-header-icon hs-heater-header-icon-small" />`;
     if (showRouting) {
         const splitHeader = `<th colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${escapeHtml(effectHeader)}</span><span>Routing</span></div></th>`;
-        return `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${splitHeader}<th>Maxed?</th></tr>`;
+        return `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th>${splitHeader}<th>Maxed?</th></tr>`;
     }
+    // Every p4x4 row's Effect is a cube multiplier, SR rows included
+    const cubeIcon = `<img src="Pictures/Default/TinyWow3.png" class="hs-heater-header-icon hs-heater-effect-header-icon" alt="Cubes" />`;
     const effectLabel = showP4x4
-        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50")
+        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50", cubeIcon)
         : `<th>${escapeHtml(effectHeader)}</th>`;
     const p4x4Label = showP4x4
         ? buildHeaderTooltipLabel("p4x4 eq", `"p4x4 eq" indicates the amount\n`
@@ -143,8 +147,8 @@ function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string 
         : `<th>p4x4 eq</th>`;
 
     return showP4x4
-        ? `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
-        : `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
+        ? `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
+        : `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
 }
 
 // The H row that wins at the live P4x4 when the table is drawn (it's redrawn

@@ -16,7 +16,7 @@ type HeaterResultTypeConfig = {
     icon?: string;
     rowLabels?: readonly string[];
     rowIcons?: readonly string[];
-    // An upgrade whose level the Types cell shows after the label ("Max SR1 (1/2)")
+    // An upgrade whose level the Loadout cell shows after the label ("Max SR1 (1/2)")
     labelLevel?: { upgrade: string; maxLevel: number };
 };
 

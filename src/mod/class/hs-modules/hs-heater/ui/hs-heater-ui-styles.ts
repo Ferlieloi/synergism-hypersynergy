@@ -890,6 +890,18 @@ export class HSHeaterUIStyles {
                 width: 22px;
             }
 
+            .hs-heater-header-icon-small {
+                height: 16px;
+                width: 16px;
+            }
+
+            /* The size of the Obt + Off Effect icons */
+            .hs-heater-effect-header-icon {
+                height: 16px;
+                width: 16px;
+                margin-right: 4px;
+            }
+
             /* === Floating Preview Container (base) === */
             .hs-heater-loadout-preview {
                 position: fixed;
