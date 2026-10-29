@@ -292,7 +292,9 @@ class HSAutosingChallengeModal {
             const condition = (jump.ifJumpMode ?? "challenges") === "challenges"
                 ? `challenge ${jump.ifJumpChallenge} ${jump.ifJumpOperator} ${jump.ifJumpValue}`
                 : `Stored C15${jump.ifJumpMultiplier ? ` × 10^${jump.ifJumpMultiplier}` : ""} ${jump.ifJumpOperator} Current C15`;
-            return `<strong>IF</strong> ${escapeHtml(condition)} ${actionId(IF_JUMP_VALUE)}`;
+            // The step that runs next when the condition holds (the logs' "jump to step N")
+            const jumpTo = jump.ifJumpIndex >= this.#steps.length ? "end of phase" : `step ${jump.ifJumpIndex + 1}`;
+            return `<strong>IF</strong> ${escapeHtml(condition)} <span class="hs-challenge-jump-to">→ ${jumpTo}</span> ${actionId(IF_JUMP_VALUE)}`;
         }
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
         if (!action) return `Challenge ${step.challengeNumber} (${step.challengeCompletions} completions)`;
@@ -315,7 +317,7 @@ class HSAutosingChallengeModal {
         <div class="hs-challenge-item hs-if-target" data-if-id="${step.ifJump.id}">
             <div class="hs-challenge-step-no"></div>
             <div class="hs-challenge-drag-handle">⋮⋮</div>
-            ↳ Jump here (IF step ${ifIndex + 1})
+            ↳ Jump here <span class="hs-challenge-jump-to">(IF step ${ifIndex + 1})</span>
         </div>`;
     }
 

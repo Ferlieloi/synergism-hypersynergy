@@ -476,6 +476,11 @@
     font-style: italic;
 }
 
+/* Where an IF jumps, after its condition, and which IF a "Jump here" row belongs to */
+.hs-challenge-jump-to {
+    color: #b4b4b4;
+}
+
 /* An action's id, after its label */
 .hs-challenge-action-id {
     font-size: 10px;
