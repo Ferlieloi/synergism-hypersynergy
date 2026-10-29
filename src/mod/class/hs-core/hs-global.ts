@@ -103,6 +103,7 @@ export const HSGlobal: IHSGlobal = class {
             HSAutosingSettingsFixer: 'HSAutosing',
             HSAutosingCorruption: 'HSAutosing',
             HSAutosingStrategyModal: 'HSAutosing',
+            HSAutosingStrategyControls: 'HSAutosing',
             // Ambrosia
             HSAmbrosiaHelper: 'HSAmbrosia',
             // Settings

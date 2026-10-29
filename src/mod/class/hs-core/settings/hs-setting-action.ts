@@ -7,6 +7,7 @@ import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
+import { HSAutosingStrategyControls } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-controls";
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
@@ -186,18 +187,18 @@ export class HSSettingActions {
         },
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.editSelectedStrategy();
+            await HSAutosingStrategyControls.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.deleteSelectedStrategy();
+            await HSAutosingStrategyControls.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.exportSelectedStrategy();
+            await HSAutosingStrategyControls.exportSelectedStrategy();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.importStrategy();
+            await HSAutosingStrategyControls.importStrategy();
         },
 
         resetAutosingAdvancedAction: async () => {

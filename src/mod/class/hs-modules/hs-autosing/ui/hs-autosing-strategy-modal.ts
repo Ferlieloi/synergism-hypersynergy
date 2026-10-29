@@ -1,7 +1,7 @@
 import { HSUI } from "../../../hs-core/hs-ui"
 import { HSAutosingStrategy, AutosingStrategyPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, createDefaultAoagPhase, phases, PhaseOption } from "../../../../types/module-types/hs-autosing-types"
 import { HSModuleManager } from "../../../hs-core/module/hs-module-manager";
-import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
+import { HSAutosingStrategyControls } from "./hs-autosing-strategy-controls";
 import { HSStrategyManager } from "../hs-strategy-manager";
 import { HSLogger } from '../../../hs-core/hs-logger';
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
@@ -437,8 +437,8 @@ export class HSAutosingStrategyModal {
                 HSUI.Notify("Failed to save strategy", { notificationType: "error" });
                 return;
             }
-            HSSettingsUI.updateStrategyDropdownList();
-            HSSettingsUI.selectAutosingStrategyByName(this.#draft.strategyName);
+            HSAutosingStrategyControls.updateStrategyDropdownList();
+            HSAutosingStrategyControls.selectAutosingStrategyByName(this.#draft.strategyName);
             if (this.#mode === 'edit') {
                 HSLogger.log(`Strategy "${this.#draft.strategyName}" updated.`, context);
                 HSUI.Notify(`Strategy "${this.#draft.strategyName}" updated`, { notificationType: "success" });

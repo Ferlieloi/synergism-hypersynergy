@@ -5,6 +5,7 @@ import { HSUI } from "./hs-core/hs-ui";
 import { HSUIC } from "./hs-core/hs-ui-components";
 import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
+import { HSAutosingStrategyControls } from "./hs-modules/hs-autosing/ui/hs-autosing-strategy-controls";
 import { HSGlobal } from "./hs-core/hs-global";
 import { HSBackup } from "./hs-core/hs-backup";
 import { HSCalculationTools } from "./hs-core/hs-calculation-tools";
@@ -83,7 +84,7 @@ export class Hypersynergism {
         // Do this after UI Panel stuff is ready, because
         // syncing basically means syncing the UI with the settings
         await HSSettingsUI.syncSettings(HSSettings.getUIDependencies());
-        HSSettingsUI.updateStrategyDropdownList();
+        HSAutosingStrategyControls.updateStrategyDropdownList();
         // After the sync: its checkboxes show the settings' states
         HSHeaderEditSettings.install();
 
