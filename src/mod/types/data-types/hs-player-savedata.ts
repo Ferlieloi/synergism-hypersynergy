@@ -487,7 +487,6 @@ export interface History {
 export interface UpgradeData {
     /** Present only in legacy saves. Current saves reconstruct this from the invested resource. */
     level?: number;
-    toggleBuy: number;
     freeLevel: number;
 }
 
@@ -900,102 +899,82 @@ export interface PlayerData {
 
   firstOwnedCoin: number
   firstGeneratedCoin: GameDecimal
-  firstCostCoin: GameDecimal
   firstProduceCoin: number
 
   secondOwnedCoin: number
   secondGeneratedCoin: GameDecimal
-  secondCostCoin: GameDecimal
   secondProduceCoin: number
 
   thirdOwnedCoin: number
   thirdGeneratedCoin: GameDecimal
-  thirdCostCoin: GameDecimal
   thirdProduceCoin: number
 
   fourthOwnedCoin: number
   fourthGeneratedCoin: GameDecimal
-  fourthCostCoin: GameDecimal
   fourthProduceCoin: number
 
   fifthOwnedCoin: number
   fifthGeneratedCoin: GameDecimal
-  fifthCostCoin: GameDecimal
   fifthProduceCoin: number
 
   firstOwnedDiamonds: number
   firstGeneratedDiamonds: GameDecimal
-  firstCostDiamonds: GameDecimal
   firstProduceDiamonds: number
 
   secondOwnedDiamonds: number
   secondGeneratedDiamonds: GameDecimal
-  secondCostDiamonds: GameDecimal
   secondProduceDiamonds: number
 
   thirdOwnedDiamonds: number
   thirdGeneratedDiamonds: GameDecimal
-  thirdCostDiamonds: GameDecimal
   thirdProduceDiamonds: number
 
   fourthOwnedDiamonds: number
   fourthGeneratedDiamonds: GameDecimal
-  fourthCostDiamonds: GameDecimal
   fourthProduceDiamonds: number
 
   fifthOwnedDiamonds: number
   fifthGeneratedDiamonds: GameDecimal
-  fifthCostDiamonds: GameDecimal
   fifthProduceDiamonds: number
 
   firstOwnedMythos: number
   firstGeneratedMythos: GameDecimal
-  firstCostMythos: GameDecimal
   firstProduceMythos: number
 
   secondOwnedMythos: number
   secondGeneratedMythos: GameDecimal
-  secondCostMythos: GameDecimal
   secondProduceMythos: number
 
   thirdOwnedMythos: number
   thirdGeneratedMythos: GameDecimal
-  thirdCostMythos: GameDecimal
   thirdProduceMythos: number
 
   fourthOwnedMythos: number
   fourthGeneratedMythos: GameDecimal
-  fourthCostMythos: GameDecimal
   fourthProduceMythos: number
 
   fifthOwnedMythos: number
   fifthGeneratedMythos: GameDecimal
-  fifthCostMythos: GameDecimal
   fifthProduceMythos: number
 
   firstOwnedParticles: number
   firstGeneratedParticles: GameDecimal
-  firstCostParticles: GameDecimal
   firstProduceParticles: number
 
   secondOwnedParticles: number
   secondGeneratedParticles: GameDecimal
-  secondCostParticles: GameDecimal
   secondProduceParticles: number
 
   thirdOwnedParticles: number
   thirdGeneratedParticles: GameDecimal
-  thirdCostParticles: GameDecimal
   thirdProduceParticles: number
 
   fourthOwnedParticles: number
   fourthGeneratedParticles: GameDecimal
-  fourthCostParticles: GameDecimal
   fourthProduceParticles: number
 
   fifthOwnedParticles: number
   fifthGeneratedParticles: GameDecimal
-  fifthCostParticles: GameDecimal
   fifthProduceParticles: number
 
   ants: PlayerAnts
@@ -1031,14 +1010,11 @@ export interface PlayerData {
     multiplier: number
   }
 
-  multiplierCost: GameDecimal
   multiplierBought: number
 
-  acceleratorCost: GameDecimal
   acceleratorBought: number
 
   acceleratorBoostBought: number
-  acceleratorBoostCost: GameDecimal
 
   upgrades: number[]
 
@@ -1059,7 +1035,6 @@ export interface PlayerData {
   challengecompletions: number[]
   highestchallengecompletions: number[]
   challenge15Exponent: number
-  highestChallenge15Exponent: number
 
   retrychallenges: boolean
   currentChallenge: {
@@ -1070,7 +1045,6 @@ export interface PlayerData {
 
   obtainium: GameDecimal
   maxObtainium: GameDecimal
-  obtainiumtimer: number
 
   // Ignore the first index. The other 25 are shaped in a 5x5 grid similar to the production appearance
   researches: number[]
@@ -1100,8 +1074,6 @@ export interface PlayerData {
   }
   achievements: number[]
   progressiveAchievements: Record<ProgressiveAchievements, number>
-
-  achievementPoints: number
 
   prestigenomultiplier: boolean
   prestigenoaccelerator: boolean
@@ -1184,7 +1156,6 @@ export interface PlayerData {
   autoSacrificeToggle: boolean
   autoBuyFragment: boolean
   autoFortifyToggle: boolean
-  autoEnhanceToggle: boolean
   autoResearchToggle: boolean
   researchBuyMaxToggle: boolean
   autoResearchMode: 'cheapest' | 'manual'
@@ -1282,8 +1253,6 @@ export interface PlayerData {
   }
   ascendShards: GameDecimal
   autoAscend: boolean
-  autoAscendMode: AutoAscensionResetModes
-  autoAscendThreshold: number
   roombaResearchIndex: number
   ascStatToggles: Record<number, boolean>
 
@@ -1296,7 +1265,6 @@ export interface PlayerData {
   autoChallengeRunning: boolean
   autoChallengeIndex: number
   autoChallengeToggles: boolean[]
-  autoChallengeStartExponent: number
   autoChallengeTimer: {
     start: number
     exit: number
@@ -1354,12 +1322,10 @@ export interface PlayerData {
   singularityElevatorTarget: number
   singularityElevatorSlowClimb: boolean
   singularityElevatorLocked: boolean
-  singularityMatter: number
   goldenQuarks: number
   quarksThisSingularity: number
   totalQuarksEver: number
   hotkeys: Record<number, string[]>
-  theme: string
   iconSet: number
   notation: 'Pure Scientific' | 'Pure Engineering' | 'Default'
 
@@ -1394,7 +1360,6 @@ export interface PlayerData {
   lifetimeAmbrosia: number
 
   blueberryTime: number
-  ambrosiaRNG: number // DEPRECIATED, DO NOT USE
   spentBlueberries: number
 
   blueberryLoadouts: BlueberryLoadouts
@@ -1443,86 +1408,66 @@ interface GameDataFields {
 
     firstOwnedCoin: number;
     firstGeneratedCoin: GameDecimal;
-    firstCostCoin: string;
     firstProduceCoin: number;
     secondOwnedCoin: number;
     secondGeneratedCoin: GameDecimal;
-    secondCostCoin: string;
     secondProduceCoin: number;
     thirdOwnedCoin: number;
     thirdGeneratedCoin: GameDecimal;
-    thirdCostCoin: string;
     thirdProduceCoin: number;
     fourthOwnedCoin: number;
     fourthGeneratedCoin: GameDecimal;
-    fourthCostCoin: string;
     fourthProduceCoin: number;
     fifthOwnedCoin: number;
     fifthGeneratedCoin: GameDecimal;
-    fifthCostCoin: string;
     fifthProduceCoin: number;
 
     firstOwnedDiamonds: number;
     firstGeneratedDiamonds: GameDecimal;
-    firstCostDiamonds: string;
     firstProduceDiamonds: number;
     secondOwnedDiamonds: number;
     secondGeneratedDiamonds: GameDecimal;
-    secondCostDiamonds: string;
     secondProduceDiamonds: number;
     thirdOwnedDiamonds: number;
     thirdGeneratedDiamonds: GameDecimal;
-    thirdCostDiamonds: string;
     thirdProduceDiamonds: number;
     fourthOwnedDiamonds: number;
     fourthGeneratedDiamonds: GameDecimal;
-    fourthCostDiamonds: string;
     fourthProduceDiamonds: number;
     fifthOwnedDiamonds: number;
     fifthGeneratedDiamonds: GameDecimal;
-    fifthCostDiamonds: string;
     fifthProduceDiamonds: number;
 
     firstOwnedMythos: number;
     firstGeneratedMythos: GameDecimal;
-    firstCostMythos: string;
     firstProduceMythos: number;
     secondOwnedMythos: number;
     secondGeneratedMythos: GameDecimal;
-    secondCostMythos: string;
     secondProduceMythos: number;
     thirdOwnedMythos: number;
     thirdGeneratedMythos: GameDecimal;
-    thirdCostMythos: string;
     thirdProduceMythos: number;
     fourthOwnedMythos: number;
     fourthGeneratedMythos: GameDecimal;
-    fourthCostMythos: string;
     fourthProduceMythos: number;
     fifthOwnedMythos: number;
     fifthGeneratedMythos: GameDecimal;
-    fifthCostMythos: string;
     fifthProduceMythos: number;
 
     firstOwnedParticles: number;
     firstGeneratedParticles: GameDecimal;
-    firstCostParticles: string;
     firstProduceParticles: number;
     secondOwnedParticles: number;
     secondGeneratedParticles: GameDecimal;
-    secondCostParticles: string;
     secondProduceParticles: number;
     thirdOwnedParticles: number;
     thirdGeneratedParticles: GameDecimal;
-    thirdCostParticles: string;
     thirdProduceParticles: number;
     fourthOwnedParticles: number;
     fourthGeneratedParticles: GameDecimal;
-    fourthCostParticles: string;
     fourthProduceParticles: number;
     fifthOwnedParticles: number;
     fifthGeneratedParticles: GameDecimal;
-    fifthCostParticles: string;
     fifthProduceParticles: number;
 
     ants: Ants;
@@ -1534,12 +1479,9 @@ interface GameDataFields {
     ascendBuilding4: AscendBuilding;
     ascendBuilding5: AscendBuilding;
 
-    multiplierCost: string;
     multiplierBought: number;
-    acceleratorCost: string;
     acceleratorBought: number;
     acceleratorBoostBought: number;
-    acceleratorBoostCost: string;
 
     // Upgrades & Research
     upgrades: number[]; // Array of upgrade levels/statuses (0 or 1)
@@ -1562,18 +1504,15 @@ interface GameDataFields {
     challengecompletions: number[]; // Completions per challenge
     highestchallengecompletions: number[]; // Highest completions per challenge
     challenge15Exponent: number;
-    highestChallenge15Exponent: number;
     retrychallenges: boolean;
     currentChallenge: CurrentChallenge;
     obtainium: GameDecimal;
     maxObtainium: GameDecimal;
 
-    obtainiumtimer: number;
     researches: number[]; // Array of research levels
     unlocks: Unlocks;
     achievements: number[]; // Status per achievement (0 or 1)
     progressiveAchievements: progressiveAchievements;
-    achievementPoints: number;
 
     // Reset Related Flags & Stats
     prestigenomultiplier: boolean;
@@ -1643,7 +1582,6 @@ interface GameDataFields {
     autoSacrificeToggle: boolean;
     autoBuyFragment: boolean;
     autoFortifyToggle: boolean;
-    autoEnhanceToggle: boolean;
     autoResearchToggle: boolean;
     researchBuyMaxToggle: boolean;
     autoResearchMode: 'cheapest' | 'manual';
@@ -1701,8 +1639,6 @@ interface GameDataFields {
 
     ascendShards: GameDecimal;
     autoAscend: boolean;
-    autoAscendMode: AutoAscensionResetModes;
-    autoAscendThreshold: number;
     roombaResearchIndex: number;
     ascStatToggles: AscStatToggles;
 
@@ -1715,7 +1651,6 @@ interface GameDataFields {
     autoChallengeRunning: boolean;
     autoChallengeIndex: number;
     autoChallengeToggles: boolean[];
-    autoChallengeStartExponent: number;
     autoChallengeTimer: {
         start: number
         exit: number
@@ -1762,12 +1697,10 @@ interface GameDataFields {
     singularityElevatorTarget: number;
     singularityElevatorSlowClimb: boolean;
     singularityElevatorLocked: boolean;
-    singularityMatter: number;
     goldenQuarks: number;
     quarksThisSingularity: number;
     totalQuarksEver: number;
     hotkeys: Record<string, any>; // Structure depends on defined hotkeys
-    theme: string; // e.g., "Dark Mode"
     iconSet: number;
     notation: 'Pure Scientific' | 'Pure Engineering' | 'Default';
     
@@ -1788,7 +1721,6 @@ interface GameDataFields {
     lifetimePurpleAmbrosia?: number;
 
     blueberryTime: number;
-    ambrosiaRNG: number; // DEPRECIATED, DO NOT USE
     spentBlueberries: number;
 
     blueberryLoadouts: BlueberryLoadouts;
