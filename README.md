@@ -47,6 +47,10 @@ If step 3 shows code instead of an install page, copy that code, choose "Create 
 
 While the game is running, a rainbow border around the mod's icon means a newer version is out: reload the page to get it.
 
+#### Live or Dev
+
+The mod comes from one of two GitHub repos: `Ferlieloi` (Live, the default) or `maenhiir` (Dev). To switch to Dev, open the loader script in Tampermonkey's dashboard, change `const repo = 'Ferlieloi'` to `const repo = 'maenhiir'`, save, and reload the game. To go back to Live, change it back. Tampermonkey's auto-update of the loader script can switch you back to Live.
+
 ### With a bookmark (NOT RECOMMENDED)
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
