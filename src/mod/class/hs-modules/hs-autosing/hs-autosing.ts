@@ -9,7 +9,7 @@ import { HSSettings } from "../../hs-core/settings/hs-settings";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, SET_CORRUPTION_LEVEL_MINUS_FREE_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSGlobal } from "../../hs-core/hs-global";
@@ -24,7 +24,6 @@ import { escapeLogText } from "../hs-heater/hs-heater-utils";
 
 declare const HS_DEV_BUILD: boolean;
 
-const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const CHALLENGE_COMPLETIONS_REGEX = /\((\d+)\s*\/\s*(\d+)\):/;
 // Everything after the challenge's name: the score is its first number (it can hold no-break spaces, which \S excludes)
@@ -1066,7 +1065,7 @@ export class HSAutosing extends HSModule {
 
         // "Step N", as the strategy editor numbers the steps
         const tag = () => `Step ${this.#stepNumber(phaseConfig, actionIndex)}`;
-        const actionText = () => `${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber} (${challenge.challengeNumber})`;
+        const actionText = () => `${SPECIAL_ACTION_BY_ID.get(challenge.challengeNumber)?.label ??challenge.challengeNumber} (${challenge.challengeNumber})`;
         switch (challenge.challengeNumber) {
             case SET_CORRUPTION_LEVEL_VALUE:
                 HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);

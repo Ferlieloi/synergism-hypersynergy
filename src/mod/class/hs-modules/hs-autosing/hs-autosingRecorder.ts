@@ -1,4 +1,4 @@
-import { SPECIAL_ACTIONS, type Challenge, type HSAutosingPassRecord, type HSAutosingTimings } from "../../../types/module-types/hs-autosing-types";
+import { SPECIAL_ACTION_BY_ID, type Challenge, type HSAutosingPassRecord, type HSAutosingTimings } from "../../../types/module-types/hs-autosing-types";
 
 /**
  * Class: HSAutosingRecorder
@@ -43,7 +43,7 @@ export class HSAutosingRecorder {
             phase: record.phase,
             pass: record.pass,
             index,
-            action: n < 100 ? `C${n}` : (SPECIAL_ACTIONS.find(a => a.value === n)?.label ?? String(n)),
+            action: n < 100 ? `C${n}` : (SPECIAL_ACTION_BY_ID.get(n)?.label ?? String(n)),
             ...(step.comment ? { comment: step.comment } : {}),
             waitBefore: step.challengeWaitBefore ?? 0,
             waitMs: HSAutosingRecorder.#round(record.waitMs),

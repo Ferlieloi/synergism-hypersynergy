@@ -107,6 +107,9 @@ export const SPECIAL_ACTIONS = [
     { label: "Stop Autosing",       value: 903, inputs: [] as const },
 ] as const;
 
+export type SpecialAction = (typeof SPECIAL_ACTIONS)[number];
+export const SPECIAL_ACTION_BY_ID: ReadonlyMap<number, SpecialAction> = new Map(SPECIAL_ACTIONS.map(a => [a.value, a] as const));
+
 export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
     phaseId: AOAG_PHASE_ID,
     startPhase: "ascension",

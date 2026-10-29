@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../../../../types/module-types/hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../../../../types/module-types/hs-autosing-types";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSUIXY } from "../../../../types/module-types/hs-ui-types";
@@ -53,7 +53,6 @@ type FieldRow = InputRow | NoteRow;
 
 // The inputs a standard challenge step uses (a special action lists its own)
 const STANDARD_CHALLENGE_INPUTS: ReadonlySet<ModalInput> = new Set<ModalInput>(["challengeNum", "completions", "waitTime", "maxTime"]);
-const SPECIAL_ACTION_BY_ID = new Map<number, (typeof SPECIAL_ACTIONS)[number]>(SPECIAL_ACTIONS.map(a => [a.value, a] as const));
 
 const isIfJumpStep = (step: Challenge): step is IsJumpChallenge => step.challengeNumber === IF_JUMP_VALUE && step.ifJump !== undefined;
 const isSpecialStep = (step: Challenge) => SPECIAL_ACTION_BY_ID.has(step.challengeNumber);
@@ -63,8 +62,6 @@ const fromAction = (read: (step: Challenge) => string | number | undefined) =>
 const fromIfJump = (read: (jump: IfJumpParams) => string | number | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? read(step.ifJump) : undefined;
 const inIfJumpMode = (mode: IfJumpMode) => (c: FieldContext) => c.isIfJump && c.ifJumpMode === mode;
-
-type SpecialAction = (typeof SPECIAL_ACTIONS)[number];
 
 // Actions picked as one dropdown entry plus a field. A step still holds its action's own id: nothing changes for
 // autosing, the logs or the step list
