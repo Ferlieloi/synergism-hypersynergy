@@ -58,8 +58,6 @@ export const HSGlobal: IHSGlobal = class {
         // Sent with every request to synergism.cc, so the game's backend can tell the mod's traffic and its version apart
         // (a custom header: Chromium drops a User-Agent set through fetch)
         get modRequestHeaders(): Record<string, string> { return { 'X-HyperSynergism-Version': HSGlobal.General.currentModVersion }; },
-
-        experimentalGDS: true
     }
 
     // --- HSPrototypes ---

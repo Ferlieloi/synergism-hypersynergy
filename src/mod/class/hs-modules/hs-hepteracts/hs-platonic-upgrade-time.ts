@@ -165,7 +165,7 @@ export class HSPlatonicUpgradeTime {
 
         // Read owned resources after sampling the header modes so the ETA does
         // not use the older periodic GDS snapshot. This forces one save-derived
-        // refresh without enabling GDS turbo mode.
+        // refresh without enabling GDS.
         const gameData = await gameDataAPI.getForcedGameData();
         HSLogger.debug(() => `Platonic upgrade ${upgradeId}: income read in ${Math.round(incomeTime - startTime)} ms,`
             + ` save forced in ${Math.round(performance.now() - incomeTime)} ms`, this.#context);

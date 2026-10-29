@@ -31,7 +31,6 @@ export interface HSGlobalCommon {
     pseudoAPIurl: string;
     meAPIurl: string;
     readonly modRequestHeaders: Record<string, string>;
-    experimentalGDS: boolean,
 }
 
 export interface HSGlobalPrototypes {

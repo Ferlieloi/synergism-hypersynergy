@@ -22,15 +22,14 @@ import { HSModuleOptions } from "../../../types/hs-types";
  * IsExplicitHSModule: Yes
  * Description: 
  *     Core module responsible for fetching, processing, and providing game data to other modules.
- *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages pseudo/me data,
- *     and subscribes to consumable game events via WebSocket. Provides APIs for other modules to access game data.
+ *     Handles Game Data Sniffing (GDS) by capturing the game's saves (btoa/atob hooks), manages pseudo/me data,
+ *     and reads the game's consumables and global event. Provides APIs for other modules to access game data.
  */
 export class HSGameData extends HSModule {
     // --- Save Data & State ---
     #saveDataLocalStorageKey = 'Synergysave2';
     #saveData?: GameData;
-    #lastB64Save?: string;
-    
+
     isSteam = false;
 
     // --- MITM / Encoding / Native JS Hooks ---
@@ -44,7 +43,7 @@ export class HSGameData extends HSModule {
     #nativeBtoa?: typeof window.btoa;
     #nativeAtob?: typeof window.atob;
 
-    // --- Turbo Mode & Intervals ---
+    // --- Engine & Intervals ---
     #gdsEnabled = false;
     // Reasons the engine is paused (autosing, save import...) while the GDS setting may stay ON.
     // The engine only runs when no pause is left and the setting is ON.
@@ -135,7 +134,7 @@ export class HSGameData extends HSModule {
 
     /**
      * Initializes the HSGameData module, sets up DOM elements, fetches pseudo and me data,
-     * registers the WebSocket, and hooks the import button for save file interception.
+     * and hooks the import button for save file interception.
      * @returns Promise<void>
      */
     async init() {
@@ -544,33 +543,6 @@ export class HSGameData extends HSModule {
     }
 
 
-    // --- Save Data Processing ---
-
-    /**
-     * Processes save data from localStorage using requestAnimationFrame loop.
-     * Updates internal save data and handles errors.
-     * @returns void
-     */
-    #processSaveDataWithRAF = () => {
-        if (!this.#gdsEnabled) return;
-
-        const saveDataB64 = localStorage.getItem(this.#saveDataLocalStorageKey);
-
-        if (saveDataB64 && saveDataB64 !== this.#lastB64Save) {
-            this.#lastB64Save = saveDataB64;
-
-            try {
-                this.#saveData = JSON.parse(atob(saveDataB64)) as GameData;
-                this.#saveDataUpdated();
-            } catch (error) {
-                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
-            }
-        }
-
-        requestAnimationFrame(this.#processSaveDataWithRAF);
-    }
-
-
     // --- GDS (Game Data Sniffing) Control ---
 
     /**
@@ -619,7 +591,7 @@ export class HSGameData extends HSModule {
 
     /**
      * Enables Game Data Sniffing (GDS) mode, sets up intervals, hooks DOM elements,
-     * and starts save processing. Handles turbo mode and experimental GDS.
+     * hooks btoa/atob and starts save processing.
      * Does nothing while the engine is paused (see pauseGDS()).
      * @returns Promise<void>
      */
@@ -672,19 +644,15 @@ export class HSGameData extends HSModule {
         HSLogger.info(`GDS = ON`, this.context);
         this.#gdsEnabled = true;
 
-        if (HSGlobal.Common.experimentalGDS) {
-            this.#hackJSNativebtoa();
-            this.#hackJSNativeAtob();
-            this.#processSaveDataExperimental();
-        } else {
-            this.#processSaveDataWithRAF();
-        }
+        this.#hackJSNativebtoa();
+        this.#hackJSNativeAtob();
+        this.#processCapturedSave();
     }
 
     /**
      * Processes save data from MITM when new encoded save JSON has been captured.
      */
-    #processSaveDataExperimental = () => {
+    #processCapturedSave = () => {
         if (!this.#gdsEnabled) return;
 
         if (this.#mitm_gamedata && this.#mitm_gamedata !== this.#last_mitm_gamedata) {
@@ -718,7 +686,7 @@ export class HSGameData extends HSModule {
         // The loadFromFileEventHandler is NOT removed here:
         // it must remain active to intercept save loads even when GDS is disabled.
 
-        HSLogger.info(`GDS turbo = OFF`, this.context);
+        HSLogger.info(`GDS = OFF`, this.context);
         this.#gdsEnabled = false;
     }
 
@@ -805,7 +773,7 @@ export class HSGameData extends HSModule {
                     self.#mitmProcessScheduled = true;
                     queueMicrotask(() => {
                         self.#mitmProcessScheduled = false;
-                        self.#processSaveDataExperimental();
+                        self.#processCapturedSave();
                     });
                 }
             }
