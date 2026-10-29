@@ -3,6 +3,7 @@ import { HSUI } from "../../../hs-core/hs-ui";
 import { SPECIAL_ACTIONS, IF_JUMP_VALUE, IsJumpChallenge, ModalInput } from "../../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../../hs-utils/hs-utils";
 import { HSAutosingEditorWindows } from "./hs-autosing-editor-windows";
+import { escapeHtml } from "../../hs-heater/hs-heater-utils";
 
 /** Challenge Modal Builder for Autosing
  * Description: Builds and manages the modal UI for configuring autosing challenge strategies.
@@ -29,7 +30,8 @@ export async function openAutosingChallengesModal(
 
     // Modal builder entry point. Copies strategy data and sets up modal UI.
     const modalId = "hs-autosing-challenges-modal";
-    const workingChallenges: Challenge[] = [...stratData];
+    // A deep copy: the IF-jump targets are changed in place, which Cancel must undo too
+    const workingChallenges: Challenge[] = structuredClone(stratData);
     // Separator index: where new actions are inserted
     let separatorIndex: number = workingChallenges.length;
     // Index of the step loaded in the fields by ✎ (null: the button adds a new step)
@@ -144,7 +146,7 @@ export async function openAutosingChallengesModal(
                         ? ` | Max: ${formatMs(entry.challengeMaxTime ?? -1)}`
                         : ""}
                 </div>
-                ${entry.comment ? `<div class=\"hs-challenge-comment\">🗨️ ${entry.comment}</div>` : ""}
+                ${entry.comment ? `<div class="hs-challenge-comment">🗨️ ${escapeHtml(entry.comment)}</div>` : ""}
             </div>
             <div class="hs-challenge-btn hs-challenge-btn-edit" id="hs-challenge-edit-${index}" data-index="${index}">✎</div>
             <div class="hs-challenge-btn hs-challenge-btn-delete" id="hs-challenge-delete-${index}" data-index="${index}">×</div>
@@ -847,10 +849,11 @@ export async function openAutosingChallengesModal(
         // The comment field held the edited step's comment: don't carry it over to the next added step
         if (editingIndex !== null) (document.getElementById("hs-challenge-comment-input") as HTMLInputElement).value = "";
         (document.getElementById("hs-challenge-num-input") as HTMLInputElement).value = "1";
-        (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "0";
+        // The values the fields have when the window opens
+        (document.getElementById("hs-challenge-completions-input") as HTMLInputElement).value = "1";
         (document.getElementById("hs-challenge-wait-inside-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-wait-before-input") as HTMLInputElement).value = "0";
-        (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "1000000";
+        (document.getElementById("hs-challenge-max-time-input") as HTMLInputElement).value = "10000";
         (document.getElementById("hs-challenge-corruption-level-input") as HTMLInputElement).value = "0";
         (document.getElementById("hs-challenge-action-select") as HTMLSelectElement).value = "";
         (document.getElementById("hs-if-jump-mode") as HTMLSelectElement).value = "challenges";
@@ -1021,11 +1024,12 @@ export async function openAutosingChallengesModal(
             if (id.startsWith("hs-challenge-delete-")) {
                 const deleteIndex = Number(el.dataset.index);
                 workingChallenges.splice(deleteIndex, 1);
-                // Decrement jump-target indices for IF jumps at or after the deleted index
+                // Decrement jump-target indices for IF jumps after the deleted index (a target before the deleted
+                // step stays where it is: it now sits before the next step)
                 for (let i = 0; i < workingChallenges.length; i++) {
                     const entry = workingChallenges[i];
                     if (typeof entry === 'object' && entry.challengeNumber === IF_JUMP_VALUE && entry.ifJump && typeof entry.ifJump.ifJumpIndex === 'number') {
-                        if (entry.ifJump.ifJumpIndex >= deleteIndex) {
+                        if (entry.ifJump.ifJumpIndex > deleteIndex) {
                             entry.ifJump.ifJumpIndex--;
                         }
                     }
