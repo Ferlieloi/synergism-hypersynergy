@@ -1,5 +1,5 @@
 import Decimal from "break_infinity.js";
-import { AutoAscensionModes } from "../../../types/data-types/hs-player-savedata";
+import { AutoAscensionModes, type GameCount } from "../../../types/data-types/hs-player-savedata";
 
 export const parseNumericStringIfSafe = (value: unknown): number | undefined => {
     if (typeof value !== 'string') return undefined;
@@ -87,6 +87,10 @@ export const parseGameDataNumber = (value: unknown, fallback = 0): number => {
 
 export const floorLog10PlusOne = (value: number): number =>
     value > 0 ? 1 + Math.floor(Math.log10(value)) : 1;
+
+// floor(log10(value + 1)): 0 for 0, where floorLog10PlusOne gives 1
+export const floorLog10OfOnePlus = (value: number | Decimal | GameCount): number =>
+    Math.floor(Math.log10(Number(value ?? 0) + 1));
 
 export const calculateSigmoidExponential = (constant: number, coefficient: number): number =>
     1 + (constant - 1) * (1 - Math.exp(-coefficient));
