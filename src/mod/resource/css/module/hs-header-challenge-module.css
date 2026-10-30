@@ -58,6 +58,18 @@
 #hsChallengeProgress .hs-cp-lines .hs-cp-sep:not(:empty) {
     padding: 0 0.25em;
 }
+/* At 1x2, the requirement on a line of its own: the challenge line across the module, the requirement below it in
+   four columns (amount, "/", requirement, resource), indented under the challenge */
+#hsChallengeProgress > .hs-cp-text.hs-cp-lines.hs-cp-split {
+    grid-template-columns: repeat(4, auto);
+    min-height: calc(6 * 1.2em);
+}
+#hsChallengeProgress .hs-cp-split .hs-cp-head {
+    grid-column: 1 / -1;
+}
+#hsChallengeProgress .hs-cp-lines.hs-cp-split .hs-cp-amount {
+    padding-left: 1em;
+}
 
 /* The game's tier colours (its progress modules) for the challenges; discreet greys for the rest */
 #hsChallengeProgress .hs-cp-ascension { color: orange; }

@@ -134,9 +134,13 @@ export class HSHeaderCellSettings {
         return cells.find(cell => cell.modules.some(module => module.classList.contains('headerModuleSelected')));
     }
 
-    static #canHalf(cell: HeaderCell): boolean {
-        return cell.key.startsWith('headerGrid:') && cell.modules.length === 1
-            && !cell.element.classList.contains('headerStackRow');
+    /** A single module in a grid cell, not 1x2 (two rows high: half would mean nothing there). */
+    static #canHalf(cell: HeaderCell, rendered = false): boolean {
+        if (!cell.key.startsWith('headerGrid:') || cell.modules.length !== 1
+            || cell.element.classList.contains('headerStackRow')) return false;
+        // Right after a game redraw its data-size is the real one; otherwise a half module keeps the real one aside
+        const module = cell.modules[0];
+        return (rendered ? module.dataset.size : module.dataset.hsHeaderFullSize ?? module.dataset.size) !== 'Tall';
     }
 
     static #change(change: CellSettings): void {
@@ -172,7 +176,7 @@ export class HSHeaderCellSettings {
             const value = settings[cell.key];
             if (value?.align) cell.element.dataset.hsHeaderAlign = value.align;
             else delete cell.element.dataset.hsHeaderAlign;
-            const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell);
+            const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell, rendered);
             const vertical = value?.vertical ?? (half ? 'top' : undefined);
             if (vertical) cell.element.dataset.hsHeaderVertical = vertical;
             else delete cell.element.dataset.hsHeaderVertical;
@@ -201,7 +205,7 @@ export class HSHeaderCellSettings {
         for (const [height, button] of HSHeaderCellSettings.#heightButtons) {
             button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected);
             button.setAttribute('aria-pressed', String(!button.disabled && (value?.half ? 'half' : 'full') === height));
-            button.title = button.disabled ? 'Select a single module in the header grid (stacks already use half height)'
+            button.title = button.disabled ? 'Select a single module in the header grid, not 1x2 (stacks already use half height)'
                 : 'Use the full cell height or half height';
         }
         for (const [vertical, button] of HSHeaderCellSettings.#verticalButtons) {

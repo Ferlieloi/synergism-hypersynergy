@@ -19,15 +19,14 @@ const GAME_TEXT_IDS: Record<HSChallengeTier, string> = {
     reincarnation: 'reincarnationChallengeProgressText',
     transcension: 'transcensionChallengeProgressText',
 };
-// When the game's i18next is missing (reset.challengeProgress.resources)
-const RESOURCE_FALLBACKS: Record<HSChallengeResource, string> = {
-    coins: 'Coins',
-    transcendShards: 'Mythos Shards',
-    challenge10Completions: 'Challenge 10 Completions',
+// Short forms in every language (user's choice): the game's words were too long for the requirement column
+const SHORT_RESOURCES: Partial<Record<HSChallengeResource, string>> = {
+    transcendShards: 'Mythos',
+    challenge10Completions: 'C10s',
 };
 // The game's line height of progress modules
 const LINE_HEIGHT = 1.2;
-// The lines layout is sized for three lines, whatever the count
+// The lines layout is sized for three lines, whatever the count; twice that with the requirement on its own line
 const MAX_LINES = 3;
 
 /** A challenge's parts, empty when not shown: one cell each in the lines layout. */
@@ -58,8 +57,9 @@ interface HSChallengePlayer {
  *     C15 score in their place), or completions and requirement (one line each only). Read from the live player
  *     every 250 ms while the module is seen; the requirement is copied from the game's own progress line (its gold
  *     numbers), which the game writes on desktop only. Empty outside a challenge, or a grey "CØ"
- *     (challengeProgressShowNone). The text size counts three lines in
- *     the lines layout, and shrinks to fit the width. Not for players without the live player (bookmarklet).
+ *     (challengeProgressShowNone). At the game's 1x2 size (Tall, one column) the requirement goes on a line of its
+ *     own. The text size counts three lines in the lines layout (six with the requirement on its own line), and
+ *     shrinks to fit the width. Not for players without the live player (bookmarklet).
  * Author: Shewchou
  */
 export class HSHeaderChallengeModule {
@@ -80,7 +80,7 @@ export class HSHeaderChallengeModule {
             const player = HSGlobal.exposedPlayer as HSChallengePlayer | null;
             // As the game's transcension progress module
             return !!player?.unlocks?.transcend || (player?.currentChallenge?.transcension ?? 0) !== 0;
-        });
+        }, { sizes: ['Tall'] });
         if (!element) {
             HSLogger.debug(() => 'No header modules patch: no challenge progress module', HSHeaderChallengeModule.#context);
             return;
@@ -119,16 +119,20 @@ export class HSHeaderChallengeModule {
         try {
             const lines = HSHeaderChallengeModule.#lines();
             const multiLine = HSHeaderChallengeModule.layout() === 'lines';
+            // 1x2 (the game's data-size): one column wide, so the requirement goes on a line of its own
+            const split = multiLine && element.dataset.size === 'Tall' && HSHeaderChallengeModule.details() === 'requirement';
             const none = lines.length === 0 && HSSettings.getSetting('challengeProgressShowNone')?.isEnabled() === true;
-            const drawn = JSON.stringify([multiLine, lines, none]);
+            const drawn = JSON.stringify([multiLine, split, lines, none]);
             if (drawn !== HSHeaderChallengeModule.#drawn) {
                 HSHeaderChallengeModule.#drawn = drawn;
                 text.classList.toggle('hs-cp-lines', multiLine);
+                text.classList.toggle('hs-cp-split', split);
                 if (none) text.replaceChildren(HSHeaderChallengeModule.#span('hs-cp-none', 'CØ'));
+                else if (split) text.replaceChildren(...HSHeaderChallengeModule.#drawSplit(lines));
                 else text.replaceChildren(...(multiLine ? HSHeaderChallengeModule.#drawLines(lines) : HSHeaderChallengeModule.#drawLine(lines)));
                 HSHeaderChallengeModule.#fittedWidth = -1;
             }
-            HSHeaderChallengeModule.#fit(element, text, multiLine);
+            HSHeaderChallengeModule.#fit(element, text, split ? 2 * MAX_LINES : multiLine ? MAX_LINES : 1);
         } catch (error) {
             HSLogger.warnOnce(`Could not draw the challenge progress module: ${error}`, 'hs-header-challenge-module');
         }
@@ -166,6 +170,31 @@ export class HSHeaderChallengeModule {
                 HSHeaderChallengeModule.#span('hs-cp-res', line.resource),
             );
             return row;
+        });
+    }
+
+    /**
+     * Two lines each: the challenge and its completions across the module, then the requirement below, in columns
+     * that line the "/" up (none when the game gives no requirement).
+     */
+    static #drawSplit(lines: HSChallengeLine[]): Node[] {
+        return lines.flatMap(line => {
+            const head = document.createElement('div');
+            head.className = 'hs-cp-head';
+            head.append(
+                HSHeaderChallengeModule.#span(`hs-cp-label hs-cp-${line.tier}`, line.label),
+                HSHeaderChallengeModule.#span('hs-cp-comp', line.completions),
+            );
+            if (!line.separator) return [head];
+            const row = document.createElement('div');
+            row.className = 'hs-cp-row';
+            row.append(
+                HSHeaderChallengeModule.#span('hs-cp-amount', line.amount),
+                HSHeaderChallengeModule.#span('hs-cp-sep', line.separator),
+                HSHeaderChallengeModule.#span('hs-cp-req', line.required),
+                HSHeaderChallengeModule.#span('hs-cp-res', line.resource),
+            );
+            return [head, row];
         });
     }
 
@@ -242,13 +271,16 @@ export class HSHeaderChallengeModule {
     }
 
     static #resource(resource: HSChallengeResource): string {
+        const short = SHORT_RESOURCES[resource];
+        if (short) return short;
+        // Coins: the game's word, in its language
         const key = `reset.challengeProgress.resources.${resource}`;
         const text = window.__HS_i18next?.t(key);
-        return typeof text === 'string' && text !== key ? text : RESOURCE_FALLBACKS[resource];
+        return typeof text === 'string' && text !== key ? text : 'Coins';
     }
 
-    /** The module's own text size, smaller when its lines don't fit its height (three in the lines layout) or width. */
-    static #fit(element: HTMLElement, text: HTMLElement, multiLine: boolean): void {
+    /** The module's own text size, smaller when its lines (the most the layout can show) don't fit its height or width. */
+    static #fit(element: HTMLElement, text: HTMLElement, maxLines: number): void {
         const width = element.clientWidth;
         const height = element.clientHeight;
         // A size change (edit mode, the window) since the last fit, or new text
@@ -262,7 +294,7 @@ export class HSHeaderChallengeModule {
             text.style.fontSize = '';
         } else {
             let size = Math.min(Number.parseFloat(getComputedStyle(element).fontSize),
-                height / (multiLine ? MAX_LINES : 1) / LINE_HEIGHT);
+                height / maxLines / LINE_HEIGHT);
             text.style.fontSize = `${size}px`;
             const available = width - 2;
             if (text.offsetWidth > available) {
