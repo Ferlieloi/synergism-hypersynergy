@@ -5,7 +5,7 @@ work with; people named elsewhere (Shewchou, Ferlieloi) are the maintainers.
 
 ## Project
 
-HyperSynergism is an unofficial QoL mod for the browser/Steam game [Synergism](https://synergism.cc/): extra information, less clicking, hotkeys and warnings. It avoids fully automating the game (the autosing module is the opt-in exception).
+HyperSynergism is an unofficial quality-of-life mod for the browser/Steam game [Synergism](https://synergism.cc/). It doesn't automate the game, apart from the opt-in autosing module.
 
 - **Vanilla game source (read-only):** `node scripts/tools/update-game.cjs` clones or pulls the official repo into `local/game/SynergismOfficial-master`, fetches the live bundle into `local/game/out.js` and runs `patcher.js` on it. Use it for formulas, save-data shapes and DOM ids; never edit it. GitHub's `master` can be ahead of the deployed game. After a game update: `docs/game/updating.md`.
 - **`docs/` (committed):** `game/` how the game behaves, `features/` one file per feature with its rules and decisions, `dev/` procedures (`code.md`, `releasing.md`, `tricks.md`). People are named there (Shewchou, Ferlieloi), never "the user": each developer's agent would read that as its own user. No personal data.
@@ -23,7 +23,7 @@ Each kind of knowledge has one home. Write it there and nowhere else; elsewhere,
 | One developer's preferences, refusals ("don't propose again"), backlog ideas | that developer's private notes (agent memory, a git-ignored local instructions file) |
 | The design of work in progress | a design doc in `local/`; once done, mark it as history at the top |
 
-Keep this file short. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule; keep the decisions and what was tried and rejected.
+Keep this file short. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule; keep the decisions, rejected options included.
 
 ## Commands
 
@@ -86,8 +86,8 @@ Prefer the game's state (`HSGlobal.exposedPlayer`, GDS data) or signals it keeps
 
 ### Steps, tests and commits
 - **Before editing, in multi-step work: recap and ask the open decisions**, each with a recommendation. Small behaviour-free follow-ups in the topic at hand can be done first and recapped after.
-- **After implementing:** type check and build (plus the loader tests if `patcher.js` changed), then give an in-game test list written as a procedure the developer can follow cold: where things stand, the setup, then each check with where to click, the exact value expected and what counts as a bug. The dev tools can set up the save (`docs/features/dev-tools.md`).
-- **Commit only when explicitly asked.** "Tests passed", an earlier "ok" or an answer to a question is not a request. If something changed after the developer's tests, ask for a retest and re-check the whole diff. When you went too far: stop, explain, offer the ways back, act only on the answer.
+- **After implementing:** type check and build (plus the loader tests if `patcher.js` changed), then give an in-game test list the developer can follow cold: the setup, then for each check where to click, the exact value expected and what counts as a bug. The dev tools can set up the save.
+- **Commit only when explicitly asked**: "tests passed" or an earlier "ok" is not a request. After any change since the developer's tests, ask for a retest first.
 - **A commit holds only your own work**: `git add` explicit paths (never `-A` or `commit -a`), check `git diff --cached --stat`, say which files were left out. Only your hunks of a shared file: `docs/dev/tricks.md`.
 - **When a design grows**, point out which decisions drive the complexity and offer the simpler variant.
 
@@ -102,15 +102,15 @@ Prefer the game's state (`HSGlobal.exposedPlayer`, GDS data) or signals it keeps
 - **Tests never reach synergism.cc or GitHub's API**: the harnesses block both; keep it so in any new script.
 
 ### Player-facing UI
-- **Texts are short: what it does.** No instructions the player sees happen anyway, no credits or history, no "moved to X". A detail for one platform is shown only there.
+- **Texts are short: what it does**, nothing the player sees happen anyway. A detail for one platform is shown only there.
 - **Avoid layout shifts on a state change** where you can: show an armed, busy or error state inside the element's own box (overlay, colour, tooltip) or reserve its room.
-- **Secondary numbers and labels in discreet greys**; game colours only where they carry meaning (tiers, currencies), never the vanilla gold for plain numbers.
+- **Secondary numbers and labels in discreet greys**; game colours only where they carry meaning (tiers, currencies).
 - **A change to how a game element looks for every player gets a setting**, on by default, whose off state gives the game's exact look.
 - **Log every refused player action and every dialog the mod answers**, with the reason.
 
 ### End of a reply
-- **Checking changes:** before changing shared code (GDS, settings, autosing, dialogs, quickbars…), check every caller of the changed functions and every reader of the changed state, one level deep. List what was checked and what wasn't.
-- **Refactor suggestions:** when a feature would clearly benefit from a larger refactor (duplicated workarounds, features fighting over the same thing, fixes piled on fixes), say so briefly: what, why, roughly how big. Don't refactor without the go-ahead.
+- **Checking changes:** before changing shared code, check the callers of changed functions and the readers of changed state, one level deep; list what was checked and what wasn't.
+- **Refactor suggestions:** when a feature clearly needs a larger refactor (piled-up workarounds, features fighting over the same thing), say what, why and roughly how big; don't start it without the go-ahead.
 
 ## Conventions
 - Class header comment (`Class / IsExplicitHSModule / Description / Author`), `#` private fields, `hs-<name>.ts` files, `HS` class prefix. Who goes in `Author:`: `docs/dev/code.md`.
