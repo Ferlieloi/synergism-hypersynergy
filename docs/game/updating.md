@@ -57,7 +57,7 @@ How the mod followed, one step and one commit each, every step checked against t
 3. Cubes: cube bank and per-level cube lines in the Tools tab (`docs/features/tools-tab.md`); the score chain removed.
 4. `calcECC` removed from GDS (raw completions everywhere), accelerator caps, renamed subtab ids.
 5. Header: every corruption header feature removed (`docs/features/header-modules.md`, `header-corruption.md`).
-6. Autosing: corruption levels instead of loadouts (`docs/features/autosing.md`).
+6. Autosing: corruption levels instead of loadouts (`docs/features/autosing.md`, `autosing-strategies.md`).
 
 The game kept changing the new system for days (viscosity, cube rates, level caps): run the checklist again after each
 game commit, not only after the announced update.

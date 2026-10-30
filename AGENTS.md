@@ -23,7 +23,7 @@ Each kind of knowledge has one home. Write it there and nowhere else; elsewhere,
 | One developer's preferences, refusals ("don't propose again"), backlog ideas | that developer's private notes (agent memory, a git-ignored local instructions file) |
 | The design of work in progress | a design doc in `local/`; once done, mark it as history at the top |
 
-Keep this file short. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule; keep the decisions, rejected options included.
+Keep this file short. Never write release state (pushed, tagged, on Live) anywhere: git knows, and such lines go stale. Read a feature's file before changing that feature. When you edit one, cut the history and test logs that no longer explain a current rule. Every rule in `docs/features/` is a maintainer's decision: change it only when asked, and never re-propose a rejected option. Write a rejected option as one clause with its reason ("not X: why"); no who, no when.
 
 ## Commands
 
@@ -72,8 +72,8 @@ Prefer the game's state (`HSGlobal.exposedPlayer`, GDS data) or signals it keeps
 - **Every save load goes through the game's `importSynergism(input, reset)`**; `__HS_onSaveImport(reset)` stops autosing when `reset` is false. It runs at every singularity: keep the `reset` path one test.
 
 ### Feature modules
-- **Autosing** (`hs-modules/hs-autosing/`): JSON strategies (defaults in `resource/json/strategies/`, validated in `hs-strategy-manager.ts`). Speed comes first in its main loop (no extra awaits, listeners or polling). `docs/features/autosing.md`.
-- **Heater** (`hs-modules/hs-heater/`): Ambrosia loadout optimizer in a web worker, which can't import `HSLogger`. `docs/features/heater.md`.
+- **Autosing** (`hs-modules/hs-autosing/`): JSON strategies (defaults in `resource/json/strategies/`, validated in `hs-strategy-manager.ts`). Speed comes first in its main loop (no extra awaits, listeners or polling). `docs/features/autosing.md` (start there; also `autosing-strategies.md`, `autosing-editor.md`).
+- **Heater** (`hs-modules/hs-heater/`): Ambrosia loadout optimizer in a web worker, which can't import `HSLogger`. `docs/features/heater.md` (start there; also `heater-optimizer.md`).
 - **Hepteract Distributor**: many of its choices were reversed at least once; update the panel's `HELP_LINES` with it. `docs/features/hepteract-distributor.md`.
 - **Version check**: `compareVersionTags` and the release helper's `compareVersions` must sort the same way. `docs/features/version-check.md`.
 - **Backup**: a backup file is untrusted. `docs/features/backup.md`.

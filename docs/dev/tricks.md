@@ -31,7 +31,7 @@ Procedures and traps met while working on the mod. The harnesses have their own 
 - Judged not worth splitting (2026-10-22): `hs-heater-optimizer` (one algorithm, a worker), `hs-autosing`,
   `hs-autosingModal`, `hs-ui`, `hs-gamedata`, `hs-hepteract-distributor`, data files, `patcher.js` (the loaders
   download it as one file), `hs-dev-tools` (must stay droppable). GDS was restructured separately
-  (`docs/features/gds.md`, "Decisions").
+  (`docs/features/gds.md`, "API and calculations").
 - The autosing strategy dropdown's options are filled twice at load (panel build, then `updateStrategyDropdownList`) on
   purpose: without the first fill, `syncSettings` warns "does not exist in select options" at each load.
 
