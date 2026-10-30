@@ -191,6 +191,13 @@ export class HSStrategyManager {
 
         const cloned = JSON.parse(JSON.stringify(strategy)) as HSAutosingStrategy;
         HSStrategyManager.#migrateCorruptions(cloned);
+        for (const phase of HSStrategyManager.#getPhases(cloned)) {
+            for (const step of phase.strat ?? []) {
+                if (isCorruptionLevelStep(step.challengeNumber) && step.ascendAfterCorruption === undefined) {
+                    step.ascendAfterCorruption = true;
+                }
+            }
+        }
         return cloned;
     }
 
@@ -220,6 +227,11 @@ export class HSStrategyManager {
                 && !isCorruptionLevel(step.corruptionLevel)) ?? -1;
             if (index !== -1) {
                 throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${index + 1} has no valid corruption level`);
+            }
+            const invalidAscend = phase.strat?.findIndex(step => isCorruptionLevelStep(step.challengeNumber)
+                && typeof step.ascendAfterCorruption !== 'boolean') ?? -1;
+            if (invalidAscend !== -1) {
+                throw new Error(`Phase ${phase.startPhase} → ${phase.endPhase}: step ${invalidAscend + 1} has no valid corruption ascension option`);
             }
         }
 

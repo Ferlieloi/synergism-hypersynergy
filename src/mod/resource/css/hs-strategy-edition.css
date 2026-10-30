@@ -380,6 +380,22 @@
     outline: none;
 }
 
+.hs-challenges-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.hs-challenges-input[type="checkbox"] {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
 /* The Add/Update button, and in edit mode a Cancel button on its right */
 .hs-challenges-add-row {
     display: flex;
