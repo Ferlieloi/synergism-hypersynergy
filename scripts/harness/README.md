@@ -51,6 +51,7 @@ heat on a S260 save in node, about 100 s.
 - **A leftover Chrome on a debug port** gets driven instead of the new one: the scripts refuse to start then. Stop it
   by its PID (never by a name pattern: the developer's own Chrome has the same name). The scripts kill their whole
   Chrome tree at the end; a script killed from outside (a timeout) can leave one behind.
+- **Two Chromes on the same profile fail to start**: run tests that share a profile one after the other.
 - **A wait loop must throw when it gives up.** One that goes on silently lets a test "pass" on a game that never loaded.
   `waitGameReady` throws.
 - **With synergism.cc blocked, the game asks a PseudoCoin Confirm at load** and keeps the loading screen until it is

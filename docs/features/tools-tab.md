@@ -11,12 +11,12 @@ How a calculation gets into the list (`toolingSupport`, `fnParams`, `options`, c
 - **Components** are a name → value object (`HSCalculationComponents`) with the game's English stat line names, not
   translated (the names match Settings → Stats for nerds, `docs/game/updating.md`). "Calculate components" on an entry
   without "(C)" gives the reduced result + " (no components)" (greying the button was the alternative not taken).
-- **Cubes since game 4.4.0 ("Base only", Shewchou's choice):** the 6 partial Cube Multiplier entries, Cubes With Tau,
+- **Cubes since game 4.4.0 ("Base only"):** the 6 partial Cube Multiplier entries, Cubes With Tau,
   Ascension Score and the corruption score entries left the list (they had about 5 of the game's 20–45 factors).
   "Cube Bank" (the 7 sources + Challenge 10, game line names) and "Cube Gain: Corruption Lines" (cube type × level
   current/next: bank × base × corruption rate × C15 per-type reward × High-Scoring Statue, the game's
   `corruptionCubeStatLines`) were added.
-- **Left out on purpose** (2026-10-21): the blessing pieces (rune effectiveness, salvage, accelerator), accelerator
+- **Left out on purpose**: the blessing pieces (rune effectiveness, salvage, accelerator), accelerator
   boost, coins owned, achievement AP, potion bases, purple craft costs and enchantment level, favorite upgrade effect;
   Leaderboard Value can't be typed in. Salvage Rune EXP Multiplier returns a `Decimal`: the result formatter needs a fix
   before it can be added.
