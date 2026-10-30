@@ -26,6 +26,13 @@
     text-align: right;
 }
 
+/* Centered button slots fill their cell; each visible button gets an equal share of that width. */
+.headerRegion > .headerStack.headerStackRow[data-hs-header-align="center"] {
+    justify-self: stretch;
+    align-items: start;
+    min-width: 0;
+}
+
 /* The ascension timer's text sits in a box at least 8em wide (the game's, against bouncing). Stacked, it keeps its
    text at the box's start, as the other modules keep their content at theirs, so it lines up with its partner;
    alone, a cell alignment centres it like any content. */

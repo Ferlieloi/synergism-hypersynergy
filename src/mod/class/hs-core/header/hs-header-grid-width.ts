@@ -2,6 +2,7 @@ import { HSGlobal } from '../hs-global';
 import { HSLogger } from '../hs-logger';
 import { HSStorage } from '../hs-storage';
 import { HSModuleManager } from '../module/hs-module-manager';
+import { HSHeaderButtons } from './hs-header-buttons';
 
 // A width in px, or 'full': no cap, the grid fills the header as the window grows
 type GridWidth = number | 'full';
@@ -30,7 +31,7 @@ export class HSHeaderGridWidth {
     static #width?: GridWidth;
     static #line?: HTMLElement;
     static #slider?: HTMLInputElement;
-    static #value?: HTMLElement;
+    static #value?: HTMLInputElement;
     static #reset?: HTMLButtonElement;
 
     /** Applies the saved width. The CSS rule comes with HSHeaderEditSettings' style block. */
@@ -67,8 +68,33 @@ export class HSHeaderGridWidth {
             HSHeaderGridWidth.#changed();
         });
 
-        const value = document.createElement('span');
+        const value = document.createElement('input');
+        value.type = 'number';
         value.className = 'hs-hes-width-value';
+        value.min = String(MIN_WIDTH);
+        value.step = '1';
+        value.setAttribute('aria-label', 'Header grid width in pixels');
+        const commitWidth = () => {
+            const maximum = Math.max(MIN_WIDTH, Math.floor(HSHeaderGridWidth.#available()));
+            const parsed = value.valueAsNumber;
+            if (!Number.isFinite(parsed)) {
+                value.value = String(document.getElementById('headerGrid')?.offsetWidth ?? MIN_WIDTH);
+                return;
+            }
+            const width = Math.max(MIN_WIDTH, Math.min(maximum, Math.round(parsed)));
+            value.value = String(width);
+            HSHeaderGridWidth.#width = width === maximum ? 'full' : width;
+            HSHeaderGridWidth.#save();
+            HSHeaderGridWidth.#changed();
+        };
+        value.addEventListener('change', commitWidth);
+        value.addEventListener('keydown', event => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            commitWidth();
+        });
+        const units = document.createElement('span');
+        units.textContent = 'px';
 
         const reset = document.createElement('button');
         reset.type = 'button';
@@ -82,7 +108,7 @@ export class HSHeaderGridWidth {
 
         const top = document.createElement('div');
         top.className = 'hs-hes-width-top';
-        top.append(label, value, reset);
+        top.append(label, value, units, reset);
         line.append(top, slider);
         HSHeaderGridWidth.#line = line;
         HSHeaderGridWidth.#slider = slider;
@@ -106,8 +132,13 @@ export class HSHeaderGridWidth {
         slider.max = `${MIN_WIDTH + Math.ceil(Math.max(0, available - MIN_WIDTH) / STEP) * STEP}`;
         slider.disabled = available < MIN_WIDTH + STEP;
         slider.value = `${HSHeaderGridWidth.#width === 'full' ? slider.max : grid.offsetWidth}`;
-        HSHeaderGridWidth.#value!.textContent = HSHeaderGridWidth.#width === 'full' ? 'Full' : `${grid.offsetWidth} px`;
+        const value = HSHeaderGridWidth.#value!;
+        value.max = String(Math.max(MIN_WIDTH, Math.floor(available)));
+        value.disabled = slider.disabled;
+        value.title = HSHeaderGridWidth.#width === 'full' ? 'Full width: follows the window' : 'Enter a width in pixels';
+        if (document.activeElement !== value) value.value = String(grid.offsetWidth);
         HSHeaderGridWidth.#reset!.disabled = HSHeaderGridWidth.#width === undefined;
+        HSHeaderButtons.refresh();
     }
 
     static #isMobile(): boolean { return document.documentElement.dataset.mobile === 'true'; }
@@ -131,6 +162,7 @@ export class HSHeaderGridWidth {
         root.classList.toggle('hs-header-grid-width', width !== undefined);
         if (width === undefined) root.style.removeProperty('--hs-header-grid-width');
         else root.style.setProperty('--hs-header-grid-width', width === 'full' ? 'none' : `${width}px`);
+        HSHeaderButtons.refresh();
     }
 
     // After a saved change: the game's fitted texts (challenge progress) only refit on a window resize or a render

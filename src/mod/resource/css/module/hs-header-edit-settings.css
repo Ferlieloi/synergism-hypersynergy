@@ -227,9 +227,15 @@ html.hs-header-stats-bottom #mainHeader > :not(#mobileHeaderContent) {
    cursor: default;
 }
 
-/* Room for the widest value ("1830 px"): Reset doesn't move while dragging */
+/* Fixed width so Reset stays in place while typing or dragging the slider. */
 #hs-header-edit-settings .hs-hes-width-value {
-   min-width: 6.5ch;
+   width: 9ch;
+   min-width: 0;
+   padding: 2px 4px;
+   color: inherit;
+   background: transparent;
+   border: 1px solid #ffffff60;
+   border-radius: 3px;
    font-variant-numeric: tabular-nums;
 }
 

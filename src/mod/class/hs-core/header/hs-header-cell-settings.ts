@@ -4,6 +4,7 @@ import { HSStorage } from '../hs-storage';
 import { HSUI } from '../hs-ui';
 import { HSModuleManager } from '../module/hs-module-manager';
 import { HSHeaderChallengeProgress } from './hs-header-challenge-progress';
+import { HSHeaderButtons } from './hs-header-buttons';
 import cellSettingsCSS from 'inline:../../../resource/css/module/hs-header-cell-settings.css';
 
 type Alignment = 'left' | 'center' | 'right';
@@ -43,6 +44,7 @@ export class HSHeaderCellSettings {
         HSUI.injectStyle(cellSettingsCSS, 'hs-header-cell-settings-css');
         HSUI.flushInjectedStyles();
         HSHeaderChallengeProgress.install();
+        HSHeaderButtons.install();
 
         const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Horizontal');
         for (const value of ALIGNMENTS) {
@@ -200,7 +202,8 @@ export class HSHeaderCellSettings {
         for (const [alignment, button] of HSHeaderCellSettings.#alignButtons) {
             button.disabled = !selected;
             button.setAttribute('aria-pressed', String(!!selected && value?.align === alignment));
-            button.title = selected ? 'Align the selected cell' : 'Select a module in a header cell first';
+            button.title = selected ? alignment === 'center' && selected.element.classList.contains('headerStackRow')
+                ? 'Space the buttons evenly across the slot' : 'Align the selected cell' : 'Select a module in a header cell first';
         }
         for (const [height, button] of HSHeaderCellSettings.#heightButtons) {
             button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected);
@@ -213,6 +216,7 @@ export class HSHeaderCellSettings {
             button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : undefined)) === vertical));
             button.title = selected ? 'Align the selected cell vertically' : 'Select a module in a header cell first';
         }
+        HSHeaderButtons.refresh();
     }
 
     static #load(): void {

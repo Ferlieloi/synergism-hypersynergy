@@ -878,6 +878,49 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // Header reset buttons: rendering and drag targets use a width-dependent capacity supplied by the mod.
+    // Saves retain groups/positions for all eight native buttons, even when loaded in a narrower window.
+    // The mod wraps an existing oversized group; it only allows adding buttons while they fit.
+    report.headerButtons = false;
+    try {
+        const renderResult = findEnclosingFunction(code, /["']--header-button-slots["']/g, ['headerTray'], 'header buttons (render)');
+        const renderBody = renderResult ? code.slice(renderResult.bodyStart, renderResult.bodyEnd) : '';
+        const propertyStart = renderBody.indexOf('--header-button-slots');
+        const propertyEnd = renderBody.indexOf(';', propertyStart);
+        const capacityProperty = renderBody.slice(propertyStart, propertyEnd < 0 ? renderBody.length : propertyEnd);
+        const readers = [...code.matchAll(/(?<![\w$.])([a-zA-Z_$][\w$]*)\s*=\s*\(\s*\)\s*=>\s*([a-zA-Z_$][\w$]*)\s*\[\s*([a-zA-Z_$][\w$]*)\s*\(\s*\)\s*\]/g)]
+            .filter(match => new RegExp(`(?<![\\w$.])${match[1].replace(/\$/g, '\\$')}\\(\\s*\\)`).test(capacityProperty));
+        if (readers.length !== 1) throw new Error(`expected one capacity reader, found ${readers.length}`);
+        const reader = readers[0];
+        const capacity = reader[2].replace(/\$/g, '\\$');
+        const access = `${capacity}\\s*\\[\\s*[a-zA-Z_$][\\w$]*\\s*\\]`;
+        const splitPattern = new RegExp(`([a-zA-Z_$][\\w$]*\\(\\s*[a-zA-Z_$][\\w$]*\\.filter\\(\\s*[a-zA-Z_$][\\w$]*\\s*\\)\\s*,\\s*)(${access})(\\s*\\))`, 'g');
+        const limitPattern = new RegExp(`(<\\s*)(${access})`, 'g');
+        const splits = [...code.matchAll(splitPattern)];
+        const limits = [...code.matchAll(limitPattern)];
+        if (splits.length !== 1 || limits.length !== 1) {
+            throw new Error(`expected one slot split and one position limit, found ${splits.length} and ${limits.length}`);
+        }
+        const expression = `${reader[2]}[${reader[3]}()]`;
+        const arrow = reader[0].indexOf('=>') + 2;
+        const edits = [
+            { at: reader.index + arrow, length: reader[0].length - arrow,
+                text: `(window.__HS_headerButtonCapacity?.(${expression})??${expression})` },
+            { at: splits[0].index, length: splits[0][0].length,
+                text: `${splits[0][1]}Math.max(8,${splits[0][2]})${splits[0][3]}` },
+            { at: limits[0].index, length: limits[0][0].length,
+                text: `${limits[0][1]}Math.max(8,${limits[0][2]})` },
+        ];
+        for (const edit of edits.sort((a, b) => b.at - a.at)) {
+            code = code.slice(0, edit.at) + edit.text + code.slice(edit.at + edit.length);
+        }
+        topLines.push('window.__HS_HEADER_BUTTONS_PATCHED=true;');
+        report.headerButtons = true;
+        log(`Patched header button capacity (fn=${reader[1]})`);
+    } catch (error) {
+        warn('Could not patch header button capacity', error.message);
+    }
+
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — sync the Steam cloud on its 60 s clock only, not at each manual save
         // (remove the manual trigger: e || ...). In saveSynergy, found by its "testing.gameSaved" message,
