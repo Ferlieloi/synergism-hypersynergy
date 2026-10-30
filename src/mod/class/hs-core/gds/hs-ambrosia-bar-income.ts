@@ -2,6 +2,7 @@ import type {
     AmbrosiaBarIncome,
     AmbrosiaBarIncomeInput,
 } from "../../../types/data-types/hs-ambrosia-income-types";
+import { calculateReactorIncome } from "./hs-ambrosia-reactor-income";
 
 /**
  * Expected sustained fill rates for a fixed Ambrosia loadout. Vanilla routes,
@@ -43,30 +44,55 @@ export function calculateAmbrosiaBarIncome(input: AmbrosiaBarIncomeInput): Ambro
         / 100 / 3_600 / recipeBlue;
     const cancer = reactor.cancerPurplePointsPerBlueOrRedFill;
 
+    const incomeFromFills = (rates: { blue: number; red: number; purple: number }): AmbrosiaBarIncome => ({
+        blueAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.blue * blueAmbrosiaPerFill,
+        redAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.red * redAmbrosiaPerFill,
+        blueRewardPerSecond: rates.blue * blueAmbrosiaPerFill,
+        redRewardPerSecond: rates.red * redAmbrosiaPerFill,
+        purpleHoneyPerSecond: reactor.barDependenceEnabled
+            ? 0
+            : rates.purple * purpleHoneyRewardLuck / 100 * input.purpleHoneyPerExtraction,
+        blueFillsPerSecond: rates.blue,
+        redFillsPerSecond: rates.red,
+        purpleFillsPerSecond: rates.purple,
+    });
+
+    if (reactor.overcapEnabled && blueRoute > 0 && redRoute > 0) {
+        return incomeFromFills(calculateReactorIncome({
+            bluePerTick: Math.max(0, input.bluePointsPerSecond) * 0.125 / recipeBlue,
+            redPerTick: baseRedProduction * 0.125,
+            blueRouting: blueRoute,
+            redRouting: redRoute,
+            blueCapacity: reactor.blueCapacity / recipeBlue,
+            // Scorpio changes the recipe, not the red tank's capacity.
+            redCapacity: reactor.blueCapacity / 1_000,
+            normalPerTick: throughputBatches * 0.125,
+            blueRequirement: blueRequirement / recipeBlue,
+            redRequirement,
+            purpleRequirement,
+            purplePerBatch: recipePurple,
+            cancer,
+            blueRebate: reactor.purpleFillBluePoints / recipeBlue,
+            redRebate: reactor.purpleFillRedPoints,
+            fusionBluePerRedFill: Math.max(0, input.bluePointsPerSecond)
+                * Math.max(0, input.acceleratorSecondsPerRedAmbrosia) * input.redLuck / 100 / recipeBlue,
+            directFillsPerExtraction: reactor.barDependenceEnabled ? purpleHoneyRewardLuck / 100 : 0,
+        }));
+    }
+
     const ratesAtBlueProduction = (blueProduction: number, purpleFills: number) => {
-        // Vanilla routes Gemini and Shop rebates after extraction. Their
-        // stored points react on the following tick, so in a sustained-rate
-        // calculation they join the ordinary supply.
+        // With overcap OFF, post-extraction rebates cannot react immediately.
+        // Their sustained supply can be solved together with ordinary points.
         const blueSupply = blueProduction + purpleFills * reactor.purpleFillBluePoints;
         const redSupply = baseRedProduction + purpleFills * reactor.purpleFillRedPoints;
         const blueBatches = blueRoute * blueSupply / recipeBlue;
         const redBatches = redRoute * redSupply;
-        // Vanilla routes blue before red each tick. If routed red exceeds blue
-        // while overcap is enabled, overflow consumes the blue batches before
-        // they can be used by the next tick's ordinary reactor conversion.
-        const normalBatches = reactor.overcapEnabled && redBatches > blueBatches
-            ? 0 : Math.min(blueBatches, redBatches, throughputBatches);
-        // At full tanks, overcap can react matching excess at 10% efficiency;
-        // unmatched excess is refunded to the regular bar rather than lost.
-        const overflowBatches = reactor.overcapEnabled
-            ? Math.min(Math.max(0, blueBatches - normalBatches),
-                Math.max(0, redBatches - normalBatches)) : 0;
-        const totalRoutedBatches = normalBatches + overflowBatches;
+        const normalBatches = Math.min(blueBatches, redBatches, throughputBatches);
         const regularBlueFills = Math.max(0,
-            (blueSupply - totalRoutedBatches * recipeBlue) / blueRequirement);
+            (blueSupply - normalBatches * recipeBlue) / blueRequirement);
         const regularRedFills = Math.max(0,
-            (redSupply - totalRoutedBatches) / redRequirement);
-        const purplePoints = (normalBatches + 0.1 * overflowBatches) * recipePurple;
+            (redSupply - normalBatches) / redRequirement);
+        const purplePoints = normalBatches * recipePurple;
         // SynergismOfficial/src/Helper.ts: inside Bar Dependence, each Purple
         // Honey an extraction would yield (reward luck / 100 on average)
         // grants one blue and one red bar reward instead.
@@ -150,16 +176,5 @@ export function calculateAmbrosiaBarIncome(input: AmbrosiaBarIncomeInput): Ambro
             throw new Error('Ambrosia bar-fill feedback did not converge.');
         }
     }
-    return {
-        blueAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.blue * blueAmbrosiaPerFill,
-        redAmbrosiaPerSecond: reactor.barDependenceEnabled ? 0 : rates.red * redAmbrosiaPerFill,
-        blueRewardPerSecond: rates.blue * blueAmbrosiaPerFill,
-        redRewardPerSecond: rates.red * redAmbrosiaPerFill,
-        purpleHoneyPerSecond: reactor.barDependenceEnabled
-            ? 0
-            : rates.purple * purpleHoneyRewardLuck / 100 * input.purpleHoneyPerExtraction,
-        blueFillsPerSecond: rates.blue,
-        redFillsPerSecond: rates.red,
-        purpleFillsPerSecond: rates.purple,
-    };
+    return incomeFromFills(rates);
 }

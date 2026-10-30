@@ -35,7 +35,7 @@ async function main() {
   const close = (actual, expected, label, tolerance = 2e-11) => assert.ok(
     Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance * Math.max(1, Math.abs(expected)),
     `${label}: ${actual} != ${expected}`);
-  const rune = (exp, costCoefficient, levelsPerOOM) => ({ exp, costCoefficient, levelsPerOOM,
+  const rune = (exp, costCoefficient, levelsPerOOM) => ({ exp, costCoefficient: String(costCoefficient), levelsPerOOM,
     freeLevelsWithoutTalismans: 10, talismanLevelsPerPower: 200, effectiveLevelMultiplier: 1.7, unlocked: true });
   const snapshot = {
     runes: { speed: rune('1e8', 50, 150), duplication: rune('1e9', 20000, 120),
@@ -182,6 +182,23 @@ async function main() {
   assert.equal(getHeaterTypeConfig('coinsC15').label, 'Coins in C15');
   const roundTrip = JSON.parse(JSON.stringify(snapshot));
   assert.deepEqual(createHeaterCoinsC15Evaluator(roundTrip, context)(zero), createHeaterCoinsC15Evaluator(snapshot, context)(zero));
+  const largeCostSnapshot = {
+    ...snapshot,
+    runes: { ...snapshot.runes, horseShoe: {
+      ...snapshot.runes.horseShoe, exp: '1e1700', costCoefficient: '1e500',
+      levelsPerOOM: 1 / 20, freeLevelsWithoutTalismans: 0, talismanLevelsPerPower: 0, effectiveLevelMultiplier: 1,
+    } },
+  };
+  assert.equal(heaterCoinRunePurchasedLevel(new Decimal('1e1700'), '1e500', 1 / 20), 60,
+    'Horseshoe purchases use its finite Decimal cost');
+  const largeCostState = createHeaterCoinsC15Evaluator(largeCostSnapshot, context)(zero);
+  const largeCostReference = refState(largeCostSnapshot, context, zero);
+  close(largeCostState.globalSpeedLog10, largeCostReference.globalSpeedLog10, 'large-cost rune speed penalty');
+  assert.deepEqual(createHeaterCoinsC15Evaluator(JSON.parse(JSON.stringify(largeCostSnapshot)), context)(zero),
+    largeCostState, 'large costs survive a JSON round-trip');
+  assert.doesNotThrow(() => HSHeaterOptimizer.createHeaterOptimizerResultFromInput({
+    ...input, coinsC15: JSON.parse(JSON.stringify(largeCostSnapshot)), heaterOptions: { coinsC15: false },
+  }), 'large Coins data must not break a heat when the Coins branch is disabled');
 
   // Export fixture with active yellow/Purple levels. It must produce the
   // same baseline regardless of the currently equipped Ambrosia loadout.
@@ -287,7 +304,14 @@ async function main() {
     close(actual.taxExponentWithoutRunes, referenceTaxes, `upstream tax export at ${count} blessings`);
     close(actual.globalSpeedLog10WithoutRunesAndBrick, Math.log10(referenceSpeed), `upstream speed export at ${count} blessings`);
   }
-  console.log(`Heater Coins in C15: ${checked} formula comparisons, exhaustive search checks and export checks passed.`);
+  api.rune.runes.horseShoe.costCoefficient = new Decimal('1e500');
+  data.runes.horseShoe = '1e1700';
+  const largeCostExport = buildHeaterCoinsC15Input(api, data, 1000);
+  const restoredExport = JSON.parse(JSON.stringify(largeCostExport));
+  assert.equal(restoredExport.runes.horseShoe.costCoefficient, '1e+500', 'export preserves Horseshoe cost');
+  assert.deepEqual(createHeaterCoinsC15Evaluator(restoredExport, context)(zero),
+    createHeaterCoinsC15Evaluator(largeCostExport, context)(zero), 'exported large costs retain the same calculation');
+  console.log(`Heater Coins in C15: ${checked} formula comparisons, exhaustive search, export and large-cost round-trip checks passed.`);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -76,7 +76,8 @@ one clone to another: check `git remote -v`.
   commit.
 - **One topic per PR. No release bundle in a PR**: Ferlieloi builds his own release.
 - Loader tests fail in a fresh worktree until `synergism_modloader` has its `node_modules`: not a regression.
-- The Tools tab calculations don't exist on Live: check GDS changes there with the node harness.
+- Check the target revision's Tools tab definitions before assuming a calculation is available there. Live includes
+  the Tools tab; the node harness can also check GDS changes directly on a save.
 - **Releasing on Live directly** (Shewchou can push to Live, after telling Ferlieloi): the release helper can't be used
   from the worktree (it pushes and checks tags on `origin` by name, and only purges from a branch named `master`). By
   hand: version in `package.json` + `package-lock.json`, `npm run release`, commit `release: vX` + annotated tag

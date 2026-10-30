@@ -6,8 +6,9 @@ formula here. This file holds what made a re-implemented formula disagree with t
 ## Inputs that aren't in the save
 
 - **PseudoCoin levels and the quark bonus come from synergism.cc**, not the save. Without them, ambrosia bar speeds
-  come out 4–10× too low, and quarks, Obtainium and Offering loadouts a few levels off; ambrosia, cube and octeract
-  loadouts and luck don't depend on them. An HS backup (since 59f71ca3) holds them in `diagnostics.heater`, a heater
+  can come out several times too low. Missing account data can also change loadout choices: Ambrosia income depends
+  on absolute generation, fusion, routing and reactor limits, so a speed factor need not cancel between candidates.
+  PseudoCoin luck upgrades also affect luck itself. An HS backup (since 59f71ca3) holds them in `diagnostics.heater`, a heater
   export in `hs_data` (`pseudoCoinUpgrades.pseudoCoinUpgradeLevels`, `me_data`, also `patreonBonus`, `isEvent`,
   `bellStacks`). How the mod reads them live: `docs/features/gds.md`.
 - **The Exalt the player is in changes many formulas.** On a player's backup, read `diagnostics.heater.exalt` first.

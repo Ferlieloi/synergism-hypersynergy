@@ -1,11 +1,12 @@
 import Decimal from 'break_infinity.js';
+import type { DecimalSource } from 'break_infinity.js';
 import type { HeaterCoinRuneInput, HeaterCoinsC15Context, HeaterCoinsC15Input, HeaterCoinsC15Levels, HeaterCoinsC15State } from '../../../types/data-types/hs-heater-coins-types';
 import { formatNumber } from './hs-heater-utils';
 
 const TAX_LOG_BASE = Math.log10(1.01);
 
 /** Runes.ts updateLevelsFromEXP, including its next-level floating point correction. */
-export function heaterCoinRunePurchasedLevel(exp: Decimal, cost: number, coefficient: number): number {
+export function heaterCoinRunePurchasedLevel(exp: Decimal, cost: DecimalSource, coefficient: number): number {
     const level = Math.floor(coefficient * exp.div(cost).plus(1).log10());
     const nextCost = Decimal.pow(10, (level + 1) / coefficient).minus(1).times(cost);
     return nextCost.lte(exp) ? level + 1 : level;
@@ -43,7 +44,9 @@ export function heaterCoinsC15LogRatio(candidate: HeaterCoinsC15State, baseline:
 
 export function createHeaterCoinsC15Evaluator(input: HeaterCoinsC15Input, context: HeaterCoinsC15Context) {
     const entries = Object.entries(input.runes) as Array<[keyof typeof input.runes, HeaterCoinRuneInput]>;
-    const runeInputs = entries.map(([key, rune]) => ({ key, rune, exp: new Decimal(rune.exp) }));
+    const runeInputs = entries.map(([key, rune]) => ({
+        key, rune, exp: new Decimal(rune.exp), cost: new Decimal(rune.costCoefficient),
+    }));
     return (levels: HeaterCoinsC15Levels): HeaterCoinsC15State => {
         const suppressed = context.exalt === 6 || context.exalt === 8;
         const coefficientDelta = (suppressed ? 0 : levels.coefficient) - input.baselineCoefficientModuleLevel;
@@ -51,9 +54,9 @@ export function createHeaterCoinsC15Evaluator(input: HeaterCoinsC15Input, contex
         const talismanPower = context.talismanPower + 0.005 * talismanDelta;
         const raw = {} as Record<keyof typeof input.runes, number>;
         const effective = {} as typeof raw;
-        for (const { key, rune, exp } of runeInputs) {
+        for (const { key, rune, exp, cost } of runeInputs) {
             const coefficient = rune.levelsPerOOM + (key === 'horseShoe' ? 0 : coefficientDelta);
-            raw[key] = heaterCoinRunePurchasedLevel(exp, rune.costCoefficient, coefficient)
+            raw[key] = heaterCoinRunePurchasedLevel(exp, cost, coefficient)
                 + rune.freeLevelsWithoutTalismans + rune.talismanLevelsPerPower * talismanPower;
             effective[key] = !rune.unlocked ? 0 : input.challenge9 && key !== 'horseShoe'
                 ? 1 : raw[key] * rune.effectiveLevelMultiplier;

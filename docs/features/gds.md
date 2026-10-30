@@ -23,6 +23,22 @@
 - **Every save load goes through the game's `importSynergism(input, reset)`**: a file, a cloud save, the Steam cloud, and with `reset = true` a singularity, entering or leaving an Exalt and the game reset (delete save). The patcher's save import hook (`__HS_SAVE_IMPORT_HOOK_PATCHED`) calls `window.__HS_onSaveImport(reset)` at the start of it, inside a `try` (an error from the mod must not stop a singularity). `HSGameData.#onSaveImport` stops autosing when `reset` is false, with `stopAutosing({ saveReplaced: true })`: that stop clicks nothing in the game, because the answer to a click (leaving Exalt 2) would come once the new save is in place. It runs at every singularity, so the `reset` path must stay one test. With `reset` false it also has the ambrosia slot shown as loaded (silver border) guessed again from the new save (`HSAmbrosia.matchActiveLoadoutToLoadedSave`, one task later: `importSynergism` loads the save synchronously then; read from the live player), so imports and Auto-Loadout don't target the old save's slot. "Load from file" also guesses again from the captured save once the offline popup shows: two guesses, same answer. With `reset` false and the "[HS] Keep my header layout" checkbox ticked (`HSHeaderKeepOnImport`, `hs-core/header/hs-header-keep-on-import.ts`, under `#importFileButton`, state in the hidden setting `keepHeaderLayoutOnImport`), the live `headerLayouts` (stripped of the mod's ids) replace the save's in the `window.__HS_parseSave` that `loadSynergy` calls, in the same synchronous step; patched players only. The game reset can't be told from a singularity and doesn't stop autosing. Without the hook (bookmarklet, older patch), only the "Load from file" button's listener stops autosing; that listener is unchanged.
 - The quickbar icon picker (`HSQuickbarIconPickerController`) only reacts to the player's clicks (`event.isTrusted`), so GDS's save clicks and other mod clicks don't end a pick.
 
+## Sustained Ambrosia income
+
+`hs-ambrosia-bar-income.ts` is shared by the Ambrosia page, its header rates and Heater's income objectives.
+It estimates the long-run average with stats, upgrades, loadout and routing held fixed. Initial partial bars and
+saved tank contents are transient stock, not a permanent income bonus or a candidate-loadout penalty. A sustained
+regime can have full tanks, empty tanks, or a repeating fill/drain cycle.
+
+Without overcap, the calculator solves the supply and reward feedback equations. With overcap and both inputs
+routed, `hs-ambrosia-reactor-income.ts` preserves the game's reaction stages: route both inputs, normal reaction,
+overflow against remaining opposite stock, extraction, zero-time rebates, regular fills, then zero-time fusion.
+Unmatched excess returns to the regular bars. Empty ticks and ordinary two-tick tank cycles are batched; bounded
+feedback sampling and resource conservation estimate sustained fills without simulating every elapsed second.
+RNG rewards use their expected value. These are fixed-stat sustained estimates, not an exact next-hour forecast
+with changing lifetime stats or random rewards. Tests use the upstream reactor fixture, including rare rebate
+bursts, fusion, Two Mind and Bar Dependence.
+
 ## Decisions
 
 - **Live player (2026-10-29, 2ac116a2..162de69f).** Two sources, the live player when the patcher exposes it and the save capture as fallback (bookmarklet, failed patch), with no adapter between them: reads stay shape-neutral (`GameDecimal` / `GameCount` and their helpers). The list of vanilla fields left out is dated in a comment above `GameDataFields`: refresh it after `gds-player-keys.cjs`.

@@ -23,7 +23,7 @@ export function buildHeaterCoinsC15Input(api: HSGameDataAPI, data: GameData, tok
         const definition = api.rune.runes[key];
         runes[key] = {
             exp: parseGameDataDecimal(data.runes[key]).toString(),
-            costCoefficient: definition.costCoefficient.toNumber(),
+            costCoefficient: definition.costCoefficient.toString(),
             levelsPerOOM: key === 'horseShoe' ? api.rune.getLevelsPerOOM(key) : api.rune.getLevelsPerOOM(key, 'true_base'),
             freeLevelsWithoutTalismans: api.rune.getRuneFreeLevels(key) - currentTalismans[key],
             talismanLevelsPerPower: power > 0 ? baseTalismans[key] / power : 0,

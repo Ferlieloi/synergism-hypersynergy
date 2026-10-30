@@ -88,6 +88,7 @@ Code: `hs-core/header/hs-header-modules.ts`; patcher "header modules" patch (`__
 - Unpatched: the bars are their own section of `#quickbarsRow` (`ambrosia-minibars`), since the ambrosia quickbar was removed.
 
 ## Ambrosia hourly rates (2026-10-20)
+- The header and Ambrosia page use the same [sustained-income calculation](gds.md#sustained-ambrosia-income).
 - **Three modules** (`hsAmbrosiaRate`, `hsRedAmbrosiaRate`, `hsPurpleHoneyRate`, `HSAmbrosia`; Shewchou's choice over one
   module of three lines): built like the game's currency modules (`currencyContainer`, its icon, `statDisplay` in the
   currency's colour, `6914.50/h`), so the game's CSS sizes them. Locked as the game's module of that currency

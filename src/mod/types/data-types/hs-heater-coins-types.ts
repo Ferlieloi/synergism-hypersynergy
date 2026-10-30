@@ -1,6 +1,6 @@
 export interface HeaterCoinRuneInput {
     exp: string;
-    costCoefficient: number;
+    costCoefficient: string;
     levelsPerOOM: number;
     freeLevelsWithoutTalismans: number;
     talismanLevelsPerPower: number;
