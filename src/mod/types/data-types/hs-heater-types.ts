@@ -1,4 +1,5 @@
 import type Decimal from "break_infinity.js";
+import type { HeaterCoinsC15Input } from './hs-heater-coins-types';
 import type { HeaterBranchId, HeaterResultArrayKey } from "../../class/hs-modules/hs-heater/hs-heater-result-config";
 import type { AmbrosiaBarIncomeReactor } from "./hs-ambrosia-income-types";
 export type { HeaterResultArrayKey } from "../../class/hs-modules/hs-heater/hs-heater-result-config";
@@ -81,6 +82,7 @@ export interface HeaterOptimizerInput {
     reactor?: AmbrosiaBarIncomeReactor;
     /** Fixed game-state inputs for the Purple Honey / Purple Ambrosia objectives. */
     purple?: HeaterPurpleInput;
+    coinsC15?: HeaterCoinsC15Input;
     ambrosiaUpgradeBonusLevels: Record<string, number>;
     ambrosiaUpgradeBlueberryCostReductions: Record<string, number>;
     shopUpgradeRawLevels: Record<string, number>;
@@ -224,6 +226,7 @@ export interface HeaterOptimizationResult {
     quarks?: HeaterResultRowMatrix;
     cubes?: HeaterResultRowMatrix;
     oct?: HeaterResultRowMatrix;
+    coinsC15?: HeaterResultRowMatrix;
     obt?: HeaterResultRowMatrix;
     off?: HeaterResultRowMatrix;
     obtAndOff?: HeaterResultRowMatrix;

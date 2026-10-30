@@ -32,6 +32,7 @@ const BRANCH_GROUPS: readonly BranchGroup[] = [
   { branches: ['hyperflux'], lane: 0 },
   { branches: ['cubes', 'sr'], lane: 0 },
   { branches: ['oct', 'ambOct'], lane: 1 },
+  { branches: ['coinsC15'], lane: 1 },
   { branches: ['luck', 'purple'], lane: 1 },
   { branches: ['quarks', 'obtOff', 'obtAndOff'], lane: 1 },
 ]
