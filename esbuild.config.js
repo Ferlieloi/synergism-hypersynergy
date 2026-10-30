@@ -2,6 +2,7 @@ const esbuild = require('esbuild');
 const inlineImport = require('esbuild-plugin-inline-import');
 const fs = require('fs');
 const path = require('path');
+const heaterWorkerPlugin = require('./scripts/heater-worker-plugin.cjs');
 
 const baseOptions = {
     entryPoints: ['src/mod/index.ts'],
@@ -59,27 +60,16 @@ async function build(env) {
         process.exit(1);
     }
     try {
-        const workerBuild = await esbuild.build({
-            entryPoints: ['src/mod/class/hs-modules/hs-heater/hs-heater-optimizer-worker.ts'],
-            bundle: true,
-            write: false,
-            platform: 'browser',
-            format: 'iife',
-            minify: env === 'release',
-            legalComments: 'none',
-            logLevel: 'silent',
-            plugins: baseOptions.plugins,
-            define: baseOptions.define,
-        });
-        const heaterWorkerSource = workerBuild.outputFiles[0].text;
         const options = {
             ...baseOptions,
+            plugins: [...baseOptions.plugins, heaterWorkerPlugin({
+                minify: env === 'release', plugins: baseOptions.plugins, define: baseOptions.define,
+            })],
             outfile: env === 'release' ? 'release/mod/hypersynergism_release.js' : 'build/hypersynergism.js',
             minify: env === 'release',
             sourcemap: false,
             define: {
                 ...baseOptions.define,
-                HS_HEATER_WORKER_SOURCE: JSON.stringify(heaterWorkerSource),
                 // False in the release build only: code under `if (HS_DEV_BUILD)` (the dev tools) is left out of it
                 HS_DEV_BUILD: JSON.stringify(env !== 'release'),
             },

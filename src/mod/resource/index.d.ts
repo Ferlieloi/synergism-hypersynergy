@@ -31,3 +31,9 @@ declare module '*.user.js' {
     const script: string;
     export default script;
 }
+
+/** Built and watched separately, then embedded into the mod bundle. */
+declare module 'hs-heater-worker-source' {
+    const source: string;
+    export default source;
+}

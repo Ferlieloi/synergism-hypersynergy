@@ -22,5 +22,5 @@ export type HeaterWorkerRequest = {
 }
 
 export type HeaterWorkerResponse =
-  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[]; stages: HeaterOptimizerStage[] }
+  | { id: number; ok: true; result: HeaterOptimizationResult; logs: HeaterOptimizerLog[]; stages?: HeaterOptimizerStage[] }
   | { id: number; ok: false; error: string; logs: HeaterOptimizerLog[] }

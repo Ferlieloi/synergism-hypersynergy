@@ -14,8 +14,7 @@ import { HSHeaterOptimizer, takeHeaterOptimizerLogs } from './hs-heater-optimize
 import type { HeaterOptimizerLog } from './hs-heater-optimizer'
 import { HSLogger } from '../../hs-core/hs-logger'
 import { escapeLogText } from './hs-heater-utils'
-
-declare const HS_HEATER_WORKER_SOURCE: string
+import HS_HEATER_WORKER_SOURCE from 'hs-heater-worker-source'
 
 const LOG_CONTEXT = 'HSHeater'
 
@@ -145,6 +144,7 @@ function formatSeconds(ms: number): string {
 // One debug line per group with the optimizer's stage times. A stage that
 // holds sub-stages is listed after them, with their total.
 function logStages(branches: string, stages: readonly HeaterOptimizerStage[]): void {
+  if (!stages.length) return
   HSLogger.debug(() => `Heat stages, ${branches}: ${stages
     .filter(stage => stage.elapsedMs >= 50)
     .map(stage => `${stage.name} ${formatSeconds(stage.elapsedMs)}`)
@@ -190,7 +190,8 @@ function runWorker(
       cleanup()
       writeOptimizerLogs(event.data.logs)
       if (event.data.ok)
-        resolve({ result: event.data.result, stages: event.data.stages })
+        // An older embedded worker may omit optional diagnostics; its calculated result is still valid.
+        resolve({ result: event.data.result, stages: event.data.stages ?? [] })
       else
         reject(new Error(event.data.error))
     }
