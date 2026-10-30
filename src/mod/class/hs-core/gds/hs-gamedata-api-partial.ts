@@ -72,10 +72,6 @@ export abstract class HSGameDataAPIPartial extends HSModule {
         this.pseudoData = data;
     }
 
-    _updateCampaignData(data: CampaignData) {
-        this.campaignData = data;
-    }
-
     // TODO: clean that...
     _updateEventData(data: ConsumableGameEvents) {
         this.eventData = data;
@@ -118,6 +114,15 @@ export abstract class HSGameDataAPIPartial extends HSModule {
 
     getEventData(): ConsumableGameEvents | undefined {
         return this.eventData;
+    }
+
+    getVanillaGlobalEvent(): VanillaGlobalEvent | null {
+        return this.vanillaGlobalEvent;
+    }
+
+    // A Happy Hour Bell or a global event is active
+    isEventActive(): boolean {
+        return this.isEvent;
     }
 
     /**

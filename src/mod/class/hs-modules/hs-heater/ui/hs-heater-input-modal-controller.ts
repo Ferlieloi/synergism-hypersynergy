@@ -17,7 +17,6 @@ import { HSSettings } from "../../../hs-core/settings/hs-settings";
 import { HSSettingsUI } from "../../../hs-core/settings/hs-settings-ui";
 import { HSLogger } from "../../../hs-core/hs-logger";
 import { HSSettingsDefinition } from "../../../../types/module-types/hs-settings-types";
-import type { HeaterBranchId } from "../hs-heater-result-config";
 import type { HSAmbrosia } from "../../hs-ambrosia/hs-ambrosia";
 
 export class HSHeaterInputModalController {
@@ -31,14 +30,13 @@ export class HSHeaterInputModalController {
     static #cachedTypeSelects: HTMLSelectElement[] = [];
     static #cachedTypeCheckboxes: HTMLInputElement[] = [];
     static #cachedTypeIcons: HTMLButtonElement[] = [];
-    static #cachedActiveLabels: HTMLElement[] = [];
 
     static #loadoutSettingPreferences: Partial<Record<keyof HSSettingsDefinition, { label: string; preferences: string[] }>> = {
         autosingEarlyCubeLoadout:           { label: 'Autosing Early Cube',     preferences: ["hyperflux:4", "hyperflux:5", "hyperflux:6", "hyperflux:7", HEATER_BEST_H_SEMANTIC_ID, "oct"] },
         autosingLateCubeLoadout:            { label: 'Autosing Late Cube',      preferences: ["cubes"] },
         autosingQuarkLoadout:               { label: 'Autosing Quark',          preferences: ["quarks"] },
-        autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "off"] },
-        autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obt"] },
+        autosingObtLoadout:                 { label: 'Autosing Obt',            preferences: ["obt", "obtAndOff", "off"] },
+        autosingOffLoadout:                 { label: 'Autosing Off',            preferences: ["off", "obtAndOff", "obt"] },
         autosingAmbrosiaLoadout:            { label: 'Autosing Amb',            preferences: ["allAmb"] },
         autoLoadoutAdd:                     { label: 'Auto-Loadout Add',        preferences: ["allAmb"] },
         autoLoadoutTime:                    { label: 'Auto-Loadout Time',       preferences: ["allAmb"] },
@@ -101,6 +99,7 @@ export class HSHeaterInputModalController {
                 <div>${HSUIC.Button({ id: 'hs-heater-update-inputs-btn', class: 'redButton',  text: 'Update 🔓 Inputs' })}</div>
                 <div>${HSHeaterUIInput.buildHeaterOptionToggleGrid(initialInput.heaterOptions)}</div>
                 <div class="hs-heater-start-row">${HSUIC.Button({ id: 'hs-heater-recalculate-btn',   class: 'redButton hs-heater-start-heater-tooltip-trigger', text: '🔥 Start Heater', styles: { cursor: 'help' } })}${HSUIC.Button({ id: 'hs-heater-cancel-btn', class: 'redButton', text: '✖', props: { title: 'Cancel this heat', hidden: '' } })}</div>
+                ${this.#buildTwoWorkersCheckbox()}
                 <div id="hs-heater-type-selects" class="hs-heater-type-selects-grid">${heaterTypeDropdowns}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-import-all-btn',    class: 'blueButton', text: 'Import All <span style="color: #338eef;">☑</span> Loadouts' })}</div>
                 <div>${HSUIC.Button({ id: 'hs-heater-sync-icons-btn',    class: 'blueButton', text:   'Sync All Icons' })}</div>
@@ -123,6 +122,21 @@ export class HSHeaterInputModalController {
         this.currentInputsModalId = modalId;
         this.attachModalHandlers(modalId);
         HSHeaterResultModalController.reconnectToInputsModal(modalId);
+    }
+
+
+    // Without a worker the heat runs on the page, one group at a time: no checkbox
+    static #buildTwoWorkersCheckbox(): string {
+        const checked = HSSettings.getSetting('heaterTwoWorkers').getValue() === true ? ' checked' : '';
+        const help = 'Heats in two workers at once, on two CPU cores: about 40% faster on late saves. '
+            + 'The tab uses more memory during a heat: untick it if the game crashes or freezes while heating. '
+            + 'A computer that reports under 8 GB of memory or fewer than 4 CPU threads heats in one worker anyway.';
+        return `
+            <label class="hs-heater-two-workers" title="${help}"${HSHeaterOptimizerRunner.canCancel ? '' : ' hidden'}>
+                <input type="checkbox" id="hs-heater-two-workers"${checked} />
+                Faster heat (2 workers) <span class="hs-heater-two-workers-help">?</span>
+            </label>
+        `;
     }
 
 
@@ -162,14 +176,13 @@ export class HSHeaterInputModalController {
                 HSHeaterResultModalController.refreshSelectedTypeHighlights(this.currentInputsModalId, false);
                 const activeModal = this.getActiveInputsModal();
                 if (activeModal) {
-                    this.refreshRequiredBranchHighlights(activeModal);
                     this.updateSyncSettingsButtonWarningState(activeModal);
                 }
             }
         });
+        HSHeaterUIInput.attachBranchCheckboxHandlers(modal);
         this.updateSyncSettingsButtonWarningState(modal);
         HSHeaterResultModalController.syncLoadoutAvailabilityState(modal);
-        this.refreshRequiredBranchHighlights(modal);
         this.monitorInputsModalRemoval(modal);
 
         const updateInputsButton = modal.querySelector('#hs-heater-update-inputs-btn') as HTMLElement | null;
@@ -213,6 +226,12 @@ export class HSHeaterInputModalController {
         const cancelButton = modal.querySelector('#hs-heater-cancel-btn') as HTMLElement | null;
         cancelButton?.addEventListener('click', () => HSHeaterOptimizerRunner.cancel());
 
+        const twoWorkersCheckbox = modal.querySelector<HTMLInputElement>('#hs-heater-two-workers');
+        twoWorkersCheckbox?.addEventListener('change', () => {
+            HSSettings.getSetting('heaterTwoWorkers').setValue(twoWorkersCheckbox.checked);
+            HSSettings.saveSettingsToStorage();
+        });
+
         recalcButton?.addEventListener('click', async () => {
             const branchCheckboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
             const hasActiveBranch = branchCheckboxes.some((checkbox) => checkbox.checked);
@@ -251,7 +270,7 @@ export class HSHeaterInputModalController {
                     updatedResult = await HSHeaterOptimizerRunner.createResult(updatedInput, (group, groupCount) => {
                         progress = groupCount > 1 ? ` ${group}/${groupCount}` : '';
                         showElapsed();
-                    });
+                    }, twoWorkersCheckbox?.checked ?? false);
                 } finally {
                     if (cancelButton) cancelButton.hidden = true;
                 }
@@ -464,18 +483,6 @@ export class HSHeaterInputModalController {
     // Loadout selection / settings sync helpers
     // ================================================================
 
-    private static refreshRequiredBranchHighlights(modal: HTMLElement): void {
-        const selectedSemanticIds = HSHeaterResultStore.collectSelectedSemanticIds(modal);
-        const unavailableBranchIds = HSHeaterResultStore.getUnavailableRequiredBranchIds(selectedSemanticIds);
-        const branchLabels = this.#cachedActiveLabels.length > 0 ? this.#cachedActiveLabels : Array.from(modal.querySelectorAll('.hs-heater-active-branch')) as HTMLElement[];
-
-        branchLabels.forEach((label) => {
-            const branchId = label.dataset.branchId as HeaterBranchId | undefined;
-            const unavailable = branchId ? unavailableBranchIds.has(branchId) : false;
-            label.classList.toggle('hs-heater-active-branch-required', unavailable);
-        });
-    }
-
     private static buildLoadoutSlotMap(modal: HTMLElement): Map<string, string[]> {
         const loadoutMap = new Map<string, string[]>();
         const typeSelects = this.#cachedTypeSelects.length ? this.#cachedTypeSelects : Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
@@ -557,7 +564,6 @@ export class HSHeaterInputModalController {
         this.#cachedTypeSelects =    Array.from(modal.querySelectorAll('.hs-heater-type-select')) as HTMLSelectElement[];
         this.#cachedTypeCheckboxes = Array.from(modal.querySelectorAll('.hs-heater-type-select-checkbox')) as HTMLInputElement[];
         this.#cachedTypeIcons =      Array.from(modal.querySelectorAll('.hs-heater-type-select-icon')) as HTMLButtonElement[];
-        this.#cachedActiveLabels =   Array.from(modal.querySelectorAll('.hs-heater-active-branch')) as HTMLElement[];
     }
 
     private static clearCachedInputsModalElements(): void {
@@ -565,7 +571,6 @@ export class HSHeaterInputModalController {
         this.#cachedTypeSelects = [];
         this.#cachedTypeCheckboxes = [];
         this.#cachedTypeIcons = [];
-        this.#cachedActiveLabels = [];
     }
 
     private static focusInputsModal(modal: HTMLElement): void {

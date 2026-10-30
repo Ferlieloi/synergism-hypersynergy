@@ -72,11 +72,6 @@ export class HSHeaderGap {
                 if (!box.width || !box.height) continue;
                 visible = true;
                 contentBottom = Math.max(contentBottom, box.bottom);
-                // The levels line can hang below the top row, outside its module's box.
-                for (const line of module.querySelectorAll<HTMLElement>('.hs-corruption-header-levels')) {
-                    const bounds = line.getBoundingClientRect();
-                    if (bounds.height) contentBottom = Math.max(contentBottom, bounds.bottom);
-                }
             }
             if (!visible) {
                 region.classList.add('hs-header-gap-empty');

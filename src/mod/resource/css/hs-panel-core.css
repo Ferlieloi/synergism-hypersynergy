@@ -1,5 +1,14 @@
 /* ===== HYPERSYNERGISM PANEL CORE STYLES ===== */
 
+/* Title bar height of the mod panel and of every mod window (its buttons are squares of that size), and the panel's tab row height */
+:root {
+    --hs-head-height: 35px;
+    --hs-panel-tabs-height: 30px;
+    /* A setting's on/off switch (a square), and the height of its fields and dropdowns */
+    --hs-setting-switch-size: 22px;
+    --hs-setting-input-height: 24px;
+}
+
 /* ===== SCROLLBAR STYLES ===== */
 /* Custom scrollbar styling for panel elements */
 .hs-scrollbar-themed::-webkit-scrollbar,
@@ -86,9 +95,9 @@ select::-webkit-scrollbar-corner {
 
 .hs-panel-header {
     width: 100%;
-    height: 40px;
-    line-height: calc(45px - (5px * 2));
-    font-size: 13pt;
+    height: var(--hs-head-height);
+    line-height: var(--hs-head-height);
+    font-size: 11pt;
     color: white;
     background-color: #353439;
     display: flex;
@@ -96,20 +105,15 @@ select::-webkit-scrollbar-corner {
 }
 
 .hs-panel-header-left {
-    padding: 5px 5px 5px 10px;
+    padding: 0 8px;
     flex-grow: 1;
 }
 
 .hs-panel-header-right {
-    margin: 4px;
     display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 4px;
+    align-self: stretch;
     flex-grow: 0;
-    line-height: 35px;
-    font-size: 13pt;
-    font-weight: bold;
 }
 
 .hs-panel-header-right > .hs-modal-btn:hover {
@@ -121,7 +125,7 @@ select::-webkit-scrollbar-corner {
 
 .hs-panel-tabs {
     width: 100%;
-    height: 40px;
+    height: var(--hs-panel-tabs-height);
     padding: 0px 0px 0px 0px;
     color: white;
 
@@ -141,10 +145,10 @@ select::-webkit-scrollbar-corner {
     display: flex;
     justify-content: center;
     font-weight: bold;
-    line-height: 40px;
+    line-height: calc(var(--hs-panel-tabs-height) - 1px);
     margin: 0px 2px 0px 2px;
     border-radius: 0px;
-    font-size: 13pt;
+    font-size: 11pt;
 }
 
 .hs-panel-tab:hover {
@@ -207,7 +211,7 @@ select::-webkit-scrollbar-corner {
 
 .hs-panel-body {
     width: 100%;
-    height: calc(100% - 45px - 40px);
+    height: calc(100% - var(--hs-head-height) - var(--hs-panel-tabs-height));
     background-color: #18171c;
     border-top: 1px solid white;
     display: none;
@@ -411,33 +415,33 @@ select::-webkit-scrollbar-corner {
 
 .hs-modal-head {
     width: 100%;
-    height: 45px;
-    line-height: calc(45px - (5px * 2));
-    font-size: 13pt;
+    height: var(--hs-head-height);
+    line-height: var(--hs-head-height);
+    font-size: 11pt;
     color: white;
     background-color: #353439;
     display: flex;
 }
 
 .hs-modal-head-left {
-    padding: 5px 10px 5px 10px;
+    padding: 0 8px;
     flex-grow: 1;
 }
 
 .hs-modal-head-buttons {
     display: flex;
-    gap: 4px;
-    margin: 4px;
     flex-grow: 0;
 }
 
+/* A square as high as the title bar; only a left border, the window's border and the body's top border close it */
 .hs-modal-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid white;
-    line-height: 35px;
+    box-sizing: border-box;
+    width: var(--hs-head-height);
+    height: var(--hs-head-height);
+    border-left: 1px solid white;
+    line-height: var(--hs-head-height);
     text-align: center;
-    font-size: 13pt;
+    font-size: 11pt;
     font-weight: bold;
     cursor: pointer;
 }
@@ -453,7 +457,7 @@ select::-webkit-scrollbar-corner {
 
 .hs-modal-body {
     width: 100%;
-    height: calc(100% - 45px);
+    height: calc(100% - var(--hs-head-height));
     background-color: #18171c;
     border-top: 1px solid white;
     padding: 10px;
@@ -487,9 +491,9 @@ select::-webkit-scrollbar-corner {
     grid-template-columns: 2fr auto;
     /*grid-template-rows: auto auto;*/
     grid-column-gap: 5px;
-    grid-row-gap: 5px;
+    grid-row-gap: 3px;
     width: 100%;
-    padding-bottom: 10px;
+    padding-bottom: 5px;
     /*border-bottom: 1px solid white;*/
     box-sizing: border-box;
     padding-left: 10px;
@@ -498,7 +502,7 @@ select::-webkit-scrollbar-corner {
 /* A setting that belongs to another one (settingControl.controlParent): indented under its label
    (block padding + switch width + gap) */
 .hs-panel-setting-block.hs-panel-setting-block-child {
-    padding-left: calc(40px + 0.5em);
+    padding-left: calc(10px + var(--hs-setting-switch-size) + 0.5em);
 }
 
 /* Buttons side by side: only the first one of the row is indented */
@@ -518,10 +522,26 @@ select::-webkit-scrollbar-corner {
     grid-column: span 2;
 }
 
+/* 20px above a title and 15px below */
 .hs-panel-grid-section-header {
     border-bottom: 1px solid limegreen;
     grid-column: span 2;
+    margin-top: 10px;
     margin-bottom: 15px;
+}
+
+/* In the Settings pages, the setting block above gives 5px of padding */
+.hs-panel-settings-grid > .hs-panel-grid-section-header {
+    margin-top: 15px;
+}
+
+/* In the Tools and Debug grids, the 10px row gap adds to both margins */
+.hs-panel-grid-2col > .hs-panel-grid-section-header {
+    margin-bottom: 5px;
+}
+
+.hs-panel-grid-2col > .hs-panel-grid-section-header:first-child {
+    margin-top: 0;
 }
 
 .hs-panel-setting-block-text-wrapper {
@@ -558,7 +578,7 @@ select::-webkit-scrollbar-corner {
 .hs-panel-setting-block-num-input {
     display: block;
     width: 100%;
-    height: 30px;
+    height: var(--hs-setting-input-height);
     border: 1px solid green;
     box-sizing: border-box;
 }
@@ -567,7 +587,7 @@ select::-webkit-scrollbar-corner {
     display: block;
     width: 100%;
     min-width: 0;
-    height: 30px;
+    height: var(--hs-setting-input-height);
     border: 1px solid green;
     box-sizing: border-box;
     min-height: 20px;
@@ -597,12 +617,16 @@ select::-webkit-scrollbar-corner {
     margin: 0;
 }
 
+/* Also an .hs-panel-btn: its min-height and line-height would keep it 30px high */
 .hs-panel-setting-block-btn {
-    width: 30px;
+    width: var(--hs-setting-switch-size);
     border: 1px solid green;
     display: block;
-    height: 30px;
+    height: var(--hs-setting-switch-size);
+    min-height: 0;
+    line-height: normal;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .hs-panel-setting-block-input-row {

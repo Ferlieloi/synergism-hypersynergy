@@ -5,10 +5,12 @@ import { HSUI } from "./hs-core/hs-ui";
 import { HSUIC } from "./hs-core/hs-ui-components";
 import { HSSettings } from "./hs-core/settings/hs-settings";
 import { HSSettingsUI } from "./hs-core/settings/hs-settings-ui";
+import { HSAutosingStrategyControls } from "./hs-modules/hs-autosing/ui/hs-autosing-strategy-controls";
 import { HSGlobal } from "./hs-core/hs-global";
 import { HSBackup } from "./hs-core/hs-backup";
 import { HSCalculationTools } from "./hs-core/hs-calculation-tools";
 import { HSBookmarkletNotice } from "./hs-core/hs-bookmarklet-notice";
+import { HSPlatform } from "./hs-core/hs-platform";
 import { HSHeaderEditSettings } from "./hs-core/header/hs-header-edit-settings";
 import overrideCSS from "inline:../resource/css/hs-overrides.css";
 import quickbarsCSS from "inline:../resource/css/module/hs-quickbars.css";
@@ -35,6 +37,10 @@ declare const HS_DEV_BUILD: boolean;
 export class Hypersynergism {
     // Class context, mainly for HSLogger
     #context = 'HSMain';
+
+    // Patches the mod no longer uses: an install patched by an older patcher still reports them,
+    // so they are left out of the "patch incomplete" warning (old corruption loadouts, and action 404's free levels)
+    static readonly #RETIRED_PATCHES = new Set(['applyCorruptions', 'corruptionFreeLevels']);
 
     #moduleManager: HSModuleManager;
     #isInitialized = false;
@@ -63,6 +69,7 @@ export class Hypersynergism {
 
         // Now that game is ready, we can process modules (which might init immediate modules like HSUI)
         await this.preprocessModules();
+        HSLogger.log(`Platform: ${HSPlatform.get()}`, this.#context);
         // After preprocessModules(), which attaches HSLogger to the panel (it drops panel logs written before that),
         // and before the feature modules, which may click game buttons that open dialogs
         HSGameDialogs.init();
@@ -77,7 +84,7 @@ export class Hypersynergism {
         // Do this after UI Panel stuff is ready, because
         // syncing basically means syncing the UI with the settings
         await HSSettingsUI.syncSettings(HSSettings.getUIDependencies());
-        HSSettingsUI.updateStrategyDropdownList();
+        HSAutosingStrategyControls.updateStrategyDropdownList();
         // After the sync: its checkboxes show the settings' states
         HSHeaderEditSettings.install();
 
@@ -135,8 +142,9 @@ export class Hypersynergism {
     #reportPatchProblems(): void {
         const report = this.#getPatchReport();
         if (!report) return;
-        const missing = Object.keys(report).filter(name => !report[name]);
-        const ambiguous: string[] = Array.isArray(window.__HS_PATCH_AMBIGUOUS) ? window.__HS_PATCH_AMBIGUOUS : [];
+        const missing = Object.keys(report).filter(name => !report[name] && !Hypersynergism.#RETIRED_PATCHES.has(name));
+        const ambiguous: string[] = Array.isArray(window.__HS_PATCH_AMBIGUOUS)
+            ? window.__HS_PATCH_AMBIGUOUS.filter(name => !Hypersynergism.#RETIRED_PATCHES.has(name)) : [];
         if (missing.length === 0 && ambiguous.length === 0) return;
 
         if (missing.length) {
@@ -354,6 +362,7 @@ export class Hypersynergism {
 
         hsui.replaceTabContents(2,
             HSUIC.Grid({
+                class: 'hs-panel-grid-2col',
                 html: [
                     ...(bookmarkletSection.length > 0 ? [this.#buildGridSectionHeader('Recommended: Tampermonkey loader'), ...bookmarkletSection] : []),
                     this.#buildGridSectionHeader('Backup & Restore'),
@@ -514,7 +523,8 @@ export class Hypersynergism {
         console.log('----- GAME DATA -----');
         console.log(dataModule.getGameData());
         console.log('----- PSEUDO DATA -----');
-        console.log(dataModule.getPseudoData());
+        // Patched game: the game's own levels, which the mod reads instead
+        console.log(window.__HS_pcoinLevelsLoaded ? window.__HS_pcoinLevels : dataModule.getPseudoData());
         console.log('----- CAMPAIGN DATA -----');
         console.log(dataModule.getCampaignData());
         console.log('----- ME DATA -----');

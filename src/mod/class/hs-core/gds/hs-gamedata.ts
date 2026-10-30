@@ -8,31 +8,28 @@ import { HSGlobal } from "../hs-global";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
 import { HSModuleManager } from "../module/hs-module-manager";
-import { HSSetting } from "../settings/hs-setting";
 import { HSSettings } from "../settings/hs-settings";
 import { HSUI } from "../hs-ui";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
 import { HSHeaderKeepOnImport } from "../header/hs-header-keep-on-import";
+import { HSPlatform } from "../hs-platform";
 import { ConsumableGameEvents } from "../../../types/data-types/hs-event-data";
 import { HSModuleOptions } from "../../../types/hs-types";
-import { CampaignData } from "../../../types/data-types/hs-campaign-data";
 
 /**
  * Class: HSGameData
  * IsExplicitHSModule: Yes
  * Description: 
  *     Core module responsible for fetching, processing, and providing game data to other modules.
- *     Handles Game Data Sniffing (GDS) via localStorage and MITM techniques, manages campaign tokens, pseudo/me data,
- *     and subscribes to consumable game events via WebSocket. Provides APIs for other modules to access game data.
+ *     Handles Game Data Sniffing (GDS): reads the live player when the patcher exposes it, else captures the game's
+ *     saves (btoa/atob hooks). Manages pseudo/me data, and reads the game's consumables and global event.
+ *     Provides APIs for other modules to access game data.
  */
 export class HSGameData extends HSModule {
-    // --- Save Data & State ---
-    #saveDataLocalStorageKey = 'Synergysave2';
-    #saveData?: GameData;
-    #lastB64Save?: string;
-    
-    isSteam = false;
+    // --- Game Data & State ---
+    // The live player (exposedPlayer), or the last parsed save without it
+    #gameData?: GameData;
 
     // --- MITM / Encoding / Native JS Hooks ---
     #mitm_gamedata: string | undefined;
@@ -42,20 +39,21 @@ export class HSGameData extends HSModule {
     #mitmCaptureCount = 0;
     #btoaHacked = false;
     #atobHacked = false;
-    #nativeBtoa?: typeof window.btoa;
-    #nativeAtob?: typeof window.atob;
 
-    // --- Turbo Mode & Intervals ---
+    // --- Engine & Intervals ---
     #gdsEnabled = false;
-    // Reasons the engine is paused (autosing, save import...) while the GDS setting may stay ON.
+    // Reasons the engine is paused (autosing) while the GDS setting may stay ON.
     // The engine only runs when no pause is left and the setting is ON.
     #enginePauses = new Set<string>();
-    #importPauseSequence = 0;
     // Ends the "Load from file" import still waiting for its save, if any
     #abortPendingImport?: () => void;
     // Bumped by disableGDS(): a start begun under an older generation is cancelled
     #engineGeneration = 0;
     #engineStart?: { generation: number, promise: Promise<void> };
+    // The source the running engine reads (#useLiveSource() at its start), undefined while it is stopped
+    #engineSource?: 'live' | 'save';
+    // Dev tools: read the save even when the live player is exposed. Not kept across a reload
+    #forceSaveSource = false;
     #gdsCSS = `
         #savegame {
             font-size: 0;
@@ -74,7 +72,6 @@ export class HSGameData extends HSModule {
     // --- DOM Elements ---
     #manualSaveButton?: HTMLButtonElement;
     #saveinfoElement?: HTMLParagraphElement;
-    #campaignTokenElement?: HTMLHeadingElement;
     #importSaveButton?: HTMLLabelElement;
 
     // --- Event Handlers ---
@@ -84,14 +81,9 @@ export class HSGameData extends HSModule {
     #gameDataSubscribers: Map<string, (data: GameData) => void> = new Map();
     #gameDataAPI?: HSGameDataAPI;
 
-    // --- Player/Me/Campaign Data ---
+    // --- Player/Me Data ---
     #playerPseudoUpgrades?: PseudoGameData;
     #meBonuses?: MeData;
-    #campaignData: CampaignData = {
-        tokens: 0,
-        maxTokens: 0,
-        isAtMaxTokens: false
-    };
 
     // --- Game Events ---
     #gameEvents: ConsumableGameEvents = {
@@ -100,34 +92,10 @@ export class HSGameData extends HSModule {
 
     // --- Miscellaneous ---
     #saveTriggerEvent: Event;
-    #lastForceFetch = 0;
-    #ForceFetchCooldown = 1000;
 
     constructor(moduleOptions: HSModuleOptions) {
         super(moduleOptions);
         this.#saveTriggerEvent = new Event('click');
-    }
-
-    /**
-     * Returns true when the current renderer environment appears to be Steam/Electron.
-     * Uses the exposed Steam bridge plus Electron-specific runtime hints.
-     */
-    #isSteamElectron(): boolean {
-        const steam = (window as unknown as { steam?: unknown }).steam as any;
-        const hasSteamBridge = typeof steam === 'object' && steam !== null
-            && typeof steam.cloudWriteFile === 'function'
-            && typeof steam.getSteamId === 'function';
-
-        const hasElectronUserAgent = typeof navigator === 'object'
-            && typeof navigator.userAgent === 'string'
-            && /\bElectron\b/.test(navigator.userAgent);
-
-        const hasElectronProcess = typeof (window as any).process === 'object'
-            && typeof (window as any).process?.versions?.electron === 'string';
-
-        const isSteamElectron = hasSteamBridge || hasElectronUserAgent || hasElectronProcess;
-        HSLogger.debug(() => `Steam/Electron env detection: ${isSteamElectron}.`, this.context);
-        return isSteamElectron;
     }
 
     /**
@@ -138,12 +106,11 @@ export class HSGameData extends HSModule {
         this.#importSaveButton = document.querySelector('#importFileButton') as HTMLLabelElement;
         this.#manualSaveButton = document.querySelector('#savegame') as HTMLButtonElement;
         this.#saveinfoElement = document.querySelector('#saveinfo') as HTMLParagraphElement;
-        this.#campaignTokenElement = document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
     }
 
     /**
      * Initializes the HSGameData module, sets up DOM elements, fetches pseudo and me data,
-     * registers the WebSocket, and hooks the import button for save file interception.
+     * and hooks the import button for save file interception.
      * @returns Promise<void>
      */
     async init() {
@@ -155,18 +122,20 @@ export class HSGameData extends HSModule {
         // Called by the patched game at the start of importSynergism, with its reset flag (patcher: save import hook)
         window.__HS_onSaveImport = (reset: unknown) => this.#onSaveImport(!!reset);
 
-        // Set before the fetches: the fetched data only reaches the API through this reference.
-        // This is the only automatic fetch (asked by the game's dev: too much traffic on these endpoints);
-        // afterwards only forceUpdateAllData() fetches again, on a player's action (heater, backup).
-        // A PseudoCoin purchase or a login after the page load is seen at the next reload.
+        // Set before the reads: the data only reaches the API through this reference.
+        // PseudoCoin levels and quark bonuses come from the game (patched) or the browser's cache when they can,
+        // and are fetched at most once, at load (asked by the game's dev: too much traffic on these endpoints).
         this.#gameDataAPI = HSModuleManager.getModule('HSGameDataAPI') as HSGameDataAPI;
+        this.#watchPCoinLevels();
+        this.#watchQuarkBonus();
         await this.#refreshFetchedData();
 
         this.#startConsumablesPoll();
         this.#startGlobalEventCapture();
         this.isInitialized = true;
 
-        this.isSteam = this.#isSteamElectron();
+        // "Load from file" matches the ambrosia loadout from the save the game decodes, whatever the GDS state
+        this.#hackJSNativeAtob();
 
         // Always hook the import button regardless of GDS setting
         // We do this asynchronously to not block init if the element takes time to appear
@@ -220,48 +189,6 @@ export class HSGameData extends HSModule {
     // --- Core Data Fetch/Update ---
 
     /**
-     * Forces a refresh of all game data, including fetched data, campaign tokens, and save data.
-     * Applies cooldown to prevent excessive refreshes.
-     * @returns Promise<void>
-     */
-    async forceUpdateAllData() {
-        const now = Date.now();
-        if (now - this.#lastForceFetch < this.#ForceFetchCooldown) { HSLogger.warn("Forced data refresh on cooldown", this.context); return; }
-        this.#lastForceFetch = now;
-
-        await this.#refreshFetchedData();
-        this.#refreshCampaignTokens();
-        await this.forceRefreshGameData();
-
-        this.#pseudoDataUpdated();
-        this.#meDataUpdated();
-        this.#campaignDataUpdated();
-    }
-
-    /** Reads the exact token total rendered by CampaignManager in the game. */
-    #refreshCampaignTokens() {
-        this.#campaignTokenElement ||= document.querySelector('#campaignTokenCount') as HTMLHeadingElement;
-        const text = this.#campaignTokenElement?.textContent ?? '';
-        // The text is translated ("You have 3 / 4 tokens!", "У вас 3 / 4 жетонов!"...): match only the numbers
-        const match = text.match(/(\d+)\s*\/\s*(\d+)/);
-        if (!match) return;
-
-        const tokens = Number.parseInt(match[1], 10);
-        const maxTokens = Number.parseInt(match[2], 10);
-        this.#campaignData = {
-            tokens,
-            maxTokens,
-            isAtMaxTokens: tokens > 0 && maxTokens > 0 && tokens === maxTokens
-        };
-    }
-
-    #campaignDataUpdated() {
-        if (this.#gameDataAPI) {
-            this.#gameDataAPI._updateCampaignData(this.#campaignData);
-        }
-    }
-
-    /**
      * SYNCHRONOUSLY triggers a game save and returns the raw save JSON captured by the btoa hook.
      * For callers that cannot await (e.g. right before a click whose ordering matters).
      * @returns The fresh save JSON, or undefined if no save was captured (e.g. during a time warp)
@@ -280,10 +207,19 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Forces a refresh of save-derived game data only, without updating fetched pseudo/me/campaign data.
+     * Reads the current data, whether the GDS engine runs or not (GDS off, paused by autosing).
+     * Live source: the live player, at once (it clears the calculation cache).
+     * Save source: forces a save. The game's save handler calls btoa synchronously, so the capture is processed here at
+     * once: the hook's microtask then finds nothing new. Only a changed save is parsed and notified, as on the periodic
+     * tick (a refused save, e.g. during a time warp, leaves the data as it was).
      * @returns Promise<void>
      */
     async forceRefreshGameData(): Promise<void> {
+        if (this.#useLiveSource()) {
+            this.#readLivePlayer();
+            return;
+        }
+
         const saveBtn = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement | null;
         // Both have an early return if already patched...
         this.#hackJSNativebtoa();
@@ -291,69 +227,148 @@ export class HSGameData extends HSModule {
 
         if (saveBtn) {
             saveBtn.dispatchEvent(this.#saveTriggerEvent);
-            // The game's save handler calls btoa synchronously, while our
-            // capture hook schedules the data update in a microtask.  Yield
-            // once so the freshly serialized save (including campaigns) is
-            // available before parsing it below.
-            await new Promise<void>((resolve) => queueMicrotask(resolve));
         } else {
             HSLogger.warn('Could not find #savegame to force refresh game data', this.context);
         }
 
-        if (this.#mitm_gamedata) {
-            try {
-                this.#saveData = JSON.parse(this.#mitm_gamedata) as GameData;
-            } catch (err) {
-                HSLogger.error(`Failed to parse save data during forceRefreshGameData: ${err}`, this.context);
-            }
-        }
-
-        // In browsers where the save button does not pass through the hooked
-        // btoa function, localStorage is still the game's authoritative save
-        // source. Prefer it when it contains the campaign manager so the
-        // heater cannot fall back to inheritance tokens alone.
-        const storedSave = localStorage.getItem(this.#saveDataLocalStorageKey);
-        if (storedSave) {
-            try {
-                const atobFn = this.#nativeAtob ?? window.atob;
-                const parsedStoredSave = JSON.parse(atobFn(storedSave)) as GameData;
-                const currentCampaignState = this.#saveData?.campaigns as unknown as
-                    { campaigns?: Record<string, number> } | Record<string, number> | undefined;
-                const currentCampaigns = currentCampaignState && 'campaigns' in currentCampaignState
-                    ? currentCampaignState.campaigns
-                    : currentCampaignState;
-                if ((!currentCampaigns || typeof currentCampaigns !== 'object') && parsedStoredSave?.campaigns) {
-                    this.#saveData = parsedStoredSave;
-                }
-            } catch (err) {
-                HSLogger.debug(() => `Could not parse localStorage save during force refresh: ${err}`, this.context);
-            }
-        }
-
-        this.#saveDataUpdated();
+        this.#processCapturedSave(true);
     }
 
     /**
-     * Fetches pseudo and me data from remote APIs and updates internal state.
+     * Reads the PseudoCoin levels (#loadPCoinLevels) and the quark bonuses (#loadQuarkBonus) once, at load.
      * @returns Promise<void>
      */
     async #refreshFetchedData() {
-        // HSLogger.debug(() => `Refreshing fetched data`, this.context);
+        await this.#loadPCoinLevels();
+        await this.#loadQuarkBonus();
+    }
+
+    // --- Quark bonuses (personal and global) ---
+    // The game reads them from https://synergism.cc/api/v1/users/me (at load and at a login) and
+    // https://synergism.cc/api/v1/quark-bonus (at load, then every 15 minutes); its formulas use its copy.
+
+    #isQuarkBonusPatched(): boolean {
+        return window.__HS_PATCH_REPORT?.quarkBonus === true;
+    }
+
+    /** Patched game: the game hands both bonuses over at each change, maybe already before the mod loaded. */
+    #watchQuarkBonus() {
+        if (!this.#isQuarkBonusPatched()) return;
+
+        window.__HS_onQuarkBonusChange = () => this.#readGameQuarkBonus();
+        this.#readGameQuarkBonus();
+    }
+
+    #readGameQuarkBonus() {
+        const bonus = window.__HS_quarkBonus;
+        if (!bonus) return;
+
+        this.#meBonuses = { globalBonus: Number(bonus.global) || 0, bonus: { quark: Number(bonus.personal) || 0 } };
+        this.#meDataUpdated();
+    }
+
+    /**
+     * Without the patch: read once, from the browser's cached copy of the game's own /users/me when it has one,
+     * else fetched. A login after the page load is seen at the next reload.
+     */
+    async #loadQuarkBonus() {
+        if (this.#isQuarkBonusPatched() || this.#meBonuses) return;
+
+        // Any status: a logged-out player's answer still holds the global bonus
+        const data = await this.#fetchGameRoute<MeData>(HSGlobal.Common.meAPIurl, 'quark bonus', true, false)
+            ?? await this.#fetchGameRoute<MeData>(HSGlobal.Common.meAPIurl, 'quark bonus', false, false);
+        if (!data) return;
+
+        this.#meBonuses = data;
+        this.#meDataUpdated();
+    }
+
+    // --- PseudoCoin upgrade levels ---
+    // The game fetches them once at load (https://synergism.cc/stripe/upgrades) and updates its copy after an in-game
+    // purchase; its formulas read that copy, so the mod follows it rather than the server.
+
+    #isPCoinLevelsPatched(): boolean {
+        return window.__HS_PATCH_REPORT?.pcoinLevels === true;
+    }
+
+    /**
+     * Patched game: HSGameDataAPI reads the game's levels live, and the patch says when they change.
+     * Otherwise: an in-game purchase is read from the game's request, whose answer is the upgrade's new level.
+     */
+    #watchPCoinLevels() {
+        if (this.#isPCoinLevelsPatched()) {
+            window.__HS_onPCoinChange = () => this.#gameDataAPI?.clearCache();
+            return;
+        }
+
+        const nativeFetch = window.fetch;
+        window.fetch = (input, init) => {
+            const response = nativeFetch.call(window, input, init);
+            try {
+                const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+                if (url.includes('/stripe/buy-upgrade/')) {
+                    // A copy of the answer: the game reads the original untouched
+                    response.then(r => r.ok ? r.clone().json() : undefined)
+                        .then(reply => this.#onPCoinPurchase(reply))
+                        .catch(() => { /* the game reports its own failures */ });
+                }
+            } catch { /* the game's request goes on */ }
+            return response;
+        };
+    }
+
+    #onPCoinPurchase(reply: unknown) {
+        const { upgradeId, level } = (reply ?? {}) as { upgradeId?: unknown, level?: unknown };
+        // Without the levels read at load, there is no upgrade name to put the new level on
+        if (typeof upgradeId !== 'number' || typeof level !== 'number' || !this.#playerPseudoUpgrades) return;
+
+        const owned = this.#playerPseudoUpgrades.playerUpgrades ??= [];
+        const upgrade = owned.find(u => Number(u.upgradeId) === upgradeId);
+        if (upgrade) upgrade.level = level;
+        else owned.push({ upgradeId, level });
+        this.#pseudoDataUpdated();
+
+        const name = this.#playerPseudoUpgrades.upgrades?.find(u => u.upgradeId === upgradeId && 'name' in u);
+        HSLogger.log(`PseudoCoin upgrade ${name && 'name' in name ? name.name : upgradeId} bought: level ${level}`, this.context);
+    }
+
+    /**
+     * Reads the levels once, without a request when possible: the browser's cached copy of the game's own fetch.
+     * Patched game: that copy only stands in until the game's fetch has answered (the cache may hold the previous
+     * page load's), and it is never fetched. Otherwise: fetched when the browser has no copy; purchases come from
+     * #watchPCoinLevels, so it is never read again.
+     */
+    async #loadPCoinLevels() {
+        if (window.__HS_pcoinLevelsLoaded || this.#playerPseudoUpgrades) return;
+
+        const url = HSGlobal.Common.pseudoAPIurl;
+        let data = await this.#fetchGameRoute<PseudoGameData>(url, 'PseudoCoin levels', true);
+        if (!data && !this.#isPCoinLevelsPatched()) data = await this.#fetchGameRoute<PseudoGameData>(url, 'PseudoCoin levels', false);
+        // The game's own levels arrived meanwhile: they win
+        if (!data || window.__HS_pcoinLevelsLoaded) return;
+
+        this.#playerPseudoUpgrades = data;
+        this.#pseudoDataUpdated();
+    }
+
+    /**
+     * One of the game's own requests: cachedOnly reads the browser's copy of the game's answer and sends nothing.
+     * okOnly: an answer with an error status counts as none.
+     */
+    async #fetchGameRoute<T>(url: string, what: string, cachedOnly: boolean, okOnly = true): Promise<T | undefined> {
         try {
-            const upgradesQuery = await fetch(HSGlobal.Common.pseudoAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
-            const data = await upgradesQuery.json() as PseudoGameData;
-
-            this.#playerPseudoUpgrades = data;
-            this.#pseudoDataUpdated();
-        } catch (err) { HSLogger.error(`Could not fetch pseudo data: ${err}`, this.context); }
-
-        try {
-            const meQuery = await fetch(HSGlobal.Common.meAPIurl, { headers: HSGlobal.Common.modRequestHeaders });
-            const data = await meQuery.json() as MeData;
-
-            this.#meBonuses = data;
-            this.#meDataUpdated();
-        } catch (err) { HSLogger.error(`Could not fetch me data: ${err}`, this.context); }
+            const response = await fetch(url, cachedOnly
+                ? { headers: HSGlobal.Common.modRequestHeaders, cache: 'only-if-cached', mode: 'same-origin' }
+                : { headers: HSGlobal.Common.modRequestHeaders });
+            if (okOnly && !response.ok) throw new Error(`status ${response.status}`);
+            return await response.json() as T;
+        } catch (err) {
+            // Not in the browser's cache (a first visit, a cleared cache, an answer the server says not to keep, a
+            // page not on synergism.cc): fetched instead, or the patch fills it
+            if (cachedOnly) HSLogger.debug(() => `No cached ${what}: ${err}`, this.context);
+            else HSLogger.error(`Could not fetch ${what}: ${err}`, this.context);
+            return undefined;
+        }
     }
 
     /**
@@ -361,14 +376,14 @@ export class HSGameData extends HSModule {
      * Also triggers initial loadout match if needed.
      * @returns void
      */
-    #saveDataUpdated() {
-        if (this.#gameDataAPI && this.#saveData) {
-            this.#gameDataAPI._updateGameData(this.#saveData);
+    #gameDataUpdated() {
+        if (this.#gameDataAPI && this.#gameData) {
+            this.#gameDataAPI._updateGameData(this.#gameData);
         }
 
         this.#gameDataSubscribers.forEach((callback) => {
-            if (this.#saveData) {
-                callback(this.#saveData);
+            if (this.#gameData) {
+                callback(this.#gameData);
             } else {
                 HSLogger.debug(() => `Could not call game data change callback. No save data found`, this.context);
             }
@@ -464,49 +479,61 @@ export class HSGameData extends HSModule {
     }
 
 
-    // --- Save Data Processing ---
+    // --- GDS (Game Data Sniffing) Control ---
 
-    /**
-     * Processes save data from localStorage using requestAnimationFrame loop.
-     * Updates internal save data and handles errors.
-     * @returns void
-     */
-    #processSaveDataWithRAF = () => {
-        if (!this.#gdsEnabled) return;
-
-        const saveDataB64 = localStorage.getItem(this.#saveDataLocalStorageKey);
-
-        if (saveDataB64 && saveDataB64 !== this.#lastB64Save) {
-            this.#lastB64Save = saveDataB64;
-
-            try {
-                this.#saveData = JSON.parse(atob(saveDataB64)) as GameData;
-                this.#saveDataUpdated();
-            } catch (error) {
-                HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
-            }
-        }
-
-        requestAnimationFrame(this.#processSaveDataWithRAF);
+    /** The live player when the patcher exposes it, unless the dev tools force the save. */
+    #useLiveSource(): boolean {
+        return !!HSGlobal.exposedPlayer && !this.#forceSaveSource;
     }
 
+    /** Dev tools: whether the save is read even when the live player is exposed. */
+    isSaveSourceForced(): boolean {
+        return this.#forceSaveSource;
+    }
 
-    // --- GDS (Game Data Sniffing) Control ---
+    /**
+     * Dev tools: read the save even when the live player is exposed, to test that path on a patched game.
+     * A running engine restarts on the new source.
+     */
+    async setForceSaveSource(force: boolean): Promise<void> {
+        if (this.#forceSaveSource === force) return;
+        this.#forceSaveSource = force;
+        // The next capture is parsed even if it is the last one seen
+        this.#last_mitm_gamedata = undefined;
+        HSLogger.log(`GDS source: ${force ? 'the save (forced)' : 'the live player when exposed'}`, this.context);
+
+        if (!this.#gdsEnabled) return;
+        await this.disableGDS();
+        await this.enableGDS();
+    }
+
+    /**
+     * The live player as the game data: the same object at every read, so it only clears the calculation cache and
+     * notifies the subscribers.
+     */
+    #readLivePlayer() {
+        const player = HSGlobal.exposedPlayer;
+        if (!player) return;
+
+        this.#gameData = player as unknown as GameData;
+        this.#gameDataUpdated();
+    }
 
     /**
      * Whether the GDS engine is currently running, i.e. the cached game data is kept up to date.
-     * Can be false while the GDS setting is ON (engine paused by autosing or a save import).
+     * Can be false while the GDS setting is ON (engine paused by autosing).
      */
     isGDSRunning(): boolean {
         return this.#gdsEnabled;
     }
 
     /**
-     * Whether a pause is held (pauseGDS()): autosing, a save file import, a backup restore. Code that forces a save
-     * (getForcedGameData) on its own schedule waits for the end of it.
+     * Whether the engine should run when no pause is held. The GDS setting only exists for bookmarklet players
+     * (its platforms): everyone else reads the live player at almost no cost, so it always runs, whatever was saved.
      */
-    isGDSPaused(): boolean {
-        return this.#enginePauses.size > 0;
+    isGDSWanted(): boolean {
+        if (HSPlatform.get() !== 'bookmarklet') return true;
+        return HSSettings.getSetting('useGameData')?.isEnabled() ?? false;
     }
 
     /**
@@ -523,7 +550,7 @@ export class HSGameData extends HSModule {
 
     /**
      * Releases a pause taken by pauseGDS(). Restarts the engine when no pause is left
-     * and the GDS setting is ON.
+     * and it is wanted (isGDSWanted()).
      * @param reason The value given to pauseGDS().
      * @returns true when the engine was restarted.
      */
@@ -531,7 +558,7 @@ export class HSGameData extends HSModule {
         if (!this.#enginePauses.delete(reason)) return false;
         HSLogger.debug(() => `GDS pause released (${reason})`, this.context);
         if (this.#enginePauses.size > 0) return false;
-        if (!(HSSettings.getSetting('useGameData')?.isEnabled() ?? false)) return false;
+        if (!this.isGDSWanted()) return false;
 
         await this.enableGDS();
         return this.#gdsEnabled;
@@ -539,7 +566,7 @@ export class HSGameData extends HSModule {
 
     /**
      * Enables Game Data Sniffing (GDS) mode, sets up intervals, hooks DOM elements,
-     * and starts save processing. Handles turbo mode and experimental GDS.
+     * hooks btoa/atob and starts save processing.
      * Does nothing while the engine is paused (see pauseGDS()).
      * @returns Promise<void>
      */
@@ -565,12 +592,14 @@ export class HSGameData extends HSModule {
     }
 
     async #startEngine(generation: number) {
+        const live = this.#useLiveSource();
+
         // Every wait happens before anything is installed: the start can be cancelled meanwhile
-        if (!this.#manualSaveButton) {
+        if (!live && !this.#manualSaveButton) {
             this.#manualSaveButton = await HSElementHooker.HookElement('#savegame') as HTMLButtonElement;
         }
 
-        if (!this.#saveinfoElement) {
+        if (!live && !this.#saveinfoElement) {
             this.#saveinfoElement = await HSElementHooker.HookElement('#saveinfo') as HTMLParagraphElement;
         }
 
@@ -580,39 +609,45 @@ export class HSGameData extends HSModule {
             return;
         }
 
-        HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
         if (this.#saveInterval) clearInterval(this.#saveInterval);
 
-        this.#saveInterval = setInterval(() => {
-            if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
-                this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
-            }
-        }, HSGlobal.HSGameData.gdsSpeedMs)
+        if (live) {
+            // No save: the live player is read as it is
+            this.#saveInterval = setInterval(() => this.#readLivePlayer(), HSGlobal.HSGameData.gdsSpeedMs);
+        } else {
+            HSUI.injectStyle(this.#gdsCSS, HSGlobal.HSGameData.gdsCSSId);
+            this.#saveInterval = setInterval(() => {
+                if (this.#manualSaveButton && this.#saveinfoElement && this.#saveTriggerEvent) {
+                    this.#manualSaveButton.dispatchEvent(this.#saveTriggerEvent);
+                }
+            }, HSGlobal.HSGameData.gdsSpeedMs)
+        }
 
-        HSLogger.info(`GDS = ON`, this.context);
+        this.#engineSource = live ? 'live' : 'save';
+        HSLogger.info(`GDS = ON (${live ? 'live player' : 'save capture'})`, this.context);
         this.#gdsEnabled = true;
 
-        if (HSGlobal.Common.experimentalGDS) {
-            this.#hackJSNativebtoa();
-            this.#hackJSNativeAtob();
-            this.#processSaveDataExperimental();
-        } else {
-            this.#processSaveDataWithRAF();
-        }
+        // Hooked on both sources: "Load from file" reads the save the game decodes
+        this.#hackJSNativebtoa();
+        this.#hackJSNativeAtob();
+        if (live) this.#readLivePlayer();
+        else this.#processCapturedSave();
     }
 
     /**
      * Processes save data from MITM when new encoded save JSON has been captured.
+     * Not while the engine reads the live player: the game's own saves (every 5 s) would replace it.
+     * @param forced Also when the GDS engine isn't running (forceRefreshGameData on the save source)
      */
-    #processSaveDataExperimental = () => {
-        if (!this.#gdsEnabled) return;
+    #processCapturedSave = (forced = false) => {
+        if (!forced && (!this.#gdsEnabled || this.#engineSource !== 'save')) return;
 
         if (this.#mitm_gamedata && this.#mitm_gamedata !== this.#last_mitm_gamedata) {
             this.#last_mitm_gamedata = this.#mitm_gamedata;
 
             try {
-                this.#saveData = JSON.parse(this.#mitm_gamedata) as GameData;
-                this.#saveDataUpdated();
+                this.#gameData = JSON.parse(this.#mitm_gamedata) as GameData;
+                this.#gameDataUpdated();
             } catch (error) {
                 HSLogger.debug(() => `<red>Error processing save data:</red> ${error}`, this.context);
             }
@@ -638,8 +673,9 @@ export class HSGameData extends HSModule {
         // The loadFromFileEventHandler is NOT removed here:
         // it must remain active to intercept save loads even when GDS is disabled.
 
-        HSLogger.info(`GDS turbo = OFF`, this.context);
+        HSLogger.info(`GDS = OFF`, this.context);
         this.#gdsEnabled = false;
+        this.#engineSource = undefined;
     }
 
     /**
@@ -685,8 +721,6 @@ export class HSGameData extends HSModule {
         const self = this;
         const _atob = window.atob;
 
-        if (!this.#nativeAtob) this.#nativeAtob = _atob;
-
         window.atob = function (s) {
             const decoded = _atob(s);
             // Quick check for JSON-like structure to capture save data
@@ -712,8 +746,6 @@ export class HSGameData extends HSModule {
         // Store ref to native btoa
         const _btoa = window.btoa;
 
-        if (!this.#nativeBtoa) this.#nativeBtoa = _btoa;
-
         // Overwrite btoa
         window.btoa = function (s) {
             // Capture raw save JSON before the game encodes it to base64.
@@ -725,7 +757,7 @@ export class HSGameData extends HSModule {
                     self.#mitmProcessScheduled = true;
                     queueMicrotask(() => {
                         self.#mitmProcessScheduled = false;
-                        self.#processSaveDataExperimental();
+                        self.#processCapturedSave();
                     });
                 }
             }
@@ -737,51 +769,28 @@ export class HSGameData extends HSModule {
     }
 
     /**
-     * Handles save file import: pauses the GDS engine and stops autosing if active,
-     * watches for offline container visibility, restores active ambrosia loadout,
-     * then brings the GDS engine back in line with the GDS setting.
-     * The GDS setting itself is never changed here, so a cancelled or failed import
-     * can't leave GDS turned off.
+     * Handles save file import: stops autosing if active, watches for offline container visibility,
+     * then restores the active ambrosia loadout.
+     * The GDS engine keeps running: the game loads the save without letting a timer in, and refuses
+     * to save while the offline popup is up (G.timeWarp), so a save from the engine can't write over it.
      * @param e MouseEvent from the import button click.
      * @returns Promise<void>
      */
     async #loadFromFileHandler(e: MouseEvent) {
         this.#mitm_atob_data = undefined; // Clear stale save data
-        const gameDataSetting = HSSettings.getSetting("useGameData") as HSSetting<boolean>;
-        const isGdsSettingEnabled = () => gameDataSetting?.isEnabled() ?? false;
-        // Shown as paused when the setting is ON, even if autosing had already paused the engine
-        const announcePause = isGdsSettingEnabled();
-        // Ends the "GDS paused" notification shown below, only when one was shown
-        const notifyResumed = (reason: string) => {
-            if (!announcePause) return;
-            HSUI.Notify(`GDS resumed (${reason})`, { position: 'top', notificationType: 'success' });
-        };
 
-        // An older click still waiting (e.g. no event came back from its dialog) is ended here.
-        // Each click gets its own pause, so an older click can't release a newer one.
+        // An older click still waiting (e.g. no event came back from its dialog) is ended here
         this.#abortPendingImport?.();
-        const pauseReason = `import-${++this.#importPauseSequence}`;
-        // Taken before stopping autosing, so autosing releasing its own pause doesn't restart the engine
-        await this.pauseGDS(pauseReason);
 
-        // Autosing can't go on with another save, whatever the GDS state
+        // Autosing can't go on with another save
         const autosing = HSModuleManager.getModule<HSAutosing>('HSAutosing');
         // Also a start in progress or a pending restart, which would run on the imported save
-        const stopsAutosing = autosing?.isAutosingActive() ?? false;
-        if (stopsAutosing) {
+        if (autosing?.isAutosingActive()) {
             HSLogger.log("Load from file clicked - Stopping Auto-Sing", this.context);
-            autosing!.stopAutosing();
-        }
-
-        if (stopsAutosing && announcePause) {
-            HSUI.Notify("Auto-Sing stopped and GDS paused for save file import", { position: 'top', notificationType: 'warning' });
-        } else if (stopsAutosing) {
+            autosing.stopAutosing();
             HSUI.Notify("Auto-Sing stopped for save file import", { position: 'top', notificationType: 'warning' });
-        } else if (announcePause) {
-            HSUI.Notify('GDS paused for save file import', { position: 'top', notificationType: 'warning' });
         }
 
-        // Always run the detection/cleanup logic, regardless of previous GDS state
         // We start watching the offline container to detect when the save is actually loaded
         const offlineContainer = await HSElementHooker.HookElement('#offlineContainer') as HTMLDivElement;
         const self = this;
@@ -797,14 +806,6 @@ export class HSGameData extends HSModule {
 
                 try {
                     HSLogger.log("Offline container visible - Save loaded (GDS)", self.context);
-
-                    // Ensure GDS is enabled for UI sync - AWAIT it because it triggers CPU heavy refreshes
-                    if (await self.resumeGDS(pauseReason)) {
-                        notifyResumed('save loaded');
-                    } else {
-                        // Setting OFF: run the engine briefly for the cleanup, stopped again below
-                        await self.enableGDS();
-                    }
 
                     const ambrosiaModule = HSModuleManager.getModule<HSAmbrosia>('HSAmbrosia');
                     if (ambrosiaModule) {
@@ -824,18 +825,6 @@ export class HSGameData extends HSModule {
                         }
                     } else {
                         HSLogger.debug(() => `No captured save data (mitm_atob_data is empty).`, self.context);
-                    }
-
-                    if (!isGdsSettingEnabled()) {
-                        // Wait for game state to settle and cleanup to take effect, then restore OFF state
-                        setTimeout(() => {
-                            // The player may have turned GDS on in the meantime
-                            if (isGdsSettingEnabled()) return;
-                            self.disableGDS();
-                            HSLogger.debug(() => "Cleanup done. GDS disabled (Restored state)", self.context);
-                        }, 2000);
-                    } else {
-                        HSLogger.debug(() => "GDS remained enabled (Restored state)", self.context);
                     }
                 } catch (e) {
                     HSLogger.error(`Critical error during GDS save load restoration: ${e}`, self.context);
@@ -879,9 +868,6 @@ export class HSGameData extends HSModule {
             if (watcherStopped) return;
             stopWaiting();
             HSLogger.log(`Save file import ended without a save loaded (${reason})`, self.context);
-            void self.resumeGDS(pauseReason).then((resumed) => {
-                if (resumed) notifyResumed('no save loaded');
-            });
         };
 
         // Fired when the dialog is closed without choosing a file
@@ -903,11 +889,10 @@ export class HSGameData extends HSModule {
         fileInput?.addEventListener('change', onChange);
         window.addEventListener('focus', onFocus);
 
-        // A new click ends this import without resuming: the new click takes its own pause right after
+        // A new click ends this import: it watches for its own save
         const abortThisImport = () => {
             if (watcherStopped) return;
             stopWaiting();
-            this.#enginePauses.delete(pauseReason);
         };
         this.#abortPendingImport = abortThisImport;
     }

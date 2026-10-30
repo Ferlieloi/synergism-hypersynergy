@@ -1,5 +1,9 @@
 export const IF_JUMP_VALUE = 200;
-export const LOADOUT_ACTION_VALUE = 202;
+// Sets Challenge.corruptionLevel; ascendAfterCorruption controls whether to ascend now or on a later action.
+export const SET_CORRUPTION_LEVEL_VALUE = 403;
+// The steps holding a level in Challenge.corruptionLevel
+export const isCorruptionLevelStep = (challengeNumber: number): boolean =>
+    challengeNumber === SET_CORRUPTION_LEVEL_VALUE;
 
 export const ALLOWED = [
     "start",
@@ -40,7 +44,7 @@ export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
 
 // Standard input fields that can be enabled per special action.
 // "waitBefore" and "comment" are always enabled and not listed here.
-export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime";
+export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel";
 
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge",     value: 101, inputs: [] as const },
@@ -69,10 +73,11 @@ export const SPECIAL_ACTIONS = [
     { label: "Ambrosia Off loadout",            value: 305, inputs: [] as const },
     { label: "Ambrosia Luck loadout",           value: 306, inputs: [] as const },
 
-    { label: "Corrup 0*",                       value: 400, inputs: [] as const },
-    { label: "Corrup from phase (reapply)",     value: 401, inputs: [] as const },
-    { label: "Corrup Ants",                     value: 402, inputs: [] as const },
-    
+    // 400 ("Corrup 0*") became a "Set corruption level" step at level 0, 401 ("Corruption level from phase (reapply)")
+    // one at its phase's level (HSStrategyManager converts them)
+    { label: "Set corruption level", value: SET_CORRUPTION_LEVEL_VALUE, inputs: ["corruptionLevel"] as const },
+    // 402 ("Corrup Ants") was removed with the game's 4.4.0: HSStrategyManager removes its steps from old strategies
+
     { label: "C1 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 601, inputs: ["maxTime", "waitTime"] as const },
     { label: "C2 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 602, inputs: ["maxTime", "waitTime"] as const },
     { label: "C3 until no more completions within maxTime ms (after initially waiting waitTime ms)",  value: 603, inputs: ["maxTime", "waitTime"] as const },
@@ -99,29 +104,16 @@ export const SPECIAL_ACTIONS = [
     { label: "Stop Autosing",       value: 903, inputs: [] as const },
 ] as const;
 
+export type SpecialAction = (typeof SPECIAL_ACTIONS)[number];
+export const SPECIAL_ACTION_BY_ID: ReadonlyMap<number, SpecialAction> = new Map(SPECIAL_ACTIONS.map(a => [a.value, a] as const));
+
 export const createDefaultAoagPhase = (): AutosingStrategyPhase => ({
     phaseId: AOAG_PHASE_ID,
     startPhase: "ascension",
     endPhase: "ascension",
-    corruptions: {
-        viscosity: 0,
-        drought: 0,
-        deflation: 0,
-        extinction: 0,
-        illiteracy: 0,
-        recession: 0,
-        dilation: 0,
-        hyperchallenge: 0
-    },
     strat: [
         {
             challengeNumber: 103,
-            challengeCompletions: 0,
-            challengeWaitTime: 0,
-            challengeMaxTime: 0
-        },
-        {
-            challengeNumber: 400,
             challengeCompletions: 0,
             challengeWaitTime: 0,
             challengeMaxTime: 0
@@ -167,32 +159,13 @@ export interface HSAutosingStrategy {
     strategyName: string;
     strategy: AutosingStrategyPhase[];
     aoagPhase?: AutosingStrategyPhase;
-    corruptionLoadouts?: CorruptionLoadoutDefinition[];
 }
 
 export interface AutosingStrategyPhase {
     phaseId?: string;
     startPhase: PhaseOption;
     endPhase: PhaseOption;
-    corruptions: CorruptionLoadout;
-    corruptionLoadoutName?: string | null;
     strat: Challenge[];
-}
-
-export interface CorruptionLoadoutDefinition {
-    name: string;
-    loadout: CorruptionLoadout;
-}
-
-export interface CorruptionLoadout {
-    viscosity: number;
-    drought: number;
-    deflation: number;
-    extinction: number;
-    illiteracy: number;
-    recession: number;
-    dilation: number;
-    hyperchallenge: number;
 }
 
 export interface IfJumpParams {
@@ -212,11 +185,104 @@ export interface Challenge {
     challengeMaxTime: number;
     challengeWaitBefore?: number;
     comment?: string;
-    loadoutName?: string;
+    // "Set corruption level" step (SET_CORRUPTION_LEVEL_VALUE)
+    corruptionLevel?: number;
+    // Corruption actions ascend immediately by default, including older saved strategies; false only loads `next`.
+    ascendAfterCorruption?: boolean;
 
     // Optional special-action params
     ifJump?: IfJumpParams;
 };
+
+// Dev builds only (HSAutosingRecorder): autosing's timings, read by the headless harness.
+// `sing` is the recorded singularity a timing belongs to (1 = the first one after the start). Times in ms.
+export interface HSAutosingTimingStep {
+    sing: number;
+    phase: string;
+    pass: number;
+    index: number;
+    action: string;
+    comment?: string;
+    // The step's challengeWaitBefore, and the time actually slept for it
+    waitBefore: number;
+    waitMs: number;
+    ms: number;
+    // An if-jump taken: the step jumped to
+    jump?: number;
+}
+
+export interface HSAutosingTimingPass {
+    sing: number;
+    phase: string;
+    // 1 = the phase's first pass in this singularity
+    pass: number;
+    ms: number;
+    steps: number;
+    end: 'done' | 'aoag' | 'stopped';
+}
+
+// One #performSingularity: Exalt 2 in and out, teleport, then (after the singularity is recorded)
+// the Obt loadout and the wait for an allowed stage
+export interface HSAutosingTimingTransition {
+    // The singularity it starts
+    sing: number;
+    ms: number;
+    // The part before the singularity is recorded: counted in the previous singularity's time
+    msBeforeRecord: number;
+}
+
+export interface HSAutosingTimingSingularity {
+    sing: number;
+    // From the previous record to this one, as the run panel times it
+    ms: number;
+    goldenQuarks: number;
+    quarks: number;
+    // C15 score before singing
+    c15: number;
+    // Time of each phase's passes, summed
+    phases: Record<string, number>;
+}
+
+// The game internals autosing found at its start ({ label: found }): those its fast paths read, and the others
+export interface HSAutosingExposureParts {
+    fastPaths: Record<string, boolean>;
+    other: Record<string, boolean>;
+}
+
+// A phase pass being run
+export interface HSAutosingPassRecord {
+    sing: number;
+    phase: string;
+    pass: number;
+    startedAt: number;
+    steps: number;
+    // Time slept for the current step's challengeWaitBefore
+    waitMs: number;
+}
+
+export interface HSAutosingTimings {
+    strategy: string;
+    target: number;
+    steps: HSAutosingTimingStep[];
+    passes: HSAutosingTimingPass[];
+    transitions: HSAutosingTimingTransition[];
+    singularities: HSAutosingTimingSingularity[];
+    // Oldest entries dropped by each list's cap
+    dropped: { steps: number; passes: number; transitions: number; singularities: number };
+    // The singularity in progress
+    current: {
+        sing: number;
+        startedAt: number;
+        passCount: Record<string, number>;
+        phaseMs: Record<string, number>;
+    };
+}
+
+declare global {
+    interface Window {
+        __HS_autosingTimings?: HSAutosingTimings;
+    }
+}
 
 export type IsJumpChallenge = Challenge & {
     ifJump: {

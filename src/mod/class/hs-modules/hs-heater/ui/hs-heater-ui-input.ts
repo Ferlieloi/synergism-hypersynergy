@@ -7,7 +7,7 @@ import { escapeHtml } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc, subscribeHeaterIconOverrideChanges, unsubscribeHeaterIconOverrideChanges, HeaterIconOverrideChangeListener } from "../hs-heater-icon-store";
 import { HSHeaterResultStore } from "../hs-heater-result-store";
 import type { HeaterOptimizerInput } from "../../../../types/data-types/hs-heater-types";
-import type { HeaterBranchId } from "../hs-heater-result-config";
+import type { HeaterBranchDefinition, HeaterBranchId } from "../hs-heater-result-config";
 import { HSInputType } from "../../../../types/module-types/hs-ui-types";
 import {
     exportFieldExtractors,
@@ -17,7 +17,7 @@ import {
     type HeaterInputField,
     type HeaterInputKey,
 } from "../hs-heater-input-config";
-import { HEATER_BRANCH_DEFINITIONS } from "../hs-heater-result-config";
+import { getHeaterTypeBranchId, HEATER_BRANCH_DEFINITIONS } from "../hs-heater-result-config";
 
 type HeaterInputValue = HeaterInputBase[HeaterInputKey];
 
@@ -37,7 +37,7 @@ export class HSHeaterUIInput {
         | 'runeSiEffectiveLevelMultiplier'
         | 'shopUpgradeRawLevels'
         | 'shopBonusLevelsNoAmbrosia'
-        | 'panthemaLevel'
+        | 'tauPower'
         | 'reactor'
         | 'purple'> = {
             ambrosiaUpgradeBonusLevels: {},
@@ -56,12 +56,15 @@ export class HSHeaterUIInput {
                 ambrosiaGeneration: 0,
                 infinity: 0,
             },
-            panthemaLevel: 0,
+            tauPower: 1,
             reactor: undefined,
             purple: undefined,
         };
     // The Exalt of the save the inputs came from, null without export data
     static #exportExalt: number | null = null;
+    // Purple Ambrosia unlocks with the first Exalt 9 completion, the same
+    // condition as the "Taxman's Last Stand x1 Done" input
+    static #purpleUnlocked = false;
 
     static #cachedTypeSelects: HTMLSelectElement[] = [];
     static #cachedTypeIcons: HTMLButtonElement[] = [];
@@ -86,18 +89,20 @@ export class HSHeaterUIInput {
                 ambrosiaGeneration: 0,
                 infinity: 0,
             },
-            panthemaLevel: hsData?.panthemaLevel ?? 0,
+            tauPower: hsData?.tauPower ?? 1,
             reactor: hsData?.heaterReactor,
             purple: hsData?.heaterPurple,
         };
         this.#exportExalt = Number.isInteger(hsData?.exalt) ? hsData.exalt : null;
+        this.#purpleUnlocked = Boolean(hsData?.exalt9Unlocked);
         return {
             ...this.buildInputBaseFromHeaterData(exportData),
             ...this.#optimizerMetadata,
             heaterOptions: Object.fromEntries(
-                // Purple Ambrosia unlocks with the first Exalt 9 completion,
-                // the same condition as the "Taxman's Last Stand x1 Done" input
-                HEATER_BRANCH_DEFINITIONS.map((branch) => [branch.id, branch.id !== 'purple' || Boolean(hsData?.exalt9Unlocked)])
+                HEATER_BRANCH_DEFINITIONS.map((branch) => [
+                    branch.id,
+                    (branch.id !== 'purple' || this.#purpleUnlocked) && this.isBranchSavedTicked(branch),
+                ])
             ) as Record<HeaterBranchId, boolean>,
         };
     }
@@ -138,23 +143,102 @@ export class HSHeaterUIInput {
     // The Purple checkbox is left out while Purple Ambrosia is locked (its
     // branch comes in as off); a missing checkbox reads as off.
     static buildHeaterOptionToggleGrid(active: Record<HeaterBranchId, boolean>): string {
-        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || active.purple).map((branch) => {
+        const checkboxRows = HEATER_BRANCH_DEFINITIONS.filter((branch) => branch.id !== 'purple' || this.#purpleUnlocked).map((branch) => {
             const fieldId = `hs-heater-input-active-${branch.id}`;
             const checked = active[branch.id] ? 'checked' : '';
             return `
                 <label class="hs-heater-active-branch" data-branch-id="${branch.id}">
                     <input type="checkbox" id="${fieldId}" class="hs-heater-active-checkbox" ${checked} />
-                    ${branch.label}
+                    ${branch.label}${'labelNote' in branch ? ` <span class="hs-heater-active-branch-note">${branch.labelNote}</span>` : ''}
                 </label>
             `;
         });
 
         return `
-           <span class="hs-heater-inputs-title">Active Branches:</span>
+           <div class="hs-heater-active-header">
+                <span class="hs-heater-inputs-title">Active Branches:</span>
+                <span class="hs-heater-active-bulk">
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="slots" title="Only the branches Your Loadout Order uses">☰</button>
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="all" title="Tick all">☑</button>
+                    <button type="button" class="hs-heater-active-bulk-btn" data-branch-bulk="none" title="Untick all">☐</button>
+                </span>
+           </div>
            <div class="hs-heater-active-grid">
                 ${checkboxRows.join('')}
             </div>
         `;
+    }
+
+    // Two lists, as most branches start ticked and a slow one (Obt + Off) starts unticked
+    static getSavedBranchList(setting: 'heaterUncheckedBranches' | 'heaterTickedBranches'): string[] {
+        const saved = HSSettings.getSetting(setting).getValue() as string[] | null;
+        return Array.isArray(saved) ? saved : [];
+    }
+
+    static #startsUnticked(branch: HeaterBranchDefinition): boolean {
+        return 'startsUnticked' in branch && branch.startsUnticked;
+    }
+
+    // Until the player changes it, a branch is ticked, or unticked if startsUnticked
+    static isBranchSavedTicked(branch: HeaterBranchDefinition): boolean {
+        return this.#startsUnticked(branch)
+            ? this.getSavedBranchList('heaterTickedBranches').includes(branch.id)
+            : !this.getSavedBranchList('heaterUncheckedBranches').includes(branch.id);
+    }
+
+    static attachBranchCheckboxHandlers(modal: HTMLElement): void {
+        const checkboxes = Array.from(modal.querySelectorAll<HTMLInputElement>('.hs-heater-active-checkbox'));
+        checkboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', () => this.saveBranchTicks(modal));
+        });
+
+        // Only the checkboxes shown: a locked Purple is left alone
+        modal.querySelectorAll<HTMLButtonElement>('.hs-heater-active-bulk-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                const mode = button.dataset.branchBulk;
+                const slotBranches = new Set<string>();
+                if (mode === 'slots') {
+                    for (const semanticId of HSHeaterResultStore.collectSelectedSemanticIds(modal)) {
+                        const branchId = getHeaterTypeBranchId(semanticId);
+                        if (branchId) slotBranches.add(branchId);
+                    }
+                }
+                for (const checkbox of checkboxes) {
+                    const branchId = checkbox.id.replace('hs-heater-input-active-', '');
+                    checkbox.checked = mode === 'all' || (mode === 'slots' && slotBranches.has(branchId));
+                }
+                this.saveBranchTicks(modal);
+            });
+        });
+    }
+
+    // Ticks the branch of the type a slot was just set to. Only that slot's:
+    // the other slots' branches, like a tick at open, could only undo an
+    // untick the player made.
+    static tickBranchOfType(modal: HTMLElement, semanticId: string): void {
+        const branchId = getHeaterTypeBranchId(semanticId);
+        if (!branchId) return;
+        // A missing checkbox is a locked branch (Purple)
+        const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branchId}`);
+        if (!checkbox || checkbox.checked) return;
+        checkbox.checked = true;
+        this.saveBranchTicks(modal);
+    }
+
+    // A branch without a checkbox (locked Purple) keeps what was saved for it
+    static saveBranchTicks(modal: HTMLElement): void {
+        const ticked = new Set(HEATER_BRANCH_DEFINITIONS
+            .filter((branch) => {
+                const checkbox = modal.querySelector<HTMLInputElement>(`#hs-heater-input-active-${branch.id}`);
+                return checkbox ? checkbox.checked : this.isBranchSavedTicked(branch);
+            })
+            .map((branch) => branch.id));
+        const ids = (startsUnticked: boolean, isTicked: boolean) => HEATER_BRANCH_DEFINITIONS
+            .filter((branch) => this.#startsUnticked(branch) === startsUnticked && ticked.has(branch.id) === isTicked)
+            .map((branch) => branch.id);
+        HSSettings.getSetting('heaterUncheckedBranches').setValue(ids(false, false));
+        HSSettings.getSetting('heaterTickedBranches').setValue(ids(true, true));
+        HSSettings.saveSettingsToStorage();
     }
 
     
@@ -270,6 +354,7 @@ export class HSHeaterUIInput {
                 const updatedSelections = typeSelects.map(s => s.value);
                 HSSettings.getSetting('heaterTypeLoadoutSelections').setValue(updatedSelections);
                 HSSettings.saveSettingsToStorage();
+                this.tickBranchOfType(modal, select.value);
                 onTypeSelectionChange?.();
             });
         });
@@ -458,8 +543,11 @@ export class HSHeaterUIInput {
         const exaltWarningRow = field.key === 'exalt'
             ? `<tr id="hs-heater-exalt-warning-row" hidden><td colspan="4" class="hs-heater-input-warning"></td></tr>`
             : '';
+        const headingRow = field.heading
+            ? `<tr><td colspan="4" class="hs-heater-input-heading">${escapeHtml(field.heading)}</td></tr>`
+            : '';
 
-        return `
+        return `${headingRow}
                 <tr>
                     <td>${iconHtml}</td>
                     <td>${escapeHtml(field.label)}</td>

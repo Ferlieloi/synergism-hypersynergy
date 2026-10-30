@@ -1,6 +1,5 @@
-import { buildHeaterTypeSemanticId, getHeaterTypeBranchId, getHeaterTypeConfig, getHeaterTypeRowCount, HEATER_BEST_H_SEMANTIC_ID, resolveHeaterTypeLabel } from "./hs-heater-result-config";
+import { buildHeaterTypeSemanticId, getHeaterTypeConfig, getHeaterTypeRowCount, HEATER_BEST_H_SEMANTIC_ID, resolveHeaterTypeLabel } from "./hs-heater-result-config";
 import type { HeaterOptimizationResult, HeaterPurpleRoutedResultKey, HeaterResultArrayKey, HeaterTypeSemanticId, NormalizedHeaterResultEntry } from "../../../types/data-types/hs-heater-types";
-import type { HeaterBranchId } from "./hs-heater-result-config";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSModuleManager } from "../../hs-core/module/hs-module-manager";
 import type { HSGameDataAPI } from "../../hs-core/gds/hs-gamedata-api";
@@ -161,27 +160,6 @@ export class HSHeaterResultStore {
         }
 
         return selectedSemanticIds;
-    }
-
-    static getUnavailableRequiredBranchIds(selectedSemanticIds: Set<string>): Set<HeaterBranchId> {
-        if (selectedSemanticIds.size === 0) return new Set<HeaterBranchId>();
-
-        const normalizedResult = this.getCurrentNormalizedResult();
-        const availableSemanticIds = normalizedResult
-            ? new Set<string>(normalizedResult.map((entry) => entry.semanticId as string))
-            : null;
-
-        const unavailableBranchIds = new Set<HeaterBranchId>();
-
-        for (const semanticId of selectedSemanticIds) {
-            if (availableSemanticIds?.has(semanticId)) continue;
-            const branchId = getHeaterTypeBranchId(semanticId);
-            if (branchId !== null) {
-                unavailableBranchIds.add(branchId);
-            }
-        }
-
-        return unavailableBranchIds;
     }
 
     static setResultFromRaw(result: HeaterOptimizationResult): void {

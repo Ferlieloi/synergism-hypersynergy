@@ -4,16 +4,15 @@ import { HSUI } from "./hs-ui";
 import { HSUIC } from "./hs-ui-components";
 import { HSModuleManager } from "./module/hs-module-manager";
 import { HSGameData } from "./gds/hs-gamedata";
+import { HSPlatform } from "./hs-platform";
 import type { HSGameDataAPI } from "./gds/hs-gamedata-api";
 import { HSGameDialogs } from "./dialogs/hs-game-dialogs";
 import { HSAutosing } from "../hs-modules/hs-autosing/hs-autosing";
-import { HSUtils } from "../hs-utils/hs-utils";
 import backupCSS from "inline:../../resource/css/module/hs-backup.css";
 
 // The game's own localStorage key for its save: the same base64 string as its export file
 const SAVE_KEY = 'Synergysave2';
 const FORMAT_VERSION = 1;
-const GDS_PAUSE_REASON = 'backup-import';
 // What the game keeps in localStorage outside its save, and reads at page load: language, colour theme,
 // stat symbols, tab order, export to the clipboard, dismissed announcements. A missing key is a value too
 // (the default theme, export to a file), so an import removes the ones the file doesn't have.
@@ -229,7 +228,7 @@ export class HSBackup {
         if (!api) return { heaterError: 'HSGameDataAPI not loaded' };
 
         try {
-            // Refreshes the save, the PseudoCoin levels, the quark bonus and the events first
+            // Forces a fresh save first
             const heaterData = await api.dumpDataForHeater();
             // The rest of it is the save, already in the file when ticked
             if (heaterData?.hs_data) return { heater: heaterData.hs_data };
@@ -293,21 +292,21 @@ export class HSBackup {
         const info: HSBackupInfo = {
             modVersion: HSGlobal.General.currentModVersion,
             date: new Date().toISOString(),
-            platform: HSModuleManager.getModule<HSGameData>('HSGameData')?.isSteam ? 'steam' : 'browser',
+            platform: HSPlatform.get() === 'steam' ? 'steam' : 'browser',
             ...(summary ?? {}),
             patcher: {
                 exposedPlayer: !!HSGlobal.exposedPlayer,
                 dialogHook: HSGameDialogs.isHookPatched(),
-                autoConfirm: HSUtils.isAutoConfirmPatched(),
                 stage: has('__HS_synergismStage'),
                 i18next: has('__HS_i18next'),
                 exportOutput: has('__HS_EXPORT_OUTPUT_PATCHED'),
                 maxChallenges: has('__HS_getMaxChallenges'),
-                applyCorruptions: has('__HS_applyCorruptions'),
                 validateBlueberryTree: has('__HS_validateBlueberryTree'),
                 saveImportHook: has('__HS_SAVE_IMPORT_HOOK_PATCHED'),
                 tackHooks: has('__HS_tackHooks'),
                 consumables: has('__HS_consumables'),
+                pcoinLevels: has('__HS_pcoinLevelsLoaded'),
+                quarkBonus: has('__HS_quarkBonus'),
                 globalEvent: has('__HS_GLOBAL_EVENT_PATCHED'),
             },
             gameLanguage: localStorage.getItem('language') ?? 'en',
@@ -582,7 +581,7 @@ export class HSBackup {
                 return;
             }
 
-            const failure = await HSBackup.#applyImport(write);
+            const failure = HSBackup.#applyImport(write);
             if (failure) status.textContent = failure;
         });
     }
@@ -599,20 +598,11 @@ export class HSBackup {
         return HSBackup.#applyImport({ save });
     }
 
-    /** @returns Why nothing was imported. When it worked, the page reloads. */
-    static async #applyImport({ save, modData, gamePrefs }: HSBackupWrite): Promise<string | null> {
-        const gameData = HSModuleManager.getModule<HSGameData>('HSGameData');
-        // The GDS engine reads the stored save at every frame: it must not take the imported one for the running game
-        await gameData?.pauseGDS(GDS_PAUSE_REASON);
-
-        const giveUp = (message: string) => {
-            void gameData?.resumeGDS(GDS_PAUSE_REASON);
-            return message;
-        };
-
-        // Autosing may have started during the pause above
-        if (HSBackup.#refusedDuringAutosing('Import')) return giveUp('Nothing was imported.');
-
+    /**
+     * Callers refuse first while autosing runs.
+     * @returns Why nothing was imported. When it worked, the page reloads.
+     */
+    static #applyImport({ save, modData, gamePrefs }: HSBackupWrite): string | null {
         // From here to the reload nothing is awaited: no timer of the game or the mod runs in between
         const previous = new Map<string, string | null>();
         const remember = (key: string) => {
@@ -653,7 +643,7 @@ export class HSBackup {
                 }
             }
             HSLogger.error(`Import failed, nothing was changed: ${error}`, HSBackup.#context);
-            return giveUp('The import failed (see the Log tab): nothing was changed.');
+            return 'The import failed (see the Log tab): nothing was changed.';
         }
 
         HSBackup.#blockStorageWrites({ save, modData, gamePrefs });

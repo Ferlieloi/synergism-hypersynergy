@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('loader', {
 
     openPath: (target) => ipcRenderer.invoke('shell:open-path', target),
     openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+    copyText: (text) => ipcRenderer.invoke('clipboard:write', text),
 
     onPatchLog: (callback) => {
         const listener = (_e, line) => callback(line)

@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         HyperSynergism Loader
 // @namespace    https://github.com/Ferlieloi
-// @version      4.1
+// @version      4.2
 // @description  Official loader for HyperSynergism mod
 // @match        https://synergism.cc/*
+// @match        https://pseudo-corp.github.io/SynergismOfficial/*
 // @grant        none
 // @run-at       document-start
 // @license      MIT

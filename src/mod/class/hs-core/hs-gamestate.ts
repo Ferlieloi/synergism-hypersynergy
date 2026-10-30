@@ -10,6 +10,7 @@ import {
     SETTINGS_VIEW, SETTINGS_VIEW_BUTTON_IDS,
     PSEUDOCOIN_VIEW, PSEUDOCOIN_VIEW_BUTTON_IDS,
     TRAITS_VIEW, TRAITS_VIEW_BUTTON_IDS,
+    viewFromButtonId,
     VIEW_KEY, VIEW_TYPE, HSViewStateRecord,
 } from "../../types/module-types/hs-gamestate-types";
 import { HSModuleOptions } from "../../types/hs-types";
@@ -53,7 +54,7 @@ export class HSGameState extends HSModule {
         CHALLENGE_VIEW: { currentView: new ChallengeView('toggleChallengesSubTab1'), previousView: new ChallengeView('unknown'), viewChangeSubscribers: new Map() },
         ANT_VIEW: { currentView: new AntView('toggleAntSubtab1'), previousView: new AntView('unknown'), viewChangeSubscribers: new Map() },
         CUBE_VIEW: { currentView: new CubeView('switchCubeSubTab1'), previousView: new CubeView('unknown'), viewChangeSubscribers: new Map() },
-        TRAITS_VIEW: { currentView: new TraitsView('corrCampaignsBtn'), previousView: new TraitsView('unknown'), viewChangeSubscribers: new Map() },
+        TRAITS_VIEW: { currentView: new TraitsView('corrStatsBtn'), previousView: new TraitsView('unknown'), viewChangeSubscribers: new Map() },
         SINGULARITY_VIEW: { currentView: new SingularityView('toggleSingularitySubTab1'), previousView: new SingularityView('unknown'), viewChangeSubscribers: new Map() },
         SETTINGS_VIEW: { currentView: new SettingsView('switchSettingSubTab1'), previousView: new SettingsView('unknown'), viewChangeSubscribers: new Map() },
         PSEUDOCOIN_VIEW: { currentView: new PseudoCoinView('cartSubTab1'), previousView: new PseudoCoinView('unknown'), viewChangeSubscribers: new Map() }
@@ -340,7 +341,7 @@ export class HSGameState extends HSModule {
             return;
         }
 
-        const tabs = await HSElementHooker.HookElements(viewProperties.subViewsSelector);
+        const tabs = await HSElementHooker.HookElements(viewProperties.subViewIds.map(id => `#${id}`));
 
         tabs.forEach(async (tab) => {
             const tabId = tab.id;
@@ -541,14 +542,7 @@ export class BuildingView extends GameView<BUILDING_VIEW> {
     }
 
     getViewEnum(tab: string): BUILDING_VIEW {
-        switch (tab) {
-            case 'switchToCoinBuilding':      return BUILDING_VIEW.COIN;
-            case 'switchToDiamondBuilding':   return BUILDING_VIEW.DIAMOND;
-            case 'switchToMythosBuilding':    return BUILDING_VIEW.MYTHOS;
-            case 'switchToParticleBuilding':  return BUILDING_VIEW.PARTICLE;
-            case 'switchToTesseractBuilding': return BUILDING_VIEW.TESSERACT;
-        }
-        return BUILDING_VIEW.UNKNOWN;
+        return viewFromButtonId(BUILDING_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): BUILDING_VIEW {
@@ -565,11 +559,7 @@ export class AchievementView extends GameView<ACHIEVEMENT_VIEW> {
     }
 
     getViewEnum(tab: string): ACHIEVEMENT_VIEW {
-        switch (tab) {
-            case 'toggleAchievementSubTab1': return ACHIEVEMENT_VIEW.ACHIEVEMENTS;
-            case 'toggleAchievementSubTab2': return ACHIEVEMENT_VIEW.REWARDS;
-        }
-        return ACHIEVEMENT_VIEW.UNKNOWN;
+        return viewFromButtonId(ACHIEVEMENT_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): ACHIEVEMENT_VIEW {
@@ -586,13 +576,7 @@ export class RuneView extends GameView<RUNE_VIEW> {
     }
 
     getViewEnum(tab: string): RUNE_VIEW {
-        switch (tab) {
-            case 'toggleRuneSubTab1': return RUNE_VIEW.RUNES;
-            case 'toggleRuneSubTab2': return RUNE_VIEW.TALISMANS;
-            case 'toggleRuneSubTab3': return RUNE_VIEW.BLESSINGS;
-            case 'toggleRuneSubTab4': return RUNE_VIEW.SPIRITS;
-        }
-        return RUNE_VIEW.UNKNOWN;
+        return viewFromButtonId(RUNE_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): RUNE_VIEW {
@@ -609,11 +593,7 @@ export class ChallengeView extends GameView<CHALLENGE_VIEW> {
     }
 
     getViewEnum(tab: string): CHALLENGE_VIEW {
-        switch (tab) {
-            case 'toggleChallengesSubTab1': return CHALLENGE_VIEW.NORMAL;
-            case 'toggleChallengesSubTab2': return CHALLENGE_VIEW.EXALT;
-        }
-        return CHALLENGE_VIEW.UNKNOWN;
+        return viewFromButtonId(CHALLENGE_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): CHALLENGE_VIEW {
@@ -630,12 +610,7 @@ export class AntView extends GameView<ANT_VIEW> {
     }
 
     getViewEnum(tab: string): ANT_VIEW {
-        switch (tab) {
-            case 'toggleAntSubtab1': return ANT_VIEW.THE_ANTHILL;
-            case 'toggleAntSubtab2': return ANT_VIEW.THE_ALTAR;
-            case 'toggleAntSubtab3': return ANT_VIEW.QUARK_CORNER;
-        }
-        return ANT_VIEW.UNKNOWN;
+        return viewFromButtonId(ANT_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): ANT_VIEW {
@@ -652,16 +627,7 @@ export class CubeView extends GameView<CUBE_VIEW> {
     }
 
     getViewEnum(tab: string): CUBE_VIEW {
-        switch (tab) {
-            case 'switchCubeSubTab1': return CUBE_VIEW.CUBE_TRIBUTES;
-            case 'switchCubeSubTab2': return CUBE_VIEW.TESSERACT_GIFTS;
-            case 'switchCubeSubTab3': return CUBE_VIEW.HYPERCUBE_BENEDICTIONS;
-            case 'switchCubeSubTab4': return CUBE_VIEW.PLATONIC_STATUES;
-            case 'switchCubeSubTab5': return CUBE_VIEW.CUBE_UPGRADES;
-            case 'switchCubeSubTab6': return CUBE_VIEW.PLATONIC_UPGRADES;
-            case 'switchCubeSubTab7': return CUBE_VIEW.HEPTERACT_FORGE;
-        }
-        return CUBE_VIEW.UNKNOWN;
+        return viewFromButtonId(CUBE_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): CUBE_VIEW {
@@ -678,12 +644,7 @@ export class TraitsView extends GameView<TRAITS_VIEW> {
     }
 
     getViewEnum(tab: string): TRAITS_VIEW {
-        switch (tab) {
-            case 'corrCampaignsBtn': return TRAITS_VIEW.CAMPAIGNS;
-            case 'corrStatsBtn':     return TRAITS_VIEW.CORRUPTION_STATS;
-            case 'corrLoadoutsBtn':  return TRAITS_VIEW.CORRUPTION_LOADOUTS;
-        }
-        return TRAITS_VIEW.UNKNOWN;
+        return viewFromButtonId(TRAITS_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): TRAITS_VIEW {
@@ -700,15 +661,7 @@ export class SingularityView extends GameView<SINGULARITY_VIEW> {
     }
 
     getViewEnum(tab: string): SINGULARITY_VIEW {
-        switch (tab) {
-            case 'toggleSingularitySubTab1': return SINGULARITY_VIEW.ELEVATOR;
-            case 'toggleSingularitySubTab2': return SINGULARITY_VIEW.SHOP;
-            case 'toggleSingularitySubTab3': return SINGULARITY_VIEW.PERKS;
-            case 'toggleSingularitySubTab4': return SINGULARITY_VIEW.OCTERACTS;
-            case 'toggleSingularitySubTab5': return SINGULARITY_VIEW.AMBROSIA;
-            case 'toggleSingularitySubTab6': return SINGULARITY_VIEW.PURPLE;
-        }
-        return SINGULARITY_VIEW.UNKNOWN;
+        return viewFromButtonId(SINGULARITY_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): SINGULARITY_VIEW {
@@ -725,19 +678,7 @@ export class SettingsView extends GameView<SETTINGS_VIEW> {
     }
 
     getViewEnum(tab: string): SETTINGS_VIEW {
-        switch (tab) {
-            case 'switchSettingSubTab1': return SETTINGS_VIEW.SETTINGS;
-            case 'switchSettingSubTab2': return SETTINGS_VIEW.LANGUAGES;
-            case 'switchSettingSubTab3': return SETTINGS_VIEW.CREDITS;
-            case 'switchSettingSubTab4': return SETTINGS_VIEW.STATS_FOR_NERDS;
-            case 'switchSettingSubTab5': return SETTINGS_VIEW.RESET_HISTORY;
-            case 'switchSettingSubTab6': return SETTINGS_VIEW.ASCEND_HISTORY;
-            case 'switchSettingSubTab7': return SETTINGS_VIEW.SINGULARITY_HISTORY;
-            case 'switchSettingSubTab8': return SETTINGS_VIEW.HOTKEYS;
-            case 'switchSettingSubTab9': return SETTINGS_VIEW.ACCOUNT;
-            case 'switchSettingSubTab10': return SETTINGS_VIEW.MESSAGES;
-        }
-        return SETTINGS_VIEW.UNKNOWN;
+        return viewFromButtonId(SETTINGS_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): SETTINGS_VIEW {
@@ -754,15 +695,7 @@ export class PseudoCoinView extends GameView<PSEUDOCOIN_VIEW> {
     }
 
     getViewEnum(tab: string): PSEUDOCOIN_VIEW {
-        switch (tab) {
-            case 'cartSubTab1': return PSEUDOCOIN_VIEW.CART_1;
-            case 'cartSubTab2': return PSEUDOCOIN_VIEW.CART_2;
-            case 'cartSubTab3': return PSEUDOCOIN_VIEW.CART_3;
-            case 'cartSubTab4': return PSEUDOCOIN_VIEW.CART_4;
-            case 'cartSubTab5': return PSEUDOCOIN_VIEW.CART_5;
-            case 'cartSubTab6': return PSEUDOCOIN_VIEW.CART_6;
-        }
-        return PSEUDOCOIN_VIEW.UNKNOWN;
+        return viewFromButtonId(PSEUDOCOIN_VIEW_BUTTON_IDS, tab);
     }
 
     getId(): PSEUDOCOIN_VIEW {

@@ -12,7 +12,11 @@ const WAITING_REGION = 'ascensionStats';
 const STACK_CAPACITY = 2;
 // A remembered cell or row index above this is not trusted (a hand-edited backup could ask for any)
 const MAX_SLOT_INDEX = 200;
+// The game gives every module these sizes
 const SIZES = ['S', 'M', 'L'];
+// Sizes the game gives only to some of its own modules (isHeaderSizeAllowed), which a mod module can ask for at register()
+const EXTRA_SIZES = ['Tall'] as const;
+type HSHeaderExtraSize = typeof EXTRA_SIZES[number];
 
 // Only the mod's modules in it: a slot the patcher's strip empties
 const isModSlot = (slot: string[]) => slot.length > 0 && slot.every(id => /^hs[A-Z]/.test(id));
@@ -58,6 +62,9 @@ interface HSHeaderModuleNotes {
  *     from every save and every loaded save (the game's save schema would reset the whole layout over an unknown id).
  *     So their place is remembered here, per browser (HSStorage), and put back before each render of the header
  *     (a save load, a singularity, the header's Reset button, each edit).
+ *     The game greys out the sizes it keeps for its own modules (Tall: "1x2"); a module given such a size
+ *     at register() gets its button enabled again whenever it's the selected one (the game's click handler resizes
+ *     any selected module, it only greys the button).
  * Author: Shewchou
  */
 export class HSHeaderModules {
@@ -66,6 +73,9 @@ export class HSHeaderModules {
     static #elements = new Map<string, HTMLElement>();
     // The registered modules: id -> whether the game shows it (its "unlocked")
     static #modules = new Map<string, () => boolean>();
+    // The registered modules' extra sizes (none for most)
+    static #extraSizes = new Map<string, readonly HSHeaderExtraSize[]>();
+    static #sizeObserver?: MutationObserver;
     static #notes?: HSHeaderModuleNotes;
     // What the last render saw, to tell the header's Reset button (a new layout in the same headerLayouts) from a load
     static #seenLayouts?: object;
@@ -98,8 +108,10 @@ export class HSHeaderModules {
      * Returns its element (the same one for an id all session long), to fill; null when the header can't take it.
      * @param id "hs" then a capital letter: the patcher strips these from saves
      * @param unlocked whether the game shows it, asked at each render (as the game's own unlock checks)
+     * @param options.sizes sizes the game keeps for its own modules that this one gets too
      */
-    static register(id: string, unlocked: () => boolean = () => true): HTMLElement | null {
+    static register(id: string, unlocked: () => boolean = () => true,
+        options: { sizes?: readonly HSHeaderExtraSize[] } = {}): HTMLElement | null {
         if (!/^hs[A-Z]/.test(id)) throw new Error(`Header module id "${id}" doesn't start with "hs" and a capital letter`);
         if (!HSHeaderModules.isAvailable()) return null;
 
@@ -117,6 +129,10 @@ export class HSHeaderModules {
         // The game checks its locks only at its next revealStuff() (a tab change, a reset): locked from the start
         try { element.classList.toggle('headerModuleLocked', !unlocked()); } catch { /* the game's next check decides */ }
         HSHeaderModules.#modules.set(id, unlocked);
+        if (options.sizes?.length) {
+            HSHeaderModules.#extraSizes.set(id, [...options.sizes]);
+            HSHeaderModules.#watchSizeButtons();
+        }
         window.__HS_headerModuleUnlocks![id] = () => {
             try { return unlocked(); } catch { return false; }
         };
@@ -129,6 +145,7 @@ export class HSHeaderModules {
     /** Take a module out of the header and its tray. Its place stays remembered for the next register(). */
     static unregister(id: string): void {
         if (!HSHeaderModules.#modules.delete(id)) return;
+        HSHeaderModules.#extraSizes.delete(id);
         delete window.__HS_headerModuleUnlocks?.[id];
 
         const layouts = HSHeaderModules.#layouts();
@@ -138,6 +155,31 @@ export class HSHeaderModules {
         HSHeaderModules.#render();
         HSHeaderModules.#elements.get(id)?.remove();
         HSLogger.debug(() => `Header module ${id} unregistered`, HSHeaderModules.#context);
+    }
+
+    /**
+     * The game greys its size buttons at each render (updateEditToolbar, which sets every button's disabled): enable
+     * again an extra size of the selected mod module. The observer runs before the next paint, so it never shows grey.
+     */
+    static #watchSizeButtons(): void {
+        if (HSHeaderModules.#sizeObserver) return;
+        const observer = new MutationObserver(() => HSHeaderModules.#enableExtraSizes());
+        for (const size of EXTRA_SIZES) {
+            const button = document.getElementById(`headerSize${size}`);
+            if (button) observer.observe(button, { attributes: true, attributeFilter: ['disabled'] });
+        }
+        HSHeaderModules.#sizeObserver = observer;
+    }
+
+    static #enableExtraSizes(): void {
+        // The game marks the selected module at each render, before the observer runs
+        const selected = document.querySelector<HTMLElement>('#mainHeader.headerEditMode .headerModuleSelected')?.id;
+        const sizes = selected ? HSHeaderModules.#extraSizes.get(selected) : undefined;
+        if (!sizes) return;
+        for (const size of sizes) {
+            const button = document.getElementById(`headerSize${size}`) as HTMLButtonElement | null;
+            if (button?.disabled) button.disabled = false;
+        }
     }
 
     static #render(): void {
@@ -242,8 +284,10 @@ export class HSHeaderModules {
                 slots.splice(HSHeaderModules.#rowIndex(slots, place, noted!), 0, [id]);
                 placed = true;
             }
-            // Alone, not the S size its stack had
-            if (placed && !partnerSlot && place.size && place.partners.length === 0) layout.sizes[id] = place.size;
+            // Alone, not the S size its stack had; an extra size only while the module still has it
+            if (placed && !partnerSlot && place.size && place.partners.length === 0 && HSHeaderModules.#allows(id, place.size)) {
+                layout.sizes[id] = place.size;
+            }
         }
 
         if (!placed) {
@@ -253,6 +297,10 @@ export class HSHeaderModules {
             delete layout.sizes[id];
         }
         if ((!placed || place?.hidden) && !layout.hidden.includes(id)) layout.hidden.push(id);
+    }
+
+    static #allows(id: string, size: string): boolean {
+        return SIZES.includes(size) || (HSHeaderModules.#extraSizes.get(id) ?? []).some(extra => extra === size);
     }
 
     /** Where a module goes back in a row: after its game slots, and after the mod's modules back there that were before it. */
@@ -307,7 +355,8 @@ export class HSHeaderModules {
                         || (Number.isInteger(place.gameIndex) && place.gameIndex >= 0 && place.gameIndex <= MAX_SLOT_INDEX))
                     && Array.isArray(place.partners) && place.partners.every(partner => typeof partner === 'string')
                     && typeof place.hidden === 'boolean'
-                    && (place.size === undefined || SIZES.includes(place.size))
+                    && (place.size === undefined || SIZES.includes(place.size)
+                        || EXTRA_SIZES.some(size => size === place.size))
                     && (place.stackIndex === undefined
                         || (Number.isInteger(place.stackIndex) && place.stackIndex >= 0 && place.stackIndex < STACK_CAPACITY));
                 if (!valid) continue;

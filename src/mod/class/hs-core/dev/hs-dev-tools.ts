@@ -203,6 +203,9 @@ export class HSDevTools {
         );
         root.append(timers);
 
+        root.append(this.#el('div', 'hs-dev-tools-group', 'GDS source (back to the live player at a reload)'));
+        root.append(this.#buildGDSSourceRow());
+
         root.append(this.#el('div', 'hs-dev-tools-group', 'Any player field (path, then value)'));
         root.append(this.#buildFreeRow());
 
@@ -456,6 +459,29 @@ export class HSDevTools {
         if (def.pinned) element.append(this.#button('x', () => this.#unpin(def.path)));
 
         this.#rows.push({ def, current, input });
+        return element;
+    }
+
+    /** Switches GDS between the live player and the save, so one session can test both paths on a patched game. */
+    #buildGDSSourceRow(): HTMLElement {
+        const element = this.#el('div', 'hs-dev-tools-buttons');
+        const module = HSModuleManager.getModule<HSGameData>('HSGameData');
+        const choices: Array<{ text: string, forceSave: boolean }> = [
+            { text: 'Live player', forceSave: false },
+            { text: 'Save (forced)', forceSave: true },
+        ];
+        for (const choice of choices) {
+            const label = this.#el('label', 'hs-dev-tools-radio');
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'hs-dev-tools-gds-source';
+            radio.checked = (module?.isSaveSourceForced() ?? false) === choice.forceSave;
+            radio.addEventListener('change', () => {
+                if (radio.checked) void module?.setForceSaveSource(choice.forceSave);
+            });
+            label.append(radio, choice.text);
+            element.append(label);
+        }
         return element;
     }
 

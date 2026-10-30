@@ -15,7 +15,7 @@ const run = (declarations, window) => {
         '"use strict";const Q=function(v){this.v=v},Ie=o=>o,Gu={d:()=>0,n:()=>0,a:()=>0};' +
         `let ${declarations};return {n};`,
         { log() {}, warn: (...a) => warnings.push(a.join(' ')) })
-    return { game: new Function('window', code)(window), warnings: warnings.filter(w => w.includes('player')) }
+    return { game: new Function('window', code)(window), warnings: warnings.filter(w => w.includes('player initializer')) }
 }
 const exposedPlayer = window => window[window.symp]
 

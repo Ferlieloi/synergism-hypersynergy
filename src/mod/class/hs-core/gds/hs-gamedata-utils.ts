@@ -1,5 +1,5 @@
 import Decimal from "break_infinity.js";
-import { AutoAscensionModes } from "../../../types/data-types/hs-player-savedata";
+import { AutoAscensionModes, type GameCount } from "../../../types/data-types/hs-player-savedata";
 
 export const parseNumericStringIfSafe = (value: unknown): number | undefined => {
     if (typeof value !== 'string') return undefined;
@@ -40,6 +40,21 @@ export const parseGameDataDecimal = (value: unknown, fallback?: Decimal): Decima
         }
     }
 
+    if (typeof value === 'object') {
+        // The live player's Decimals come from the game's own bundle, so they aren't `instanceof` ours
+        // and our constructor throws on them: read their fields instead
+        const { mantissa, exponent } = value as { mantissa?: unknown; exponent?: unknown };
+        if (typeof mantissa === 'number' && typeof exponent === 'number') {
+            return Decimal.fromMantissaExponent_noNormalize(mantissa, exponent);
+        }
+
+        // The live player's counters (worlds, cubes) are classes whose valueOf() gives the number
+        const primitive = value.valueOf();
+        if (primitive !== value) {
+            return parseGameDataDecimal(primitive, fallback);
+        }
+    }
+
     try {
         return new Decimal(value as any);
     } catch {
@@ -73,6 +88,10 @@ export const parseGameDataNumber = (value: unknown, fallback = 0): number => {
 export const floorLog10PlusOne = (value: number): number =>
     value > 0 ? 1 + Math.floor(Math.log10(value)) : 1;
 
+// floor(log10(value + 1)): 0 for 0, where floorLog10PlusOne gives 1
+export const floorLog10OfOnePlus = (value: number | Decimal | GameCount): number =>
+    Math.floor(Math.log10(Number(value ?? 0) + 1));
+
 export const calculateSigmoidExponential = (constant: number, coefficient: number): number =>
     1 + (constant - 1) * (1 - Math.exp(-coefficient));
 
@@ -82,27 +101,6 @@ export const findInsertionIndex = (target: number, array: number[]): number => {
         index += 1;
     }
     return index;
-};
-
-// ECC stands for "Effective Challenge Completions"
-export const calcECC = (type: 'transcend' | 'reincarnation' | 'ascension', completions: number): number => {
-    let effective = 0;
-    switch (type) {
-        case 'transcend':
-            effective += Math.min(100, completions);
-            effective += 1 / 20 * (Math.min(1000, Math.max(100, completions)) - 100);
-            effective += 1 / 100 * (Math.max(1000, completions) - 1000);
-            return effective;
-        case 'reincarnation':
-            effective += Math.min(25, completions);
-            effective += 1 / 2 * (Math.min(75, Math.max(25, completions)) - 25);
-            effective += 1 / 10 * (Math.max(75, completions) - 75);
-            return effective;
-        case 'ascension':
-            effective += Math.min(10, completions);
-            effective += 1 / 2 * (Math.max(10, completions) - 10);
-            return effective;
-    }
 };
 
 

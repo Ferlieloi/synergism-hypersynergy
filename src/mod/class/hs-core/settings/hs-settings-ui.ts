@@ -1,7 +1,6 @@
 ﻿import { HSSettingBase, HSSettingControl, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
 import { HSModuleManager } from "../module/hs-module-manager";
 import { HSAmbrosia } from "../../hs-modules/hs-ambrosia/hs-ambrosia";
-import { HSStorage } from "../hs-storage";
 import { HSUI } from "../hs-ui";
 import { HSGlobal } from "../hs-global";
 import { HSUIC } from "../hs-ui-components";
@@ -11,9 +10,7 @@ import { HSPlatform } from "../hs-platform";
 import { HSSetting } from "./hs-setting";
 import { HSSettings } from "./hs-settings";
 import { HSStrategyManager } from "../../hs-modules/hs-autosing/hs-strategy-manager";
-import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
 import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import sIconB64 from "inline:../../../resource/txt/s_icon.txt";
 
 type HSSettingBaseWithHidden<T extends HSSettingType> = HSSettingBase<T> & { hidden?: boolean };
@@ -46,6 +43,16 @@ export class HSSettingsUI {
     static readonly #context = 'HSSettingsUI';
     static #nativeTabPreferenceObserver: MutationObserver | null = null;
     static #nativeTabClickListenerInstalled = false;
+
+    // The numbers the Auto-Sing Advanced "Reset to default" button puts back (advancedDataCollection is a hidden debug switch)
+    static readonly #autosingAdvancedSettings = [
+        'autosing3to6DCubeOpeningPercent',
+        'autosingTessBuildingAutoBuyPercent',
+        'autosingAutoChallTimerStart',
+        'autosingAutoChallTimerExit',
+        'autosingAutoChallTimerEnter',
+    ] as const;
+    static #advancedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
     static async syncSettings(deps: HSSettingsUIDependencies): Promise<void> {
         HSLogger.log(`Syncing mod settings`, this.#context);
@@ -433,84 +440,6 @@ export class HSSettingsUI {
         };
     }
 
-    static updateStrategyDropdownList(): void {
-        const setting = HSSettings.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
-        control.selectOptions.length = 0;
-        control.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
-
-        let savedStrategy = undefined;
-        const storageMod = HSModuleManager.getModule<HSStorage>("HSStorage");
-        if (storageMod && typeof storageMod.getData === "function") {
-            let settingsData = storageMod.getData(HSGlobal.HSSettings.storageKey);
-            if (settingsData) {
-                const parsed = typeof settingsData === "string" ? JSON.parse(settingsData) : settingsData;
-                if (parsed && parsed.autosingStrategy && parsed.autosingStrategy.settingValue) {
-                    savedStrategy = parsed.autosingStrategy.settingValue;
-                }
-            }
-        }
-
-        const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
-        if (selectEl) {
-            selectEl.innerHTML = "";
-            if (defaultStrategiesOptions.length > 0) {
-                const optgroupDefault = document.createElement('optgroup');
-                optgroupDefault.label = 'Default Strategies';
-                for (const opt of defaultStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'true');
-                    optgroupDefault.appendChild(option);
-                }
-                selectEl.appendChild(optgroupDefault);
-            }
-
-            if (userStrategiesOptions.length > 0) {
-                const optgroupUser = document.createElement('optgroup');
-                optgroupUser.label = 'User Strategies';
-                for (const opt of userStrategiesOptions) {
-                    const option = document.createElement('option');
-                    option.text = opt.text;
-                    option.value = String(opt.value);
-                    option.setAttribute('data-default', 'false');
-                    optgroupUser.appendChild(option);
-                }
-                selectEl.appendChild(optgroupUser);
-            }
-
-            let toSelect = savedStrategy;
-            if (!toSelect || !Array.from(selectEl.options).some(opt => opt.value === toSelect)) {
-                if (selectEl.options.length > 0) {
-                    toSelect = selectEl.options[0].value;
-                }
-            }
-            if (toSelect) {
-                selectEl.value = toSelect;
-                setting.setValue(toSelect);
-            }
-            HSLogger.log(`Strategy dropdown rebuilt with ${defaultStrategiesOptions.length} default and ${userStrategiesOptions.length} user strategies. Selected: ${toSelect}`, this.#context);
-        }
-    }
-
-    static selectAutosingStrategyByName(strategyName: string): void {
-        const setting = HSSettings.getSetting("autosingStrategy");
-        const control = setting.getDefinition().settingControl;
-        if (control?.selectOptions) {
-            const selectEl = document.querySelector(`#${control.controlId}`) as HTMLSelectElement | null;
-            if (selectEl) {
-                selectEl.value = strategyName;
-            }
-            setting.setValue(strategyName);
-        } else {
-            HSLogger.warn(`Could not select autosing strategy '${strategyName}' because control is unavailable`, this.#context);
-        }
-    }
-
     static #sortSettingsByControlGroup(
         settings: HSSettingRecord,
         controlGroups: Record<string, HSSettingControlGroup>,
@@ -576,12 +505,10 @@ export class HSSettingsUI {
         });
     }
 
-    // Not hidden, and meant for the platform the mod was loaded on (shown when it isn't known yet)
+    // Not hidden, and meant for the platform the mod was loaded on
     static #isShownInPanel(setting: HSSettingBaseWithHidden<HSSettingType>): boolean {
         if (setting.hidden === true) return false;
-        if (!setting.platforms) return true;
-        const platform = HSPlatform.get();
-        return platform === null || setting.platforms.includes(platform);
+        return !setting.platforms || setting.platforms.includes(HSPlatform.get());
     }
 
     static #buildPagesHTML(
@@ -773,8 +700,10 @@ export class HSSettingsUI {
                 type: convertedType
             }));
         } else if (convertedType === HSInputType.SELECT) {
+            // HSAutosingStrategyControls.updateStrategyDropdownList fills these options again after syncSettings.
+            // This first fill stays: without it the sync finds an empty dropdown and warns at each load
             if (controls.selectOptions && controls.controlId === 'hs-setting-auto-sing-strategy') {
-                const { defaultStrategiesOptions, userStrategiesOptions } = HSSettings.getMergedStrategyOptions();
+                const { defaultStrategiesOptions, userStrategiesOptions } = HSStrategyManager.getMergedStrategyOptions();
                 controls.selectOptions.length = 0;
                 controls.selectOptions.push(...defaultStrategiesOptions, ...userStrategiesOptions);
                 HSLogger.log(`Merged strategy options for select input: ${controls.selectOptions.length} total options (${defaultStrategiesOptions.length} default, ${userStrategiesOptions.length} user)`, this.#context);
@@ -802,257 +731,43 @@ export class HSSettingsUI {
         return valueRowChildren;
     }
 
-    static async deleteSelectedStrategy(): Promise<void> {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to delete", { notificationType: "warning" });
+    // A first click waits 5 s for a second one. The armed text is shorter: the button keeps its size
+    static resetAutosingAdvancedSettings(): void {
+        if (HSSettingsUI.#advancedResetTimer === undefined) {
+            const button = HSSettingsUI.#advancedResetButton();
+            if (!button) return;
+            button.textContent = 'Confirm reset?';
+            HSSettingsUI.#advancedResetTimer = setTimeout(() => HSSettingsUI.#disarmAdvancedReset(), 5000);
             return;
         }
+        HSSettingsUI.#disarmAdvancedReset();
 
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
-            return;
-        }
-
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
-            return;
-        }
-
-        const strategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        if (defaultNames.includes(strategyName)) {
-            HSUI.Notify("You cannot delete default strategies.", { notificationType: "warning" });
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to delete strategy "${strategyName}"?`)) {
-            return;
-        }
-
-        const saved = HSStrategyManager.deleteStrategyFromStorage(strategyName, "HSSettings");
-        if (!saved) {
-            HSUI.Notify("Failed to delete strategy from localStorage", { notificationType: "error" });
-            return;
-        }
-
-        HSSettingsUI.updateStrategyDropdownList();
-
-        const firstDefault = defaultNames[0];
-        if (firstDefault) {
-            HSSettingsUI.selectAutosingStrategyByName(firstDefault);
-        }
-
-        HSUI.Notify(`Strategy "${strategyName}" deleted. Defaulted to ${firstDefault ? '"' + firstDefault + '"' : 'none'}.`, { notificationType: "success" });
-    }
-
-    static async exportSelectedStrategy(): Promise<void> {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to export", { notificationType: "warning" });
-            return;
-        }
-
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) {
-            HSUI.Notify("Strategy dropdown not available", { notificationType: "error" });
-            return;
-        }
-
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) {
-            HSUI.Notify("Selected strategy not found in dropdown", { notificationType: "error" });
-            return;
-        }
-
-        const strategyName = selectedOption.value.toString();
-        let strategy = HSSettings.getStrategies().find(s => s.strategyName === strategyName);
-        if (!strategy && HSSettings.getDefaultStrategyNames().includes(strategyName)) {
-            strategy = await HSSettings.loadDefaultStrategyByName(strategyName) || undefined;
-        }
-
-        if (!strategy) {
-            HSUI.Notify("Strategy not found - cannot export", { notificationType: "error" });
-            return;
-        }
-
-        try {
-            const strategyJson = JSON.stringify(strategy, null, 2);
-            await navigator.clipboard.writeText(strategyJson);
-            HSUI.Notify(`Strategy "${strategyName}" copied to clipboard`, { notificationType: "success" });
-        } catch {
-            HSUI.Notify("Failed to copy strategy to clipboard", { notificationType: "error" });
-        }
-    }
-
-    static async importStrategy(): Promise<void> {
-        const uiMod = HSModuleManager.getModule<HSUI>('HSUI');
-        if (uiMod) {
-            const modalId = await uiMod.Modal({
-                title: 'Import Strategy',
-                htmlContent: `
-            <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
-                <div>
-                    <label for="import-strategy-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy Name:</label>
-                    <input type="text" id="import-strategy-name" placeholder="Enter strategy name" style="width: 100%; padding: 8px; box-sizing: border-box;" />
-                </div>
-                <div>
-                    <label for="import-strategy-json" style="display: block; margin-bottom: 5px; font-weight: bold;">Strategy JSON:</label>
-                    <textarea id="import-strategy-json" placeholder="Paste strategy JSON here" rows="10" style="width: 100%; padding: 8px; box-sizing: border-box; font-family: monospace;"></textarea>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button id="import-strategy-cancel" data-close="${'modal-will-be-replaced'}" style="padding: 8px 16px; cursor: pointer;">Cancel</button>
-                    <button id="import-strategy-submit" style="padding: 8px 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none;">Import</button>
-                </div>
-            </div>
-        `
-            });
-
-            const cancelBtn = document.querySelector(`#${modalId} #import-strategy-cancel`) as HTMLButtonElement;
-            if (cancelBtn) {
-                cancelBtn.dataset.close = modalId;
+        // None of them has a settingAction to run
+        const names = HSSettingsUI.#autosingAdvancedSettings;
+        for (const name of names) {
+            const value = HSSettings.getJsonSettingValue(name);
+            if (typeof value !== 'number') {
+                HSLogger.warn(`No default value for ${name}, left as it is`, this.#context);
+                continue;
             }
-
-            const submitBtn = document.querySelector(`#${modalId} #import-strategy-submit`) as HTMLButtonElement;
-            const nameInput = document.querySelector(`#${modalId} #import-strategy-name`) as HTMLInputElement;
-            const jsonInput = document.querySelector(`#${modalId} #import-strategy-json`) as HTMLTextAreaElement;
-
-            jsonInput.addEventListener('input', () => {
-                if (nameInput.value.trim()) {
-                    return;
-                }
-
-                try {
-                    const parsed = JSON.parse(jsonInput.value) as Partial<HSAutosingStrategy>;
-                    if (parsed && typeof parsed.strategyName === 'string' && parsed.strategyName.trim()) {
-                        nameInput.value = parsed.strategyName.trim();
-                    }
-                } catch {
-                    // Ignore invalid JSON while typing
-                }
-            });
-
-            if (!submitBtn || !nameInput || !jsonInput) {
-                HSUI.Notify("Failed to create import modal", {
-                    notificationType: "error"
-                });
-                return;
-            }
-
-            submitBtn.addEventListener('click', async () => {
-                const strategyName = nameInput.value.trim();
-                const strategyJson = jsonInput.value.trim();
-
-                if (!strategyName) {
-                    HSUI.Notify("Please enter a strategy name", {
-                        notificationType: "warning"
-                    });
-                    return;
-                }
-
-                const existingStrategies = HSSettings.getStrategies();
-                if (existingStrategies.some(s => s.strategyName === strategyName)) {
-                    HSUI.Notify(`Strategy "${strategyName}" already exists`, {
-                        notificationType: "warning"
-                    });
-                    return;
-                }
-
-                let parsedStrategy: HSAutosingStrategy;
-                try {
-                    parsedStrategy = JSON.parse(strategyJson);
-                } catch (error) {
-                    HSUI.Notify("Invalid JSON format", {
-                        notificationType: "error"
-                    });
-                    return;
-                }
-
-                HSSettings.validateStrategy(parsedStrategy);
-                parsedStrategy.strategyName = strategyName;
-
-                try {
-                    const { saved } = HSStrategyManager.saveStrategyToStorage(parsedStrategy, undefined, "HSSettings");
-                    if (!saved) {
-                        HSUI.Notify("Failed to save strategy", {
-                            notificationType: "error"
-                        });
-                        return;
-                    }
-
-                    // Refresh the dropdown list after import
-                    HSSettingsUI.updateStrategyDropdownList();
-                    HSSettingsUI.selectAutosingStrategyByName(strategyName);
-                    HSLogger.log(`Strategy "${strategyName}" imported and selected.`, "HSSettings");
-                    HSUI.Notify(`Strategy "${strategyName}" imported successfully and selected.`, {
-                        notificationType: "success"
-                    });
-
-                    const modal = document.querySelector(`#${modalId}`) as HTMLDivElement;
-                    if (modal) {
-                        await modal.transition({ opacity: 0 });
-                        modal.parentElement?.removeChild(modal);
-                    }
-                } catch (error) {
-                    HSUI.Notify("Failed to save strategy", {
-                        notificationType: "error"
-                    });
-                    HSLogger.log(`Strategy import failed: ${error}`, "HSSettings");
-                }
-            });
-        } else {
-            HSUI.Notify("Failed to find HSUI", {
-                notificationType: "error"
-            });
+            const definition = HSSettings.getSetting(name).getDefinition() as HSSettingBase<number>;
+            definition.settingValue = value;
+            definition.calculatedSettingValue = value * (definition.settingValueMultiplier ?? 1);
         }
+        HSSettings.saveSettingsToStorage();
+        HSSettingsUI.refreshSettingControls([...names]);
+        HSLogger.log('Auto-Sing Advanced settings reset to default', this.#context);
     }
 
-    static async editSelectedStrategy(): Promise<void> {
-        const strategySetting = HSSettings.getSetting("autosingStrategy");
-        const selectedValue = strategySetting.getValue();
+    static #advancedResetButton(): HTMLElement | null {
+        const id = HSSettings.getSetting('resetAutosingAdvanced').getDefinition().settingControl?.controlId;
+        return id ? document.getElementById(id) : null;
+    }
 
-        if (!selectedValue || selectedValue === '') {
-            HSUI.Notify("Please select a strategy to edit", {
-                notificationType: "warning"
-            });
-            return;
-        }
-
-        const control = strategySetting.getDefinition().settingControl;
-        if (!control?.selectOptions) return;
-
-        const selectedOption = control.selectOptions.find(opt => opt.value.toString() === selectedValue);
-        if (!selectedOption) return;
-
-        const selectedStrategyName = selectedOption.value.toString();
-        const defaultNames = HSSettings.getDefaultStrategyNames();
-        const isDefaultStrategy = defaultNames.includes(selectedStrategyName);
-
-        const strategies = HSSettings.getStrategies();
-        let strategy = strategies.find(s => s.strategyName === selectedStrategyName);
-
-        if (!strategy && isDefaultStrategy) {
-            strategy = await HSSettings.loadDefaultStrategyByName(selectedStrategyName) || undefined;
-        }
-
-        if (!strategy) {
-            HSUI.Notify("Strategy not found - Cannot edit", {
-                notificationType: "error"
-            });
-            return;
-        }
-
-        if (isDefaultStrategy) {
-            await HSAutosingStrategyModal.open(strategy, {
-                duplicateFromDefault: true,
-                suggestedName: `${strategy.strategyName}_copy`
-            });
-        } else {
-            await HSAutosingStrategyModal.open(strategy);
-        }
+    static #disarmAdvancedReset(): void {
+        clearTimeout(HSSettingsUI.#advancedResetTimer);
+        HSSettingsUI.#advancedResetTimer = undefined;
+        const button = HSSettingsUI.#advancedResetButton();
+        if (button) button.textContent = HSSettings.getSetting('resetAutosingAdvanced').getDefinition().settingDescription;
     }
 }

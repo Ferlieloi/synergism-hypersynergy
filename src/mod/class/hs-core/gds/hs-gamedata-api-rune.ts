@@ -1,14 +1,23 @@
 import Decimal from "break_infinity.js";
-import { calcECC, parseGameDataDecimal } from "./hs-gamedata-utils";
-import { AntUpgrades, RUNE_KEYS } from "../../../types/data-types/hs-gamedata-api-types";
+import { parseGameDataDecimal } from "./hs-gamedata-utils";
+import { AntUpgrades } from "../../../types/data-types/hs-gamedata-api-types";
+import { RUNE_KEYS } from "./hs-gamedata-tables";
 import type { GameData } from "../../../types/data-types/hs-player-savedata";
-import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap, RuneHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
+import type { CalculationCache, CalculationMode, RuneKeys, RuneTypeMap } from "../../../types/data-types/hs-gamedata-api-types";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
 const RUNE_KEY_INDEX = new Map<RuneKeys, number>(RUNE_KEYS.map((rune, index) => [rune, index]))
 
+/**
+ * Class: RuneHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Runes: levels from EXP, free and effective levels, levels per order of magnitude, effects and effectiveness.
+ * Author: Shewchou
+ */
 export class RuneHelper {
-    readonly #ctx: RuneHelperContext;
-    #lastGameData?: GameData;
+    readonly #api: HSGameDataAPI;
+    #lastCacheGeneration?: number;
     readonly #runeEffectsCache = new Map<RuneKeys, Map<number, unknown>>();
     readonly #runeEffectiveLevelCache = new Map<RuneKeys, number>();
     readonly #runeFreeLevelsCache = new Map<RuneKeys, number>();
@@ -18,17 +27,17 @@ export class RuneHelper {
     readonly #levelsPerOOMModeCache = new Map<string, number>();
     #totalRuneLevelsCache?: number;
 
-    constructor(context: RuneHelperContext) {
-        this.#ctx = context;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
         for (const rune of RUNE_KEYS) {
             this.#costLog10Cache.set(rune, this.runes[rune].costCoefficient.log10());
         }
     }
 
     #clearCachesIfGameDataChanged(): void {
-        const gameData = this.#ctx.getGameData();
-        if (gameData !== this.#lastGameData) {
-            this.#lastGameData = gameData;
+        const generation = this.#api.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#runeEffectsCache.clear();
             this.#runeEffectiveLevelCache.clear();
             this.#runeFreeLevelsCache.clear();
@@ -55,17 +64,18 @@ export class RuneHelper {
             costCoefficient: new Decimal(50),
             levelsPerOOM: 150,
             levelsPerOOMIncrease: () => {
-                const data = this.#ctx.getGameData();
+                const data = this.#api.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    (data?.challengecompletions?.[2] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[78] ?? 0)
                     + (data?.researches[111] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[16] ?? 0)
-                    + this.#ctx.getTalismanEffects('chronos').speedOOMBonus
-                    + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
-                    + this.#ctx.getLevelMilestone('speedRune')
+                    + this.#api.talisman.getTalismanEffects('chronos').speedOOMBonus
+                    + this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+                    + this.#api.getLevelMilestone('speedRune')
                 );
             },
             effects: (n: number) => {
@@ -78,9 +88,9 @@ export class RuneHelper {
                     globalSpeed,
                 }
             },
-            effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
-            freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('speed'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            effectiveLevelMult: () => this.#api.firstFiveEffectiveRuneLevelMult(),
+            freeLevels: () => this.#api.firstFiveFreeLevels() + this.#api.getRuneBonusLevels('speed'),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: () => true,
         },
         duplication: {
@@ -88,17 +98,17 @@ export class RuneHelper {
             costCoefficient: new Decimal(20000),
             levelsPerOOM: 120,
             levelsPerOOMIncrease: () => {
-                const data = this.#ctx.getGameData();
+                const data = this.#api.getGameData();
                 return (
-                    0.75 * calcECC('transcend', (data?.challengecompletions?.[1] ?? 0))
+                    0.8 * (data?.challengecompletions?.[1] ?? 0)
                     + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[90] ?? 0)
                     + (data?.researches[112] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
-                    + this.#ctx.getTalismanEffects('exemption').duplicationOOMBonus
-                    + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
-                    + this.#ctx.getLevelMilestone('duplicationRune')
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
+                    + this.#api.talisman.getTalismanEffects('exemption').duplicationOOMBonus
+                    + this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+                    + this.#api.getLevelMilestone('duplicationRune')
                 );
             },
             effects: (n: number) => {
@@ -111,27 +121,28 @@ export class RuneHelper {
                     taxReduction,
                 }
             },
-            effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
-            freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('duplication'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getAchievementReward('duplicationRuneUnlock')),
+            effectiveLevelMult: () => this.#api.firstFiveEffectiveRuneLevelMult(),
+            freeLevels: () => this.#api.firstFiveFreeLevels() + this.#api.getRuneBonusLevels('duplication'),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
+            isUnlocked: () => Boolean(this.#api.achievement.AchRewards.duplicationRuneUnlock()),
         },
         prism: {
             ignoreChal9: false,
             costCoefficient: new Decimal('5e5'),
             levelsPerOOM: 90,
             levelsPerOOMIncrease: () => {
-                const data = this.#ctx.getGameData();
+                const data = this.#api.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.6 * (data?.challengecompletions?.[3] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[79] ?? 0)
                     + (data?.researches[113] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[16] ?? 0)
-                    + this.#ctx.getTalismanEffects('mortuus').prismOOMBonus
-                    + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
-                    + this.#ctx.getLevelMilestone('prismRune')
+                    + this.#api.talisman.getTalismanEffects('mortuus').prismOOMBonus
+                    + this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+                    + this.#api.getLevelMilestone('prismRune')
                 );
             },
             effects: (level: number) => {
@@ -142,59 +153,62 @@ export class RuneHelper {
                     costDivisorLog10,
                 }
             },
-            effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
-            freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('prism'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getAchievementReward('prismRuneUnlock')),
+            effectiveLevelMult: () => this.#api.firstFiveEffectiveRuneLevelMult(),
+            freeLevels: () => this.#api.firstFiveFreeLevels() + this.#api.getRuneBonusLevels('prism'),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
+            isUnlocked: () => Boolean(this.#api.achievement.AchRewards.prismRuneUnlock()),
         },
         thrift: {
             ignoreChal9: false,
             costCoefficient: new Decimal('2.5e7'),
             levelsPerOOM: 60,
             levelsPerOOMIncrease: () => {
-                const data = this.#ctx.getGameData();
+                const data = this.#api.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.4 * (data?.challengecompletions?.[4] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[77] ?? 0)
                     + (data?.researches[114] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[37] ?? 0)
-                    + this.#ctx.getTalismanEffects('midas').thriftOOMBonus
-                    + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
-                    + this.#ctx.getLevelMilestone('thriftRune')
+                    + this.#api.talisman.getTalismanEffects('midas').thriftOOMBonus
+                    + this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+                    + this.#api.getLevelMilestone('thriftRune')
                 );
             },
             effects: (level: number) => {
-                const costDelay = Math.min(1e15, level / 125)
+                // SynergismOfficial/src/Runes.ts runeConstructionEffect
+                const construction = level > 0 ? 0.03 * Math.pow(1 + Math.log(1 + level), 2) : 0
                 const salvage = 2.5 * Math.log(1 + level / 10)
                 const taxReduction = 0.01 + 0.99 * Math.exp(-Math.cbrt(level) / 10)
                 return {
-                    costDelay,
+                    construction,
                     salvage,
                     taxReduction,
                 }
             },
-            effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult(),
-            freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('thrift'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getAchievementReward('thriftRuneUnlock')),
+            effectiveLevelMult: () => this.#api.firstFiveEffectiveRuneLevelMult(),
+            freeLevels: () => this.#api.firstFiveFreeLevels() + this.#api.getRuneBonusLevels('thrift'),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
+            isUnlocked: () => Boolean(this.#api.achievement.AchRewards.thriftRuneUnlock()),
         },
         superiorIntellect: {
             ignoreChal9: false,
             costCoefficient: new Decimal('1e12'),
             levelsPerOOM: 30,
             levelsPerOOMIncrease: () => {
-                const data = this.#ctx.getGameData();
+                const data = this.#api.getGameData();
                 return (
-                    (data?.upgrades[66] ?? 0) * 2
+                    0.2 * (data?.challengecompletions?.[5] ?? 0)
+                    + (data?.upgrades[66] ?? 0) * 2
                     + (data?.researches[115] ?? 0)
-                    + calcECC('ascension', (data?.challengecompletions?.[11] ?? 0))
-                    + 1.5 * calcECC('ascension', (data?.challengecompletions?.[14] ?? 0))
+                    + (data?.challengecompletions?.[11] ?? 0)
+                    + 1.5 * (data?.challengecompletions?.[14] ?? 0)
                     + (data?.cubeUpgrades[37] ?? 0)
-                    + this.#ctx.getTalismanEffects('polymath').SIOOMBonus
-                    + this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
-                    + this.#ctx.getLevelMilestone('SIRune')
+                    + this.#api.talisman.getTalismanEffects('polymath').SIOOMBonus
+                    + this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').runeOOMBonus
+                    + this.#api.getLevelMilestone('SIRune')
                 );
             },
             effects: (level: number) => {
@@ -207,22 +221,22 @@ export class RuneHelper {
                     antSpeed,
                 }
             },
-            effectiveLevelMult: () => this.#ctx.firstFiveEffectiveRuneLevelMult() * this.SIEffectiveRuneLevelMult(),
-            freeLevels: () => this.#ctx.firstFiveFreeLevels() + this.#ctx.getRuneBonusLevels('superiorIntellect'),
-            runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
+            effectiveLevelMult: () => this.#api.firstFiveEffectiveRuneLevelMult() * this.SIEffectiveRuneLevelMult(),
+            freeLevels: () => this.#api.firstFiveFreeLevels() + this.#api.getRuneBonusLevels('superiorIntellect'),
+            runeEXPPerOffering: (purchasedLevels: number) => this.firstFiveRuneEXPMult(purchasedLevels),
             isUnlocked: (data?: GameData) => Boolean((data?.researches?.[82] ?? 0) > 0),
         },
         infiniteAscent: {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e75'),
             levelsPerOOM: 1 / 2,
-            levelsPerOOMIncrease: () => this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').infiniteAscentOOMBonus,
+            levelsPerOOMIncrease: () => this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus').infiniteAscentOOMBonus,
             effects: (level: number) => {
                 const quarkMult = 1 + level / 500 + (level > 0 ? 0.1 : 0)
                 const cubeMult = 1 + level / 100
 
                 const salvagePerkLevels = [30, 40, 61, 81, 111, 131, 161, 191, 236, 260]
-                const salvageCoefficient = 0.025 * salvagePerkLevels.filter((x) => x <= (this.#ctx.getGameData()?.highestSingularityCount ?? 0)).length
+                const salvageCoefficient = 0.025 * salvagePerkLevels.filter((x) => x <= (this.#api.getGameData()?.highestSingularityCount ?? 0)).length
                 const salvage = salvageCoefficient * level
 
                 return {
@@ -232,34 +246,34 @@ export class RuneHelper {
                 }
             },
             effectiveLevelMult: () => 1,
-            freeLevels: () => this.#ctx.getRuneBonusLevels('infiniteAscent'),
+            freeLevels: () => this.#api.getRuneBonusLevels('infiniteAscent'),
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getSingularityChallengeEffect('noQuarkUpgrades', 'topHatUnlock')),
+            isUnlocked: () => Boolean(this.#api.getSingularityChallengeEffect('noQuarkUpgrades', 'topHatUnlock')),
         },
         antiquities: {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e206'),
             levelsPerOOM: 1 / 50,
-            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('capricorn', 'antiquitiesOfAntGodCoefficient'),
+            levelsPerOOMIncrease: () => this.#api.purple.getPurpleAmbrosiaUpgradeEffects('capricorn', 'antiquitiesOfAntGodCoefficient'),
             effects: (level: number, key?: string) => {
                 if (key === 'addCodeCooldownReduction') {
                     return level > 0 ? 0.8 - 0.3 * (level - 1) / (level + 10) : 1
                 } else if (key === 'offeringLog10' || key === 'obtainiumLog10') {
                     return Math.round(300 * (1 - Math.pow(1 - 1 / 300, level)))
                 } else {
-                    return level > 0 ? Math.pow(1.01, Math.min(5, level) * (this.#ctx.getGameData()?.singularityCount ?? 0)) : 1
+                    return level > 0 ? Math.pow(1.01, Math.min(5, level) * (this.#api.getGameData()?.singularityCount ?? 0)) : 1
                 }
             },
             effectiveLevelMult: () => 1,
-            freeLevels: () => this.#ctx.getRuneBonusLevels('antiquities'),
+            freeLevels: () => this.#api.getRuneBonusLevels('antiquities'),
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean((this.#ctx.getGameData()?.platonicUpgrades[20] ?? 0) > 0),
+            isUnlocked: () => Boolean((this.#api.getGameData()?.platonicUpgrades[20] ?? 0) > 0),
         },
         horseShoe: {
             ignoreChal9: true,
             costCoefficient: new Decimal('1e500'),
             levelsPerOOM: 1 / 20,
-            levelsPerOOMIncrease: () => this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseShoeRuneCoefficient'),
+            levelsPerOOMIncrease: () => this.#api.purple.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseShoeRuneCoefficient'),
             effects: (level: number) => {
                 const ambrosiaLuck = 2 * level
                 const redLuck = 2 * level / 5
@@ -271,9 +285,9 @@ export class RuneHelper {
                 }
             },
             effectiveLevelMult: () => 1,
-            freeLevels: () => this.#ctx.getRuneBonusLevels('horseShoe'),
+            freeLevels: () => this.#api.getRuneBonusLevels('horseShoe'),
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseshoeRuneUnlocked')),
+            isUnlocked: () => Boolean(this.#api.purple.getPurpleAmbrosiaUpgradeEffects('sagittarius', 'horseshoeRuneUnlocked')),
         },
         finiteDescent: {
             ignoreChal9: true,
@@ -281,11 +295,11 @@ export class RuneHelper {
             levelsPerOOM: 0.1,
             levelsPerOOMIncrease: () => 0,
             effects: (level: number) => {
-                const ascensionScore = level >= 1 ? 1.04 + 0.96 * (level - 1) / (level + 25) : 1
-                const corruptionFreeLevels = level >= 1 ? 0.01 + 0.14 * (level - 1) / (level + 16) : 0
+                const cubesBanked = level >= 1 ? Math.round(40 + 960 * (level - 1) / (level + 25)) : 0
+                const corruptionFreeLevels = 0.01 * Math.min(level, 100)
                 const infiniteAscentFreeLevel = Math.floor(level / 2)
                 return {
-                    ascensionScore,
+                    cubesBanked,
                     corruptionFreeLevels,
                     infiniteAscentFreeLevel,
                 }
@@ -293,7 +307,7 @@ export class RuneHelper {
             effectiveLevelMult: () => 1,
             freeLevels: () => 0,
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => this.#ctx.getShopLevel('shopSadisticRune') > 0,
+            isUnlocked: () => this.#api.quarkShop.getShopLevel('shopSadisticRune') > 0,
         },
         topHat: {
             ignoreChal9: false,
@@ -312,7 +326,7 @@ export class RuneHelper {
             effectiveLevelMult: () => 1,
             freeLevels: () => 0,
             runeEXPPerOffering: (purchasedLevels: number) => this.universalRuneEXPMult(purchasedLevels),
-            isUnlocked: () => Boolean(this.#ctx.getSingularityChallengeEffect('noQuarkUpgrades', 'topHatUnlock')),
+            isUnlocked: () => Boolean(this.#api.getSingularityChallengeEffect('noQuarkUpgrades', 'topHatUnlock')),
         },
     }
 
@@ -355,8 +369,8 @@ export class RuneHelper {
             if (modeCached !== undefined) return modeCached;
 
             const normalValue = this.getLevelsPerOOM(rune);
-            const ambrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', mode);
-            const normalAmbrosiaEffects = this.#ctx.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', 'normal');
+            const ambrosiaEffects = this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', mode);
+            const normalAmbrosiaEffects = this.#api.ambrosia.getAmbrosiaUpgradeEffects('ambrosiaRuneOOMBonus', 'normal');
             const ambrosiaKey = rune === 'infiniteAscent' ? 'infiniteAscentOOMBonus' : 'runeOOMBonus';
             const result = normalValue
                 - Number(normalAmbrosiaEffects?.[ambrosiaKey] ?? 0)
@@ -382,7 +396,7 @@ export class RuneHelper {
             return this.#runeEffectiveLevelCache.get(rune)!;
         }
 
-        const data = this.#ctx.getGameData()
+        const data = this.#api.getGameData()
         if (!data) return 0
 
         const runeEXP = parseGameDataDecimal(data.runes[rune])
@@ -405,20 +419,20 @@ export class RuneHelper {
             runeExpLog,
         ]
 
-        const cached = this.#ctx.checkCalculationCache(cacheName, calculationVars)
+        const cached = this.#api.checkCalculationCache(cacheName, calculationVars)
         if (cached !== undefined) {
             this.#runeEffectiveLevelCache.set(rune, cached)
             return cached
         }
 
         if (runeDef.isUnlocked && !runeDef.isUnlocked(data)) {
-            this.#ctx.updateCalculationCache(cacheName, { value: 0, cachedBy: calculationVars })
+            this.#api.updateCalculationCache(cacheName, { value: 0, cachedBy: calculationVars })
             this.#runeEffectiveLevelCache.set(rune, 0)
             return 0
         }
 
         if (data.currentChallenge.reincarnation === 9 && !runeDef.ignoreChal9) {
-            this.#ctx.updateCalculationCache(cacheName, { value: 1, cachedBy: calculationVars })
+            this.#api.updateCalculationCache(cacheName, { value: 1, cachedBy: calculationVars })
             this.#runeEffectiveLevelCache.set(rune, 1)
             return 1
         }
@@ -426,7 +440,7 @@ export class RuneHelper {
         const runeLevel = this.getRuneLevelFromEXP(rune, runeEXP)
         const effectiveLevel = (runeLevel + freeLevels) * effectiveMult
 
-        this.#ctx.updateCalculationCache(cacheName, { value: effectiveLevel, cachedBy: calculationVars })
+        this.#api.updateCalculationCache(cacheName, { value: effectiveLevel, cachedBy: calculationVars })
         this.#runeEffectiveLevelCache.set(rune, effectiveLevel)
         return effectiveLevel
     }
@@ -437,7 +451,7 @@ export class RuneHelper {
             return this.#totalRuneLevelsCache;
         }
 
-        const data = this.#ctx.getGameData()
+        const data = this.#api.getGameData()
         if (!data) return 0
 
         const total = RUNE_KEYS.reduce((sum, rune) => {
@@ -460,9 +474,9 @@ export class RuneHelper {
     }
 
     public calculateRuneEffectivenessHypercubeBlessing = () => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         const DR = 1 / 64
-        const effectPerBlessing = this.#ctx.calculateHypercubeBlessingMultiplierPlatonicBlessing() / 1000
+        const effectPerBlessing = this.#api.calculateHypercubeBlessingMultiplierPlatonicBlessing() / 1000
         const limit = 1000
         if ((data?.hypercubeBlessings.talismanBonus ?? 0) < limit) {
             return 1 + effectPerBlessing * (data?.hypercubeBlessings.talismanBonus ?? 0)
@@ -473,7 +487,7 @@ export class RuneHelper {
     }
 
     public calculateRuneEffectivenessTesseractBlessing = () => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         const DR = 1 / 32
         const effectPerBlessing = this.calculateRuneEffectivenessHypercubeBlessing() / 1000
         const limit = 1000
@@ -486,7 +500,7 @@ export class RuneHelper {
     }
 
     public calculateRuneEffectivenessCubeBlessing = () => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         const DR = 1 / 16
         const effectPerBlessing = this.calculateRuneEffectivenessTesseractBlessing() / 10000
         const limit = 1000
@@ -504,26 +518,26 @@ export class RuneHelper {
     }
 
     public SIEffectiveRuneLevelMult = () => {
-        return 1 + ((this.#ctx.getGameData()?.researches[84] ?? 0) / 200)
+        return 1 + ((this.#api.getGameData()?.researches[84] ?? 0) / 200)
     }
 
     // SynergismOfficial/src/Hypercubes.ts calculateSalvageHypercubeBlessing
     public calculateSalvageHypercubeBlessing = (): number => {
-        const factor = Math.pow(Math.log10((this.#ctx.getGameData()?.hypercubeBlessings.runeExp ?? 0) + 1), 1.25)
+        const factor = Math.pow(Math.log10((this.#api.getGameData()?.hypercubeBlessings.runeExp ?? 0) + 1), 1.25)
         const cap = 3 / 2
         return 1 + cap * factor / (40 + factor)
     }
 
     // SynergismOfficial/src/Tesseracts.ts calculateSalvageTesseractBlessing
     public calculateSalvageTesseractBlessing = (): number => {
-        const factor = Math.pow(Math.log10((this.#ctx.getGameData()?.tesseractBlessings.runeExp ?? 0) + 1), 1.25)
+        const factor = Math.pow(Math.log10((this.#api.getGameData()?.tesseractBlessings.runeExp ?? 0) + 1), 1.25)
         const cap = 1 / 2 * this.calculateSalvageHypercubeBlessing()
         return 1 + cap * factor / (20 + factor)
     }
 
     // SynergismOfficial/src/Cubes.ts calculateSalvageCubeBlessing
     public calculateSalvageCubeBlessing = (): number => {
-        const data = this.#ctx.getGameData()
+        const data = this.#api.getGameData()
         const limit = 1000
         const blessings = data?.cubeBlessings.runeExp ?? 0
         const effectMultiplier = (1 + (data?.cubeUpgrades[14] ?? 0) / 100) * this.calculateSalvageTesseractBlessing()
@@ -539,7 +553,7 @@ export class RuneHelper {
     #synergismLevelSalvage = (): number => {
         let salvage = 0
         let salvagePerLevel = 1
-        let remainingLevels = this.#ctx.calculateSynergismLevel()
+        let remainingLevels = this.#api.calculateSynergismLevel()
         while (remainingLevels >= 100) {
             salvage += salvagePerLevel * 100
             remainingLevels -= 100
@@ -550,67 +564,81 @@ export class RuneHelper {
 
     // SynergismOfficial/src/Statistics.ts positiveSalvageStats
     #rawPositiveSalvage = (): number => {
-        const data = this.#ctx.getGameData()
+        const data = this.#api.getGameData()
         const completions = data?.challengecompletions
         // SynergismOfficial/src/Hepteracts.ts hepteracts.abyss.EFFECTS
-        const abyssHepteract = this.#ctx.calculateHepteractEffective('abyss')
+        const abyssHepteract = this.#api.calculateHepteractEffective('abyss')
         const abyssSalvage = 0.1 * Math.floor(10 * Math.log2(Math.max(1, abyssHepteract * 2)))
 
         return (
-            Number(this.#ctx.getAchievementReward('salvage') ?? 0)
+            Number(this.#api.achievement.AchRewards.salvage() ?? 0)
             + this.#synergismLevelSalvage()
-            + this.#ctx.getLevelMilestone('salvageChallengeBuff')
+            + this.#api.getLevelMilestone('salvageChallengeBuff')
             + 7 * (data?.upgrades[61] ?? 0)
-            + this.#ctx.getRuneEffects('thrift').salvage
-            + 0.3 * calcECC('reincarnation', completions?.[6] ?? 0)
-            + 0.3 * calcECC('reincarnation', completions?.[7] ?? 0)
-            + 0.4 * calcECC('reincarnation', completions?.[8] ?? 0)
-            + 0.5 * calcECC('reincarnation', completions?.[9] ?? 0)
-            + this.#ctx.getAntUpgradeEffectValue(AntUpgrades.Salvage, 'salvage')
+            + this.#api.rune.getRuneEffects('thrift').salvage
+            + 0.3 * (completions?.[6] ?? 0)
+            + 0.3 * (completions?.[7] ?? 0)
+            + 0.4 * (completions?.[8] ?? 0)
+            + 0.5 * (completions?.[9] ?? 0)
+            + this.#api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.Salvage, 'salvage')
             + this.calculateSalvageCubeBlessing()
             + 3 * (data?.cubeUpgrades[2] ?? 0)
             + abyssSalvage
             + Math.min(50, 5 * (data?.highestSingularityCount ?? 0))
-            + this.#ctx.getRuneEffects('infiniteAscent').salvage
-            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').positiveSalvage
-            + this.#ctx.getPurpleAmbrosiaUpgradeEffects('virgo', 'assignedBlueberrySalvage')
+            + this.#api.rune.getRuneEffects('infiniteAscent').salvage
+            + this.#api.ambrosia.getRedAmbrosiaUpgradeEffects('salvageYinYang').positiveSalvage
+            + this.#api.purple.getPurpleAmbrosiaUpgradeEffects('virgo', 'assignedBlueberrySalvage')
         )
     }
 
     // SynergismOfficial/src/Statistics.ts positiveSalvageStatMultiplier
     #positiveSalvageMultiplier = (): number => {
-        const highestSingularity = this.#ctx.getGameData()?.highestSingularityCount ?? 0
+        const highestSingularity = this.#api.getGameData()?.highestSingularityCount ?? 0
         const perkSings = [230, 245, 260, 275, 290]
         return 1
             + perkSings.filter((x) => x <= highestSingularity).length / 100
-            + this.#ctx.getTalismanEffects('achievement').positiveSalvageMult
+            + this.#api.talisman.getTalismanEffects('achievement').positiveSalvageMult
     }
 
     // SynergismOfficial/src/Calculate.ts calculatePositiveSalvage
     public calculatePositiveSalvage = (): number => {
         const rawSalvage = this.#rawPositiveSalvage()
-        if (this.#ctx.getGameData()?.singularityChallenges.taxmanLastStand.enabled) {
+        if (this.#api.getGameData()?.singularityChallenges.taxmanLastStand.enabled) {
             return 100 + (rawSalvage * this.#positiveSalvageMultiplier()) / Math.max(1, Math.log(rawSalvage))
         }
         return rawSalvage * this.#positiveSalvageMultiplier()
     }
 
-    // SynergismOfficial/src/Statistics.ts negativeSalvageStats and negativeSalvageStatMultiplier,
-    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvage
-    public calculateNegativeSalvage = (): number => {
-        const data = this.#ctx.getGameData()
-        if (!data) return 0
-
-        const rawSalvage = this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'drought')
-            + this.#ctx.calculateSingularityDebuff('Salvage')
-            + this.#ctx.getRedAmbrosiaUpgradeEffects('salvageYinYang').negativeSalvage
+    // SynergismOfficial/src/Statistics.ts negativeSalvageStatMultiplier,
+    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvageMultiplier
+    public calculateNegativeSalvageMultiplier = (): number => {
+        const data = this.#api.getGameData()
+        if (!data) return 1
 
         const perkSings = [75, 85, 105, 125, 155, 185, 215, 245, 260, 275]
-        const multiplier = 1
+        return Math.max(0, 1
             - perkSings.filter((x) => x <= (data.highestSingularityCount ?? 0)).length / 100
-            + this.#ctx.getTalismanEffects('achievement').negativeSalvageMult
+            + this.#api.talisman.getTalismanEffects('achievement').negativeSalvageMult
+            + (data.platonicUpgrades[13] > 0 ? -0.5 : 0))
+    }
 
-        return rawSalvage * multiplier
+    // SynergismOfficial/src/Statistics.ts negativeSalvageStats,
+    // SynergismOfficial/src/Calculate.ts calculateNegativeSalvage
+    public calculateNegativeSalvage = (): number => {
+        const rawSalvage = this.#api.calculateSingularityDebuff('Salvage')
+            + this.#api.ambrosia.getRedAmbrosiaUpgradeEffects('salvageYinYang').negativeSalvage
+        return rawSalvage * this.calculateNegativeSalvageMultiplier()
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateBadOfferingsSalvage: the corruption level's salvage
+    public calculateBadOfferingsSalvage = (): number => {
+        const salvage = this.#api.corruption.getCorruptionEffect(this.#api.corruption.getActiveCorruptionLevel(), 'salvage') as number
+        return salvage * this.calculateNegativeSalvageMultiplier()
+    }
+
+    // SynergismOfficial/src/Calculate.ts calculateChallenge15RuneSalvage
+    public calculateChallenge15RuneSalvage = (): number => {
+        return this.#api.corruption.getChallenge15CorruptionEffect('drought') * this.calculateNegativeSalvageMultiplier()
     }
 
     // SynergismOfficial/src/Calculate.ts calculateTotalSalvage
@@ -618,14 +646,25 @@ export class RuneHelper {
         return this.calculatePositiveSalvage() + this.calculateNegativeSalvage()
     }
 
-    // SynergismOfficial/src/Calculate.ts calculateSalvageRuneEXPMultiplier
-    public calculateSalvageRuneEXPMultiplier = (): Decimal => {
-        return Decimal.pow(10, this.calculateTotalSalvage() / 30)
+    // SynergismOfficial/src/Calculate.ts calculateFirstFiveRuneSalvage: the corruption salvage only counts for the
+    // first five runes
+    public calculateFirstFiveRuneSalvage = (): number => {
+        return this.calculateTotalSalvage() + this.calculateBadOfferingsSalvage() + this.calculateChallenge15RuneSalvage()
     }
 
-    public universalRuneEXPMult = (purchasedLevels: number): Decimal => {
-        const data = this.#ctx.getGameData();
-        const recycleMultiplier = this.calculateSalvageRuneEXPMultiplier()
+    // SynergismOfficial/src/Calculate.ts calculateSalvageRuneEXPMultiplier
+    public calculateSalvageRuneEXPMultiplier = (salvage = this.calculateTotalSalvage()): Decimal => {
+        return Decimal.pow(10, salvage / 30)
+    }
+
+    // SynergismOfficial/src/Runes.ts firstFiveRuneEXPMult
+    public firstFiveRuneEXPMult = (purchasedLevels: number): Decimal => {
+        return this.universalRuneEXPMult(purchasedLevels, this.calculateFirstFiveRuneSalvage())
+    }
+
+    public universalRuneEXPMult = (purchasedLevels: number, salvage = this.calculateTotalSalvage()): Decimal => {
+        const data = this.#api.getGameData();
+        const recycleMultiplier = this.calculateSalvageRuneEXPMultiplier(salvage)
 
         const allRuneExpAdditiveMultiplier = (
             1
@@ -641,7 +680,7 @@ export class RuneHelper {
             1 + (data?.researches[92] ?? 0) / 20,
             1 + ((data?.ascensionCounter ?? 0) / 1000) * (data?.cubeUpgrades[32] ?? 0),
             1 + (1 / 10) * (data?.constantUpgrades[8] ?? 0),
-            this.#ctx.calculateChallenge15Reward('runeExp')
+            this.#api.calculateChallenge15Reward('runeExp')
         ].reduce((x, y) => x.times(y), new Decimal('1'))
 
         return allRuneExpMultiplier.times(allRuneExpAdditiveMultiplier).times(recycleMultiplier)

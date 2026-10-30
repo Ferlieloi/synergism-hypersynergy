@@ -33,7 +33,6 @@ test('dialog hook: origin captured when queued, answer given at the front of the
     const window = {}
     const { game } = patchAndRun(allDialogs, window)
     assert.equal(window.__HS_DIALOG_HOOK_PATCHED, true)
-    assert.equal(window.__HS_AUTO_CONFIRM_PATCHED, true)
 
     const queued = []
     const front = []
@@ -81,18 +80,14 @@ test('dialog hook: origin captured when queued, answer given at the front of the
     assert.ok(front.every(f => queued.includes(f.origin)))
 })
 
-test('dialog hook: older mods keep __HS_AUTO_CONFIRM for Confirm and Alert', async () => {
+test('dialog hook: without the mod, dialogs are shown (the legacy __HS_AUTO_CONFIRM is gone)', async () => {
     const window = { __HS_AUTO_CONFIRM: true }
-    const { game } = patchAndRun(allDialogs, window)
+    const { game, code } = patchAndRun(allDialogs, window)
+    assert.ok(!code.includes('__HS_AUTO_CONFIRM'))
 
-    assert.equal(await game.Confirm('Sure?'), true)
-    assert.equal(await game.Alert('Hello'), undefined)
-    assert.equal(game.shown.length, 0)
-
-    // Prompts were never auto-answered
-    void game.Prompt('Code?')
+    void game.Confirm('Sure?')
     assert.equal(game.shown.length, 1)
-    assert.equal(game.shown[0].wrapper, 'promptWrapper')
+    assert.equal(game.shown[0].wrapper, 'confirmWrapper')
 })
 
 test('dialog hook: each action hides the 4 other wrappers, lines in any order, defaults with parentheses', async () => {

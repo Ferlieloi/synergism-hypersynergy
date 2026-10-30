@@ -1,5 +1,5 @@
 import Decimal from "break_infinity.js";
-import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups } from "../../../types/data-types/hs-gamedata-api-types"
+import { HepteractEffectiveValues, RedAmbrosiaUpgradeCalculationCollection, SingularityChallengeDataKeys, ISingularityChallengeData, GoldenQuarkUpgradeKey, OcteractUpgradeKey, TalismanKeys, RuneKeys, SynergismLevelMilestones, SynergismLevelMilestoneDefinition, ShopUpgradeGroups, AchievementRewards } from "../../../types/data-types/hs-gamedata-api-types"
 import type { GameData, SingularityChallengeRewards } from "../../../types/data-types/hs-player-savedata"
 
 export const SHOP_UPGRADE_TYPE_KEYS: Record<ShopUpgradeGroups, string[]> = {
@@ -266,10 +266,35 @@ export const challenge15Rewards = {
     baseValue: 1,
     requirement: 2e9
   },
-  score: {
+  wowCubes: {
     value: 1,
     baseValue: 1,
     requirement: 1e10
+  },
+  wowTesseracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowHypercubes: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowPlatonicCubes: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e10
+  },
+  wowHepteracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e15
+  },
+  wowOcteracts: {
+    value: 1,
+    baseValue: 1,
+    requirement: 1e30
   },
   quarks: {
     value: 1,
@@ -1030,17 +1055,17 @@ export const goldenQuarkUpgradeMaxLevels: Record<GoldenQuarkUpgradeKey, GoldenQu
   },
   advancedPack: {
     maxLevel: 1, costPerLevel: 200, specialCostForm: 'Default',
-    effect: (n, key) => key === 'corruptionScoreIncrease' ? (n > 0 ? 0.33 : 0) : (n > 0 ? 0.04 : 0),
+    effect: (n, key) => key === 'cubesBanked' ? (n > 0 ? 500 : 0) : (n > 0 ? 0.04 : 0),
   },
   expertPack: {
     maxLevel: 1, costPerLevel: 800, specialCostForm: 'Default',
     effect: (n, key) => key === 'addCodeAscensionTimeMult' ? (n > 0 ? 1.2 : 1)
-      : key === 'ascensionScoreMult' ? (n > 0 ? 1.5 : 1)
+      : key === 'freeCorruptionLevels' ? (n > 0 ? 1 : 0)
         : (n > 0 ? 0.06 : 0),
   },
   masterPack: {
     maxLevel: 1, costPerLevel: 3200, specialCostForm: 'Default',
-    effect: (n, key) => key === 'ascensionScoreMult' ? (n > 0 ? 2 : 1) : (n > 0 ? 0.08 : 0),
+    effect: (n, key) => key === 'freeCorruptionLevels' ? (n > 0 ? 1 : 0) : (n > 0 ? 0.08 : 0),
   },
   divinePack: { maxLevel: 1, costPerLevel: 12_800, specialCostForm: 'Default' },
   wowPass2: { maxLevel: 1, qualityOfLife: true, costPerLevel: 12_500, specialCostForm: 'Default' },
@@ -1268,10 +1293,9 @@ export const SINGULARITY_CHALLENGE_DATA: {
     uniquerewardcount: 4,
     effect: (n: number) => {
       return {
-        corrScoreIncrease: 0.05 * n,
         blueberrySpeedMult: (1 + n / 60),
         capIncrease: 3 * +(n > 0),
-        freeCorruptionLevel: +(n >= 12),
+        freeCorruptionLevel: n >= 1 ? 1 + 0.2 * n : 0,
         shopUpgrade: n >= 12,
         reinCapIncrease2: 7 * +(n >= 15),
         ascCapIncrease2: 2 * +(n >= 15)
@@ -1499,6 +1523,19 @@ export const calculateSigmoid = (
 
 
 
+// challenge15ScoreReward and challenge15CubeReward in SynergismOfficial/src/Variables.ts
+const challenge15ScoreReward = (e: number, divisor: number) => {
+  const softcap = Math.max(divisor, 1e20)
+  return 1 + (1 / 4) * Math.pow(Math.max(divisor, Math.min(e, softcap)) / divisor, 1 / 4)
+    * Math.pow(Math.max(e, softcap) / softcap, 1 / 8)
+}
+
+const challenge15CubeReward = (e: number, power: number, divisor = 1e10) => {
+  const softcapped = challenge15ScoreReward(Math.min(e, 1e30), divisor)
+  const excess = challenge15ScoreReward(Math.max(e, 1e30), divisor) / challenge15ScoreReward(1e30, divisor)
+  return Math.pow(softcapped, power) * Math.pow(excess, power / 2)
+}
+
 // https://github.com/Pseudo-Corp/SynergismOfficial/blob/master/src/Variables.ts#L454
 export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: number) => number } = {
   cube1: (e: number) => 1 + ((1 / 50) * Math.log2(e / 175)),
@@ -1527,10 +1564,12 @@ export const c15Functions: { [key in keyof typeof challenge15Rewards]: (e: numbe
   constantBonus: (e: number) => 1 + (1 / 5) * Math.pow(e / 1e8, 2 / 3),
   cube4: (e: number) => 1 + ((1 / 200) * Math.log(e / 1.25e8)) / Math.log(2),
   spiritBonus: (e: number) => 1 + (1 / 5) * Math.pow(e / 2e9, 1 / 4),
-  score: (e: number) =>
-    (e >= 1e20)
-      ? 1 + (1 / 4) * Math.pow(e / 1e10, 1 / 8) * Math.pow(1e10, 1 / 8)
-      : 1 + (1 / 4) * Math.pow(e / 1e10, 1 / 4),
+  wowCubes: (e: number) => challenge15CubeReward(e, 1 / 4.1),
+  wowTesseracts: (e: number) => challenge15CubeReward(e, 0.35),
+  wowHypercubes: (e: number) => challenge15CubeReward(e, 0.5),
+  wowPlatonicCubes: (e: number) => challenge15CubeReward(e, 0.75),
+  wowHepteracts: (e: number) => challenge15CubeReward(e, 0.85, 1e15),
+  wowOcteracts: (e: number) => Math.sqrt(challenge15ScoreReward(e, 1e30)),
   quarks: (e: number) => 1 + (3 / 400) * Math.log2(e * 32 / 1e11),
   hepteractsUnlocked: (e: number) => e >= 1e15 ? 1 : 0,
   challengeHepteractUnlocked: (e: number) => e >= 2e15 ? 1 : 0,
@@ -1636,3 +1675,142 @@ export const exponentialCostProgressionDecimal = (baseMult: string, level: numbe
     mythicalFragment: getCost(level - 150, 5),
   };
 };
+
+export const RUNE_KEYS: RuneKeys[] = [
+    'speed',
+    'duplication',
+    'prism',
+    'thrift',
+    'superiorIntellect',
+    'infiniteAscent',
+    'antiquities',
+    'horseShoe',
+    'topHat',
+    'finiteDescent',
+]
+
+export const TALISMAN_EXEMPTION_INSCRIPT_VALUES = [0, -0.2, -0.3, -0.4, -0.45, -0.5, -0.55, -0.6, -0.61, -0.62, -0.65]
+export const TALISMAN_CHRONOS_INSCRIPT_VALUES = [1, 1.04, 1.08, 1.12, 1.16, 1.20, 1.25, 1.30, 1.325, 1.35, 1.4]
+export const TALISMAN_MIDAS_INSCRIPT_VALUES = [1, 1.04, 1.08, 1.12, 1.16, 1.20, 1.25, 1.30, 1.325, 1.35, 1.40]
+export const TALISMAN_METAPHYSICS_INSCRIPT_VALUES = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2]
+export const TALISMAN_POLYMATH_INSCRIPT_VALUES = [1, 1.04, 1.08, 1.12, 1.16, 1.20, 1.25, 1.30, 1.325, 1.35, 1.40]
+export const TALISMAN_MORTUUS_INSCRIPT_VALUES = [1, 1.05, 1.1, 1.15, 1.2, 1.3, 1.4, 1.5, 1.65, 1.8, 2]
+export const TALISMAN_PLASTIC_INSCRIPT_VALUES = [1, 1.005, 1.01, 1.015, 1.02, 1.025, 1.03, 1.04, 1.045, 1.05, 1.0666]
+export const TALISMAN_WOWSQUARE_INSCRIPT_VALUES = [1, 1.025, 1.05, 1.075, 1.1, 1.125, 1.15, 1.2, 1.225, 1.25, 1.30]
+export const TALISMAN_ACHIEVEMENT_EFFECT_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.03]
+export const TALISMAN_COOKIEGRANDMA_INSCRIPT_VALUES = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+export const TALISMAN_HORSESHOE_INSCRIPT_VALUES = [0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.012, 0.015, 0.02]
+
+export const ACHIEVEMENT_REWARD_TYPES: AchievementRewards[] = [
+    'acceleratorPower',
+    'accelerators',
+    'multipliers',
+    'accelBoosts',
+    'crystalMultiplier',
+    'taxReduction',
+    'particleGain',
+    'conversionExponent',
+    'chronosTalisman',
+    'midasTalisman',
+    'metaphysicsTalisman',
+    'polymathTalisman',
+    'talismanPower',
+    'sacrificeMult',
+    'antSpeed',
+    'antSacrificeUnlock',
+    'preserveAnthillCount',
+    'preserveAnthillCountSingularity',
+    'antAutobuyers',
+    'inceptusAutobuy',
+    'fortunaeAutobuy',
+    'tributumAutobuy',
+    'celeritasAutobuy',
+    'exploratoremAutobuy',
+    'sacrificiumAutobuy',
+    'experientiaAutobuy',
+    'hicAutobuy',
+    'scientiaAutobuy',
+    'praemoenioAutobuy',
+    'phylacteriumAutobuy',
+    'antELOAdditive',
+    'antELOAdditiveMultiplier',
+    'wowSquareTalisman',
+    'ascensionCountMultiplier',
+    'ascensionCountAdditive',
+    'wowCubeGain',
+    'wowTesseractGain',
+    'wowHypercubeGain',
+    'wowPlatonicGain',
+    'quarkGain',
+    'wowHepteractGain',
+    'cubesBanked',
+    'constUpgrade1Buff',
+    'constUpgrade2Buff',
+    'platonicToHypercubes',
+    'statTracker',
+    'ascensionRewardScaling',
+    'overfluxConversionRate',
+    'diamondUpgrade18',
+    'diamondUpgrade19',
+    'diamondUpgrade20',
+    'prestigeCountMultiplier',
+    'transcensionCountMultiplier',
+    'reincarnationCountMultiplier',
+    'duplicationRuneUnlock',
+    'prismRuneUnlock',
+    'thriftRuneUnlock',
+    'salvage',
+    'offeringBonus',
+    'obtainiumBonus',
+    'transcendToPrestige',
+    'reincarnationToTranscend',
+    'antSacrificeCountMultiplier',
+    'freeAntUpgrades',
+    'autoAntSacrifice',
+    'antSpeed2UpgradeImprover',
+    'antSacrificeToReincarnation'
+] as const;
+
+export const FAVORITE_UPGRADE_GQ_DEPENDENCIES = ['goldenQuarks1', 'platonicDelta', 'oneMind'] as const;
+export const FAVORITE_UPGRADE_OCTERACT_DEPENDENCIES = ['octeractImprovedFree', 'octeractCorruption', 'octeractBlueberries'] as const;
+export const FAVORITE_UPGRADE_RED_AMBROSIA_DEPENDENCIES = ['tutorial', 'infiniteShopUpgrades', 'blueberryGenerationSpeed2'] as const;
+
+export const offeringPotionThresholds = [
+    1,
+    10,
+    25,
+    50,
+    100,
+    500,
+    1000,
+    10000,
+    50000,
+    100000,
+    1000000,
+    10000000,
+    100000000,
+    1000000000,
+    10000000000,
+    100000000000,
+    1000000000000,
+    10000000000000,
+    100000000000000
+]
+
+export const obtainiumPotionThresholds = [
+    1,
+    20,
+    50,
+    250,
+    1000,
+    20000,
+    400000,
+    10000000,
+    400000000,
+    10000000000,
+    100000000000,
+    1000000000000,
+    10000000000000,
+    100000000000000,
+    1000000000000000
+]

@@ -1,8 +1,8 @@
-import { escapeHtml, formatNumber } from "../hs-heater-utils";
+import { escapeHtml, formatNumber, HEATER_EFFECT_PAIR_SEPARATOR } from "../hs-heater-utils";
 import { getEffectiveHeaterIconSrc } from "../hs-heater-icon-store";
 import { getHeaterResultSectionDefinitions, getHeaterTypeConfig, resolveHeaterTypeDescription, type HeaterResultSectionDef } from "../hs-heater-result-config";
 import { HSHeaterResultStore, pickBestHyperfluxRowIndex, type NormalizedHeaterResultEntry } from "../hs-heater-result-store";
-import type { HeaterResultArrayKey, HeaterResultRow } from "../../../../types/data-types/hs-heater-types";
+import type { HeaterResultAffordableRow, HeaterResultArrayKey, HeaterResultLimits, HeaterResultRow, HeaterResultShortfall, HeaterResultUnaffordableRow, HeaterShortResource } from "../../../../types/data-types/hs-heater-types";
 
 type ResultKey = HeaterResultArrayKey;
 
@@ -24,6 +24,9 @@ type NormalizedResultRow = {
     effectValue:        HeaterResultRow[typeof RESULT_COL_INDEX.effect];
     p4x4Value:          HeaterResultRow[typeof RESULT_COL_INDEX.p4x4];
     maxedValue:         HeaterResultRow[typeof RESULT_COL_INDEX.maxed];
+    shortfall:          HeaterResultShortfall | undefined;
+    limits:             HeaterResultLimits | undefined;
+    effectTitle:        string | undefined;
 };
 
 function buildTypeLabelWithIcon(label: string, semanticId?: string, infoTitle = label): string {
@@ -71,22 +74,68 @@ function normalizeArrayResultRow(row: HeaterResultRow): NormalizedResultRow {
         effectValue:        row[RESULT_COL_INDEX.effect],
         p4x4Value:          row[RESULT_COL_INDEX.p4x4],
         maxedValue:         row[RESULT_COL_INDEX.maxed],
+        shortfall:          row[0] === "Unaffordable" ? (row as HeaterResultUnaffordableRow)[7] : undefined,
+        limits:             row[0] === "Unaffordable" ? undefined : (row as HeaterResultAffordableRow)[7],
+        effectTitle:        row[0] === "Unaffordable" ? undefined : (row as HeaterResultAffordableRow)[8],
     };
 }
 
-function buildHeaderTooltipLabel(label: string, tooltip: string): string {
-    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${escapeHtml(label)}</th>`;
+// "Max SR1" + " (1/2)": the level of the type's labelLevel upgrade in the row's tree
+function buildTypeLabel(entry: NormalizedHeaterResultEntry, loadoutJson: string): string {
+    const labelLevel = getHeaterTypeConfig(entry.key)?.labelLevel;
+    if (!labelLevel || !loadoutJson) return entry.label;
+    let level = 0;
+    try {
+        level = Number(JSON.parse(loadoutJson)[labelLevel.upgrade] ?? 0);
+    } catch {
+        return entry.label;
+    }
+    return `${entry.label} (${level}/${labelLevel.maxLevel})`;
+}
+
+// Next to a row's ✘: the resource(s) that would raise it, either one
+function buildLimitIcons(limits: HeaterResultLimits): string {
+    const icons: string[] = [];
+    if (limits.ambrosia)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Ambrosia.png" alt="Ambrosia" title="More Ambrosia would raise it" />`);
+    if (limits.blueberries)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Blueberries.png" alt="Blueberries" title="More Blueberries would raise it" />`);
+    return icons.join("");
+}
+
+// Next to an unaffordable row's ✘: its short resource(s), all of them needed
+function buildShortfallIcons(shortfall: HeaterResultShortfall): string {
+    const icons: string[] = [];
+    if (shortfall.ambrosia)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Ambrosia.png" alt="Ambrosia" title="Not enough Ambrosia" />`);
+    if (shortfall.blueberries)
+        icons.push(`<img class="hs-heater-limit-icon" src="Pictures/Default/Blueberries.png" alt="Blueberries" title="Not enough Blueberries" />`);
+    return icons.join("");
+}
+
+// An unaffordable row's short resource: what the tree needs, "≥" for a minimum
+function buildShortCostCell(short: HeaterShortResource, atLeast: boolean): string {
+    const need = `${atLeast ? "≥ " : ""}${formatCostCellValue(short.need)}`;
+    return `<td class="hs-heater-short-cost" title="You have ${formatCostCellValue(short.have)}">${need}</td>`;
+}
+
+function buildHeaderTooltipLabel(label: string, tooltip: string, iconHtml = ""): string {
+    return `<th class="hs-heater-header-tooltip" data-tooltip="${escapeHtml(tooltip)}">${iconHtml}${escapeHtml(label)}</th>`;
 }
 
 function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string {
     const { showP4x4, showRouting, effectHeader } = sectionDef;
     const blueberryHeader = `<img src="Pictures/Default/Blueberries.png" class="hs-heater-header-icon" />`;
+    // Ambrosia.png fills its frame, Blueberries.png doesn't: drawn smaller to match
+    const ambrosiaHeader = `<img src="Pictures/Default/Ambrosia.png" class="hs-heater-header-icon hs-heater-header-icon-small" />`;
     if (showRouting) {
         const splitHeader = `<th colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${escapeHtml(effectHeader)}</span><span>Routing</span></div></th>`;
-        return `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${splitHeader}<th>Maxed?</th></tr>`;
+        return `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th>${splitHeader}<th>Maxed?</th></tr>`;
     }
+    // Every p4x4 row's Effect is a cube multiplier, SR rows included
+    const cubeIcon = `<img src="Pictures/Default/TinyWow3.png" class="hs-heater-header-icon hs-heater-effect-header-icon" alt="Cubes" />`;
     const effectLabel = showP4x4
-        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50")
+        ? buildHeaderTooltipLabel(effectHeader, "Effect counts Hyperflux as if you have P4x4x50", cubeIcon)
         : `<th>${escapeHtml(effectHeader)}</th>`;
     const p4x4Label = showP4x4
         ? buildHeaderTooltipLabel("p4x4 eq", `"p4x4 eq" indicates the amount\n`
@@ -98,8 +147,8 @@ function buildArraySectionHeaderRow(sectionDef: HeaterResultSectionDef): string 
         : `<th>p4x4 eq</th>`;
 
     return showP4x4
-        ? `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
-        : `<tr class="hs-heater-header-row"><th>Types</th><th>Loadout</th><th>${blueberryHeader}</th><th>Cost</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
+        ? `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th>${effectLabel}${p4x4Label}<th>Maxed?</th></tr>`
+        : `<tr class="hs-heater-header-row"><th>Loadout</th><th>Actions</th><th>${blueberryHeader}</th><th>${ambrosiaHeader}</th><th colspan="2">${escapeHtml(effectHeader)}</th><th>Maxed?</th></tr>`;
 }
 
 // The H row that wins at the live P4x4 when the table is drawn (it's redrawn
@@ -119,6 +168,17 @@ function buildLoadoutActionControls(escapedFullLoadout: string, escapedLoadoutLa
     const copyButton = `<button class="hs-heater-copy-loadout-btn hs-heater-json-tooltip-trigger" type="button" data-loadout="${escapedFullLoadout}" data-loadout-label="${escapedLoadoutLabel}">Copy</button>`;
     const importButton = `<button class="hs-heater-import-loadout-btn" type="button" data-loadout="${escapedFullLoadout}" data-loadout-label="${escapedLoadoutLabel}">Import</button>`;
     return `${copyButton}${importButton}`;
+}
+
+// Obt + Off's Effect is two numbers, each after its resource's game icon
+function buildEffectHtml(entry: NormalizedHeaterResultEntry, effectValue: unknown): string {
+    const parts = String(effectValue).split(HEATER_EFFECT_PAIR_SEPARATOR);
+    if (entry.key !== "obtAndOff" || parts.length !== 2)
+        return escapeHtml(String(effectValue));
+    return `<span class="hs-heater-effect-pair">`
+        + `<img class="hs-heater-effect-icon" src="Pictures/Default/Obtainium.png" alt="Obtainium" />${escapeHtml(parts[0])}`
+        + `<img class="hs-heater-effect-icon" src="Pictures/Default/Offering.png" alt="Offerings" />${escapeHtml(parts[1])}`
+        + `</span>`;
 }
 
 // Purple rows show the Purple Reactor routing they assume, next to the effect
@@ -175,27 +235,40 @@ function buildArraySectionDataRow(
     const loadoutCell = isUnaffordable
         ? `<td>${escapeHtml(String(loadoutValue))}</td>`
         : `<td><div class="hs-heater-loadout-buttons">${actionControlsHtml}</div></td>`;
+    const typeLabel = buildTypeLabel(entry, isValidJson ? fullLoadout : "");
     const resultCell = rowSpan === 1
-        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+        ? `<td${typeCellClass}>${buildTypeLabelWithIcon(typeLabel, entry.semanticId, infoTitle)}</td>`
         : entry.rowIndex === 0
-            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(entry.label, entry.semanticId, infoTitle)}</td>`
+            ? `<td${typeCellClass} rowspan="${rowSpan}">${buildTypeLabelWithIcon(typeLabel, entry.semanticId, infoTitle)}</td>`
             : "";
-    const blueberryCostCell = `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
-    const costCell = `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
+    const { shortfall } = rowModel;
+    const blueberryCostCell = shortfall?.blueberries
+        ? buildShortCostCell(shortfall.blueberries, shortfall.atLeast)
+        : `<td>${formatCostCellValue(rowModel.blueberryCostValue)}</td>`;
+    const costCell = shortfall?.ambrosia
+        ? buildShortCostCell(shortfall.ambrosia, shortfall.atLeast)
+        : `<td>${formatCostCellValue(rowModel.costValue)}</td>`;
     // Effect takes two columns, or shares them with p4x4 eq. With the routing,
     // it stays one cell, split inside (see .hs-heater-split-cell).
-    const effectHtml = escapeHtml(String(rowModel.effectValue));
+    const effectHtml = buildEffectHtml(entry, rowModel.effectValue);
+    const effectTitle = rowModel.effectTitle ? ` title="${escapeHtml(rowModel.effectTitle)}"` : "";
     const effectCell = showRouting
-        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
+        ? `<td colspan="2" class="hs-heater-split-cell"><div class="hs-heater-split"><span${effectTitle}>${effectHtml}</span>${buildPurpleRoutingHtml(entry)}</div></td>`
         : showP4x4
-            ? `<td>${effectHtml}</td>`
-            : `<td colspan="2">${effectHtml}</td>`;
+            ? `<td${effectTitle}>${effectHtml}</td>`
+            : `<td colspan="2"${effectTitle}>${effectHtml}</td>`;
     const bestHMarker = bestH && entry.key === "hyperflux" && entry.rowIndex === bestH.rowIndex
         ? ` <span class="hs-heater-best-h-marker" title="Best H at your current P4x4 (${bestH.p4x4})">★ now</span>`
         : "";
     const p4x4Cell = showP4x4 && !showRouting ? `<td>${escapeHtml(String(rowModel.p4x4Value))}${bestHMarker}</td>` : "";
-    const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? '<span class="hs-heater-status-unmaxed">✘</span>' : escapeHtml(String(rowModel.maxedValue))}</td>`;
-    // A type picked in "Your loadout order" that can't be afforded: the whole row in red
+    // A row whose ✔ is set after the fact (bar income) can still carry limits: shown only on ✘
+    const limitIcons = rowModel.maxedValue !== false ? ""
+        : shortfall ? buildShortfallIcons(shortfall)
+        : rowModel.limits ? buildLimitIcons(rowModel.limits)
+        : "";
+    const maxCell = `<td>${rowModel.maxedValue === true ? '<span class="hs-heater-status-maxed">✔</span>' : rowModel.maxedValue === false ? `<span class="hs-heater-status-unmaxed">✘</span>${limitIcons}` : escapeHtml(String(rowModel.maxedValue))}</td>`;
+    // A type picked in "Your loadout order" that can't be afforded: the whole
+    // row in the orange of that slot's border
     const rowClass = isSelectedType && isUnaffordable ? ' class="hs-heater-selected-unaffordable-row"' : '';
     return `<tr${rowClass}>${resultCell}${loadoutCell}${blueberryCostCell}${costCell}${effectCell}${p4x4Cell}${maxCell}</tr>`;
 }

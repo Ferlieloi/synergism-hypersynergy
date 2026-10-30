@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { detectSteamPathWindows, detectSevenZip } = require('../lib/steamLocator')
+const { detectSteamPathWindows, detectSevenZip, getBundledSevenZipPath } = require('../lib/steamLocator')
 
 test('Steam registry detection yields so the window can process events while a query is pending', async t => {
     const steamPath = fs.mkdtempSync(path.join(os.tmpdir(), 'hs-steam-'))
@@ -54,6 +54,23 @@ test('7-Zip detection resolves the executable from an asynchronous registry quer
         }
     })
     assert.equal(result, exe)
+})
+
+test('the loader\'s own 7za is found in the packaged resources, or in node_modules when run from source', t => {
+    const resourcesPath = fs.mkdtempSync(path.join(os.tmpdir(), 'hs-resources-'))
+    const previous = process.resourcesPath
+    t.after(() => {
+        process.resourcesPath = previous
+        fs.rmSync(resourcesPath, { recursive: true, force: true })
+    })
+    process.resourcesPath = resourcesPath
+    assert.equal(getBundledSevenZipPath({ isPackaged: true }), null)
+    const exe = path.join(resourcesPath, '7zip-bin', '7za.exe')
+    fs.mkdirSync(path.dirname(exe))
+    fs.writeFileSync(exe, '')
+    assert.equal(getBundledSevenZipPath({ isPackaged: true }), exe)
+
+    assert.equal(getBundledSevenZipPath({ isPackaged: false }), require('7zip-bin').path7za)
 })
 
 test('registry detection does not spawn Windows commands on other platforms', async () => {

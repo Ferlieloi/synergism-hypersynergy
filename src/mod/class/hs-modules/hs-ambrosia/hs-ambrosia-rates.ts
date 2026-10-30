@@ -28,7 +28,7 @@ interface HSAmbrosiaRateHeaderModule {
  * Description:
  *     Created by HSAmbrosia. The hourly ambrosia, red ambrosia and purple honey rates expected for the active loadout:
  *     under the Ambrosia tab's bars while the tab is open, and as three modules of the game's header (with the
- *     patcher's header modules patch). Computed from GDS's save data; the tab forces a save when GDS delivers none.
+ *     patcher's header modules patch). Computed from GDS's data; the tab forces a read when GDS delivers none.
  * Author: Shewchou
  */
 export class HSAmbrosiaRates {

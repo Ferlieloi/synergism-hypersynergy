@@ -96,63 +96,6 @@
 #hsAutomationHeader[data-size="L"] .hs-quickbar-slots-wrapper { zoom: 1.25; }
 
 
-/*  ==================================================
-    --- Game's corruption loadout header modules ---
-    ================================================== */
-
-/* The levels line under the icon and slots (HSCorruption), on the "Corruption loadouts" module and its loadout page
-   module. Not on a locked module, which the game hides with display: none. In the grid (and the tray): a grid, the
-   line across both columns. */
-:is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader).hs-corruption-levels-shown:not(.headerModuleLocked) {
-   display: grid;
-   grid-template-columns: auto 1fr;
-   align-items: center;
-}
-.hs-corruption-header-levels {
-   grid-column: 1 / -1;
-   font-size: 0.7em;
-   font-weight: 500;
-   letter-spacing: 0.03em;
-   line-height: 1.2;
-}
-/* Size the module from its controls. Changing level strings must keep centered slots in the same columns. */
-#headerGrid .hs-corruption-header-levels {
-   contain: inline-size;
-   min-width: 0;
-}
-:is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader)[data-size="L"] .hs-corruption-header-levels {
-   font-size: 0.75em;
-}
-/* In the top row: out of the flow, hanging under the module into the row's bottom margin (10px in the game), so the
-   row's height and alignment stay the game's. That margin grows by what the line needs past it, by the module's size
-   (the line is 0.7em of the module's font, 0.75em at L). */
-.ascensionStats :is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader).hs-corruption-levels-shown:not(.headerModuleLocked) {
-   display: flex;
-   position: relative;
-}
-.ascensionStats .hs-corruption-header-levels {
-   position: absolute;
-   top: 100%;
-   left: 0;
-   white-space: nowrap;
-}
-.ascensionStats:has(:is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader).hs-corruption-levels-shown:not(.headerModuleLocked)) {
-   margin-bottom: 13px;
-}
-.ascensionStats:has(:is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader).hs-corruption-levels-shown[data-size="S"]:not(.headerModuleLocked)) {
-   margin-bottom: 10px;
-}
-.ascensionStats:has(:is(#corruptionLoadoutsHeader, #corruptionLoadoutPageHeader).hs-corruption-levels-shown[data-size="L"]:not(.headerModuleLocked)) {
-   margin-bottom: 16px;
-}
-.hs-corruption-header-levels-current {
-   color: #ba2d2d;
-}
-.hs-corruption-header-levels-next {
-   color: #aeaeae;
-}
-
-
 /* Icon picking (game's header loadout slots, heater results). Above the loaded slot's rainbow/silver border
    (hs-animations.css, !important, a border-image), as specific as its rules and injected after them */
 .hs-quickbar-slot-pickmode,

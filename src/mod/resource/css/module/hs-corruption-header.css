@@ -1,0 +1,94 @@
+/* The game's "Corruption level" header module (HSCorruptionHeader): the next level after its text, and the popover
+   of level controls a click opens */
+
+html.hs-corruption-header-controls #mainHeader:not(.headerEditMode) #corruptionLevelHeader {
+   cursor: pointer;
+}
+
+/* " → 30", the module's white-space: pre keeps its leading space */
+#corruptionLevelHeader > .hs-corruption-header-next {
+   color: silver;
+}
+#corruptionLevelHeader > .hs-corruption-header-next:empty {
+   display: none;
+}
+
+#hs-corruption-popover {
+   position: absolute;
+   z-index: 10000;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   gap: 6px;
+   padding: 8px 10px;
+   background-color: #111;
+   border: 1px solid #555;
+   border-radius: 4px;
+   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+   color: white;
+   font-size: 14px;
+}
+#hs-corruption-popover[hidden],
+#hs-corruption-popover [hidden] {
+   display: none;
+}
+
+#hs-corruption-popover .hs-corr-pop-title {
+   color: #ccc;
+}
+
+/* As the game's #corruptionLevelControls and #corruptionLevelInput */
+#hs-corruption-popover .hs-corr-pop-row {
+   display: flex;
+   align-items: center;
+   gap: 4px;
+}
+#hs-corruption-popover .hs-corr-pop-input {
+   width: 5em;
+   border: 1px solid orange;
+   color: gold;
+   background-color: var(--blackbtn-color);
+}
+
+/* The game's level buttons at their text's width (the game gives them a fixed one), for a narrower popover */
+#hs-corruption-popover .hs-corr-pop-row > :is(.corruptionReset, .corruptionDown, .corruptionUp, .corruptionMax) {
+   width: auto;
+   min-width: 30px;
+   padding: 0 5px;
+}
+
+/* The game's cleanse icon as it is (it has its own frame), as high as the buttons; "OK?" over it while it waits,
+   so the button keeps its size */
+#hs-corruption-popover .hs-corr-pop-cleanse {
+   position: relative;
+   margin-right: 4px;
+   padding: 0;
+   background-color: transparent;
+}
+#hs-corruption-popover .hs-corr-pop-cleanse > img {
+   display: block;
+   width: 30px;
+   height: 30px;
+}
+#hs-corruption-popover .hs-corr-pop-cleanse-confirm {
+   position: absolute;
+   inset: 0;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   background-color: rgba(139, 0, 139, 0.85);
+   color: white;
+   font-weight: bold;
+}
+#hs-corruption-popover .hs-corr-pop-cleanse-confirm:empty {
+   display: none;
+}
+
+#hs-corruption-popover .hs-corr-pop-toggles {
+   display: flex;
+   gap: 24px;
+}
+/* Smaller than the tab's (scale 1.4) */
+#hs-corruption-popover .hs-corr-pop-toggle > input {
+   transform: none;
+}

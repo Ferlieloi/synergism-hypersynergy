@@ -58,6 +58,52 @@ export class HSHeaterUIStyles {
                 display: none;
             }
 
+            .hs-heater-two-workers {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 0px 8px;
+                /* Close to the heat button: the column's 12px gap less 8 */
+                margin-top: -8px;
+                color: #bbb;
+                cursor: help;
+            }
+
+            /* Shows there is a tooltip: a circle like the results' type info trigger */
+            .hs-heater-two-workers-help {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 16px;
+                width: 16px;
+                height: 16px;
+                box-sizing: border-box;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                border-radius: 50%;
+                color: #9a9a9a;
+                font-size: 11px;
+                font-weight: bold;
+                line-height: 1;
+                user-select: none;
+            }
+
+            .hs-heater-two-workers[hidden] {
+                display: none;
+            }
+
+            /* Same as the Active Branches checkboxes */
+            .hs-heater-two-workers input {
+                width: 16px;
+                height: 16px;
+                margin: 0;
+                cursor: pointer;
+                accent-color: #a22a2a;
+                box-sizing: border-box;
+                padding: 0;
+                border: 0;
+                flex-shrink: 0;
+            }
+
             /* === Shared Table Base Styles === */
             .hs-heater-input-table,
             .hs-heater-results-table,
@@ -341,6 +387,19 @@ export class HSHeaterUIStyles {
                 align-items: center;
             }
 
+            /* Sized like the table's text, not like the panel's 150x30 buttons */
+            #hs-heater-red-ambrosia-action-btn {
+                width: auto;
+                height: 22px;
+                min-height: 0;
+                line-height: 20px;
+                padding: 0 8px;
+                border-width: 1px;
+                box-sizing: border-box;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
             #hs-heater-red-ambrosia-footer-note {
                 width: auto;
                 display: inline-block;
@@ -357,6 +416,17 @@ export class HSHeaterUIStyles {
                 height: auto;
                 color: #e0b84f;
                 text-align: center;
+            }
+
+            .hs-heater-input-table td.hs-heater-input-heading {
+                height: auto;
+                padding: 6px 4px 1px;
+                border-left: none;
+                border-right: none;
+                color: #9a9a9a;
+                font-size: 0.85em;
+                font-weight: bold;
+                text-align: left;
             }
 
             .hs-heater-select-input {
@@ -401,29 +471,12 @@ export class HSHeaterUIStyles {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                padding: 0px 14px 0px 8px;
+                padding: 0px 8px;
                 border-radius: 4px;
-                transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
-                position: relative;
             }
 
-            .hs-heater-active-branch-required {
-                background-color: rgba(192, 46, 46, 0.20);
-                color: #ffffff;
-            }
-
-            .hs-heater-active-branch-required::after {
-                content: "🔥";
-                position: absolute;
-                top: 0;
-                right: 0;
-                width: 14px;
-                height: 14px;
-                display: grid;
-                place-items: center;
-                font-size: 10px;
-                opacity: 0.33;
-                pointer-events: none;
+            .hs-heater-active-branch-note {
+                color: #9a9a9a;
             }
 
             .hs-heater-loadout-buttons {
@@ -437,6 +490,35 @@ export class HSHeaterUIStyles {
             .hs-heater-inputs-title {
                 font-weight: 700;
                 text-align: left;
+            }
+
+            .hs-heater-active-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+
+            .hs-heater-active-bulk {
+                display: flex;
+                gap: 2px;
+            }
+
+            .hs-heater-active-bulk-btn {
+                background: none;
+                border: none;
+                margin: 0;
+                padding: 0 2px;
+                min-width: 0;
+                height: auto;
+                font-size: 14px;
+                line-height: 1;
+                color: #999;
+                cursor: pointer;
+            }
+
+            .hs-heater-active-bulk-btn:hover {
+                color: #ddd;
             }
 
             .hs-heater-type-selects-grid {
@@ -732,6 +814,23 @@ export class HSHeaterUIStyles {
                 object-fit: contain;
             }
 
+            .hs-heater-effect-pair {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+            }
+
+            .hs-heater-effect-icon {
+                width: 16px;
+                height: 16px;
+                object-fit: contain;
+            }
+
+            /* The Offerings pair, apart from the Obtainium one */
+            .hs-heater-effect-icon + .hs-heater-effect-icon {
+                margin-left: 8px;
+            }
+
             .hs-heater-json-tooltip-trigger {
                 display: inline-block;
                 cursor: help;
@@ -741,13 +840,28 @@ export class HSHeaterUIStyles {
             /* === Status & Colors === */
             .hs-heater-status-maxed { color: #08ba52; }
             .hs-heater-status-unmaxed { color: #962f2f; }
+            .hs-heater-limit-icon {
+                width: 16px;
+                height: 16px;
+                vertical-align: middle;
+                margin-left: 3px;
+                cursor: help;
+            }
             .hs-heater-best-h-marker { color: #f2c94c; white-space: nowrap; cursor: help; }
 
-            /* Same red as the ✘. The type's label is in a button when it has
-               an icon, and a button doesn't inherit the row's colour. */
+            /* Same orange as the slot's border in "Your loadout order". The
+               type's label is in a button when it has an icon, and a button
+               doesn't inherit the row's colour. */
             .hs-heater-selected-unaffordable-row td,
             .hs-heater-selected-unaffordable-row .hs-heater-type-icon-button {
+                color: #c96a00;
+            }
+
+            /* An unaffordable row's short resource, same red as the ✘. After
+               the rule above, which has the same specificity. */
+            td.hs-heater-short-cost {
                 color: #962f2f;
+                cursor: help;
             }
 
             .hs-heater-inputs-header { background-color: #472323; }
@@ -774,6 +888,18 @@ export class HSHeaterUIStyles {
                 vertical-align: middle;
                 height: 22px;
                 width: 22px;
+            }
+
+            .hs-heater-header-icon-small {
+                height: 16px;
+                width: 16px;
+            }
+
+            /* The size of the Obt + Off Effect icons */
+            .hs-heater-effect-header-icon {
+                height: 16px;
+                width: 16px;
+                margin-right: 4px;
             }
 
             /* === Floating Preview Container (base) === */

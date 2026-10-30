@@ -21,6 +21,7 @@
     "electron-updater": "^6.8.10"
   },
   "devDependencies": {
+    "7zip-bin": "~5.2.0",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"
   },
@@ -42,6 +43,16 @@
       "assets/**/*",
       "lib/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/7zip-bin/win/x64/7za.exe",
+        "to": "7zip-bin/7za.exe"
+      },
+      {
+        "from": "assets/7za-License.txt",
+        "to": "7zip-bin/License.txt"
+      }
     ],
     "win": {
       "icon": "assets/favicon.ico",

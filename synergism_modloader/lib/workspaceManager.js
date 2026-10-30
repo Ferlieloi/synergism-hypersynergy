@@ -144,6 +144,7 @@ module.exports = {
     ensureNoRunningWorkGames,
     prepareWorkspace,
     promoteWorkspace,
+    renameWithRetry,
     discardExtractionInputs,
     cleanupOldWorkspaces,
     removeBestEffort

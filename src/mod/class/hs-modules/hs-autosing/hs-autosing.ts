@@ -6,21 +6,25 @@ import { HSModule } from "../../hs-core/module/hs-module";
 import { HSLogger } from "../../hs-core/hs-logger";
 import { HSUI } from "../../hs-core/hs-ui";
 import { HSSettings } from "../../hs-core/settings/hs-settings";
+import { HSStrategyManager } from "./hs-strategy-manager";
 import { HSNumericSetting } from "../../hs-core/settings/hs-setting";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSNumberParser } from "../../hs-utils/hs-number-parser";
-import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTIONS, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, LOADOUT_ACTION_VALUE, IF_JUMP_VALUE, ALLOWED } from "../../../types/module-types/hs-autosing-types";
+import { HSAutosingStrategy, PhaseOption, phases, AutosingStrategyPhase, Challenge, SPECIAL_ACTION_BY_ID, createDefaultAoagPhase, AOAG_PHASE_ID, AOAG_PHASE_NAME, SET_CORRUPTION_LEVEL_VALUE, IF_JUMP_VALUE, ALLOWED, type HSAutosingPassRecord, type HSAutosingExposureParts } from "../../../types/module-types/hs-autosing-types";
 import { HSAutosingModal } from "./hs-autosingModal";
+import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSGlobal } from "../../hs-core/hs-global";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
-import { HSAutosingCorruption, CORRUPTION_NAMES, ZERO_CORRUPTIONS, ANT_CORRUPTIONS } from './hs-autosingCorruption';
+import { HSAutosingCorruption } from './hs-autosingCorruption';
 import { ELogLevel } from "../../../types/module-types/hs-logger-types";
 import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
 import { HSSubtabMemory } from "../hs-subtab-memory";
 import { MAIN_VIEW_BUTTON_IDS } from "../../../types/module-types/hs-gamestate-types";
+import { escapeLogText } from "../hs-heater/hs-heater-utils";
 
-const SPECIAL_ACTION_LABEL_BY_ID = new Map<number, string>(SPECIAL_ACTIONS.map((a) => [a.value, a.label] as const));
+declare const HS_DEV_BUILD: boolean;
+
 const STAGE_REGEX = /Current Game Section:\s*(.+)/;
 const CHALLENGE_COMPLETIONS_REGEX = /\((\d+)\s*\/\s*(\d+)\):/;
 // Everything after the challenge's name: the score is its first number (it can hold no-break spaces, which \S excludes)
@@ -70,6 +74,10 @@ export class HSAutosing extends HSModule {
     #restartTimer?: number;
     #targetSingularity = 0;
     #prevActionTime: number = 0;
+    // Steps added to (and removed from) the first phase at load: the logs number steps as the strategy editor does
+    #insertedStepsPhase: AutosingStrategyPhase | null = null;
+    #insertedStepCount: number = 0;
+    #removedStepCount: number = 0;
     #stopAtSingularitysEnd: boolean = false;
     #hasWarnedMissingStageFunc: boolean = false;
     #storedC15: number = 0;
@@ -114,6 +122,8 @@ export class HSAutosing extends HSModule {
     #ambrosia_obt!: HTMLButtonElement;
     #ambrosia_off!: HTMLButtonElement;
     #ambrosia_luck!: HTMLButtonElement;
+    // Read once per run: the slots above aren't looked up while it's on
+    #ambrosiaSwitchesOff = false;
 
     // DOM Elements - Misc
     #antSacrifice!: HTMLButtonElement;
@@ -175,9 +185,13 @@ export class HSAutosing extends HSModule {
     // Game References
     #stageFunc?: ((mode: number) => string) | null;
     #getMaxChallengesFunc?: ((challenge: number) => number) | null;
-    #applyCorruptionsFunc?: ((json: string) => boolean) | null;
     #exposedPlayer: typeof HSGlobal.exposedPlayer = null;
-    #isExposureReady: boolean = false;
+    // Each fast path runs on what it reads; the others fall back to the DOM. Set at each start.
+    #hasStageFunc: boolean = false;
+    #hasLivePlayer: boolean = false;
+    #hasMaxChallenges: boolean = false;
+    // The game internals found or not at the last start (shown in the timer's footer)
+    #exposureParts: HSAutosingExposureParts = { fastPaths: {}, other: {} };
     #gamestate!: HSGameState;
     #subtabMemory?: HSSubtabMemory;
     // The tab the player was on, brought back after each Exalt (the game opens Buildings) and each DOM stage read
@@ -298,32 +312,28 @@ export class HSAutosing extends HSModule {
     }
 
     #cacheCorruptionElements(): boolean {
-        const corrNextElements: Record<string, HTMLElement | null> = Object.fromEntries(
-            CORRUPTION_NAMES.map(name => [`corrNext${name}`, document.getElementById(`corrNext${name}`) as HTMLElement | null])
-        ) as Record<string, HTMLElement | null>;
-
         const elements = {
             addCodeAllBtn: document.getElementById("addCodeAll") as HTMLButtonElement | null,
             timeCodeBtn: document.getElementById("timeCode") as HTMLButtonElement | null,
-            corrImportBtn: document.querySelector('#corruptionLoadoutTable button.corrImport') as HTMLButtonElement | null,
-            ...corrNextElements,
-        } as Record<string, HTMLElement | null>;
+            corruptionLevelInput: document.getElementById("corruptionLevelInput") as HTMLInputElement | null,
+            corruptionLevelMax: document.getElementById("corruptionLevelMax") as HTMLButtonElement | null,
+        };
         if (!this.#ensureElements(elements)) return false;
 
-        const corrNext = Object.fromEntries(
-            CORRUPTION_NAMES.map(name => [`corrNext${name}`, elements[`corrNext${name}`] as HTMLElement])
-        ) as Record<string, HTMLElement>;
-
-        this.#addCodeAllBtn = elements.addCodeAllBtn as HTMLButtonElement;
-        this.#timeCodeBtn = elements.timeCodeBtn as HTMLButtonElement;
-        this.#corruptionManager = new HSAutosingCorruption(
-            corrNext,
-            elements.corrImportBtn as HTMLButtonElement,
-        );
+        this.#addCodeAllBtn = elements.addCodeAllBtn;
+        this.#timeCodeBtn = elements.timeCodeBtn;
+        // The level input and Max button are checked above, then used by id (HSCorruptionLevel)
+        this.#corruptionManager = new HSAutosingCorruption();
         return true;
     }
 
     async #cacheAmbrosiaLoadoutButtons(): Promise<boolean> {
+        this.#ambrosiaSwitchesOff = HSSettings.getSetting("autosingNoAmbrosiaSwitch").isEnabled();
+        if (this.#ambrosiaSwitchesOff) {
+            HSLogger.log("Ambrosia loadout switches are off: the ambrosia loadout settings are not used.", this.context);
+            return true;
+        }
+
         const earlyCubeVal = HSSettings.getSetting("autosingEarlyCubeLoadout").getValue();
         const lateCubeVal = HSSettings.getSetting("autosingLateCubeLoadout").getValue();
         const quarkVal = HSSettings.getSetting("autosingQuarkLoadout").getValue();
@@ -454,37 +464,42 @@ export class HSAutosing extends HSModule {
         }
     }
 
-    async #cacheExposedFunctions(): Promise<void> {
+    #cacheExposedFunctions(): void {
         this.#exposedPlayer = HSGlobal.exposedPlayer ?? null;
         this.#stageFunc = window.__HS_synergismStage ?? null;
         this.#getMaxChallengesFunc = window.__HS_getMaxChallenges ?? null;
+        this.#hasStageFunc = !!this.#stageFunc;
+        this.#hasLivePlayer = !!this.#exposedPlayer;
+        this.#hasMaxChallenges = this.#hasLivePlayer && !!this.#getMaxChallengesFunc;
+
+        // Not needed by the fast paths. Without the after-tack hook, waiting for a tack sleeps 5 ms instead.
+        // Without the dialog hook, HSGameDialogs' watcher clicks the dialogs as they show, before autosing's
+        // next step runs. Without the export output, only the quark export at each singularity's end is skipped.
         const isAfterTackHooked = HSUtils.cacheAfterTackHook();
-
-        // Autosing's dialogs are answered by the dialog hook (HSGameDialogs), or by an older patcher's
-        // auto-confirm (__HS_AUTO_CONFIRM, see HSAutosingSettingsFixer). Without either, HSGameDialogs' watcher clicks them.
-        const areDialogsAnswered = HSGameDialogs.isHookPatched() || HSUtils.isAutoConfirmPatched();
-
-        // Triggering the late setCorruptions patch in order to check if it's available (could be done at mod load...)
-        await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-
-        // Read again, __HS_applyCorruptions should now be set on window.
-        this.#applyCorruptionsFunc = window.__HS_applyCorruptions ?? null;
-        this.#corruptionManager.setApplyCorruptionsFunc(this.#applyCorruptionsFunc ?? null);
-
-        this.#isExposureReady = !!(this.#stageFunc && this.#exposedPlayer && this.#getMaxChallengesFunc && areDialogsAnswered && isAfterTackHooked && this.#applyCorruptionsFunc);
-
-        // Not required for the fast mode: without it, only the quark export at the end of each singularity is skipped
+        const isDialogHookPatched = HSGameDialogs.isHookPatched();
         const isExportOutputPatched = !!window.__HS_EXPORT_OUTPUT_PATCHED;
-        const exposureMsg = `Exposure status: ${this.#isExposureReady}
-            (stageFunc: ${!!this.#stageFunc},
-            exposedPlayer: ${!!this.#exposedPlayer},
+
+        this.#exposureParts = {
+            fastPaths: {
+                'Stage function': this.#hasStageFunc,
+                'Live player': this.#hasLivePlayer,
+                'Max challenges': !!this.#getMaxChallengesFunc,
+            },
+            other: {
+                'After-tack hook': isAfterTackHooked,
+                'Dialog hook': isDialogHookPatched,
+                'Export output': isExportOutputPatched,
+            },
+        };
+        const isComplete = [...Object.values(this.#exposureParts.fastPaths), ...Object.values(this.#exposureParts.other)].every(Boolean);
+        const exposureMsg = `Exposure status: ${isComplete}
+            (stageFunc: ${this.#hasStageFunc},
+            exposedPlayer: ${this.#hasLivePlayer},
             getMaxChallengesFunc: ${!!this.#getMaxChallengesFunc},
             onAfterTackHook: ${isAfterTackHooked},
-            applyCorruptionsFunc: ${!!this.#applyCorruptionsFunc},
-            dialogHook: ${HSGameDialogs.isHookPatched()},
-            autoConfirmPatched: ${HSUtils.isAutoConfirmPatched()},
+            dialogHook: ${isDialogHookPatched},
             exportOutputPatched: ${isExportOutputPatched})`;
-        if (this.#isExposureReady) HSLogger.debug(() => exposureMsg, this.context);
+        if (isComplete) HSLogger.debug(() => exposureMsg, this.context);
         else HSLogger.warn(exposureMsg, this.context);
     }
 
@@ -566,7 +581,6 @@ export class HSAutosing extends HSModule {
 
         this.#strategy = strategy;
         this.#rebuildStrategyPhaseCaches();
-        this.#corruptionManager.buildLoadoutCache(strategy.corruptionLoadouts ?? []);
 
         if (!HSGlobal.General.isModFullyLoaded) {
             HSLogger.debug(() => "Hypersynergism is still loading. Please wait before starting Auto-Sing.", this.context);
@@ -582,13 +596,11 @@ export class HSAutosing extends HSModule {
         // From here, the game's Confirms and Alerts are answered (by the dialog hook, or by the dialog watcher
         // without any patch). Cleared by #restoreHsSettings().
         HSGameDialogs.setAutosingActive(true);
-        // This needs to be done before cacheExposedFunctions since it enables __HS_AUTO_CONFIRM (without the hook).
         // Appended: after a restart, the list still holds what the previous run changed (kept changed meanwhile)
         this.#hsSettingsToRestore = [...this.#hsSettingsToRestore, ...await HSAutosingSettingsFixer.fixAllSettings()];
         if (this.#isStartCancelled()) return;
         this.#cacheObservers();
-        await this.#cacheExposedFunctions();
-        if (this.#isStartCancelled()) return;
+        this.#cacheExposedFunctions();
 
         this.#autosingEnabled = true;
         this.#stopAtSingularitysEnd = false;
@@ -789,8 +801,7 @@ export class HSAutosing extends HSModule {
             return false;
         }
         if (gameData.highestSingularityCount < 216) {
-            // window.confirm is the native browser dialog, not the same as the game's
-            // patched confirm/alert hooks, so __HS_AUTO_CONFIRM_PATCHED does NOT intercept this.
+            // window.confirm is the native browser dialog, not one of the game's: the dialog hook doesn't answer it.
             if (!window.confirm(`AutoSing is not fully functional until you completed EXALT6 at least once.`)) {
                 return false;
             }
@@ -827,11 +838,11 @@ export class HSAutosing extends HSModule {
             return null;
         }
 
-        const defaultNames = HSSettings.getDefaultStrategyNames();
+        const defaultNames = HSStrategyManager.getDefaultStrategyNames();
         const selectedRawName = selectedOption.value.toString();
         const strategy = defaultNames.includes(selectedRawName)
-            ? await HSSettings.loadDefaultStrategyByName(selectedRawName)
-            : (HSSettings.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
+            ? await HSStrategyManager.loadDefaultStrategyByName(selectedRawName, this.context)
+            : (HSStrategyManager.getStrategies().find(s => s.strategyName === selectedRawName) ?? null);
 
         if (!strategy) {
             HSUI.Notify(`Could not find or load strategy "${selectedRawName}" - Autosing stopped.`, { notificationType: "warning" });
@@ -860,19 +871,24 @@ export class HSAutosing extends HSModule {
             }
         ];
 
+        this.#insertedStepsPhase = null;
         if (!strategy || !Array.isArray(strategy.strategy) || strategy.strategy.length === 0) return;
         const firstPhase = strategy.strategy[0];
         if (!firstPhase || !Array.isArray(firstPhase.strat)) return;
         let nbSteps = stepsToInsert.length;
+        this.#removedStepCount = 0;
 
         // Remove probable pre-existing Obt switch as first step
         if (firstPhase.strat[0]?.challengeNumber === 304) {
             firstPhase.strat.splice(0, 1);
             nbSteps--;
+            this.#removedStepCount = 1;
         }
 
         // Insert at the start
         firstPhase.strat.unshift(...stepsToInsert);
+        this.#insertedStepsPhase = firstPhase;
+        this.#insertedStepCount = stepsToInsert.length;
 
         // Adjust ifJump.ifJumpIndex for all steps in the first phase
         for (const step of firstPhase.strat) {
@@ -892,10 +908,13 @@ export class HSAutosing extends HSModule {
             await this.#useAddAndTimeCodes();
             if (!this.#autosingEnabled) return;
 
+            // Dev builds only: the timings read by the headless harness
+            if (HS_DEV_BUILD) HSAutosingRecorder.start(this.#strategy!.strategyName, this.#targetSingularity);
+
             if (this.#autosingModal) {
                 let quarks: number;
                 let goldenQuarks: number;
-                if (this.#isExposureReady) {
+                if (this.#hasLivePlayer) {
                     quarks = Number(this.#exposedPlayer!.worlds);
                     goldenQuarks = Number(this.#exposedPlayer!.goldenQuarks);
                 } else {
@@ -905,7 +924,7 @@ export class HSAutosing extends HSModule {
                 }
                 // Stopped meanwhile: don't reset the review window, and don't enter Exalt 2 below
                 if (!this.#autosingEnabled) return;
-                this.#autosingModal.start(this.#strategy!, quarks, goldenQuarks);
+                this.#autosingModal.start(this.#strategy!, quarks, goldenQuarks, this.#exposureParts);
                 this.#autosingModal.show();
             }
 
@@ -932,7 +951,7 @@ export class HSAutosing extends HSModule {
                     const stage = await this.#getStage();
                     if (!this.#autosingEnabled) return;
                     // Only the DOM stage fallback navigates to Settings on every phase.
-                    if (!this.#isExposureReady) this.#showPlayerTab();
+                    if (!this.#hasStageFunc) this.#showPlayerTab();
 
                     try {
                         await this.#matchStageToStrategy(stage);
@@ -989,8 +1008,6 @@ export class HSAutosing extends HSModule {
         const phaseConfig = this.#strategyPhaseRanges!.find((r) => stageStartIndex >= r.startIndex && stageEndIndex <= r.endIndex)?.phase ?? null;
         if (!phaseConfig) { HSLogger.warn(`No strategy phase matched for stage ${stage} - Autosing stopped.`, this.context); this.stopAutosing(); return; }
         this.#phaseConfigByStage.set(stage, phaseConfig);
-
-        HSLogger.debug(() => `Executing phase: ${phaseConfig.startPhase}-${phaseConfig.endPhase}`, this.context);
         await this.#executePhase(phaseConfig);
     }
 
@@ -1009,13 +1026,10 @@ export class HSAutosing extends HSModule {
         const phaseLabelOverride = options?.phaseLabelOverride;
         const ignoreObserverActivated = options?.ignoreObserverActivated;
         const phaseLabel = phaseLabelOverride ?? `${phaseConfig.startPhase}-${phaseConfig.endPhase}`;
+        // At every phase run: the step lines below don't name their phase
+        HSLogger.debug(() => `===== Executing phase: ${phaseLabel} =====`, this.context);
         this.#autosingModal?.setCurrentPhase(phaseLabel);
-
-        const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
-        if (phaseLoadout)
-            await this.#corruptionManager.setCorruptions(phaseLoadout);
-
-        this.#clickResetButton(this.#ascendBtn);
+        const passRecord = HS_DEV_BUILD ? HSAutosingRecorder.startPass(phaseLabel) : undefined;
 
         const isEndPhase = phaseConfig.endPhase === "end";
         for (let i = 0; i < phaseConfig.strat.length; i++) {
@@ -1024,10 +1038,13 @@ export class HSAutosing extends HSModule {
             // Autosing disabled or AOAG observer activated
             if (!this.#autosingEnabled || (this.#antiquitiesObserverActivated && !isEndPhase && !ignoreObserverActivated)) {
                 this.#autosingModal?.recordPhase(phaseLabel);
+                if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.endPass(passRecord, this.#autosingEnabled ? 'aoag' : 'stopped');
                 return;
             }
 
-            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i);
+            const stepStartedAt = HS_DEV_BUILD ? performance.now() : 0;
+            const jumpIndex = await this.#executeStrategyAction(phaseConfig, i, passRecord);
+            if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.step(passRecord, phaseConfig.strat[i], i, stepStartedAt, jumpIndex);
             if (typeof jumpIndex === 'number') {
                 // set loop index to jumpIndex-1 because the for-loop will increment it
                 i = jumpIndex - 1;
@@ -1038,57 +1055,95 @@ export class HSAutosing extends HSModule {
         if (phaseConfig.endPhase === "end") this.#endStageDone = true;
 
         this.#autosingModal?.recordPhase(phaseLabel);
+        if (HS_DEV_BUILD && passRecord) HSAutosingRecorder.endPass(passRecord, 'done');
     }
 
-    async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number): Promise<number | null> {
+    /** A step's number in the strategy editor (from 1), 0 for a step inserted at load. */
+    #stepNumber(phaseConfig: AutosingStrategyPhase, index: number): number {
+        if (phaseConfig !== this.#insertedStepsPhase) return index + 1;
+        if (index < this.#insertedStepCount) return 0;
+        return index + 1 - this.#insertedStepCount + this.#removedStepCount;
+    }
+
+    /** @param passRecord Dev builds only: the recorder's pass, which gets the time slept before the step */
+    async #executeStrategyAction(phaseConfig: AutosingStrategyPhase, actionIndex: number, passRecord?: HSAutosingPassRecord): Promise<number | null> {
         const challenge = phaseConfig.strat[actionIndex];
 
         const wb = challenge.challengeWaitBefore ?? 0;
         if (wb > 0) {
+            const waitStartedAt = HS_DEV_BUILD ? performance.now() : 0;
             await HSUtils.sleepUntilElapsed(this.#prevActionTime, wb, this.context);
+            if (HS_DEV_BUILD && passRecord) passRecord.waitMs = performance.now() - waitStartedAt;
             // Stopped during the wait: don't act on the game (or restart/stop autosing again with 902/903)
             if (!this.#autosingEnabled) return null;
         }
 
+        // "Step N", as the strategy editor numbers the steps
+        const tag = () => `Step ${this.#stepNumber(phaseConfig, actionIndex)}`;
+        const actionText = () => `${SPECIAL_ACTION_BY_ID.get(challenge.challengeNumber)?.label ??challenge.challengeNumber} (${challenge.challengeNumber})`;
         switch (challenge.challengeNumber) {
-            case 401: {
-                const phaseLoadout = this.#corruptionManager.getPhaseCorruptionLoadout(phaseConfig);
-                if (phaseLoadout) await this.#corruptionManager.setCorruptions(phaseLoadout, true);
-                break;
-            }
-            case LOADOUT_ACTION_VALUE:
-                await this.#corruptionManager.applyLoadoutByName(challenge.loadoutName);
+            case SET_CORRUPTION_LEVEL_VALUE:
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0} (${challenge.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`, this.context);
+                if (challenge.ascendAfterCorruption === false) this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
+                else await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
-                return this.#handleIfJumpAction(challenge);
+                return this.#handleIfJumpAction(challenge, phaseConfig, tag);
             default:
                 if (challenge.challengeNumber >= 100) {
-                    HSLogger.debug(() => `Step#${actionIndex} - SA: ${SPECIAL_ACTION_LABEL_BY_ID.get(challenge.challengeNumber) ?? challenge.challengeNumber}`, this.context);
+                    HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);
                     await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
                 } else {
-                    HSLogger.debug(() => `Step#${actionIndex} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
+                    HSLogger.debug(() => `${tag()} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
                     await this.#waitForCompletion(
                         challenge.challengeNumber,
                         challenge.challengeCompletions ?? 0,
                         challenge.challengeMaxTime,
                         challenge.challengeWaitTime,
+                        tag,
                     );
                 }
         }
         return null;
     }
 
-    #handleIfJumpAction(challenge: Challenge): number | null {
+    /** The level is only a selection until the reset; never skip it just because `next` already matches. */
+    async #setCorruptionLevelAndAscend(level: number): Promise<void> {
+        this.#corruptionManager.setLevel(level);
+        const insideAscensionChallenge = this.#hasLivePlayer
+            ? this.#exposedPlayer!.currentChallenge.ascension !== 0
+            : (this.#challengeProgressElements[2]?.textContent ?? '').trim() !== '';
+        if (insideAscensionChallenge) {
+            // Exiting supplies the ascension reset and records C15's score before its coins are cleared.
+            // A plain Ascend here would reset the coins while leaving the challenge active, losing that score.
+            if (!this.#hasLivePlayer) this.#getChallengeAccessor(15).getCompletions();
+            this.#clickResetButton(this.#exitAscBtn);
+        } else {
+            this.#clickResetButton(this.#ascendBtn);
+        }
+        // Normally synchronous (or the patched dialog resolves in a microtask): no polling or tick delay.
+        // Without the dialog hook, let a displayed confirmation finish before another strategy action runs.
+        if (!HSGameDialogs.isQueueIdle()) await HSGameDialogs.whenQueueIdle();
+    }
+
+    #handleIfJumpAction(challenge: Challenge, phaseConfig: AutosingStrategyPhase, tag: () => string): number | null {
         const jump = challenge.ifJump;
         const mode = jump?.ifJumpMode;
         const operator = jump?.ifJumpOperator;
         const jumpIndex = jump?.ifJumpIndex;
+        // condition: "C9 (12) > 5", with the values read
+        const logIfJump = (condition: string, jumped: boolean) => HSLogger.debug(() => {
+            const outcome = !jumped ? "no jump"
+                : jumpIndex! >= phaseConfig.strat.length ? "jump to the end of the phase"
+                : `jump to step ${this.#stepNumber(phaseConfig, jumpIndex!)}`;
+            return `${tag()} - IF ${escapeLogText(condition)} (${IF_JUMP_VALUE}): ${outcome}`;
+        }, this.context);
 
         switch (mode) {
             case "challenges": {
                 const ifIdx = jump!.ifJumpChallenge ?? -1;
                 const value = jump!.ifJumpValue ?? 0;
-                const completions = this.#isExposureReady && ifIdx >= 1 && ifIdx <= 15
+                const completions = this.#hasLivePlayer && ifIdx >= 1 && ifIdx <= 15
                     ? (ifIdx === 15
                         ? this.#exposedPlayer!.challenge15Exponent
                         : this.#exposedPlayer!.challengecompletions[ifIdx])
@@ -1098,6 +1153,7 @@ export class HSAutosing extends HSModule {
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && completions > value) ||
                         (operator === "<" && completions < value));
+                logIfJump(`C${ifIdx} (${completions}) ${operator} ${value}`, shouldJump);
                 if (shouldJump) {
                     return jumpIndex;
                 }
@@ -1105,13 +1161,14 @@ export class HSAutosing extends HSModule {
             }
             case "stored_c15": {
                 const exponent = jump!.ifJumpMultiplier ?? 0;
-                const c15Score = this.#isExposureReady
+                const c15Score = this.#hasLivePlayer
                     ? this.#exposedPlayer!.challenge15Exponent
                     : this.#getChallengeAccessor(15).getCompletions().toNumber();
                 const threshold = this.#storedC15 * 10 ** exponent;
                 const shouldJump = jumpIndex !== undefined &&
                     ((operator === ">" && threshold > c15Score) ||
                         (operator === "<" && threshold < c15Score));
+                logIfJump(`stored C15 × 10^${exponent} (${threshold}) ${operator} current C15 (${c15Score})`, shouldJump);
                 if (shouldJump) {
                     return jumpIndex;
                 }
@@ -1135,7 +1192,7 @@ export class HSAutosing extends HSModule {
                 this.#clickResetButton(this.#exitReincBtn);
                 break;
             case 103: // Exit Ascension challenge
-                if (!this.#isExposureReady) this.#getChallengeAccessor(15).getCompletions();
+                if (!this.#hasLivePlayer) this.#getChallengeAccessor(15).getCompletions();
                 this.#clickResetButton(this.#exitAscBtn);
                 break;
             case 104: // Ascend
@@ -1164,7 +1221,7 @@ export class HSAutosing extends HSModule {
                 await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime);
                 break;
             case 215: // store C15
-                this.#storedC15 = this.#isExposureReady
+                this.#storedC15 = this.#hasLivePlayer
                     ? this.#exposedPlayer!.challenge15Exponent
                     : this.#getChallengeAccessor(15).getCompletions().toNumber();
                 break;
@@ -1185,12 +1242,6 @@ export class HSAutosing extends HSModule {
                 break;
             case 306: // Ambrosia loadout
                 await this.#setAmbrosiaLoadout(this.#ambrosia_luck);
-                break;
-            case 400: // Zero Corruptions
-                await this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS);
-                break;
-            case 402: // Ant Corruptions
-                await this.#corruptionManager.setCorruptions(ANT_CORRUPTIONS);
                 break;
             case 601:
             case 602:
@@ -1237,11 +1288,13 @@ export class HSAutosing extends HSModule {
     // CHALLENGE RESOLUTION
     // ============================================================================
 
+    /** @param stepTag The strategy step's "Step N", for the timeout warning (none outside a step) */
     async #waitForCompletion(
         challengeIndex: number,
         minCompletions: number,
         maxTime: number = 99999999,
-        waitTime: number = 0
+        waitTime: number = 0,
+        stepTag?: () => string
     ): Promise<void> {
         const sleepInterval = 5;
         const accessor = this.#getChallengeAccessor(challengeIndex);
@@ -1250,7 +1303,7 @@ export class HSAutosing extends HSModule {
         // Fast path: use exposedPlayer.currentChallenge instead of MutationObserver/class polling.
         // player.currentChallenge stores the absolute button index (1-15) per tier, 0 = not active.
         // Multiple tiers can be active simultaneously, but each challenge maps to exactly one field.
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             const p = this.#exposedPlayer!;
             const isChallengeActive = challengeIndex <= 5
                 ? () => p.currentChallenge.transcension === challengeIndex
@@ -1279,7 +1332,7 @@ export class HSAutosing extends HSModule {
         // Fast path: C1-C15 with exposed player: no DOM reads, no Decimal.
         // C1-C14: challengecompletions[i] capped by getMaxChallenges(i).
         // C15: challenge15Exponent (raw score, unbounded maxPossible = Infinity never fires).
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const p2 = this.#exposedPlayer!;
             const isC15 = challengeIndex === 15;
             const maxPossible = isC15 ? Infinity : this.#getMaxChallengesFunc!(challengeIndex);
@@ -1289,7 +1342,7 @@ export class HSAutosing extends HSModule {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
-                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: C${challengeIndex} only reached ${current}/${minCompletions} completions within ${maxTime} ms`, this.context);
                     }
                     return;
                 }
@@ -1317,7 +1370,7 @@ export class HSAutosing extends HSModule {
                 const now = performance.now();
                 if (now >= endTime) {
                     if (challengeIndex <= 10 && minCompletions !== 0) {
-                        HSLogger.warn(`-------> Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
+                        HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: C${challengeIndex} only reached ${currentCompletions}/${minCompletions} completions within ${maxTime}ms`, this.context);
                     }
                     return;
                 }
@@ -1350,7 +1403,7 @@ export class HSAutosing extends HSModule {
         const levelElement = accessor.levelElement;
 
         // Fast path: no DOM text parsing, no Decimal
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             const deadline = performance.now() + maxTime;
 
@@ -1404,7 +1457,7 @@ export class HSAutosing extends HSModule {
         await HSUtils.sleep(initialWaitTime);
 
         // Fast path: use exposedPlayer.challengecompletions instead of MutationObserver/class polling.
-        if (this.#isExposureReady) {
+        if (this.#hasMaxChallenges) {
             const p = this.#exposedPlayer!;
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             let currentCompletions = p.challengecompletions[challengeIndex];
@@ -1476,7 +1529,7 @@ export class HSAutosing extends HSModule {
 
     async #getStage(): Promise<string> {
         if (!this.#autosingEnabled) return '';
-        if (this.#isExposureReady) {
+        if (this.#hasStageFunc) {
             // Fast path with the exposed function: never fall through to DOM navigation.
             // A transient throw during a sing transition returns '' so the wait
             // loop retries on the next tick rather than navigating to Settings.
@@ -1548,11 +1601,12 @@ export class HSAutosing extends HSModule {
 
     async #performSingularity(skipRecord: boolean = false): Promise<void> {
         HSLogger.debug(() => "Performing Singularity...", this.context);
+        const startedAt = HS_DEV_BUILD ? performance.now() : 0;
 
         let q = 0;
         let gq = 0;
         let c15ScoreBeforeSinging: Decimal;
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             c15ScoreBeforeSinging = new Decimal(this.#exposedPlayer!.challenge15Exponent);
         } else {
             // A GDS fetch right after a singularity lags, so the amounts are read before it for bookmarklet:
@@ -1587,11 +1641,8 @@ export class HSAutosing extends HSModule {
 
         this.#endStageDone = false;
         this.#antiquitiesObserverActivated = false;
-        // A singularity can reset vanilla's pending corruption state. Always apply
-        // the first requested loadout of the new run, then deduplicate within it.
-        this.#corruptionManager.invalidateAppliedCache();
 
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             // The vanilla Teleport function is simply 1) doing some checks (everything true for us wanting to go lower),
             // 2) updates singularityCount, 3) calls a function to update the UI...
             // So maybe we can skip everything except singularityCount update...
@@ -1600,7 +1651,7 @@ export class HSAutosing extends HSModule {
             this.#elevatorTeleportButton.click();
         }
 
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             // Entering the Exalt pays this singularity's golden quarks: read them after it
             q = Number(this.#exposedPlayer!.worlds);
             gq = Number(this.#exposedPlayer!.goldenQuarks);
@@ -1616,6 +1667,8 @@ export class HSAutosing extends HSModule {
         } else {
             this.#autosingModal?.recordSingularity(gqGain, gq, qGain, q, happyHourStackAmount, c15ScoreBeforeSinging);
         }
+        const recordedAt = HS_DEV_BUILD ? performance.now() : 0;
+        if (HS_DEV_BUILD) HSAutosingRecorder.singularity(!skipRecord, gqGain, qGain, c15ScoreBeforeSinging.toNumber());
 
         HSLogger.debug(() => "===== Singularity performed =====", this.context);
 
@@ -1633,11 +1686,12 @@ export class HSAutosing extends HSModule {
         } while (this.#autosingEnabled && !this.#isAllowedStage(stage));
         if (!this.#autosingEnabled) return;
         // The DOM stage fallback left the player on Settings
-        if (!this.#isExposureReady) this.#showPlayerTab();
+        if (!this.#hasStageFunc) this.#showPlayerTab();
         HSLogger.debug(() => `Reached allowed starting stage: ${stage} (performSingularity)`, this.context);
 
         this.#observeAntiquitiesRune();
         this.#prevActionTime = performance.now();
+        if (HS_DEV_BUILD) HSAutosingRecorder.transition(startedAt, recordedAt);
     }
 
     async #enterAndLeaveExalt(): Promise<boolean> {
@@ -1716,6 +1770,10 @@ export class HSAutosing extends HSModule {
         const aoagPhase = this.#strategy?.aoagPhase ?? createDefaultAoagPhase();
         aoagPhase.phaseId = AOAG_PHASE_ID;
 
+        // AOAG needs level 0 applied before its steps; ordinary phase entry performs no reset.
+        await this.#setCorruptionLevelAndAscend(0);
+        if (!this.#autosingEnabled) return;
+
         await this.#executePhase(aoagPhase, {
             phaseLabelOverride: AOAG_PHASE_NAME,
             ignoreObserverActivated: true
@@ -1767,17 +1825,15 @@ export class HSAutosing extends HSModule {
     /** Runs the push's steps in order, and ends at the first step after a stop. */
     async #pushSingularityBeforeStop(): Promise<void> {
         const steps: Array<() => unknown> = [
-            () => this.#ambrosia_late_cube.click(),
-            () => this.#corruptionManager.setCorruptions(ZERO_CORRUPTIONS),
+            () => this.#setAmbrosiaLoadout(this.#ambrosia_late_cube),
+            () => this.#corruptionManager.setLevel(0),
 
             () => this.#maxC11to14WithC10(11),
             () => this.#maxC11to14WithC10(12),
             () => this.#maxC11to14WithC10(13),
             () => this.#maxC11to14WithC10(14),
 
-            () => this.#corruptionManager.setCorruptions(
-                { viscosity: 16, drought: 16, deflation: 16, extinction: 16, illiteracy: 16, recession: 16, dilation: 16, hyperchallenge: 16 }
-            ),
+            () => this.#corruptionManager.setMaxLevel(),
 
             () => this.#autoChallengeButton.click(),
 
@@ -1917,6 +1973,8 @@ export class HSAutosing extends HSModule {
     }
 
     async #setAmbrosiaLoadout(loadout: HTMLButtonElement): Promise<void> {
+        // Every load resets the ambrosia bars, even reloading the tree already in place
+        if (this.#ambrosiaSwitchesOff) return;
         loadout.click();
         // The game marks the slot only if the load succeeded. It doesn't when the tree is rejected
         // (its alert is silent under auto-confirm), so don't wait forever (even though that shouldn't happen...)
@@ -1939,7 +1997,7 @@ export class HSAutosing extends HSModule {
     }
 
     #isInExalt(): boolean {
-        if (this.#isExposureReady) {
+        if (this.#hasLivePlayer) {
             return this.#exposedPlayer!.insideSingularityChallenge;
         }
         return document.documentElement.getAttribute(EXALT_STATE_ATTRIBUTE) === 'true';
@@ -2189,7 +2247,7 @@ export class HSAutosing extends HSModule {
         if (this.#isInExalt() === targetState) return true;
 
         const observed = this.#observeExaltState(targetState);
-        if (!this.#isExposureReady) return await observed;
+        if (!this.#hasLivePlayer) return await observed;
 
         let done = false;
         const polled = (async (): Promise<void> => {

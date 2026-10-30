@@ -47,14 +47,6 @@
     "enabled": false,
     "hidden": true
   },
-  "headerCorruptionSlotsShown": {
-    "settingName": "headerCorruptionSlotsShown",
-    "settingDescription": "Corruption loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
-    "settingType": "numeric",
-    "enabled": true,
-    "hidden": true,
-    "settingValue": 16
-  },
   "headerAmbrosiaSlotsShown": {
     "settingName": "headerAmbrosiaSlotsShown",
     "settingDescription": "Ambrosia loadout slots shown in the header (block next to the header's edit tray, 16 = all)",
@@ -108,20 +100,6 @@
     "hidden": true,
     "settingValue": -1
   },
-  "autoConfirmPopups": {
-    "settingName": "autoConfirmPopups",
-    "settingDescription": "Auto-confirm pop-ups (Tampermonkey only)",
-    "settingHelpText": "When enabled, confirmation and alert pop-ups are automatically dismissed. Confirm pop-ups are resolved as OK and alert pop-ups are resolved silently.",
-    "settingType": "boolean",
-    "enabled": false,
-    "hidden": true,
-    "settingAction": "autoConfirmPopups",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "ui",
-      "controlPage": "ui"
-    }
-  },
   "hideGameDialogs": {
     "settingName": "hideGameDialogs",
     "settingDescription": "Hide game dialogs",
@@ -154,12 +132,89 @@
   },
   "compactChallengeText": {
     "settingName": "compactChallengeText",
-    "settingDescription": "Compact challenge progress text",
+    "settingDescription": "Compact progress text in the game's challenge modules",
     "settingHelpText": "Show current/required amounts or Challenge 15 scores without the challenge name, at any cell height. Hover for the full description. Inactive modules keep the game's challenge-name preview in the editor.",
     "settingType": "boolean",
     "enabled": false,
     "hidden": true,
-    "settingAction": "compactChallengeTextAction"
+    "settingAction": "compactChallengeTextAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-compact-challenge-text-btn"
+    }
+  },
+  "challengeProgressHeader": {
+    "settingName": "challengeProgressHeader",
+    "settingDescription": "Challenge progress module in the header",
+    "settingHelpText": "One header module for the challenges you are in.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "challengeProgressHeaderAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-challenge-progress-header-btn"
+    }
+  },
+  "challengeProgressLayout": {
+    "settingName": "challengeProgressLayout",
+    "settingDescription": "Challenge progress module: layout",
+    "settingHelpText": "All challenges on one line, or one line each.",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": "line"
+  },
+  "challengeProgressDetails": {
+    "settingName": "challengeProgressDetails",
+    "settingDescription": "Challenge progress module: details",
+    "settingHelpText": "After each challenge: nothing, its completions (the score for C15), or its completions and requirement.",
+    "settingType": "string",
+    "enabled": true,
+    "hidden": true,
+    "settingValue": "completions"
+  },
+  "challengeProgressShowNone": {
+    "settingName": "challengeProgressShowNone",
+    "settingDescription": "Challenge progress module: CØ outside challenges",
+    "settingHelpText": "A discreet CØ when you are in no challenge, instead of an empty module.",
+    "settingType": "boolean",
+    "enabled": false,
+    "hidden": true
+  },
+  "corruptionHeaderControls": {
+    "settingName": "corruptionHeaderControls",
+    "settingDescription": "Corruption module: next level and controls",
+    "settingHelpText": "Shows the next ascension's corruption level when it differs. Click the module to change it.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "corruptionHeaderControlsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-corruption-header-controls-btn"
+    }
+  },
+  "corruptionHeaderAlwaysShown": {
+    "settingName": "corruptionHeaderAlwaysShown",
+    "settingDescription": "Keep the corruption module visible",
+    "settingHelpText": "Keeps the Corruption level module in the header before Challenge 11 is completed in a singularity.",
+    "settingType": "boolean",
+    "enabled": true,
+    "hidden": true,
+    "settingAction": "corruptionHeaderAlwaysShownAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-corruption-header-always-shown-btn"
+    }
   },
   "editGameHeader": {
     "settingName": "editGameHeader",
@@ -282,7 +337,7 @@
   "reloadOnLateLoaderStart": {
     "settingName": "reloadOnLateLoaderStart",
     "settingDescription": "Reload when the loader starts late",
-    "settingHelpText": "Browser (Tampermonkey) only. Sometimes Tampermonkey starts the mod's loader after the game has already started (Tampermonkey was idle, or the computer is slow), and the mod can't load. On: the page reloads automatically (at most 2 times in a row). Off: a message asks you to refresh.",
+    "settingHelpText": "Browser (Tampermonkey) only. Sometimes Tampermonkey starts the mod's loader after the game has already started (Tampermonkey was idle, or the computer is slow), and the mod can't load. On: the page reloads automatically (at most 3 times in a row). Off: a message asks you to refresh.",
     "settingType": "boolean",
     "enabled": true,
     "platforms": ["userscript"],
@@ -375,9 +430,10 @@
     "settingBlockId": "hs-setting-block-gamedata",
     "settingName": "useGameData",
     "settingDescription": "Game Data Sniffing (GDS)",
-    "settingHelpText": "Enables game data sniffing by continuously scanning localStorage save data in the background. Enabling this gives the mod vastly enhanced functionality, but may cause performance issues on some systems.",
+    "settingHelpText": "The mod saves the game twice a second and reads that save, for the features that show values computed from your game data.",
     "settingType": "boolean",
     "enabled": true,
+    "platforms": ["bookmarklet"],
     "settingAction": "useGameData",
     "settingControl": {
       "controlType": "switch",
@@ -868,6 +924,19 @@
       "controlType": "button",
       "controlGroup": "auto-sing-strategy-controls",
       "controlPage": "auto-sing"
+    }
+  },
+  "autosingNoAmbrosiaSwitch": {
+    "settingName": "autosingNoAmbrosiaSwitch",
+    "settingDescription": "Don't switch ambrosia loadouts",
+    "settingHelpText": "Auto-Sing never loads an ambrosia loadout, so the ambrosia bars keep their progress. The loadouts below are not used.",
+    "settingType": "boolean",
+    "enabled": false,
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "auto-sing-ambrosia",
+      "controlPage": "auto-sing",
+      "controlEnabledId": "hs-setting-auto-sing-no-ambrosia-switch-btn"
     }
   },
   "autosingEarlyCubeLoadout": {
@@ -1404,14 +1473,28 @@
       "controlEnabledId": "hs-setting-ambrosia-minibar-btn"
     }
   },
+  "ambrosiaMinibarBorders": {
+    "settingName": "ambrosiaMinibarBorders",
+    "settingDescription": "Ambrosia minibars border",
+    "settingHelpText": "A white frame around the ambrosia minibars.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "ambrosiaMinibarBordersAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-ambrosia-minibar-borders-btn"
+    }
+  },
   "ambrosiaRateHeader": {
     "settingName": "ambrosiaRateHeader",
     "settingDescription": "Ambrosia per hour in the header (S25+)",
-    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout, as in the Ambrosia tab. Needs GDS.",
+    "settingHelpText": "The expected ambrosia, red ambrosia and purple honey per hour for the active loadout, as in the Ambrosia tab.",
     "settingType": "boolean",
     "hidden": true,
     "enabled": true,
-    "usesGameData": true,
     "settingAction": "ambrosiaRateHeaderAction",
     "settingControl": {
       "controlType": "switch",
@@ -1433,36 +1516,6 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-enable-syn-ui-btn"
-    }
-  },
-  "corruptionHeaderLevels": {
-    "settingName": "corruptionHeaderLevels",
-    "settingDescription": "Corruption levels in the header",
-    "settingHelpText": "Your corruption levels on a line under the corruption loadout modules: the current ones, then the next ones when they differ. Turned off while Auto-Sing runs.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": true,
-    "settingAction": "corruptionHeaderLevelsAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-levels-btn"
-    }
-  },
-  "corruptionHeaderIconCleanse": {
-    "settingName": "corruptionHeaderIconCleanse",
-    "settingDescription": "Cleanse corruptions with the header icon",
-    "settingHelpText": "Use the left icon of both corruption loadout modules as the Cleanse button, removing the separate button at the end. Turn this off to restore the original layout.",
-    "settingType": "boolean",
-    "hidden": true,
-    "enabled": false,
-    "settingAction": "corruptionHeaderIconCleanseAction",
-    "settingControl": {
-      "controlType": "switch",
-      "controlGroup": "quickbar-qol",
-      "controlPage": "qol-buttons",
-      "controlEnabledId": "hs-setting-qol-corruption-header-icon-cleanse-btn"
     }
   },
   "matchOcteractIconSize": {
@@ -1523,6 +1576,51 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-remove-header-gap-btn"
+    }
+  },
+  "headerHideLoadoutIcons": {
+    "settingName": "headerHideLoadoutIcons",
+    "settingDescription": "Hide the header's ambrosia bar icon",
+    "settingHelpText": "Hides the icon on the left of the Ambrosia loadouts module.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": false,
+    "settingAction": "headerHideLoadoutIconsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-hide-loadout-icons-btn"
+    }
+  },
+  "headerFitLoadoutSlots": {
+    "settingName": "headerFitLoadoutSlots",
+    "settingDescription": "Fit the ambrosia loadout slots to their cell",
+    "settingHelpText": "In a header grid cell, the Ambrosia loadouts slots fill the cell on one line (two even rows above 8), sized like the automation bar's buttons. Off: the game's own layout.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerFitLoadoutSlotsAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-fit-loadout-slots-btn"
+    }
+  },
+  "headerEditButton": {
+    "settingName": "headerEditButton",
+    "settingDescription": "✎ Header edit button",
+    "settingHelpText": "A small pencil next to the mod icon that opens and closes the header's edit mode.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerEditButtonAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-edit-button-btn"
     }
   },
   "headerStatsAtBottom": {
@@ -1689,14 +1787,14 @@
     "settingHelpText": "Timer (positive decimal) for auto-starting challenges.",
     "settingType": "numeric",
     "enabled": true,
-    "settingValue": 0,
+    "settingValue": 0.1,
     "settingControl": {
       "controlId": "hs-setting-auto-sing-challenge-start-timer-value",
       "controlType": "number",
       "controlGroup": "auto-sing-timer-modal",
       "controlPage": "auto-sing",
       "controlOptions": {
-        "min": 0,
+        "min": 0.1,
         "max": 1000000,
         "step": 0.01
       }
@@ -1715,7 +1813,7 @@
       "controlGroup": "auto-sing-timer-modal",
       "controlPage": "auto-sing",
       "controlOptions": {
-        "min": 0,
+        "min": 0.1,
         "max": 1000000,
         "step": 0.01
       }
@@ -1734,10 +1832,25 @@
       "controlGroup": "auto-sing-timer-modal",
       "controlPage": "auto-sing",
       "controlOptions": {
-        "min": 0,
+        "min": 0.1,
         "max": 1000000,
         "step": 0.01
       }
+    }
+  },
+  "resetAutosingAdvanced": {
+    "settingName": "resetAutosingAdvanced",
+    "settingDescription": "Reset to default",
+    "settingHelpText": "Puts the numbers above back to their default values. Click twice.",
+    "settingType": "button",
+    "enabled": true,
+    "settingValue": "",
+    "settingAction": "resetAutosingAdvancedAction",
+    "settingControl": {
+      "controlId": "hs-setting-auto-sing-advanced-reset-button",
+      "controlType": "button",
+      "controlGroup": "auto-sing-timer-modal",
+      "controlPage": "auto-sing"
     }
   },
   "heaterTypeLoadoutSelections": {
@@ -1748,5 +1861,30 @@
     "settingType": "selectstrings",
     "enabled": true,
     "settingValue": []
+  },
+  "heaterUncheckedBranches": {
+    "hidden": true,
+    "settingName": "heaterUncheckedBranches",
+    "settingDescription": "Heater unticked branches",
+    "settingHelpText": "Stores the branches the player unticked in the heater modal.",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": []
+  },
+  "heaterTickedBranches": {
+    "hidden": true,
+    "settingName": "heaterTickedBranches",
+    "settingDescription": "Heater ticked branches",
+    "settingHelpText": "Stores the branches that start unticked and the player ticked in the heater modal.",
+    "settingType": "selectstrings",
+    "enabled": true,
+    "settingValue": []
+  },
+  "heaterTwoWorkers": {
+    "hidden": true,
+    "settingName": "heaterTwoWorkers",
+    "settingDescription": "Heater: heat in two workers at once (checkbox under the heat button)",
+    "settingType": "boolean",
+    "enabled": true
   }
 }

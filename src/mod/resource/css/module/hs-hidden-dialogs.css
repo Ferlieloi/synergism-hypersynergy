@@ -33,7 +33,7 @@
    (controlParent in hs-settings.json). The list is built by the module, not by the settings UI, so it has its
    own rules: indented under its label (block padding + switch width + gap)... */
 #hs-hidden-dialogs-block {
-    padding-left: calc(40px + 0.5em);
+    padding-left: calc(10px + var(--hs-setting-switch-size) + 0.5em);
 }
 
 /* ...and hidden while it's off: its switch has .hs-disabled then, kept up to date by the settings UI */

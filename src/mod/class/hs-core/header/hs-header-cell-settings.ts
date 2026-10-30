@@ -47,7 +47,8 @@ export class HSHeaderCellSettings {
         const alignment = HSHeaderCellSettings.#group('hs-header-cell-alignment', 'Horizontal');
         for (const value of ALIGNMENTS) {
             const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
-                HSHeaderCellSettings.#change({ align: value });
+                // A click on the pressed button clears it: the cell goes back to the game's layout.
+                HSHeaderCellSettings.#change({ align: button.getAttribute('aria-pressed') === 'true' ? undefined : value });
             });
             button.id = `hs-header-align-${value}`;
             alignment.append(button);
@@ -65,7 +66,7 @@ export class HSHeaderCellSettings {
         const vertical = HSHeaderCellSettings.#group('hs-header-cell-vertical-alignment', 'Vertical');
         for (const value of VERTICAL_ALIGNMENTS) {
             const button = HSHeaderCellSettings.#button(value[0].toUpperCase() + value.slice(1), () => {
-                HSHeaderCellSettings.#change({ vertical: value });
+                HSHeaderCellSettings.#change({ vertical: button.getAttribute('aria-pressed') === 'true' ? undefined : value });
             });
             button.id = `hs-header-vertical-${value}`;
             vertical.append(button);
@@ -133,9 +134,13 @@ export class HSHeaderCellSettings {
         return cells.find(cell => cell.modules.some(module => module.classList.contains('headerModuleSelected')));
     }
 
-    static #canHalf(cell: HeaderCell): boolean {
-        return cell.key.startsWith('headerGrid:') && cell.modules.length === 1
-            && !cell.element.classList.contains('headerStackRow');
+    /** A single module in a grid cell, not 1x2 (two rows high: half would mean nothing there). */
+    static #canHalf(cell: HeaderCell, rendered = false): boolean {
+        if (!cell.key.startsWith('headerGrid:') || cell.modules.length !== 1
+            || cell.element.classList.contains('headerStackRow')) return false;
+        // Right after a game redraw its data-size is the real one; otherwise a half module keeps the real one aside
+        const module = cell.modules[0];
+        return (rendered ? module.dataset.size : module.dataset.hsHeaderFullSize ?? module.dataset.size) !== 'Tall';
     }
 
     static #change(change: CellSettings): void {
@@ -143,6 +148,8 @@ export class HSHeaderCellSettings {
         if (!selected || ('half' in change && !HSHeaderCellSettings.#canHalf(selected))) return;
         const cells = HSHeaderCellSettings.#settings.layouts[HSHeaderCellSettings.#layoutKey()];
         const next = { ...cells[selected.key], ...change };
+        if (next.align === undefined) delete next.align;
+        if (next.vertical === undefined) delete next.vertical;
         if (next.half === undefined) delete next.half;
         if (next.align === undefined && next.half === undefined && next.vertical === undefined) delete cells[selected.key];
         else cells[selected.key] = next;
@@ -169,7 +176,7 @@ export class HSHeaderCellSettings {
             const value = settings[cell.key];
             if (value?.align) cell.element.dataset.hsHeaderAlign = value.align;
             else delete cell.element.dataset.hsHeaderAlign;
-            const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell);
+            const half = value?.half === true && HSHeaderCellSettings.#canHalf(cell, rendered);
             const vertical = value?.vertical ?? (half ? 'top' : undefined);
             if (vertical) cell.element.dataset.hsHeaderVertical = vertical;
             else delete cell.element.dataset.hsHeaderVertical;
@@ -192,18 +199,18 @@ export class HSHeaderCellSettings {
         const value = selected ? settings[selected.key] : undefined;
         for (const [alignment, button] of HSHeaderCellSettings.#alignButtons) {
             button.disabled = !selected;
-            button.setAttribute('aria-pressed', String(!!selected && (value?.align ?? 'center') === alignment));
+            button.setAttribute('aria-pressed', String(!!selected && value?.align === alignment));
             button.title = selected ? 'Align the selected cell' : 'Select a module in a header cell first';
         }
         for (const [height, button] of HSHeaderCellSettings.#heightButtons) {
             button.disabled = !selected || !HSHeaderCellSettings.#canHalf(selected);
             button.setAttribute('aria-pressed', String(!button.disabled && (value?.half ? 'half' : 'full') === height));
-            button.title = button.disabled ? 'Select a single module in the header grid (stacks already use half height)'
+            button.title = button.disabled ? 'Select a single module in the header grid, not 1x2 (stacks already use half height)'
                 : 'Use the full cell height or half height';
         }
         for (const [vertical, button] of HSHeaderCellSettings.#verticalButtons) {
             button.disabled = !selected;
-            button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : 'center')) === vertical));
+            button.setAttribute('aria-pressed', String(!!selected && (value?.vertical ?? (value?.half ? 'top' : undefined)) === vertical));
             button.title = selected ? 'Align the selected cell vertically' : 'Select a module in a header cell first';
         }
     }

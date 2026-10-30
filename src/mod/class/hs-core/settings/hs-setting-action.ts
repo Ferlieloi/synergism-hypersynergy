@@ -7,19 +7,20 @@ import { HSModuleManager } from "../module/hs-module-manager";
 import { HSMouse } from "../hs-mouse";
 import { HSAutosing } from "../../hs-modules/hs-autosing/hs-autosing";
 import { HSAutosingStrategyModal } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-modal";
+import { HSAutosingStrategyControls } from "../../hs-modules/hs-autosing/ui/hs-autosing-strategy-controls";
 import { HSSettings } from "./hs-settings";
 import { HSSettingsUI } from "./hs-settings-ui";
 import { HSQOLButtons } from "../../hs-modules/hs-qol-buttons/hs-qol-buttons";
-import { HSCorruption } from "../../hs-modules/hs-corruption";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
 import { HSAutoExport } from "../../hs-modules/hs-auto-export";
 import { HSGlobal } from "../hs-global";
-import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSHiddenDialogs } from "../dialogs/hs-hidden-dialogs";
 import { HSOcteractHeader } from "../header/hs-octeract-header";
 import { HSHeaderGap } from "../header/hs-header-gap";
 import { HSHeaderEditSettings } from "../header/hs-header-edit-settings";
 import { HSHeaderChallengeProgress } from "../header/hs-header-challenge-progress";
+import { HSHeaderChallengeModule } from "../header/hs-header-challenge-module";
+import { HSCorruptionHeader } from "../header/hs-corruption-header";
 
 // Action of an on/off setting that belongs to a module: `on` when the setting is on, `off` when it is off.
 // Does nothing if the module isn't loaded.
@@ -66,21 +67,6 @@ export class HSSettingActions {
             }
         },
 
-        // Auto validate Confirm & Alert (not Prompt). Only has an effect without the dialog hook (old patcher):
-        // with the hook, the patcher leaves the answers to HSGameDialogs.
-        autoConfirmPopups: async (params: HSSettingActionParams) => {
-            const context = params.contextName ?? "HSSettings";
-            if (params.disable && params.disable === true) {
-                HSUtils.setAutoConfirm(false);
-            } else {
-                if (HSUtils.isAutoConfirmPatched()) {
-                    HSUtils.setAutoConfirm(true);
-                } else {
-                    HSLogger.warn("autoConfirmPopups enabled, but __HS_AUTO_CONFIRM not patched", context);
-                }
-            }
-        },
-
         // "Hide game dialogs": the checkbox in the game's Confirm and Alert, and the hidden dialogs answered.
         // Also run at load, which adds the ready-made entries a newer mod version brought.
         hideGameDialogs: async (params: HSSettingActionParams) => {
@@ -123,8 +109,11 @@ export class HSSettingActions {
             },
             (mod) => mod.disableBerryMinibars()
         ),
+        // A class on <html>, so it applies to the bars wherever they are (hs-ambrosia-minibars.css)
+        ambrosiaMinibarBordersAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-minibars-framed', params.disable !== true);
+        },
 
-        // Needs GDS (usesGameData): the settings keep it off while GDS is off
         ambrosiaRateHeaderAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
             (mod) => mod.enableRateHeader(),
             (mod) => mod.disableRateHeader()
@@ -142,10 +131,25 @@ export class HSSettingActions {
             HSHeaderChallengeProgress.setEnabled(params.disable !== true);
         },
 
-        // Not awaited: the GDS start and stop run on their own
+        challengeProgressHeaderAction: async (params: HSSettingActionParams) => {
+            if (params.disable === true) HSHeaderChallengeModule.disable();
+            else HSHeaderChallengeModule.enable();
+        },
+
+        // The game's Corruption level header module, which is in the page from the start
+        corruptionHeaderControlsAction: async (params: HSSettingActionParams) => {
+            if (params.disable === true) HSCorruptionHeader.disableControls();
+            else HSCorruptionHeader.enableControls();
+        },
+        corruptionHeaderAlwaysShownAction: async (params: HSSettingActionParams) => {
+            HSCorruptionHeader.setAlwaysShown(params.disable !== true);
+        },
+
+        // Not awaited: the GDS start and stop run on their own.
+        // Only bookmarklet players have the setting: elsewhere GDS always runs, even with an OFF saved before.
         useGameData: moduleToggle<HSGameData>('HSGameData',
             (mod) => { void mod.enableGDS(); },
-            (mod) => { void mod.disableGDS(); }
+            (mod) => { void (mod.isGDSWanted() ? mod.enableGDS() : mod.disableGDS()); }
         ),
 
         persistentAmbrosiaLevelsAction: moduleToggle<HSAmbrosia>('HSAmbrosia',
@@ -183,18 +187,22 @@ export class HSSettingActions {
         },
 
         editAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.editSelectedStrategy();
+            await HSAutosingStrategyControls.editSelectedStrategy();
         },
         deleteAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.deleteSelectedStrategy();
+            await HSAutosingStrategyControls.deleteSelectedStrategy();
         },
 
         exportAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.exportSelectedStrategy();
+            await HSAutosingStrategyControls.exportSelectedStrategy();
         },
 
         importAutosingStrategy: async (params: HSSettingActionParams) => {
-            await HSSettingsUI.importStrategy();
+            await HSAutosingStrategyControls.importStrategy();
+        },
+
+        resetAutosingAdvancedAction: async () => {
+            HSSettingsUI.resetAutosingAdvancedSettings();
         },
 
         // A class on <html>, so it applies whenever #quickbarsRow is created (hs-quickbars.css)
@@ -208,6 +216,19 @@ export class HSSettingActions {
         },
         removeHeaderGapAction: async (params: HSSettingActionParams) => {
             HSHeaderGap.setEnabled(params.disable !== true);
+        },
+        // A class on <html> (hs-header-edit-settings.css)
+        headerHideLoadoutIconsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-no-loadout-icons', params.disable !== true);
+        },
+        // A class on <html> while off (hs-header-loadout-icons.css): the default look needs nothing before the
+        // settings load
+        headerFitLoadoutSlotsAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-game-loadout-slots', params.disable === true);
+        },
+        // A class on <html>: the button itself is created once (HSHeaderEditSettings.install)
+        headerEditButtonAction: async (params: HSSettingActionParams) => {
+            document.documentElement.classList.toggle('hs-header-edit-button', params.disable !== true);
         },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
@@ -247,13 +268,6 @@ export class HSSettingActions {
             (mod) => mod.disableAutomationQuickbar()
         ),
 
-        // The game's corruption loadout header modules, which are in the page from the start
-        corruptionHeaderLevelsAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderLevels(params.disable !== true);
-        },
-        corruptionHeaderIconCleanseAction: async (params: HSSettingActionParams) => {
-            HSCorruption.setHeaderIconCleanse(params.disable !== true);
-        },
         matchOcteractIconSizeAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-match-octeract-icon-size', params.disable !== true);
         },

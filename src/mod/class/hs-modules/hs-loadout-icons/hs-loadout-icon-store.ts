@@ -5,17 +5,15 @@ import { HSLogger } from "../../hs-core/hs-logger";
  * IsExplicitHSModule: No
  * Description:
  *     The mod's custom loadout slot icons, one map per kind of loadout, in localStorage (per browser).
- *     The game's own slot icons live in the save, where only a corruption or ambrosia upgrade name is
+ *     The game's own slot icons live in the save, where only an ambrosia upgrade name is
  *     accepted, so the mod's icons (any image of the game) are kept here and painted over the game's slots.
  *     Ambrosia: keyed by the game's slot button id (blueberryLoadout1…), shown on the Ambrosia tab's slots
  *     (HSAmbrosia), the heater results' slot row and the game's header (HSHeaderLoadoutIcons). Its storage
  *     key still bears the name of the removed ambrosia quickbar, so the icons players picked stay.
- *     Corruption: keyed by the slot number (1…), left by the old corruption quickbar, shown on the header.
  * Author: Shewchou
  */
 export class HSLoadoutIconStore {
     static readonly ambrosia = new HSLoadoutIconStore('hs-ambrosia-quickbar-icons');
-    static readonly corruption = new HSLoadoutIconStore('hs-corruption-loadout-icons');
 
     readonly #context = 'HSLoadoutIconStore';
     readonly #storageKey: string;

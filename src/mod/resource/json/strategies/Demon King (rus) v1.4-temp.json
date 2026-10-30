@@ -1,20 +1,9 @@
 {
-  "strategyName": "DK_(rus)_v1.3",
+  "strategyName": "DK_(rus)_v1.4-temp",
   "strategy": [
     {
       "startPhase": "start",
       "endPhase": "ascension",
-      "corruptions": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": null,
       "strat": [
         {
           "challengeNumber": 305,
@@ -126,18 +115,14 @@
     {
       "startPhase": "ascension",
       "endPhase": "challenge13",
-      "corruptions": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": null,
       "strat": [
+        {
+          "challengeNumber": 104,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0
+        },
         {
           "challengeNumber": 10,
           "challengeCompletions": 6,
@@ -178,7 +163,7 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 10,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 3
+            "ifJumpIndex": 4
           }
         },
         {
@@ -214,7 +199,7 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 10,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 7
+            "ifJumpIndex": 8
           }
         },
         {
@@ -236,17 +221,6 @@
     {
       "startPhase": "challenge13",
       "endPhase": "challenge14",
-      "corruptions": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": "c14",
       "strat": [
         {
           "challengeNumber": 14,
@@ -292,11 +266,14 @@
           "challengeMaxTime": 0
         },
         {
-          "challengeNumber": 400,
-          "challengeCompletions": 1,
+          "challengeNumber": 403,
+          "ascendAfterCorruption": true,
+          "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
-          "challengeMaxTime": 10000
+          "challengeMaxTime": 0,
+          "corruptionLevel": 20,
+          "comment": "Before leaving the 1st C15"
         },
         {
           "challengeNumber": 103,
@@ -366,17 +343,6 @@
     {
       "startPhase": "challenge14",
       "endPhase": "singularity",
-      "corruptions": {
-        "viscosity": 1,
-        "drought": 7,
-        "deflation": 4,
-        "extinction": 11,
-        "illiteracy": 0,
-        "recession": 14,
-        "dilation": 3,
-        "hyperchallenge": 0
-      },
-      "corruptionLoadoutName": null,
       "strat": [
         {
           "challengeNumber": 10,
@@ -411,18 +377,16 @@
     {
       "startPhase": "singularity",
       "endPhase": "end",
-      "corruptions": {
-        "viscosity": 10,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 16,
-        "dilation": 14,
-        "hyperchallenge": 16
-      },
-      "corruptionLoadoutName": "singularity-end",
       "strat": [
+        {
+          "challengeNumber": 403,
+          "ascendAfterCorruption": true,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeWaitBefore": 0,
+          "challengeMaxTime": 0,
+          "corruptionLevel": 50
+        },
         {
           "challengeNumber": 302,
           "challengeCompletions": 1,
@@ -484,15 +448,8 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 1e+110,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 2
+            "ifJumpIndex": 3
           }
-        },
-        {
-          "challengeNumber": 402,
-          "challengeCompletions": 0,
-          "challengeWaitTime": 0,
-          "challengeWaitBefore": 0,
-          "challengeMaxTime": 0
         },
         {
           "challengeNumber": 104,
@@ -556,17 +513,6 @@
   "aoagPhase": {
     "startPhase": "ascension",
     "endPhase": "ascension",
-    "corruptions": {
-      "viscosity": 0,
-      "drought": 0,
-      "deflation": 0,
-      "extinction": 0,
-      "illiteracy": 0,
-      "recession": 0,
-      "dilation": 0,
-      "hyperchallenge": 0
-    },
-    "corruptionLoadoutName": "AOAG Unlocked",
     "strat": [
       {
         "challengeNumber": 103,
@@ -598,46 +544,5 @@
       }
     ],
     "phaseId": "aoag"
-  },
-  "corruptionLoadouts": [
-    {
-      "name": "singularity-end",
-      "loadout": {
-        "viscosity": 16,
-        "drought": 16,
-        "deflation": 16,
-        "extinction": 16,
-        "illiteracy": 16,
-        "recession": 16,
-        "dilation": 16,
-        "hyperchallenge": 16
-      }
-    },
-    {
-      "name": "AOAG Unlocked",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 0,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      }
-    },
-    {
-      "name": "c14",
-      "loadout": {
-        "viscosity": 0,
-        "drought": 0,
-        "deflation": 0,
-        "extinction": 0,
-        "illiteracy": 16,
-        "recession": 0,
-        "dilation": 0,
-        "hyperchallenge": 0
-      }
-    }
-  ]
+  }
 }

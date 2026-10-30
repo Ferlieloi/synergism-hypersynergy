@@ -1,6 +1,6 @@
 import { HSModuleOptions } from "../../types/hs-types";
 import { HSSetting } from "../hs-core/settings/hs-setting";
-import { HSGameData } from "../hs-core/gds/hs-gamedata";
+import { HSPlatform } from "../hs-core/hs-platform";
 import { HSGlobal } from "../hs-core/hs-global";
 import { HSLogger } from "../hs-core/hs-logger";
 import { HSModule } from "../hs-core/module/hs-module";
@@ -84,7 +84,7 @@ export class HSAutoExport extends HSModule {
     }
 
     #isSteam(): boolean {
-        return HSModuleManager.getModule<HSGameData>('HSGameData')?.isSteam === true;
+        return HSPlatform.get() === 'steam';
     }
 
     #tick(): void {

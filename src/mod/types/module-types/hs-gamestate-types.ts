@@ -41,7 +41,6 @@ export enum RUNE_VIEW {
     RUNES = 1,
     TALISMANS = 2,
     BLESSINGS = 3,
-    SPIRITS = 4,
 }
 
 export enum CHALLENGE_VIEW {
@@ -70,9 +69,9 @@ export enum CUBE_VIEW {
 
 export enum TRAITS_VIEW {
     UNKNOWN = -1,
-    CAMPAIGNS = 1,
-    CORRUPTION_STATS = 2,
-    CORRUPTION_LOADOUTS = 3,
+    CORRUPTION_STATS = 1,
+    TOKENS = 2,
+    AUTO_ASCENSION = 3,
 }
 
 export enum SINGULARITY_VIEW {
@@ -106,7 +105,6 @@ export enum PSEUDOCOIN_VIEW {
     CART_3 = 3,
     CART_4 = 4,
     CART_5 = 5,
-    CART_6 = 6,
 }
 
 /**
@@ -150,7 +148,6 @@ export const RUNE_VIEW_BUTTON_IDS: Record<RUNE_VIEW, string> = {
     [RUNE_VIEW.RUNES]: 'toggleRuneSubTab1',
     [RUNE_VIEW.TALISMANS]: 'toggleRuneSubTab2',
     [RUNE_VIEW.BLESSINGS]: 'toggleRuneSubTab3',
-    [RUNE_VIEW.SPIRITS]: 'toggleRuneSubTab4',
     [RUNE_VIEW.UNKNOWN]: '',
 };
 
@@ -179,9 +176,9 @@ export const CUBE_VIEW_BUTTON_IDS: Record<CUBE_VIEW, string> = {
 };
 
 export const TRAITS_VIEW_BUTTON_IDS: Record<TRAITS_VIEW, string> = {
-    [TRAITS_VIEW.CAMPAIGNS]: 'corrCampaignsBtn',
     [TRAITS_VIEW.CORRUPTION_STATS]: 'corrStatsBtn',
-    [TRAITS_VIEW.CORRUPTION_LOADOUTS]: 'corrLoadoutsBtn',
+    [TRAITS_VIEW.TOKENS]: 'corrTokensBtn',
+    [TRAITS_VIEW.AUTO_ASCENSION]: 'corrAutoAscendBtn',
     [TRAITS_VIEW.UNKNOWN]: '',
 };
 
@@ -215,13 +212,24 @@ export const PSEUDOCOIN_VIEW_BUTTON_IDS: Record<PSEUDOCOIN_VIEW, string> = {
     [PSEUDOCOIN_VIEW.CART_3]: 'cartSubTab3',
     [PSEUDOCOIN_VIEW.CART_4]: 'cartSubTab4',
     [PSEUDOCOIN_VIEW.CART_5]: 'cartSubTab5',
-    [PSEUDOCOIN_VIEW.CART_6]: 'cartSubTab6',
     [PSEUDOCOIN_VIEW.UNKNOWN]: '',
+};
+
+/**
+ * A tab's subtab button ids, in the game's order: its enum's order (integer keys iterate in ascending order, and
+ * UNKNOWN's empty id is left out)
+ */
+export const subtabButtonIds = (buttonIds: Record<number, string>): string[] =>
+    Object.values(buttonIds).filter(id => id !== '');
+
+/** The subtab a button id belongs to, from its tab's *_VIEW_BUTTON_IDS record; UNKNOWN (-1) for any other id. */
+export const viewFromButtonId = <T extends number>(buttonIds: Record<T, string>, id: string): T => {
+    const key = Object.keys(buttonIds).find(k => id !== '' && buttonIds[Number(k) as T] === id);
+    return (key === undefined ? -1 : Number(key)) as T;
 };
 
 export interface HSViewProperties {
     subViewIds: string[];
-    subViewsSelector: string | string[];
     viewClassName: string;
 }
 

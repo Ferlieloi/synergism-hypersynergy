@@ -1,21 +1,28 @@
 import Decimal from "break_infinity.js";
 import { AntUpgrades } from "../../../types/data-types/hs-gamedata-api-types";
-import type { AcceleratorHelperContext } from "../../../types/data-types/hs-gamedata-api-types";
-import { calcECC } from "./hs-gamedata-utils";
+import { parseGameDataDecimal } from "./hs-gamedata-utils";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
+/**
+ * Class: AcceleratorHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Accelerators and accelerator boosts: free and total counts, power and effect, and the cube blessings that raise them.
+ * Author: Shewchou
+ */
 export class AcceleratorHelper {
-    readonly #ctx: AcceleratorHelperContext;
+    readonly #api: HSGameDataAPI;
 
-    constructor(context: AcceleratorHelperContext) {
-        this.#ctx = context;
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
     }
 
     calculateAcceleratorHypercubeBlessing = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 1
 
         const DR = 1 / 12
-        const effectPerBlessing = this.#ctx.calculateHypercubeBlessingMultiplierPlatonicBlessing() / 1000
+        const effectPerBlessing = this.#api.calculateHypercubeBlessingMultiplierPlatonicBlessing() / 1000
         const limit = 1000
         const acceleratorBlessings = data.hypercubeBlessings.accelerator ?? 0
 
@@ -28,7 +35,7 @@ export class AcceleratorHelper {
     }
 
     calculateAcceleratorTesseractBlessing = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 1
 
         const DR = 1 / 6
@@ -45,7 +52,7 @@ export class AcceleratorHelper {
     }
 
     calculateAcceleratorCubeBlessing = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0
 
         const DR = 1 / 3
@@ -63,7 +70,7 @@ export class AcceleratorHelper {
     }
 
     calculateTotalCoinOwned = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0
         return (
             (data.firstOwnedCoin ?? 0)
@@ -75,7 +82,7 @@ export class AcceleratorHelper {
     }
 
     getFreeAcceleratorBoost = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0
 
         let boost = 0
@@ -86,13 +93,13 @@ export class AcceleratorHelper {
         if ((data.upgrades?.[31] ?? 0) > 0.5) {
             boost += Math.floor(this.calculateTotalCoinOwned() / 2000)
         }
-        boost += Number(this.#ctx.getAchievementReward('accelBoosts'))
-        boost += (data.researches?.[93] ?? 0) * Math.floor(this.#ctx.calculateTotalRuneLevels() / 20)
+        boost += Number(this.#api.achievement.AchRewards.accelBoosts())
+        boost += (data.researches?.[93] ?? 0) * Math.floor(this.#api.rune.calculateTotalRuneLevels() / 20)
 
-        boost *= 1 + (data.researches?.[3] ?? 0) / 5 * (1 + 0.5 * calcECC('ascension', data.challengecompletions?.[14] ?? 0))
+        boost *= 1 + (data.researches?.[3] ?? 0) / 5 * (1 + (data.challengecompletions?.[14] ?? 0) / 2)
         boost *= 1 + (data.researches?.[16] ?? 0) / 20 + (data.researches?.[17] ?? 0) / 20
         boost *= 1 + (data.researches?.[88] ?? 0) / 20
-        boost *= this.#ctx.getAntUpgradeEffectValue(AntUpgrades.AcceleratorBoosts, 'acceleratorBoostMult')
+        boost *= this.#api.antUpgrade.getAntUpgradeEffectValue(AntUpgrades.AcceleratorBoosts, 'acceleratorBoostMult')
         boost *= 1 + (data.researches?.[127] ?? 0) / 100
         boost *= 1 + 0.008 * (data.researches?.[142] ?? 0)
         boost *= 1 + 0.006 * (data.researches?.[157] ?? 0)
@@ -100,7 +107,7 @@ export class AcceleratorHelper {
         boost *= 1 + 0.002 * (data.researches?.[187] ?? 0)
         boost *= 1 + 0.0001 * (data.researches?.[200] ?? 0)
         boost *= 1 + 0.0001 * (data.cubeUpgrades?.[50] ?? 0)
-        boost *= 1 + (1 / 1000) * this.#ctx.calculateHepteractEffective('acceleratorBoost')
+        boost *= 1 + (1 / 1000) * this.#api.calculateHepteractEffective('acceleratorBoost')
 
         if ((data.upgrades?.[73] ?? 0) > 0.5 && data.currentChallenge.reincarnation !== 0) {
             boost *= 2
@@ -110,18 +117,18 @@ export class AcceleratorHelper {
     }
 
     calculateTotalAcceleratorBoost = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0
         return Math.floor((data.acceleratorBoostBought ?? 0) + this.getFreeAcceleratorBoost())
     }
 
     getAcceleratorMultiplier = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 1
 
         let multiplier = 1
 
-        multiplier *= 1 + (data.researches?.[1] ?? 0) / 5 * (1 + 0.5 * calcECC('ascension', data.challengecompletions?.[14] ?? 0))
+        multiplier *= 1 + (data.researches?.[1] ?? 0) / 5 * (1 + (data.challengecompletions?.[14] ?? 0) / 2)
         multiplier *= 1 + (data.researches?.[6] ?? 0) / 20 + (data.researches?.[7] ?? 0) / 25 + (data.researches?.[8] ?? 0) / 40 + (3 / 200) * (data.researches?.[9] ?? 0) + (data.researches?.[10] ?? 0) / 200
         multiplier *= 1 + (data.researches?.[86] ?? 0) / 20
         multiplier *= 1 + (data.researches?.[126] ?? 0) / 100
@@ -151,11 +158,23 @@ export class AcceleratorHelper {
     }
 
     getFreeAccelerator = (): number => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return 0
 
-        let accelerator = Number(this.#ctx.getAchievementReward('accelerators'))
-        accelerator += 5 * Number(calcECC('transcend', data.challengecompletions?.[2] ?? 0))
+        // SynergismOfficial/src/Statistics.ts freeAcceleratorAdditiveStats
+        let accelerator = 0
+        if ((data.upgrades?.[8] ?? 0) !== 0) {
+            accelerator += Math.floor((data.multiplierBought ?? 0) / 7)
+        }
+        accelerator += [5, 4, 3, 2, 1].reduce((sum, amount, i) => sum + ((data.upgrades?.[21 + i] ?? 0) !== 0 ? amount : 0), 0)
+        if ((data.upgrades?.[32] ?? 0) !== 0) {
+            accelerator += Math.min(500, Math.floor(parseGameDataDecimal(data.prestigePoints).add(1).log10() / 25))
+        }
+        if ((data.upgrades?.[45] ?? 0) !== 0) {
+            accelerator += Math.min(2500, Math.floor(parseGameDataDecimal(data.transcendShards).add(1).log10()))
+        }
+        accelerator += Number(this.#api.achievement.AchRewards.accelerators())
+        accelerator += 5 * (data.challengecompletions?.[2] ?? 0)
         accelerator += this.calculateTotalAcceleratorBoost() * (
             5
             + 2 * (data.researches?.[18] ?? 0)
@@ -165,58 +184,59 @@ export class AcceleratorHelper {
         )
 
         if (data.unlocks?.prestige) {
-            const speedEffects = this.#ctx.getRuneEffects('speed')
+            const speedEffects = this.#api.rune.getRuneEffects('speed')
             accelerator *= Number(speedEffects.multiplicativeAccelerators ?? 1)
         }
 
         accelerator *= this.getAcceleratorMultiplier()
-        const viscosityPower = this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'viscosity')
-        accelerator = Math.pow(
-            accelerator,
-            Math.min(1, (1 + (data.platonicUpgrades[6] ?? 0) / 30) * viscosityPower)
-        )
+        // SynergismOfficial/src/Calculate.ts calculateFreeAccelMult: Challenge 15's viscosity is a power
+        accelerator = Math.pow(accelerator, this.#api.corruption.getChallenge15CorruptionEffect('viscosity'))
 
-        accelerator += 2000 * this.#ctx.calculateHepteractEffective('accelerator')
-        accelerator *= this.#ctx.calculateChallenge15Reward('accelerator')
-        accelerator *= 1 + 3 * this.#ctx.calculateHepteractEffective('accelerator') / 10000
-        accelerator = Math.min(1e100, Math.floor(accelerator))
-
-        const usedLevels = data.corruptions.used
-        if (usedLevels.viscosity >= 15) {
-            accelerator = Math.pow(accelerator, 0.2)
-        }
-        if (usedLevels.viscosity >= 16) {
-            accelerator = 1
-        }
+        accelerator += 2000 * this.#api.calculateHepteractEffective('accelerator')
+        accelerator *= this.#api.calculateChallenge15Reward('accelerator')
+        accelerator *= 1 + 3 * this.#api.calculateHepteractEffective('accelerator') / 10000
+        // Capped at 1e300 here, and at 1e100 once divided by viscosity (getTotalAccelerator)
+        accelerator = Math.min(1e300, Math.floor(accelerator))
 
         return accelerator
     }
 
-    getAcceleratorPower = (): number => {
-        const data = this.#ctx.getGameData();
+    // SynergismOfficial/src/Synergism.ts updateAllTick and SynergismOfficial/src/Calculate.ts
+    // calculateEffectiveFreeAccelMult: the corruption level's viscosity divides every accelerator, then the free ones
+    // are capped at 1e100
+    getTotalAccelerator = (): number => {
+        const data = this.#api.getGameData();
         if (!data) return 0
 
-        const achievementBonus = Number(this.#ctx.getAchievementReward('acceleratorPower'))
-        const transcendECC = Number(calcECC('transcend', data.challengecompletions?.[2] ?? 0))
+        const viscosity = this.#api.corruption.getCorruptionEffect(this.#api.corruption.getActiveCorruptionLevel(), 'viscosity') as number
+        return (data.acceleratorBought ?? 0) / viscosity + Math.min(1e100, this.getFreeAccelerator() / viscosity)
+    }
+
+    getAcceleratorPower = (): number => {
+        const data = this.#api.getGameData();
+        if (!data) return 0
+
+        const achievementBonus = Number(this.#api.achievement.AchRewards.acceleratorPower())
+        const challenge2Completions = data.challengecompletions?.[2] ?? 0
         const tuSevenMulti = (data.upgrades?.[46] ?? 0) > 0.5 ? 1.05 : 1
 
-        const speedEffects = this.#ctx.getRuneEffects('speed')
+        const speedEffects = this.#api.rune.getRuneEffects('speed')
         const base = 1.1
             + (speedEffects.acceleratorPower ?? 0)
             + achievementBonus
-            + transcendECC / 400
-            + tuSevenMulti * (this.calculateTotalAcceleratorBoost() / 100) * (1 + transcendECC / 20)
+            + tuSevenMulti * (this.calculateTotalAcceleratorBoost() / 100) * (1 + challenge2Completions / 20)
 
-        const exponent = 1 + 0.04 * calcECC('reincarnation', data.challengecompletions?.[7] ?? 0)
-        return Math.pow(base, exponent)
+        const exponent = 1 + 0.04 * (data.challengecompletions?.[7] ?? 0)
+        // SynergismOfficial/src/Synergism.ts updateAllTick: capped at 1e300 (raw C7 completions overflow it)
+        return Math.min(1e300, Math.pow(base, exponent))
     }
 
     getAcceleratorEffect = (): Decimal => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         if (!data) return new Decimal(1)
 
         const acceleratorPower = this.getAcceleratorPower()
-        const totalAccelerator = (data.acceleratorBought ?? 0) + this.getFreeAccelerator()
+        const totalAccelerator = this.getTotalAccelerator()
         const totalMultiplier = data.multiplierBought
 
         const exponent = data.currentChallenge.transcension === 1

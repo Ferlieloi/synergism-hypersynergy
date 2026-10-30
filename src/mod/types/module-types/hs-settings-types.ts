@@ -29,12 +29,10 @@ export interface HSSettingsDefinition {
     keepHeaderLayoutOnImport: KeepHeaderLayoutOnImportSetting;
 
     // Header loadout slots shown
-    headerCorruptionSlotsShown: HeaderCorruptionSlotsShownSetting;
     headerAmbrosiaSlotsShown: HeaderAmbrosiaSlotsShownSetting;
 
     // Notification Settings
     syncNotificationOpacity: SyncNotificationOpacitySetting;
-    autoConfirmPopups: AutoConfirmPopupsSetting;
 
     // UI Settings
     hideGameDialogs: HideGameDialogsSetting;
@@ -42,6 +40,12 @@ export interface HSSettingsDefinition {
     hiddenVanillaTabs: HiddenVanillaTabsSetting;
     editGameHeader: HSSettingBase<string>;
     compactChallengeText: HSSettingBase<boolean>;
+    challengeProgressHeader: HSSettingBase<boolean>;
+    challengeProgressLayout: HSSettingBase<string>;
+    challengeProgressDetails: HSSettingBase<string>;
+    challengeProgressShowNone: HSSettingBase<boolean>;
+    corruptionHeaderControls: HSSettingBase<boolean>;
+    corruptionHeaderAlwaysShown: HSSettingBase<boolean>;
     autoDismissOfflinePopup: AutoDismissOfflinePopupSetting;
     reloadOnLateLoaderStart: ReloadOnLateLoaderStartSetting;
     rememberSubtabs: RememberSubtabsSetting;
@@ -66,6 +70,7 @@ export interface HSSettingsDefinition {
     autoLoadoutAdd: AutoLoadoutAddSetting;
     autoLoadoutTime: AutoLoadoutTimeSetting;
     ambrosiaMinibars: AmbrosiaMinibarsSetting;
+    ambrosiaMinibarBorders: HSSettingBase<boolean>;
     ambrosiaRateHeader: AmbrosiaRateHeaderSetting;
 
     // Game Data Settings
@@ -74,6 +79,7 @@ export interface HSSettingsDefinition {
     // Auto Sing Settings
     startAutosing: StartAutosing;
     singularityNumber: SingularityNumber;
+    autosingNoAmbrosiaSwitch: HSSettingBase<boolean>;
     autosingEarlyCubeLoadout: AutosingEarlyCubeLoadout;
     autosingLateCubeLoadout: AutosingLateCubeLoadout;
     autosingQuarkLoadout: AutosingQuarkLoadout;
@@ -89,22 +95,27 @@ export interface HSSettingsDefinition {
     autosingAutoChallTimerStart: AutosingAutoChallTimerStart;
     autosingAutoChallTimerExit: AutosingAutoChallTimerExit;
     autosingAutoChallTimerEnter: AutosingAutoChallTimerEnter;
+    resetAutosingAdvanced: HSSettingBase<string>;
 
     // Heater Settings
     heaterTypeLoadoutSelections: HeaterTypeLoadoutSelectionsSetting;
+    heaterUncheckedBranches: HeaterUncheckedBranchesSetting;
+    heaterTickedBranches: HeaterTickedBranchesSetting;
+    heaterTwoWorkers: HeaterTwoWorkersSetting;
 
     // QOL Buttons Settings
     hideMaxedGQUpgrades: QOLButtonsHideMaxedGQUpgradesSetting;
     enableGQDistributor: QOLButtonsEnableGQDistributorSetting;
     hideMaxedOctUpgrades: QOLButtonsHideMaxedOctUpgradesSetting;
     enableAutomationQuickBar: QOLButtonsEnableAutomationQuickBarSetting;
-    corruptionHeaderLevels: QOLButtonsCorruptionHeaderLevelsSetting;
-    corruptionHeaderIconCleanse: HSSettingBase<boolean>;
     matchOcteractIconSize: HSSettingBase<boolean>;
     matchOcteractText: HSSettingBase<boolean>;
     centerQuickbars: QOLButtonsCenterQuickbarsSetting;
     headerStatsAtBottom: QOLButtonsHeaderStatsAtBottomSetting;
     removeHeaderGap: HSSettingBase<boolean>;
+    headerHideLoadoutIcons: HSSettingBase<boolean>;
+    headerFitLoadoutSlots: HSSettingBase<boolean>;
+    headerEditButton: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
@@ -196,12 +207,10 @@ export interface HepteractDistributorKeepSetting extends HSSettingBase<number> {
 export interface KeepHeaderLayoutOnImportSetting extends HSSettingBase<boolean> { }
 
 // Header loadout slots shown
-export interface HeaderCorruptionSlotsShownSetting extends HSSettingBase<number> { }
 export interface HeaderAmbrosiaSlotsShownSetting extends HSSettingBase<number> { }
 
 // Notification Opacity Settings
 export interface SyncNotificationOpacitySetting extends HSSettingBase<number> { }
-export interface AutoConfirmPopupsSetting extends HSSettingBase<boolean> { }
 
 // Log Settings
 export interface LogTimestampSetting extends HSSettingBase<boolean> { }
@@ -256,7 +265,6 @@ export interface QOLButtonsHideMaxedGQUpgradesSetting extends HSSettingBase<bool
 export interface QOLButtonsEnableGQDistributorSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHideMaxedOctUpgradesSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsEnableAutomationQuickBarSetting extends HSSettingBase<boolean> { }
-export interface QOLButtonsCorruptionHeaderLevelsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsCenterQuickbarsSetting extends HSSettingBase<boolean> { }
 export interface QOLButtonsHeaderStatsAtBottomSetting extends HSSettingBase<boolean> { }
 
@@ -270,3 +278,6 @@ export interface GQDistributorKeepSkippedShareSetting extends HSSettingBase<bool
 
 // Heater Settings
 export interface HeaterTypeLoadoutSelectionsSetting extends HSSettingBase<string[]> { }
+export interface HeaterUncheckedBranchesSetting extends HSSettingBase<string[]> { }
+export interface HeaterTickedBranchesSetting extends HSSettingBase<string[]> { }
+export interface HeaterTwoWorkersSetting extends HSSettingBase<boolean> { }

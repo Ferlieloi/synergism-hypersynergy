@@ -161,13 +161,12 @@ export class HSGameDialogs {
 
     /**
      * Set by autosing for its run (Restart included). With the hook, every Confirm and Alert queued meanwhile
-     * is answered (OK, dismissed), unless a session claims it. With an older patcher, autosing uses
-     * __HS_AUTO_CONFIRM instead (HSAutosingSettingsFixer). Without any patch (bookmarklet), they're clicked as
-     * soon as they open (#checkShownDialog), with a slow poll as a safety net, for as long as autosing is active.
+     * is answered (OK, dismissed), unless a session claims it. Without the hook (bookmarklet, older patcher),
+     * they're clicked as soon as they open (#checkShownDialog), with a slow poll as a safety net, for as long as autosing is active.
      */
     static setAutosingActive(active: boolean): void {
         HSGameDialogs.#autosingActive = active;
-        const answersByDom = active && !HSGameDialogs.#hookPatched && !window.__HS_AUTO_CONFIRM_PATCHED;
+        const answersByDom = active && !HSGameDialogs.#hookPatched;
         HSGameDialogs.#autosingAnswersByDom = answersByDom;
         if (answersByDom) HSGameDialogs.#startWatcher();
         else HSGameDialogs.#stopWatcher();

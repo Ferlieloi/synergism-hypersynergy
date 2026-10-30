@@ -6,7 +6,7 @@ const esbuild = require('esbuild');
 
 // Expose internal calculations only in this in-memory test bundle.
 async function main() {
-  const root = path.resolve(__dirname, '..');
+  const root = path.resolve(__dirname, '../..');
   const optimizer = path.join(root, 'src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts');
   const bundled = await esbuild.build({
     stdin: { contents: `export * from ${JSON.stringify(optimizer)};
@@ -41,7 +41,7 @@ async function main() {
     runeSiBonusLevelsTalismanNoAmbrosia: 0, runeIaExp: new Decimal(1),
     runeIaBonusLevelsTotal: new Decimal(0), runeIaBonusLevelsTalisman: new Decimal(0),
     baseTalismanPower: new Decimal(1), exalt5Unlocked: true, exalt9Unlocked: true,
-    jack: true, panthemaLevel: 3, shopAmbrosiaLuck1: 10,
+    panthemaLevel: 3, tauPower: 1, shopAmbrosiaLuck1: 10, freeShopLevelsInfinity: 10,
     ambrosiaUpgradeBonusLevels: {}, ambrosiaUpgradeBlueberryCostReductions: {},
     shopUpgradeRawLevels: { obtainiumEX3: 100, offeringEX3: 100 },
     shopBonusLevelsNoAmbrosia: { offering: 0, obtainium: 0, cubes: 0, speed: 0,

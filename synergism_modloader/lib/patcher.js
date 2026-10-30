@@ -434,6 +434,28 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // ── TALISMANS PATCH — capture Talismans.ts talismans as window.__HS_talismans
+    // The fragments invested in each talisman live in talismans[k].fragmentsInvested; player.talismans only gets a copy
+    // at each save. Found by what it is: the object literal assigned to a variable with exemption as one of its own keys,
+    // holding fragmentsInvested and horseShoe. Wrapped in a call that keeps a reference:
+    //   Te={exemption:{…},…}  becomes  Te=(function(o){window.__HS_talismans=o;return o})({exemption:{…},…})
+    report.talismans = false;
+    try {
+        const talismans = findAssignedObjectLiteral(code, /(?<![\w$.])["']?exemption["']?\s*:/g,
+            ['fragmentsInvested', 'horseShoe'], 'talismans');
+        if (talismans) {
+            const capture = '(function(o){window.__HS_talismans=o;return o})(';
+            code = code.slice(0, talismans.start) + capture + code.slice(talismans.start, talismans.end + 1) + ')' + code.slice(talismans.end + 1);
+            report.talismans = true;
+            log(`Patched talismans (variable=${talismans.name})`);
+        } else {
+            warn('Could not find the talismans object in game bundle');
+        }
+    } catch (e) {
+        warn('Error while patching talismans', e);
+    }
+
+    // ==================================================================================
     // ── GETMAXCHALLENGES PATCH — expose Challenges.ts getMaxChallenges as window.__HS_getMaxChallenges
     // Match challenge-cap behavior without assuming minified variable names.
     report.getMaxChallenges = false;
@@ -498,7 +520,6 @@ function patchBundle(code, options = {}) {
     //    e=>  becomes  (e,__hsO=window.__HS_dialogOrigin?.("confirm",e))=>
     // 2. At the start of the queued action (when the dialog reaches the front of the queue), the mod may answer it:
     //    window.__HS_onDialog(kind, origin) returns { value } to resolve the dialog without showing it, or undefined to show it.
-    // Without the mod's hook (older mod), window.__HS_AUTO_CONFIRM still auto-answers Confirm and Alert, as the old patch did.
     // All 5 or none: with a partial match, the mod falls back to clicking dialogs through the DOM.
     report.dialogHook = false;
     try {
@@ -509,8 +530,6 @@ function patchBundle(code, options = {}) {
             promptWrapper: 'prompt',
             purchasePromptWrapper: 'purchasePrompt'
         };
-        // Old mod versions only know __HS_AUTO_CONFIRM, for these two kinds
-        const legacyAnswers = { confirm: '!0', alert: 'void 0' };
         const wrapperRe = /["'](confirmWrapper|alertWrapper|infoAlertWrapper|promptWrapper|purchasePromptWrapper)["']/g;
         const actionRe = /[\w$.]+\.enqueue\(\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g;
         const dialogHeaderRe = new RegExp(String.raw`(?<![\w$.])[\w$]+\s*=\s*(?:async\s*)?(${PARAMS}|[\w$]+)\s*=>\s*$`, 'd');
@@ -561,47 +580,21 @@ function patchBundle(code, options = {}) {
                     start: site.paramsStart, end: site.paramsEnd,
                     text: `(${list ? `${list},` : ''}${originParam})`
                 });
-                const legacy = legacyAnswers[site.kind];
                 edits.push({
                     start: site.bodyStart, end: site.bodyStart,
-                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);` +
-                        (legacy ? `if(!window.__HS_onDialog&&window.__HS_AUTO_CONFIRM)return Promise.resolve(${legacy});` : '') +
-                        `\n`
+                    text: `\nconst __hsA=window.__HS_onDialog?.("${site.kind}",__hsO);if(__hsA)return Promise.resolve(__hsA.value);\n`
                 });
             }
             edits.sort((a, b) => b.start - a.start);
             for (const edit of edits) {
                 code = code.slice(0, edit.start) + edit.text + code.slice(edit.end);
             }
-            // __HS_AUTO_CONFIRM_PATCHED: older mod versions check it before relying on __HS_AUTO_CONFIRM
-            topLines.push('window.__HS_DIALOG_HOOK_PATCHED = true;window.__HS_AUTO_CONFIRM_PATCHED = true;');
+            topLines.push('window.__HS_DIALOG_HOOK_PATCHED = true;');
             report.dialogHook = true;
             log('Patched the 5 game dialogs (dialog hook)');
         }
     } catch (e) {
         warn('Error while patching the game dialogs', e);
-    }
-
-    // ==================================================================================
-    // ── APPLYCORRUPTIONS PATCH — expose Corruptions.ts applyCorruptions as window.__HS_applyCorruptions
-    // Found by what it does, not by minified or parameter names: the function reading the legacy "a/b/c" format
-    // (.includes("/")) or JSON (JSON.parse), then setting the next corruptions (setCorruptionLevelsWithChallengeRequirement).
-    // Exposed where it's defined, so it exists as soon as the bundle runs (see exposeFunction):
-    //   fx=e=>{  becomes  fx=window.__HS_applyCorruptions=e=>{
-    report.applyCorruptions = false;
-    try {
-        const corrResult = findEnclosingFunction(code, /\.includes\(\s*["']\/["']\s*\)/g,
-            ['setCorruptionLevelsWithChallengeRequirement', 'JSON.parse('], 'applyCorruptions');
-        if (corrResult) {
-            const exposed = exposeFunction(code, corrResult, '__HS_applyCorruptions');
-            code = exposed.code;
-            report.applyCorruptions = true;
-            log(`Patched applyCorruptions${exposed.atDefinition ? '' : ' at its first call'} (fn=${corrResult.fnName})`);
-        } else {
-            warn('Could not patch applyCorruptions — corruption import not found in bundle');
-        }
-    } catch (e) {
-        warn('Error while patching applyCorruptions', e);
     }
 
     // ==================================================================================
@@ -686,6 +679,97 @@ function patchBundle(code, options = {}) {
         }
     } catch (e) {
         warn('Error while patching consumables', e);
+    }
+
+    // ==================================================================================
+    // ── PSEUDOCOIN LEVELS PATCH — expose PseudoCoinUpgrades.ts PCoinUpgrades as window.__HS_pcoinLevels
+    // The game fetches the player's PseudoCoin upgrade levels once at load (initializePCoinCache) and updates them in
+    // place after an in-game purchase (updatePCoinCache); its formulas read that object. The mod reads it too, instead
+    // of fetching https://synergism.cc/stripe/upgrades again (the game's dev asked for less traffic). At the end of
+    // both functions, window.__HS_pcoinLevelsLoaded says the levels are the server's (until then they are all 0, as
+    // for a player who has none), and window.__HS_onPCoinChange tells the mod they changed.
+    // initializePCoinCache is found by the fetch it awaits and the response it reads; the object by its reset loop
+    // and the levels it writes in it:
+    //   gF=async()=>{let e=await Ad.fetchUpgrades();for(let t of Object.keys(cv))cv[t]=0,TT(t,0);
+    //       for(let t of e.playerUpgrades)cv[t.internalName]=t.level,TT(t.internalName,t.level)}
+    // updatePCoinCache by the only other write of a variable into that object:  hF=async(e,t)=>{cv[e]=t,TT(e,t)}
+    // The game never replaces the object, so the reference stays live. All three insertions or none.
+    report.pcoinLevels = false;
+    try {
+        const initResult = findEnclosingFunction(code, /\.fetchUpgrades\s*\(/g, ['.playerUpgrades', '.internalName'],
+            'pcoinLevels');
+        const initBody = initResult ? code.slice(initResult.bodyStart, initResult.bodyEnd) : '';
+        const levelsVar = /Object\.keys\(\s*([a-zA-Z_$][\w$]*)\s*\)/.exec(initBody)?.[1];
+        const escapedVar = levelsVar?.replace(/\$/g, '\\$');
+        const writesLevels = escapedVar && new RegExp(
+            String.raw`(?<![\w$.])${escapedVar}\s*\[\s*[a-zA-Z_$][\w$]*\.internalName\s*\]\s*=`).test(initBody);
+        const updateResults = [];
+        if (writesLevels) {
+            const write = new RegExp(String.raw`(?<![\w$.])${escapedVar}\s*\[\s*[a-zA-Z_$][\w$]*\s*\]\s*=\s*[a-zA-Z_$][\w$]*(?![\w$.\[(])`, 'g');
+            let match;
+            while ((match = write.exec(code)) !== null) {
+                const result = findFunctionAround(code, match.index, []);
+                if (result && result.bodyStart !== initResult.bodyStart
+                    && !updateResults.some(r => r.bodyStart === result.bodyStart)) updateResults.push(result);
+            }
+        }
+        if (writesLevels && updateResults.length === 1) {
+            const updateResult = updateResults[0];
+            const notify = '\n;window.__HS_pcoinLevelsLoaded=true;try{window.__HS_onPCoinChange?.()}catch(__hsE){}\n';
+            // From the end of the bundle backwards, so the earlier positions stay valid
+            const inserts = [
+                { at: initResult.bodyStart, text: `\nwindow.__HS_pcoinLevels=${levelsVar};\n` },
+                { at: initResult.bodyEnd, text: notify },
+                { at: updateResult.bodyEnd, text: notify }
+            ].sort((a, b) => b.at - a.at);
+            for (const insert of inserts) code = code.slice(0, insert.at) + insert.text + code.slice(insert.at);
+            report.pcoinLevels = true;
+            log(`Patched PseudoCoin levels (variable=${levelsVar}, init=${initResult.fnName}, update=${updateResult.fnName})`);
+        } else {
+            warn(!initResult
+                ? 'Could not patch PseudoCoin levels — initializePCoinCache (".fetchUpgrades(" with ".playerUpgrades") not found'
+                : !writesLevels
+                    ? `Could not patch PseudoCoin levels — the levels object was not found in ${initResult.fnName}`
+                    : `Could not patch PseudoCoin levels — expected 1 updatePCoinCache writing ${levelsVar}, found ${updateResults.length}`);
+        }
+    } catch (e) {
+        warn('Error while patching PseudoCoin levels', e);
+    }
+
+    // ==================================================================================
+    // ── QUARK BONUS PATCH — hand Quark.ts's personal and global quark bonuses to the mod (window.__HS_quarkBonus)
+    // The game gets the personal bonus from https://synergism.cc/api/v1/users/me (at load and at a login) and the
+    // global one from https://synergism.cc/api/v1/quark-bonus (at load, then every 15 minutes); the mod reads them
+    // instead of fetching /users/me again (the game's dev asked for less traffic). Both setters call updateQuarkUI
+    // with both current values. It is found by its two translation keys, and its global bonus is the parameter its
+    // texts get as globalBonus:
+    //   a$=(e,t)=>{let r=u("currentBonus");e>0?r.innerHTML=s.t("settings.quarkBonusExtended",{globalBonus:t,...
+    //   becomes  a$=(e,t)=>{try{window.__HS_quarkBonus={personal:e,global:t};window.__HS_onQuarkBonusChange?.()}catch(__hsE){}...
+    report.quarkBonus = false;
+    try {
+        const uiResult = findEnclosingFunction(code, /["']settings\.quarkBonusExtended["']/g,
+            ['settings.quarkBonusSimple', 'currentBonus'], 'quark bonus');
+        const header = uiResult ? code.slice(Math.max(0, uiResult.bodyStart - 300), uiResult.bodyStart) : '';
+        const paramList = new RegExp(String.raw`(${PARAMS})\s*(?:=>\s*)?\{$`).exec(header)?.[1];
+        const params = paramList ? splitParams(paramList.slice(1, -1)).map(p => p.split('=')[0].trim()) : [];
+        const body = uiResult ? code.slice(uiResult.bodyStart, uiResult.bodyEnd) : '';
+        const globalParam = params.find(p => new RegExp(
+            String.raw`globalBonus\s*:\s*${p.replace(/\$/g, '\\$')}(?![\w$.\[(])`).test(body));
+        const personalParam = params.find(p => p !== globalParam);
+        if (uiResult && params.length === 2 && params.every(p => /^[\w$]+$/.test(p)) && globalParam && personalParam) {
+            code = code.slice(0, uiResult.bodyStart) +
+                `\ntry{window.__HS_quarkBonus={personal:${personalParam},global:${globalParam}};` +
+                'window.__HS_onQuarkBonusChange?.()}catch(__hsE){}\n' +
+                code.slice(uiResult.bodyStart);
+            report.quarkBonus = true;
+            log(`Patched quark bonus (fn=${uiResult.fnName}, personal=${personalParam}, global=${globalParam})`);
+        } else {
+            warn(!uiResult
+                ? 'Could not patch the quark bonus — updateQuarkUI ("settings.quarkBonusExtended") not found'
+                : `Could not patch the quark bonus — the personal and global bonus parameters of ${uiResult.fnName} were not found`);
+        }
+    } catch (e) {
+        warn('Error while patching the quark bonus', e);
     }
 
     // ==================================================================================
@@ -886,7 +970,7 @@ function startBrowserLoader(options) {
     if (window.HS_LOADER_INITIALIZED) return;
     window.HS_LOADER_INITIALIZED = true;
 
-    const loaderVersion = '4.4';
+    const loaderVersion = '4.7';
     const startTime = performance.now();
     const log = (...a) => console.log(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#4af', ...a);
     const warn = (...a) => console.warn(`%c[HS-LOADER v${loaderVersion} +${(performance.now() - startTime).toFixed(0)}ms]`, 'color:#fa4', ...a);
@@ -906,7 +990,7 @@ function startBrowserLoader(options) {
     // At most LATE_START_MAX_RELOADS in a row, counted in sessionStorage so it can't loop.
     // The mod's reloadOnLateLoaderStart setting (read from localStorage) can turn the reload off.
     const LATE_START_KEY = 'hs-loader-late-start-reloads';
-    const LATE_START_MAX_RELOADS = 2;
+    const LATE_START_MAX_RELOADS = 3;
     const LATE_START_WINDOW_MS = 60000;
     const LATE_START_RELOAD_DELAY_MS = 1500;
 
@@ -1144,6 +1228,13 @@ function startBrowserLoader(options) {
     // ─── Phase 1 & 2: Fetch, patch, and inject the game bundle ───────────────
     // ==================================================================================
 
+    // The bundle of the page's own copy of the game: the game is also served elsewhere (pseudo-corp.github.io/SynergismOfficial/,
+    // for players whose network blocks synergism.cc), and its page loads "./dist/out.js" from wherever it is
+    function gameBundleUrl() {
+        if (location.hostname === 'synergism.cc') return 'https://synergism.cc/dist/out.js';
+        return new URL('dist/out.js', document.baseURI).href;
+    }
+
     async function injectPatchedBundle() {
         if (window.__HS_INJECTED__) return;
         window.__HS_INJECTED__ = true;
@@ -1151,7 +1242,7 @@ function startBrowserLoader(options) {
         log('Fetching game bundle...');
         let code;
         try {
-            const res = await originalFetch(`https://synergism.cc/dist/out.js?t=${Date.now()}`, {
+            const res = await originalFetch(`${gameBundleUrl()}?t=${Date.now()}`, {
                 cache: 'no-store',
                 // The mod's header (HSGlobal.Common.modRequestHeaders); the mod isn't loaded yet, so no version
                 headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'X-HyperSynergism-Version': 'loader' }
@@ -1241,7 +1332,6 @@ function startBrowserLoader(options) {
                         `exportData:          typeof window.__HS_exportData,` +
                         `exportOutputPatched: !!window.__HS_EXPORT_OUTPUT_PATCHED,` +
                         `getMaxChallenges:    typeof window.__HS_getMaxChallenges,` +
-                        `applyCorruptions:    typeof window.__HS_applyCorruptions,` +
                         `validateBlueberryTree: typeof window.__HS_validateBlueberryTree,` +
                         `dialogHookPatched:   !!window.__HS_DIALOG_HOOK_PATCHED,` +
                         `saveImportHookPatched: !!window.__HS_SAVE_IMPORT_HOOK_PATCHED,` +

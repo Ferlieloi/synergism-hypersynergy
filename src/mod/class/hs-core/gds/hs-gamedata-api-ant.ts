@@ -1,21 +1,31 @@
 import Decimal from "break_infinity.js";
 import { AntUpgrades, CalculationCache, } from "../../../types/data-types/hs-gamedata-api-types";
-import type { AntUpgradeTypeMap, AntUpgradeHelperContext, } from "../../../types/data-types/hs-gamedata-api-types";
+import type { AntUpgradeTypeMap, } from "../../../types/data-types/hs-gamedata-api-types";
+import { calculateSigmoidExponential, parseGameDataDecimal } from "./hs-gamedata-utils";
+import type { GameData } from "../../../types/data-types/hs-player-savedata";
+import type { HSGameDataAPI } from "./hs-gamedata-api";
 
+/**
+ * Class: AntUpgradeHelper
+ * IsExplicitHSModule: No
+ * Description:
+ *     Ant upgrades: free levels, effective levels and effects.
+ * Author: Shewchou
+ */
 export class AntUpgradeHelper {
-    readonly #ctx: AntUpgradeHelperContext;
+    readonly #api: HSGameDataAPI;
     readonly #antUpgradeEffectCache = new Map<string, AntUpgradeTypeMap[keyof AntUpgradeTypeMap]>();
     readonly #antUpgradeValueCache = new Map<string, unknown>();
     readonly #antUpgradeActualLevelCache = new Map<AntUpgrades, number>();
-    #lastAntUpgradeGameData?: object;
+    #lastCacheGeneration?: number;
     public readonly antUpgradeData: ReturnType<typeof buildAntUpgradeData>;
 
-    constructor(ctx: AntUpgradeHelperContext) {
-        this.#ctx = ctx;
-        this.antUpgradeData = buildAntUpgradeData(this.#ctx);
+    constructor(api: HSGameDataAPI) {
+        this.#api = api;
+        this.antUpgradeData = buildAntUpgradeData(this.#api);
     }
 
-    #getAntUpgradeEffectCacheKey<K extends AntUpgrades>(antUpgrade: K, actualLevel: number, data?: ReturnType<AntUpgradeHelperContext['getGameData']>): string {
+    #getAntUpgradeEffectCacheKey<K extends AntUpgrades>(antUpgrade: K, actualLevel: number, data?: GameData | undefined): string {
         let key = `${antUpgrade}:${actualLevel}`;
 
         if (antUpgrade === AntUpgrades.AntSpeed) {
@@ -23,17 +33,18 @@ export class AntUpgradeHelper {
         } else if (antUpgrade === AntUpgrades.Coins) {
             key += `:${data?.currentChallenge.ascension ?? 0}:${String(data?.ants.crumbs ?? 0)}`;
         } else if (antUpgrade === AntUpgrades.AntELO) {
-            key += `:${data?.ants.antSacrificeCount ?? 0}:${Number(this.#ctx.getAchievementReward('antSpeed2UpgradeImprover') ?? 0)}`;
+            key += `:${data?.ants.antSacrificeCount ?? 0}:${Number(this.#api.achievement.AchRewards.antSpeed2UpgradeImprover() ?? 0)}`;
         }
 
         return key;
     }
 
-    #getCachedAntUpgradeActualLevel<K extends AntUpgrades>(antUpgrade: K, data: ReturnType<AntUpgradeHelperContext['getGameData']>): number {
+    #getCachedAntUpgradeActualLevel<K extends AntUpgrades>(antUpgrade: K, data: GameData | undefined): number {
         if (!data) return 0;
 
-        if (this.#lastAntUpgradeGameData !== data) {
-            this.#lastAntUpgradeGameData = data;
+        const generation = this.#api.getCacheGeneration();
+        if (generation !== this.#lastCacheGeneration) {
+            this.#lastCacheGeneration = generation;
             this.#antUpgradeActualLevelCache.clear();
             this.#antUpgradeEffectCache.clear();
             this.#antUpgradeValueCache.clear();
@@ -50,7 +61,7 @@ export class AntUpgradeHelper {
     }
 
     getAntUpgradeEffectValue = <K extends AntUpgrades, P extends keyof AntUpgradeTypeMap[K]>(antUpgrade: K, property: P): AntUpgradeTypeMap[K][P] => {
-        const data = this.#ctx.getGameData();
+        const data = this.#api.getGameData();
         const actualLevel = this.#getCachedAntUpgradeActualLevel(antUpgrade, data);
         const effectCacheKey = this.#getAntUpgradeEffectCacheKey(antUpgrade, actualLevel, data);
         const valueCacheKey = `${effectCacheKey}:${String(property)}`;
@@ -74,15 +85,15 @@ export class AntUpgradeHelper {
         return value;
     }
 
-    calculateTrueAntLevel = (antUpgrade: AntUpgrades, data?: ReturnType<AntUpgradeHelperContext['getGameData']>): number => {
-        if (!data) data = this.#ctx.getGameData();
+    calculateTrueAntLevel = (antUpgrade: AntUpgrades, data?: GameData | undefined): number => {
+        if (!data) data = this.#api.getGameData();
         if (!data) return 0;
 
         const upgradeData = this.antUpgradeData[antUpgrade];
-        const freeLevels = computeFreeAntUpgradeLevels(this.#ctx);
+        const freeLevels = computeFreeAntUpgradeLevels(this.#api);
         const corruptionDivisor = upgradeData.exemptFromCorruption
             ? 1
-            : this.#ctx.calculateCorruptionEffect(data.corruptions.used, 'extinction');
+            : this.#api.corruption.getChallenge15CorruptionEffect('extinction');
 
         if (data.currentChallenge.ascension === 11) {
             return Math.min(data.ants.upgrades[antUpgrade], freeLevels) / corruptionDivisor;
@@ -92,12 +103,12 @@ export class AntUpgradeHelper {
     }
 }
 
-export const computeFreeAntUpgradeLevels = (env: AntUpgradeHelperContext): number => {
-    const data = env.getGameData();
+export const computeFreeAntUpgradeLevels = (api: HSGameDataAPI): number => {
+    const data = api.getGameData();
     if (!data) return 0;
 
     const cacheName = 'FreeAntUpgradeLevels' as keyof CalculationCache;
-    const freeAntUpgradesReward = Number(env.getAchievementReward('freeAntUpgrades') ?? 0);
+    const freeAntUpgradesReward = Number(api.achievement.AchRewards.freeAntUpgrades() ?? 0);
     const calculationVars = [
         data.challengecompletions[9],
         data.constantUpgrades[6] ?? 0,
@@ -113,39 +124,39 @@ export const computeFreeAntUpgradeLevels = (env: AntUpgradeHelperContext): numbe
         data.challengecompletions[8],
     ];
 
-    const cached = env.checkCalculationCache(cacheName, calculationVars);
+    const cached = api.checkCalculationCache(cacheName, calculationVars);
     if (cached !== undefined) return cached;
 
     let bonusLevels = 0;
-    bonusLevels += env.CalcECC('reincarnation', data.challengecompletions[9]);
+    bonusLevels += data.challengecompletions[9];
     bonusLevels += Math.round(2000 * (1 - Math.pow(0.999, data.constantUpgrades[6] ?? 0)));
-    bonusLevels += 12 * env.CalcECC('ascension', data.challengecompletions[11]);
+    bonusLevels += 12 * data.challengecompletions[11];
     bonusLevels += 2 * data.researches[97];
     bonusLevels += 2 * data.researches[98];
     bonusLevels += data.researches[102];
     bonusLevels += 2 * data.researches[132];
     bonusLevels += Math.floor((1 / 200) * data.researches[200]);
     bonusLevels += freeAntUpgradesReward;
-    bonusLevels *= env.calculateChallenge15Reward('bonusAntLevel');
+    bonusLevels *= api.calculateChallenge15Reward('bonusAntLevel');
 
     if (data.currentChallenge.ascension === 11) {
         bonusLevels += Math.floor(
             3 * data.challengecompletions[8]
             + 5 * data.challengecompletions[9]
         );
-        env.updateCalculationCache(cacheName, { value: bonusLevels, cachedBy: calculationVars });
+        api.updateCalculationCache(cacheName, { value: bonusLevels, cachedBy: calculationVars });
         return bonusLevels;
     }
 
-    env.updateCalculationCache(cacheName, { value: bonusLevels, cachedBy: calculationVars });
+    api.updateCalculationCache(cacheName, { value: bonusLevels, cachedBy: calculationVars });
     return bonusLevels;
 };
 
-const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
+const buildAntUpgradeData = (api: HSGameDataAPI) => ({
     [AntUpgrades.AntSpeed]: {
         exemptFromCorruption: false,
         effect: (n: number) => {
-            const data = env.getGameData();
+            const data = api.getGameData();
             let baseMul = 1.1;
             baseMul += (data?.researches[101] ?? 0) / 1000;
             baseMul += (data?.researches[162] ?? 0) / 1000;
@@ -157,15 +168,15 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.Coins]: {
         exemptFromCorruption: false,
         effect: (n: number) => {
-            const data = env.getGameData();
+            const data = api.getGameData();
             let divisor = 1;
             if (data?.currentChallenge.ascension === 15) {
                 divisor = 100 + 9900 * (1000 + n) / (1000 + n ** 2);
             }
-            const baseExponent = 999999 + env.calculateSigmoidExponential(49000001, n / 3000);
+            const baseExponent = 999999 + calculateSigmoidExponential(49000001, n / 3000);
             const bonusExponent = 250 * n;
             const exponent = (baseExponent + bonusExponent) / divisor;
-            const coinMult = Decimal.max(1, Decimal.pow(data?.ants.crumbs ?? 0, exponent));
+            const coinMult = Decimal.max(1, Decimal.pow(parseGameDataDecimal(data?.ants.crumbs), exponent));
             return {
                 crumbToCoinExp: exponent,
                 coinMultiplier: coinMult,
@@ -181,13 +192,13 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.AcceleratorBoosts]: {
         exemptFromCorruption: false,
         effect: (n: number) => ({
-            acceleratorBoostMult: env.calculateSigmoidExponential(20, n / 1000),
+            acceleratorBoostMult: calculateSigmoidExponential(20, n / 1000),
         }),
     },
     [AntUpgrades.Multipliers]: {
         exemptFromCorruption: false,
         effect: (n: number) => ({
-            multiplierMult: env.calculateSigmoidExponential(40, n / 1000),
+            multiplierMult: calculateSigmoidExponential(40, n / 1000),
         }),
     },
     [AntUpgrades.Offerings]: {
@@ -242,9 +253,9 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.AntELO]: {
         exemptFromCorruption: false,
         effect: (n: number) => {
-            const data = env.getGameData();
+            const data = api.getGameData();
             const antSacrificeLimitCount = n + 200 * Math.min(1, n);
-            const upgradeImprover = Math.min(n, (env.getAchievementReward('antSpeed2UpgradeImprover') as number ?? 0));
+            const upgradeImprover = Math.min(n, (api.achievement.AchRewards.antSpeed2UpgradeImprover() as number ?? 0));
             const effectiveSacs = Math.min(
                 antSacrificeLimitCount + upgradeImprover,
                 data?.ants.antSacrificeCount ?? 0 + upgradeImprover,
@@ -267,8 +278,8 @@ const buildAntUpgradeData = (env: AntUpgradeHelperContext) => ({
     [AntUpgrades.AscensionScore]: {
         exemptFromCorruption: true,
         effect: (n: number) => ({
-            ascensionScoreBase: 100000 * (1 - Math.pow(0.999, n)),
-            cubesBanked: 3 * Math.min(200, n) + 2500 * (1 - Math.pow(1 - 1 / 2750, n)) + 96900 * (1 - Math.pow(1 - 1 / 969000, n)),
+            cubesBanked: Math.min(200, n) + Math.min(800, Math.max(0, n - 200) * 0.1)
+                + Math.min(5000, Math.max(0, n - 8200) / 100),
         }),
     },
     [AntUpgrades.WowCubes]: {

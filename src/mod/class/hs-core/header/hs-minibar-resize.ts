@@ -28,6 +28,8 @@ const MIN_BAR_HEIGHT = 3;
 const MAX_BAR_HEIGHT = 24;
 const BAR_IDS = ['hs-blue-progress-bar', 'hs-red-progress-bar', 'hs-purple-progress-bar'];
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
+// The gap between two bars for a bar height: the wrapper's CSS gap (hs-ambrosia-minibars.css)
+const barGap = (barHeight: number) => barHeight <= 5 ? 0 : 2;
 
 /** Resizes the minibars without starting the game's header drag. Dimensions belong to each screen layout. */
 export class HSMinibarResize {
@@ -118,8 +120,15 @@ export class HSMinibarResize {
         }
         let barHeight = MAX_BAR_HEIGHT;
         if (module?.classList.contains('hs-header-half')) {
-            const gap = Number.parseFloat(getComputedStyle(this.wrapper).rowGap) || 0;
-            barHeight = Math.max(MIN_BAR_HEIGHT, Math.floor((16 - gap * (this.#visibleBars() - 1)) / this.#visibleBars()));
+            // The tallest bars that fit the half slot's 16px with their gaps (which depend on the bar height)
+            const bars = this.#visibleBars();
+            barHeight = MIN_BAR_HEIGHT;
+            for (let height = MAX_BAR_HEIGHT; height > MIN_BAR_HEIGHT; height--) {
+                if (height * bars + barGap(height) * (bars - 1) <= 16) {
+                    barHeight = height;
+                    break;
+                }
+            }
         }
         return { width: Math.max(MIN_WIDTH, width), barHeight };
     }

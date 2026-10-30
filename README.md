@@ -12,52 +12,49 @@ Hypersynergism adds quality-of-life tools, game information, interface options, 
 
 Here are some of Hypersynergism’s standout features:
 
-- **AutoSing:** (S216+) Run configurable strategies to farm singularities (this can be considered as "not strictly QoL". You do you.)
-- **Ambrosia Heater:** Use the built-in optimizer to compute loadouts.
-- **Ambrosia tools:** Manage and quick-switch loadouts, automatically switch loadouts when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
-- **Quickbars:** View and interact with Ambrosia, Corruption and Automation controls from the game header.
-- **Header cell controls:** Open the game's header editor with Edit game header in HS Settings → UI, or by holding down on the header. Select a module and choose Left, Center, or Right horizontally and Top, Center, or Bottom vertically for its cell. Use Full or Half height for a single module in the grid; Half matches the compact modules in a two-module stack, with the same vertical alignment controls. Enable Compact challenge text in [HS] Header to show only progress numbers at any cell height, with the full description on hover. Choices are remembered separately for desktop and mobile. Done saves the game layout and any pending HS settings immediately.
-- **Compact header spacing:** Enable Remove header gap in [HS] Header to bring the game tabs up to the last visible header module, while keeping corruption levels visible.
-- **Resizable minibars:** In header edit mode, drag the minibars’ right edge, bottom edge, or corner to adjust their width and bar height. The bars are borderless, fit inside half-height cells, and follow the cell's alignment. Sizes stay within the header cell, are saved per desktop/mobile layout, and can be restored with Reset size.
-- **Header options:** In the [HS] Header settings, use the corruption loadout icon to cleanse corruptions instead of a separate button, match the octeract icon to the other cube icons in the top row, and add a white Oct/Oct/s unit label.
-- **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set. (Soon to be: Hept Optimizer)
+- **AutoSing:** (S216+) Run singularities with strategies you can edit in the strategy editor (this can be considered as "not strictly QoL". You do you.)
+- **Ambrosia Heater:** Find the best Ambrosia loadouts for your save with the built-in optimizer.
+- **Ambrosia tools:** Quick-switch loadouts, switch them automatically when using ADD or TIME codes, and track Ambrosia progress and income with minibars.
+- **Header:** Place an Automation quickbar, use any game image as a loadout slot icon, align modules in their cells, resize the minibars, remove the gap under the header, and more, all from the game's header editor.
+- **Hepteract helpers:** View in-game hepteract ratios, quickly expand and fill hepteracts, and split your hepteracts between them with the Hepteract Distributor, using ratios you set.
 - **Golden Quark tools:** Split your Golden Quarks between upgrades with the GQ Distributor, using ratios you set.
-- **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the "Since you were away" box at load.
+- **Game information:** Compute game values from your save in the Tools tab (luck, cube multipliers, Ambrosia speed, ascension score…, with their components), and see the time until a platonic upgrade's next level in its tooltip.
+- **Fewer pop-ups:** Tick "Don't show again" on the game dialogs you no longer need to read, and skip the game's offline popup at load.
 - **Interface options:** Each tab reopens on the subtab you last used, unused game tabs can be hidden, and notifications can be made more transparent.
-- **Backup & Restore:** Save the game save, the mod's settings and the logs in one file, and load it back later or on another device.
+- **Saves:** Export the save every X minutes, and back up the save, the mod's settings and the logs in one file, to load later or on another device.
 
 ## Using the mod
 
-### On Steam (Windows only)
+### 🎮 On Steam (Windows only)
 
 Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
 
 The mod is downloaded at each launch, always in its latest version. The loader updates itself, and tells you when the game has to be patched again.
 
-### In a browser: Tampermonkey (recommended)
+### 🌐 In a browser: Tampermonkey (recommended)
 
 The mod is loaded by a userscript, which starts it together with the game.
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/), a browser extension that runs userscripts: [Chrome](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo), [Firefox](https://addons.mozilla.org/firefox/addon/tampermonkey/), [Edge](https://microsoftedge.microsoft.com/addons/detail/iikmkjmpaadaobahmlepeloendndfphd), [Opera](https://addons.opera.com/extensions/details/tampermonkey-beta/). Other userscript managers may work too.
 2. Chrome, Edge and other Chrome-based browsers only: allow Tampermonkey to run scripts. Right-click its icon, choose "Manage extension" and turn on "Allow User Scripts" (or "Developer mode" if that switch isn't there). See [Tampermonkey's guide](https://www.tampermonkey.net/faq.php?q=Q209).
 3. Open the [loader script](https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js) and click "Install" on the page Tampermonkey shows.
-4. Load the game at https://synergism.cc/ (or reload it). The mod loads by itself, always in its latest version.
+4. Load the game at https://synergism.cc/ (or reload it). The mod loads by itself, always in its latest version. It also works on the game's other address, https://pseudo-corp.github.io/SynergismOfficial/ (no login or cloud saves there).
 
 If step 3 shows code instead of an install page, copy that code, choose "Create a new script" in Tampermonkey, replace everything with the copy and save.
 
 While the game is running, a rainbow border around the mod's icon means a newer version is out: reload the page to get it.
 
-### With a bookmark (NOT RECOMMENDED)
+#### Live or Dev
+
+The mod comes from one of two GitHub repos: `Ferlieloi` (Live, the default) or `maenhiir` (Dev). To switch to Dev, open the loader script in Tampermonkey's dashboard, change `const repo = 'Ferlieloi'` to `const repo = 'maenhiir'`, save, and reload the game. To go back to Live, change it back. Tampermonkey's auto-update of the loader script can switch you back to Live.
+
+### 🔖 With a bookmark (NOT RECOMMENDED)
 
 The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
 
-Create a new bookmark in your browser and name it as you wish. For the URL, copy and paste the code in [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js).
+Create a new bookmark in your browser, with any name. As its URL, paste the whole content of [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js) (it starts with `javascript:`).
 
-**Example:**
-
-![image](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/doc/img/bookmark_v2.png?raw=true)  
-
-Load the game in your browser (or refresh the page if it's already running), close the "Since you were away" box, then click the bookmark. It always loads the latest version of the mod.
+Load/refresh the game in your browser, close the game's "offline" popup, then click the bookmark. It always loads the latest version of the mod.
 
 ## Help and bug reports
 

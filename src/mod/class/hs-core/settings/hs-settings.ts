@@ -1,5 +1,4 @@
 import { HSSettingBase, HSSettingControlGroup, HSSettingControlPage, HSSettingRecord, HSSettingsDefinition, HSSettingType } from "../../../types/module-types/hs-settings-types";
-import { HSAutosingStrategy } from "../../../types/module-types/hs-autosing-types";
 import { HSUtils } from "../../hs-utils/hs-utils";
 import { HSLogger } from "../hs-logger";
 import { HSModule } from "../module/hs-module";
@@ -221,6 +220,12 @@ export class HSSettings extends HSModule {
         return HSSettings.#settings;
     };
 
+    /** A setting's value in hs-settings.json. Its definition's defaultValue is the value it had at load: the player's. */
+    static getJsonSettingValue(settingName: keyof HSSettingsDefinition): unknown {
+        const defaults = JSON.parse(settings) as Record<string, { settingValue?: unknown } | undefined>;
+        return defaults[settingName]?.settingValue;
+    }
+
     /** Run `listener` each time a setting is turned on or off: the panel, enable()/disable(), a boolean setValue(). */
     static onStateChange(listener: (settingName: string) => void): void {
         HSSettings.#stateListeners.add(listener);
@@ -239,47 +244,13 @@ export class HSSettings extends HSModule {
 
     /**
      * Whether a setting needs GDS on the platform the mod was loaded on (its usesGameData: true, or a list of
-     * platforms). A list counts as no while the platform isn't known yet (before HSGameData is initialised).
+     * platforms).
      */
     static usesGameData(definition: Pick<HSSettingBase<HSSettingType>, 'usesGameData'>): boolean {
         const usesGameData = definition.usesGameData;
         if (!Array.isArray(usesGameData)) return usesGameData === true;
-        const platform = HSPlatform.get();
-        return platform !== null && usesGameData.includes(platform);
+        return usesGameData.includes(HSPlatform.get());
     }
-
-    static getStrategies(): HSAutosingStrategy[] {
-        return HSStrategyManager.getStrategies();
-    }
-
-    static getMergedStrategyOptions() {
-        return HSStrategyManager.getMergedStrategyOptions();
-    }
-
-    static getDefaultStrategyNames(): string[] {
-        return HSStrategyManager.getDefaultStrategyNames();
-    }
-
-    static async loadDefaultStrategyByName(name: string): Promise<HSAutosingStrategy | null> {
-        try {
-            // Dynamic import using the name
-            const data = await import(`../../../resource/json/strategies/${name}.json`);
-            return data.default || data;
-        } catch (e) {
-            HSLogger.error(`Failed to load strategy '${name}': ${e}`, this.#staticContext);
-            return null;
-        }
-    }
-
-
-    // ===============================
-    // ------ Strategy helpers -------
-    // ===============================
-
-    static validateStrategy(strategy: HSAutosingStrategy) {
-        return HSStrategyManager.validateStrategy(strategy, HSSettings.#staticContext);
-    }
-
 
     // ===============================
     // --------- Persistence ---------
@@ -476,14 +447,6 @@ export class HSSettings extends HSModule {
                         // If nestedKey doesn't exist in A, we ignore it (doesn't get copied to resolved)
                     });
                 });
-
-                // autoConfirmPopups is hidden and internal only for now, we force it OFF on load.
-                const autoConfirmPopups = resolved.autoConfirmPopups as unknown as Record<string, unknown> | undefined;
-                if (autoConfirmPopups) {
-                    autoConfirmPopups.enabled = false;
-                    autoConfirmPopups.settingValue = false;
-                    autoConfirmPopups.calculatedSettingValue = false;
-                }
 
                 return resolved as unknown as HSSettingsDefinition;
             } else {

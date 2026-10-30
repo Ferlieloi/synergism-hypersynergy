@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { createStartupDiagnostics } = require('./lib/startupDiagnostics')
@@ -317,3 +317,4 @@ ipcMain.handle('game:launch', (_e, exePath, modUrl, channel, modRef) => {
 
 ipcMain.handle('shell:open-path', (_e, target) => shell.openPath(target))
 ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url))
+ipcMain.handle('clipboard:write', (_e, text) => clipboard.writeText(String(text)))

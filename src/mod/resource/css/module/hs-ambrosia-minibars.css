@@ -5,10 +5,18 @@
     width: 281px;
     display: flex;
     padding: 0;
-    gap: 2px;
+    /* 2px between bars, none from 5px bars down (they would be more gap than bar). Same rule: barGap in
+       hs-minibar-resize.ts */
+    gap: clamp(0px, calc((var(--hs-minibar-height) - 5px) * 2), 2px);
     flex-direction: column;
     margin-bottom: 3px;
     box-sizing: border-box;
+}
+
+/* "Minibars border" setting: one frame around the group, an outline so it takes no room from the bars at any size
+   (the resize limits stay the bars' own) */
+html.hs-minibars-framed #hs-minibars-wrapper {
+    outline: 1px solid #808080;
 }
 
 /* As a module of the game's header (HSHeaderModules): a currency module's width (its em follow the header's S / M / L),

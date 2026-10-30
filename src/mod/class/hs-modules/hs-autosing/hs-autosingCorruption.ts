@@ -1,130 +1,32 @@
-import { CorruptionLoadout, CorruptionLoadoutDefinition, AutosingStrategyPhase } from "../../../types/module-types/hs-autosing-types";
 import { HSLogger } from "../../hs-core/hs-logger";
-import { HSUtils } from "../../hs-utils/hs-utils";
-import { HSGameDialogs } from "../../hs-core/dialogs/hs-game-dialogs";
+import { HSCorruptionLevel } from "../../hs-core/hs-corruption-level";
 
-export const CORRUPTION_NAMES = ['viscosity', 'drought', 'deflation', 'extinction', 'illiteracy', 'recession', 'dilation', 'hyperchallenge'] as const;
-
-export const ZERO_CORRUPTIONS: CorruptionLoadout = {
-    viscosity: 0, drought: 0, deflation: 0, extinction: 0,
-    illiteracy: 0, recession: 0, dilation: 0, hyperchallenge: 0,
-};
-
-export const ANT_CORRUPTIONS: CorruptionLoadout = {
-    viscosity: 16, drought: 0, deflation: 16, extinction: 0,
-    illiteracy: 5, recession: 16, dilation: 0, hyperchallenge: 16,
-};
-
+/**
+ * Class: HSAutosingCorruption
+ * IsExplicitHSModule: No
+ * Description: Sets the game's corruption level for autosing's steps and its AOAG phase. Since the game's 4.4.0, one level
+ *     (player.corruptions.next, used from the next ascension), set through the game's own controls (HSCorruptionLevel),
+ *     so the game checks it: a level above what the player can reach now is lowered to it, without any message.
+ * Author: Shewchou
+ */
 export class HSAutosingCorruption {
-    static readonly #DOM_IMPORT_TIMEOUT_MS = 2000;
-    static readonly #DOM_IMPORT_MAX_CLICKS = 5;
     readonly #context = 'HSAutosingCorruption';
 
-    readonly #corrNext: Record<string, HTMLElement | null>;
-    readonly #importBtn: HTMLButtonElement;
-    #applyCorruptionsFunc: ((json: string) => boolean) | null;
-    #lastAppliedCorruptionsJson: string | null = null;
+    /**
+     * Sets the next corruption level (synchronous, no dialog). Compared with the game's current level, not with the
+     * last one asked: a level the game lowered is asked again by the next call.
+     */
+    setLevel(level: number): void {
+        if (HSCorruptionLevel.getNext() === level) return;
 
-    #loadoutByName: Map<string, Readonly<CorruptionLoadout>> = new Map();
-    readonly #loadoutJson = new WeakMap<Readonly<CorruptionLoadout>, string>();
-
-    constructor(
-        corrNext: Record<string, HTMLElement | null>,
-        importBtn: HTMLButtonElement,
-    ) {
-        this.#corrNext = corrNext;
-        this.#importBtn = importBtn;
-        this.#applyCorruptionsFunc = null;
+        const kept = HSCorruptionLevel.setNext(level);
+        if (kept === level) HSLogger.debug(() => `Corruption level set: ${level}`, this.#context);
+        else HSLogger.debug(() => `Corruption level ${level} asked, the game kept ${kept} (the highest reachable now)`, this.#context);
     }
 
-    setApplyCorruptionsFunc(fn: ((json: string) => boolean) | null): void {
-        this.#applyCorruptionsFunc = fn;
-    }
-
-    #corruptionsMatchDOM(target: Readonly<CorruptionLoadout>): boolean {
-        for (const name of CORRUPTION_NAMES) {
-            const el = this.#corrNext[`corrNext${name}`] ?? this.#corrNext[name];
-            if (!el) return false;
-            if (parseInt(el.textContent || '0', 10) !== target[name]) return false;
-        }
-        return true;
-    }
-
-    invalidateAppliedCache(): void {
-        this.#lastAppliedCorruptionsJson = null;
-    }
-
-    async setCorruptions(corruptions: Readonly<CorruptionLoadout>, force: boolean = false): Promise<void> {
-        // Only immutable named loadouts have cached JSON. Ad-hoc inputs may change
-        // between calls, so keep serializing those from their current values.
-        const jsonString = this.#loadoutJson.get(corruptions) ?? JSON.stringify(corruptions);
-        if (!force && jsonString === this.#lastAppliedCorruptionsJson) return;
-
-        // Fast path: call applyCorruptions directly — no UI clicks, no prompt, synchronous.
-        if (this.#applyCorruptionsFunc) {
-            const success = this.#applyCorruptionsFunc(jsonString);
-            if (!success) {
-                HSLogger.warn(`Failed to set corruptions: ${jsonString}`, this.#context);
-                return;
-            }
-            this.#lastAppliedCorruptionsJson = jsonString;
-            HSLogger.debug(() => `Corruptions set: ${jsonString}`, this.#context);
-            return;
-        }
-
-        // DOM Fallback. Time-limited: it would otherwise click forever if the import never matches
-        // (also after autosing has stopped, and a new start waits for autosing's chains to end).
-        // Clicks import only while no dialog is open, a few times at most: with a dialog open, each click
-        // would queue one more import Prompt, all shown later. Its session answers the Prompt with the loadout,
-        // and dismisses the Alert of a rejected import.
-        const deadline = performance.now() + HSAutosingCorruption.#DOM_IMPORT_TIMEOUT_MS;
-        let importClicks = 0;
-        while (true) {
-            if (importClicks < HSAutosingCorruption.#DOM_IMPORT_MAX_CLICKS && HSGameDialogs.isQueueIdle()) {
-                importClicks++;
-                HSGameDialogs.act('corruptionImport', { prompt: { ok: jsonString }, alert: 'dismiss' }, () => this.#importBtn.click());
-            }
-            await HSUtils.yield();
-            if (this.#corruptionsMatchDOM(corruptions)) {
-                this.#lastAppliedCorruptionsJson = jsonString;
-                HSLogger.debug(() => `Corruptions DOM match: ${jsonString}`, this.#context);
-                break;
-            }
-            if (performance.now() >= deadline) {
-                HSLogger.warn(`Failed to set corruptions through the import prompt within ${HSAutosingCorruption.#DOM_IMPORT_TIMEOUT_MS} ms: ${jsonString}`, this.#context);
-                break;
-            }
-        }
-    }
-
-    getPhaseCorruptionLoadout(phaseConfig: AutosingStrategyPhase): Readonly<CorruptionLoadout> | null {
-        if (phaseConfig.corruptionLoadoutName === null || phaseConfig.corruptionLoadoutName === "") return null;
-        if (phaseConfig.corruptionLoadoutName === undefined) return phaseConfig.corruptions ?? null;
-
-        const named = this.#getLoadoutByName(phaseConfig.corruptionLoadoutName);
-        return named ?? phaseConfig.corruptions ?? null;
-    }
-
-    buildLoadoutCache(defs: CorruptionLoadoutDefinition[]): void {
-        this.#loadoutByName.clear();
-        for (const d of defs) {
-            const loadout = Object.freeze({ ...d.loadout });
-            this.#loadoutByName.set(d.name, loadout);
-            this.#loadoutJson.set(loadout, JSON.stringify(loadout));
-        }
-    }
-    
-    async applyLoadoutByName(name?: string | null): Promise<void> {
-        const loadout = this.#getLoadoutByName(name);
-        if (!loadout) {
-            HSLogger.debug(() => `Loadout not found: ${name ?? "(none)"}`, this.#context);
-            return;
-        }
-        await this.setCorruptions(loadout);
-    }
-
-    #getLoadoutByName(name?: string | null): Readonly<CorruptionLoadout> | null {
-        if (!name) return null;
-        return this.#loadoutByName.get(name) ?? null;
+    /** The game's Max button: the highest level the player can reach now. */
+    setMaxLevel(): void {
+        const kept = HSCorruptionLevel.press('max');
+        HSLogger.debug(() => `Corruption level set to the max: ${kept}`, this.#context);
     }
 }

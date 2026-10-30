@@ -46,7 +46,7 @@ export interface HeaterOptimizerInput {
     baseTalismanPower: Decimal;
     patreonBonus: number;
     activeBells: number;
-    jack: boolean;
+    globalEventBlueBarBonus: number;
     freeShopLevelsInfinity: number;
     freeShopLevelsQuark: number;
     chronometerLevel: number;
@@ -96,6 +96,8 @@ export interface HeaterOptimizerInput {
         infinity: number;
     };
     panthemaLevel: number;
+    /** Platonic Tau's power on every cube multiplier (1 when not bought). */
+    tauPower: number;
     heaterOptions: Record<HeaterBranchId, boolean>;
 }
 
@@ -128,7 +130,35 @@ export type HeaterResultAffordableRow = [
     effect: string,
     p4x4Eq: number | "Never" | "",
     isMaxed: boolean,
+    limits?: HeaterResultLimits,
+    /** The Effect cell's title (Max SR rows: the penalty they lift). */
+    effectTitle?: string,
 ];
+
+/**
+ * A row that isn't maxed: which resource would let one more level of an
+ * upgrade raise its stat. Set only when one of them is true.
+ */
+export interface HeaterResultLimits {
+    ambrosia: boolean;
+    blueberries: boolean;
+}
+
+/** A resource an unaffordable row runs short of: what the tree needs, what the inputs have. */
+export interface HeaterShortResource {
+    need: number;
+    have: number;
+}
+
+/**
+ * Why a row is unaffordable: only the short resource(s) are set. atLeast: the
+ * needs are those of the smallest tree that could fill the row (a minimum).
+ */
+export interface HeaterResultShortfall {
+    ambrosia?: HeaterShortResource;
+    blueberries?: HeaterShortResource;
+    atLeast: boolean;
+}
 
 export type HeaterResultUnaffordableRow = [
     loadoutLabel: "Unaffordable",
@@ -138,6 +168,7 @@ export type HeaterResultUnaffordableRow = [
     effect: "N / A",
     p4x4Eq: "N / A",
     isMaxed: false,
+    shortfall?: HeaterResultShortfall,
 ];
 
 export type HeaterResultRow = HeaterResultAffordableRow | HeaterResultUnaffordableRow;
@@ -195,6 +226,7 @@ export interface HeaterOptimizationResult {
     oct?: HeaterResultRowMatrix;
     obt?: HeaterResultRowMatrix;
     off?: HeaterResultRowMatrix;
+    obtAndOff?: HeaterResultRowMatrix;
     hyperflux?: HeaterResultRowMatrix;
     sr1?: HeaterResultRowMatrix;
     sr2?: HeaterResultRowMatrix;
