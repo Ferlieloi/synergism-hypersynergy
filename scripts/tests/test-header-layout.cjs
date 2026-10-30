@@ -56,7 +56,8 @@ async function main() {
             const sleep=()=>new Promise(resolve=>setTimeout(resolve,100));
             const stored={}; window.testStorage={getData:key=>stored[key],setData:(key,value)=>(stored[key]=value,true),clearData:key=>delete stored[key]};
             const positions={a:0,b:1,c:2,d:0,e:1,f:2,g:3,h:4};
-            window.testPlayer={headerLayouts:{desktop:{positions},mobile:{positions}}};
+            const layout={positions,regions:{headerGrid:[['a','b','c'],['d','e','f','g','h']],ascensionStats:[]},hidden:[]};
+            window.testPlayer={headerLayouts:{desktop:layout,mobile:layout}};
             let alignment='center',large=false,locked=false,editing=false;
             const header=document.getElementById('mainHeader'),grid=document.getElementById('headerGrid');
             window.__HS_HEADER_BUTTONS_PATCHED=true;
@@ -64,9 +65,12 @@ async function main() {
                 header.classList.toggle('headerEditMode',editing);
                 header.style.setProperty('--header-button-slots',String(window.__HS_headerButtonCapacity?.(4)??4));
                 grid.replaceChildren();
-                for(const [index,ids] of [['a','b','c'],['d','e','f','g','h']].entries()){
+                for(const [index,ids] of layout.regions.headerGrid.entries()){
                     const slot=document.createElement('div');slot.className='headerStack headerStackRow';slot.dataset.headerSlot=index;
                     slot.dataset.hsHeaderAlign=index===0?alignment:'left';
+                    if(editing)for(let index=0;index<(window.__HS_headerButtonCapacity?.(4)??4);index++){
+                        const placeholder=document.createElement('div');placeholder.className='headerButtonSlot';slot.append(placeholder)
+                    }
                     for(const id of ids){const button=document.createElement('div');button.id=id;button.className='resetbtn headerModule';
                         if(id==='c'&&locked)button.classList.add('headerModuleLocked');
                         button.textContent=id;button.style.gridColumn=positions[id]+1;
@@ -89,6 +93,9 @@ async function main() {
                     close(rect.width,grid.getBoundingClientRect().width/7,'centered slot fills cell');
                 };
                 equalSpacing();
+                editing=true;window.__HS_renderHeaderLayout();equalSpacing();
+                check(grid.querySelectorAll('.headerButtonSlot').length===0,'preview has no empty button placeholders');
+                editing=false;window.__HS_renderHeaderLayout();
                 slider.value='1750';slider.dispatchEvent(new Event('input'));await sleep();
                 check(window.__HS_headerButtonCapacity(4)===6,'dragging the slider refreshes capacity before release');
                 commit(1900);await sleep();
@@ -110,6 +117,7 @@ async function main() {
                 close((partial.left+partial.right)/2,(row.left+row.right)/2,'a partial wrapped row ignores its empty columns');
                 // Empty positions and locked buttons must contribute no width to an aligned group.
                 positions.a=6;positions.b=0;positions.c=3;
+                editing=true;
                 for(const edge of ['left','right']){
                     alignment=edge;window.__HS_renderHeaderLayout();
                     const slot=grid.firstElementChild.getBoundingClientRect();
@@ -125,6 +133,7 @@ async function main() {
                 close(right.left-middle.left,centered.width/3,'Center keeps equal spacing');
                 check(JSON.stringify(positions)===JSON.stringify({a:6,b:0,c:3,d:0,e:1,f:2,g:3,h:4}),'alignment never changes saved positions');
                 positions.a=0;positions.b=1;positions.c=2;
+                editing=false;
                 alignment='left';window.__HS_renderHeaderLayout();check(document.getElementById('c').style.gridColumn==='3','alignment changes retain model positions');
                 alignment='right';locked=true;window.__HS_renderHeaderLayout();
                 close(document.getElementById('b').getBoundingClientRect().right,grid.firstElementChild.getBoundingClientRect().right,'Right ignores locked buttons');
@@ -141,7 +150,24 @@ async function main() {
                 const reset=document.querySelector('.hs-hes-width-top button');reset.click();await sleep();
                 check(!document.documentElement.classList.contains('hs-header-grid-width'),'Reset restores vanilla width');
                 check(input.value==='1250','Reset refreshes numeric value');
-                document.getElementById('result').textContent='PASS header spacing, capacity, wrapping, numeric bounds, slider, Enter and Reset';
+                commit(1900);editing=true;alignment='center';window.__HS_renderHeaderLayout();await sleep();equalSpacing();
+                const point=(x,y)=>header.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,clientX:x,clientY:y}));
+                let target=grid.firstElementChild.getBoundingClientRect();
+                point(target.right-1,target.top+16);
+                check(window.__HS_canJoinHeaderButtons(layout.regions.headerGrid[0],'d')===true,'a new button fits the group');
+                check(window.__HS_moveHeaderButton(layout,'d','headerGrid',{index:0,join:true})===true,'insert using real buttons');
+                check(layout.regions.headerGrid[0].join(',')==='a,b,c,d','drop appends without swapping a hidden position');
+                check(layout.regions.headerGrid[1].join(',')==='e,f,g,h','drop removes the old copy');
+                window.__HS_renderHeaderLayout();target=grid.firstElementChild.getBoundingClientRect();point(target.left+1,target.top+16);
+                check(window.__HS_moveHeaderButton(layout,'d','headerGrid',{index:0,join:true})===true,'reorder within a group');
+                check(layout.regions.headerGrid[0].join(',')==='d,a,b,c','the pointer determines insertion order');
+                window.__HS_renderHeaderLayout();
+                for(const id of layout.regions.headerGrid[0])document.getElementById(id).style.width='80px';
+                const saved=JSON.stringify(layout);
+                check(window.__HS_canJoinHeaderButtons(layout.regions.headerGrid[0],'e')===false,'reject a button that does not fit');
+                check(window.__HS_moveHeaderButton(layout,'e','headerGrid',{index:0,join:true})===false,'full group is not changed');
+                check(JSON.stringify(layout)===saved,'failed join preserves the layout');
+                document.getElementById('result').textContent='PASS header preview, alignment, button insertion, capacity, wrapping and width controls';
             })().catch(error=>document.getElementById('result').textContent='FAIL '+error.stack);
             </script></body></html>`);
         const run = spawnSync(browser, ['--headless', '--disable-gpu', '--no-sandbox', '--no-first-run', '--no-default-browser-check',

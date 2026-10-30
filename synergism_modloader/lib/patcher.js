@@ -901,6 +901,20 @@ function patchBundle(code, options = {}) {
         if (splits.length !== 1 || limits.length !== 1) {
             throw new Error(`expected one slot split and one position limit, found ${splits.length} and ${limits.length}`);
         }
+        const joinPattern = new RegExp(`([a-zA-Z_$][\\w$]*)\\.includes\\(\\s*([a-zA-Z_$][\\w$]*)\\s*\\)\\s*\\|\\|\\s*\\1\\.length\\s*<\\s*${reader[1].replace(/\$/g, '\\$')}\\(\\s*\\)`, 'g');
+        const joins = [...code.matchAll(joinPattern)];
+        if (joins.length !== 1) throw new Error(`expected one button join check, found ${joins.length}`);
+        const move = findEnclosingFunction(code, /\.positions\s*\[/g, ['.join', '.hidden', '.splice(', '.push('], 'header buttons (move)');
+        const parameters = (fn, count) => {
+            if (!fn) throw new Error('header button drop handler not found');
+            const match = /\(([^()]+)\)\s*(?:=>\s*)?\{$/.exec(code.slice(Math.max(0, fn.bodyStart - 300), fn.bodyStart));
+            const names = match ? match[1].split(',').map(name => name.trim()) : [];
+            if (names.length !== count || !names.every(name => /^[a-zA-Z_$][\w$]*$/.test(name))) {
+                throw new Error(`unreadable parameters for ${fn.fnName}`);
+            }
+            return names.join(',');
+        };
+        const moveArguments = parameters(move, 4);
         const expression = `${reader[2]}[${reader[3]}()]`;
         const arrow = reader[0].indexOf('=>') + 2;
         const edits = [
@@ -910,6 +924,10 @@ function patchBundle(code, options = {}) {
                 text: `${splits[0][1]}Math.max(8,${splits[0][2]})${splits[0][3]}` },
             { at: limits[0].index, length: limits[0][0].length,
                 text: `${limits[0][1]}Math.max(8,${limits[0][2]})` },
+            { at: joins[0].index, length: joins[0][0].length,
+                text: `(window.__HS_canJoinHeaderButtons?.(${joins[0][1]},${joins[0][2]})??(${joins[0][0]}))` },
+            { at: move.bodyStart, length: 0,
+                text: `if(window.__HS_moveHeaderButton?.(${moveArguments}))return;` },
         ];
         for (const edit of edits.sort((a, b) => b.at - a.at)) {
             code = code.slice(0, edit.at) + edit.text + code.slice(edit.at + edit.length);
