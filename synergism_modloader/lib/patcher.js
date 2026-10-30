@@ -878,6 +878,85 @@ function patchBundle(code, options = {}) {
     }
 
     // ==================================================================================
+    // Header reset buttons: rendering and drag targets use a width-dependent capacity supplied by the mod.
+    // Saves retain groups/positions for all eight native buttons, even when loaded in a narrower window.
+    // The mod wraps an existing oversized group; it only allows adding buttons while they fit.
+    report.headerButtons = false;
+    try {
+        const renderResult = findEnclosingFunction(code, /["']--header-button-slots["']/g, ['headerTray'], 'header buttons (render)');
+        const renderBody = renderResult ? code.slice(renderResult.bodyStart, renderResult.bodyEnd) : '';
+        const propertyStart = renderBody.indexOf('--header-button-slots');
+        const propertyEnd = renderBody.indexOf(';', propertyStart);
+        const capacityProperty = renderBody.slice(propertyStart, propertyEnd < 0 ? renderBody.length : propertyEnd);
+        const readers = [...code.matchAll(/(?<![\w$.])([a-zA-Z_$][\w$]*)\s*=\s*\(\s*\)\s*=>\s*([a-zA-Z_$][\w$]*)\s*\[\s*([a-zA-Z_$][\w$]*)\s*\(\s*\)\s*\]/g)]
+            .filter(match => new RegExp(`(?<![\\w$.])${match[1].replace(/\$/g, '\\$')}\\(\\s*\\)`).test(capacityProperty));
+        if (readers.length !== 1) throw new Error(`expected one capacity reader, found ${readers.length}`);
+        const reader = readers[0];
+        const capacity = reader[2].replace(/\$/g, '\\$');
+        const access = `${capacity}\\s*\\[\\s*[a-zA-Z_$][\\w$]*\\s*\\]`;
+        const splitPattern = new RegExp(`([a-zA-Z_$][\\w$]*\\(\\s*[a-zA-Z_$][\\w$]*\\.filter\\(\\s*[a-zA-Z_$][\\w$]*\\s*\\)\\s*,\\s*)(${access})(\\s*\\))`, 'g');
+        const limitPattern = new RegExp(`(<\\s*)(${access})`, 'g');
+        const splits = [...code.matchAll(splitPattern)];
+        const limits = [...code.matchAll(limitPattern)];
+        if (splits.length !== 1 || limits.length !== 1) {
+            throw new Error(`expected one slot split and one position limit, found ${splits.length} and ${limits.length}`);
+        }
+        const joinPattern = new RegExp(`([a-zA-Z_$][\\w$]*)\\.includes\\(\\s*([a-zA-Z_$][\\w$]*)\\s*\\)\\s*\\|\\|\\s*\\1\\.length\\s*<\\s*${reader[1].replace(/\$/g, '\\$')}\\(\\s*\\)`, 'g');
+        const joins = [...code.matchAll(joinPattern)];
+        if (joins.length !== 1) throw new Error(`expected one button join check, found ${joins.length}`);
+        const move = findEnclosingFunction(code, /\.positions\s*\[/g, ['.join', '.hidden', '.splice(', '.push('], 'header buttons (move)');
+        const parameters = (fn, count) => {
+            if (!fn) throw new Error('header button drop handler not found');
+            const match = /\(([^()]+)\)\s*(?:=>\s*)?\{$/.exec(code.slice(Math.max(0, fn.bodyStart - 300), fn.bodyStart));
+            const names = match ? match[1].split(',').map(name => name.trim()) : [];
+            if (names.length !== count || !names.every(name => /^[a-zA-Z_$][\w$]*$/.test(name))) {
+                throw new Error(`unreadable parameters for ${fn.fnName}`);
+            }
+            return names.join(',');
+        };
+        const moveArguments = parameters(move, 4);
+        const expression = `${reader[2]}[${reader[3]}()]`;
+        const arrow = reader[0].indexOf('=>') + 2;
+        const edits = [
+            { at: reader.index + arrow, length: reader[0].length - arrow,
+                text: `(window.__HS_headerButtonCapacity?.(${expression})??${expression})` },
+            { at: splits[0].index, length: splits[0][0].length,
+                text: `${splits[0][1]}Math.max(8,${splits[0][2]})${splits[0][3]}` },
+            { at: limits[0].index, length: limits[0][0].length,
+                text: `${limits[0][1]}Math.max(8,${limits[0][2]})` },
+            { at: joins[0].index, length: joins[0][0].length,
+                text: `(window.__HS_canJoinHeaderButtons?.(${joins[0][1]},${joins[0][2]})??(${joins[0][0]}))` },
+            { at: move.bodyStart, length: 0,
+                text: `if(window.__HS_moveHeaderButton?.(${moveArguments}))return;` },
+        ];
+        for (const edit of edits.sort((a, b) => b.at - a.at)) {
+            code = code.slice(0, edit.at) + edit.text + code.slice(edit.at + edit.length);
+        }
+        topLines.push('window.__HS_HEADER_BUTTONS_PATCHED=true;');
+        report.headerButtons = true;
+        log(`Patched header button capacity (fn=${reader[1]})`);
+    } catch (error) {
+        warn('Could not patch header button capacity', error.message);
+    }
+
+    // Only the timer that enters the header editor is optional; native pointer/click/drag handling stays intact.
+    report.headerLongPress = false;
+    try {
+        const down = findEnclosingFunction(code, /window\.setTimeout\s*\(/g,
+            ['.headerRegion', '.pointerId', 'getBoundingClientRect'], 'header long press');
+        const timers = down ? [...code.slice(down.bodyStart, down.bodyEnd)
+            .matchAll(/(?<![\w$.])([a-zA-Z_$][\w$]*)\s*=\s*window\.setTimeout\s*\(/g)] : [];
+        if (timers.length !== 1) throw new Error(`expected one header hold timer, found ${timers.length}`);
+        const at = down.bodyStart + timers[0].index;
+        code = code.slice(0, at) + `${timers[0][1]}=window.__HS_headerLongPressEnabled===false?undefined:window.setTimeout(`
+            + code.slice(at + timers[0][0].length);
+        topLines.push('window.__HS_HEADER_LONG_PRESS_PATCHED=true;');
+        report.headerLongPress = true;
+        log(`Patched optional header long press (fn=${down.fnName})`);
+    } catch (error) {
+        warn('Could not patch header long press', error.message);
+    }
+
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — sync the Steam cloud on its 60 s clock only, not at each manual save
         // (remove the manual trigger: e || ...). In saveSynergy, found by its "testing.gameSaved" message,

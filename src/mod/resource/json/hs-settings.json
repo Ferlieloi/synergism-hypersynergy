@@ -219,7 +219,7 @@
   "editGameHeader": {
     "settingName": "editGameHeader",
     "settingDescription": "Edit game header",
-    "settingHelpText": "Open the game's header editor to move and resize modules, with HS alignment and half-height controls. You can also open it by holding down on the header. Click Done in the header when finished.",
+    "settingHelpText": "Open the game's header editor to move and resize modules, with HS alignment and half-height controls. You can also open it by holding down on the header when Long press to edit is enabled. Click Done in the header when finished.",
     "settingType": "button",
     "enabled": true,
     "settingValue": "",
@@ -1621,6 +1621,21 @@
       "controlGroup": "quickbar-qol",
       "controlPage": "qol-buttons",
       "controlEnabledId": "hs-setting-qol-header-edit-button-btn"
+    }
+  },
+  "headerLongPressEditing": {
+    "settingName": "headerLongPressEditing",
+    "settingDescription": "Long press to edit the header",
+    "settingHelpText": "Allow holding down on the header to open its editor. When disabled, use the pencil or the mod panel's header editor button instead. Normal header button clicks and dragging in edit mode still work.",
+    "settingType": "boolean",
+    "hidden": true,
+    "enabled": true,
+    "settingAction": "headerLongPressEditingAction",
+    "settingControl": {
+      "controlType": "switch",
+      "controlGroup": "quickbar-qol",
+      "controlPage": "qol-buttons",
+      "controlEnabledId": "hs-setting-qol-header-long-press-btn"
     }
   },
   "headerStatsAtBottom": {

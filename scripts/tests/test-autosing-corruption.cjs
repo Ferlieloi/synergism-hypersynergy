@@ -138,6 +138,46 @@ async function main() {
         assert.equal(state.dialogWaits, 0);
         scenarios++;
 
+        // Explicit immediate mode also applies a pending level, regardless of the unused completions field.
+        ({ runner, state } = setup());
+        await runner.runPhaseForTest(phase([step(403, { corruptionLevel: 20, ascendAfterCorruption: true, challengeCompletions: 1 }), step(152)]));
+        assert.deepEqual(state.events, [['select', 20], ['ascend', 20], ['action', 20]]);
+        scenarios++;
+
+        // Load-only changes `next` without resetting, leaving C15 and its coins untouched until an explicit exit.
+        for (const live of [true, false]) for (const challenge of [0, 15]) {
+            ({ runner, state } = setup({ live, challenge, confirm: true }));
+            const loadOnly = phase([step(403, { corruptionLevel: 20, ascendAfterCorruption: false }), step(152)]);
+            await runner.runPhaseForTest(loadOnly);
+            await runner.runPhaseForTest(loadOnly);
+            assert.deepEqual(state.events, [['select', 20], ['action', 5], ['action', 5]]);
+            assert.equal(state.player.corruptions.next, 20);
+            assert.equal(state.player.corruptions.used, 5);
+            assert.equal(state.player.currentChallenge.ascension, challenge);
+            assert.equal(state.c15Coins, 42);
+            assert.equal(state.dialogWaits, 0);
+            const applyLater = runner.runPhaseForTest(phase([step(403, { corruptionLevel: 20, ascendAfterCorruption: true }), step(152)]));
+            state.confirm();
+            await applyLater;
+            assert.deepEqual(state.events.slice(-2), [['ascend', 20], ['action', 20]]);
+            if (challenge) assert.equal(state.savedC15Score, 42);
+            scenarios++;
+        }
+
+        // A plain Ascend following load-only applies the selected level, exactly once.
+        ({ runner, state } = setup());
+        await runner.runPhaseForTest(phase([
+            step(403, { corruptionLevel: 20, ascendAfterCorruption: false }), step(104), step(152),
+        ]));
+        assert.deepEqual(state.events, [['select', 20], ['ascend', 20], ['action', 20]]);
+        scenarios++;
+
+        // Load-only uses the game's cap without applying the clamped level yet.
+        ({ runner, state } = setup({ cap: 12 }));
+        await runner.runPhaseForTest(phase([step(403, { corruptionLevel: 20, ascendAfterCorruption: false }), step(152)]));
+        assert.deepEqual(state.events, [['select', 12], ['action', 5]]);
+        scenarios++;
+
         // Ordinary phase passes preserve the current run, including C15's coins, with no implicit reset.
         ({ runner, state } = setup({ challenge: 15 }));
         await runner.runPhaseForTest(phase([step(152)]));
@@ -235,14 +275,24 @@ async function main() {
         const normalized = HSStrategyManager.normalizeCorruptions(old);
         assert.equal(normalized.strategy[0].strat[0].challengeNumber, 403);
         assert.equal(normalized.strategy[0].strat[0].corruptionLevel, 20);
+        assert.equal(normalized.strategy[0].strat[0].ascendAfterCorruption, true);
         assert.equal(normalized.strategy[0].strat[0].challengeWaitBefore, 50);
         assert.equal(normalized.strategy[0].strat[0].comment, 'target');
         assert.equal(normalized.strategy[0].strat[1].ifJump.ifJumpIndex, 0);
         assert.equal(normalized.aoagPhase.strat[0].challengeNumber, 403);
         assert.equal(normalized.aoagPhase.strat[0].corruptionLevel, 50);
+        assert.equal(normalized.aoagPhase.strat[0].ascendAfterCorruption, true);
         assert.deepEqual(HSStrategyManager.normalizeCorruptions(normalized), normalized);
         assert.equal(old.strategy[0].strat[0].challengeNumber, 404, 'normalization must not mutate its input');
         assert.equal(SPECIAL_ACTION_BY_ID.has(404), false);
+        scenarios++;
+
+        const deferred = HSStrategyManager.normalizeCorruptions({ strategyName: 'deferred', strategy: [phase([
+            step(403, { corruptionLevel: 20, ascendAfterCorruption: false }), step(403, { corruptionLevel: 50 }),
+        ])] });
+        assert.equal(deferred.strategy[0].strat[0].ascendAfterCorruption, false);
+        assert.equal(deferred.strategy[0].strat[1].ascendAfterCorruption, true);
+        assert.deepEqual(HSStrategyManager.normalizeCorruptions(JSON.parse(JSON.stringify(deferred))), deferred);
         scenarios++;
 
         const directory = path.join(root, 'src/mod/resource/json/strategies');
@@ -251,7 +301,12 @@ async function main() {
             HSStrategyManager.validateStrategy(strategy);
             for (const entry of [...strategy.strategy, strategy.aoagPhase].filter(Boolean)) {
                 assert.ok(entry.strat.every(action => action.challengeNumber !== 404), filename);
+                assert.ok(entry.strat.filter(action => action.challengeNumber === 403).every(action => action.ascendAfterCorruption === true), filename);
             }
+            const invalid = structuredClone(strategy);
+            const corruption = invalid.strategy.flatMap(entry => entry.strat).find(action => action.challengeNumber === 403);
+            corruption.ascendAfterCorruption = 'false';
+            assert.throws(() => HSStrategyManager.validateStrategy(invalid), /corruption ascension option/);
             scenarios++;
         }
         console.log(`Passed ${scenarios} Autosing corruption scenarios.`);

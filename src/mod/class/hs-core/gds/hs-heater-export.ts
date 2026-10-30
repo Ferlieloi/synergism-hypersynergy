@@ -12,6 +12,7 @@ import type { CampaignData } from "../../../types/data-types/hs-campaign-data";
 import type { MeData } from "../../../types/data-types/hs-me-data";
 import type { HSGameDataAPI } from "./hs-gamedata-api";
 import { floorLog10OfOnePlus, parseGameDataDecimal } from "./hs-gamedata-utils";
+import { buildHeaterCoinsC15Input } from './hs-heater-coins-export';
 
 /** The API's protected data the export reads, taken after the refresh. */
 export interface HSHeaterExportData {
@@ -278,6 +279,7 @@ export function buildHeaterExport(api: HSGameDataAPI, { gameData, meData, eventD
                 purpleHoneyPerExtraction: api.purple.calculatePurpleHoneyPerExtraction(),
                 ...api.calculatePurpleAmbrosiaCraftCosts(),
             },
+            heaterCoinsC15: buildHeaterCoinsC15Input(api, gameData, campaignData?.tokens ?? 0),
             ambrosiaUpgradeBonusLevels,
             ambrosiaUpgradeBlueberryCostReductions,
             shopUpgradeRawLevels,

@@ -2,6 +2,7 @@ import type { HSDialogKind } from '../class/hs-core/dialogs/hs-game-dialogs';
 import type { ConsumableGameEvents } from './data-types/hs-event-data';
 import type { PseudoCoinUpgradeNames, TalismanKeys } from './data-types/hs-gamedata-api-types';
 import type { TalismanShards } from './data-types/hs-player-savedata';
+import type { HSHeaderButtonLayout, HSHeaderButtonDropTarget } from '../class/hs-core/header/hs-header-buttons';
 
 /** Hooks supplied by the shared patcher. Optional for bookmarklets and older loaders. */
 declare global {
@@ -31,6 +32,12 @@ declare global {
         __HS_onSaveImport?: (reset: unknown) => void;
         __HS_headerModuleUnlocks?: Record<string, () => boolean>;
         __HS_beforeHeaderRender?: () => void;
+        __HS_HEADER_BUTTONS_PATCHED?: boolean;
+        __HS_headerButtonCapacity?: (defaultCapacity: number) => number;
+        __HS_canJoinHeaderButtons?: (slot: readonly string[], id: string) => boolean | undefined;
+        __HS_moveHeaderButton?: (layout: HSHeaderButtonLayout, id: string, region: string, target: HSHeaderButtonDropTarget) => boolean;
+        __HS_HEADER_LONG_PRESS_PATCHED?: boolean;
+        __HS_headerLongPressEnabled?: boolean;
         __HS_renderHeaderLayout?: () => void;
         __HS_parseSave?: (text: string) => Record<string, unknown> | null;
         __HS_stripHeaderModules?: <T>(player: T) => T;

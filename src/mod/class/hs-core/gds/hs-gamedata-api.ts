@@ -505,6 +505,19 @@ export class HSGameDataAPI extends HSGameDataAPIPartial {
     }
 
 
+    /** An isolated calculation context: its helpers and caches use the supplied data, never the live player. */
+    createCalculationSnapshot(data: GameData): HSGameDataAPI {
+        const snapshot = new HSGameDataAPI({ moduleName: this.moduleName, context: this.context });
+        snapshot.gameData = data;
+        snapshot.meData = this.meData;
+        snapshot.pseudoData = this.pseudoData;
+        snapshot.campaignData = this.campaignData;
+        snapshot.eventData = this.eventData;
+        snapshot.vanillaGlobalEvent = this.vanillaGlobalEvent;
+        snapshot.isEvent = this.isEvent;
+        return snapshot;
+    }
+
     // ===== Registration =====
     public registerCalculationHelper<T extends object>(helper: T): T {
         this.#calculationHelperProviders.push(helper);

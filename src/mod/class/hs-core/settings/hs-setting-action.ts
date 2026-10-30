@@ -230,6 +230,9 @@ export class HSSettingActions {
         headerEditButtonAction: async (params: HSSettingActionParams) => {
             document.documentElement.classList.toggle('hs-header-edit-button', params.disable !== true);
         },
+        headerLongPressEditingAction: async (params: HSSettingActionParams) => {
+            window.__HS_headerLongPressEnabled = params.disable !== true;
+        },
 
         hideMaxedGQUpgradesAction: async (params: HSSettingActionParams) => {
             const qolButtonsMod = HSModuleManager.getModule<HSQOLButtons>('HSQOLButtons');

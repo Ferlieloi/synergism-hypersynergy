@@ -1083,8 +1083,9 @@ export class HSAutosing extends HSModule {
         const actionText = () => `${SPECIAL_ACTION_BY_ID.get(challenge.challengeNumber)?.label ??challenge.challengeNumber} (${challenge.challengeNumber})`;
         switch (challenge.challengeNumber) {
             case SET_CORRUPTION_LEVEL_VALUE:
-                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0}`, this.context);
-                await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
+                HSLogger.debug(() => `${tag()} - SA: ${actionText()}: ${challenge.corruptionLevel ?? 0} (${challenge.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`, this.context);
+                if (challenge.ascendAfterCorruption === false) this.#corruptionManager.setLevel(challenge.corruptionLevel ?? 0);
+                else await this.#setCorruptionLevelAndAscend(challenge.corruptionLevel ?? 0);
                 break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge, phaseConfig, tag);

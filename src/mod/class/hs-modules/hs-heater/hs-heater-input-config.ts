@@ -14,7 +14,8 @@ type HeaterInputBase = Omit<HeaterOptimizerInput,
     | 'shopBonusLevelsNoAmbrosia'               // the modal's Free Quark/Infinity override theirs; the other groups are built from many sources
     | 'tauPower'                                // 1 or 1.01: only the Cube/Oct Effect text and the Amb+Oct score
     | 'reactor'                                 // the Opt rows already search the routing
-    | 'purple'>;                                // fixed values the loadout doesn't change
+    | 'purple'
+    | 'coinsC15'>;                              // fixed values calculated in C15
 type HeaterInputKey = keyof HeaterInputBase;
 
 type HeaterFieldType = 'number' | 'percent' | 'boolean' | 'text' | 'select';
@@ -69,7 +70,7 @@ export const inputDefinitions = [
     { key: "currentSingularity",        label: "Current Singularity",       type: "number",  url: "Pictures/Default/Singularity.png" },
     { key: "activeBells",               label: "Active Bells",              type: "number",  url: "Pictures/PseudoShop/HAPPY_HOUR_BELL.png" },
     { key: "globalEventBlueBarBonus",   label: "Event Blue Bar Bonus",      type: "percent", url: "Pictures/PseudoShop/GLOBALTimeSkip.png" },
-    { key: "postAoag",                  label: "Post-AoAG (Obt/Off)",       type: "boolean", url: "Pictures/Runes/Antiquities.png" },
+    { key: "postAoag",                  label: "Post-AoAG (Obt/Off/Coins)", type: "boolean", url: "Pictures/Runes/Antiquities.png" },
 
     { heading: "Blue Ambrosia", key: "amb", label: "Lifetime Ambrosia",         type: "number",  url: "Pictures/Achievements/Progressive/AmbrosiaCount.png" },
     { key: "blueberries",               label: "Blueberries Owned",         type: "number",  url: "Pictures/Default/Blueberries.png" },

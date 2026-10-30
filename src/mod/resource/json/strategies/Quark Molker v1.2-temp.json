@@ -237,6 +237,7 @@
         },
         {
           "challengeNumber": 403,
+          "ascendAfterCorruption": true,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,
@@ -343,6 +344,7 @@
       "strat": [
         {
           "challengeNumber": 403,
+          "ascendAfterCorruption": true,
           "challengeCompletions": 0,
           "challengeWaitTime": 0,
           "challengeWaitBefore": 0,

@@ -62,6 +62,7 @@ const SECTIONS: { title: string; gridWidth?: true; slots?: true; choices?: HSCho
             { setting: 'headerStatsAtBottom', label: 'Top row at the bottom' },
             { setting: 'removeHeaderGap', label: 'Remove header gap' },
             { setting: 'headerEditButton', label: '✎ Header edit button' },
+            { setting: 'headerLongPressEditing', label: 'Long press to edit', shown: () => window.__HS_HEADER_LONG_PRESS_PATCHED === true },
         ],
     },
     {
@@ -180,6 +181,9 @@ export class HSHeaderEditSettings {
             // at once instead. Not caught (a game change): wait for it as a real hold.
             let hold: (() => void) | undefined;
             const realSetTimeout = window.setTimeout;
+            // The pencil and panel button are explicit requests to edit, even with long-press editing disabled.
+            const longPressEnabled = window.__HS_headerLongPressEnabled;
+            window.__HS_headerLongPressEnabled = true;
             window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
                 if (!hold && typeof handler === 'function' && (timeout ?? 0) >= 500) {
                     hold = () => handler(...args);
@@ -192,6 +196,7 @@ export class HSHeaderEditSettings {
                 region.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: -1 }));
             } finally {
                 window.setTimeout = realSetTimeout;
+                window.__HS_headerLongPressEnabled = longPressEnabled;
             }
             try {
                 if (hold) hold();

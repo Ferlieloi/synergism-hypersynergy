@@ -39,7 +39,8 @@ export class HSHeaterUIInput {
         | 'shopBonusLevelsNoAmbrosia'
         | 'tauPower'
         | 'reactor'
-        | 'purple'> = {
+        | 'purple'
+        | 'coinsC15'> = {
             ambrosiaUpgradeBonusLevels: {},
             ambrosiaUpgradeBlueberryCostReductions: {},
             runeSiBonusLevelsTalismanNoAmbrosia: 0,
@@ -59,6 +60,7 @@ export class HSHeaterUIInput {
             tauPower: 1,
             reactor: undefined,
             purple: undefined,
+            coinsC15: undefined,
         };
     // The Exalt of the save the inputs came from, null without export data
     static #exportExalt: number | null = null;
@@ -92,6 +94,7 @@ export class HSHeaterUIInput {
             tauPower: hsData?.tauPower ?? 1,
             reactor: hsData?.heaterReactor,
             purple: hsData?.heaterPurple,
+            coinsC15: hsData?.heaterCoinsC15,
         };
         this.#exportExalt = Number.isInteger(hsData?.exalt) ? hsData.exalt : null;
         this.#purpleUnlocked = Boolean(hsData?.exalt9Unlocked);
@@ -101,7 +104,9 @@ export class HSHeaterUIInput {
             heaterOptions: Object.fromEntries(
                 HEATER_BRANCH_DEFINITIONS.map((branch) => [
                     branch.id,
-                    (branch.id !== 'purple' || this.#purpleUnlocked) && this.isBranchSavedTicked(branch),
+                    (branch.id !== 'purple' || this.#purpleUnlocked)
+                        && (branch.id !== 'coinsC15' || Boolean(this.#optimizerMetadata.coinsC15))
+                        && this.isBranchSavedTicked(branch),
                 ])
             ) as Record<HeaterBranchId, boolean>,
         };

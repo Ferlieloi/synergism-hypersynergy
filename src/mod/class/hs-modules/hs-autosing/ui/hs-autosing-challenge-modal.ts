@@ -15,7 +15,7 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue';
 
 interface FieldRowBase {
@@ -30,11 +30,11 @@ interface InputRow extends FieldRowBase {
     key: FieldKey;
     // The <option>s of a select; an input otherwise
     options?: string;
-    type?: 'number' | 'text';
+    type?: 'number' | 'text' | 'checkbox';
     attributes?: string;
     initial: string;
     // The step's value for this field (undefined: the initial value)
-    load?: (step: Challenge) => string | number | undefined;
+    load?: (step: Challenge) => string | number | boolean | undefined;
     // A number input's other rule, checked while the field is shown (any number when absent)
     check?: (context: FieldContext) => NumberCheck;
 }
@@ -57,7 +57,7 @@ const STANDARD_CHALLENGE_INPUTS: ReadonlySet<ModalInput> = new Set<ModalInput>([
 const isIfJumpStep = (step: Challenge): step is IsJumpChallenge => step.challengeNumber === IF_JUMP_VALUE && step.ifJump !== undefined;
 const isSpecialStep = (step: Challenge) => SPECIAL_ACTION_BY_ID.has(step.challengeNumber);
 // A step's own value, for the fields of a standard challenge or special action (not an IF jump)
-const fromAction = (read: (step: Challenge) => string | number | undefined) =>
+const fromAction = (read: (step: Challenge) => string | number | boolean | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? undefined : read(step);
 const fromIfJump = (read: (jump: IfJumpParams) => string | number | undefined) =>
     (step: Challenge) => isIfJumpStep(step) ? read(step.ifJump) : undefined;
@@ -178,6 +178,10 @@ const FIELD_ROWS: readonly FieldRow[] = [
         shown: c => c.inputs.has("corruptionLevel"), load: fromAction(step => step.corruptionLevel),
     },
     {
+        key: 'ascendAfterCorruption', label: "Ascend immediately", type: 'checkbox', initial: "true",
+        shown: c => c.inputs.has("corruptionLevel"), load: fromAction(step => step.ascendAfterCorruption ?? true),
+    },
+    {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
         load: step => step.challengeWaitBefore,
     },
@@ -234,7 +238,7 @@ const HELP_LINES: readonly [string, string][] = [
     ["→ step N", "Click: shows the other row of the IF"],
     ["↺", "A loop: the IF jumps back"],
     ["Fixed time", "Every Wait before, plus the Wait inside of challenges and C1-C10 steps. IF jumps not followed"],
-    ["Corruption level", "Sets the actual level and ascends to apply it (exits an active Ascension challenge). Free reward levels are added by the game"],
+    ["Corruption level", "Sets the actual level. Ascend immediately applies it now (exits an active Ascension challenge); unchecked only loads it for the next ascension. Free reward levels are added by the game"],
 ];
 const HELP_HTML = HELP_LINES.map(([term, text]) =>
     `<div class="hs-challenges-help-term">${escapeHtml(term)}</div><div>${escapeHtml(text)}</div>`).join("");
@@ -413,7 +417,8 @@ export class HSAutosingChallengeModal {
             const content = 'note' in row
                 ? `<div class="hs-challenges-input-note">${row.note}</div>`
                 : this.#renderControl(row);
-            return `<div class="${classes}" data-row="${i}"><div class="hs-challenges-input-label">${row.label}</div>${content}</div>`;
+            const label = 'type' in row && row.type === 'checkbox' ? '' : `<div class="hs-challenges-input-label">${row.label}</div>`;
+            return `<div class="${classes}" data-row="${i}">${label}${content}</div>`;
         }).join("");
 
         return `
@@ -451,6 +456,7 @@ export class HSAutosingChallengeModal {
 
     #renderControl(row: InputRow): string {
         const common = `class="hs-challenges-input" data-field="${row.key}"`;
+        if (row.type === 'checkbox') return `<label class="hs-challenges-checkbox"><input type="checkbox" ${common} />${row.label}</label>`;
         return row.options !== undefined
             ? `<select ${common}>${row.options}</select>`
             : `<input type="${row.type ?? "number"}" ${common} ${row.attributes ?? ""} />`;
@@ -542,7 +548,8 @@ export class HSAutosingChallengeModal {
         const labelClass = stepLabelClass(step);
         const action = SPECIAL_ACTION_BY_ID.get(step.challengeNumber);
         if (!action) return `<span class="${labelClass}">Challenge ${step.challengeNumber}</span> (${step.challengeCompletions} completions)`;
-        const label = isCorruptionLevelStep(step.challengeNumber) ? `${action.label}: ${step.corruptionLevel ?? 0}` : action.label;
+        const label = isCorruptionLevelStep(step.challengeNumber)
+            ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})` : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -647,7 +654,8 @@ export class HSAutosingChallengeModal {
         for (const row of INPUT_ROWS) {
             if (row.key === 'comment' && keepComment) continue;
             const value = step ? row.load?.(step) : undefined;
-            this.#field(row.key).value = value === undefined ? row.initial : String(value);
+            if (row.type === 'checkbox') (this.#field(row.key) as HTMLInputElement).checked = value === undefined ? row.initial === 'true' : value === true;
+            else this.#field(row.key).value = value === undefined ? row.initial : String(value);
         }
         this.#showFields();
     }
@@ -658,7 +666,7 @@ export class HSAutosingChallengeModal {
         const context = this.#context();
         this.#badReason = null;
         for (const { row, element } of this.#rows) {
-            if (!('key' in row) || row.options !== undefined || row.type === 'text') continue;
+            if (!('key' in row) || row.options !== undefined || row.type === 'text' || row.type === 'checkbox') continue;
             let reason: string | null = null;
             if (!element.hidden) {
                 const text = this.#field(row.key).value.trim();
@@ -707,7 +715,11 @@ export class HSAutosingChallengeModal {
                 challengeWaitBefore: this.#number('waitBefore'),
                 challengeMaxTime: this.#number('maxTime'),
             };
-            if (isCorruptionLevelStep(step.challengeNumber)) step.corruptionLevel = this.#number('corruptionLevel');
+            if (isCorruptionLevelStep(step.challengeNumber)) {
+                step.corruptionLevel = this.#number('corruptionLevel');
+                step.ascendAfterCorruption = (this.#field('ascendAfterCorruption') as HTMLInputElement).checked;
+                step.challengeCompletions = 0;
+            }
         }
         const comment = this.#field('comment').value.trim();
         if (comment) step.comment = comment;
