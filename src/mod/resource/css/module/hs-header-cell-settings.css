@@ -26,11 +26,29 @@
     text-align: right;
 }
 
-/* Centered button slots fill their cell; each visible button gets an equal share of that width. */
-.headerRegion > .headerStack.headerStackRow[data-hs-header-align="center"] {
+/* Align only visible buttons. Empty drop columns remain native in edit mode and take no room outside it. */
+#mainHeader:not(.headerEditMode) .headerRegion > .headerStack.headerStackRow[data-hs-header-align] {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
     justify-self: stretch;
-    align-items: start;
+    align-items: flex-start;
     min-width: 0;
+}
+
+#mainHeader:not(.headerEditMode) .headerRegion > .headerStackRow[data-hs-header-align="left"] { justify-content: flex-start; }
+#mainHeader:not(.headerEditMode) .headerRegion > .headerStackRow[data-hs-header-align="center"] {
+    justify-content: space-around;
+    /* Half a gap at each edge gives each button an equal share, including a partial wrapped row. */
+    padding-inline: 2.5px;
+    box-sizing: border-box;
+}
+#mainHeader:not(.headerEditMode) .headerRegion > .headerStackRow[data-hs-header-align="right"] { justify-content: flex-end; }
+
+#mainHeader:not(.headerEditMode) .headerStackRow[data-hs-header-align] > .resetbtn.headerModule {
+    flex: none;
+    margin: 0;
 }
 
 /* The ascension timer's text sits in a box at least 8em wide (the game's, against bouncing). Stacked, it keeps its

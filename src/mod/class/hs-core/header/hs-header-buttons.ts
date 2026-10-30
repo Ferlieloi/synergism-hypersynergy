@@ -33,8 +33,9 @@ export class HSHeaderButtons {
             const width = button.getBoundingClientRect().width;
             if (!width) continue;
             const buttonStyle = getComputedStyle(button);
-            buttonWidth = Math.max(buttonWidth, width + (Number.parseFloat(buttonStyle.marginLeft) || 0)
-                + (Number.parseFloat(buttonStyle.marginRight) || 0));
+            const margins = (Number.parseFloat(buttonStyle.marginLeft) || 0) + (Number.parseFloat(buttonStyle.marginRight) || 0);
+            // Aligned groups use a 5px gap in place of the game's 5px button margin.
+            buttonWidth = Math.max(buttonWidth, width + Math.max(5, margins));
         }
         if (window.__HS_HEADER_BUTTONS_PATCHED && cellWidth > 0 && buttonWidth > 0) {
             // There are eight native reset buttons. Existing larger groups wrap when the window gets narrower.
@@ -60,13 +61,16 @@ export class HSHeaderButtons {
             const buttons = Array.from(slot.querySelectorAll<HTMLElement>(':scope > .resetbtn.headerModule'))
                 .filter(button => !button.hidden && !button.classList.contains('headerModuleLocked'))
                 .sort((a, b) => positionOf(a) - positionOf(b));
-            const spread = slot.dataset.hsHeaderAlign === 'center' && !editing;
-            const capacity = spread ? Math.max(1, Math.min(HSHeaderButtons.#capacity, buttons.length)) : HSHeaderButtons.#capacity;
+            const aligned = !!slot.dataset.hsHeaderAlign && !editing;
+            const capacity = HSHeaderButtons.#capacity;
             slot.style.gridTemplateColumns = `repeat(${capacity}, minmax(0, 1fr))`;
             // The game's mobile default may translate a run of neighbouring slots; explicit alignment is per slot.
             if (slot.dataset.hsHeaderAlign) slot.style.translate = 'none';
             buttons.forEach((button, index) => {
-                const position = spread ? index : positionOf(button);
+                // Flex alignment uses only real buttons in their saved order, never vacant drag/drop columns.
+                // Keep the game's positions underneath it so editing still uses its original drop targets.
+                button.style.order = aligned ? String(index) : '';
+                const position = positionOf(button);
                 button.style.gridColumn = String(position % capacity + 1);
                 button.style.gridRow = String(Math.floor(position / capacity) + 1);
             });

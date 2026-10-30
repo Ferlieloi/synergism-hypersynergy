@@ -33,6 +33,8 @@ declare global {
         __HS_beforeHeaderRender?: () => void;
         __HS_HEADER_BUTTONS_PATCHED?: boolean;
         __HS_headerButtonCapacity?: (defaultCapacity: number) => number;
+        __HS_HEADER_LONG_PRESS_PATCHED?: boolean;
+        __HS_headerLongPressEnabled?: boolean;
         __HS_renderHeaderLayout?: () => void;
         __HS_parseSave?: (text: string) => Record<string, unknown> | null;
         __HS_stripHeaderModules?: <T>(player: T) => T;

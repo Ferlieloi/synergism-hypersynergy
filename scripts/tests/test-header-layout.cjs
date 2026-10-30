@@ -57,7 +57,7 @@ async function main() {
             const stored={}; window.testStorage={getData:key=>stored[key],setData:(key,value)=>(stored[key]=value,true),clearData:key=>delete stored[key]};
             const positions={a:0,b:1,c:2,d:0,e:1,f:2,g:3,h:4};
             window.testPlayer={headerLayouts:{desktop:{positions},mobile:{positions}}};
-            let center=true,large=false,locked=false,editing=false;
+            let alignment='center',large=false,locked=false,editing=false;
             const header=document.getElementById('mainHeader'),grid=document.getElementById('headerGrid');
             window.__HS_HEADER_BUTTONS_PATCHED=true;
             window.__HS_renderHeaderLayout=()=>{
@@ -66,7 +66,7 @@ async function main() {
                 grid.replaceChildren();
                 for(const [index,ids] of [['a','b','c'],['d','e','f','g','h']].entries()){
                     const slot=document.createElement('div');slot.className='headerStack headerStackRow';slot.dataset.headerSlot=index;
-                    slot.dataset.hsHeaderAlign=index===0&&center?'center':'left';
+                    slot.dataset.hsHeaderAlign=index===0?alignment:'left';
                     for(const id of ids){const button=document.createElement('div');button.id=id;button.className='resetbtn headerModule';
                         if(id==='c'&&locked)button.classList.add('headerModuleLocked');
                         button.textContent=id;button.style.gridColumn=positions[id]+1;
@@ -105,7 +105,30 @@ async function main() {
                 const d=document.getElementById('d').getBoundingClientRect(),h=document.getElementById('h').getBoundingClientRect();
                 check(h.top>=d.bottom,'wrapped buttons do not overlap');
                 HeaderTest.HSHeaderButtons.refresh();check(document.getElementById('h').style.gridRow==='2','refresh preserves saved positions');
-                center=false;window.__HS_renderHeaderLayout();check(document.getElementById('c').style.gridColumn==='3','alignment changes retain model positions');
+                grid.children[1].dataset.hsHeaderAlign='center';HeaderTest.HSHeaderButtons.refresh();
+                const partial=document.getElementById('h').getBoundingClientRect(),row=grid.children[1].getBoundingClientRect();
+                close((partial.left+partial.right)/2,(row.left+row.right)/2,'a partial wrapped row ignores its empty columns');
+                // Empty positions and locked buttons must contribute no width to an aligned group.
+                positions.a=6;positions.b=0;positions.c=3;
+                for(const edge of ['left','right']){
+                    alignment=edge;window.__HS_renderHeaderLayout();
+                    const slot=grid.firstElementChild.getBoundingClientRect();
+                    const b=document.getElementById('b').getBoundingClientRect(),c=document.getElementById('c').getBoundingClientRect(),a=document.getElementById('a').getBoundingClientRect();
+                    close(c.left-b.right,5,edge+' packs first gap');close(a.left-c.right,5,edge+' packs second gap');
+                    close(edge==='left'?b.left:a.right,edge==='left'?slot.left:slot.right,edge+' touches the cell edge');
+                    check(a.top===b.top,'vacant native positions do not create a new row');
+                }
+                alignment='center';window.__HS_renderHeaderLayout();
+                const centered=grid.firstElementChild.getBoundingClientRect();
+                const left=document.getElementById('b').getBoundingClientRect(),middle=document.getElementById('c').getBoundingClientRect(),right=document.getElementById('a').getBoundingClientRect();
+                close(middle.left-left.left,centered.width/3,'Center ignores vacant native positions');
+                close(right.left-middle.left,centered.width/3,'Center keeps equal spacing');
+                check(JSON.stringify(positions)===JSON.stringify({a:6,b:0,c:3,d:0,e:1,f:2,g:3,h:4}),'alignment never changes saved positions');
+                positions.a=0;positions.b=1;positions.c=2;
+                alignment='left';window.__HS_renderHeaderLayout();check(document.getElementById('c').style.gridColumn==='3','alignment changes retain model positions');
+                alignment='right';locked=true;window.__HS_renderHeaderLayout();
+                close(document.getElementById('b').getBoundingClientRect().right,grid.firstElementChild.getBoundingClientRect().right,'Right ignores locked buttons');
+                locked=false;alignment='left';window.__HS_renderHeaderLayout();
                 commit('');check(input.value==='1250','blank entry restores current width');
                 commit(1800);await sleep();large=true;window.__HS_renderHeaderLayout();await sleep();
                 check(window.__HS_headerButtonCapacity(4)===4,'large buttons reduce capacity');

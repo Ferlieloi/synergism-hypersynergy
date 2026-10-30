@@ -921,6 +921,24 @@ function patchBundle(code, options = {}) {
         warn('Could not patch header button capacity', error.message);
     }
 
+    // Only the timer that enters the header editor is optional; native pointer/click/drag handling stays intact.
+    report.headerLongPress = false;
+    try {
+        const down = findEnclosingFunction(code, /window\.setTimeout\s*\(/g,
+            ['.headerRegion', '.pointerId', 'getBoundingClientRect'], 'header long press');
+        const timers = down ? [...code.slice(down.bodyStart, down.bodyEnd)
+            .matchAll(/(?<![\w$.])([a-zA-Z_$][\w$]*)\s*=\s*window\.setTimeout\s*\(/g)] : [];
+        if (timers.length !== 1) throw new Error(`expected one header hold timer, found ${timers.length}`);
+        const at = down.bodyStart + timers[0].index;
+        code = code.slice(0, at) + `${timers[0][1]}=window.__HS_headerLongPressEnabled===false?undefined:window.setTimeout(`
+            + code.slice(at + timers[0][0].length);
+        topLines.push('window.__HS_HEADER_LONG_PRESS_PATCHED=true;');
+        report.headerLongPress = true;
+        log(`Patched optional header long press (fn=${down.fnName})`);
+    } catch (error) {
+        warn('Could not patch header long press', error.message);
+    }
+
     if (options.steam) {
         // ── STEAM AUTO-SYNC PATCH — sync the Steam cloud on its 60 s clock only, not at each manual save
         // (remove the manual trigger: e || ...). In saveSynergy, found by its "testing.gameSaved" message,

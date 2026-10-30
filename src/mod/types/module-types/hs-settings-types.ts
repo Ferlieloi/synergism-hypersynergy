@@ -116,6 +116,7 @@ export interface HSSettingsDefinition {
     headerHideLoadoutIcons: HSSettingBase<boolean>;
     headerFitLoadoutSlots: HSSettingBase<boolean>;
     headerEditButton: HSSettingBase<boolean>;
+    headerLongPressEditing: HSSettingBase<boolean>;
 
     // Talismans Settings
     enableTalismansModule: EnableTalismansModuleSetting;
