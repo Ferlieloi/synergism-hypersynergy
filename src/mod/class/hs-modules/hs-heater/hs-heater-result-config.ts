@@ -92,6 +92,12 @@ const HEATER_RESULT_TYPE_CONFIG = createHeaterResultTypeConfig({
         section: "common",
         icon: "Pictures/Default/BlueberryCubes3.png",
     },
+    coinsC15: {
+        label: "Coins in C15",
+        description: "Maximizes coins per real second in Challenge 15, assuming the tax cap is reached. Export your game data while in C15.\nUses your existing rune EXP, blessings, spirits and talismans. The Effect compares coin income with no purchased Ambrosia modules; it holds other resources and upgrades fixed.\nSingularity Stabilizers help before Antiquities of the Ant God. Brick of Lead slows coin income.",
+        section: "common",
+        icon: "Pictures/Default/Coin.png",
+    },
     purpleHoney: {
         label: "Purple Honey",
         description: "Maximizes Purple Honey per second, at your current Purple Reactor routing percentages. Use it when saving Honey for Purple Reactor or Synthesis upgrades.",
@@ -233,6 +239,7 @@ export const HEATER_BRANCH_DEFINITIONS = [
     { id: "quarks",    label: "Quarks",                      resultKeys: ["quarks"],                  optionKey: "calculateQuarks" },
     { id: "cubes",     label: "3-7D Cubes",                  resultKeys: ["cubes"],                   optionKey: "calculateCubes" },
     { id: "oct",       label: "Octeracts",                   resultKeys: ["oct"],                     optionKey: "calculateOct" },
+    { id: "coinsC15",  label: "Coins in C15",                resultKeys: ["coinsC15"],                optionKey: "calculateCoinsC15" },
     { id: "obtOff",    label: "Obt, Off",                    resultKeys: ["obt", "off"],              optionKey: "calculateOff" },
     // Starts unticked: it adds 10 to 40 s to a late-game heat. labelNote: greyed after the label
     { id: "obtAndOff", label: "Obt + Off",                   resultKeys: ["obtAndOff"],               optionKey: "calculateObtAndOff", startsUnticked: true, labelNote: "(slower)" },

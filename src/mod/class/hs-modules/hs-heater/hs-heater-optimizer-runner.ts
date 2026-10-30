@@ -22,6 +22,7 @@ const BRANCH_GROUPS: readonly (readonly HeaterBranchId[])[] = [
   ['hyperflux'],
   ['cubes', 'sr'],
   ['oct'],
+  ['coinsC15'],
   ['luck', 'ambOct', 'purple'],
   ['quarks', 'obtOff', 'obtAndOff'],
 ]

@@ -1,6 +1,8 @@
 import type { HeaterOptimizerInput, HeaterOptimizationResult, HeaterRedAmbUpgradeEffects, HeaterResultAffordableRow, HeaterResultRow, HeaterResultRowMatrix, HeaterResultLimits, HeaterResultShortfall, HeaterResultUnaffordableRow, } from "../../../types/data-types/hs-heater-types";
 import { applyHeaterBells, formatNumber, HEATER_EFFECT_PAIR_SEPARATOR } from "./hs-heater-utils";
 import { HEATER_BRANCH_DEFINITIONS } from "./hs-heater-result-config";
+import { createHeaterCoinsC15Evaluator, formatHeaterCoinsC15Effect, heaterCoinsC15LogRatio } from './hs-heater-coins';
+import type { HeaterCoinsC15State } from '../../../types/data-types/hs-heater-coins-types';
 import { calculateAmbrosiaBarIncome } from '../../hs-core/gds/hs-ambrosia-bar-income';
 import type { AmbrosiaBarIncome, AmbrosiaBarIncomeReactor } from '../../../types/data-types/hs-ambrosia-income-types';
 
@@ -162,6 +164,7 @@ interface Options {
     calculateSR:        boolean;
     calculateAmbOct:    boolean;
     calculatePurple:    boolean;
+    calculateCoinsC15:  boolean;
 }
 
 export type HeaterCubeExperimentUpgrade =
@@ -355,7 +358,11 @@ let options: Options = {
     calculateSR: false,
     calculateAmbOct: false,
     calculatePurple: false,
+    calculateCoinsC15: false,
 };
+
+let coinsC15Evaluator: ReturnType<typeof createHeaterCoinsC15Evaluator> | undefined;
+let coinsC15Baseline: HeaterCoinsC15State | undefined;
 
 let cubeExperimentConfig: HeaterCubeExperimentConfig | undefined;
 let cubeExperimentDiagnostics: HeaterCubeExperimentDiagnostics | undefined;
@@ -1365,6 +1372,7 @@ for (const upgradeName of upgradeKeyOrder) {
 // ===========================================================================
 
 class Loadout {
+    private coinStateCache: HeaterCoinsC15State | null = null;
 
     upgradeLevels: Record<string, number>;
     private costCache:  number | null;
@@ -1418,6 +1426,22 @@ class Loadout {
         this.costCache = null;
         this.blueberryCostCache = null;
         this.statCache = {};
+        this.coinStateCache = null;
+    }
+
+    get coinsC15State(): HeaterCoinsC15State {
+        if (!coinsC15Evaluator) throw new Error('Coins in C15 needs a fresh game-data export.');
+        return this.coinStateCache ??= coinsC15Evaluator({
+            coefficient: this.effectiveLevel('ambrosiaRuneOOMBonus'),
+            talisman: this.effectiveLevel('ambrosiaTalismanBonusRuneLevel'),
+            stabilizer: this.effectiveLevel(stats.exalt > 0 ? 'ambrosiaSingReduction2' : 'ambrosiaSingReduction1'),
+            brick: this.effectiveLevel('ambrosiaBrickOfLead'),
+        });
+    }
+
+    compareStat(other: Loadout, stat: string): number {
+        return stat === 'coinsC15' ? heaterCoinsC15LogRatio(this.coinsC15State, other.coinsC15State)
+            : this.getStat(stat) - other.getStat(stat);
     }
 
     setCachedStat(stat: string, value: number): void {
@@ -1520,6 +1544,9 @@ class Loadout {
       if (this.statCache[stat] == null || override) {
         this.statCache[stat] = stat === "mLuck" ? stats.baseMLuck : 1
         switch (stat) {
+          case 'coinsC15':
+            this.statCache[stat] = heaterCoinsC15LogRatio(this.coinsC15State, coinsC15Baseline!);
+            break;
           case "luck":
             const unassignedBlueberries = stats.blueberries - this.blueberryCost
             let luck = stats.baseLuck
@@ -1797,7 +1824,9 @@ class Loadout {
 
         let baseLoadout = new Loadout();
         let effectStr: string;
-        if (effectStat === "singReduction" || effectStat === "vouchers")
+        if (effectStat === 'coinsC15')
+          effectStr = formatHeaterCoinsC15Effect(this.compareStat(baseLoadout, 'coinsC15'))
+        else if (effectStat === "singReduction" || effectStat === "vouchers")
           // A number of levels gained, shown as an integer (3, not 3.00)
           effectStr = formatNumber(this.getStat(effectStat) - baseLoadout.getStat(effectStat), false)
         else if (baseLoadout.getStat(effectStat) === 0)
@@ -1811,7 +1840,8 @@ class Loadout {
           effectStr = formatNumber(effectStat === "cube" || effectStat === "oct" ? ratio ** stats.tauPower : ratio)
         }
 
-        const isMaxed = this.getStat(stat) >= maxLoadout.getStat(stat)
+        const isMaxed = stat === 'coinsC15' ? this.compareStat(maxLoadout, stat) >= 0
+            : this.getStat(stat) >= maxLoadout.getStat(stat)
         const row: HeaterResultAffordableRow = [
             this.format,
             null,
@@ -1853,7 +1883,7 @@ class Loadout {
             if (Object.keys(probe.upgradeLevels).some(name =>
               (probe.upgradeLevels[name] ?? 0) > (maxLoadout.upgradeLevels[name] ?? 0)))
                 continue
-            if (probe.getStat(stat) <= baseStat)
+            if (stat === 'coinsC15' ? probe.compareStat(base, stat) <= 0 : probe.getStat(stat) <= baseStat)
                 continue
             if (probe.blueberryCost - base.blueberryCost > spareBlueberries)
                 limits.blueberries = true
@@ -4759,6 +4789,37 @@ function findOpt(table1: Loadout[], table2: Loadout[], stat: string, budget = st
 // Input mapping: HeaterOptimizerInput → stats + options
 // ===========================================================================
 
+// Only two rune modules and the applicable stabilizer can improve capped
+// coin income. Enumerate them together: trimming by Cube or rune levels
+// would lose valid coin optima. Brick can only lower this objective.
+function findCoinsC15Opt(): Loadout {
+    let best = new Loadout();
+    const suppressed = stats.exalt === 6 || stats.exalt === 8;
+    const stabilizer = stats.exalt > 0 ? 'ambrosiaSingReduction2' : 'ambrosiaSingReduction1';
+    const maxStabilizer = stats.postAoAG ? 0 : upgrades[stabilizer].maxLevel;
+    for (let stabilizerLevel = 0; stabilizerLevel <= maxStabilizer; stabilizerLevel++) {
+        const seed = new Loadout();
+        seed.upgradeLevels[stabilizer] = stabilizerLevel;
+        seed.satisfyPrerequisites();
+        if (seed.cost > stats.amb || seed.blueberryCost > stats.blueberries) continue;
+        for (let talisman = 0; talisman <= (suppressed ? 0 : upgrades.ambrosiaTalismanBonusRuneLevel.maxLevel); talisman++) {
+            const talismanLoadout = new Loadout(seed);
+            talismanLoadout.upgradeLevels.ambrosiaTalismanBonusRuneLevel = talisman;
+            if (talismanLoadout.cost > stats.amb) break;
+            for (let coefficient = 0; coefficient <= (suppressed ? 0 : upgrades.ambrosiaRuneOOMBonus.maxLevel); coefficient++) {
+                const candidate = new Loadout(talismanLoadout);
+                candidate.upgradeLevels.ambrosiaRuneOOMBonus = coefficient;
+                if (candidate.cost > stats.amb) break;
+                const comparison = candidate.compareStat(best, 'coinsC15');
+                if (comparison > 0 || (comparison === 0 && (candidate.cost < best.cost
+                    || (candidate.cost === best.cost && candidate.blueberryCost < best.blueberryCost))))
+                    best = candidate;
+            }
+        }
+    }
+    return best;
+}
+
 function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     const {
         amb, ramb, bonusAmbrosiaPerFill, blueberries, purpleLeoLevel,
@@ -4939,6 +5000,14 @@ function fillStatsAndOptionsFromInput(input: HeaterOptimizerInput): void {
     stats.purple = input.purple;
     stats.ossifiedTactics2 = ossifiedTactics2;
 
+    coinsC15Evaluator = input.coinsC15 ? createHeaterCoinsC15Evaluator(input.coinsC15, {
+        singularity: stats.sing,
+        exalt: stats.exalt,
+        postAoag: stats.postAoAG,
+        talismanPower: stats.talismanP,
+    }) : undefined;
+    coinsC15Baseline = coinsC15Evaluator ? new Loadout().coinsC15State : undefined;
+
     const optionsState = input.heaterOptions;
     HEATER_BRANCH_DEFINITIONS.forEach((branch) => {
         const optionKey = branch.optionKey;
@@ -5053,6 +5122,21 @@ export class HSHeaterOptimizer {
         }
 
         try {
+
+          if (options.calculateCoinsC15) {
+              if (!coinsC15Evaluator) {
+                  HSLogger.warn('Coins in C15 skipped: export fresh game data.');
+              } else {
+                  const coinMaximum = new Loadout(maxLoadout);
+                  coinMaximum.upgradeLevels.ambrosiaBrickOfLead = 0;
+                  const coinWinner = findCoinsC15Opt();
+                  const row = coinWinner.generateOutput('coinsC15', coinMaximum);
+                  row[8] = 'Coin income multiplier at the tax cap, compared with no purchased Ambrosia modules. Existing resources and upgrades are held fixed.';
+                  output.coinsC15 = [row];
+              }
+              if (!Object.entries(options).some(([key, enabled]) => key !== 'calculateCoinsC15' && enabled))
+                  return output;
+          }
 
           HSLogger.debug(() => '[HeaterDiag] Building shared luck tables', 'HSHeaterOptimizer');
           // --- Shared luck tables ---

@@ -20,6 +20,7 @@
     "test:autosing": "node scripts/test-autosing-corruption.cjs",
     "test:auto-export": "node scripts/test-auto-export.cjs",
     "test:heater": "node scripts/test-heater-vouchers.cjs",
+    "test:heater-coins": "node scripts/test-heater-coins.cjs",
     "build": "node esbuild.config.js build",
     "release": "node esbuild.config.js release",
     "dev": "node esbuild.config.js dev",
