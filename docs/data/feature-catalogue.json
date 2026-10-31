@@ -45,13 +45,11 @@
           "id": "channels",
           "title": "Live and Dev channels",
           "where": "Browser loader configuration / Steam loader build selection",
-          "summary": "Choose stable Live builds or the separate Dev channel.",
+          "summary": "Choose between the Live and Dev repositories.",
           "details": [
-            "Live uses Ferlieloi/synergism-hypersynergy; Dev uses maenhiir/synergism-hypersynergy.",
-            "In the browser bridge, change the repo owner only when intentionally switching channels. Steam also supports selecting builds; development has a local loader."
-          ],
-          "limits": [
-            "Dev may contain unfinished changes. Changing the loader script can be undone by its automatic update."
+            "Live is Ferlieloi's repository (Ferlieloi/synergism-hypersynergy). Dev is Shewchou's repository (maenhiir/synergism-hypersynergy).",
+            "In the browser bridge, change the repo owner only when intentionally switching channels. Steam also supports selecting builds; development has a local loader.",
+            "Live is generally more stable."
           ]
         },
         {

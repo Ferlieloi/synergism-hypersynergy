@@ -39,16 +39,13 @@ Patches a copy of the Steam game and launches it with the mod.
 
 ### Live and Dev channels
 
-Choose stable Live builds or the separate Dev channel.
+Choose between the Live and Dev repositories.
 
 **Where:** Browser loader configuration / Steam loader build selection
 
-- Live uses Ferlieloi/synergism-hypersynergy; Dev uses maenhiir/synergism-hypersynergy.
+- Live is Ferlieloi's repository (Ferlieloi/synergism-hypersynergy). Dev is Shewchou's repository (maenhiir/synergism-hypersynergy).
 - In the browser bridge, change the repo owner only when intentionally switching channels. Steam also supports selecting builds; development has a local loader.
-
-**Availability and limits**
-
-- Dev may contain unfinished changes. Changing the loader script can be undone by its automatic update.
+- Live is generally more stable.
 
 **Source:** [tampermonkey-bridge.user.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/43cf692e14e9263a4fdb99d391fdc635ae726d78/src/loader/tampermonkey-bridge.user.js) · [loaders.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/43cf692e14e9263a4fdb99d391fdc635ae726d78/docs/features/loaders.md) · [README.md](https://github.com/Ferlieloi/synergism-hypersynergy/blob/43cf692e14e9263a4fdb99d391fdc635ae726d78/synergism_modloader/README.md)
 

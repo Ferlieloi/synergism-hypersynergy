@@ -8,7 +8,7 @@ Choose the browser userscript or the Windows Steam loader. Both patch the game b
 
 - [Browser userscript](Features-getting-started#browser-userscript): Loads Hypersynergism automatically with the game.
 - [Windows Steam loader](Features-getting-started#windows-steam-loader): Patches a copy of the Steam game and launches it with the mod.
-- [Live and Dev channels](Features-getting-started#live-and-dev-channels): Choose stable Live builds or the separate Dev channel.
+- [Live and Dev channels](Features-getting-started#live-and-dev-channels): Choose between the Live and Dev repositories.
 - [Legacy bookmarklet and migration help](Features-getting-started#legacy-bookmarklet-and-migration-help): Keeps a legacy loading path and shows how to switch to Tampermonkey.
 - [Channel-aware update notifications](Features-getting-started#channel-aware-update-notifications): Marks a newer version with a rainbow icon border and a panel-title notice.
 
