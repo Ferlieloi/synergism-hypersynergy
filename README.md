@@ -25,6 +25,13 @@ Here are some of Hypersynergism’s standout features:
 
 ## Using the mod
 
+### Feature guides
+
+See the [complete feature inventory](docs/FEATURES.md) for usage, settings, availability and source references,
+including smaller remembered preferences and header customization. The repository also includes a static
+[website](docs/index.html) with a browsable player wiki. Native GitHub Wiki pages are prepared from the same
+catalogue; [publishing instructions](docs/dev/publishing-guide.md) cover both destinations.
+
 ### 🎮 On Steam (Windows only)
 
 Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". It needs the full [7-Zip](https://www.7-zip.org/) install. More in the [loader's README](synergism_modloader/README.md).
