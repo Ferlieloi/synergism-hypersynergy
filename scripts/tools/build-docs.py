@@ -240,6 +240,19 @@ def build() -> None:
 <li>Make a backup in Tools before experimenting with strategies or imports.</li></ol>
 <h2>Original project</h2><p>Created by <a href="https://github.com/ahvonenj/synergism-hypersynergy">ahvonenj</a>. This guide documents the maintained Ferlieloi fork. It follows the original website's game-inspired style.</p>'''
     page("docs/index.html", "Home", "home", home)
+    # Support Pages configured at either repository root or /docs without moving the source.
+    add("index.html", '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=docs/">
+  <title>Hypersynergism</title>
+  <style>body { background: #18171c; color: ghostwhite; font: 16px sans-serif; margin: 3rem; } a { color: #82baff; }</style>
+</head>
+<body><p><a href="docs/">Open the Hypersynergism website</a></p></body>
+</html>''')
+    add(".nojekyll", "")
 
     search = '''<form class="feature-controls" role="search" onsubmit="return false">
 <label for="feature-search">Find a feature <input id="feature-search" type="search" placeholder="Try hidden tabs, header, GQ, export…" autocomplete="off"></label>
@@ -257,7 +270,7 @@ def build() -> None:
          f'<h1>Mod features</h1><p>{feature_count} features across {len(CATEGORIES)} categories. Search includes descriptions, usage and limits. Expand an entry for the details.</p>'
          '<noscript><p>Search needs JavaScript; all features and their details remain available below.</p></noscript>' + search + sections)
 
-    wiki_intro = '<h1>Hypersynergism wiki</h1><p>Player guides for the maintained mod: what each feature does, where to find it, and its availability and limits.</p>'
+    wiki_intro = f'<h1>Hypersynergism wiki</h1><p>Player guides for the maintained mod: what each feature does, where to find it, and its availability and limits.</p><p>Also available in the <a href="{REPO}/wiki">GitHub Wiki</a>.</p>'
     page("docs/wiki/index.html", "Wiki", "wiki", wiki_intro + category_list.replace('href="wiki/', 'href="')
          + '<h2>Reference</h2><ul><li><a href="settings.html">Every setting and saved preference</a></li>'
          '<li><a href="calculations.html">Calculation picker reference</a></li>'

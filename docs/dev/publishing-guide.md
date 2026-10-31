@@ -41,7 +41,7 @@ After the documentation changes are reviewed and committed to `master`:
 3. Select branch **master**, folder **/docs**, and Save.
 4. Wait for the Pages deployment to finish. The expected address is `https://ferlieloi.github.io/synergism-hypersynergy/`; verify GitHub's reported URL before calling it live.
 
-The tracked `.nojekyll` makes this a plain static deployment. No custom Actions workflow is required; future commits to `/docs` update the site through Pages. The original author's website is not changed.
+The tracked `.nojekyll` makes this a plain static deployment. No custom Actions workflow is required; future commits to `/docs` update the site through Pages. If Pages serves the repository root instead, the root `index.html` redirects visitors to `docs/`; the main website address works with either source selection. The original author's website is not changed.
 
 Set the repository's About → Website field to the new URL only after it is confirmed live.
 
