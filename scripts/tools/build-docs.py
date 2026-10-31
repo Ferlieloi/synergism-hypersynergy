@@ -116,7 +116,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0) -> None:
     <div id="second-row"><div id="second-row-left-container"><div class="second-row-subcontainer">
       <img class="res-icon" src="{prefix}res/coin.png" width="32" height="32" alt="">
       <div class="second-row-disp">Hypersynergism<br>Guide for <span id="version_num">v{esc(VERSION)}</span></div>
-    </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi &amp; contributors</span></p></div>
+    </div></div><p class="header-credit">A Synergism QoL mod<br><span>Maintained by Ferlieloi, maenhiir &amp; contributors</span></p></div>
     <nav aria-label="Main navigation"><div id="tabs">{nav}</div></nav>
   </header>
   <div id="border" style="background:{color}"></div>
@@ -281,7 +281,7 @@ def build() -> None:
                "## Feature guides", "\n".join(f'- [{c["title"]}]({wiki_name(c)})' for c in CATEGORIES),
                "## Reference", "- [All features](Mod-Features)\n- [Settings and remembered preferences](Settings-Reference)\n- [Calculation picker](Calculation-Reference)",
                "## Help", f"Use the [issues page]({REPO}/issues) for bug reports. Include your mod/game version and reproduction steps. Review save and log content before sharing a diagnostic backup.",
-               "## Credits", "Created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy); maintained by Ferlieloi and contributors. See the repository's developer documents for implementation rules."]
+               "## Credits", "Created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy); maintained by Ferlieloi, maenhiir and contributors. See the repository's developer documents for implementation rules."]
     add("docs/wiki-source/Home.md", "\n\n".join(md_home))
     sidebar = ["**Hypersynergism**", "- [Home](Home)\n- [All features](Mod-Features)"] + [f'- [{c["title"]}]({wiki_name(c)})' for c in CATEGORIES] + ["- [Settings](Settings-Reference)\n- [Calculations](Calculation-Reference)"]
     add("docs/wiki-source/_Sidebar.md", "\n".join(sidebar))
@@ -317,7 +317,7 @@ def build() -> None:
 <a href="{REPO}" aria-label="Open the maintained repository"><img src="res/github.png" id="github-logo" width="180" height="180" alt="GitHub"></a>
 <ul><li><a href="{REPO}">Maintained Live repository</a></li><li><a href="{REPO}/releases">Releases &amp; Windows loader</a></li><li><a href="{REPO}/issues">Bug reports &amp; requests</a></li><li><a href="https://github.com/maenhiir/synergism-hypersynergy">Dev channel</a></li><li><a href="https://github.com/ahvonenj/synergism-hypersynergy">Original repository</a></li><li><a href="https://github.com/Pseudo-Corp/SynergismOfficial">Synergism game source</a></li></ul>''')
     page("docs/about.html", "About", "about", '''<h1>About Hypersynergism</h1>
-<p>A community mod for <a href="https://synergism.cc/">Synergism</a>. Originally created by <a href="https://github.com/ahvonenj">ahvonenj</a>, now maintained in the Ferlieloi fork with community contributions.</p>
+<p>A community mod for <a href="https://synergism.cc/">Synergism</a>. Originally created by <a href="https://github.com/ahvonenj">ahvonenj</a>, now maintained by <a href="https://github.com/Ferlieloi">Ferlieloi</a>, <a href="https://github.com/maenhiir">maenhiir</a> and contributors.</p>
 <h2>The original style</h2><p>This guide adapts the <a href="https://ahvonenj.github.io/synergism-hypersynergy/">original Hypersynergism website</a>: the dark background, resource icons, compact colored tabs and straightforward text layout.</p>
 <p>The original website CSS is retained with responsive and accessibility additions. The game-inspired images come from the original site's resources; Synergism artwork belongs to its respective creators. Neither the mod nor this guide is an official game website.</p>
 <h2>Privacy</h2><p>This documentation site uses no analytics, cookies, account system or game-save uploads. Search runs in your browser. Following external links uses those services.</p>

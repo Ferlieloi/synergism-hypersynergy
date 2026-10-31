@@ -29,4 +29,4 @@ Use the [issues page](https://github.com/Ferlieloi/synergism-hypersynergy/issues
 
 ## Credits
 
-Created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy); maintained by Ferlieloi and contributors. See the repository's developer documents for implementation rules.
+Created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy); maintained by Ferlieloi, maenhiir and contributors. See the repository's developer documents for implementation rules.
