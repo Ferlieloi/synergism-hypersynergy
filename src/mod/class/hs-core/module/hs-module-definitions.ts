@@ -1,3 +1,4 @@
+import { HSCorruptionPredictor } from '../../hs-modules/hs-corruption-predictor/hs-corruption-predictor';
 import { HSCodes } from "../../hs-modules/hs-codes";
 import { HSHepteracts } from "../../hs-modules/hs-hepteracts/hs-hepteracts";
 import { HSHepteractDistributor } from "../../hs-modules/hs-hepteracts/hs-hepteract-distributor";
@@ -95,6 +96,7 @@ export const HS_MODULE_DEFINITIONS = [
         context: 'HSGameDataAPI',
         moduleColor: '#fbc531',
     },
+    { className: 'HSCorruptionPredictor', moduleClass: HSCorruptionPredictor, context: 'HSCorruptionPredictor', moduleColor: 'crimson' },
     {
         className: 'HSSubtabMemory',
         moduleClass: HSSubtabMemory,
