@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the public site, feature inventory and GitHub Wiki from one catalogue.
+"""Build the public site and the feature inventory from one catalogue.
 
 No dependencies or network access. Existing developer documents are inputs only.
 What each page is built from and how it behaves: docs/features/website.md.
@@ -42,10 +42,6 @@ def esc(value: object) -> str:
 
 def source_link(path: str) -> str:
     return SOURCE + quote(path, safe="/")
-
-
-def wiki_name(category: dict) -> str:
-    return "Features-" + category["id"]
 
 
 def slug(title: str) -> str:
@@ -283,16 +279,15 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
 </html>''')
 
 
-def feature_md(category: dict, f: dict, *, setting_href=lambda k: f"Settings-Reference#{k.lower()}",
-               image_prefix: str = SITE) -> str:
-    """image_prefix: what an image's path from docs/ follows (the website for the GitHub Wiki, "" in docs/FEATURES.md)."""
+def feature_md(category: dict, f: dict) -> str:
+    """An entry in docs/FEATURES.md: images relative to docs/, settings linked to the website."""
     parts = [f'### {f["title"]}', f["summary"], f'**Where:** {f["where"]}',
              "\n".join(f"- {x}" for x in f["details"])]
-    parts += [f'![{image["alt"]}]({image_prefix}{quote(src, safe="/@")})' for image, (src, _, _) in feature_images(f)]
+    parts += [f'![{image["alt"]}]({quote(src, safe="/@")})' for image, (src, _, _) in feature_images(f)]
     if f.get("limits"):
         parts += ["**Availability and limits**", "\n".join(f"- {x}" for x in f["limits"])]
     if f.get("settings"):
-        parts += ["**Related settings:** " + ", ".join(f'[`{k}`]({setting_href(k)})' for k in f["settings"])]
+        parts += ["**Related settings:** " + ", ".join(f'[`{k}`]({SITE}wiki/settings.html#{quote(k)})' for k in f["settings"])]
     parts += sources_md("Source", own_sources(category, f))
     return "\n\n".join(parts)
 
@@ -315,10 +310,6 @@ def guide_title(cid: str) -> str:
     if not first.startswith("# "):
         raise ValueError(f"Guide {cid}.md: the first line must be its '# Title'")
     return first[2:].strip()
-
-
-def guide_wiki_name(cid: str) -> str:
-    return "Guide-" + cid
 
 
 def inline_md(text: str) -> str:
@@ -781,8 +772,6 @@ def changelog_outputs() -> None:
 
 def settings_outputs() -> None:
     html_rows = []
-    md = ["# Settings reference", "Every setting in the audited source is listed below. Hidden means it is not a normal panel control: many hidden settings are edited in the header editor, a tool window or an inline game control. Some are internal state or diagnostics.",
-          "These are source-defined initial values, not a promise that an existing player's stored or migrated preferences match them. An enabled numeric/select setting does not necessarily mean its dependent feature is switched on."]
     by_setting = {k: (c, f) for c in CATEGORIES for f in c["features"] for k in f.get("settings", [])}
     for key, s in SETTINGS.items():
         c, f = by_setting[key]
@@ -794,8 +783,6 @@ def settings_outputs() -> None:
         html_rows.append(f'<tr id="{esc(key)}"><th scope="row"><code>{esc(key)}</code><br>{esc(s["settingDescription"])}</th>'
                          f'<td data-label="Initial value">{esc(default)}</td><td data-label="Control">{esc(state)}<br><span class="control-page">{esc(page_name)}</span></td>'
                          f'<td data-label="Feature"><a href="{c["id"]}.html#{f["id"]}">{esc(f["title"])}</a></td></tr>')
-        md += [f"## {key}", s["settingDescription"],
-               f"- Source default: `{default}`; enabled flag: `{str(s.get('enabled')).lower()}`.\n- Location: {state}{' / ' + page_name if page_name else ''}.\n- Guide: [{f['title']}]({wiki_name(c)}#{slug(f['title'])})."]
     page("docs/wiki/settings.html", "Settings reference", "wiki",
          '<p class="breadcrumb"><a href="index.html">Wiki</a> / Settings</p><h1>Settings reference</h1>'
          f'<p>All {len(SETTINGS)} source-defined settings, including saved header preferences and internal state. Hidden settings often have controls in the header editor or a tool window; others are implementation state.</p>'
@@ -803,7 +790,6 @@ def settings_outputs() -> None:
          '<div class="table-scroll"><table class="settings-table"><caption>Settings and their feature guides</caption><thead><tr><th>Setting</th><th>Initial value</th><th>Control type / page</th><th>Feature</th></tr></thead><tbody>'
          + "".join(html_rows) + '</tbody></table></div>', depth=1,
          description="Every Hypersynergism setting: what it does, its initial value, where it is set and the feature it belongs to.")
-    add("docs/wiki-source/Settings-Reference.md", "\n\n".join(md))
 
 
 def calculation_outputs() -> None:
@@ -818,14 +804,9 @@ def calculation_outputs() -> None:
     if not entries:
         raise ValueError("Calculation extraction failed")
     entries.sort()
-    md = ["# Calculation reference\n", "Entries registered for the Tools calculation picker in the audited source. Parameter options are provided by the mod. Component/reduction support does not mean that every individual result has a full named breakdown.\n",
-          "| Calculation | Function | Reduction support |", "| --- | --- | --- |"]
     rows = []
     for name, fn, reduce in entries:
-        md.append(f"| {name} | `{fn}` | {'Yes' if reduce else 'No'} |")
         rows.append(f'<tr><th scope="row">{esc(name)}</th><td><code>{esc(fn)}</code></td><td>{"Yes" if reduce else "No"}</td></tr>')
-    md += [f"\nSource: [calculation registry]({source_link(path)})."]
-    add("docs/wiki-source/Calculation-Reference.md", "\n".join(md))
     page("docs/wiki/calculations.html", "Calculation reference", "wiki",
          '<p class="breadcrumb"><a href="index.html">Wiki</a> / Calculations</p><h1>Calculation reference</h1>'
          f'<p>{len(entries)} entries registered for the Tools calculation picker. Options are provided in-game. Reduction support does not guarantee a full named component breakdown for every entry.</p>'
@@ -851,7 +832,6 @@ def guide_outputs() -> None:
              f'<p class="breadcrumb"><a href="index.html">Wiki</a> / <a href="{cid}.html">{esc(c["title"])}</a> / Guide</p>'
              + guide_html(cid), depth=1, source=f"docs/data/guides/{cid}.md",
              description=f"{guide_title(cid)}: a players' guide for Hypersynergism, the Synergism quality-of-life mod.")
-        add(f"docs/wiki-source/{guide_wiki_name(cid)}.md", GUIDES[cid])
 
 
 def build() -> None:
@@ -911,7 +891,6 @@ def build() -> None:
     wiki_intro = f'<h1>Hypersynergism wiki</h1><p>Player guides for the maintained mod: what each feature does, where to find it, and its availability and limits.</p>'
     guides_html = ('<h2>Guides</h2><ul>' + "".join(
         f'<li><a href="{cid}-guide.html">{esc(guide_title(cid))}</a></li>' for cid in GUIDES) + '</ul>') if GUIDES else ""
-    guides_md = ["## Guides", "\n".join(f"- [{guide_title(cid)}]({guide_wiki_name(cid)})" for cid in GUIDES)] if GUIDES else []
     page("docs/wiki/index.html", "Wiki", "wiki", wiki_intro + category_list("../", "") + guides_html
          + '<h2>Reference</h2><ul><li><a href="settings.html">Every setting and saved preference</a></li>'
          '<li><a href="calculations.html">Calculation picker reference</a></li>'
@@ -919,36 +898,16 @@ def build() -> None:
          '<h2>Help</h2><p>For bugs, describe the game/mod version and how to reproduce the issue. A backup from Tools can include useful diagnostic context; review private data before sharing.</p>'
          f'<p><a href="{REPO}/issues">Report an issue</a> · <a href="{REPO}/blob/master/docs/README.md">Developer documentation</a></p>', depth=1,
          description="Hypersynergism wiki: a page per feature category, players' guides, and the settings and calculation references.")
-    md_home = ["# Hypersynergism wiki", f"Player documentation for the maintained [Hypersynergism mod]({REPO}).",
-               "## Feature guides", "\n".join(f'- [{c["title"]}]({wiki_name(c)})' for c in CATEGORIES)] + guides_md + [
-               "## Reference", "- [All features](Mod-Features)\n- [Settings and remembered preferences](Settings-Reference)\n- [Calculation picker](Calculation-Reference)",
-               "## Help", f"Use the [issues page]({REPO}/issues) for bug reports. Include your mod/game version and reproduction steps. Review save and log content before sharing a diagnostic backup.",
-               "## Credits", "Created by [ahvonenj](https://github.com/ahvonenj/synergism-hypersynergy); maintained by Ferlieloi, maenhiir and contributors. See the repository's developer documents for implementation rules."]
-    add("docs/wiki-source/Home.md", "\n\n".join(md_home))
-    sidebar = (["**Hypersynergism**", "- [Home](Home)\n- [All features](Mod-Features)"] + [f'- [{c["title"]}]({wiki_name(c)})' for c in CATEGORIES]
-               + [f"- [{guide_title(cid)}]({guide_wiki_name(cid)})" for cid in GUIDES]
-               + ["- [Settings](Settings-Reference)\n- [Calculations](Calculation-Reference)"])
-    add("docs/wiki-source/_Sidebar.md", "\n".join(sidebar))
-    add("docs/wiki-source/_Footer.md", f"[Hypersynergism source]({REPO}) · [Report an issue]({REPO}/issues) · Original mod by [ahvonenj](https://github.com/ahvonenj)")
     inventory = ["# Hypersynergism feature inventory", "Generated from the reviewed feature catalogue. Every feature includes its location, usage, limits and source references."]
-    native_index = ["# Mod features", f"{feature_count} documented features, grouped below. Open a guide for usage, settings and limitations."]
     for c in CATEGORIES:
-        native_index += [f'## {c["title"]}', c["intro"], "\n".join(
-            f'- [{f["title"]}]({wiki_name(c)}#{slug(f["title"])}): {f["summary"]}' for f in c["features"])]
-        md = [f'# {c["title"]}', c["intro"]] + sources_md("Sources for this category", c["sources"]) + guide_link_md(c, guide_wiki_name(c["id"])) + [
-              "## On this page", "\n".join(f'- [{f["title"]}](#{slug(f["title"])})' for f in c["features"])]
-        md += [feature_md(c, f) for f in c["features"]]
-        add(f'docs/wiki-source/{wiki_name(c)}.md', "\n\n".join(md))
-        # The standalone inventory links to the website: the GitHub Wiki only points to it.
         inventory += [f'## {c["title"]}', c["intro"]] + sources_md("Sources for this category", c["sources"]) + guide_link_md(c, f'{SITE}wiki/{c["id"]}-guide.html') + [
-            feature_md(c, f, setting_href=lambda k: f"{SITE}wiki/settings.html#{quote(k)}", image_prefix="") for f in c["features"]]
+            feature_md(c, f) for f in c["features"]]
         toc = '<ul class="wiki-toc">' + "".join(f'<li><a href="#{f["id"]}">{esc(f["title"])}</a></li>' for f in c["features"]) + '</ul>'
         page(f'docs/wiki/{c["id"]}.html', c["title"], "wiki",
              f'<p class="breadcrumb"><a href="index.html">Wiki</a> / {esc(c["title"])}</p>'
              f'<h1>{category_icon(c, "../", 32)}{esc(c["title"])}</h1><p>{esc(c["intro"])}</p>{sources_html("Sources for this category", c["sources"])}'
              f'{guide_link(c, c["id"] + "-guide.html")}{toc}'
              + "".join(feature_html(c, f) for f in c["features"]), depth=1, description=category_description(c))
-    add("docs/wiki-source/Mod-Features.md", "\n\n".join(native_index))
     add("docs/FEATURES.md", "\n\n".join(inventory))
     settings_outputs()
     calculation_outputs()
@@ -968,7 +927,7 @@ def build() -> None:
 <h2>License &amp; acknowledgements</h2><p>The repository's <a href="https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/LICENSE">MIT license</a> and upstream credits are retained. Documentation describes the audited source; availability can vary with progression, platform and game patches.</p>''',
          description="Who makes Hypersynergism, where the website's style comes from, privacy and license.")
     add("docs/.nojekyll", "")
-    source_rows = ["# Feature audit and maintenance", "The reviewed catalogue is `docs/data/feature-catalogue.json`. Website pages, `docs/FEATURES.md` and `docs/wiki-source/` are generated; edit the catalogue, then run `python scripts/tools/build-docs.py`.",
+    source_rows = ["# Feature audit and maintenance", "The reviewed catalogue is `docs/data/feature-catalogue.json`. Website pages and `docs/FEATURES.md` are generated; edit the catalogue, then run `python scripts/tools/build-docs.py`.",
                    f"Audit source: [{CATALOGUE['audited_commit']}]({REPO}/commit/{CATALOGUE['audited_commit']}). The generator reads the package version, settings registry and calculation registry from the checkout. When re-auditing, update the audit commit only after reviewing behavior changes.",
                    "## Coverage", f"- {feature_count} feature entries in {len(CATEGORIES)} categories.\n- All {len(SETTINGS)} settings are associated with a feature, including hidden settings.\n- Shared framework modules and development-only tools are identified separately.\n- Source and developer-document references are checked to exist.",
                    "| Category | Features | Primary evidence |", "| --- | --- | --- |"]

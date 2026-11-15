@@ -90,7 +90,7 @@ lists every place (tests and docs included).
 - **Bookmarklet.** `release/loader/loader.js`, written by hand, loads `Ferlieloi@master`.
 - **The mod.** The version check reads `window.__HS_REPO` (set by both loaders), else `HSGlobal.Release.githubOwner`,
   which is also the mod's GitHub link; `modWebsiteUrl` is next to it (`hs-core/hs-global.ts`).
-- **Website and wiki.** `repository` in `docs/data/feature-catalogue.json`, `REMOTE` in `scripts/tools/prepare-wiki.py`,
+- **Website and wiki.** `repository` in `docs/data/feature-catalogue.json`, the GitHub Wiki's hand-written pointer pages,
   the GitHub Pages site (`docs/dev/publishing-guide.md`).
 - **Maintainer tools.** `scripts/merge-live-release.mjs` finds Live by the name `Ferlieloi`; the release helper reads
   `origin`.

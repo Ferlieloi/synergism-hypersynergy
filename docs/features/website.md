@@ -6,18 +6,18 @@ How the player website is built and how it behaves. How to update and publish it
 - **GitHub Pages serves Live's `master` from the repository root** (Pages source `/`, not `/docs`): page addresses contain `docs/` (`https://ferlieloi.github.io/synergism-hypersynergy/docs/features.html`). The generated root `index.html` redirects the bare address to `docs/`; the root `.nojekyll` turns Jekyll off for the whole repository.
 - **Links that rely on the root source:** the mod's Tools tab website button (`HSGlobal.General.modWebsiteUrl`, the bare address), the strategy editor's guide link (`modWebsiteUrl` + `docs/wiki/autosing-guide.html#making-or-editing-a-strategy`, `hs-autosing-strategy-modal.ts`), the README, the GitHub Wiki's pages, and the category icons taken from the mod's folder (`src/mod/resource/img/`, "Sources and outputs"). Switching Pages to `/docs` breaks them all.
 - **The site is served from Live only.** Dev commits the data, never the generated pages (`docs/dev/releasing.md`, "Porting a change to Live"), so the pages in a Dev checkout lag the data and `--check` fails there.
-- **The native GitHub Wiki** (`Ferlieloi/synergism-hypersynergy.wiki`, its own repository) holds only pages pointing to the website since 2026-11-04, written by hand there: one per category page plus Home, Mod-Features, the two references, sidebar and footer. `docs/wiki-source/` still holds the full Markdown wiki and `prepare-wiki.py` copies it over those pages: running it brings the full wiki back.
+- **The native GitHub Wiki** (`Ferlieloi/synergism-hypersynergy.wiki`, its own repository) holds only pages pointing to the website since 2026-11-04, written by hand there: one per category page plus Home, Mod-Features, the two references, sidebar and footer. Nothing in the repository generates them (not a generated Markdown wiki: it only duplicated the site).
 
 ## Sources and outputs
-`build-docs.py` writes 45 files (Python, no dependency, no network). HTML pages start with a comment naming their source.
+`build-docs.py` writes 26 files (Python, no dependency, no network). HTML pages start with a comment naming their source.
 
 | Source | Generated from it |
 |---|---|
-| `docs/data/feature-catalogue.json` | `features.html`, `index.html` (home), `wiki/index.html`, `wiki/<category id>.html`, `FEATURES.md`, `FEATURE-AUDIT.md`; in `wiki-source/`: `Home`, `_Sidebar`, `_Footer`, `Mod-Features`, `Features-<category id>` |
-| catalogue + `src/mod/resource/json/hs-settings.json` | `wiki/settings.html`, `wiki-source/Settings-Reference.md`; the header's settings count |
-| `docs/data/guides/<category id>.md` | `wiki/<category id>-guide.html`; `wiki-source/Guide-<category id>.md` (a verbatim copy) |
+| `docs/data/feature-catalogue.json` | `features.html`, `index.html` (home), `wiki/index.html`, `wiki/<category id>.html`, `FEATURES.md`, `FEATURE-AUDIT.md` |
+| catalogue + `src/mod/resource/json/hs-settings.json` | `wiki/settings.html`; the header's settings count |
+| `docs/data/guides/<category id>.md` | `wiki/<category id>-guide.html` |
 | `docs/data/changelog.json` | `changelog.html` |
-| `src/mod/class/hs-core/gds/hs-calculation-definition.ts` | `wiki/calculations.html`, `wiki-source/Calculation-Reference.md` |
+| `src/mod/class/hs-core/gds/hs-calculation-definition.ts` | `wiki/calculations.html` |
 | `package.json` `version` | the header's "Guide for v…" on every page |
 | the generator itself | `about.html`, `github.html`, root `index.html`, both `.nojekyll`; every page text that isn't data (intros, the home page's steps, the changelog's introduction, the audit's "Reviewed distinctions" and "Verification limits") |
 
@@ -34,23 +34,23 @@ How the player website is built and how it behaves. How to update and publish it
 One Python file, no template engine: each page is an f-string.
 - **Nothing is written until every output is built:** the checks run first (`validate_catalogue()`, which also parses every guide; `validate_changelog()` when the changelog page is built), every output goes into `OUTPUTS` (path → text) through `add()`, then `main()` writes them all, compares them (`--check`) or writes them to `--out`. A refused input stops the run with no file written, so a new output goes through `add()` too, never straight to disk.
 - **One frame for every page:** `page()` writes the head, header, tabs and footer around a page's body (`depth` sets the `../` prefix of pages in `wiki/`). The header and the tabs change there, once.
-- **An entry is rendered twice:** `feature_html()` for the site (`compact=True` on the features page: details folded, first image as a miniature) and `feature_md()` for the Markdown outputs. A change to how an entry is laid out goes in both.
+- **An entry is rendered twice:** `feature_html()` for the site (`compact=True` on the features page: details folded, first image as a miniature) and `feature_md()` for `FEATURES.md`. A change to how an entry is laid out goes in both.
 - **The calculation reference is a text scrape** of `hs-calculation-definition.ts` (`calculationName`, `fnName`, `toolingSupport`, `supportsReduce`). If one of the first three is renamed, no entry is found and the run stops. If `supportsReduce` is renamed, the page silently shows "No" for every entry.
 
 ## Feature catalogue (`feature-catalogue.json`)
 - **Top level:** `repository` (every repository, release, issue and source link: source links follow `blob/master/`), `audited_commit` (shown only in `FEATURE-AUDIT.md`), `branch` (not read), `categories` (in display order).
-- **Category:** `id`, `title`, `color` (a CSS colour: the features page's category heading), `intro`, `icon` (optional: a path from the repository root to a picture under `docs/res/` or `src/mod/resource/img/`, shown before the category's title on the home page, the wiki index, the features page and its wiki page), `sources` (repository paths, listed once under the intro of its wiki page, its Markdown page and its `FEATURES.md` section; not on the features page), `features` (in display order).
-- **Feature:** `id`, `title`, `summary`, `where`, `details` (list) are required; `limits` (list), `settings` (setting keys), `sources`, `images` (screenshots: `src` from `docs/`, `alt`, optional `caption`; a narrow one before the details, floating right of them, a wide one after them; also in the Markdown pages; on the features page the first one is also a miniature right of the title, whose click unfolds the details) are optional. An entry shows only its own `sources`, not its category's.
+- **Category:** `id`, `title`, `color` (a CSS colour: the features page's category heading), `intro`, `icon` (optional: a path from the repository root to a picture under `docs/res/` or `src/mod/resource/img/`, shown before the category's title on the home page, the wiki index, the features page and its wiki page), `sources` (repository paths, listed once under the intro of its wiki page and its `FEATURES.md` section; not on the features page), `features` (in display order).
+- **Feature:** `id`, `title`, `summary`, `where`, `details` (list) are required; `limits` (list), `settings` (setting keys), `sources`, `images` (screenshots: `src` from `docs/`, `alt`, optional `caption`; a narrow one before the details, floating right of them, a wide one after them; also in `FEATURES.md`; on the features page the first one is also a miniature right of the title, whose click unfolds the details) are optional. An entry shows only its own `sources`, not its category's.
 - **The generator refuses:** a category or feature id used twice, a missing required field, an unknown setting key, a setting of `hs-settings.json` no feature lists, a source path that isn't a file in the checkout, a missing icon or image, an icon outside `docs/res/` and `src/mod/resource/img/`, an image outside `docs/res/` or without `alt`. A setting listed by two features links to the last one on the settings page.
-- **Ids name addresses; titles can change.** A category id names `wiki/<id>.html`, `Features-<id>`, its guide and the `?category=` filter; a feature id is its anchor on the features page, its wiki page and the settings page's links. The Markdown wiki anchors features by title instead.
+- **Ids name addresses; titles can change.** A category id names `wiki/<id>.html`, the GitHub Wiki's `Features-<id>` pointer page, its guide and the `?category=` filter; a feature id is its anchor on the features page, its wiki page and the settings page's links. `FEATURES.md` anchors features by title instead (GitHub's heading ids).
 - **Plain text only**: every string is escaped on the site, so Markdown or HTML in a catalogue string shows as typed.
 
 ## Players' guides (`docs/data/guides/`)
-- At most one per category, named by its id, first line `# Title`. Linked from its category on the features page and wiki page, the wiki index ("Guides") and the Markdown wiki's sidebar.
+- At most one per category, named by its id, first line `# Title`. Linked from its category on the features page and wiki page, and the wiki index ("Guides").
 - **A Markdown subset** (the list: `docs/dev/publishing-guide.md`), anything else refused, so a guide renders the same on the site and on GitHub. Each heading gets the id GitHub would give it (lowercase, punctuation dropped, spaces to hyphens).
 - **Alerts** (`> [!NOTE]`, TIP, IMPORTANT, WARNING, CAUTION): GitHub shows them with its icons; the site draws a box in the same colours with a matching icon. For what the reader must not miss, a few per guide: three in `autosing.md` (needs Tampermonkey or Steam, Save isn't final, copy the timings first).
 - **Images:** alone on their line, path relative to the guide (so GitHub shows them too), rewritten for the site; `@<n>x` in the name sets the displayed size. One 850 px wide or less floats right of the text after it (placed right under its heading); headings start below a floating image. Rules: `docs/dev/publishing-guide.md`, "Images".
-- **Links: in-page anchors or full URLs.** A relative link to another page would point elsewhere from `docs/wiki/` than from the GitHub Wiki. Images are the exception: the GitHub Wiki copy no longer serves ("Hosting").
+- **Links: in-page anchors or full URLs.** A relative link to another page would point elsewhere from `docs/wiki/` than from the guide's file on GitHub. Images are the exception: the generator rewrites their path for the site.
 - **Renaming the "Making or editing a strategy" heading of `autosing.md` breaks the strategy editor's link** to it.
 
 ## Every page

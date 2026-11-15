@@ -6,7 +6,7 @@ The site uses GitHub Pages, matching the original project. No Sites/Cloudflare p
 
 1. Review the relevant mod implementation and developer feature docs.
 2. Edit `docs/data/feature-catalogue.json`. It is the shared source for the public site, inventory and wiki; do not edit generated pages by hand.
-3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html` (and `docs/wiki-source/Guide-<category id>.md`), linked from its category, the wiki index and the sidebar. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` ``, `[links](url)`, GitHub's alerts (a `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` line, then `> ` lines of paragraphs or flat lists, then a blank line) and images (see "Images" below): the generator refuses anything else.
+3. Step-by-step guides are hand-written Markdown in `docs/data/guides/<category id>.md`, starting with a `# Title` line. Each becomes `docs/wiki/<category id>-guide.html`, linked from its category and the wiki index. Use only headings (`#` to `####`), paragraphs, flat `-` and `1.` lists, `---` rules (blank line above), `**bold**`, `` `code` ``, `[links](url)`, GitHub's alerts (a `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` line, then `> ` lines of paragraphs or flat lists, then a blank line) and images (see "Images" below): the generator refuses anything else.
 
 ## Images
 
@@ -99,7 +99,7 @@ Keep the root source: the site's addresses contain `docs/` (the root `index.html
 
 The GitHub Wiki (its own repository, `Ferlieloi/synergism-hypersynergy.wiki`) holds only pages pointing to the website: Home, Mod-Features, a `Features-<category id>` page per category, Settings-Reference, Calculation-Reference, the sidebar and the footer. They are written by hand in the wiki itself; update them when a category is added, renamed or removed.
 
-`docs/wiki-source/` and `scripts/tools/prepare-wiki.py` date from when the wiki held the full guide: don't run the helper, it would replace the pointer pages with full ones.
+Nothing in the repository generates them.
 
 ## Scope and verification
 
