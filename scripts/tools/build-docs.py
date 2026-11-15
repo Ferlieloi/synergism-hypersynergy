@@ -1053,9 +1053,9 @@ def build() -> None:
 <p id="feature-results" class="muted" role="status" aria-live="polite"></p>
 <p id="no-results" hidden>No matching features. Try a shorter search or choose another category.</p>'''
     sections = "".join(
-        f'<section class="feature-category" data-category="{c["id"]}" aria-labelledby="heading-{c["id"]}">'
-        f'<h2 id="heading-{c["id"]}" style="--category-color:{c["color"]}">{category_icon(c, "", 24)}{esc(c["title"])}</h2>'
-        f'<p>{esc(c["intro"])}</p>' + guide_link(c, f'wiki/{c["id"]}-guide.html')
+        f'<section class="feature-category" data-category="{c["id"]}" aria-labelledby="heading-{c["id"]}" style="--category-color:{c["color"]}">'
+        f'<h2 id="heading-{c["id"]}">{category_icon(c, "", 24)}{esc(c["title"])}</h2>'
+        f'<div class="category-intro"><p>{esc(c["intro"])}</p>' + guide_link(c, f'wiki/{c["id"]}-guide.html') + '</div>'
         + "".join(feature_html(c, f, compact=True) for f in c["features"]) + '</section>'
         for c in CATEGORIES)
     page("docs/features.html", "All features", "features",

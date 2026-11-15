@@ -74,7 +74,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .feature h3 .permalink, .feature h3 .permalink:visited { color: #fff; font-weight: bold; }
 .page-wrapper .feature h3 { font-size: 1.12em; margin-bottom: 2px; }
 .page-wrapper .feature h3 + p { margin-top: 2px; color: #d3cfdc; }
-.page-wrapper .feature-category > p { color: var(--muted); font-size: .95em; }
+/* The intro and its guide link: one block with an unbroken rule in the category's colour. */
+.category-intro { color: #d3cfdc; border-left: 3px solid var(--category-color); padding-left: 10px; margin: 10px 0 12px 30px; }
+.category-intro > p { margin: 0; }
+.category-intro > p + p { margin-top: .5em; }
 /* Features page: a click anywhere on an entry opens or closes it (guide.js). Its state: hovered (mouse only), open,
    and open as the link's target; a closed entry loses its highlight, the link's target included. */
 .feature-category .feature { cursor: pointer; }
@@ -208,7 +211,7 @@ footer { clear: both; margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1
   #tabs a { min-width: 0; padding: 6px 8px; font-size: .8rem; }
   #page-container { padding: 16px 12px; }
   .page-wrapper { padding: 0; }
-  .page-wrapper p, .page-wrapper h2, .page-wrapper h3, .page-wrapper h4, .feature details, .limits, .callout, .shot, footer, .table-scroll, .feature-controls, .changelog-controls, .changelog-sources, .changelog-merge { margin-left: 0; }
+  .page-wrapper p, .page-wrapper h2, .page-wrapper h3, .page-wrapper h4, .feature details, .limits, .callout, .shot, footer, .table-scroll, .feature-controls, .changelog-controls, .changelog-sources, .changelog-merge, .category-intro { margin-left: 0; }
   .changelog-entry h3 { margin-left: 0; }
   .shot-side, .feature details .shot-side { float: none; max-width: 100%; margin-left: 0; }
   .page-wrapper ul, .page-wrapper ol { margin-left: 12px; }
