@@ -33,6 +33,8 @@ const EDITOR_STRATEGY = 'Demon King (BTMco) v1.2-temp'
 const SETTINGS_STRATEGY = 'Demon King (rus) v2.0'
 // The Distributor's fields: Keep empty, Orbs %, then the ratios in the panel's order (Chronos to Multiplier)
 const DISTRIBUTOR_ORBS = 15, DISTRIBUTOR_RATIOS = [80, 2, 12, 5, 1, 1, 1]
+// The header grid's width in the header edit shot (Grid width setting): the window is 1600 px wide
+const HEADER_GRID_WIDTH = 1440
 const RUN_SINGULARITIES = 10
 
 // Page helpers, defined in each evaluation
@@ -105,6 +107,9 @@ const SHOTS = {
     async 'header-edit'(c) {
         const clip = await run(c, `
             document.getElementById('hs-header-edit-button').click(); await __shot.wait(1500);
+            // Narrower than the window, as on a player's wider screen: the grid clears the mod's icon and the ✎
+            const width = document.querySelector('#hs-header-edit-settings .hs-hes-width-value');
+            width.value = '${HEADER_GRID_WIDTH}'; width.dispatchEvent(new Event('change', { bubbles: true })); await __shot.wait(800);
             const r = document.getElementById('headerEditPanel').getBoundingClientRect();
             return { x: 0, y: 0, width: document.documentElement.clientWidth, height: r.bottom + 4 };`)
         await capture(c, 'header-edit', clip)
