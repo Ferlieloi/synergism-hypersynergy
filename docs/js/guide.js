@@ -16,7 +16,10 @@
 
   const sections = [...document.querySelectorAll('.feature-category')];
   const features = [...document.querySelectorAll('.feature')];
-  const text = new Map(features.map(feature => [feature, feature.textContent.toLocaleLowerCase()]));
+  // Punctuation and symbols are spaces on both sides, so a label typed as the panel shows it
+  // ("Repeat hover (hold left Shift)", "S216+", "✏️ Edit") still matches.
+  const words = value => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ');
+  const text = new Map(features.map(feature => [feature, words(feature.textContent)]));
   const result = document.getElementById('feature-results');
   const noResults = document.getElementById('no-results');
   const reset = document.getElementById('search-reset');
@@ -91,7 +94,7 @@
   }
 
   function filter(updateURL = true) {
-    const terms = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    const terms = words(search.value).split(' ').filter(Boolean);
     applyFilterFolds(terms.length > 0 || category.value !== '');
     let visible = 0;
     for (const section of sections) {

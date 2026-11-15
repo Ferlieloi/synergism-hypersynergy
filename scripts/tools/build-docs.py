@@ -169,12 +169,21 @@ def sources_md(label: str, paths: list[str]) -> list[str]:
     return [f"**{label}:** " + " · ".join(f'[{Path(p).name}]({source_link(p)})' for p in paths)] if paths else []
 
 
+def setting_label(key: str) -> str:
+    """A setting as the player sees it: its panel label, so the features search finds what the Settings tab shows.
+    A hidden setting has no panel label: its description, without the trailing note on where its control is."""
+    s = SETTINGS[key]
+    label = s["settingDescription"]
+    return re.sub(r" \([^()]*\)$", "", label) if s.get("hidden") else label
+
+
 def feature_html(category: dict, feature: dict, *, compact: bool = False) -> str:
     f = feature
     settings = ""
     if f.get("settings"):
-        settings = '<p class="setting-refs">Related settings: ' + ", ".join(
-            f'<a href="{("wiki/" if compact else "")}settings.html#{esc(k)}"><code>{esc(k)}</code></a>'
+        # Labels can hold commas ("Search fields (Perks, GQ, Oct)"); the key stays the link's anchor and tooltip.
+        settings = '<p class="setting-refs">Related settings: ' + " · ".join(
+            f'<a href="{("wiki/" if compact else "")}settings.html#{esc(k)}" title="{esc(k)}">{esc(setting_label(k))}</a>'
             for k in f["settings"]
         ) + "</p>"
     # The features page is docs/features.html, a wiki page docs/wiki/<category>.html.
@@ -287,7 +296,7 @@ def feature_md(category: dict, f: dict) -> str:
     if f.get("limits"):
         parts += ["**Availability and limits**", "\n".join(f"- {x}" for x in f["limits"])]
     if f.get("settings"):
-        parts += ["**Related settings:** " + ", ".join(f'[`{k}`]({SITE}wiki/settings.html#{quote(k)})' for k in f["settings"])]
+        parts += ["**Related settings:** " + " · ".join(f'[{setting_label(k)}]({SITE}wiki/settings.html#{quote(k)})' for k in f["settings"])]
     parts += sources_md("Source", own_sources(category, f))
     return "\n\n".join(parts)
 
