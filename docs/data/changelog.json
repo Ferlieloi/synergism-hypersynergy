@@ -27,6 +27,142 @@
   ],
   "entries": [
     {
+      "id": "dev-2.14.8a-dev1",
+      "version": "2.14.8a-dev1",
+      "channel": "dev",
+      "repository": "maenhiir/synergism-hypersynergy",
+      "commit": "32dc33bcf5c2785857316f1f21aeb5e849466a8e",
+      "previous_commit": "b84f401e5438cfb4d7af71bd6529b66e87b04730",
+      "date": "2026-11-15",
+      "date_kind": "published",
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8a-dev1",
+      "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.14.8a-dev1"
+        }
+      ],
+      "notes": [],
+      "changes": [
+        {
+          "type": "added",
+          "text": "Auto-Sing has a Cleanse corruption action: the game's Cleanse without ascending, to level 0 or to the highest cleared level.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f2b89c2c89e6e5c93c8739f896b104143713d9cf"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Auto-Sing has Set Auto Challenge, Set Auto Ant-Sac and Set Auto Ascend actions with an ON/OFF choice. The old Toggle actions only flipped the game toggle, which the game keeps through a singularity, so it alternated between runs. Existing strategies keep working; Quark Molker and TAS use the new action.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/63e54905f6a58ee6518396702dba9708d4851439",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1db14a5f03e459bb03fdb944842b7768d5d85865"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Demon King (rus) is updated to v2.0, Rus's update for the new corruptions, and Demon Alchemist (cc) v1.0 is a new default strategy. Strategies not yet retuned for the new corruptions are listed under Old Strategies.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/2d1dd72891abec523fafc743ed361955774d2c27",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/752866a0fd3fa69f9de30cadfdef7e62e7a22789",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/41c9f1930045dd9760fa721c5a766f6f27f9196a"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "Max C11 to Max C14 steps log a warning when they reach Max Time before the challenge is maxed. The strategy name field is wider.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/cf88fc4462295e6ff43bcedb6be7510c4de01ef6",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8e7d0e1588a262577098247359a358169dd018d7"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The Golden Quark and Octeract searches list the upgrades found as tooltip cards and offer clickable search words. Hidden maxed matches point to the game's Maxed Upgrades button.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/7c34af50c69565013e96828c3e6f7615f74a1694",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/5836756f121a3033940d8a3bdcaab111288a2e7f",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1f1bde0a74f1d50d54ea363b2b329f49b3d484f9"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Ambrosia Heater has its own icon in the quick access menu. Unaffordable result rows are shown in red with the missing resource in bold.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/c007d7d5a979920ce996d78e6a221a0bbc2c120a",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/721d416c6a7ee659c1b579453bb25373eb5f480e"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Red Ambrosia upgrades show their own pictures, including Viscount, Free Accumulator and the level-2 upgrades. Missing values show as a dash.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/b238228df20f085fca7d6a9def57c635f272227c",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ac332cf7a6c463c7cc12acdba14df25dbfa4738c"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "Import from file can keep the current header layout, the same setting as Keep my header layout under the game's Load from file.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/58d3248d03608808e94e0407c5060deae3187623"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Calculation tools list is grouped by theme, with an A to Z option. In header edit mode, the Octeracts settings sit under Ambrosia loadouts.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8b6c77f01f4dcfdbc47100be3741ed328feb84c5",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/30c79cc9af12e7d35253eefa43e4ade4385b7bcb"
+          ]
+        },
+        {
+          "type": "removed",
+          "text": "The Notify test buttons, Dump Settings and Dump Game vars, and the potion BUY 10x and CONSUME 10x buttons are removed.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/566d711e4c241de906df2aff0779013adc8f663a",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ef567b0e66f0091130973d725a94a2ec045ff740"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "New Tampermonkey bridge installs start with their editable Live or Dev line and a comment explaining it.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/72a62ab6626c48f1a29c782169137b974c78e471"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "maenhiir",
+          "roles": [
+            "changes",
+            "merge"
+          ],
+          "commits": [
+            "f2b89c2c89e6e5c93c8739f896b104143713d9cf",
+            "63e54905f6a58ee6518396702dba9708d4851439",
+            "5836756f121a3033940d8a3bdcaab111288a2e7f",
+            "fe0f0c212401b3eee5eefb3b2bf7983e91a137a9"
+          ]
+        }
+      ],
+      "merges": [
+        {
+          "direction": "live-to-dev",
+          "commit": "fe0f0c212401b3eee5eefb3b2bf7983e91a137a9",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fe0f0c212401b3eee5eefb3b2bf7983e91a137a9"
+          ],
+          "summary": "Includes changes from Live through v2.14.8a.",
+          "from_entry_ids": [
+            "live-2.14.8a"
+          ]
+        }
+      ]
+    },
+    {
       "id": "live-2.14.8a",
       "version": "2.14.8a",
       "channel": "live",
