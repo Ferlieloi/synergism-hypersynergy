@@ -78,11 +78,11 @@ For when neither repo is maintained anymore. Installed loaders download the mod 
 `<owner>/synergism-hypersynergy`, so only the owner changes: keep the repo's name. `git grep -n -i -E "ferlieloi|maenhiir"`
 lists every place (tests and docs included).
 - **Tampermonkey.** The bridge builds every URL from its `repo` value, the owner (`repositoryRoot` in
-  `src/loader/shared/loader-urls.mjs`): a player can set it to the fork's owner as for Dev (README, "Live or Dev"), with
+  `src/loader/shared/loader-urls.mjs`): a player can set it to the fork's owner as for Dev (`docs/data/guides/getting-started.md`, "Live or Dev"), with
   no new script. The bridge still auto-updates from Ferlieloi's repo through its `@updateURL`, so a bridge published
   there later sets it back. A fork's own bridge: `defaultRepo` in `loader-urls.mjs`, the `@updateURL` and `@namespace`
   in `scripts/build-loaders.cjs`, then `npm run build:loaders` (it also rebuilds `patcher.js`, which carries
-  `defaultRepo`), and the install links (README, `INSTALL_URL` in `hs-core/hs-bookmarklet-notice.ts`).
+  `defaultRepo`), and the install links (README, `docs/data/guides/getting-started.md`, `INSTALL_URL` in `hs-core/hs-bookmarklet-notice.ts`).
 - **Steam.** The two channels are fixed in `synergism_modloader/lib/config.js` (`CHANNELS`), and installed loaders
   update themselves from Ferlieloi's releases (`launcherUpdater.js`, `build.publish` in its `package.json`): players
   install the fork's loader once. Its release workflow only runs on Ferlieloi's repo (the `if:` in
@@ -99,4 +99,4 @@ lists every place (tests and docs included).
 
 - **One loader at a time** (`app.requestSingleInstanceLock`): a second start brings the first loader to the front and closes, with a line in the console and in `loader-startup.log`. The lock follows the user data folder, which the installed loader and `npm start` share: close one to run the other.
 - **Re-patch banner:** "Launch last played" patches first when a re-patch is needed (a game update too); no stored hash asks for one re-patch; any patcher difference blocks "Launch only" and "Quick switch", switching builds included; a failed download asks for nothing (a console line). Downloading the patcher and the mod by commit id (`@<sha>`) to avoid jsDelivr's lag was refused.
-- **Bookmarklet notice:** shown at every bookmark load, no "don't show again"; the script is always Live (`Ferlieloi`, `master`); only Tampermonkey is named; the README's bookmark loads from `Ferlieloi@master`.
+- **Bookmarklet notice:** shown at every bookmark load, no "don't show again"; the script is always Live (`Ferlieloi`, `master`); only Tampermonkey is named; the installation guide's bookmark loads from `Ferlieloi@master`.

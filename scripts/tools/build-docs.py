@@ -852,15 +852,15 @@ def build() -> None:
 <h2>Quick links</h2><ul>
 <li><a href="features.html">All {feature_count} documented features</a></li>
 <li><a href="wiki/index.html">Player wiki &amp; detailed guides</a></li>
-<li><a href="wiki/getting-started.html">Install in a browser or on Steam</a></li>
+<li><a href="wiki/getting-started-guide.html">Install in a browser or on Steam</a></li>
 <li><a href="{REPO}/releases">Downloads &amp; releases</a></li>
 <li><a href="{REPO}/issues">Help &amp; bug reports</a></li></ul>
 <h2>About the mod</h2><p>Hypersynergism adds information and practical controls to the game: Ambrosia optimization, forge and shop distribution, header editing, remembered interface preferences, save tools and more.</p>
 <p>Most features are optional. AutoSing is separately enabled and automates progression; it goes beyond the original mod's strictly QoL scope.</p>
 <h2>Explore the features</h2>{category_list("", "wiki/")}
 <h2>New to Hypersynergism?</h2><ol>
-<li>Follow the <a href="wiki/getting-started.html">installation guide</a>.</li>
-<li>Open the mod icon to explore settings and Tools.</li>
+<li>Follow the <a href="wiki/getting-started-guide.html">installation guide</a>.</li>
+<li>Open the mod's icon, at the top left of the game, to explore settings and Tools.</li>
 <li>Use the pencil beside the icon for header customization; new mod modules start in the game's Hidden tray.</li>
 <li>Make a backup in Tools before experimenting with strategies or imports.</li></ol>
 <h2>Original project</h2><p>Created by <a href="https://github.com/ahvonenj/synergism-hypersynergy">ahvonenj</a>. This guide documents the maintained Ferlieloi fork. It follows the original website's game-inspired style.</p>'''

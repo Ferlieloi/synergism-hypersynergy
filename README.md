@@ -1,6 +1,6 @@
 # Hypersynergism
 
-[Website](https://ferlieloi.github.io/synergism-hypersynergy/) · [Wiki](https://github.com/Ferlieloi/synergism-hypersynergy/wiki)
+[Website](https://ferlieloi.github.io/synergism-hypersynergy/) · [Wiki](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/index.html)
 
 A QoL mod for the [Synergism](https://synergism.cc/) game ([game's GitHub](https://github.com/Pseudo-Corp/SynergismOfficial)).
 
@@ -27,46 +27,27 @@ Here are some of Hypersynergism’s standout features:
 
 ## Using the mod
 
+### Install
+
+Full steps, the Live and Dev channels, and what to do when it doesn't load: the [installation guide](docs/data/guides/getting-started.md).
+
+#### 🌐 In a browser: Tampermonkey (recommended)
+
+1. **Install [Tampermonkey](https://www.tampermonkey.net/)** for your browser. Chrome-based browsers (Chrome, Edge, Brave, Opera…) need one more setting: see the [installation guide](docs/data/guides/getting-started.md).
+2. **[Click here to install the Hypersynergism loader](https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js)**, then click **Install** on Tampermonkey's page.
+3. **Open or reload [Synergism](https://synergism.cc/).** The mod loads with the game, always in its latest version.
+
+#### 🎮 On Steam (Windows only)
+
+Download the **Hypersynergism Loader** from the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases) and run it: it patches a copy of the game and starts it with the mod. Steps: the [installation guide](docs/data/guides/getting-started.md).
+
+#### 🔖 With a bookmark (not recommended)
+
+Loaded that way, several features are missing or unreliable, Auto-Sing among them. Steps: the [installation guide](docs/data/guides/getting-started.md).
+
 ### Feature guides
 
-See the [complete feature inventory](docs/FEATURES.md) for usage, settings, availability and source references,
-including smaller remembered preferences and header customization. The repository also includes a static
-[website](docs/index.html) with a browsable player wiki; the GitHub Wiki points to it. How to update and publish
-it: [publishing instructions](docs/dev/publishing-guide.md).
-
-### 🎮 On Steam (Windows only)
-
-Use the Hypersynergism Loader, a small Windows app that patches a copy of the game and launches it with the mod. Its installer is on the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases), under "Hypersynergism Loader". More in the [loader's README](synergism_modloader/README.md).
-
-The mod is downloaded at each launch, always in its latest version. The loader updates itself, and tells you when the game has to be patched again.
-
-### 🌐 In a browser: Tampermonkey (recommended)
-
-The mod is loaded by a userscript, which starts it together with the game.
-
-1. **Install [Tampermonkey](https://www.tampermonkey.net/)** for your browser: [Chrome](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo), [Firefox](https://addons.mozilla.org/firefox/addon/tampermonkey/), [Edge](https://microsoftedge.microsoft.com/addons/detail/iikmkjmpaadaobahmlepeloendndfphd), or [Opera](https://addons.opera.com/extensions/details/tampermonkey-beta/).
-2. **Allow userscripts in Chrome-based browsers** (Chrome, Edge, Brave, etc.):
-   - Open your browser's **Extensions** page, find **Tampermonkey**, and open **Details** or **Manage extension**.
-   - Turn on **Allow User Scripts**. If that option isn't available, follow [Tampermonkey's instructions for enabling Developer mode](https://www.tampermonkey.net/faq.php?q=Q209).
-   - Firefox users can skip this step.
-3. **[Click here to install the Hypersynergism loader](https://cdn.jsdelivr.net/gh/Ferlieloi/synergism-hypersynergy@master/src/loader/tampermonkey-bridge.user.js).** Tampermonkey should open an installation page. Click **Install**.
-4. **Open or reload [Synergism](https://synergism.cc/).** Hypersynergism will load automatically whenever you open the game, always in its latest version. It also works at https://pseudo-corp.github.io/SynergismOfficial/ (no login or cloud saves there).
-
-**If the install link displays code instead:** copy all the code, click the Tampermonkey extension icon → **Create a new script**, replace all the example code with what you copied, and press **Ctrl+S** (or **Cmd+S**) to save. Then reload the game.
-
-While the game is running, a rainbow border around the mod's icon means a newer version is out: reload the page to get it.
-
-#### Live or Dev
-
-The mod comes from one of two GitHub repos: `Ferlieloi` (Live, the default) or `maenhiir` (Dev). To switch to Dev, open the bridge script in Tampermonkey's dashboard, set its `repo` value to `'maenhiir'`, save, and reload the game. Set it to `'Ferlieloi'` to return to Live. Tampermonkey's auto-update of the bridge script can switch you back to Live.
-
-### 🔖 With a bookmark (NOT RECOMMENDED)
-
-The mod can also be loaded with a bookmark, once the game has started. Loaded that way it can't reach the game's internals, so several features are missing, slower, less reliable or even buggy (Auto-Sing among them). The mod then shows a window explaining how to switch to Tampermonkey.
-
-Create a new bookmark in your browser, with any name. As its URL, paste the whole content of [release/loader/loader.js](https://github.com/Ferlieloi/synergism-hypersynergy/blob/master/release/loader/loader.js) (it starts with `javascript:`).
-
-Load/refresh the game in your browser, close the game's "offline" popup, then click the bookmark. It always loads the latest version of the mod.
+Every feature, where to find it and its limits: the [website](https://ferlieloi.github.io/synergism-hypersynergy/docs/features.html), also as one Markdown file, the [feature inventory](docs/FEATURES.md). How to update and publish them: [publishing instructions](docs/dev/publishing-guide.md).
 
 ## Help and bug reports
 

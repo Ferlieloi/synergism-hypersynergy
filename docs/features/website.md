@@ -48,6 +48,7 @@ One Python file, no template engine: each page is an f-string.
 ## Players' guides (`docs/data/guides/`)
 - At most one per category, named by its id, first line `# Title`. Linked from its category on the features page and wiki page, and the wiki index ("Guides").
 - **A Markdown subset** (the list: `docs/dev/publishing-guide.md`), anything else refused, so a guide renders the same on the site and on GitHub. Each heading gets the id GitHub would give it (lowercase, punctuation dropped, spaces to hyphens).
+- **The installation guide (`getting-started.md`) is the one full install procedure**: every step, the Live/Dev switch, what to do when the mod doesn't load. The README keeps a short version per platform with the one-click links (Tampermonkey, the loader's install link, the releases page) and links the guide's Markdown file for the rest (it works on both repos at once; the site's page exists only once Live regenerates).
 - **Alerts** (`> [!NOTE]`, TIP, IMPORTANT, WARNING, CAUTION): GitHub shows them with its icons; the site draws a box in the same colours with a matching icon. For what the reader must not miss, a few per guide: three in `autosing.md` (needs Tampermonkey or Steam, Save isn't final, copy the timings first).
 - **Images:** alone on their line, path relative to the guide (so GitHub shows them too), rewritten for the site; `@<n>x` in the name sets the displayed size. One 850 px wide or less floats right of the text after it (placed right under its heading); headings start below a floating image. Rules: `docs/dev/publishing-guide.md`, "Images".
 - **Links: in-page anchors or full URLs.** A relative link to another page would point elsewhere from `docs/wiki/` than from the guide's file on GitHub. Images are the exception: the generator rewrites their path for the site.
@@ -65,7 +66,7 @@ One Python file, no template engine: each page is an f-string.
 - **Filters are kept in the address** (`?q=`, `?category=` or `?channel=`) so a filtered page can be shared, except on a page opened as a file.
 
 ## Home, Github, About
-- **Home:** an introduction, quick links (features, wiki, installation, releases, issues), the categories with their feature counts (each linking to its wiki page), four first steps for new players, the original project.
+- **Home:** an introduction, quick links (features, wiki, the installation guide, releases, issues), the categories with their feature counts (each linking to its wiki page), four first steps for new players (the installation guide, where the mod's icon is…), the original project.
 - **Github:** links to Live, its releases and issues, the Dev repository, ahvonenj's original repository and the game's source. **About:** maintainers, the original website's style, privacy, licence.
 
 ## Features page (`features.html`, `guide.js`)
