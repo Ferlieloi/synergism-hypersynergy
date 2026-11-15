@@ -3612,7 +3612,7 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Done saves header edits reliably.",
+          "text": "Done in the header editor saves the layout and the pending [HS] settings at once, so a reload right after keeps them.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3e916573cf3e00a118f6ca6e6d8af8285f395539"
           ]
@@ -3627,7 +3627,8 @@
           ],
           "commits": [
             "3e916573cf3e00a118f6ca6e6d8af8285f395539",
-            "2aecc87cbd5cba37504f8d08861d64fefdb12521"
+            "2aecc87cbd5cba37504f8d08861d64fefdb12521",
+            "7ae5e2bce4b8946ac90b0917aac6f0dc08310098"
           ]
         }
       ],
@@ -4155,7 +4156,7 @@
       "changes": [
         {
           "type": "added",
-          "text": "Header cells gain Left/Center/Right and Top/Center/Bottom alignment, plus full/half-height modules, with separate desktop and mobile settings.",
+          "text": "Header edit mode: Left / Center / Right and Top / Center / Bottom alignment for the selected cell, and Full / Half height so a module can use half a cell; cell settings are kept separately for desktop and mobile.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/092a6482e8ff7095a1c44fd4f9657ff9dea45890",
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/8361eb2b4dfda1d14a08d9864597320156eaa3a8",
@@ -4164,7 +4165,14 @@
         },
         {
           "type": "added",
-          "text": "Added Edit game header in Settings → UI, header-gap removal, compact challenge text and Octeract icon/unit display options.",
+          "text": "Settings > UI: an Edit game header button. Holding the header still works.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/0846bc6eb2a7fd3bf16d4f1945a270bfdc182b2a"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "[HS] Header block, all off by default: Remove the gap below the header, Compact challenge progress text (numbers only, full text on hover), Cleanse corruptions with the header icon, Match the octeract header icon size, Match the octeract header text (Oct or Oct/s).",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/0846bc6eb2a7fd3bf16d4f1945a270bfdc182b2a",
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/302d52714e53da055123773b5bdcc0b3af767f6a"
@@ -4172,7 +4180,7 @@
         },
         {
           "type": "added",
-          "text": "Ambrosia minibars resize by dragging their edges or corner in edit mode; desktop and mobile sizes are remembered separately.",
+          "text": "Ambrosia minibars: drag the right edge, bottom edge or corner in edit mode to resize them, with sizes kept separately for desktop and mobile; Reset size restores the defaults.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/302d52714e53da055123773b5bdcc0b3af767f6a"
           ]
@@ -4186,10 +4194,13 @@
             "merge"
           ],
           "commits": [
+            "a656157f3986a0250b5f78c6affc39262788523b",
+            "d64b4510259ed46dc8b713074852cbe1566ed40b",
+            "6874f66861f9a5b1a7f6bd0ab41cdceb757ed7fe",
             "092a6482e8ff7095a1c44fd4f9657ff9dea45890",
             "8361eb2b4dfda1d14a08d9864597320156eaa3a8",
             "302d52714e53da055123773b5bdcc0b3af767f6a",
-            "a656157f3986a0250b5f78c6affc39262788523b"
+            "0846bc6eb2a7fd3bf16d4f1945a270bfdc182b2a"
           ]
         }
       ],
@@ -4911,28 +4922,35 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "The Horseshoe rune correctly contributes two Ambrosia Luck per level.",
+          "text": "The Horseshoe rune gives 2 Ambrosia Luck per level, not 1.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/4e204f1e7f6eaaa62b8131feeba57e1af246e882"
           ]
         },
         {
           "type": "changed",
-          "text": "Only one strategy, phase, actions-editor or corruption window of each kind opens at once; reopening brings the existing window forward with a warning.",
+          "text": "AutoSing strategy editor: one window of each kind at a time (strategy, phase, actions editor, corruption windows); opening one that is already open brings it to the front with a warning.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ebc69816e5e7d75a705a736e5ba837de835aee5d"
           ]
         },
         {
-          "type": "changed",
-          "text": "Bookmarklet players see migration instructions for Tampermonkey; the bookmarklet loads the Live master branch rather than the retired original repository’s latest tag.",
+          "type": "added",
+          "text": "Bookmarklet players are shown how to switch to the Tampermonkey loader, at each load and from the Tools tab. The bookmarklet in the README loads the mod from this repository instead of the original one.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/68c685d7732a3c2b01426e3f4df3260034b86bdf"
           ]
         },
         {
+          "type": "changed",
+          "text": "Less traffic to synergism.cc: the global event comes from the game’s own request, the cleanse icon from the game’s files, and the loader’s game download says the mod’s version. With the bookmarklet, no global event is shown.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/04cd19929d609761a07003d9a714824f34a4b860"
+          ]
+        },
+        {
           "type": "removed",
-          "text": "Removed Mod Wiki and Mod Features buttons from Tools.",
+          "text": "The Mod Wiki and Mod Features buttons are removed from the Tools tab.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e43231d8967a358f841282069b5f99f4eea48d93"
           ]
@@ -4946,6 +4964,10 @@
             "release"
           ],
           "commits": [
+            "e43231d8967a358f841282069b5f99f4eea48d93",
+            "4e204f1e7f6eaaa62b8131feeba57e1af246e882",
+            "ebc69816e5e7d75a705a736e5ba837de835aee5d",
+            "68c685d7732a3c2b01426e3f4df3260034b86bdf",
             "04cd19929d609761a07003d9a714824f34a4b860",
             "4d88316676615b744824115744dcf5cd46c6a266"
           ]
@@ -5150,7 +5172,14 @@
       "changes": [
         {
           "type": "changed",
-          "text": "Happy Hour Bells are read from the game’s own record, removing the mod’s separate consumables connection.",
+          "text": "Happy Hour Bells are read from the game itself: the mod no longer opens its own connection to synergism.cc for them. The Lotus indicator is gone from the events quick bar.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/7471f5919abb2a80703708516cf1d99f17a5aa02"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "With the bookmarklet, the Happy Hour Bells count as 0.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/7471f5919abb2a80703708516cf1d99f17a5aa02"
           ]
@@ -5657,16 +5686,23 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater Obtainium and Offering searches compare voucher counts together with Luck and their Blueberry costs, fixing missed stronger loadouts and voucher-dependent Luck.",
+          "text": "Heater: the Obtainium and Offering searches compare voucher counts together with Luck and their Blueberry costs, so stronger loadouts are no longer missed.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/07fd5a59d3548c404a810c74f89ac0306b7be6a4"
           ]
         },
         {
           "type": "fixed",
-          "text": "Fixed browser loader collisions with the game bundle.",
+          "text": "Browser loader: the game’s unpatched code no longer runs alongside the patched one.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/1a842dff3550d6a884aa6eee164a0245ef4f83a8"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Steam: loaders 0.2.6 and older patch mod 2.14.4b and newer again (with Hypersynergism Loader 0.2.7).",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/7733195bbc7200ac0bb653f15606063b10b39fdb"
           ]
         }
       ],
@@ -5674,10 +5710,14 @@
         {
           "id": "Ferlieloi",
           "roles": [
-            "changes"
+            "changes",
+            "release"
           ],
           "commits": [
-            "7733195bbc7200ac0bb653f15606063b10b39fdb"
+            "7733195bbc7200ac0bb653f15606063b10b39fdb",
+            "1a842dff3550d6a884aa6eee164a0245ef4f83a8",
+            "dcefed6e3bd8300c749e7dd8059711beef74f6ad",
+            "07fd5a59d3548c404a810c74f89ac0306b7be6a4"
           ]
         }
       ],
@@ -6716,44 +6756,46 @@
       "changes": [
         {
           "type": "changed",
-          "text": "Heater loadout previews match the game’s grouped upgrade grid and icon layout, with support for older tier layouts.",
+          "text": "Heater loadout previews follow the game’s grouped Ambrosia upgrade grid and its icons; older game layouts still work.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/src/mod/class/hs-modules/hs-heater/hs-heater-ui-result.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         },
         {
           "type": "fixed",
-          "text": "Corrected Red Ambrosia comparison gains for Era of Red Ambrosia and extra Blueberries, including when no completed heat is available.",
+          "text": "Heater Red Ambrosia window: Era of Red Ambrosia (it was labelled Ancient Red Ambrosia) shows its gain, and the extra Blueberry row shows its gain even without a heat result.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/src/mod/class/hs-modules/hs-heater/hs-heater-red-ambrosia-table.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         },
         {
           "type": "fixed",
-          "text": "Ambrosia minibars initialize once save data is available, and Hepteract cost details remain visible above the game’s hover text without layout jumps.",
+          "text": "The Ambrosia minibars start once the save data is there, and the Hepteract cost line stays above the game’s hover text without moving the page.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/src/mod/class/hs-modules/hs-hepteracts.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         },
         {
           "type": "fixed",
-          "text": "Improved initialization on slower Steam launches and made Talisman Cycle BUY tolerate unavailable game controls.",
+          "text": "Steam: the mod waits for the page to finish loading before starting, so slow launches no longer miss game elements; Talisman Cycle BUY is skipped when the game’s buttons don’t appear.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/src/mod/class/hs-modules/hs-talismans.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         },
         {
           "type": "changed",
-          "text": "The Steam loader can update itself, remembers the last working build, and can launch an existing patch when the build list cannot be downloaded.",
+          "text": "Browser userscript 4.0: it downloads the loader code from the repository at each page load, so loader fixes arrive without a userscript update.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/synergism_modloader/README.md"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         },
         {
-          "type": "fixed",
-          "text": "Steam patching keeps the previous playable copy if a replacement fails, reuses a stable patch folder, and cleans up old numbered patch folders with a retry option.",
+          "type": "changed",
+          "text": "Steam loader 0.2.4 to 0.2.6 (released separately): it updates itself, remembers the last working build, launches an existing patch when the build list can’t be downloaded, keeps the previous playable copy when a patch fails, and cleans up old patch folders.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/ae5adc0c58cd3ce841a9547db2b8e39a15b74213/synergism_modloader/README.md"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/72599e240692fe967b97b365b4e11422a946f5a5",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/177fd40fc77dfa4b08e708f7a7af792ef4389545",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/85384a4fc4282186aacce8fa1a70df19aa177b6c"
           ]
         }
       ],
@@ -6764,10 +6806,14 @@
         {
           "id": "Ferlieloi",
           "roles": [
-            "changes"
+            "changes",
+            "release"
           ],
           "commits": [
-            "72599e240692fe967b97b365b4e11422a946f5a5"
+            "72599e240692fe967b97b365b4e11422a946f5a5",
+            "177fd40fc77dfa4b08e708f7a7af792ef4389545",
+            "85384a4fc4282186aacce8fa1a70df19aa177b6c",
+            "ae5adc0c58cd3ce841a9547db2b8e39a15b74213"
           ]
         }
       ],
@@ -7004,9 +7050,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater no longer double-counts persistent Red free Cube/Luck shop levels or Cube-only bonuses in Octeract builds, and uses the correct Octeract-specific shop multipliers.",
+          "text": "Heater: Red Ambrosia’s free Cube and Luck levels are no longer counted twice, and the Octeract builds no longer count Cube-only bonuses and use the Octeract shop multipliers.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/94c60104ffaa17d7c9b1b8f9735a2d0a81fe84ae/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/94c60104ffaa17d7c9b1b8f9735a2d0a81fe84ae"
           ]
         }
       ],
@@ -7069,44 +7115,52 @@
       "changes": [
         {
           "type": "added",
-          "text": "Added Buy MAX to the game’s purchase prompt.",
+          "text": "A Buy MAX button in the game’s purchase window.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a"
           ]
         },
         {
           "type": "added",
-          "text": "Added Match invested ratios, Reset and Balance total investments controls to the Golden Quark Distributor.",
+          "text": "GQ Distributor: Match invested ratios sets the ratios to the Golden Quarks already invested in each upgrade, without spending any; Reset sets every ratio to 0.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "GQ Distributor: Balance total investments (on by default) brings each upgrade’s total investment toward its ratio; off, only the unspent Golden Quarks are split by the ratios.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a"
           ]
         },
         {
           "type": "fixed",
-          "text": "Golden Quark distribution uses a fresh save and the game’s purchase dialog, obeys upgrade caps, and drains purchase alerts before continuing.",
+          "text": "GQ Distributor: Distribute reads a fresh save, enters the Golden Quarks in the game’s purchase window so the game applies the upgrade caps, skips an upgrade it can’t buy a level of, closes the purchase alerts before the next one, and stops with a message when a game dialog is already open.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-modules/hs-qolButtons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e9dc34986df19c6e24619370635a4843914192fa",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a"
           ]
         },
         {
           "type": "fixed",
-          "text": "The mod panel icon, Auto-Challenge quickbar icon and custom loadout icon picker support the game’s sprite-sheet artwork.",
+          "text": "The mod panel icon, the Auto-Challenge quick bar icon and the icons picked for loadout slots work with the game’s sprite-sheet images.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-utils/hs-icons.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e9dc34986df19c6e24619370635a4843914192fa"
           ]
         },
         {
           "type": "fixed",
-          "text": "Updated Heater sustained bar-income calculations for Purple rebates, Cancer feedback and Red-Blue Ultrafusion’s base Red Luck behavior.",
+          "text": "Heater bar income follows the game’s Purple Bar Rebates and Cancer points, and Red-Blue Ultrafusion uses base Red Luck as the game does.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-modules/hs-heater/hs-heater-bar-income.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e9dc34986df19c6e24619370635a4843914192fa"
           ]
         },
         {
           "type": "fixed",
-          "text": "Corrected capped daily Golden Quark and Octeract free levels and their Achievement Points, including Ambrosia generation updates after daily free-level gains.",
+          "text": "Golden Quark and Octeract daily free levels are counted up to the game’s caps, with the Achievement Points for reaching them; Ambrosia generation updates when daily free levels change.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a/src/mod/class/hs-core/gds/hs-gamedata-api-goldenQuark.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e9dc34986df19c6e24619370635a4843914192fa"
           ]
         }
       ],
@@ -7114,10 +7168,12 @@
         {
           "id": "Ferlieloi",
           "roles": [
-            "changes"
+            "changes",
+            "release"
           ],
           "commits": [
-            "e9dc34986df19c6e24619370635a4843914192fa"
+            "e9dc34986df19c6e24619370635a4843914192fa",
+            "3f6bcf7d4cdffb3f23c5491bce98eee5113ff78a"
           ]
         }
       ],
@@ -7161,16 +7217,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Heater respects Exalt 5 and Exalt 9 upgrade unlocks; zero lifetime Red Ambrosia no longer incorrectly blocks upgrades.",
+          "text": "Heater: the upgrades that need an Exalt 5 completion are left out until there is one (new Exalt 5 Completed input), and having no lifetime Red Ambrosia no longer blocks the upgrades from the third row on.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/c8f88d9a39a4eeb4f2bedb67e49df08c5cab9a18/src/mod/class/hs-modules/hs-heater/hs-heater-optimizer.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c8f88d9a39a4eeb4f2bedb67e49df08c5cab9a18"
           ]
         },
         {
           "type": "fixed",
-          "text": "Hepteract forge costs, owned-resource percentages and time estimates correctly parse formatted numbers and refresh balances before use.",
+          "text": "Hepteract forge: the cost line’s percentage of owned and its time estimate read the current Hepteract and Quark balances, and numbers with thousands separators are read correctly.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/c8f88d9a39a4eeb4f2bedb67e49df08c5cab9a18/src/mod/class/hs-modules/hs-hepteracts.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/c8f88d9a39a4eeb4f2bedb67e49df08c5cab9a18"
           ]
         }
       ],
