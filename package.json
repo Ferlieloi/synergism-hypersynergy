@@ -29,7 +29,8 @@
     "site": "node scripts/tools/watch-site.cjs",
     "screenshots": "node scripts/tools/screenshots/take.cjs",
     "release-and-tag-helper": "node scripts/release-and-tag-helper.mjs",
-    "merge-live": "node scripts/merge-live-release.mjs"
+    "merge-live": "node scripts/merge-live-release.mjs",
+    "release-loader": "node scripts/loader-release.mjs"
   },
   "license": "MIT",
   "devDependencies": {
