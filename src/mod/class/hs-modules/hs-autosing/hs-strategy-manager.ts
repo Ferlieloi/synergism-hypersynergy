@@ -81,6 +81,11 @@ export class HSStrategyManager {
         return manifestArr.map((filename: string) => filename.replace(/\.json$/, ""));
     }
 
+    /** A default strategy not yet retuned since the game's 4.4.0 corruption rework: its file name ends in "-temp". */
+    static isOldDefaultStrategy(name: string): boolean {
+        return name.endsWith("-temp");
+    }
+
     static async loadDefaultStrategyByName(name: string, context = ''): Promise<HSAutosingStrategy | null> {
         try {
             // Dynamic import using the name
