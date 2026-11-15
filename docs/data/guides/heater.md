@@ -35,9 +35,10 @@ A **Red Ambrosia Upgrades** window opens with the results: it compares those upg
 
 ## Import them in your slots
 
-- **Import All ☑ Loadouts** (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
 - For one tree only: **Import** on its row puts it into the loadout slot currently loaded; **Copy** copies it as text.
-- **Sync All Loadout Settings** gives your slots' roles to Auto-Sing, the ADD and TIME code loadouts and the timed export, so you don't set them by hand. **Sync All Icons** gives each slot an icon that matches its role.
+- **Import All ☑ Loadouts** (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
+- **Sync All Icons** gives each slot an icon that matches its role.
+- **Sync All Loadout Settings** gives your slots' roles to Auto-Sing, the ADD and TIME code loadouts and the timed export, so you don't set them by hand.
 
 ## When to heat again
 
