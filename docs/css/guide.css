@@ -56,11 +56,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .fold-icon { flex: none; width: 0; height: 0; border-style: solid; border-width: .3em 0 .3em .45em; border-color: transparent transparent transparent currentColor; transform: translateY(-.08em) rotate(90deg); transition: transform .15s; }
 .folded .fold-icon { transform: translateY(-.08em); }
 .category-count { color: var(--muted); font-size: .6em; font-weight: normal; }
-.feature-category.folded > :not(h2) { display: none; }
+.feature-category.folded > :not(h2), .settings-section.folded > :not(h2) { display: none; }
 /* Until guide.js has folded the categories (html.folding, set in the page's head): contents hidden, and the
    triangle's room kept so the titles don't move when it arrives. */
-.folding .feature-category > :not(h2) { display: none; }
-.folding .feature-category h2 { padding-left: calc(.45em + 10px); }
+.folding .feature-category > :not(h2), .folding .settings-section > :not(h2) { display: none; }
+.folding .feature-category h2, .folding .settings-section h2 { padding-left: calc(.45em + 10px); }
 .fold-all { display: inline-grid; }
 .fold-all > span { grid-area: 1 / 1; }
 .fold-all > span:last-child, .fold-all.unfold > span:first-child { visibility: hidden; }
@@ -242,6 +242,7 @@ footer { margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1px solid #353
   #page-container { overflow: visible; }
   .page-wrapper, .permalink, .permalink:visited, a, a:visited, code, .where, .sources, .limits { color: black; }
   .feature { break-inside: avoid; }
-  .feature-category.folded > :not(h2):not([hidden]), .folding .feature-category > :not(h2):not([hidden]) { display: block; }
-  .fold-icon { display: none; }
+  .feature-category.folded > :not(h2):not([hidden]), .folding .feature-category > :not(h2):not([hidden]),
+  .settings-section.folded > :not(h2), .folding .settings-section > :not(h2) { display: block; }
+  .fold-icon, .fold-all { display: none; }
 }

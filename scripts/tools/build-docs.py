@@ -246,7 +246,7 @@ def page(path: str, title: str, tab: str, body: str, *, depth: int = 0,
          scripts: tuple[str, ...] = (),
          folding: bool = False,
          description: str = "Hypersynergism: current feature guide, installation and wiki for the Synergism quality-of-life mod.") -> None:
-    """folding: the features page's categories stay hidden until guide.js has folded them, so the full list never
+    """folding: the features page's categories (the settings page's sections) stay hidden until guide.js has folded them, so the full list never
     shows for a frame first. guide.js lifts it when done, or the script tag's onerror or a timeout if it never runs."""
     prefix = "../" * depth
     tabs = [("home", "Home", "index.html", "orange"),
@@ -947,16 +947,18 @@ def settings_outputs() -> None:
         if page_id not in pages:
             continue
         groups = sorted(pages[page_id].items(), key=lambda x: CONTROL_GROUPS[x[0]]["order"])
-        sections.append(f'<h2 id="page-{esc(page_id)}">{esc(p["pageName"])}</h2>'
-                        + settings_table(f"page-{page_id}", [(CONTROL_GROUPS[g]["groupName"], keys) for g, keys in groups]))
-    sections.append('<h2 id="saved-choices">Saved choices and internal state</h2>'
+        sections.append(f'<section class="settings-section" aria-labelledby="page-{esc(page_id)}"><h2 id="page-{esc(page_id)}">{esc(p["pageName"])}</h2>'
+                        + settings_table(f"page-{page_id}", [(CONTROL_GROUPS[g]["groupName"], keys) for g, keys in groups])
+                        + '</section>')
+    sections.append('<section class="settings-section" aria-labelledby="saved-choices"><h2 id="saved-choices">Saved choices and internal state</h2>'
                     '<p>Not in the Settings tab: choices made in the header’s edit mode, a tool window or a checkbox, and state the mod keeps between sessions. The feature says where each is set.</p>'
-                    + settings_table("saved-choices", [(c["title"], hidden[c["id"]]) for c in CATEGORIES if c["id"] in hidden]))
+                    + settings_table("saved-choices", [(c["title"], hidden[c["id"]]) for c in CATEGORIES if c["id"] in hidden])
+                    + '</section>')
     page("docs/wiki/settings.html", "Settings reference", "wiki",
          '<p class="breadcrumb"><a href="index.html">Wiki</a> / Settings</p><h1>Settings reference</h1>'
          f'<p>The mod’s {len(SETTINGS)} settings: the Settings tab’s pages in the order the tab shows them (open the mod’s panel from its icon at the top left of the game), then what the mod saves from elsewhere. Each row links to the feature that explains it; the grey name under a setting is its name in the mod’s files, as a backup or the Log shows it.</p>'
          '<p>Defaults are the mod’s initial values: a saved choice, a migration or another setting can change what you see.</p>'
-         + "".join(sections), depth=1,
+         + "".join(sections), depth=1, folding=True,
          description="Every Hypersynergism setting, page by page as the Settings tab shows them: its default and the feature it belongs to.")
 
 

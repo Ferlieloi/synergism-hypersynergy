@@ -1,10 +1,11 @@
 /* Search is progressive enhancement; the complete guide is pre-rendered HTML. */
 (() => {
   'use strict';
-  // The features page hides its categories under html.folding until they are folded (no full list for a frame
-  // first): lifted whatever happens here, so an error never leaves them hidden.
+  // The features and settings pages hide their sections under html.folding until they are folded (no full list for
+  // a frame first): lifted whatever happens here, so an error never leaves them hidden.
   try {
     setUp();
+    setUpSettingsFolds();
   } finally {
     document.documentElement.classList.remove('folding');
   }
@@ -69,6 +70,88 @@
     }
   }
 
+  // Folding (features and settings pages): each section's title becomes a toggle (a triangle on its left that turns
+  // in place, a count in grey after it), and a Fold all / Unfold all button acts on the sections shown. Every section
+  // starts folded; nothing is remembered across visits.
+  function makeFoldable(sections, placeFoldAll) {
+    const toggles = new Map();
+    const counts = new Map();
+    const setFolded = (section, folded) => {
+      section.classList.toggle('folded', folded);
+      toggles.get(section)?.setAttribute('aria-expanded', String(!folded));
+    };
+    const foldAll = document.createElement('button');
+    const updateFoldAll = () => {
+      const shown = sections.filter(section => !section.hidden && toggles.has(section));
+      const allFolded = shown.length > 0 && shown.every(section => section.classList.contains('folded'));
+      foldAll.classList.toggle('unfold', allFolded);
+    };
+    for (const section of sections) {
+      const heading = section.querySelector('h2');
+      if (!heading) continue;
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'fold-toggle';
+      toggle.setAttribute('aria-expanded', 'true');
+      const icon = document.createElement('span');
+      icon.className = 'fold-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      const count = document.createElement('span');
+      count.className = 'category-count';
+      toggle.append(icon, ...heading.childNodes, count);
+      heading.append(toggle);
+      toggle.addEventListener('click', () => {
+        setFolded(section, toggle.getAttribute('aria-expanded') === 'true');
+        updateFoldAll();
+      });
+      toggles.set(section, toggle);
+      counts.set(section, count);
+      setFolded(section, true);
+    }
+    foldAll.type = 'button';
+    foldAll.className = 'fold-all';
+    // Both labels share one grid cell so the button keeps its width when the label changes.
+    foldAll.innerHTML = '<span>Fold all</span><span>Unfold all</span>';
+    placeFoldAll(foldAll);
+    foldAll.addEventListener('click', () => {
+      const fold = !foldAll.classList.contains('unfold');
+      for (const section of sections) {
+        if (!section.hidden && toggles.has(section)) setFolded(section, fold);
+      }
+      updateFoldAll();
+    });
+    updateFoldAll();
+    return { toggles, counts, setFolded, updateFoldAll };
+  }
+
+  // The settings page: its sections (the Settings tab's pages, then the saved choices) fold; a link to a setting's
+  // row unfolds its section and brings the row to the middle of the screen, its group and column titles in view.
+  function setUpSettingsFolds() {
+    const sections = [...document.querySelectorAll('.settings-section')];
+    if (!sections.length) return;
+    const { counts, setFolded, updateFoldAll } = makeFoldable(sections, foldAll => {
+      const bar = document.createElement('p');
+      bar.append(foldAll);
+      sections[0].before(bar);
+    });
+    for (const [section, count] of counts) count.textContent = String(section.querySelectorAll('tbody tr[id]').length);
+    const reveal = () => {
+      let target;
+      try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { return; }
+      const section = target?.closest('.settings-section');
+      if (!section) return;
+      if (section.classList.contains('folded')) {
+        setFolded(section, false);
+        updateFoldAll();
+      }
+      target.scrollIntoView({ block: target.matches('tr') ? 'center' : 'start' });
+    };
+    window.addEventListener('hashchange', reveal);
+    reveal();
+    // At load the browser scrolls to the address's target itself once it shows, after this: centre it again then.
+    if (document.readyState !== 'complete') window.addEventListener('load', reveal, { once: true });
+  }
+
   function setUp() {
   const search = document.getElementById('feature-search');
   const category = document.getElementById('feature-category');
@@ -89,58 +172,8 @@
     category.value = params.get('category');
   }
 
-  // Folding: each category title becomes a toggle. Every category starts folded; nothing is remembered across visits.
   // A search or category choice unfolds everything; the folds return once it is cleared.
-  const toggles = new Map();
-  const counts = new Map();
-  for (const section of sections) {
-    const heading = section.querySelector('h2');
-    if (!heading) continue;
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'fold-toggle';
-    toggle.setAttribute('aria-expanded', 'true');
-    const icon = document.createElement('span');
-    icon.className = 'fold-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    const count = document.createElement('span');
-    count.className = 'category-count';
-    toggle.append(icon, ...heading.childNodes, count);
-    heading.append(toggle);
-    toggle.addEventListener('click', () => {
-      setFolded(section, toggle.getAttribute('aria-expanded') === 'true');
-      updateFoldAll();
-    });
-    toggles.set(section, toggle);
-    counts.set(section, count);
-    setFolded(section, true);
-  }
-
-  const foldAll = document.createElement('button');
-  foldAll.type = 'button';
-  foldAll.className = 'fold-all';
-  // Both labels share one grid cell so the button keeps its width when the label changes.
-  foldAll.innerHTML = '<span>Fold all</span><span>Unfold all</span>';
-  reset.after(foldAll);
-
-  function setFolded(section, folded) {
-    section.classList.toggle('folded', folded);
-    toggles.get(section)?.setAttribute('aria-expanded', String(!folded));
-  }
-
-  function updateFoldAll() {
-    const shown = sections.filter(section => !section.hidden && toggles.has(section));
-    const allFolded = shown.length > 0 && shown.every(section => section.classList.contains('folded'));
-    foldAll.classList.toggle('unfold', allFolded);
-  }
-
-  foldAll.addEventListener('click', () => {
-    const fold = !foldAll.classList.contains('unfold');
-    for (const section of sections) {
-      if (!section.hidden && toggles.has(section)) setFolded(section, fold);
-    }
-    updateFoldAll();
-  });
+  const { counts, setFolded, updateFoldAll } = makeFoldable(sections, foldAll => reset.after(foldAll));
 
   let savedFolds = null;
   function applyFilterFolds(active) {
