@@ -10785,9 +10785,13 @@
       "previous_commit": "fd8942a037ae39aafe70dfe14b7b73232bab06cb",
       "date": "2026-05-13",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev4",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev4"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev4"
@@ -10809,27 +10813,22 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc/src/mod/class/hs-modules/hs-heater/hs-heater-api.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "Icons dragged onto the Ambrosia slots before are not kept: pick them again with Alt+Click."
+      ],
       "changes": [
         {
-          "type": "added",
-          "text": "Allow Ambrosia quickbar icons to be picked with Alt-click, cleared with right-click and saved per slot.",
+          "type": "changed",
+          "text": "Ambrosia Heater results are grouped into common, P4x4 (pre-AoAG) and hybrid loadouts, each with a preview; new inputs; reworked formulas.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc/src/mod/class/hs-modules/hs-ambrosiaQuickbar.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc"
           ]
         },
         {
           "type": "changed",
-          "text": "Group Heater results into common, pre-AOAG p4x4 and hybrid loadouts, with preview, Copy and Import controls.",
+          "text": "Ambrosia quick bar slots take any game icon with Alt+Click and are cleared with right-click, replacing drag and drop.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc/src/mod/class/hs-modules/hs-heater/hs-heater-ui.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Update Heater optimization formulas and Ambrosia bonus calculations.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc/src/mod/class/hs-modules/hs-heater/hs-heater-api.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/e4e22f61ab4c3c1bc9bde1c7806d21a64c61e9fc"
           ]
         }
       ],
@@ -10860,9 +10859,13 @@
       "previous_commit": "54fdbed4a9acad3de4af7ea5528292d026b75354",
       "date": "2026-05-12",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev3",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev3"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev3"
@@ -10887,24 +10890,17 @@
       "notes": [],
       "changes": [
         {
-          "type": "changed",
-          "text": "Expand and label Heater input fields, and improve result calculation/display.",
+          "type": "added",
+          "text": "Ambrosia Heater: new goals (red luck, all ambrosia, max luck, generation + octeracts) and new inputs.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/fd8942a037ae39aafe70dfe14b7b73232bab06cb/src/mod/class/hs-modules/hs-heater/hs-heater-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fd8942a037ae39aafe70dfe14b7b73232bab06cb"
           ]
         },
         {
           "type": "fixed",
-          "text": "Correct Quark-shop bonuses and values passed into Heater loadout optimization.",
+          "text": "Ambrosia Heater: fixed the Quark shop bonuses, rune experience and free Infinity shop levels it used.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/fd8942a037ae39aafe70dfe14b7b73232bab06cb/src/mod/class/hs-core/gds/hs-gamedata-api-quarkShop.ts"
-          ]
-        },
-        {
-          "type": "fixed",
-          "text": "Use actual rune experience and free Infinity-shop levels in Heater’s rune and shop-bonus calculations.",
-          "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/fd8942a037ae39aafe70dfe14b7b73232bab06cb/src/mod/class/hs-modules/hs-heater/hs-heater-api.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/fd8942a037ae39aafe70dfe14b7b73232bab06cb"
           ]
         }
       ],
@@ -10935,9 +10931,13 @@
       "previous_commit": "8d331de11d84e5d849d0fd1031dc21cbd65fcda0",
       "date": "2026-05-11",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev2",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev2"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev2"
@@ -10955,9 +10955,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Recover performance after the GDS rework and correct Heater input calculations.",
+          "text": "Fixed the slowdown from v2.12.4-dev1’s game data rework, and some Ambrosia Heater input values.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/9615a7b80435e02b1acaabedc17c7b4456e822ef/src/mod/class/hs-core/gds/hs-gamedata-api.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9615a7b80435e02b1acaabedc17c7b4456e822ef"
           ]
         }
       ],
@@ -10988,9 +10988,13 @@
       "previous_commit": "c723976555073d12d0a7ca5b27bcfa1ec6e0020a",
       "date": "2026-05-08",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev1",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.4-dev1"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.4-dev1"
@@ -11017,21 +11021,38 @@
         }
       ],
       "notes": [
-        "This preview had a severe performance regression, addressed by the following preview."
+        "Work in progress: this build’s game data rework makes the game slow; fixed in v2.12.4-dev2."
       ],
       "changes": [
         {
           "type": "added",
-          "text": "Add an in-game Ambrosia Heater optimizer with editable inputs and computed loadout results.",
+          "text": "Added the Ambrosia Heater to the Tools tab: inputs filled from the save, lockable, and the best loadout per goal with Copy and Import buttons.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/1f58c492f224279764c53b581392b18e32bf05ed/src/mod/class/hs-modules/hs-heater/hs-heater-ui.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/ddb1e0b1602b1aafbf1b751b839697ff681fccc1",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1f58c492f224279764c53b581392b18e32bf05ed"
           ]
         },
         {
           "type": "changed",
-          "text": "Update game-data calculations for the new rune, free levels, Exalt, Favorite’s Favorite and achievement bonuses.",
+          "text": "Game Data follows the game update: new rune, free levels, Exalt, Favorite’s Favorite upgrade and new achievements.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/2cc7930eb1f8eabaa4c6b9d78e7dc9735491c0b9/src/mod/class/hs-core/gds/hs-gamedata-api.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/2cc7930eb1f8eabaa4c6b9d78e7dc9735491c0b9",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1f58c492f224279764c53b581392b18e32bf05ed",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/756ac7689f90329f7931bca41c5d2a852f830f6c"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "The Events quick bar shows the game’s global event.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/70cce2aa218e803b6930b7fe805216ec5a6fdc67"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Export Heater button is renamed Copy Heater Data.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/1f58c492f224279764c53b581392b18e32bf05ed"
           ]
         }
       ],
@@ -12015,9 +12036,13 @@
       "previous_commit": "b15030297c7889f842a6e5fdcd9b809eb1ffc098",
       "date": "2026-04-24",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev4",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev4"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.1-dev4"
@@ -12047,34 +12072,43 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/commit/2d2262fae6e6608e76ebb8a1fa75217ef877f8da"
         }
       ],
-      "notes": [],
+      "notes": [
+        "If you used BTMco. Demon King v1.0, select v1.1."
+      ],
       "changes": [
         {
           "type": "changed",
-          "text": "Refresh Corruption quickbar active borders directly when the corruption cap changes.",
+          "text": "AutoSing switches Ambrosia loadouts with the game’s own buttons, without double clicks or a 25 ms wait, and sets the loadout mode to Load at start.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/d83691e4348db29187617ca40a3f66d0b420d71f/src/mod/class/hs-modules/hs-qolQuickbarCorruption.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/373b223e89728848422331eced0d04fcd2274ea6"
           ]
         },
         {
           "type": "changed",
-          "text": "Switch AutoSing Ambrosia loadouts through the original game buttons, avoiding duplicate clicks and the extra quickbar delay.",
+          "text": "The Corruption quick bar borders follow the corruption cap without Game Data and refresh when it changes.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/373b223e89728848422331eced0d04fcd2274ea6/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/d83691e4348db29187617ca40a3f66d0b420d71f"
           ]
         },
         {
           "type": "changed",
-          "text": "Update the bundled Demon King strategy to v1.1.",
+          "text": "AFK Swapper shows a notification when it turns itself off for a missing loadout.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/69bc1663e16b7dad8d24888a423152dc142b3276/src/mod/resource/json/strategies/manifest.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/a3c97dcf167a287085fde90851e9cbe3bfba3231"
           ]
         },
         {
-          "type": "fixed",
-          "text": "Notify when AFK Swapper lacks required loadouts, and remove obsolete Exalt patches and alternate loaders.",
+          "type": "changed",
+          "text": "Default strategy BTMco. Demon King updated to v1.1.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/a3c97dcf167a287085fde90851e9cbe3bfba3231/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/69bc1663e16b7dad8d24888a423152dc142b3276"
+          ]
+        },
+        {
+          "type": "removed",
+          "text": "Removed the unused teleport and Exalt patches.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/69bc1663e16b7dad8d24888a423152dc142b3276"
           ]
         }
       ],
@@ -12136,9 +12170,13 @@
       "previous_commit": "b5f3c48bbbd391eb590db1c00a5d8bcf561813e9",
       "date": "2026-04-21",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev3",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev3"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.1-dev3"
@@ -12156,9 +12194,17 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Repair AutoSing corruption switching and challenge-completion waits for players without exposed game data.",
+          "text": "Without the Tampermonkey patch, AutoSing sets corruptions and leaves challenges again.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/8b36b61e46a23c1b52714c33ff4a23844851eb47/src/mod/class/hs-modules/hs-autosing/hs-autosingCorruption.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8b36b61e46a23c1b52714c33ff4a23844851eb47"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "The Corruption quick bar computes the corruption cap like the game.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/0bca4c0081fbf8575749a905146fa05ed3139808",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/8b36b61e46a23c1b52714c33ff4a23844851eb47"
           ]
         }
       ],
@@ -12191,9 +12237,13 @@
       "previous_commit": null,
       "date": "2026-04-20",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev2",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev2"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.1-dev2"
@@ -12227,41 +12277,55 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/commit/c9b96313ba34aa8d65d1b36de70ca52f2924a6d5"
         }
       ],
-      "notes": [],
+      "notes": [
+        "The HyperSynergism Bridge Loader (Shewchou) userscript stops working: use the main bridge with its repository set to maenhiir.",
+        "AFK Swapper’s loadout settings were renamed in Live v2.11.2: choose its loadouts again."
+      ],
       "changes": [
         {
           "type": "added",
-          "text": "Add a Cleanse button to the Corruption quickbar.",
+          "text": "Added a Cleanse button to the Corruption quick bar; it counts as the all-zero loadout for the borders.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/66be64f1246eca354e4cfa4f0b49acf324bbc440/src/mod/class/hs-modules/hs-qolQuickbarCorruption.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/66be64f1246eca354e4cfa4f0b49acf324bbc440",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f7f28c56e70fa50112f534dbc9d7b45080cdda78"
           ]
         },
         {
           "type": "fixed",
-          "text": "Respect corruption caps when identifying the active corruption loadout; treat Cleanse as the zero-corruption loadout.",
+          "text": "The Corruption quick bar borders take the corruption cap into account.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/9e073aa3094172f61b1b98e529822d7ec82d9d1a/src/mod/class/hs-modules/hs-qolQuickbarCorruption.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9e073aa3094172f61b1b98e529822d7ec82d9d1a"
           ]
         },
         {
           "type": "fixed",
-          "text": "Repair AutoSing restart, tab restoration, lower-singularity teleport state and the post-singularity Obtainium-loadout switch.",
+          "text": "AutoSing: coin upgrade 81 clicks start right after a singularity, the Obtainium loadout switch happens after it, and the dashboard’s Restart button and the return to your tab are fixed.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/2882d6370d43c97d3578311da1c57369fce148b1/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/2882d6370d43c97d3578311da1c57369fce148b1",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/f59160d1a681a9a1809c8fda471b0feed4ea13b4",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/9db00211800c3c7b6c2c0a3ea9f381a6c5f5643e"
           ]
         },
         {
           "type": "fixed",
-          "text": "Prevent AFK Swapper from enabling itself after changing tabs and correct initial Ambrosia loadout matching.",
+          "text": "AFK Swapper no longer turns itself on after a tab switch.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/d743fc07e694d0e5ef4c49aad4f2628a325c6dfd/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/d743fc07e694d0e5ef4c49aad4f2628a325c6dfd"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The loaded Ambrosia loadout is guessed at load once the save’s data is available.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/c3af100a19903ef9d34b3570584eb89b48423f2b"
           ]
         },
         {
           "type": "removed",
-          "text": "Remove the legacy Migrate & Save All strategy action-ID conversion control.",
+          "text": "Removed the Migrate&SaveAll strategy button and the separate Dev bridge and loader files.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/c3af100a19903ef9d34b3570584eb89b48423f2b/src/mod/resource/json/hs-settings.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/c3af100a19903ef9d34b3570584eb89b48423f2b",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/2882d6370d43c97d3578311da1c57369fce148b1"
           ]
         }
       ],
@@ -12339,9 +12403,13 @@
       "previous_commit": "c6a94e9f0fd978afd3738219a5005676e022c471",
       "date": "2026-04-20",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev1",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.12.1-dev1"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.12.1-dev1"
@@ -12358,10 +12426,11 @@
       "notes": [],
       "changes": [
         {
-          "type": "changed",
-          "text": "Updated Ambrosia timing calculations for Brick of Lead and the game’s scaling beyond 10,000 lifetime Ambrosia.",
+          "type": "fixed",
+          "text": "Ambrosia bar calculations count Brick of Lead and the extra scaling past 10,000 lifetime Ambrosia.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/commit/f6631f52b042deee7ae9f16b0d4b4e124ee83b1c"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/c4ff78dbb88622d9b4e60b9c7fd4dc7fba80d8fe",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/36490ce08ddada06f0d59d49365e10515154bab2"
           ]
         }
       ],
@@ -12370,21 +12439,26 @@
       ],
       "contributors": [
         {
+          "id": "loader3229",
+          "roles": [
+            "changes",
+            "merge"
+          ],
+          "commits": [
+            "c4ff78dbb88622d9b4e60b9c7fd4dc7fba80d8fe",
+            "34ae4767c96081aa817f081ad610c8fad9f0125a",
+            "36490ce08ddada06f0d59d49365e10515154bab2",
+            "fee44dd4c64fa92a01c15301b2fd80f15d106413",
+            "e3bfc821998557986002f259bd75018611800c8b"
+          ]
+        },
+        {
           "id": "maenhiir",
           "roles": [
             "changes"
           ],
           "commits": [
             "f6631f52b042deee7ae9f16b0d4b4e124ee83b1c"
-          ]
-        },
-        {
-          "id": "loader3229",
-          "roles": [
-            "merge"
-          ],
-          "commits": [
-            "e3bfc821998557986002f259bd75018611800c8b"
           ]
         }
       ],
@@ -12894,9 +12968,13 @@
       "previous_commit": "860bea5cf163a182903c3a4cc970581045660081",
       "date": "2026-04-19",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev15",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev15"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev15"
@@ -12917,17 +12995,17 @@
       "notes": [],
       "changes": [
         {
-          "type": "fixed",
-          "text": "Correct lower-singularity teleport state and corruption loadout matching.",
+          "type": "changed",
+          "text": "With the Tampermonkey loader, teleporting to a lower singularity sets the singularity directly.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/38f9bd51ed24d4d831cb3bcb1532492cd8a0ad9d/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/38f9bd51ed24d4d831cb3bcb1532492cd8a0ad9d"
           ]
         },
         {
-          "type": "changed",
-          "text": "Update Ambrosia calculation values to match the game.",
+          "type": "fixed",
+          "text": "Ambrosia bar calculations use the game update’s new bar requirement.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/a6692669c6d1d40267b8083184c625c7c3e9d2b7/src/mod/class/hs-core/gds/hs-gamedata-api.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/a6692669c6d1d40267b8083184c625c7c3e9d2b7"
           ]
         }
       ],
@@ -12960,9 +13038,13 @@
       "previous_commit": "0611b83152251fd42e226e2740fa98eafbf169d8",
       "date": "2026-04-18",
       "date_kind": "tag",
-      "status": "tagged",
-      "release_url": null,
+      "status": "published",
+      "release_url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev14",
       "sources": [
+        {
+          "label": "Published release",
+          "url": "https://github.com/maenhiir/synergism-hypersynergy/releases/tag/v2.11.0-dev14"
+        },
         {
           "label": "Git tag",
           "url": "https://github.com/maenhiir/synergism-hypersynergy/tree/v2.11.0-dev14"
@@ -12984,27 +13066,59 @@
           "url": "https://github.com/maenhiir/synergism-hypersynergy/blob/462851e7a2d0cbf839e91151c716c6e2ff5baaf9/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
         }
       ],
-      "notes": [],
+      "notes": [
+        "If you used BTMco. Lotus Eater or BTMco. Quark Factory v1.0, select the new default strategy again."
+      ],
       "changes": [
         {
-          "type": "changed",
-          "text": "Update bundled strategies to BTMco. Quark Factory v2.2 and BTMco. Demon King v1.0.",
+          "type": "added",
+          "text": "AutoSing switches to the Obtainium loadout as soon as a singularity starts; a strategy whose first step is that switch has it skipped.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/462851e7a2d0cbf839e91151c716c6e2ff5baaf9/src/mod/resource/json/strategies/manifest.json"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9"
           ]
         },
         {
           "type": "changed",
-          "text": "Improve AutoSing modal rendering and synchronize all browser loaders.",
+          "text": "After a singularity, AutoSing clicks coin upgrade 81 until it is bought, as an automatic first strategy step.",
           "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "AutoSing does fewer pause and stop checks, and the dashboard does less work when it redraws.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9",
             "https://github.com/maenhiir/synergism-hypersynergy/commit/7f0fd5f31200cdcd38a1c9089d213fd3e91675f1"
           ]
         },
         {
-          "type": "fixed",
-          "text": "Improve corruption application and AutoSing reset/target handling.",
+          "type": "changed",
+          "text": "Default strategies updated to BTMco. Quark Factory v2.2 and BTMco. Demon King v1.0, which replaces BTMco. Lotus Eater.",
           "evidence": [
-            "https://github.com/maenhiir/synergism-hypersynergy/blob/462851e7a2d0cbf839e91151c716c6e2ff5baaf9/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "An imported strategy shows in the strategy list right away, and Ambrosia Quick Import works with Auto-confirm pop-ups on.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9"
+          ]
+        },
+        {
+          "type": "added",
+          "text": "Added a Discord Thread button to the Tools tab.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "The Tampermonkey bridge loads the loader before the game starts.",
+          "evidence": [
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/462851e7a2d0cbf839e91151c716c6e2ff5baaf9",
+            "https://github.com/maenhiir/synergism-hypersynergy/commit/7f0fd5f31200cdcd38a1c9089d213fd3e91675f1"
           ]
         }
       ],
