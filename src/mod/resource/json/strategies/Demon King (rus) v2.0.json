@@ -294,7 +294,24 @@
             "ifJumpOperator": "<",
             "ifJumpValue": 1000000000000,
             "ifJumpMultiplier": 0,
-            "ifJumpIndex": 12
+            "ifJumpIndex": 12,
+            "ifJumpMaxJumps": 20
+          }
+        },
+        {
+          "challengeNumber": 200,
+          "challengeCompletions": 0,
+          "challengeWaitTime": 0,
+          "challengeMaxTime": 0,
+          "challengeWaitBefore": 0,
+          "ifJump": {
+            "id": "2e400b2f-1b3e-4979-b455-b776dd8efeed",
+            "ifJumpMode": "challenges",
+            "ifJumpChallenge": 15,
+            "ifJumpOperator": "<",
+            "ifJumpValue": 1000000000000,
+            "ifJumpMultiplier": 0,
+            "ifJumpIndex": 6
           }
         },
         {
