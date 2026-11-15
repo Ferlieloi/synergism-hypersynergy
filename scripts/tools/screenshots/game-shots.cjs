@@ -6,8 +6,9 @@
     Order matters: the static views need the save's own state (hepteracts unlock late in a singularity), so the
     Auto-Sing run comes last. The views need S216+, hepteracts and the GQ shop unlocked.
     What the shots change: the panel and the windows are moved clear of the mod's icon and shown at full opacity, the
-    Distributor gets "Match current" rounded (a save's ratios may all be 0), and the build version loses its -devN
-    suffix (the release it comes from).
+    Distributor gets set ratios and distributes (it ascends: the save's state changes), and the build version loses
+    its -devN suffix (the release it comes from).
+    header-edit is taken from another backup, one whose header layout shows well: `take.cjs <that backup> header-edit`.
 */
 const fs = require('node:fs')
 const path = require('node:path')
@@ -20,13 +21,18 @@ const WIDTH = 1600, HEIGHT = 1000, SCALE = 2
 const SESSION_SETTINGS = {
     autosingStrategy: 'Basic v1.3-temp',
     singularityNumber: 260,
-    autosingStepTimings: true,
+    // Off as players have it; the run turns it on for the step timings
+    autosingStepTimings: false,
     autosingObtLoadout: '1', autosingEarlyCubeLoadout: '2', autosingLateCubeLoadout: '3',
     autosingQuarkLoadout: '4', autosingOffLoadout: '5', autosingAmbrosiaLoadout: '6',
 }
 // The strategy shown in the editor views: Basic has no IF step; the guide describes this one's last-phase IF
 // (C15 < 1e110, at most 5 jumps)
 const EDITOR_STRATEGY = 'Demon King (BTMco) v1.2-temp'
+// The strategy shown selected in the Auto-Sing settings (the guide's Getting started)
+const SETTINGS_STRATEGY = 'Demon King (rus) v2.0'
+// The Distributor's fields: Keep empty, Orbs %, then the ratios in the panel's order (Chronos to Multiplier)
+const DISTRIBUTOR_ORBS = 15, DISTRIBUTOR_RATIOS = [80, 2, 12, 5, 1, 1, 1]
 const RUN_SINGULARITIES = 10
 
 // Page helpers, defined in each evaluation
@@ -36,6 +42,10 @@ const HELPERS = `window.__shot = {
     leaf: (root, text) => [...root.querySelectorAll('*')].find(e => e.children.length === 0 && e.offsetParent && e.textContent.trim() === text),
     closeModals: () => document.querySelectorAll('.hs-modal').forEach(m => __shot.leaf(m, 'x')?.click()),
     select: (id, v) => { const s = document.getElementById(id); s.value = v; s.dispatchEvent(new Event('change', { bubbles: true })); },
+    // A settings switch (✓/✗) set on or off
+    setSwitch: async (id, on) => { const b = document.getElementById(id); if (b.classList.contains('hs-disabled') === on) { b.click(); await __shot.wait(300); } },
+    // A field typed in, then left
+    type: (input, v) => { input.value = String(v); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); },
     answerDialogs: async () => { for (let i = 0; i < 5; i++) { const b = ['ok_confirm', 'ok_alert'].map(id => document.getElementById(id)).find(b => b?.offsetParent); if (!b) return; b.click(); await __shot.wait(300); } },
     rect: e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; },
     // The mod panel on one Settings subtab, as tall as its content (at most maxHeight), below the mod's icon
@@ -43,6 +53,8 @@ const HELPERS = `window.__shot = {
         __shot.closeModals();
         const p = document.getElementById('hs-panel');
         if (p.classList.contains('hs-panel-closed')) { document.getElementById('hs-panel-control').click(); await __shot.wait(800); }
+        // The Debug tab is dev builds only (the release build removes tab 4)
+        const debugTab = document.getElementById('hs-panel-tab-4'); if (debugTab) debugTab.style.display = 'none';
         document.getElementById('hs-panel-tab-3').click(); await __shot.wait(300);
         [...document.querySelectorAll('.hs-panel-subtab')].find(e => e.textContent.trim() === subtab).click();
         p.style.left = '10px'; p.style.top = '52px'; p.style.width = '560px'; p.style.height = maxHeight + 'px'; p.style.opacity = '1';
@@ -81,8 +93,12 @@ const SHOTS = {
 
     // Mod panel, Settings > Auto-Sing (the guide's Getting started)
     async 'autosing-settings'(c) {
-        await capture(c, 'autosing-settings', await run(c, `return await __shot.panel('Auto-Sing', 940);`))
-        await run(c, `document.getElementById('hs-panel-close-btn').click(); await __shot.wait(800);`)
+        await capture(c, 'autosing-settings', await run(c, `
+            __shot.select('hs-setting-auto-sing-strategy', ${JSON.stringify(SETTINGS_STRATEGY)});
+            await __shot.setSwitch('hs-setting-auto-sing-step-timings-btn', false);
+            return await __shot.panel('Auto-Sing', 940);`))
+        await run(c, `document.getElementById('hs-panel-close-btn').click(); await __shot.wait(800);
+            __shot.select('hs-setting-auto-sing-strategy', ${JSON.stringify(SESSION_SETTINGS.autosingStrategy)}); await __shot.wait(300);`)
     },
 
     // Header edit mode: the header and the edit panel under it, full width
@@ -114,24 +130,23 @@ const SHOTS = {
             input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true }));`)
     },
 
-    // Hepteract forge's Distributor
-    async 'hepteract-distributor'(c) {
+    // Ambrosia Heater Inputs, cut below the right column's last button
+    async 'heater-inputs'(c) {
         const clip = await run(c, `
-            document.getElementById('cubetab').click(); await __shot.wait(500);
-            document.getElementById('switchCubeSubTab7').click(); await __shot.wait(800);
-            document.getElementById('hs-hept-distributor-open').click(); await __shot.wait(1000);
-            const d = document.getElementById('hs-hept-distributor');
-            if (!d?.offsetParent) throw new Error('no Distributor panel: hepteracts locked?');
-            // A save's ratios may all be 0: "Match current", rounded (it gives repeating decimals)
-            [...d.querySelectorAll('button')].find(b => b.textContent.trim() === 'Match current').click(); await __shot.wait(500);
-            d.querySelectorAll('input[aria-label$=" ratio"]').forEach(i => {
-                const v = Number(i.value); i.value = String(v >= 10 ? Math.round(v) : Math.round(v * 10) / 10 || '');
-                i.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-            d.scrollIntoView({ block: 'center' }); await __shot.wait(300);
-            return __shot.rect(d);`)
-        await capture(c, 'hepteract-distributor', { x: clip.x - 8, y: clip.y - 8, width: clip.width + 16, height: clip.height + 16 })
-        await run(c, `document.getElementById('buildingstab').click(); await __shot.wait(500);`)
+            __shot.closeModals(); await __shot.wait(500);
+            document.getElementById('hs-panel-amb-heater-compute-btn').click(); await __shot.wait(3000);
+            const m = __shot.modal(/Ambrosia Heater Inputs/);
+            // As the guide tells: ☰ (what the slots need), every slot ticked for Import All
+            m.querySelector('.hs-heater-active-bulk-btn[data-branch-bulk="slots"]').click(); await __shot.wait(300);
+            m.querySelectorAll('.hs-heater-type-select-checkbox').forEach(b => { if (!b.checked) { b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true })); } });
+            m.style.left = '80px'; m.style.top = '60px';
+            await __shot.wait(300);
+            const r = __shot.rect(m);
+            // The lowest button inside the window's box (the left column scrolls: its hidden ones are below it)
+            const last = [...m.querySelectorAll('button')].filter(b => b.offsetParent && b.getBoundingClientRect().bottom <= r.y + r.height).reduce((a, b) => b.getBoundingClientRect().bottom > a.getBoundingClientRect().bottom ? b : a);
+            return { ...r, height: last.getBoundingClientRect().bottom + 8 - r.y };`)
+        await capture(c, 'heater-inputs', clip)
+        await run(c, `__shot.closeModals(); await __shot.wait(500);`)
     },
 
     // Ambrosia Heater: a full heat, then the results window
@@ -154,6 +169,37 @@ const SHOTS = {
             return __shot.rect(__shot.modal(/Ambrosia Heater Results/));`)
         await capture(c, 'heater-results', clip)
         await run(c, `__shot.closeModals(); await __shot.wait(500);`)
+    },
+
+    // Hepteract forge's Distributor after a distribution, its summary in the status line. It ascends: after the heat
+    async 'hepteract-distributor'(c) {
+        const clip = await run(c, `
+            const forge = async () => {
+                document.getElementById('cubetab').click(); await __shot.wait(500);
+                document.getElementById('switchCubeSubTab7').click(); await __shot.wait(800);
+            };
+            await forge();
+            let d = document.getElementById('hs-hept-distributor');
+            if (!d?.offsetParent) { document.getElementById('hs-hept-distributor-open').click(); await __shot.wait(1000); d = document.getElementById('hs-hept-distributor'); }
+            if (!d?.offsetParent) throw new Error('no Distributor panel: hepteracts locked?');
+            __shot.type(d.querySelector('input[aria-label^="Hepteracts to keep"]'), '');
+            __shot.type(d.querySelector('input[aria-label^="Percentage of hepteracts"]'), ${DISTRIBUTOR_ORBS});
+            const ratios = ${JSON.stringify(DISTRIBUTOR_RATIOS)};
+            d.querySelectorAll('input[aria-label$=" ratio"]').forEach((i, n) => __shot.type(i, ratios[n]));
+            await __shot.wait(300);
+            [...d.querySelectorAll('button')].find(b => b.textContent.trim() === 'Distribute').click(); await __shot.wait(1000);
+            const status = d.querySelector('.hs-hept-distributor-status'), t0 = Date.now();
+            while (status.textContent.trim() === 'Distributing…') {
+                if (Date.now() - t0 > 180000) throw new Error('Distribute not done after 3 minutes');
+                await __shot.wait(1000);
+            }
+            if (/^Stopped/.test(status.textContent.trim())) throw new Error('Distributor: ' + status.textContent.trim());
+            // An ascension sends the player to Buildings
+            await forge();
+            d.scrollIntoView({ block: 'center' }); await __shot.wait(300);
+            return __shot.rect(d);`)
+        await capture(c, 'hepteract-distributor', { x: clip.x - 8, y: clip.y - 8, width: clip.width + 16, height: clip.height + 16 })
+        await run(c, `document.getElementById('buildingstab').click(); await __shot.wait(500);`)
     },
 
     // Strategy window, actions window, an IF step loaded in the editor: a default strategy opened with Edit
@@ -201,6 +247,7 @@ const SHOTS = {
     // Auto-Sing window and step timings, after RUN_SINGULARITIES on the default strategy
     async 'autosing-window'(c) {
         await run(c, `
+            await __shot.setSwitch('hs-setting-auto-sing-step-timings-btn', true);
             document.getElementById('hs-setting-auto-sing-enabled').click();
             const t0 = Date.now();
             while (!(Number(document.getElementById('hs-completed-sing-amount')?.textContent) >= ${RUN_SINGULARITIES})) {

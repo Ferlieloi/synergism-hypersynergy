@@ -4,6 +4,8 @@ The Ambrosia Heater finds, for your save, the best Ambrosia upgrade tree for eac
 
 ## Open it
 
+![The Ambrosia Heater Inputs window: what the Heater read from your save on the left; the loadouts to heat, Start Heater and your loadout order on the right](../../res/guides/heater-inputs@2x.webp#past-headings)
+
 Open the mod panel (the mod's icon, top left), then Tools → **Ambrosia Heater**. The menu by the mod's icon opens it too. The **Ambrosia Heater Inputs** window opens, filled from your game: its left column holds what the Heater read from your save, which you rarely need to change.
 
 ## Say which slot holds what
@@ -19,7 +21,7 @@ The checkbox at the end of a line says whether **Import All** fills that slot: u
 
 ## Read the results
 
-![The Ambrosia Heater results window after a heat: common, Obtainium and Offering, p4x4 and hybrid loadouts](../../res/features/heater-results@2x.webp)
+![The Ambrosia Heater results window after a heat: common, Obtainium and Offering, p4x4 and hybrid loadouts](../../res/features/heater-results@2x.webp#past-headings)
 
 The results window opens when the heat ends. Each row is the best tree for one goal, grouped in sections: Common Loadouts, Obtainium & Offering Loadouts, p4x4 (pre-AoAG) Loadouts, Hybrid Loadouts.
 
@@ -31,7 +33,7 @@ The results window opens when the heat ends. Each row is the best tree for one g
 
 A **Red Ambrosia Upgrades** window opens with the results: it compares those upgrades for your save.
 
-## Put them in your slots
+## Import them in your slots
 
 - **Import All ☑ Loadouts** (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
 - For one tree only: **Import** on its row puts it into the loadout slot currently loaded; **Copy** copies it as text.

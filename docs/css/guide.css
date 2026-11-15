@@ -103,6 +103,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .feature details .shot-side { margin-left: 24px; }
 .page-wrapper :is(h2, h3, h4), .page-wrapper hr { clear: both; }
 .page-wrapper .feature h3 { clear: none; }
+/* The headings after a guide image marked #past-headings, down to the next image (build-docs.py): beside it */
+.page-wrapper .beside-shot { clear: none; }
 .feature, .feature details, .callout, .limits { display: flow-root; }
 /* The features page's miniature of an entry's image, right of its title; a click unfolds the entry (guide.js). */
 .thumb { float: right; margin: 8px 0 6px 16px; line-height: 0; }

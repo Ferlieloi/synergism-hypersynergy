@@ -1,4 +1,5 @@
-// Where each screenshot goes on the website (docs/res/<to>@2x.webp) and its crop, in the shot's pixels (2x).
+// Where each screenshot goes on the website (docs/res/<to>@2x.webp), its crop in the shot's pixels (2x), and its
+// width on the site when smaller than taken (page px: the file is scaled down to twice that).
 // The names are those of game-shots.cjs, plus steam-loader (loader-shot.cjs).
 module.exports = {
     'mod-panel': { to: 'features/mod-panel' },
@@ -7,11 +8,13 @@ module.exports = {
     'header-edit': { to: 'features/header-edit' },
     'gq-search': { to: 'features/gq-search' },
     'hepteract-distributor': { to: 'features/hepteract-distributor' },
+    'heater-inputs': { to: 'guides/heater-inputs' },
     'heater-results': { to: 'features/heater-results' },
     'strategy-window': { to: 'guides/strategy-window' },
     'actions-window': { to: 'guides/actions-window' },
     'if-jump': { to: 'guides/if-jump' },
     'autosing-window': { to: 'guides/autosing-window' },
     'step-timings': { to: 'guides/step-timings' },
-    'steam-loader': { to: 'features/steam-loader' },
+    // 880 px wide as taken; smaller, it floats beside the text (850 px or less, build-docs.py)
+    'steam-loader': { to: 'features/steam-loader', shown: 800 },
 }

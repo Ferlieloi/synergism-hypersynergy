@@ -399,6 +399,8 @@ def guide_html(cid: str) -> str:
     para: list[str] = []
     kind = ""
     callout = False
+    # After an image marked #past-headings, until the next image: headings flow beside it (guide.css, .beside-shot)
+    beside_shot = False
 
     def end_para() -> None:
         if para:
@@ -460,11 +462,17 @@ def guide_html(cid: str) -> str:
             callout = True
             continue
         # An image alone on its line; its path is relative to the guide, as GitHub reads it.
-        image = re.match(r'!\[([^\]]+)\]\(([^)\s"]+)(?: "([^"]+)")?\)$', line)
+        # "#past-headings" after the path (GitHub ignores it): a floating image the headings after it flow beside,
+        # down to the next image
+        image = re.match(r'!\[([^\]]+)\]\(([^)\s"#]+)(#past-headings)?(?: "([^"]+)")?\)$', line)
         if image:
             end_para()
             end_list()
-            out.append(figure_html("../", site_image(DOCS / "data/guides" / image[2], where), image[1], image[3] or ""))
+            site = site_image(DOCS / "data/guides" / image[2], where)
+            if image[3] and not is_side_image(site):
+                raise ValueError(f"{where}: #past-headings is for an image that floats ({SIDE_IMAGE_MAX_WIDTH} px wide or less as shown)")
+            beside_shot = bool(image[3])
+            out.append(figure_html("../", site, image[1], image[4] or ""))
             continue
         heading = re.match(r"(#{1,4}) (.+)$", line)
         if re.match(r"\s+\S|[>|]|[*+] |```|\d+\) |#{5}", line):
@@ -481,7 +489,8 @@ def guide_html(cid: str) -> str:
             end_para()
             end_list()
             level, text = len(heading[1]), heading[2].strip()
-            out.append(f'<h{level} id="{esc(slug(text))}">{inline_md(text)}</h{level}>')
+            beside = ' class="beside-shot"' if beside_shot else ""
+            out.append(f'<h{level} id="{esc(slug(text))}"{beside}>{inline_md(text)}</h{level}>')
         else:
             text_line(line)
     end_para()

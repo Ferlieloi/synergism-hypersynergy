@@ -52,10 +52,11 @@ if (unknown.length) {
 
     console.log('Converting to WebP...')
     for (const name of names) {
-        const { to, crop } = IMAGES[name]
+        const { to, crop, shown } = IMAGES[name]
         const args = [path.join(paths.repo, 'scripts/tools/prepare-image.cjs'), path.join(outDir('screenshots'), `${name}@2x.png`),
             path.join(paths.repo, 'docs/res', `${to}@2x.webp`)]
         if (crop) args.push('--crop', crop.join(','))
+        if (shown) args.push('--width', String(shown * 2))
         execFileSync(process.execPath, args, { stdio: 'inherit' })
     }
     process.exit(0)

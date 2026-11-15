@@ -15,14 +15,14 @@ The mod also works on the game's copy at [pseudo-corp.github.io/SynergismOfficia
 
 ## On Steam (Windows)
 
+![The Steam loader, step 2: the Live channel and its master build](../../res/features/steam-loader@2x.webp)
+
 The Hypersynergism Loader is a small Windows app that patches a copy of the game and starts it with the mod. Your Steam game itself isn't changed: Steam's Play button still starts it without the mod.
 
 1. **Download the loader** from the [releases page](https://github.com/Ferlieloi/synergism-hypersynergy/releases): the latest release named **Hypersynergism Loader**, file `HypersynergismLoader-Setup-….exe`. Run it; it needs no administrator rights. The installer isn't signed, so Windows may show "Windows protected your PC": click **More info**, then **Run anyway**.
 2. **① Locate game:** **Auto-detect** finds your Steam folder (or **Browse…** to it), then **Continue →**.
 3. **② Choose build:** keep the **Live** channel and its **master** build, the latest version, then **Continue →**.
 4. **③ Patch & play:** click **Patch & launch**. The game starts with the mod.
-
-![The Steam loader, step 2: the Live channel and its master build](../../res/features/steam-loader@2x.webp)
 
 The next times, open the loader and click **Launch last played build** on its first screen. When the game has been updated or a new mod version needs it, the loader asks you to patch again: the button becomes **Patch & launch last played**. Close the game before patching. The loader updates itself.
 

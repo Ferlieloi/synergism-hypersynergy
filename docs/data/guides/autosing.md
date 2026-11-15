@@ -18,7 +18,7 @@ The Auto-Sing window shows the time per singularity, the quarks and golden quark
 
 ## Which singularity to farm
 
-![The Auto-Sing window after 10 singularities: times, quarks and golden quarks per second, phase statistics](../../res/guides/autosing-window@2x.webp)
+![The Auto-Sing window after 10 singularities: times, quarks and golden quarks per second, phase statistics](../../res/guides/autosing-window@2x.webp#past-headings)
 
 - Start low: a singularity should take 15 to 20 seconds at most. That can be 30 singularities below your highest, and that's normal.
 - Then go up one singularity at a time, as long as golden quarks per second keep going up.
@@ -97,7 +97,7 @@ The other actions are grouped in the dropdown (Exit and Ascend, Game actions, Ch
 
 #### If-jump steps
 
-![An If-jump step loaded in the fields: it jumps back to step 4 while C15 is below 1e110, at most 5 times](../../res/guides/if-jump@2x.webp)
+![An If-jump step loaded in the fields: it jumps back to step 4 while C15 is below 1e110, at most 5 times](../../res/guides/if-jump@2x.webp#past-headings)
 
 An If-jump step (an IF row in the list) jumps to its **Jump here** row when its condition holds, else the steps continue below it.
 - **Challenges** mode: compares a challenge's completions (If Challenge) with Value, using > or <.
