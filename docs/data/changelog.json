@@ -8099,9 +8099,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Fixed C15 score parsing on bookmarklet setups and retained the last C15 score when another Ascension challenge replaces its progress text.",
+          "text": "On bookmarklet setups, AutoSing reads challenge completions and goals from the game’s challenge progress line, without opening the Challenges tab (as in v2.13.5d).",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/13ad4d2f271cbc41226bb025f8f222ec88e0fa91/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/13ad4d2f271cbc41226bb025f8f222ec88e0fa91"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "On bookmarklet setups, AutoSing reads the C15 score correctly, and keeps the last one when another Ascension challenge’s progress replaces it.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/13ad4d2f271cbc41226bb025f8f222ec88e0fa91"
           ]
         }
       ],
@@ -8152,9 +8159,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Autosing reads challenge completion and goal values from the game’s new progress display, without needing to open the Challenges tab.",
+          "text": "On bookmarklet setups, AutoSing reads challenge completions and goals from the game’s challenge progress line, without opening the Challenges tab.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/10e1deaa193c38a76a9431905947e043103d64d8/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/10e1deaa193c38a76a9431905947e043103d64d8"
           ]
         }
       ],
@@ -8205,9 +8212,18 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Autosing no longer hangs on a stale game-stage reading; it waits for fresh UI text and stops with a warning if that refresh fails.",
+          "text": "On bookmarklet setups, AutoSing waits for the game to refresh the stage it reads and stops with a warning after 5 seconds without one, instead of hanging; it opens the Challenges tab to read challenge completions.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/523f528e123e668159533ea23ed44df12ffefba5/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/523f528e123e668159533ea23ed44df12ffefba5",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e10f2be7830cfa09c8015a6b25f25ceea161a92d"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "Stopping AutoSing takes effect during challenge waits and stage reads.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/523f528e123e668159533ea23ed44df12ffefba5",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/e10f2be7830cfa09c8015a6b25f25ceea161a92d"
           ]
         }
       ],
@@ -8264,16 +8280,16 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Autosing reset and challenge-exit clicks no longer leave unwanted game hover windows open.",
+          "text": "AutoSing’s ascend and challenge-exit clicks no longer leave the game’s hover windows open.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/8c8a407591b19a340ee5152c378fa49f99a2c3ca/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/8c8a407591b19a340ee5152c378fa49f99a2c3ca"
           ]
         },
         {
           "type": "fixed",
-          "text": "Update detection correctly compares letter-suffixed releases such as 2.13.5b.",
+          "text": "The new-version check knows that 2.13.5b comes after 2.13.5.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/8c8a407591b19a340ee5152c378fa49f99a2c3ca/src/mod/class/hs-core/github/hs-github.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/0c57dcc5d2f726847f0f3398099672162dea2bdc"
           ]
         }
       ],
@@ -8284,7 +8300,8 @@
             "changes"
           ],
           "commits": [
-            "8c8a407591b19a340ee5152c378fa49f99a2c3ca"
+            "8c8a407591b19a340ee5152c378fa49f99a2c3ca",
+            "0c57dcc5d2f726847f0f3398099672162dea2bdc"
           ]
         }
       ],
@@ -8352,9 +8369,31 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Fixed Autosing state synchronization and wait handling, getting stuck in Exalt 2, and restoring the previous tab after a phase.",
+          "text": "AutoSing brings you back to the tab you were on after each singularity, even when the game sends you to another tab.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/95082a002e66a33ca45ccc5c3a43cee97072787b/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6ddbf6c3b2610989316bfad952ddffdd2bd16643",
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/95082a002e66a33ca45ccc5c3a43cee97072787b"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "AutoSing stops with a warning when it cannot enter and leave Exalt 2 at the start of a singularity, instead of getting stuck.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/21e68a0adbbee7bf8980d4f29a37d159c933162a"
+          ]
+        },
+        {
+          "type": "fixed",
+          "text": "On patched games, Max C11–C14 actions end as soon as the challenges are capped instead of waiting out their time limit.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6ddbf6c3b2610989316bfad952ddffdd2bd16643"
+          ]
+        },
+        {
+          "type": "changed",
+          "text": "AutoSing applies a corruption loadout only when it differs from the current one, and its dashboard redraws at most 10 times a second.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6ddbf6c3b2610989316bfad952ddffdd2bd16643"
           ]
         }
       ],
@@ -8366,6 +8405,8 @@
             "merge"
           ],
           "commits": [
+            "6ddbf6c3b2610989316bfad952ddffdd2bd16643",
+            "21e68a0adbbee7bf8980d4f29a37d159c933162a",
             "95082a002e66a33ca45ccc5c3a43cee97072787b",
             "bf3b79204840c0317f41379815c8768e4b9d3835"
           ]
@@ -9206,9 +9247,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Autosing retries entering a challenge until the game confirms entry.",
+          "text": "AutoSing keeps clicking a challenge until the game has entered it.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/a516a807c87621c866e2fe358fa5918e9da8650a/src/mod/class/hs-modules/hs-autosing/hs-autosing.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/a516a807c87621c866e2fe358fa5918e9da8650a"
           ]
         }
       ],
@@ -9409,9 +9450,9 @@
       "changes": [
         {
           "type": "added",
-          "text": "Added the completed Steam mod loader for patching and launching a modded copy of the Steam game.",
+          "text": "The Hypersynergism Loader for Steam (Windows), first shipped as a download with v2.13.1: it patches a copy of the Steam game to load the mod and launches it, leaving the Steam install untouched; it needs the full 7-Zip.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/77db0e691ade123802b69ea2766f481baa0fc075/synergism_modloader/README.md"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/77db0e691ade123802b69ea2766f481baa0fc075"
           ]
         }
       ],
@@ -11394,9 +11435,9 @@
       "changes": [
         {
           "type": "fixed",
-          "text": "Start AFK Swapper correctly when the Ambrosia tab is already open and synchronize the initial active loadout state.",
+          "text": "AFK Swapper starts when it is turned on with the Ambrosia tab already open, and the loadout recognised at load is marked as active right away.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/blob/6298c835a0fd45ec3fcb80414dac353c83a1de22/src/mod/class/hs-modules/hs-ambrosia.ts"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/6298c835a0fd45ec3fcb80414dac353c83a1de22"
           ]
         }
       ],
@@ -11460,14 +11501,25 @@
         }
       ],
       "notes": [],
-      "changes": [],
+      "changes": [
+        {
+          "type": "changed",
+          "text": "AFK Swapper switches to Blue Luck slightly before the blue bar fills.",
+          "evidence": [
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/2426284c455e976b77940b599f782ca71c4d14ab"
+          ]
+        }
+      ],
       "contributors": [
         {
           "id": "Ferlieloi",
           "roles": [
+            "changes",
             "merge"
           ],
           "commits": [
+            "d649bedc3a39a7d41d1991c0067729003a264174",
+            "2426284c455e976b77940b599f782ca71c4d14ab",
             "bd438a5e3167b50d9b4fea8ddc7ba4f0dfac4712"
           ]
         }
@@ -11781,15 +11833,15 @@
       "notes": [],
       "changes": [
         {
-          "type": "fixed",
-          "text": "AutoSing recognizes game automation toggles by their border state, including with translated labels.",
+          "type": "changed",
+          "text": "AFK Swapper: the Normal Luck loadout is now Blue Luck; AFK Swapper switches to it once the blue bar holds what that loadout needs to fill it, its Brick of Lead included, and keeps it until the bar resets.",
           "evidence": [
-            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/d1bc9e92"
+            "https://github.com/Ferlieloi/synergism-hypersynergy/commit/1c94ef310efc030ccb60940e1afa2bb64d0ff227"
           ]
         },
         {
           "type": "changed",
-          "text": "AFK Swapper calculates when the Blue Luck loadout can fill the blue bar and keeps that loadout until the bar resets; when a required loadout is unconfigured, it waits for configuration instead of disabling itself.",
+          "text": "With a loadout setting left empty, AFK Swapper waits instead of turning itself off.",
           "evidence": [
             "https://github.com/Ferlieloi/synergism-hypersynergy/commit/1c94ef310efc030ccb60940e1afa2bb64d0ff227"
           ]
