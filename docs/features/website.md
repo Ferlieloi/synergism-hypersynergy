@@ -19,6 +19,7 @@ How the player website is built and how it behaves. How to update and publish it
 | `docs/data/changelog.json` | `changelog.html` |
 | `src/mod/class/hs-core/gds/hs-calculation-definition.ts` | `wiki/calculations.html` |
 | `package.json` `version` | the header's "Guide for v…" on every page |
+| `src/mod/class/hs-core/hs-global.ts` `modDiscordThreadUrl` | the Discord thread links (home page's Help, wiki index); not found = the run stops |
 | the generator itself | `about.html`, `github.html`, root `index.html`, both `.nojekyll`; every page text that isn't data (intros, the home page's steps, the changelog's introduction, the audit's "Reviewed distinctions" and "Verification limits") |
 
 - **Read from the checkout**: version, settings and calculations come from the branch the generator runs on (why Dev's pages would show Dev's version and settings).
@@ -66,7 +67,8 @@ One Python file, no template engine: each page is an f-string.
 - **Filters are kept in the address** (`?q=`, `?category=` or `?channel=`) so a filtered page can be shared, except on a page opened as a file.
 
 ## Home, Github, About
-- **Home:** an introduction, quick links (features, wiki, the installation guide, releases, issues), the categories with their feature counts (each linking to its wiki page), four first steps for new players (the installation guide, where the mod's icon is…), the original project.
+- **Home:** an introduction, quick links (features, wiki, the installation guide, releases, help), the categories with their feature counts (each linking to its wiki page), four first steps for new players (the installation guide, where the mod's icon is…), Help & bug reports (`#help`), the original project.
+- **Help & bug reports is the site's one help text:** Discord first (the thread, and the server's invite since the thread opens only to members), then GitHub issues; what to send with a bug (what happened, the mod's version from the panel's title, a backup file, private); first things to try, CLEAR SETTINGS last. The wiki index's Help points to it.
 - **Github:** links to Live, its releases and issues, the Dev repository, ahvonenj's original repository and the game's source. **About:** maintainers, the original website's style, privacy, licence.
 
 ## Features page (`features.html`, `guide.js`)
@@ -82,7 +84,7 @@ One Python file, no template engine: each page is an f-string.
 - Limits: the browser's find (Ctrl+F) doesn't search folded categories (`hidden="until-found"` would clash with the `hidden` the filter sets).
 
 ## Wiki pages (`docs/wiki/`)
-- **Index:** the categories, the guides, the references (settings, calculations, `FEATURES.md` as a file), how to report a bug. No link to the GitHub Wiki: it only points back here.
+- **Index:** the categories, the guides, the references (settings, calculations, `FEATURES.md` as a file), a Help line pointing to the home page's Help (Discord thread, issues, developer docs). No link to the GitHub Wiki: it only points back here.
 - **Category page:** its intro, its guide, a table of contents, then every feature in full (no folding, nothing to open), with the same anchors as the features page.
 - **Settings:** one row per setting, in `hs-settings.json` order, anchored by its key: its `settingDescription` (not the help text), initial value (`settingValue`, else `enabled`), "Panel control" or "Hidden / inline or internal" with its control page (named as the Settings tab shows it, from `hs-settings-control-pages.json`), and its feature.
 - **Calculations:** the calculation picker's entries (`toolingSupport: true`), sorted by name, with their function and whether they support reduction. Read by pattern from the TypeScript file: the build fails only if it finds none.

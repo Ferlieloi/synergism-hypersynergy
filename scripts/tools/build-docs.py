@@ -30,6 +30,14 @@ SOURCE = REPO + "/blob/master/"
 # Pages serves the repository root, so the site's pages sit under docs/ (docs/features/website.md, "Hosting").
 _OWNER, _NAME = CATALOGUE["repository"].split("/")
 SITE = f"https://{_OWNER.lower()}.github.io/{_NAME}/docs/"
+# The mod's Discord thread, as its Tools tab opens it (the site reads the mod, docs/features/website.md).
+_GLOBAL = (ROOT / "src/mod/class/hs-core/hs-global.ts").read_text(encoding="utf-8")
+_THREAD = re.search(r"modDiscordThreadUrl\(\)\s*\{\s*return\s*'([^']+)'", _GLOBAL)
+if not _THREAD:
+    raise SystemExit("build-docs.py: modDiscordThreadUrl not found in hs-global.ts (renamed?)")
+DISCORD_THREAD = _THREAD[1]
+# The thread opens only to members of the game's server.
+DISCORD_INVITE = "https://www.discord.gg/ameCknq"
 OUTPUTS: dict[str, str] = {}
 # Hand-written guides, one per category at most: docs/data/guides/<category id>.md, starting with a "# Title" line.
 GUIDES = {p.stem: p.read_text(encoding="utf-8").replace("\r\n", "\n")
@@ -854,7 +862,7 @@ def build() -> None:
 <li><a href="wiki/index.html">Player wiki &amp; detailed guides</a></li>
 <li><a href="wiki/getting-started-guide.html">Install in a browser or on Steam</a></li>
 <li><a href="{REPO}/releases">Downloads &amp; releases</a></li>
-<li><a href="{REPO}/issues">Help &amp; bug reports</a></li></ul>
+<li><a href="#help">Help &amp; bug reports</a></li></ul>
 <h2>About the mod</h2><p>Hypersynergism adds information and practical controls to the game: Ambrosia optimization, forge and shop distribution, header editing, remembered interface preferences, save tools and more.</p>
 <p>Most features are optional. AutoSing is separately enabled and automates progression; it goes beyond the original mod's strictly QoL scope.</p>
 <h2>Explore the features</h2>{category_list("", "wiki/")}
@@ -863,6 +871,11 @@ def build() -> None:
 <li>Open the mod's icon, at the top left of the game, to explore settings and Tools.</li>
 <li>Use the pencil beside the icon for header customization; new mod modules start in the game's Hidden tray.</li>
 <li>Make a backup in Tools before experimenting with strategies or imports.</li></ol>
+<h2 id="help">Help &amp; bug reports</h2><ul>
+<li><strong>Ask on Discord:</strong> the <a href="{DISCORD_THREAD}">HyperSynergism thread</a> on the game's Discord server (the link opens once you've <a href="{DISCORD_INVITE}">joined the server</a>).</li>
+<li><strong>Report a bug on GitHub:</strong> the <a href="{REPO}/issues">issues page</a>.</li>
+<li><strong>With a bug, send:</strong> what you did and what happened, the mod's version (in the mod panel's title), and a backup file: Tools → Backup &amp; Restore → Export to file. It holds your save, the mod's settings and its logs: share it only where you ask for help.</li>
+<li><strong>First things to try:</strong> reload the game; on Steam, Patch &amp; launch again in the loader. The mod doesn't load at all: the <a href="wiki/getting-started-guide.html#if-it-doesnt-load">installation guide</a>. Last resort, Tools → CLEAR SETTINGS puts every mod setting back to its default: export a backup first.</li></ul>
 <h2>Original project</h2><p>Created by <a href="https://github.com/ahvonenj/synergism-hypersynergy">ahvonenj</a>. This guide documents the maintained Ferlieloi fork. It follows the original website's game-inspired style.</p>'''
     page("docs/index.html", "Home", "home", home)
     # Support Pages configured at either repository root or /docs without moving the source.
@@ -904,8 +917,8 @@ def build() -> None:
          + '<h2>Reference</h2><ul><li><a href="settings.html">Every setting and saved preference</a></li>'
          '<li><a href="calculations.html">Calculation picker reference</a></li>'
          '<li><a href="../FEATURES.md">Download the complete feature inventory (Markdown)</a></li></ul>'
-         '<h2>Help</h2><p>For bugs, describe the game/mod version and how to reproduce the issue. A backup from Tools can include useful diagnostic context; review private data before sharing.</p>'
-         f'<p><a href="{REPO}/issues">Report an issue</a> · <a href="{REPO}/blob/master/docs/README.md">Developer documentation</a></p>', depth=1,
+         f'<h2>Help</h2><p>Questions, bug reports and what to send with them: <a href="../index.html#help">Help &amp; bug reports</a>, on the home page.</p>'
+         f'<p><a href="{DISCORD_THREAD}">Discord thread</a> · <a href="{REPO}/issues">Report an issue</a> · <a href="{REPO}/blob/master/docs/README.md">Developer documentation</a></p>', depth=1,
          description="Hypersynergism wiki: a page per feature category, players' guides, and the settings and calculation references.")
     inventory = ["# Hypersynergism feature inventory", "Generated from the reviewed feature catalogue. Every feature includes its location, usage, limits and source references."]
     for c in CATEGORIES:
