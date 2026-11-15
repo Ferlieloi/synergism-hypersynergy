@@ -36,7 +36,7 @@ The next times, open the loader and click **Launch last played build** on its fi
 
 The mod comes from one of two channels: **Live** (Ferlieloi's repository, the default, more stable) or **Dev** (maenhiir's, Shewchou's repository: new features first).
 
-- **Steam:** pick the channel at step ②.
+- **Steam:** pick the channel at step **② Choose build**.
 - **Tampermonkey:** open Tampermonkey's dashboard and edit **HyperSynergism Bridge Loader**. Near the top, change `const repo = 'Ferlieloi';` to `const repo = 'maenhiir';`, save with **Ctrl+S** and reload the game. To go back to Live, put `'Ferlieloi'` back. An automatic update of the script also puts you back on Live.
 
 ## With a bookmark (not recommended)

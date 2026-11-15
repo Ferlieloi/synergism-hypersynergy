@@ -506,11 +506,11 @@
         {
           "id": "header-editor",
           "title": "Header pencil and editor shortcut",
-          "where": "Pencil next to mod icon; Settings → UI → Edit game header",
+          "where": "Pencil ① next to mod icon; Settings → UI → Edit game header",
           "summary": "Opens header editing without waiting for a long press.",
           "details": [
             "The pencil toggles edit mode and can itself be hidden in the Layout section. The panel's button opens the editor and closes the panel.",
-            "Done saves the header and pending mod settings."
+            "Done ② saves the header and pending mod settings."
           ],
           "settings": [
             "headerEditButton",

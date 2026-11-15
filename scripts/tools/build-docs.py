@@ -61,7 +61,18 @@ def add(path: str, text: str) -> None:
 
 
 def ul(items: list[str]) -> str:
-    return "<ul>" + "".join(f"<li>{esc(x)}</li>" for x in items) + "</ul>"
+    return "<ul>" + "".join(f"<li>{image_marks(esc(x))}</li>" for x in items) + "</ul>"
+
+
+# A screenshot's numbered or lettered marks (scripts/tools/screenshots/game-shots.cjs draws them): ①–⑳, Ⓐ–Ⓩ.
+IMAGE_MARKS = {**{chr(0x2460 + n): str(n + 1) for n in range(20)}, **{chr(0x24B6 + n): chr(65 + n) for n in range(26)}}
+
+
+def image_marks(s: str) -> str:
+    """A circled number or letter in a text points to the same mark in its screenshot: drawn as that mark's badge.
+    Guides write the UI's own circled labels in bold (the Steam loader's "**① Locate game**"): inline_md skips them."""
+    return re.sub("[\u2460-\u2473\u24b6-\u24cf]", lambda m: (
+        f'<span class="image-mark" role="img" aria-label="{m[0]}">{IMAGE_MARKS[m[0]]}</span>'), s)
 
 
 IMAGE_TYPES = (".png", ".webp", ".gif")
@@ -201,7 +212,7 @@ def feature_html(category: dict, feature: dict, *, compact: bool = False) -> str
     figures = {side: "".join(figure_html(prefix, site, image["alt"], image.get("caption", ""))
                              for image, site in images if is_side_image(site) == side) for side in (True, False)}
     # A narrow screenshot first, floating right of the entry's text; a wide one after the details.
-    body = (figures[True] + f'<p class="where"><strong>Where:</strong> {esc(f["where"])}</p>{ul(f["details"])}'
+    body = (figures[True] + f'<p class="where"><strong>Where:</strong> {image_marks(esc(f["where"]))}</p>{ul(f["details"])}'
             + figures[False])
     if f.get("limits"):
         body += '<div class="limits"><strong>Availability &amp; limits</strong>' + ul(f["limits"]) + "</div>"
@@ -366,6 +377,8 @@ def inline_md(text: str) -> str:
         s = esc(part)
         s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", r'<a href="\2">\1</a>', s)
         s = re.sub(rf"\*\*{SETTING_MARK}️?\s*(.+?)\*\*", setting_ref, s)
+        # Image marks outside bold only: in bold, a circled character is the UI's own text
+        s = "".join(p if p.startswith("**") else image_marks(p) for p in re.split(r"(\*\*.+?\*\*)", s))
         out.append(re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s))
     return "".join(out)
 

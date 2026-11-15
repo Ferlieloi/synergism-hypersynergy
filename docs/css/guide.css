@@ -172,6 +172,8 @@ code { color: #d2bfef; overflow-wrap: anywhere; font-family: Consolas, "Cascadia
 .setting-ref:hover, .setting-ref:hover:visited { border-color: #7d73a8; color: #ddd5f5; text-decoration: none; }
 .setting-ref:hover .setting-label { text-decoration: underline; }
 .setting-gear { margin-right: 4px; color: #a99fd6; }
+/* A screenshot's mark named in the text (① or Ⓐ outside bold, build-docs.py): the amber badge the screenshot scripts draw. */
+.image-mark { display: inline-block; box-sizing: border-box; min-width: 1.4em; height: 1.4em; padding: 0 .15em; border-radius: .7em; background: #ffc21a; color: #000; font: 700 .78em/1.4em Arial, sans-serif; text-align: center; vertical-align: .12em; }
 /* Links leaving the site: a small grey icon saying where they go (not in the changelog's cards, full of them). */
 .page-wrapper a[href^="http"]::after { content: ""; display: inline-block; width: .8em; height: .8em; margin-left: .25em; vertical-align: -.05em; background: #8d89a0; -webkit-mask: var(--external) center / contain no-repeat; mask: var(--external) center / contain no-repeat; }
 .page-wrapper a[href^="http"] { --external: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z'/%3E%3C/svg%3E"); }

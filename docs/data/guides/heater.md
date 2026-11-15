@@ -10,35 +10,35 @@ Open the mod panel (the mod's icon, top left), then Tools → **Ambrosia Heater*
 
 ## Say which slot holds what
 
-Under **Your Loadout Order**, each line is one of the game's loadout slots (L1, L2…). Pick what each slot is for: All Ambrosia, Quarks, Octeracts, an H row for cubes before AOAG… Leave a slot you don't want the Heater to touch at **None**.
+Under **Your Loadout Order** ①, each line is one of the game's loadout slots (L1, L2…). Pick what each slot is for: All Ambrosia, Quarks, Octeracts, an H row for cubes before AOAG… Leave a slot you don't want the Heater to touch at **None**.
 
-The checkbox at the end of a line says whether **Import All** fills that slot: untick a slot to keep its tree as it is.
+The checkbox ② at the end of a line says whether **Import All** fills that slot: untick a slot to keep its tree as it is.
 
 ## Heat
 
-1. Under **Loadouts to heat**, tick what to compute. **☰** at the end of that line ticks exactly what your slots need, the quickest heat. Obt + Off is slower and starts unticked.
-2. Click **🔥 Start Heater**. A heat usually takes under a minute; the button counts the seconds, and **✖** next to it cancels.
+1. Under **Loadouts to heat** ③, tick what to compute. **☰** ④ at the end of that line ticks exactly what your slots need, the quickest heat. Obt + Off is slower and starts unticked.
+2. Click **🔥 Start Heater** ⑤. A heat usually takes under a minute; the button counts the seconds, and **✖** next to it cancels.
 
 ## Read the results
 
-![The Ambrosia Heater results window after a heat: common, Obtainium and Offering, p4x4 and hybrid loadouts](../../res/features/heater-results@2x.webp#past-headings)
+![The Ambrosia Heater results window after a heat: common, Obtainium and Offering, p4x4 and hybrid loadouts](../../res/guides/heater-results@2x.webp#past-headings)
 
 The results window opens when the heat ends. Each row is the best tree for one goal, grouped in sections: Common Loadouts, Obtainium & Offering Loadouts, p4x4 (pre-AoAG) Loadouts, Hybrid Loadouts.
 
-- **Blueberries and Ambrosia** (the two icons): what the tree costs.
-- **Effect:** what the tree gives for its goal.
-- **Maxed:** ✔ means more Ambrosia or Blueberries wouldn't improve that tree. ✘ means they would: the icon after it says which one, and hovering the ✘ shows the levels still missing.
-- **Unaffordable:** you can't buy that tree yet; the figure in red is what you're short of.
-- **Cubes before AOAG:** the H0–H7 rows, one per Hyperflux level. Their **p4x4 eq** is how many P4x4 you need for that row to beat the rows above it, and **★ now** marks the best one at your current P4x4.
+- **Blueberries and Ambrosia** Ⓐ (the two icons): what the tree costs.
+- **Effect** Ⓑ: what the tree gives for its goal.
+- **Maxed:** ✔ means more Ambrosia or Blueberries wouldn't improve that tree. ✘ Ⓒ means they would: the icon after it says which one, and hovering the ✘ shows the levels still missing.
+- **Unaffordable** Ⓓ: you can't buy that tree yet; the figure in red is what you're short of.
+- **Cubes before AOAG:** the H0–H7 rows, one per Hyperflux level. Their **p4x4 eq** Ⓔ is how many P4x4 you need for that row to beat the rows above it, and **★ now** Ⓕ marks the best one at your current P4x4.
 
 A **Red Ambrosia Upgrades** window opens with the results: it compares those upgrades for your save.
 
 ## Import them in your slots
 
 - For one tree only: **Import** on its row puts it into the loadout slot currently loaded; **Copy** copies it as text.
-- **Import All ☑ Loadouts** (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
-- **Sync All Icons** gives each slot an icon that matches its role.
-- **Sync All Loadout Settings** gives your slots' roles to Auto-Sing, the ADD and TIME code loadouts and the timed export, so you don't set them by hand.
+- **Import All ☑ Loadouts** ⑥ (in the Inputs window) writes each ticked slot's tree into it. A slot set to **Best H (P4x4 now)** gets the H row that wins at your P4x4 at that moment.
+- **Sync All Icons** ⑦ gives each slot an icon that matches its role.
+- **Sync All Loadout Settings** ⑧ gives your slots' roles to Auto-Sing, the ADD and TIME code loadouts and the timed export, so you don't set them by hand.
 
 ## When to heat again
 
