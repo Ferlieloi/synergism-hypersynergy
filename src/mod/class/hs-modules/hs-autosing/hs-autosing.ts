@@ -862,7 +862,7 @@ export class HSAutosing extends HSModule {
             default:
                 if (challenge.challengeNumber >= 100) {
                     HSLogger.debug(() => `${tag()} - SA: ${actionText()}`, this.context);
-                    await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime);
+                    await this.#performSpecialAction(challenge.challengeNumber, challenge.challengeWaitTime, challenge.challengeMaxTime, tag);
                 } else {
                     HSLogger.debug(() => `${tag()} - C${challenge.challengeNumber}: waiting for ${challenge.challengeCompletions ?? 0} completions, then wait ${challenge.challengeWaitTime}ms (max time: ${challenge.challengeMaxTime}ms)`, this.context);
                     await this.#waitForCompletion(
@@ -969,7 +969,8 @@ export class HSAutosing extends HSModule {
     // SPECIAL ACTIONS
     // ============================================================================
 
-    async #performSpecialAction(actionId: number, waitTime: number, maxTime: number): Promise<void> {
+    /** @param stepTag The strategy step's "Step N", for the timeout warning */
+    async #performSpecialAction(actionId: number, waitTime: number, maxTime: number, stepTag: () => string): Promise<void> {
         switch (actionId) {
             case 101: // Exit Transcension challenge
                 this.#clickResetButton(this.#dom.exitTranscBtn);
@@ -1004,7 +1005,7 @@ export class HSAutosing extends HSModule {
             case 212:
             case 213:
             case 214: // Max C11-C14
-                await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime);
+                await this.#maxC11to14WithC10((actionId - 200) as 11 | 12 | 13 | 14, maxTime, stepTag);
                 break;
             case 215: // store C15
                 this.#storedC15 = this.#hasLivePlayer
@@ -1180,15 +1181,20 @@ export class HSAutosing extends HSModule {
         }
     }
 
-    async #maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14, maxTime = 2000): Promise<void> {
+    /** @param stepTag The strategy step's "Step N", for the timeout warning (none in the push before stop) */
+    async #maxC11to14WithC10(challengeIndex: 11 | 12 | 13 | 14, maxTime = 2000, stepTag?: () => string): Promise<void> {
         await this.#waitForCompletion(challengeIndex, 0, 0, 0);
         await this.#waitForCompletion(10, 0, 0, 0);
 
         const accessor = this.#dom.getChallengeAccessor(challengeIndex);
         const levelElement = accessor.levelElement;
+        const warnTimeout = (reached: unknown, max: unknown): void => {
+            HSLogger.warn(`-------> ${stepTag ? `${stepTag()} - ` : ""}Timeout: Max C${challengeIndex} only reached ${reached}/${max} completions within ${maxTime} ms`, this.context);
+        };
 
         // Fast path: no DOM text parsing, no Decimal
         if (this.#hasMaxChallenges) {
+            const p = this.#exposedPlayer!;
             const maxPossible = this.#getMaxChallengesFunc!(challengeIndex);
             const deadline = performance.now() + maxTime;
 
@@ -1197,10 +1203,14 @@ export class HSAutosing extends HSModule {
             // even after the challenge had already reached its cap.
             while (
                 this.#autosingEnabled
-                && this.#exposedPlayer!.challengecompletions[challengeIndex] < maxPossible
+                && p.challengecompletions[challengeIndex] < maxPossible
                 && performance.now() < deadline
             ) {
                 await HSUtils.waitForNextTack();
+            }
+
+            if (this.#autosingEnabled && p.challengecompletions[challengeIndex] < maxPossible) {
+                warnTimeout(p.challengecompletions[challengeIndex], maxPossible);
             }
         } else {
             // Fallback: DOM text parsing + Decimal. Once maxed, the game exits the challenge and empties its
@@ -1211,6 +1221,8 @@ export class HSAutosing extends HSModule {
             if (isDone()) return;
 
             await this.#domWaits.waitForChallengeProgress(levelElement!, isDone, maxTime);
+
+            if (this.#autosingEnabled && !isDone()) warnTimeout(getCompletions(), maxPossible);
         }
     }
 
