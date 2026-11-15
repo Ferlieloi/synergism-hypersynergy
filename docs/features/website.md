@@ -29,6 +29,13 @@ How the player website is built and how it behaves. How to update and publish it
 - **`npm run screenshots`** (`scripts/tools/screenshots/`) takes the site's screenshots from an HS backup in the real game headless, and the Steam loader's window from its page with made-up data: `docs/dev/publishing-guide.md`, "Images".
 - **Checks not run by `npm test`** (it runs only `*.cjs`): `python scripts/tests/test-changelog-validation.py` (changelog validation and credit rules) and `node --check` on the two scripts.
 
+## How the generator is organised
+One Python file, no template engine: each page is an f-string.
+- **Nothing is written until every output is built:** the checks run first (`validate_catalogue()`, which also parses every guide; `validate_changelog()` when the changelog page is built), every output goes into `OUTPUTS` (path → text) through `add()`, then `main()` writes them all, compares them (`--check`) or writes them to `--out`. A refused input stops the run with no file written, so a new output goes through `add()` too, never straight to disk.
+- **One frame for every page:** `page()` writes the head, header, tabs and footer around a page's body (`depth` sets the `../` prefix of pages in `wiki/`). The header and the tabs change there, once.
+- **An entry is rendered twice:** `feature_html()` for the site (`compact=True` on the features page: details folded, first image as a miniature) and `feature_md()` for the Markdown outputs. A change to how an entry is laid out goes in both.
+- **The calculation reference is a text scrape** of `hs-calculation-definition.ts` (`calculationName`, `fnName`, `toolingSupport`, `supportsReduce`). If one of the first three is renamed, no entry is found and the run stops. If `supportsReduce` is renamed, the page silently shows "No" for every entry.
+
 ## Feature catalogue (`feature-catalogue.json`)
 - **Top level:** `repository` (every repository, release, issue and source link: source links follow `blob/master/`), `audited_commit` (shown only in `FEATURE-AUDIT.md`), `branch` (not read), `categories` (in display order).
 - **Category:** `id`, `title`, `color` (a CSS colour: the features page's category heading), `intro`, `icon` (optional: a picture under `docs/res/`, shown before the category's title on the home page, the wiki index, the features page and its wiki page), `sources` (repository paths, listed once under the intro of its wiki page, its Markdown page and its `FEATURES.md` section; not on the features page), `features` (in display order).
