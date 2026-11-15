@@ -31,8 +31,6 @@ The results window opens when the heat ends. Each row is the best tree for one g
 - **Unaffordable** Ⓓ: you can't buy that tree yet; the figure in red is what you're short of.
 - **Cubes before AOAG:** the H0–H7 rows, one per Hyperflux level. Their **p4x4 eq** Ⓔ is how many P4x4 you need for that row to beat the rows above it, and **★ now** Ⓕ marks the best one at your current P4x4.
 
-A **Red Ambrosia Upgrades** window opens with the results: it compares those upgrades for your save.
-
 ## Import them in your slots
 
 - For one tree only: **Import** on its row puts it into the loadout slot currently active; **Copy** copies it as text, ready for a [**Quick Import**](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/ambrosia.html#quick-import) (Ambrosia tab).
@@ -46,3 +44,15 @@ Heat again when your Ambrosia or Blueberries have grown, or after upgrades that 
 
 > [!TIP]
 > Before a big change of trees, make a [backup](https://ferlieloi.github.io/synergism-hypersynergy/docs/wiki/saves.html#full-backup) (Tools → Backup & Restore → Export to file): your old loadouts are in it.
+
+---
+
+## Pick your next Red Ambrosia upgrade
+
+![The Red Ambrosia Upgrades window: for each upgrade not maxed yet, its value for Ambrosia, Red Ambrosia and Octeracts, the best ones in brighter colours](../../res/guides/heater-red-ambrosia@1.4x.webp)
+
+A **Red Ambrosia Upgrades** window opens with the results. It shows which Red Ambrosia upgrades to buy next for each resource: **Amb** (Ambrosia), **Red Amb** (Red Ambrosia) and **Oct** (Octeracts). Each value compares what the upgrade's next level gives for that resource with the Red Ambrosia it costs.
+
+- **Lower value, brighter colour = better:** in each column, the brightest cell is the upgrade that gives the most for its cost. Read the column of the resource you're after.
+- **-** means the upgrade doesn't help that resource.
+- Click a column's header to sort the upgrades by it, best first; click again for worst first, a third time for the original order.

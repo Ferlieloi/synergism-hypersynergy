@@ -196,7 +196,7 @@ code { color: #d2bfef; overflow-wrap: anywhere; font-family: Consolas, "Cascadia
 .lightbox-bar a, .lightbox-bar a:visited { color: #b5b0c7; }
 .lightbox-bar button { min-height: 0; padding: 4px 10px; }
 .shot a { cursor: zoom-in; }
-footer { margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1px solid #35323d; font-size: .8rem; color: var(--muted); }
+footer { clear: both; margin: 45px 0 18px 30px; padding-top: 15px; border-top: 1px solid #35323d; font-size: .8rem; color: var(--muted); }
 @media (max-width: 640px) {
   nav { margin-top: 0; }
   #first-row { gap: 7px 12px; margin: 12px 8px; }
