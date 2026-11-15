@@ -14,6 +14,7 @@ import { HSAutosingModal } from "./hs-autosingModal";
 import { HSAutosingRecorder } from "./hs-autosingRecorder";
 import { HSAutosingStepTimingsWindow } from "./ui/hs-autosing-step-timings-window";
 import { HSGlobal } from "../../hs-core/hs-global";
+import type { PlayerData } from "../../../types/data-types/hs-player-savedata";
 import { HSGameState, MainView } from "../../hs-core/hs-gamestate";
 import { HSAutosingSettingsFixer } from './hs-autosingSettingsFixer';
 import { HSAutosingCorruption } from './hs-autosingCorruption';
@@ -857,6 +858,11 @@ export class HSAutosing extends HSModule {
                 HSLogger.debug(() => `${tag()} - SA: ${actionText()} (${challenge.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`, this.context);
                 this.#corruptionManager.cleanse(challenge.cleanseToHighest === true);
                 break;
+            case 156:
+            case 157:
+            case 158:
+                this.#setAutoToggle(challenge.challengeNumber, challenge.toggleOn !== false, () => `${tag()} - SA: ${actionText()}`);
+                break;
             case IF_JUMP_VALUE:
                 return this.#handleIfJumpAction(challenge, phaseConfig, actionIndex, jumpCounts, tag);
             default:
@@ -968,6 +974,46 @@ export class HSAutosing extends HSModule {
     // ============================================================================
     // SPECIAL ACTIONS
     // ============================================================================
+
+    /**
+     * "Set Auto Challenge / Ant-Sac / Ascend" (156-158): the game's buttons only flip their toggle, so the button is
+     * clicked only when the toggle isn't already in the wanted state. The state comes from the live player, else from
+     * a fresh save (bookmarklet players), never from the button's text or colour.
+     */
+    #setAutoToggle(actionId: number, on: boolean, logPrefix: () => string): void {
+        const toggles: Record<number, { read: (player: PlayerData) => unknown; button: () => HTMLButtonElement }> = {
+            156: { read: p => p.autoChallengeRunning, button: () => this.#dom.autoChallengeButton },
+            157: { read: p => p.ants?.toggles?.autoSacrificeEnabled, button: () => this.#dom.autoAntSacrificeButton },
+            158: { read: p => p.autoAscend, button: () => this.#dom.autoAscendButton },
+        };
+        const toggle = toggles[actionId];
+        const wanted = on ? 'ON' : 'OFF';
+        const readState = (): boolean | undefined => {
+            let player: PlayerData | null | undefined = this.#exposedPlayer;
+            if (!player) {
+                const raw = HSModuleRegistry.getModule('HSGameData')?.forceCaptureRawSaveSync();
+                try { player = raw ? JSON.parse(raw) as PlayerData : undefined; } catch { player = undefined; }
+            }
+            const state = player ? toggle.read(player) : undefined;
+            return typeof state === 'boolean' ? state : undefined;
+        };
+        const before = readState();
+        if (before === undefined) {
+            HSLogger.warn(`${logPrefix()} ${wanted}: could not read the game's toggle (offline progress?), left as it is`, this.context);
+            return;
+        }
+        if (before === on) {
+            HSLogger.debug(() => `${logPrefix()} ${wanted}: already ${wanted}`, this.context);
+            return;
+        }
+        toggle.button().click();
+        // Only checked with the live player: without it, a second save capture would slow every such step
+        if (this.#exposedPlayer && readState() !== on) {
+            HSLogger.warn(`${logPrefix()} ${wanted}: the game did not change the toggle`, this.context);
+            return;
+        }
+        HSLogger.debug(() => `${logPrefix()} ${wanted}`, this.context);
+    }
 
     /** @param stepTag The strategy step's "Step N", for the timeout warning */
     async #performSpecialAction(actionId: number, waitTime: number, maxTime: number, stepTag: () => string): Promise<void> {

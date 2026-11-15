@@ -1,15 +1,6 @@
-export const IF_JUMP_VALUE = 200;
-// Sets Challenge.corruptionLevel; ascendAfterCorruption controls whether to ascend now or on a later action.
-export const SET_CORRUPTION_LEVEL_VALUE = 403;
-// The game's cleanse, without ascending: to 0, or to the highest level cleared with Challenge.cleanseToHighest
-export const CLEANSE_CORRUPTION_VALUE = 405;
-export const EXIT_ASCENSION_CHALLENGE_VALUE = 103;
 // HSAutosingStrategy.formatVersion of the strategies written now. Absent (1): from before the AOAG phase's level 0
 // became its first step (autosing set it itself); HSStrategyManager adds that step once.
 export const STRATEGY_FORMAT_VERSION = 2;
-// The steps holding a level in Challenge.corruptionLevel
-export const isCorruptionLevelStep = (challengeNumber: number): boolean =>
-    challengeNumber === SET_CORRUPTION_LEVEL_VALUE;
 
 export const ALLOWED = [
     "start",
@@ -50,7 +41,24 @@ export const AOAG_PHASE_NAME = "AOAG Unlocked Phase" as const;
 
 // Standard input fields that can be enabled per special action.
 // "waitBefore" and "comment" are always enabled and not listed here.
-export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel" | "cleanseToHighest";
+export type ModalInput = "challengeNum" | "completions" | "waitTime" | "maxTime" | "corruptionLevel" | "cleanseToHighest" | "toggleOn";
+
+// Special action ids that code refers to by name (the full list: SPECIAL_ACTIONS below)
+export const EXIT_ASCENSION_CHALLENGE_VALUE = 103;
+// "Set Auto Challenge / Ant-Sac / Ascend" (156-158): turn that game toggle on or off with Challenge.toggleOn.
+// 153-155 only flip it; kept for older strategies, no longer offered in the editor.
+export const FLIP_TOGGLE_VALUES = [153, 154, 155] as const;
+export const SET_AUTO_TOGGLE_VALUES = [156, 157, 158] as const;
+export const isSetAutoToggleStep = (challengeNumber: number): boolean =>
+    (SET_AUTO_TOGGLE_VALUES as readonly number[]).includes(challengeNumber);
+export const IF_JUMP_VALUE = 200;
+// Sets Challenge.corruptionLevel; ascendAfterCorruption controls whether to ascend now or on a later action.
+export const SET_CORRUPTION_LEVEL_VALUE = 403;
+// The steps holding a level in Challenge.corruptionLevel
+export const isCorruptionLevelStep = (challengeNumber: number): boolean =>
+    challengeNumber === SET_CORRUPTION_LEVEL_VALUE;
+// The game's cleanse, without ascending: to 0, or to the highest level cleared with Challenge.cleanseToHighest
+export const CLEANSE_CORRUPTION_VALUE = 405;
 
 export const SPECIAL_ACTIONS = [
     { label: "Exit Transcension challenge",     value: 101, inputs: [] as const },
@@ -63,6 +71,9 @@ export const SPECIAL_ACTIONS = [
     { label: "Auto Challenge Toggle",           value: 153, inputs: [] as const },
     { label: "Auto Ant-Sac Toggle",             value: 154, inputs: [] as const },
     { label: "Auto Ascend Toggle",              value: 155, inputs: [] as const },
+    { label: "Set Auto Challenge",              value: 156, inputs: ["toggleOn"] as const },
+    { label: "Set Auto Ant-Sac",                value: 157, inputs: ["toggleOn"] as const },
+    { label: "Set Auto Ascend",                 value: 158, inputs: ["toggleOn"] as const },
 
     { label: "If-jump",                         value: IF_JUMP_VALUE, inputs: [] as const },
 
@@ -209,6 +220,8 @@ export interface Challenge {
     ascendAfterCorruption?: boolean;
     // "Cleanse corruption" step (CLEANSE_CORRUPTION_VALUE): to the highest level cleared instead of 0 (absent: false)
     cleanseToHighest?: boolean;
+    // "Set Auto X" steps (SET_AUTO_TOGGLE_VALUES): ON or OFF (absent: ON)
+    toggleOn?: boolean;
 
     // Optional special-action params
     ifJump?: IfJumpParams;

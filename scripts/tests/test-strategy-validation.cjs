@@ -53,6 +53,8 @@ async function main() {
             s => {first(s).challengeNumber = 403; first(s).corruptionLevel = -1;},
             s => {first(s).challengeNumber = 405; first(s).cleanseToHighest = 'yes';},
             s => {first(s).challengeNumber = 405; first(s).cleanseToHighest = null;},
+            s => {first(s).challengeNumber = 157; first(s).toggleOn = 'on';},
+            s => {first(s).challengeNumber = 158; first(s).toggleOn = null;},
         ];
         for (const field of ['challengeCompletions', 'challengeWaitBefore', 'challengeWaitTime', 'challengeMaxTime']) {
             for (const value of ['invalid', null, -1, Infinity, NaN]) invalidCases.push(s => {first(s)[field] = value;});
@@ -71,6 +73,15 @@ async function main() {
             first(s).challengeNumber = 405;
             if (option !== undefined) first(s).cleanseToHighest = option;
             assert.equal(first(manager.validateStrategy(s)).cleanseToHighest, option);
+        }
+        // A Set Auto X step (156-158): ON/OFF true, false or absent (ON); the older flip actions (153-155) still load
+        for (const id of [153, 154, 155, 156, 157, 158]) {
+            for (const option of [true, false, undefined]) {
+                const s = valid();
+                first(s).challengeNumber = id;
+                if (option !== undefined && id >= 156) first(s).toggleOn = option;
+                assert.equal(first(manager.validateStrategy(s)).toggleOn, id >= 156 ? option : undefined);
+            }
         }
 
         const jumpStrategy = () => {

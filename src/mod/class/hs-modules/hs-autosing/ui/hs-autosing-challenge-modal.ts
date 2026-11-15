@@ -1,4 +1,4 @@
-import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
+import { AutosingStrategyPhase, Challenge, isCorruptionLevelStep, SET_CORRUPTION_LEVEL_VALUE, CLEANSE_CORRUPTION_VALUE, SPECIAL_ACTIONS, SPECIAL_ACTION_BY_ID, type SpecialAction, IF_JUMP_VALUE, FLIP_TOGGLE_VALUES, isSetAutoToggleStep, IsJumpChallenge, ModalInput, IfJumpParams } from "../hs-autosing-types";
 import { HSTooltip } from "../../../hs-core/hs-tooltip";
 import { HSUI } from "../../../hs-core/hs-ui";
 import { HSUtils } from "../../../hs-utils/hs-utils";
@@ -16,7 +16,7 @@ interface FieldContext {
     ifJumpMode: IfJumpMode;
 }
 
-type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'waitBefore' | 'waitInside' | 'maxTime'
+type FieldKey = 'action' | 'challengeNum' | 'forgeItem' | 'completions' | 'corruptionLevel' | 'ascendAfterCorruption' | 'cleanseToHighest' | 'toggleOn' | 'waitBefore' | 'waitInside' | 'maxTime'
     | 'comment' | 'ifJumpMode' | 'ifJumpChallenge' | 'ifJumpMultiplier' | 'ifJumpOperator' | 'ifJumpValue' | 'ifJumpMaxJumps';
 
 interface FieldRowBase {
@@ -95,7 +95,7 @@ const WHOLE_NOT_NEGATIVE: NumberCheck = { isValid: v => Number.isInteger(v) && v
 // labelClass: the colour of the group's step labels in the list (none: white)
 const ACTION_GROUPS: readonly { label: string; ranges: readonly [number, number][]; labelClass?: string }[] = [
     { label: "Exit and Ascend", ranges: [[101, 104]] },
-    { label: "Game actions", ranges: [[151, 155], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
+    { label: "Game actions", ranges: [[151, 158], [FORGE_FAMILY.first, FORGE_FAMILY.last]] },
     { label: "Condition", ranges: [[IF_JUMP_VALUE, IF_JUMP_VALUE]] },
     { label: "Challenges", ranges: [[211, 215], [C1_TO_C10_FAMILY.first, C1_TO_C10_FAMILY.last]] },
     { label: "Ambrosia loadouts", ranges: [[301, 306]], labelClass: "hs-step-ambrosia" },
@@ -125,12 +125,16 @@ function stepLabelClass(step: Challenge): string {
     return (action && ACTION_GROUPS.find(g => inRanges(g.ranges)(action))?.labelClass) ?? "";
 }
 
+// Only flip their game toggle: hidden in the dropdown, still shown when an older strategy's step is loaded
+const isFlipToggle = (id: number) => (FLIP_TOGGLE_VALUES as readonly number[]).includes(id);
+
 // A family's actions show as its one entry, at its first action's place
 function renderActionOptions(): string {
     const group = (label: string, actions: readonly SpecialAction[]) => {
         const options = new Set(actions.map(a => {
             const family = familyOf(a.value);
-            return family ? `<option value="${family.value}">${family.label}</option>` : `<option value="${a.value}">${a.value} - ${a.label}</option>`;
+            return family ? `<option value="${family.value}">${family.label}</option>`
+                : `<option value="${a.value}"${isFlipToggle(a.value) ? " hidden" : ""}>${a.value} - ${a.label}</option>`;
         }));
         return options.size === 0 ? "" : `<optgroup label="${label}">${[...options].join("")}</optgroup>`;
     };
@@ -185,6 +189,11 @@ const FIELD_ROWS: readonly FieldRow[] = [
     {
         key: 'cleanseToHighest', label: "Cleanse to highest cleared level", type: 'checkbox', initial: "false",
         shown: c => c.inputs.has("cleanseToHighest"), load: fromAction(step => step.cleanseToHighest ?? false),
+    },
+    {
+        key: 'toggleOn', label: "State:", initial: "true",
+        options: `<option value="true">ON</option><option value="false">OFF</option>`,
+        shown: c => c.inputs.has("toggleOn"), load: fromAction(step => step.toggleOn ?? true),
     },
     {
         key: 'waitBefore', label: "Wait before (ms):", attributes: `min="0"`, initial: "0", check: fixedCheck(NOT_NEGATIVE),
@@ -560,7 +569,8 @@ export class HSAutosingChallengeModal {
         const label = isCorruptionLevelStep(step.challengeNumber)
             ? `${action.label}: ${step.corruptionLevel ?? 0} (${step.ascendAfterCorruption === false ? 'next ascension' : 'ascend now'})`
             : step.challengeNumber === CLEANSE_CORRUPTION_VALUE
-                ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})` : action.label;
+                ? `${action.label} (${step.cleanseToHighest === true ? 'to highest cleared' : 'to 0'})`
+                : isSetAutoToggleStep(step.challengeNumber) ? `${action.label} (${step.toggleOn === false ? 'OFF' : 'ON'})` : action.label;
         return `<strong class="${labelClass}">${label}</strong> ${actionId(step.challengeNumber)}`;
     }
 
@@ -737,6 +747,9 @@ export class HSAutosingChallengeModal {
                 step.challengeCompletions = 0;
             } else if (step.challengeNumber === CLEANSE_CORRUPTION_VALUE) {
                 step.cleanseToHighest = (this.#field('cleanseToHighest') as HTMLInputElement).checked;
+                step.challengeCompletions = 0;
+            } else if (isSetAutoToggleStep(step.challengeNumber)) {
+                step.toggleOn = this.#field('toggleOn').value === "true";
                 step.challengeCompletions = 0;
             }
         }

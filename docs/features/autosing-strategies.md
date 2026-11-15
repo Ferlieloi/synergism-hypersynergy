@@ -19,6 +19,10 @@ Saving or deleting changes the in-memory strategy list only after localStorage a
 - **No named corruption loadouts** (a level is one number, nothing to name).
 - **Removed actions**: 400 "Corrup 0*" (one corruption action less), 401 "Corruption level from phase (reapply)" (with the phase levels), 402 "Corrup Ants", 404 "Set corruption level minus free levels" (set the lowest level that reached the target once free levels were added; removed for 403's actual level). The `corruptionFreeLevels` patch went with 404 (`#RETIRED_PATCHES`, older installs still report it); GDS's `calculateFreeCorruptionLevels()` stays (Tools tab, effective level).
 
+## Game toggle steps
+- **"Set Auto Challenge / Ant-Sac / Ascend" (156–158)** set the game's toggle to the step's ON/OFF (`toggleOn`, absent: ON; validation refuses anything but a boolean; the editor always writes it; the step list shows "(ON)" or "(OFF)"). The game's buttons only flip, so the step clicks only when the state differs, read from the live player, else from a fresh save (never the button's text). Already in that state: nothing done. With the live player, a click the game didn't take is a warning. Test: `test-strategy-validation.cjs`.
+- **The flip actions 153–155** ("Auto Challenge / Ant-Sac / Ascend Toggle") still run in older strategies, but the editor's dropdown no longer offers them (hidden `<option>`, shown when such a step is loaded): the game keeps these toggles through a singularity, so one flip per singularity alternated ON and OFF. Not converted to 156–158: a flip's result depends on the state at that moment. 153 keeps its old behaviour, exiting the Transcension and Reincarnation challenges after its click (Quark Molker and TAS were written with it); 156 doesn't exit.
+
 ## Conversions (`ensureAoagPhase`, `normalizeCorruptions`)
 Older formats are brought to the current one at load of the player's saved strategies, at import and at save, silently unless noted:
 - A phase's level → a 403 step at the phase's start (later if-jumps +1), except in the first and AOAG phases (dropped: they ran at 0).
